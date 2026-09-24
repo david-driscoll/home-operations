@@ -48,8 +48,8 @@ spec:
 # (`app/config.py`), which ships in the public image. Verified by extracting
 # 3.3.5 from ghcr.io, not inferred from docs.
 #
-# `headerInjection` rather than `bearerToken` (./home-assistant.yaml's type)
-# because the middleware reads the `x-api-key` header specifically and does a
+# `X-API-Key` rather than an `Authorization: Bearer` (what ./home-assistant.yaml
+# injects) because the middleware reads the `x-api-key` header specifically and does a
 # constant-time compare against the raw key -- an `Authorization: Bearer` would
 # never be looked at.
 apiVersion: toolhive.stacklok.dev/v1beta1

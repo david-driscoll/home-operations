@@ -45,7 +45,7 @@ spec:
     template:
       engineVersion: v2
       data:
-        token: "{{ .api_key }}"
+        authorization: "Bearer {{ .api_key }}"
   data:
     - secretKey: api_key
       remoteRef:
@@ -56,9 +56,10 @@ spec:
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
 # Outgoing auth for the proxy below. Outline's MCP endpoint takes a plain
-# bearer token, so `type: bearerToken` rather than the headerInjection shape
-# ./homelable.yaml needs -- the operator emits the `Authorization: Bearer `
-# prefix itself, so the Secret holds the bare key.
+# `Authorization: Bearer <api-key>`. Sent as `headerInjection` with the prefix
+# baked into the Secret, NOT `type: bearerToken`: the vMCP cannot convert
+# bearerToken and silently drops such a backend from agent-tools -- see
+# ./arr-mcp.yaml's auth config for the full account.
 #
 # The CRD requires this to live in the same namespace as the proxy, which it does.
 apiVersion: toolhive.stacklok.dev/v1beta1
@@ -66,11 +67,12 @@ kind: MCPExternalAuthConfig
 metadata:
   name: outline
 spec:
-  type: bearerToken
-  bearerToken:
-    tokenSecretRef:
+  type: headerInjection
+  headerInjection:
+    headerName: Authorization
+    valueSecretRef:
       name: toolhive-outline
-      key: token
+      key: authorization
 
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
