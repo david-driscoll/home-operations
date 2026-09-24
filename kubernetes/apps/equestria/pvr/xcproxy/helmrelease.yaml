@@ -131,6 +131,15 @@ spec:
         globalMounts:
           - path: /scripts/App.cs
             subPath: App.cs
+      # Static M3U playlists (playlists.sops.yaml), one file per Secret key,
+      # served at /playlists/<key>. Mounted as a directory rather than with
+      # subPath so an edited Secret reaches the pod without a restart.
+      playlists:
+        type: secret
+        name: xcproxy-playlists
+        globalMounts:
+          - path: /playlists
+            readOnly: true
       cache:
         storageClass: longhorn
         size: 1Gi

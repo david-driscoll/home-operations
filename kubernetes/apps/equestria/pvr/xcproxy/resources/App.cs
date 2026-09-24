@@ -606,6 +606,21 @@ app.MapGet("/get.php", async ([FromServices] PlaylistData playlistData) =>
   return Results.Content(content + "\n", "audio/x-mpegurl");
 });
 
+// Static playlists mounted from the xcproxy-playlists Secret, e.g. /playlists/usnewson.m3u
+// for Dispatcharr. Read on every request so an edited Secret is served without a restart.
+app.MapGet("/playlists/{name}", async (string name, [FromServices] XcProxyConfiguration cfg) =>
+{
+  // Only a bare file name: no path separators, and none of the Secret volume's ..data entries.
+  if (!Regex.IsMatch(name, @"^[A-Za-z0-9_-]+\.m3u8?$"))
+    return Results.NotFound();
+
+  var path = Path.Combine(cfg.PlaylistsDirectory, name);
+  if (!File.Exists(path))
+    return Results.NotFound();
+
+  return Results.Content(await File.ReadAllTextAsync(path), "audio/x-mpegurl");
+});
+
 await app.RunAsync();
 
 // ============================================
@@ -629,6 +644,7 @@ public record XcProxyConfiguration
   public required string TmdbImageBackdrop { get; init; }
   public required bool EnrichDetails { get; init; }
   public required string MetaCacheFile { get; init; }
+  public required string PlaylistsDirectory { get; init; }
   public required string StreamMode { get; init; } // "redirect" | "proxy"
   public required int StreamChunkSize { get; init; }
   public required bool CategoryPickFirst { get; init; }
@@ -655,6 +671,7 @@ public record XcProxyConfiguration
       TmdbImageBackdrop = envConfig["TMDB_IMG_BACKDROP"] ?? "https://image.tmdb.org/t/p/w780",
       EnrichDetails = IsTruthy(envConfig["XC_ENRICH_DETAILS"]),
       MetaCacheFile = envConfig["META_CACHE_FILE"] ?? "/cache/tmdb_cache.json",
+      PlaylistsDirectory = envConfig["PLAYLISTS_DIR"] ?? "/playlists",
       StreamMode = ( envConfig["STREAM_MODE"] ?? "redirect" ).ToLowerInvariant(),
       StreamChunkSize = int.TryParse(envConfig["STREAM_CHUNK"], out var chunk) ? chunk : 65536,
       CategoryPickFirst = IsTruthy(envConfig["CATEGORY_PICK_FIRST"] ?? "true"),

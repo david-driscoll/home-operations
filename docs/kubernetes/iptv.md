@@ -12,6 +12,7 @@ after the 2026-09-24 clean-up, when all three had happened at once.
 | ECM (Enhanced Channel Manager) | [`kubernetes/apps/equestria/pvr/ecm/`](../../kubernetes/apps/equestria/pvr/ecm/) — `ecm.driscoll.tech` | Curation UI and automation on top of Dispatcharr. Its MCP sidecar is `toolhive-ecm_*` in agent-tools. |
 | Teamarr | [`kubernetes/apps/equestria/pvr/teamarr/`](../../kubernetes/apps/equestria/pvr/teamarr/) — `teamarr.driscoll.tech` | Sports: builds per-game event channels (1000+) and per-team channels (409-422) in Dispatcharr, plus their XMLTV. Its MCP is `toolhive-teamarr_*`. |
 | game-thumbs | [`kubernetes/apps/equestria/pvr/game-thumbs/`](../../kubernetes/apps/equestria/pvr/game-thumbs/) — `dispatcharr-thumbs.driscoll.tech` | Renders matchup/team logos. Teamarr's `epg.art_base_url` points here. |
+| xcproxy | [`kubernetes/apps/equestria/pvr/xcproxy/`](../../kubernetes/apps/equestria/pvr/xcproxy/) | Besides the VOD proxy, serves static M3Us from [`playlists.sops.yaml`](../../kubernetes/apps/equestria/pvr/xcproxy/playlists.sops.yaml) at `/playlists/<key>`, one file per Secret key. Dispatcharr's USNewsON account reads `http://xcproxy.equestria.svc.cluster.local:8080/playlists/usnewson.m3u`. |
 | Teamarr MCP | [`kubernetes/apps/agents/agent-tools-servers/teamarr.yaml`](../../kubernetes/apps/agents/agent-tools-servers/teamarr.yaml) | `ghcr.io/lukeeexd/teamarr-mcp`; writes allowed, destructive tools off. |
 
 All of `equestria` is shed nightly 02:00-09:00 local
@@ -23,6 +24,20 @@ both MCPs are unreachable then. Dispatcharr is excluded from the shed.
 **M3U accounts:** one main provider carries almost all live streams, with a
 backup provider and a VOD account alongside it. A few older accounts are
 disabled or in an error state and unused.
+
+**USNewsON** (MSNOW, CNN, Fox News) has no connection limit, so its stream is
+the **primary** on channels 1, 10 and 12. The playlist lives in xcproxy (above).
+Its upstream refuses any request without `Referer: https://usnewson.com/`
+(403), and Dispatcharr only ever sends a User-Agent. The headers therefore ride
+in the URL fragment (`…m3u8#referer=…&origin=…`), and those three channels use
+the **Wrapper** stream profile (dispatchwrapparr, `/data/dispatchwrapparr/` on
+the PVC). dispatchwrapparr turns the fragment into request headers. The profile
+is set per channel: Dispatcharr ignores a per-stream profile at channel
+playback, and failover to the provider's backup streams uses the same channel
+profile. The upstream hosts (`sN.usnlive.com`) rotate. On 2026-09-24 `s5`
+(MSNBC) and `s6` (Fox News) were down while `s15` served all three, so the
+playlist carries `s15` alternates. Edit `playlists.sops.yaml` with `sops`; the
+pod picks up the change without a restart.
 
 **EPG sources** — what actually feeds the guide:
 
@@ -168,6 +183,16 @@ Levers, cheapest first:
 - Lower Dispatcharr's channel shutdown delay (Settings -> Proxy) so a slot is
   released soon after the viewer leaves.
 
+**Stream order on a channel** (failover goes down the list):
+
+1. Unlimited sources (USNewsON).
+2. Main-provider feeds of that exact network and feed. Existing, proven streams
+   come first, then `US: <NAME>`, `(H)`, `USA`, `(S)`/`(A)`, and the
+   `(US) (X2)`/`(US) (CX)` families.
+3. Prime/Tubi FAST versions. On locals these are usually news-only loops, not
+   the station's broadcast, so they are a last resort.
+4. The backup provider, highest resolution first.
+
 ## State after the 2026-09-24 changes
 
 Applied through the ECM and Teamarr MCPs (`toolhive-ecm_*`, `toolhive-teamarr_*`):
@@ -186,6 +211,7 @@ Applied through the ECM and Teamarr MCPs (`toolhive-ecm_*`, `toolhive-teamarr_*`
 | Last guide gaps closed | 103 was named *Comedy Central* but carried **CBS Denver/Greensboro streams**. It is now *CTV Comedy*, with its own CTV Comedy streams, the gracenote Canada row `76863` and its logo. 111 CTV2 Toronto had been linked to CHWI (the Windsor/London CTV2) and is now on *CTV Two - Toronto HD* `72705`. 209 FilmRise Western: no guide source has a `filmrisewestern` id, but the provider EPG has an `US FilmRise Western (S)` row, so that stream is now primary and the channel is linked to that row. 546 CW (Philly) and 2013 ESPN 3 were deleted (no guide exists for either). |
 | Renames | 222/223 → *HBO Movies (East/West)*, 279 → *Starz Kids*, matching the networks' current names. |
 | Audit | `scripts/iptv-audit.py` is clean: every channel outside 24/7 has a guide and a resolving logo, and every West channel with an East partner is at +3h. |
+| Stream review (evening) | Every United States + Movies channel (148) was matched against all ~25k Dispatcharr streams by normalised name, East/West kept apart, with call signs for the locals. 369 missing duplicates were added to 107 channels and each list was reordered per *Stream order on a channel*. 12 streams were removed: MSNBC and a dangling deleted-stream reference on 12 Fox News, CNN International on 10 CNN (moved to 11), a West feed on 224 HBO Signature (East), and a college-football event stream on 67 WRAL. 68/69 WWAY had both held the same mix of ABC and CBS streams; they are now split, ABC-named feeds on 68 and CBS-named ones (incl. `WWAY DT2`) on 69. Renamed multiplex channels carry both names' feeds: ActionMAX + *Cinemax Action*, MoreMAX + *Cinemax Hits*, 5StarMAX + *Cinemax Classics*, HBO Family + *HBO Movies*, BBC World News + *BBC News*. The locals were already complete: every call-sign match was attached. |
 
 ## Plan (open work)
 
