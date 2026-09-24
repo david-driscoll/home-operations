@@ -71,3 +71,6 @@ resources:
   # TWO remote proxies in one file, one per media server -- arr-mcp's schema
   # refuses a config naming both jellyfin and plex, and the estate runs both.
   - ./arr-mcp.yaml
+  # Teamarr's API as tools. No secret (Teamarr has no auth), destructive tools
+  # off, and the tool set is fixed at pod start -- see the file's header.
+  - ./teamarr.yaml
