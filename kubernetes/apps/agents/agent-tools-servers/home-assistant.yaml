@@ -22,7 +22,7 @@ spec:
     template:
       engineVersion: v2
       data:
-        token: "{{ .apikey }}"
+        authorization: "Bearer {{ .apikey }}"
   data:
     - secretKey: apikey
       remoteRef:
@@ -53,16 +53,30 @@ spec:
 # but continuing" -- it stays Running while serving nothing).
 #
 # So: no OAuth client registration, no token exchange, no new secret.
+#
+# `headerInjection` carrying a literal `Authorization: Bearer <token>`, not
+# `type: bearerToken`, even though bearerToken is the purpose-built type for
+# this header. ToolHive 0.51.1's vMCP has no bearerToken converter
+# (pkg/vmcp/auth/converters: no entry for it), so both VirtualMCPServers
+# reported `unsupported auth type: bearerToken` for this backend and DROPPED it
+# from the aggregate -- while the proxy itself stayed Ready, which hid it. Seen
+# live 2026-09-24 for both arr-mcps and home-assistant. headerInjection is what
+# ./homelable.yaml proves works; the `Bearer ` prefix lives in the Secret.
+#
+# Because it now converts, the backend MUST be named in both
+# VirtualMCPServers' `outgoingAuth.backends` -- see the homelable note there;
+# an unnamed headerInjection backend makes vmcp exit 1 at startup.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPExternalAuthConfig
 metadata:
   name: home-assistant
 spec:
-  type: bearerToken
-  bearerToken:
-    tokenSecretRef:
+  type: headerInjection
+  headerInjection:
+    headerName: Authorization
+    valueSecretRef:
       name: toolhive-home-assistant
-      key: token
+      key: authorization
 
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.

@@ -59,6 +59,21 @@ spec:
         type: externalAuthConfigRef
         externalAuthConfigRef:
           name: homelable
+      # The bearer-token backends. headerInjection like homelable (see
+      # ../agent-tools-servers/arr-mcp.yaml for why not bearerToken), so each
+      # MUST be named here and in the twin VirtualMCPServer, or vmcp exits 1.
+      toolhive-arr-mcp-plex:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: arr-mcp-plex
+      toolhive-arr-mcp-jellyfin:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: arr-mcp-jellyfin
+      toolhive-home-assistant:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: home-assistant
       # MUST match ./virtualmcpserver.yaml's -- see the note there. Both
       # servers aggregate the same MCPGroup, so both generate the same
       # `headerValueEnv` and both need the Secret mounted; enabling one without
