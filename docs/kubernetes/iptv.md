@@ -180,7 +180,9 @@ Applied through the ECM and Teamarr MCPs (`toolhive-ecm_*`, `toolhive-teamarr_*`
 | Starz West | Removed 2026-09-24: 256, 258, 260, 266, 268, 270, 272, 274, 278 (no West schedule anywhere) and 280 (dead stream). See *East / West rules* 4. No West channel now sits on a national guide on purpose; `KNOWN_NO_WEST_GUIDE` in `scripts/iptv-audit.py` is empty and is where one would go. |
 | Movies | 23 channels added at 283-305 (see *Channel map*). Every primary stream was probed OK one at a time before creation. Each has a logo from the guide row, a primary + backup stream where the provider has one, and a gracenote/mybunny/epgshare01 guide row. |
 | New-channel gotcha | `ecm_create_channel` puts a new channel in **every** channel profile, including Locals (2). Movie channels belong in 1/3/4/7, so the 23 were removed from Locals with `ecm_apply_profile_to_channels(profile_id=2, enabled=false)`. Do the same for any channel you add. |
-| Guide gaps not yet fixed | 103 Comedy Central (CA), 111 CTV2 Toronto, 209 FilmRise Western, 546 CW (Philly), 2013 ESPN 3. |
+| Last guide gaps closed | 103 was named *Comedy Central* but carried **four CBS Denver/Greensboro streams**. It is now *CTV Comedy*, with three CTV Comedy streams, the gracenote Canada row `76863` and its logo. 111 CTV2 Toronto had been linked to CHWI (the Windsor/London CTV2) and is now on *CTV Two - Toronto HD* `72705`. 209 FilmRise Western: no guide source has a `filmrisewestern` id, but the provider EPG (source 5) has an `US FilmRise Western (S)` row, so that stream is now primary and the channel is linked to that row. 546 CW (Philly) and 2013 ESPN 3 were deleted (no guide exists for either). |
+| Renames | 222/223 → *HBO Movies (East/West)*, 279 → *Starz Kids*, matching the networks' current names. |
+| Audit | `scripts/iptv-audit.py` is clean: every channel outside 24/7 has a guide and a resolving logo, and every West channel with an East partner is at +3h. |
 
 ## Plan (open work)
 
@@ -188,10 +190,7 @@ Applied through the ECM and Teamarr MCPs (`toolhive-ecm_*`, `toolhive-teamarr_*`
 
 1. Shorten Dispatcharr's proxy shutdown delay `[UI]` so IPTorrents slots free
    sooner after a viewer leaves.
-2. Optionally rename 222/223 to *HBO Movies* and 279 to *Starz Kids*
-   (`ecm_update_channel` hits the 401 bug, so use the UI `[UI]`).
-3. Fix the five unguided regular channels (see the state table).
-4. **Guardrails.** Rename EPG sources 1-4/10 off "epg.jesmann.com" and
+2. **Guardrails.** Rename EPG sources 1-4/10 off "epg.jesmann.com" and
    source 9 off "trial" `[UI]`. Move ECM's 03:00 probe to after 09:00. Run
    `scripts/iptv-audit.py` after every change and whenever the guide looks off.
 
@@ -295,8 +294,12 @@ it, then generate again.
   `match_channels_epg`, `refresh_all_epg`, `reorder_streams` and others. Upstream
   bug in 0.18.x: `guarded_run` resolves targets outside the sidecar's
   `claim_context`, so the backend call goes out without credentials. Workarounds:
-  `assign_channel_numbers` for renumbering, `link_channel_epg` for EPG links,
-  `refresh_epg` (single source), and the UI for logos.
+  **`bulk_commit_channels`** covers most of them: `updateChannel` (with `data:
+  {name, logo_id, ...}`), `addStreamToChannel`, `removeStreamFromChannel` and
+  `reorderChannelStreams` (`streamIds`) all work, in one atomic batch behind a
+  preview token. Otherwise: `assign_channel_numbers` for renumbering,
+  `link_channel_epg` for EPG links, `refresh_epg` (single source), and
+  `create_logo` + `updateChannel{logo_id}` for logos.
 - **The same `tvg_id` can exist in several EPG sources.** The provider EPG
   (source 5) re-publishes other guides' ids, e.g. `USA.Network.HD.(Pacific).us2`
   exists in both source 5 (with the *East* schedule) and epgshare01 (source 11).
