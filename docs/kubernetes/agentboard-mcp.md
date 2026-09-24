@@ -281,13 +281,20 @@ workloads need `reloader.stakater.com/ignore: "true"` first.
 over the **same** ToolHive backends, alongside `agent-tools`, as its intended
 replacement. Four differences matter to an agent:
 
-- **Profiles, not one catalogue.** There are four MCP entries,
-  `toolport-{infrastructure,media,postgres,research}`, both in
+- **Profiles, not one catalogue.** There is one MCP entry per profile,
+  `toolport-{infrastructure,networking,home,media,postgres,research}`, both in
   `agentboard/resources/mcp.json` and in the repo's `.mcp.json`. They all point at
   one endpoint, `http://toolport.agents.svc.cluster.local:8765/mcp`. The bearer
   token in each entry's `headers` (`TOOLPORT_TOKEN_<PROFILE>`, from the `toolport`
   Secret) decides which servers that entry can see. The profile membership is in
   `toolport/resources/registry.json`.
+  - `toolport-postgres` reaches **every** database, not only `postgres`. Its
+    DBHub backend (`agent-tools-servers/postgres.yaml`) runs one source per
+    database. A sidecar regenerates that list from `pg_database` every 5
+    minutes, and the list includes a read-only `authentik` source on the
+    authentik-pg cluster. Tools are therefore per database:
+    `execute_sql_<db>` and `search_objects_<db>`. This also applies to
+    `agent-tools`, where they appear as `toolhive-postgres_execute_sql_<db>`.
 - **Lazy discovery.** Each profile exposes toolport's meta-tools
   (`toolport_search_tools`, `toolport_call_tool`, `toolport_run_script`,
   `toolport_fetch_result`, `toolport_status`), not hundreds of tools. The

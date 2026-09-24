@@ -35,7 +35,7 @@ spec:
           podSelector:
             matchLabels:
               app: ws-david
-        # The four MCPRemoteProxies of ../toolport-mcp -- the tailnet door's
+        # The per-profile MCPRemoteProxies of ../toolport-mcp -- the tailnet door's
         # path in. ToolHive labels every proxy pod it runs this way.
         - namespaceSelector:
             matchLabels:
@@ -50,6 +50,8 @@ spec:
                 values:
                   - toolport-postgres
                   - toolport-infrastructure
+                  - toolport-networking
+                  - toolport-home
                   - toolport-media
                   - toolport-research
       ports:

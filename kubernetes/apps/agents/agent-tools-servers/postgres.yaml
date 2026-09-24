@@ -27,6 +27,37 @@ metadata:
     reflector.v1.k8s.emberstack.com/reflects: database/postgres-superuser
 
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# authentik's OWN database role on its dedicated cluster
+# (stargate-command/authentik-pg), the same OpenBao item that cluster's
+# `authentik-pg-app` ExternalSecret reads. It is the only credential there:
+# that cluster runs with `enableSuperuserAccess: false`. It owns the SSO
+# database, so DBHub exposes this source READ-ONLY (see
+# ./resources/dbhub-sources.sh) -- the tool can look, not write.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-postgres-authentik
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-postgres-authentik
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        username: "{{ .username }}"
+        password: "{{ .password }}"
+  dataFrom:
+    - extract:
+        key: clusters/equestria/apps/authentik-pg/app
+
+---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
 # DBHub (github.com/bytebase/dbhub), replacing crystaldba/postgres-mcp.
@@ -80,6 +111,23 @@ metadata:
 # read-only mode, row limits and query timeouts are first-class -- but
 # swapping the server and changing its blast radius are two decisions, and
 # this file makes only the first.
+#
+# EVERY DATABASE, NOT ONE. A single DSN reaches exactly one database --
+# Postgres has no cross-database queries -- and it used to be `postgres`, the
+# maintenance db, so none of the 40-odd app databases were queryable at all.
+# DBHub now runs from a TOML config (`--config`) with one `[[sources]]` per
+# database, generated live by the `sources` sidecar below
+# (./resources/dbhub-sources.sh) from `pg_database` every 5 minutes, plus
+# `authentik` on the separate authentik-pg cluster, read-only. DBHub
+# hot-reloads the file, so a new app's database appears without a restart.
+#
+# Tool names change with it: with more than one source DBHub suffixes each
+# built-in with the source id -- `execute_sql_<db>`, `search_objects_<db>`,
+# with `-` normalised to `_` (src/utils/tool-metadata.ts at v1.3.1). About 90
+# tools; toolport's lazy discovery keeps them out of an agent's context.
+#
+# `readonly` is a [[tools]] setting at v1.3.1 (docs/config/toml.mdx), not a
+# [[sources]] one as the v1.2.3 note above says.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
@@ -116,9 +164,13 @@ spec:
   # switch the control off when one hostname covers it. Both the Service
   # short name (what the proxy actually sends) and its FQDN are listed, so
   # this survives a caller that resolves the long form.
+  #
+  # --config replaces the DSN env var: DBHub refuses the two together, and
+  # the sources come from the generated file (see the header).
   args:
     - "--transport=http"
     - "--port=8080"
+    - "--config=/config/dbhub.toml"
     - "--allowed-hosts=mcp-toolhive-postgres,mcp-toolhive-postgres.agents.svc.cluster.local,mcp-toolhive-postgres-headless,mcp-toolhive-postgres-headless.agents.svc.cluster.local"
 
   podTemplateSpec:
@@ -137,18 +189,115 @@ spec:
       annotations:
         reloader.stakater.com/auto: "true"
     spec:
-      containers:
-        - name: mcp
+      volumes:
+        # The generated dbhub.toml, shared between the sidecar that writes it
+        # and DBHub, which reads and watches it.
+        - name: dbhub-config
+          emptyDir: {}
+        - name: dbhub-sources
+          configMap:
+            name: toolhive-postgres-sources
+            defaultMode: 0555
+        - name: tmp
+          emptyDir: {}
+      # A NATIVE SIDECAR (initContainer + restartPolicy: Always): it starts
+      # before `mcp` and keeps running beside it. The startupProbe is what
+      # holds `mcp` back until the first dbhub.toml exists -- without it the
+      # kubelet starts `mcp` as soon as the sidecar process is up, and DBHub
+      # dies on a missing --config file.
+      initContainers:
+        - name: sources
+          image: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm@sha256:17c0ee85fd74ed54e696e745bb0d9418643db3b8cb7fd9e67e6007a105b575a9
+          restartPolicy: Always
+          command: ["/bin/sh", "/opt/dbhub-sources/dbhub-sources.sh"]
           env:
-            - name: DSN
+            - name: HOME
+              value: /tmp
+            - name: INTERVAL
+              value: "300"
+            - name: PGHOST
               valueFrom:
                 secretKeyRef:
                   name: postgres-superuser
-                  key: uri
+                  key: hostname
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-superuser
+                  key: port
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-superuser
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-superuser
+                  key: password
+            - name: AUTHENTIK_PGHOST
+              value: authentik-pg-rw.stargate-command.svc.cluster.local
+          startupProbe:
+            exec:
+              command: ["test", "-f", "/config/.ready"]
+            periodSeconds: 2
+            failureThreshold: 60
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 26
+            runAsGroup: 26
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: dbhub-config
+              mountPath: /config
+            - name: dbhub-sources
+              mountPath: /opt/dbhub-sources
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: mcp
+          # Interpolated by DBHub into the generated dbhub.toml's
+          # dollar-brace PG_USER-style placeholders, so no credential is ever written
+          # to the file.
+          env:
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-superuser
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-superuser
+                  key: password
+            - name: AUTHENTIK_PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: toolhive-postgres-authentik
+                  key: username
+            - name: AUTHENTIK_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: toolhive-postgres-authentik
+                  key: password
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            - name: dbhub-config
+              mountPath: /config
+              readOnly: true
 
   resources:
     requests:

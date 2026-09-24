@@ -269,6 +269,16 @@ spec:
                   secretKeyRef:
                     name: toolport
                     key: TOKEN_INFRASTRUCTURE
+              TOOLPORT_TOKEN_NETWORKING:
+                valueFrom:
+                  secretKeyRef:
+                    name: toolport
+                    key: TOKEN_NETWORKING
+              TOOLPORT_TOKEN_HOME:
+                valueFrom:
+                  secretKeyRef:
+                    name: toolport
+                    key: TOKEN_HOME
               TOOLPORT_TOKEN_MEDIA:
                 valueFrom:
                   secretKeyRef:

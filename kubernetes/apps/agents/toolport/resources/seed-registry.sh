@@ -23,7 +23,7 @@ dst=/data/registry.json
 
 cp "$src" "$dst"
 
-for profile in POSTGRES INFRASTRUCTURE MEDIA RESEARCH; do
+for profile in POSTGRES INFRASTRUCTURE NETWORKING HOME MEDIA RESEARCH; do
   token=$(printenv "TOKEN_${profile}" || true)
   if [ -z "$token" ]; then
     echo "seed-registry: TOKEN_${profile} is empty -- refusing to start with an unauthenticated client slot" >&2

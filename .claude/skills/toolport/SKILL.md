@@ -1,6 +1,6 @@
 ---
 name: toolport
-description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, GitHub, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, Postgres, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
+description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, GitHub, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
 ---
 
 <!--
@@ -90,10 +90,17 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
   usually just in a different one:
   - `toolport-infrastructure`: `kubernetes`,
     `proxmox-{twilight-sparkle,celestia,luna,alpha-site}`,
-    `docker-{celestia,luna,alpha-site}`, `unifi-{network,protect,access}`,
-    `tailscale`, `github`, `pulumi`, `openbao`, `home-assistant`
+    `docker-{celestia,luna,alpha-site}`, `github`, `pulumi`, `openbao`
+  - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`
+  - `toolport-home`: `home-assistant`
   - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`
-  - `toolport-postgres`: `postgres`
+  - `toolport-postgres`: `postgres` -- every database in the estate, one
+    DBHub source each. Its tools are per database:
+    `postgres__execute_sql_<db>` and `postgres__search_objects_<db>`, with `-`
+    in a database name written `_` (e.g. `execute_sql_jellyfin_pg`). Search
+    `toolport_search_tools` with the database name. `authentik` (the SSO
+    database, on its own cluster) is read-only; the rest are read-write as
+    the cluster superuser, so be deliberate with anything but SELECT.
   - `toolport-research`: `context7`, `microsoft-docs`, `nuget`, `degoog`
 
   Tool names are `<server id>__<tool>`, e.g. `kubernetes__list_resources`.

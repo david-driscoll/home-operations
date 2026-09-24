@@ -74,6 +74,68 @@ spec:
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPExternalAuthConfig
 metadata:
+  name: toolport-networking
+spec:
+  type: headerInjection
+  headerInjection:
+    headerName: Authorization
+    valueSecretRef:
+      name: toolport
+      key: authorization-networking
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolport-networking
+spec:
+  remoteUrl: http://toolport.${NAMESPACE}.svc.cluster.local:8765/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: toolport
+  externalAuthConfigRef:
+    name: toolport-networking
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
+  name: toolport-home
+spec:
+  type: headerInjection
+  headerInjection:
+    headerName: Authorization
+    valueSecretRef:
+      name: toolport
+      key: authorization-home
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolport-home
+spec:
+  remoteUrl: http://toolport.${NAMESPACE}.svc.cluster.local:8765/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: toolport
+  externalAuthConfigRef:
+    name: toolport-home
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
   name: toolport-media
 spec:
   type: headerInjection

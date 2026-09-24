@@ -44,25 +44,10 @@
     {
       "id": "infrastructure",
       "name": "Infrastructure",
-      "enabledServerIds": [
-        "kubernetes",
-        "proxmox-twilight-sparkle",
-        "proxmox-celestia",
-        "proxmox-luna",
-        "proxmox-alpha-site",
-        "docker-celestia",
-        "docker-luna",
-        "docker-alpha-site",
-        "unifi-network",
-        "unifi-protect",
-        "unifi-access",
-        "tailscale",
-        "github",
-        "pulumi",
-        "openbao",
-        "home-assistant"
-      ]
+      "enabledServerIds": ["kubernetes", "proxmox-twilight-sparkle", "proxmox-celestia", "proxmox-luna", "proxmox-alpha-site", "docker-celestia", "docker-luna", "docker-alpha-site", "github", "pulumi", "openbao"]
     },
+    { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale"] },
+    { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
     { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm"] },
     { "id": "research", "name": "Research", "enabledServerIds": ["context7", "microsoft-docs", "nuget", "degoog"] }
   ],
@@ -70,6 +55,8 @@
   "httpClients": [
     { "id": "postgres", "label": "postgres", "profile": "postgres", "tokenSha256": "__SHA256_POSTGRES__" },
     { "id": "infrastructure", "label": "infrastructure", "profile": "infrastructure", "tokenSha256": "__SHA256_INFRASTRUCTURE__" },
+    { "id": "networking", "label": "networking", "profile": "networking", "tokenSha256": "__SHA256_NETWORKING__" },
+    { "id": "home", "label": "home", "profile": "home", "tokenSha256": "__SHA256_HOME__" },
     { "id": "media", "label": "media", "profile": "media", "tokenSha256": "__SHA256_MEDIA__" },
     { "id": "research", "label": "research", "profile": "research", "tokenSha256": "__SHA256_RESEARCH__" }
   ]

@@ -12,7 +12,7 @@ metadata:
 spec:
   name: toolport
   category: AI
-  description: Profile-scoped MCP gateway (postgres, infrastructure, media, research) over the ToolHive backends
+  description: Profile-scoped MCP gateway (postgres, infrastructure, networking, home, media, research) over the ToolHive backends
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
   access_policy:
     groups:

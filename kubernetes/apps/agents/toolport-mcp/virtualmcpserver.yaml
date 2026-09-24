@@ -8,7 +8,7 @@
 #
 # Tool names come out as `toolport-<profile>_<toolport tool>`, e.g.
 # `toolport-infrastructure_toolport_search_tools`: conflictResolution `prefix`
-# is required here, since all four backends are the same toolport and expose
+# is required here, since every backend is the same toolport and expose
 # identical meta-tool names.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: VirtualMCPServer
@@ -77,6 +77,14 @@ spec:
         type: externalAuthConfigRef
         externalAuthConfigRef:
           name: toolport-infrastructure
+      toolport-networking:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-networking
+      toolport-home:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-home
       toolport-media:
         type: externalAuthConfigRef
         externalAuthConfigRef:
