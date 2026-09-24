@@ -34,7 +34,7 @@ WEST_SHIFT_HOURS = 3
 # (mybunny, epgshare01, gracenote, provider EPG), so they carry the national
 # guide on purpose. Reported separately instead of as mislinks. Keyed by
 # channel number; see docs/kubernetes/iptv.md "East / West rules".
-KNOWN_NO_WEST_GUIDE = {280}
+KNOWN_NO_WEST_GUIDE: set[int] = set()
 
 
 def fetch(url: str, expect: bytes, timeout: int = 180) -> bytes:
