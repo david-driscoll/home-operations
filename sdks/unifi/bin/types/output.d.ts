@@ -555,6 +555,44 @@ export interface FirewallPolicyDestination {
      */
     zoneId: string;
 }
+export interface FirewallPolicySchedule {
+    /**
+     * Date used by `ONE_TIME_ONLY`, in `YYYY-MM-DD` format.
+     */
+    date: string;
+    /**
+     * End date used by `CUSTOM`, in `YYYY-MM-DD` format.
+     */
+    dateEnd: string;
+    /**
+     * Start date used by `CUSTOM`, in `YYYY-MM-DD` format.
+     */
+    dateStart: string;
+    /**
+     * Schedule mode.
+     */
+    mode: string;
+    /**
+     * Clear inherited fields that are unused by the selected mode.
+     */
+    normalize: boolean;
+    /**
+     * Weekdays on which the policy is active.
+     */
+    repeatOnDays: string[];
+    /**
+     * Whether the policy is active all day.
+     */
+    timeAllDay: boolean;
+    /**
+     * End time in 24-hour `HH:MM` format.
+     */
+    timeRangeEnd: string;
+    /**
+     * Start time in 24-hour `HH:MM` format.
+     */
+    timeRangeStart: string;
+}
 export interface FirewallPolicySource {
     /**
      * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
@@ -1121,6 +1159,10 @@ export interface GetNetworkDhcpServer {
      */
     ntpEnabled: boolean;
     /**
+     * List of NTP server addresses for DHCP clients.
+     */
+    ntpServers: string[];
+    /**
      * The IPv4 address where the DHCP range starts.
      */
     start: string;
@@ -1247,7 +1289,7 @@ export interface NetworkDhcpGuarding {
      */
     enabled: boolean;
     /**
-     * List of allowed DHCP server IP addresses (maximum 3).
+     * List of allowed DHCP server IP addresses (maximum 3). On `corporate` and `guest` networks the controller only honors DHCP guarding with `setting_preference = "manual"`; when `setting_preference` is not configured, the provider sets it to `manual` automatically whenever `dhcp_guarding.enabled` is `true`.
      */
     servers?: string[];
 }
@@ -1294,6 +1336,10 @@ export interface NetworkDhcpServer {
      * Specifies whether DHCP NTP is enabled.
      */
     ntpEnabled: boolean;
+    /**
+     * List of NTP server addresses for DHCP clients.
+     */
+    ntpServers?: string[];
     /**
      * The IPv4 address where the DHCP range starts.
      */
@@ -2309,9 +2355,14 @@ export interface VpnClientWireguard {
      */
     presharedKeyEnabled: boolean;
     /**
-     * WireGuard private key for this client.
+     * WireGuard private key for this client. Stored in state; use `private_key_wo` to avoid persisting the secret.
      */
-    privateKey: string;
+    privateKey?: string;
+    privateKeyWo?: string;
+    /**
+     * Version counter for `private_key_wo`. Increment this value to trigger a private key update.
+     */
+    privateKeyWoVersion?: number;
 }
 export interface VpnClientWireguardConfiguration {
     /**

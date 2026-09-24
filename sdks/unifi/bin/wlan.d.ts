@@ -26,6 +26,10 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly apGroupMode: pulumi.Output<string>;
     /**
+     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     */
+    readonly bandsteeringMode: pulumi.Output<string>;
+    /**
      * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
     readonly bcFilterLists: pulumi.Output<string[]>;
@@ -237,6 +241,10 @@ export interface WlanState {
      */
     apGroupMode?: pulumi.Input<string | undefined>;
     /**
+     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     */
+    bandsteeringMode?: pulumi.Input<string | undefined>;
+    /**
      * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
     bcFilterLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -439,6 +447,10 @@ export interface WlanArgs {
      * Access point group mode.
      */
     apGroupMode?: pulumi.Input<string | undefined>;
+    /**
+     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     */
+    bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
      * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */

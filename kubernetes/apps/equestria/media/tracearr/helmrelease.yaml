@@ -36,6 +36,7 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+          downscaler/exclude: "true"
         # Exactly one. The session poller is a singleton ("only 1 supported"
         # upstream), and Recreate keeps a rollout from running two at once.
         replicas: 1

@@ -43,6 +43,10 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly apGroupMode: pulumi.Output<string>;
     /**
+     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     */
+    declare public readonly bandsteeringMode: pulumi.Output<string>;
+    /**
      * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
     declare public readonly bcFilterLists: pulumi.Output<string[]>;
@@ -248,6 +252,7 @@ export class Wlan extends pulumi.CustomResource {
             const state = argsOrState as WlanState | undefined;
             resourceInputs["apGroupIds"] = state?.apGroupIds;
             resourceInputs["apGroupMode"] = state?.apGroupMode;
+            resourceInputs["bandsteeringMode"] = state?.bandsteeringMode;
             resourceInputs["bcFilterLists"] = state?.bcFilterLists;
             resourceInputs["bssTransition"] = state?.bssTransition;
             resourceInputs["dtim6e"] = state?.dtim6e;
@@ -307,6 +312,7 @@ export class Wlan extends pulumi.CustomResource {
             }
             resourceInputs["apGroupIds"] = args?.apGroupIds;
             resourceInputs["apGroupMode"] = args?.apGroupMode;
+            resourceInputs["bandsteeringMode"] = args?.bandsteeringMode;
             resourceInputs["bcFilterLists"] = args?.bcFilterLists;
             resourceInputs["bssTransition"] = args?.bssTransition;
             resourceInputs["dtim6e"] = args?.dtim6e;
@@ -376,6 +382,10 @@ export interface WlanState {
      * Access point group mode.
      */
     apGroupMode?: pulumi.Input<string | undefined>;
+    /**
+     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     */
+    bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
      * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
@@ -580,6 +590,10 @@ export interface WlanArgs {
      * Access point group mode.
      */
     apGroupMode?: pulumi.Input<string | undefined>;
+    /**
+     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     */
+    bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
      * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */

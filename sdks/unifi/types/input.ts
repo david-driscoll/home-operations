@@ -577,6 +577,45 @@ export interface FirewallPolicyDestination {
     zoneId: pulumi.Input<string>;
 }
 
+export interface FirewallPolicySchedule {
+    /**
+     * Date used by `ONE_TIME_ONLY`, in `YYYY-MM-DD` format.
+     */
+    date?: pulumi.Input<string | undefined>;
+    /**
+     * End date used by `CUSTOM`, in `YYYY-MM-DD` format.
+     */
+    dateEnd?: pulumi.Input<string | undefined>;
+    /**
+     * Start date used by `CUSTOM`, in `YYYY-MM-DD` format.
+     */
+    dateStart?: pulumi.Input<string | undefined>;
+    /**
+     * Schedule mode.
+     */
+    mode?: pulumi.Input<string | undefined>;
+    /**
+     * Clear inherited fields that are unused by the selected mode.
+     */
+    normalize?: pulumi.Input<boolean | undefined>;
+    /**
+     * Weekdays on which the policy is active.
+     */
+    repeatOnDays?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Whether the policy is active all day.
+     */
+    timeAllDay?: pulumi.Input<boolean | undefined>;
+    /**
+     * End time in 24-hour `HH:MM` format.
+     */
+    timeRangeEnd?: pulumi.Input<string | undefined>;
+    /**
+     * Start time in 24-hour `HH:MM` format.
+     */
+    timeRangeStart?: pulumi.Input<string | undefined>;
+}
+
 export interface FirewallPolicySource {
     /**
      * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
@@ -869,7 +908,7 @@ export interface NetworkDhcpGuarding {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * List of allowed DHCP server IP addresses (maximum 3).
+     * List of allowed DHCP server IP addresses (maximum 3). On `corporate` and `guest` networks the controller only honors DHCP guarding with `setting_preference = "manual"`; when `setting_preference` is not configured, the provider sets it to `manual` automatically whenever `dhcp_guarding.enabled` is `true`.
      */
     servers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
@@ -918,6 +957,10 @@ export interface NetworkDhcpServer {
      * Specifies whether DHCP NTP is enabled.
      */
     ntpEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * List of NTP server addresses for DHCP clients.
+     */
+    ntpServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The IPv4 address where the DHCP range starts.
      */
@@ -1982,9 +2025,14 @@ export interface VpnClientWireguard {
      */
     presharedKeyEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * WireGuard private key for this client.
+     * WireGuard private key for this client. Stored in state; use `private_key_wo` to avoid persisting the secret.
      */
-    privateKey: pulumi.Input<string>;
+    privateKey?: pulumi.Input<string | undefined>;
+    privateKeyWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version counter for `private_key_wo`. Increment this value to trigger a private key update.
+     */
+    privateKeyWoVersion?: pulumi.Input<number | undefined>;
 }
 
 export interface VpnClientWireguardConfiguration {

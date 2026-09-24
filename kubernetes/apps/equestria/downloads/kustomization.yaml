@@ -9,4 +9,4 @@ resources:
   - ./qbittorrent/ks.yaml
   # Stremio addon streaming Prowlarr results through qBittorrent; read by
   # media/aiostreams -> Gelato. docs/runbooks/seedstrem-gelato.md
-  # - ./seedstrem/ks.yaml
+  - ./seedstrem/ks.yaml

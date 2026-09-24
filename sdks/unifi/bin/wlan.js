@@ -60,6 +60,7 @@ class Wlan extends pulumi.CustomResource {
             const state = argsOrState;
             resourceInputs["apGroupIds"] = state?.apGroupIds;
             resourceInputs["apGroupMode"] = state?.apGroupMode;
+            resourceInputs["bandsteeringMode"] = state?.bandsteeringMode;
             resourceInputs["bcFilterLists"] = state?.bcFilterLists;
             resourceInputs["bssTransition"] = state?.bssTransition;
             resourceInputs["dtim6e"] = state?.dtim6e;
@@ -120,6 +121,7 @@ class Wlan extends pulumi.CustomResource {
             }
             resourceInputs["apGroupIds"] = args?.apGroupIds;
             resourceInputs["apGroupMode"] = args?.apGroupMode;
+            resourceInputs["bandsteeringMode"] = args?.bandsteeringMode;
             resourceInputs["bcFilterLists"] = args?.bcFilterLists;
             resourceInputs["bssTransition"] = args?.bssTransition;
             resourceInputs["dtim6e"] = args?.dtim6e;

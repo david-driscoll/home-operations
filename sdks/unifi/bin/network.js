@@ -65,6 +65,7 @@ class Network extends pulumi.CustomResource {
             resourceInputs["dhcpV6Server"] = state?.dhcpV6Server;
             resourceInputs["domainName"] = state?.domainName;
             resourceInputs["enabled"] = state?.enabled;
+            resourceInputs["firewallZoneId"] = state?.firewallZoneId;
             resourceInputs["gatewayType"] = state?.gatewayType;
             resourceInputs["igmpSnooping"] = state?.igmpSnooping;
             resourceInputs["internetAccess"] = state?.internetAccess;
@@ -104,6 +105,7 @@ class Network extends pulumi.CustomResource {
             resourceInputs["dhcpV6Server"] = args?.dhcpV6Server;
             resourceInputs["domainName"] = args?.domainName;
             resourceInputs["enabled"] = args?.enabled;
+            resourceInputs["firewallZoneId"] = args?.firewallZoneId;
             resourceInputs["gatewayType"] = args?.gatewayType;
             resourceInputs["igmpSnooping"] = args?.igmpSnooping;
             resourceInputs["internetAccess"] = args?.internetAccess;

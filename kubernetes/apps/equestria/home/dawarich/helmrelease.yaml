@@ -69,6 +69,7 @@ spec:
           # deleted by hand after the credential landed. Expect to restart this
           # pod once when SSO first appears.
           reloader.stakater.com/auto: "true"
+          downscaler/exclude: "true"
         replicas: 1
         # Recreate, not RollingUpdate: one ReadWriteOnce volume shared by both
         # containers, and the web container migrates the database at boot.

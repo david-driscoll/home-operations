@@ -37,6 +37,7 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+          downscaler/exclude: "true"
         pod:
           securityContext:
             runAsUser: 568

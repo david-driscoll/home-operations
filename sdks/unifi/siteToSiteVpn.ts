@@ -108,7 +108,7 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly profile: pulumi.Output<string>;
     /**
-     * The remote site's subnets reachable through the tunnel (CIDR).
+     * The remote site's subnets reachable through the tunnel (CIDR). May be empty when dynamic routing is enabled.
      */
     declare public readonly remoteSubnets: pulumi.Output<string[]>;
     /**
@@ -274,7 +274,7 @@ export interface SiteToSiteVpnState {
      */
     profile?: pulumi.Input<string | undefined>;
     /**
-     * The remote site's subnets reachable through the tunnel (CIDR).
+     * The remote site's subnets reachable through the tunnel (CIDR). May be empty when dynamic routing is enabled.
      */
     remoteSubnets?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -366,7 +366,7 @@ export interface SiteToSiteVpnArgs {
      */
     profile?: pulumi.Input<string | undefined>;
     /**
-     * The remote site's subnets reachable through the tunnel (CIDR).
+     * The remote site's subnets reachable through the tunnel (CIDR). May be empty when dynamic routing is enabled.
      */
     remoteSubnets: pulumi.Input<pulumi.Input<string>[]>;
     /**

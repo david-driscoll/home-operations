@@ -9,7 +9,7 @@ spec:
   category: Applications
   description: "OpenCloud — file sync and share, with Collabora document editing and Radicale CalDAV/CardDAV"
   url: &url https://${APP}.${ROOT_DOMAIN}
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/opencloud.svg
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/opencloud.svg
   access_policy:
     groups:
       # `admins` is listed ALONGSIDE `family`, not instead of it. This binding

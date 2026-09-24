@@ -36,6 +36,7 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+          downscaler/exclude: "true"
         strategy: Recreate
         # ONE POD, TWO CONTAINERS -- upstream's `nextjs-app` and `job-server`
         # services from docker-compose.yml, minus its `vectorchord` database

@@ -39,6 +39,7 @@ spec:
           # is what makes the 30-day OpenBao password rotation reach the pod.
           # See components/postgres/AGENTS.md.
           reloader.stakater.com/auto: "true"
+          downscaler/exclude: "true"
         replicas: 1
         # Single replica against one ReadWriteOnce volume: a rolling update
         # would deadlock on the PVC.

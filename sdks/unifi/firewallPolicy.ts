@@ -91,6 +91,10 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time_all_day`; when false, both time-range fields are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     */
+    declare public readonly schedule: pulumi.Output<outputs.FirewallPolicySchedule>;
+    /**
      * The name of the UniFi site. Defaults to the site configured in the provider.
      */
     declare public readonly site: pulumi.Output<string>;
@@ -127,6 +131,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["logging"] = state?.logging;
             resourceInputs["name"] = state?.name;
             resourceInputs["protocol"] = state?.protocol;
+            resourceInputs["schedule"] = state?.schedule;
             resourceInputs["site"] = state?.site;
             resourceInputs["source"] = state?.source;
             resourceInputs["timeouts"] = state?.timeouts;
@@ -152,6 +157,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["logging"] = args?.logging;
             resourceInputs["name"] = args?.name;
             resourceInputs["protocol"] = args?.protocol;
+            resourceInputs["schedule"] = args?.schedule;
             resourceInputs["site"] = args?.site;
             resourceInputs["source"] = args?.source;
             resourceInputs["timeouts"] = args?.timeouts;
@@ -225,6 +231,10 @@ export interface FirewallPolicyState {
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time_all_day`; when false, both time-range fields are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     */
+    schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
+    /**
      * The name of the UniFi site. Defaults to the site configured in the provider.
      */
     site?: pulumi.Input<string | undefined>;
@@ -283,6 +293,10 @@ export interface FirewallPolicyArgs {
      * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Defaults to `all`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply.
      */
     protocol?: pulumi.Input<string | undefined>;
+    /**
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time_all_day`; when false, both time-range fields are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     */
+    schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**
      * The name of the UniFi site. Defaults to the site configured in the provider.
      */

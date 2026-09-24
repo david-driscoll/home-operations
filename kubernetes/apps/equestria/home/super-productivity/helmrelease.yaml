@@ -37,6 +37,8 @@ spec:
         pod:
           securityContext:
             runAsNonRoot: false
+        annotations:
+          downscaler/exclude: "true"
 
         containers:
           *app :

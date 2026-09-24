@@ -46,6 +46,10 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly enabled: pulumi.Output<boolean>;
     /**
+     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's `purpose` field.
+     */
+    readonly firewallZoneId: pulumi.Output<string>;
+    /**
      * The gateway type. Must be one of `default` or `switch`.
      */
     readonly gatewayType: pulumi.Output<string>;
@@ -58,11 +62,11 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly internetAccess: pulumi.Output<boolean>;
     /**
-     * List of IP aliases for the network.
+     * List of IP aliases for the network, in CIDR notation (e.g. `192.168.2.1/24`). The controller rejects entries without a prefix length.
      */
     readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
-     * List of IPv6 aliases for the network.
+     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
      */
     readonly ipv6Aliases: pulumi.Output<string[] | undefined>;
     /**
@@ -200,6 +204,10 @@ export interface NetworkState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
+     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's `purpose` field.
+     */
+    firewallZoneId?: pulumi.Input<string | undefined>;
+    /**
      * The gateway type. Must be one of `default` or `switch`.
      */
     gatewayType?: pulumi.Input<string | undefined>;
@@ -212,11 +220,11 @@ export interface NetworkState {
      */
     internetAccess?: pulumi.Input<boolean | undefined>;
     /**
-     * List of IP aliases for the network.
+     * List of IP aliases for the network, in CIDR notation (e.g. `192.168.2.1/24`). The controller rejects entries without a prefix length.
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * List of IPv6 aliases for the network.
+     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
      */
     ipv6Aliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -346,6 +354,10 @@ export interface NetworkArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
+     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's `purpose` field.
+     */
+    firewallZoneId?: pulumi.Input<string | undefined>;
+    /**
      * The gateway type. Must be one of `default` or `switch`.
      */
     gatewayType?: pulumi.Input<string | undefined>;
@@ -358,11 +370,11 @@ export interface NetworkArgs {
      */
     internetAccess?: pulumi.Input<boolean | undefined>;
     /**
-     * List of IP aliases for the network.
+     * List of IP aliases for the network, in CIDR notation (e.g. `192.168.2.1/24`). The controller rejects entries without a prefix length.
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * List of IPv6 aliases for the network.
+     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
      */
     ipv6Aliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**

@@ -51,7 +51,7 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly fixedApMac: pulumi.Output<string>;
     /**
-     * A fixed IPv4 address for this client.
+     * A fixed IPv4 address for this client. Set to an empty string to clear a previously assigned fixed IP.
      */
     declare public readonly fixedIp: pulumi.Output<string>;
     /**
@@ -179,7 +179,7 @@ export interface ClientState {
      */
     fixedApMac?: pulumi.Input<string | undefined>;
     /**
-     * A fixed IPv4 address for this client.
+     * A fixed IPv4 address for this client. Set to an empty string to clear a previously assigned fixed IP.
      */
     fixedIp?: pulumi.Input<string | undefined>;
     /**
@@ -250,7 +250,7 @@ export interface ClientArgs {
      */
     fixedApMac?: pulumi.Input<string | undefined>;
     /**
-     * A fixed IPv4 address for this client.
+     * A fixed IPv4 address for this client. Set to an empty string to clear a previously assigned fixed IP.
      */
     fixedIp?: pulumi.Input<string | undefined>;
     /**
