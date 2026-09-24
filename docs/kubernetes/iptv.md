@@ -33,7 +33,7 @@ disabled; `custom` (1) is in an error state and unused.
 | 6 | Teamarr (`teamarr.driscoll.tech/api/v1/epg/xmltv`) | Event + team channels. Teamarr's `dispatcharr.epg_id` must be **6**. |
 | 3 | US Locals — `cdn.epg.guru/7daygracenote/UnitedStates-Locals.xml.gz` | Local stations, keyed by **Gracenote station id** (`21103`, `43730`...) |
 | 2 | US — `cdn.epg.guru/7dayiptv/UnitedStates.xml.gz` | National channels, keyed `name.us` |
-| 1 | Canada — `cdn.epg.guru/7dayiptv/Canada.xml.gz` | Canadian channels, keyed `name.ca` |
+| 1 | Canada — `cdn.epg.guru/7daygracenote/Canada.xml.gz` | Canadian locals (103-114), keyed by Gracenote station id. The `7dayiptv/` flavour keys by name (`2MMaroc(2MAROC).ca`) and matches none of them. |
 | 4 | UK — `cdn.epg.guru/7dayiptv/UnitedKingdom.xml.gz` | Unused |
 | 7 | Twitch (Twitcharr) | Channel 9000 |
 
