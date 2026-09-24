@@ -10,10 +10,19 @@
 # `toolport-infrastructure_toolport_search_tools`: conflictResolution `prefix`
 # is required here, since every backend is the same toolport and expose
 # identical meta-tool names.
+#
+# NAMED `toolport-mcp`, NEVER `toolport`. The operator names the vMCP's
+# Deployment after this resource, and `agents/toolport` is already the gateway's
+# own Deployment (../toolport). Named `toolport`, the operator tried to UPDATE
+# the gateway's Deployment into a vMCP. It was saved only because a Deployment's
+# selector is immutable: every reconcile failed with "`selector` does not match
+# template `labels`", no vMCP pod was ever created, and the route answered 500
+# (2026-09-24). The MCPRemoteProxies are `toolport-<profile>` for the same
+# reason: any ToolHive workload name must not equal `toolport`.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: VirtualMCPServer
 metadata:
-  name: toolport
+  name: toolport-mcp
 spec:
   groupRef:
     name: toolport
