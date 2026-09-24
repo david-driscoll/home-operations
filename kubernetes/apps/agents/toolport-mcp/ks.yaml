@@ -6,7 +6,7 @@
 # to authentik -- published at toolport-mcp.agents.<root domain> on the
 # internal gateway, reachable from the LAN and over Tailscale (./httproute.yaml).
 #
-#   client --OAuth--> vmcp-toolport (this) --bearer per profile-->
+#   client --OAuth--> vmcp-toolport-mcp (this) --bearer per profile-->
 #     MCPRemoteProxy toolport-<profile> --> toolport:8765 --> ToolHive backends
 #
 # toolport itself only speaks static bearer tokens, which is fine for
