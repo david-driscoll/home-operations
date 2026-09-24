@@ -112,10 +112,10 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
   installed" lines above. Destructive calls go straight through: be as careful
   as you would calling the backend directly.
 - **Do not call `toolport_enable_server` / `toolport_disable_server`.** Agent
-  control is off, and the registry is re-seeded from git on every restart
+  control is off, and the registry is rendered from git by External Secrets
   anyway -- servers and profiles are changed in
   `kubernetes/apps/agents/toolport/resources/registry.json`.
-- **Where it is reachable.** In agentboard the four entries are already in
+- **Where it is reachable.** In agentboard the profile entries are already in
   `.mcp.json`, each sending its profile's bearer. Off-cluster, the tailnet-only
   OAuth door is `https://toolport-mcp.<tailnet>/mcp`; there every profile
   appears at once, prefixed `toolport-<profile>_`.

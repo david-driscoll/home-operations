@@ -53,11 +53,11 @@
   ],
   "activeProfileId": "infrastructure",
   "httpClients": [
-    { "id": "postgres", "label": "postgres", "profile": "postgres", "tokenSha256": "__SHA256_POSTGRES__" },
-    { "id": "infrastructure", "label": "infrastructure", "profile": "infrastructure", "tokenSha256": "__SHA256_INFRASTRUCTURE__" },
-    { "id": "networking", "label": "networking", "profile": "networking", "tokenSha256": "__SHA256_NETWORKING__" },
-    { "id": "home", "label": "home", "profile": "home", "tokenSha256": "__SHA256_HOME__" },
-    { "id": "media", "label": "media", "profile": "media", "tokenSha256": "__SHA256_MEDIA__" },
-    { "id": "research", "label": "research", "profile": "research", "tokenSha256": "__SHA256_RESEARCH__" }
+    { "id": "postgres", "label": "postgres", "profile": "postgres", "tokenSha256": "{{ .TOKEN_POSTGRES | sha256sum }}" },
+    { "id": "infrastructure", "label": "infrastructure", "profile": "infrastructure", "tokenSha256": "{{ .TOKEN_INFRASTRUCTURE | sha256sum }}" },
+    { "id": "networking", "label": "networking", "profile": "networking", "tokenSha256": "{{ .TOKEN_NETWORKING | sha256sum }}" },
+    { "id": "home", "label": "home", "profile": "home", "tokenSha256": "{{ .TOKEN_HOME | sha256sum }}" },
+    { "id": "media", "label": "media", "profile": "media", "tokenSha256": "{{ .TOKEN_MEDIA | sha256sum }}" },
+    { "id": "research", "label": "research", "profile": "research", "tokenSha256": "{{ .TOKEN_RESEARCH | sha256sum }}" }
   ]
 }

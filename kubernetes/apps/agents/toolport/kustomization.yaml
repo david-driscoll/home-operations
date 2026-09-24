@@ -8,26 +8,19 @@ resources:
   - ./networkpolicy.yaml
   - ./definition.yaml
 configMapGenerator:
-  # toolport's registry TEMPLATE -- servers, profiles, httpClients with hash
-  # placeholders. Kept as a real .json file so `jq` and editors can check it.
-  # Substitution stays ON: the home-assistant URL needs ${ROOT_DOMAIN}.
+  # toolport's registry TEMPLATE: servers, profiles, and httpClients whose
+  # tokenSha256 values are ESO Go templates. The `${APP}-registry`
+  # ExternalSecret (./externalsecret.yaml) renders it into the Secret the pod
+  # mounts. It stays a real .json file (the templates sit inside JSON strings)
+  # so `jq` and editors can still check it.
   #
-  # disableNameSuffixHash because ./helmrelease.yaml mounts it by literal name;
-  # Reloader (the controller's `reloader.stakater.com/auto`) is what rolls the
-  # pod when it changes, not a hash suffix.
-  - name: ${APP}-registry
+  # Flux substitution stays ON: the home-assistant URL needs the root domain.
+  # envsubst runs first and leaves the double-brace templates alone; ESO then
+  # renders those.
+  #
+  # disableNameSuffixHash: the ExternalSecret's templateFrom names it literally.
+  - name: ${APP}-registry-template
     files:
       - registry.json=./resources/registry.json
     options:
       disableNameSuffixHash: true
-  # The initContainer script that turns the template into the live registry.
-  # Substitution OFF -- it is shell, and Flux's envsubst would read its
-  # `${profile}` etc. as unset substitution variables and fail the build in
-  # strict mode. Same split as apps/volsync-system/lock-canceller.
-  - name: ${APP}-seed
-    files:
-      - seed-registry.sh=./resources/seed-registry.sh
-    options:
-      disableNameSuffixHash: true
-      annotations:
-        kustomize.toolkit.fluxcd.io/substitute: disabled

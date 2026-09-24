@@ -31,10 +31,10 @@ spec:
     controllers:
       *app :
         annotations:
-          # Rolls the pod when the registry ConfigMap, the seed script, the
-          # client-token Secret or the backend-token Secret changes. The
-          # registry is only read at pod start (the initContainer copies it),
-          # so without this a git change would sit unused until a reschedule.
+          # Rolls the pod when the rendered registry Secret, the client-token
+          # Secret or the backend-token Secret changes. The registry is a
+          # subPath mount, which never live-updates, so without this a git
+          # change would sit unused until a reschedule.
           reloader.stakater.com/auto: "true"
         strategy: Recreate
         pod:
@@ -47,23 +47,11 @@ spec:
             runAsGroup: 10001
             fsGroup: 10001
             fsGroupChangePolicy: OnRootMismatch
-        initContainers:
-          seed-registry:
-            image: &image
-              repository: ghcr.io/btsouth/toolport-gateway
-              tag: v1.20.0@sha256:7e3bb4f8b53fc10c12d81b77c90d4a07f123cd76a3be20ae45b7ecbb0b6c6d95
-            command: ["/bin/sh", "/opt/toolport/seed-registry.sh"]
-            envFrom:
-              - secretRef:
-                  name: ${APP}
-            securityContext: &securityContext
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop: ["ALL"]
         containers:
           *app :
-            image: *image
+            image:
+              repository: ghcr.io/btsouth/toolport-gateway
+              tag: v1.20.0@sha256:7e3bb4f8b53fc10c12d81b77c90d4a07f123cd76a3be20ae45b7ecbb0b6c6d95
             # No command/args: the image's ENTRYPOINT is already
             # `toolport-gateway --http 8765`. Use the flag, not TOOLPORT_HTTP --
             # the env form is ignored whenever stdin is a pipe.
@@ -78,11 +66,15 @@ spec:
               # Prometheus text at GET /metrics -- behind the same bearer as
               # everything else, so no ServiceMonitor until one carries a token.
               TOOLPORT_METRICS: "1"
+              # Switches secret lookups to the file backend; see
+              # ./externalsecret.yaml. Only this key: the gateway never needs
+              # the plaintext client tokens, just their hashes in the registry.
+              TOOLPORT_SECRET_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOOLPORT_SECRET_KEY
             envFrom:
-              # TOOLPORT_SECRET_KEY (and the client tokens, unused by the
-              # gateway itself -- it only compares hashes from the registry).
-              - secretRef:
-                  name: ${APP}
               # TOOLPORT_SECRET_<KEY> bearer tokens for the backends toolport
               # calls directly. See ./externalsecret.yaml.
               - secretRef:
@@ -106,13 +98,16 @@ spec:
                 memory: 128Mi
               limits:
                 memory: 512Mi
-            securityContext: *securityContext
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
 
     persistence:
-      # The live registry, audit log, integrity pins and secrets.enc. An
-      # emptyDir on purpose: git (./resources/registry.json) is the source of
-      # truth and ./resources/seed-registry.sh re-seeds it every start, so
-      # nothing here is worth a PVC or a backup.
+      # The audit log, integrity pins, secrets.enc and the registry lock. An
+      # emptyDir on purpose: the registry comes from git by way of ESO, and
+      # nothing toolport writes here is worth a PVC or a backup.
       data:
         type: emptyDir
         globalMounts:
@@ -121,23 +116,18 @@ spec:
         type: emptyDir
         globalMounts:
           - path: /tmp
+      # The ESO-rendered registry (`${APP}-registry`, ./externalsecret.yaml),
+      # mounted as a single FILE inside the writable /data emptyDir rather
+      # than as its own directory. toolport creates `registry.json.lock` next
+      # to the registry on every load, so the directory must be writable;
+      # nothing rewrites the file itself.
       registry:
-        type: configMap
+        type: secret
         name: ${APP}-registry
-        advancedMounts:
-          *app :
-            seed-registry:
-              - path: /config
-                readOnly: true
-      seed:
-        type: configMap
-        name: ${APP}-seed
-        defaultMode: 0555
-        advancedMounts:
-          *app :
-            seed-registry:
-              - path: /opt/toolport
-                readOnly: true
+        globalMounts:
+          - path: /data/registry.json
+            subPath: registry.json
+            readOnly: true
 
     service:
       *app :
