@@ -299,7 +299,8 @@ replacement. Four differences matter to an agent:
   (`toolport_search_tools`, `toolport_call_tool`, `toolport_run_script`,
   `toolport_fetch_result`, `toolport_status`), not hundreds of tools. The
   `toolport` skill (`.claude/skills/toolport/SKILL.md`, which agentboard also
-  installs user-wide at boot) explains how to use them.
+  mounts user-wide from a ConfigMap built from that same file) explains how to
+  use them.
 - **Two backend paths.**
   - MCPServer backends (stdio or HTTP) are reached through their ToolHive proxy
     Services (`mcp-toolhive-<name>-proxy`), which hold the credentials inside

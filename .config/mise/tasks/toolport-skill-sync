@@ -17,8 +17,7 @@
 # `<!-- END upstream -->`. The frontmatter and the "In this estate" section
 # outside the markers are ours and are never touched.
 #
-# .github/workflows/toolport-skill-sync.yaml runs this on Renovate's PR and
-# pushes the result, so a bump lands complete.
+# Run it on Renovate's `toolport` PR before merging, so a bump lands complete.
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel)

@@ -289,13 +289,6 @@ spec:
                   secretKeyRef:
                     name: toolport
                     key: TOKEN_RESEARCH
-              # The toolport skill, installed user-wide at boot by
-              # ./resources/entrypoint.sh into ~/.claude/skills/toolport/ so
-              # every session sees it whatever its working directory. The
-              # source is this repo's own copy on main, which Renovate keeps in
-              # step with the gateway image (see that file's header).
-              TOOLPORT_SKILL_URL:
-                value: https://raw.githubusercontent.com/david-driscoll/home-operations/main/.claude/skills/toolport/SKILL.md
             envFrom:
               - secretRef:
                   name: ${APP}-pulumi
@@ -398,6 +391,23 @@ spec:
                 readOnly: true
               - path: /root/.bashrc
                 subPath: bashrc
+                readOnly: true
+      # User-wide Claude Code skills: ~/.claude/skills/<name>/SKILL.md loads in
+      # every session whatever its working directory, unlike the repo's
+      # .claude/skills, which only a session inside the checkout sees. The file
+      # is the repo's own .claude/skills/toolport/SKILL.md, pulled in by
+      # ./kustomization.yaml's configMapGenerator, so the pod always runs the
+      # copy from the deployed git revision. A change rolls the pod through
+      # Reloader like any other ConfigMap here. Its own ConfigMap rather than
+      # the mise-config one because it must not go through Flux substitution.
+      skills:
+        type: configMap
+        name: agentboard-skills
+        advancedMounts:
+          *app :
+            *app :
+              - path: /root/.claude/skills/toolport/SKILL.md
+                subPath: toolport-SKILL.md
                 readOnly: true
       github-token:
         type: secret
