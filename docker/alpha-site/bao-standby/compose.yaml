@@ -60,7 +60,7 @@ services:
   bao-standby:
     profiles: ["break-glass"]
     container_name: bao-standby
-    image: ghcr.io/openbao/openbao:2.6.2@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
+    image: ghcr.io/openbao/openbao:2.7.0@sha256:71156a1c6623a5fa3f5e61b0c6a8ead0faf0df29a778339188443551995d1315
     restart: unless-stopped
     depends_on:
       - standby-postgres
