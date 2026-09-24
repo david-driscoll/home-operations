@@ -53,6 +53,10 @@ spec:
         # stack run lands this entry, that server's login fails at authentik
         # with an unregistered-redirect error, well before ToolHive is reached.
         - url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/oauth/callback
+        # ../toolport-mcp's auth server -- the OAuth door in front of
+        # toolport. Same federation as agent-tools-mcp above, same caveat: its
+        # login fails at authentik until an `applications` stack run lands this.
+        - url: https://toolport-mcp.agents.${ROOT_DOMAIN}/oauth/callback
       propertyMappings:
         - email
         - openid

@@ -1,0 +1,99 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../agent-tools-servers/docs.yaml.
+#
+# The OAuth door to toolport. Modelled line for line on
+# ../agent-tools-mcp/virtualmcpserver.yaml (read its comments for the why of
+# each auth-server field); what differs is the hostname
+# (toolport-mcp.agents.<root domain>, ./httproute.yaml) and the group.
+#
+# Tool names come out as `toolport-<profile>_<toolport tool>`, e.g.
+# `toolport-infrastructure_toolport_search_tools`: conflictResolution `prefix`
+# is required here, since every backend is the same toolport and expose
+# identical meta-tool names.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: VirtualMCPServer
+metadata:
+  name: toolport
+spec:
+  groupRef:
+    name: toolport
+  incomingAuth:
+    type: oidc
+    oidcConfigRef:
+      name: toolport
+      audience: https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp
+      resourceUrl: https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp
+  authServerConfig:
+    issuer: https://toolport-mcp.agents.${ROOT_DOMAIN}
+    upstreamProviders:
+      - name: authentik
+        type: oauth2
+        oauth2Config:
+          allowPrivateIPs: true
+          authorizationEndpoint: https://authentik.${ROOT_DOMAIN}/application/o/authorize/
+          tokenEndpoint: https://authentik.${ROOT_DOMAIN}/application/o/token/
+          userInfo:
+            endpointUrl: https://authentik.${ROOT_DOMAIN}/application/o/userinfo/
+          # The shared `toolhive` authentik client; its allowedRedirectUris
+          # (../toolhive/definition.yaml) carries this server's callback.
+          clientId: toolhive
+          clientSecretRef:
+            name: toolhive-oidc
+            key: client-secret
+          redirectUri: https://toolport-mcp.agents.${ROOT_DOMAIN}/oauth/callback
+          scopes:
+            - openid
+            - profile
+            - email
+            - offline_access
+    baselineClientScopes:
+      - openid
+      - offline_access
+    storage:
+      type: redis
+      redis:
+        addr: toolhive-valkey.${NAMESPACE}.svc.cluster.local:6379
+        aclUserConfig:
+          passwordSecretRef:
+            name: toolhive-valkey
+            key: password
+    signingKeySecretRefs:
+      - name: toolhive-authserver-keys
+        key: signing.pem
+    hmacSecretRefs:
+      - name: toolhive-authserver-keys
+        key: hmac
+  outgoingAuth:
+    source: inline
+    # EVERY backend in ./remoteproxies.yaml, or vmcp exits 1 at startup
+    # ("environment variable … not set or empty") -- see
+    # ../agent-tools-mcp/virtualmcpserver.yaml.
+    backends:
+      toolport-postgres:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-postgres
+      toolport-infrastructure:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-infrastructure
+      toolport-networking:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-networking
+      toolport-home:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-home
+      toolport-media:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-media
+      toolport-research:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: toolport-research
+  serviceType: ClusterIP
+  config:
+    aggregation:
+      conflictResolution: prefix

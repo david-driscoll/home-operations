@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./secretstore.yaml
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml
+  - ./networkpolicy.yaml
+  - ./definition.yaml
+configMapGenerator:
+  # toolport's registry TEMPLATE: servers, profiles, and httpClients whose
+  # tokenSha256 values are ESO Go templates. The `${APP}-registry`
+  # ExternalSecret (./externalsecret.yaml) renders it into the Secret the pod
+  # mounts. It stays a real .json file (the templates sit inside JSON strings)
+  # so `jq` and editors can still check it.
+  #
+  # Flux substitution stays ON: the home-assistant URL needs the root domain.
+  # envsubst runs first and leaves the double-brace templates alone; ESO then
+  # renders those.
+  #
+  # disableNameSuffixHash: the ExternalSecret's templateFrom names it literally.
+  - name: ${APP}-registry-template
+    files:
+      - registry.json=./resources/registry.json
+    options:
+      disableNameSuffixHash: true
