@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "discoveryMode": "lazy",
+  "humanApproval": false,
+  "allowAgentControl": false,
+  "servers": [
+    { "id": "postgres", "name": "Postgres", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-postgres-proxy.agents.svc.cluster.local:8080/mcp" },
+
+    { "id": "kubernetes", "name": "Kubernetes", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-kubernetes-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "proxmox-twilight-sparkle", "name": "Proxmox twilight-sparkle", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-twilight-sparkle-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "proxmox-celestia", "name": "Proxmox celestia", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-celestia-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "proxmox-luna", "name": "Proxmox luna", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-luna-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "proxmox-alpha-site", "name": "Proxmox alpha-site", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-alpha-site-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "docker-celestia", "name": "Docker celestia", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-docker-celestia-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "docker-luna", "name": "Docker luna", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-docker-luna-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "docker-alpha-site", "name": "Docker alpha-site", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-docker-alpha-site-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "unifi-network", "name": "UniFi Network", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-unifi-network-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "unifi-protect", "name": "UniFi Protect", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-unifi-protect-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "unifi-access", "name": "UniFi Access", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-unifi-access-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "tailscale", "name": "Tailscale", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-tailscale-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "github", "name": "GitHub", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-github-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "pulumi", "name": "Pulumi", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-pulumi-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "openbao", "name": "OpenBao", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-openbao-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "home-assistant", "name": "Home Assistant", "transport": "http", "source": "manual", "url": "https://home.${ROOT_DOMAIN}/api/mcp", "env": [{ "key": "HOME_ASSISTANT_TOKEN", "secret": true }] },
+
+    { "id": "arr-plex", "name": "arr-mcp (Plex)", "transport": "http", "source": "manual", "url": "http://arr-mcp-plex.equestria.svc.cluster.local:6060/mcp", "env": [{ "key": "ARR_PLEX_TOKEN", "secret": true }] },
+    {
+      "id": "arr-jellyfin",
+      "name": "arr-mcp (Jellyfin)",
+      "transport": "http",
+      "source": "manual",
+      "url": "http://arr-mcp-jellyfin.equestria.svc.cluster.local:6060/mcp",
+      "env": [{ "key": "ARR_JELLYFIN_TOKEN", "secret": true }]
+    },
+    { "id": "teamarr", "name": "Teamarr", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-teamarr-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "ecm", "name": "Enhanced Channel Manager", "transport": "http", "source": "manual", "url": "http://ecm-mcp.equestria.svc.cluster.local:6101/mcp", "env": [{ "key": "ECM_TOKEN", "secret": true }] },
+
+    { "id": "context7", "name": "Context7", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-context7-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "microsoft-docs", "name": "Microsoft Learn", "transport": "http", "source": "manual", "url": "https://learn.microsoft.com/api/mcp" },
+    { "id": "nuget", "name": "NuGet", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-nuget-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "degoog", "name": "degoog", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-degoog-proxy.agents.svc.cluster.local:4443/mcp" }
+  ],
+  "profiles": [
+    { "id": "postgres", "name": "Postgres", "enabledServerIds": ["postgres"] },
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "enabledServerIds": ["kubernetes", "proxmox-twilight-sparkle", "proxmox-celestia", "proxmox-luna", "proxmox-alpha-site", "docker-celestia", "docker-luna", "docker-alpha-site", "github", "pulumi", "openbao"]
+    },
+    { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale"] },
+    { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
+    { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm", "teamarr"] },
+    { "id": "research", "name": "Research", "enabledServerIds": ["context7", "microsoft-docs", "nuget", "degoog"] }
+  ],
+  "activeProfileId": "infrastructure",
+  "httpClients": [
+    { "id": "postgres", "label": "postgres", "profile": "postgres", "tokenSha256": "{{ .TOKEN_POSTGRES | sha256sum }}" },
+    { "id": "infrastructure", "label": "infrastructure", "profile": "infrastructure", "tokenSha256": "{{ .TOKEN_INFRASTRUCTURE | sha256sum }}" },
+    { "id": "networking", "label": "networking", "profile": "networking", "tokenSha256": "{{ .TOKEN_NETWORKING | sha256sum }}" },
+    { "id": "home", "label": "home", "profile": "home", "tokenSha256": "{{ .TOKEN_HOME | sha256sum }}" },
+    { "id": "media", "label": "media", "profile": "media", "tokenSha256": "{{ .TOKEN_MEDIA | sha256sum }}" },
+    { "id": "research", "label": "research", "profile": "research", "tokenSha256": "{{ .TOKEN_RESEARCH | sha256sum }}" }
+  ]
+}

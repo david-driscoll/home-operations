@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+#MISE description="Refresh the vendored toolport skill body from the upstream version pinned in its header"
+#
+# toolport-skill-sync — rewrite the upstream half of .claude/skills/toolport/SKILL.md.
+#
+#   mise run toolport-skill-sync           # rewrite in place
+#   mise run toolport-skill-sync --check   # exit 1 if the body is stale (CI)
+#
+# The skill file pins its upstream source in a header comment:
+#
+#   source: https://raw.githubusercontent.com/btsouth/toolport/<tag>/.../SKILL.md
+#
+# Renovate bumps <tag> (the `toolport` group in .github/renovate.json5, with
+# the toolport-gateway image), which on its own is HALF a change -- the URL
+# moves and the text under it does not. This fetches the pinned file, drops its
+# frontmatter, and replaces everything between `<!-- BEGIN upstream -->` and
+# `<!-- END upstream -->`. The frontmatter and the "In this estate" section
+# outside the markers are ours and are never touched.
+#
+# .github/workflows/toolport-skill-sync.yaml runs this on Renovate's PR and
+# pushes the result, so a bump lands complete.
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+skill="$root/.claude/skills/toolport/SKILL.md"
+check=false
+[[ "${1:-}" == "--check" ]] && check=true
+
+url=$(sed -n 's/^source: \(https:\/\/[^ ]*\)$/\1/p' "$skill" | head -n1)
+if [[ -z "$url" ]]; then
+  echo "toolport-skill-sync: no 'source: https://…' line in $skill" >&2
+  exit 1
+fi
+
+upstream=$(mktemp)
+body=$(mktemp)
+out=$(mktemp)
+trap 'rm -f "$upstream" "$body" "$out"' EXIT
+
+curl -fsSL --max-time 30 "$url" -o "$upstream"
+
+# Upstream body = everything after the closing `---` of its frontmatter, minus
+# the one blank line that follows it. Kept in a FILE, not an awk -v string:
+# -v interprets backslash escapes, which would corrupt any in the text.
+awk 'n >= 2 { print; next } /^---$/ { n++ }' "$upstream" | sed '1{/^$/d;}' > "$body"
+if [[ ! -s "$body" ]]; then
+  echo "toolport-skill-sync: fetched $url but found no body after its frontmatter" >&2
+  exit 1
+fi
+
+awk -v bodyfile="$body" '
+  /^<!-- BEGIN upstream -->$/ {
+    print
+    while ((getline line < bodyfile) > 0) print line
+    skipping = 1
+    next
+  }
+  /^<!-- END upstream -->$/ { skipping = 0 }
+  !skipping { print }
+' "$skill" > "$out"
+
+if ! grep -q '^<!-- BEGIN upstream -->$' "$out" || ! grep -q '^<!-- END upstream -->$' "$out"; then
+  echo "toolport-skill-sync: BEGIN/END upstream markers missing from $skill" >&2
+  exit 1
+fi
+
+if cmp -s "$skill" "$out"; then
+  echo "toolport-skill-sync: up to date with $url"
+  exit 0
+fi
+
+if $check; then
+  echo "toolport-skill-sync: $skill is stale against $url -- run 'mise run toolport-skill-sync'" >&2
+  diff -u "$skill" "$out" >&2 || true
+  exit 1
+fi
+
+cp "$out" "$skill"
+echo "toolport-skill-sync: updated $skill from $url"

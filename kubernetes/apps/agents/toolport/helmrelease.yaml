@@ -1,0 +1,137 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ${APP}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      *app :
+        annotations:
+          # Rolls the pod when the rendered registry Secret, the client-token
+          # Secret or the backend-token Secret changes. The registry is a
+          # subPath mount, which never live-updates, so without this a git
+          # change would sit unused until a reschedule.
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        pod:
+          securityContext:
+            # The image's USER is the NAME `toolport` (useradd --uid 10001 in
+            # upstream's Dockerfile); runAsNonRoot cannot verify a name, so
+            # the uid has to be spelled out.
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            fsGroupChangePolicy: OnRootMismatch
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/btsouth/toolport-gateway
+              tag: v1.20.0@sha256:7e3bb4f8b53fc10c12d81b77c90d4a07f123cd76a3be20ae45b7ecbb0b6c6d95
+            # No command/args: the image's ENTRYPOINT is already
+            # `toolport-gateway --http 8765`. Use the flag, not TOOLPORT_HTTP --
+            # the env form is ignored whenever stdin is a pipe.
+            env:
+              TOOLPORT_HTTP_HOST: 0.0.0.0
+              TOOLPORT_REGISTRY: /data/registry.json
+              TOOLPORT_DATA_DIR: /data
+              HOME: /data
+              # Four meta-tools (status / search / call / fetch_result) plus
+              # run_script, instead of every backend's catalogue.
+              TOOLPORT_DISCOVERY: lazy
+              # Prometheus text at GET /metrics -- behind the same bearer as
+              # everything else, so no ServiceMonitor until one carries a token.
+              TOOLPORT_METRICS: "1"
+              # Switches secret lookups to the file backend; see
+              # ./externalsecret.yaml. Only this key: the gateway never needs
+              # the plaintext client tokens, just their hashes in the registry.
+              TOOLPORT_SECRET_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOOLPORT_SECRET_KEY
+            envFrom:
+              # TOOLPORT_SECRET_<KEY> bearer tokens for the backends toolport
+              # calls directly. See ./externalsecret.yaml.
+              - secretRef:
+                  name: ${APP}-backends
+            probes:
+              # tcpSocket, not HTTP: every route, `/` included, sits behind the
+              # bearer check and answers 401 to an anonymous probe.
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8765
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  failureThreshold: 5
+              readiness: *probe
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+
+    persistence:
+      # The audit log, integrity pins, secrets.enc and the registry lock. An
+      # emptyDir on purpose: the registry comes from git by way of ESO, and
+      # nothing toolport writes here is worth a PVC or a backup.
+      data:
+        type: emptyDir
+        globalMounts:
+          - path: /data
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+      # The ESO-rendered registry (`${APP}-registry`, ./externalsecret.yaml),
+      # mounted as a single FILE inside the writable /data emptyDir rather
+      # than as its own directory. toolport creates `registry.json.lock` next
+      # to the registry on every load, so the directory must be writable;
+      # nothing rewrites the file itself.
+      registry:
+        type: secret
+        name: ${APP}-registry
+        globalMounts:
+          - path: /data/registry.json
+            subPath: registry.json
+            readOnly: true
+
+    service:
+      *app :
+        controller: *app
+        ports:
+          http:
+            port: 8765

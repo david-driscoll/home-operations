@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The EXTERNAL door to ../toolport: a ToolHive VirtualMCPServer that gives
+# toolport the one thing it lacks -- an OAuth authorization server, federated
+# to authentik -- published at toolport-mcp.agents.<root domain> on the
+# internal gateway, reachable from the LAN and over Tailscale (./httproute.yaml).
+#
+#   client --OAuth--> vmcp-toolport (this) --bearer per profile-->
+#     MCPRemoteProxy toolport-<profile> --> toolport:8765 --> ToolHive backends
+#
+# toolport itself only speaks static bearer tokens, which is fine for
+# agentboard (in-namespace, NetworkPolicy-gated) but not for a laptop. Each
+# profile is one MCPRemoteProxy carrying that profile's token, so a signed-in
+# user sees every profile, prefixed `toolport-<profile>_…`.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolport-mcp
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The shared auth-server keys and toolhive-oidc client secret.
+    - name: toolhive
+      namespace: *namespace
+    # The `toolport` Secret the MCPExternalAuthConfigs read.
+    - name: toolport
+      namespace: *namespace
+  path: ./kubernetes/apps/agents/toolport-mcp
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  # Same reasoning as ../agent-tools-mcp/ks.yaml: `Degraded` (some profile
+  # unreachable) is a normal serving state for this CRD; only `Failed` blocks.
+  healthCheckExprs:
+    - apiVersion: toolhive.stacklok.dev/v1beta1
+      kind: VirtualMCPServer
+      failed: status.phase == 'Failed'
+      current: status.phase == 'Ready' || status.phase == 'Degraded'
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
