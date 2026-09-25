@@ -32,7 +32,7 @@
     "node-unifi": "^2.5.1",
     "openapi-fetch": "^0.17.0",
     "simple-oauth2": "^5.1.0",
-    "vscode-ws-jsonrpc": "^3.5.0"
+    "vscode-ws-jsonrpc": "^4.0.2"
   },
   "devDependencies": {
     "@types/node-unifi": "^2.5.1",

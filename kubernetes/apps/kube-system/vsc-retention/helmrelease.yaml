@@ -103,6 +103,34 @@ spec:
                 # -- that needs a finalizer strip, which is a human decision, not something
                 # this job does unattended. The growth alert (VolumeSnapshotContentsGrowing)
                 # is what catches that class of stall.
+
+                # In-cluster auth, spelled out rather than auto-detected. On
+                # shining-armor kubectl's in-cluster detection fails and it falls
+                # back to localhost:8080 -- every attempt of the 2026-09-24 run
+                # died that way within a second, SA token mounted. A kubeconfig
+                # that names the mounted files works on any node; tokenFile keeps
+                # the token out of argv and logs and follows kubelet's rotation.
+                SA=/var/run/secrets/kubernetes.io/serviceaccount
+                [ -r "$SA/token" ] || { echo "No service-account token at $SA" >&2; exit 1; }
+                export KUBECONFIG=/tmp/kubeconfig
+                cat > "$KUBECONFIG" <<EOF
+                apiVersion: v1
+                kind: Config
+                clusters:
+                  - name: in-cluster
+                    cluster:
+                      server: https://kubernetes.default.svc
+                      certificate-authority: $SA/ca.crt
+                users:
+                  - name: sa
+                    user:
+                      tokenFile: $SA/token
+                contexts:
+                  - name: in-cluster
+                    context: {cluster: in-cluster, user: sa}
+                current-context: in-cluster
+                EOF
+
                 RETENTION_DAYS="$${RETENTION_DAYS:-7}"
                 CUTOFF_EPOCH=$(date -u -d "-$${RETENTION_DAYS} days" +%s)
                 echo "Reclaiming orphaned VolumeSnapshotContents older than $${RETENTION_DAYS} days (cutoff epoch $${CUTOFF_EPOCH})"

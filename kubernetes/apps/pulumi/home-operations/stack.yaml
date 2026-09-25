@@ -164,7 +164,7 @@ spec:
           initContainers:
             - name: vals
               # renovate: datasource=docker depName=jdxcode/mise
-              image: jdxcode/mise:2026.9.12
+              image: jdxcode/mise:2026.9.13
               # NO `command:`, and no shell anywhere in this container. The
               # image's ENTRYPOINT is /usr/local/bin/mise, so `args` below are
               # mise's own arguments.
