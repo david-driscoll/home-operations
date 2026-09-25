@@ -12,6 +12,6 @@ talosVersion: v1.14.1
 # would have upgraded Kubernetes as a side effect of `talos:apply`. Realigned
 # 2026-09-21 -- if you change one, change the other in the same PR.
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
-kubernetesVersion: v1.37.0
+kubernetesVersion: v1.37.1
 # renovate: datasource=github-releases depName=prometheus-operator/prometheus-operator
 prometheusOperatorVersion: v0.94.1
