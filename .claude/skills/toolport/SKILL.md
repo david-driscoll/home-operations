@@ -18,7 +18,7 @@ agentboard mounts this same file user-wide, at
 every agentboard session on the next deploy.
 
 renovate: datasource=github-releases depName=btsouth/toolport
-source: https://raw.githubusercontent.com/btsouth/toolport/v1.20.0/packaging/agent-plugin/toolport/skills/toolport/SKILL.md
+source: https://raw.githubusercontent.com/btsouth/toolport/v1.21.2/packaging/agent-plugin/toolport/skills/toolport/SKILL.md
 -->
 
 <!-- BEGIN upstream -->
