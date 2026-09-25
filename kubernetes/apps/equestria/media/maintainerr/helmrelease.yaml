@@ -54,20 +54,6 @@ spec:
               UI_HOSTNAME: 0.0.0.0
               UI_PORT: &port 6246
               LOG_LEVEL: info
-              # Only needed when reverse-proxying Maintainerr from a subfolder
-              # (must be "/subfolder", no trailing slash). This app gets its own
-              # hostname, so it stays unset.
-              # BASE_PATH: /maintainerr
-              # Raises Maintainerr's GitHub API rate limit. `github-token` is the
-              # GitHub App installation token minted in kube-system
-              # (apps/kube-system/secrets/github-app-token) and reflected into
-              # every namespace by emberstack, equestria included -- same secret
-              # renovate and dynacat read, no ExternalSecret needed here.
-              GITHUB_TOKEN:
-                valueFrom:
-                  secretKeyRef:
-                    name: github-token
-                    key: token
               # Only for a separate front end on a different origin calling the
               # API cross-origin -- the bundled UI (incl. via localhost) never
               # needs this.
