@@ -35,7 +35,9 @@ directives:
   connect-src:
     - "'self'"
     - "blob:"
-    - "https://${OIDC_ISSUER}/"
+    - "https://authentik.${ROOT_DOMAIN}/"
+    - "https://iris.${ROOT_DOMAIN}/"
+    - "https://canterlot.${ROOT_DOMAIN}/"
   default-src:
     - "'none'"
   font-src:
