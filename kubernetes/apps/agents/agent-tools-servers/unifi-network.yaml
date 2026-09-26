@@ -1,20 +1,63 @@
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
-# unifi-network-mcp (PyPI) has no prebuilt container of its own and is not in
-# ToolHive's own catalog (unlike ./kubernetes.yaml's cataloged image),
-# so this runs it on Astral's official `uv` image rather than adding a
-# from-scratch Dockerfile+CI pair for three near-identical packages.
-# `ghcr.io/astral-sh/uv` ships `ENTRYPOINT []` / `CMD ["/usr/local/bin/uv"]`
-# (verified against its published image config), so the top-level MCPServer
-# `image`+`args` fields cannot be relied on to produce `uv tool run ...` --
-# podTemplateSpec below sets the container's `command`/`args` explicitly
-# instead, the same escape hatch ./docs.yaml uses for its
-# /tmp emptyDir.
+# unifi-network-mcp (github.com/sirkirby/unifi-mcp, apps/network) on
+# upstream's own image. The three unifi-*-mcp servers used to run from PyPI on
+# Astral's `uv` image, back when upstream published no container; it now
+# publishes one per server to GHCR, tagged with the same versions as PyPI.
 #
-# `transport: stdio` because the package itself speaks stdio (see this repo's
-# own .mcp.json, which runs it as `uvx unifi-network-mcp` today) -- the
-# operator's proxy-runner is what turns that into Streamable HTTP.
+# WHY streamable-http AND NOT stdio. Read ./openbao.yaml's header for the
+# mechanism: ToolHive's stdio proxy answers `initialize` from a cache it never
+# resets, including when it re-attaches to a restarted backend, and the Python
+# MCP SDK refuses every request on a session that has not seen `initialize`.
+# These packages run mcp 2.2.0, where that gate is
+# mcp/server/runner.py (`ServerRunner._on_request`), and it logs nothing when
+# it fires -- the backend just answers -32602 "Invalid request parameters". So
+# under stdio, any backend-only restart (node drain, OOM, a Reloader roll on a
+# credential change) broke every UniFi tool, old sessions and new, until the
+# PROXY Deployment restarted too.
+#
+# The package serves Streamable HTTP at /mcp itself (UNIFI_MCP_HTTP_ENABLED),
+# but two things in its unifi_mcp_shared/transport.py shape how:
+#   - It binds HTTP only when the Python process is PID 1, which it is in
+#     upstream's image and was NOT under `uv tool run` (uv is PID 1 there).
+#     Outside PID 1 it also keeps stdio as the primary transport, which exits
+#     on stdin EOF and takes HTTP down with it. Upstream's image, with
+#     `python` itself as the container command (below), satisfies both;
+#     UNIFI_MCP_HTTP_FORCE does not.
+#   - It has NO stateless option, and stateful sessions do not reliably
+#     survive a backend restart here. ToolHive's HTTP proxy can recover a
+#     session it knows (it replays the stored `initialize` to the new pod --
+#     pkg/transport/proxy/transparent, `reinitializeAndReplay`), but it also
+#     polls the backend StatefulSet's readyReplicas and EXITS if it catches
+#     it at 0 (pkg/container/runtime/monitor.go -> pkg/runner/runner.go),
+#     restarting the proxy and forgetting every session. vMCP never
+#     re-initializes a backend session, so a client that held one gets
+#     `404 Session not found` from this server until it reconnects. Tested
+#     2026-09-26 by deleting `-0` pods: in the stateful run, two of three
+#     proxies recovered their sessions and one restarted and lost them; over
+#     three later rounds of four, 8 of 12 backend restarts restarted the
+#     proxy too.
+#
+# So the command below runs the package's own `main()` with the SDK's
+# `stateless_http` default switched on first -- the same switch ./docker
+# passes to `app.run()` directly, applied here because this package calls
+# `run_streamable_http_async()` itself. Stateless means no session to lose:
+# `tools/list` with no handshake returns 200, and in those rounds every server
+# answered again within 14-45s of its pod being deleted, proxy restart or not.
+# Nothing in these packages needs a session (no
+# elicitation, sampling, or server-sent notifications), and lazily loaded
+# tools live in the process, not the session. The wrapper touches only mcp's
+# public `MCPServer` class; if an image bump renames that method or its
+# keyword, the process exits at startup (AttributeError or TypeError) and the
+# pod crash-loops, rather than quietly running stateful.
+#
+# UNIFI_MCP_ENABLE_DNS_REBINDING_PROTECTION=false because the proxy rewrites
+# Host to its own target -- an operator-generated Service name, or a pod's
+# IP:port if it ever pins a session -- which this file should not hard-code
+# into an allow-list. Upstream's runtime.py documents "false" for exactly
+# this Kubernetes/proxy case. The protection guards browsers against
+# localhost-bound servers; this one is reachable only in-cluster.
 #
 # NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
 # header. This server joins ../agent-tools-mcp's MCPGroup instead.
@@ -23,10 +66,10 @@ kind: MCPServer
 metadata:
   name: toolhive-unifi-network
 spec:
-  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-  transport: stdio
+  image: ghcr.io/sirkirby/unifi-network-mcp:0.33.0@sha256:1135662e79759beb907697ccb7656eab0de9ca3beefb09d730cd3ed8bc1f3cf5
+  transport: streamable-http
   proxyPort: 8080
-  proxyMode: streamable-http
+  mcpPort: 8000
   groupRef:
     name: agent-tools
 
@@ -38,6 +81,16 @@ spec:
     - name: UNIFI_NETWORK_SITE
       value: default
     - name: UNIFI_NETWORK_VERIFY_SSL
+      value: "false"
+    # The image reads these, not the operator-injected MCP_TRANSPORT/MCP_PORT.
+    - name: UNIFI_MCP_HTTP_ENABLED
+      value: "true"
+    - name: UNIFI_MCP_HOST
+      value: 0.0.0.0
+    # Must match `mcpPort` above.
+    - name: UNIFI_MCP_PORT
+      value: "8000"
+    - name: UNIFI_MCP_ENABLE_DNS_REBINDING_PROTECTION
       value: "false"
 
   podTemplateSpec:
@@ -57,15 +110,23 @@ spec:
         reloader.stakater.com/auto: "true"
     spec:
       volumes:
-        # `uv tool run` (uvx) resolves and caches the package under
-        # $HOME/.cache/uv on first call; the operator runs this pod with a
-        # read-only root filesystem, same as ./docs.yaml.
-        - name: uv-cache
+        # The operator runs this pod with a read-only root filesystem, same
+        # as ./docs.yaml, and as uid 1000, which has no home in the image.
+        - name: tmp
           emptyDir: {}
       containers:
         - name: mcp
-          command: ["/usr/local/bin/uv"]
-          args: ["tool", "run", "unifi-network-mcp"]
+          # `python` (the image's venv, first on PATH) runs as PID 1 itself,
+          # as the image's own CMD would -- see the header for both halves.
+          command:
+            - python
+            - -c
+            - >-
+              import functools;
+              from mcp.server.mcpserver import MCPServer;
+              MCPServer.run_streamable_http_async = functools.partialmethod(MCPServer.run_streamable_http_async, stateless_http=True);
+              from unifi_network_mcp.main import main;
+              main()
           env:
             - name: HOME
               value: /tmp
@@ -73,14 +134,14 @@ spec:
             - secretRef:
                 name: toolhive-unifi-network
           volumeMounts:
-            - name: uv-cache
+            - name: tmp
               mountPath: /tmp
           # Flagged by Codacy (real finding -- see
           # ./context7.yaml's comment). Explicit rather
           # than relying on the operator's own default (which the comment
           # above already claims is read-only) -- readOnlyRootFilesystem is
-          # safe here specifically because uv-cache above gives `uv`/HOME
-          # somewhere writable.
+          # safe here specifically because the tmp emptyDir above gives
+          # HOME somewhere writable.
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
