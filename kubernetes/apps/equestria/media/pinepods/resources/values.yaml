@@ -66,6 +66,34 @@ env:
   VALKEY_HOST: "valkey.database.svc.cluster.local"
   VALKEY_PORT: "6379"
 
+  # SSO via authentik. The provider and its credential come from
+  # ../definition.yaml, through the oidc_* extract in ../externalsecret.yaml.
+  # PinePods reads these at every boot but only inserts a provider row when
+  # none exists for this client id, and never updates it: a later edit here
+  # needs the row fixed in Settings (or deleted) first. The first six must all
+  # be non-empty, or the API refuses to start ("Incomplete OIDC configuration").
+  # Standard login stays enabled: it is the admin's way back in.
+  OIDC_PROVIDER_NAME: "authentik"
+  OIDC_CLIENT_ID: "{{ .oidc_client_id }}"
+  OIDC_CLIENT_SECRET: "{{ .oidc_client_secret }}"
+  OIDC_AUTHORIZATION_URL: "{{ .oidc_authorization_url }}"
+  OIDC_TOKEN_URL: "{{ .oidc_token_url }}"
+  OIDC_USER_INFO_URL: "{{ .oidc_userinfo_url }}"
+  OIDC_BUTTON_TEXT: "Sign in with authentik"
+  OIDC_SCOPE: "openid email profile"
+  OIDC_NAME_CLAIM: "name"
+  OIDC_EMAIL_CLAIM: "email"
+  OIDC_USERNAME_CLAIM: "preferred_username"
+  # The role gate. Left unset these default to roles / user / admin, and since
+  # authentik sends no `roles` claim every login would bounce with
+  # error=no_access&details=invalid_roles (handlers/auth.rs in 0.9.0). The
+  # `profile` scope carries authentik's `groups`, so family may sign in and
+  # admins become PinePods admins. An existing account matched by email is
+  # re-synced on each login, including losing admin if not in `admins`.
+  OIDC_ROLES_CLAIM: "groups"
+  OIDC_USER_ROLE: "family"
+  OIDC_ADMIN_ROLE: "admins"
+
   # Application Configuration
   # -- Debug mode
   # Set to true for additional logging
