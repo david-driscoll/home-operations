@@ -183,3 +183,47 @@ spec:
       # Service URL, which is useless to backrest -- it runs in a container on
       # celestia, not in this cluster. Must match httproute.yaml's hostname.
       external-endpoint: "https://s3.git.${ROOT_DOMAIN}"
+---
+# git-pages' site store (apps/coder/git-pages). Every published site is a
+# manifest plus content-addressed blobs in here; git-pages keeps no other state.
+#
+# Backed up even though every site is, in principle, rebuildable: rebuilding
+# means re-running the publish workflow in every repository that has one, by
+# hand, and blobs are deduplicated so the bucket stays small.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageBucket
+metadata:
+  name: git-pages
+  annotations:
+    driscoll.dev/backup: "true"
+spec:
+  clusterRef:
+    name: ${APP}
+  globalAlias: git-pages
+  deletionPolicy: Retain
+  keyPermissions:
+    - keyRef:
+        name: git-pages
+      read: true
+      write: true
+      owner: false
+---
+# git-pages' S3 identity.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: git-pages
+spec:
+  clusterRef:
+    name: ${APP}
+  name: git-pages
+  neverExpires: true
+  permissions:
+    createBucket: false
+  secretTemplate:
+    # git-pages reads only `access-key-id` and `secret-access-key` from this;
+    # endpoint, region and bucket are fixed in its config.toml. No
+    # includeBucketName -- see the note on the renovate key.
+    name: ${APP}-git-pages-credentials
+    includeEndpoint: true
+    includeRegion: true

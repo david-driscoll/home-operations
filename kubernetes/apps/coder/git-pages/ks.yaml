@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app git-pages
+  namespace: &namespace coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The bucket and the GarageKey Secret this app reads live in forgejo-garage,
+    # which is wait: true -- so the Secret exists before the pod references it.
+    - name: forgejo-garage
+      namespace: coder
+    # Publishing is authorized by asking Forgejo's API who the upload token
+    # belongs to. Not needed to START, but a git-pages that is up while the
+    # forge is not rejects every publish.
+    - name: forgejo
+      namespace: coder
+  path: ./kubernetes/apps/coder/git-pages
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # No components/volsync: all state is in the forgejo-garage `git-pages`
+      # bucket, which has its own backup opt-in.

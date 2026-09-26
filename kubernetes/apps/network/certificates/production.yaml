@@ -57,3 +57,7 @@ spec:
     # apps/coder/kube-coder/ks.yaml). A wildcard so adding a user is not a
     # certificate change.
     - "*.dev.${ROOT_DOMAIN}"
+    # git-pages team sites (<org>.pages.${ROOT_DOMAIN}; see
+    # apps/coder/git-pages). A wildcard so a new Forgejo org publishing pages is
+    # not a certificate change.
+    - "*.pages.${ROOT_DOMAIN}"
