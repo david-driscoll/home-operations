@@ -1,0 +1,234 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# tdarr-mcp (github.com/maximeallanic/tdarr-mcp) -- Tdarr's /api/v2 as MCP
+# tools: libraries and scans, nodes and workers, the file/job tables, plugins,
+# stats, backups. A TypeScript server on the official MCP SDK that speaks
+# stdio only, so the operator's proxy-runner turns it into Streamable HTTP,
+# same as ./context7.yaml.
+#
+# RUN FROM SOURCE, PINNED TO A COMMIT. Upstream publishes nothing to run: no
+# image, no npm package, no releases or tags, and package.json has no `bin`
+# and no `prepare` script, so neither `npx github:...` nor a git dependency
+# yields anything executable. What it does ship is a `bun.lock`, and Bun runs
+# the TypeScript source directly -- so the pod downloads the pinned commit's
+# tarball, `bun install --frozen-lockfile` (MCP SDK 1.29.0, integrity-checked
+# against the lockfile), and execs `bun src/main.ts`. Same fetch-on-start
+# shape as the `npx -y` servers next door.
+#
+# RENOVATE DOES NOT TRACK THE COMMIT. The .github/renovate.json5 annotation
+# manager captures no `currentDigest`, so a git-refs pin cannot be expressed
+# through it, and upstream has had one commit since February. To move it:
+# read the diff, change the SHA in `args` below, and re-check the allow-list
+# against the new tool set. The bun IMAGE is tracked (kubernetes manager,
+# digest-pinned).
+#
+# THE SCRIPT HAS NO DOLLAR SIGN IN IT, deliberately: ./ks.yaml runs Flux
+# postBuild.substitute over this file, and a shell variable would be read as
+# a Flux variable. Keep it that way. (It also survives a container restart:
+# the emptyDir outlives the container, hence the `rm -rf`.)
+#
+# STDOUT IS THE MCP STREAM. The proxy reads the container's stdout as
+# JSON-RPC from the first byte, so `bun install`'s progress goes to stderr
+# (`1>&2`). Drop that redirect and every session starts with a parse error.
+#
+# SMOKE-TESTED 2026-09-25 against this exact image and script, under
+# `docker run --read-only --tmpfs /tmp --user 1000:1000 --cap-drop ALL`:
+# `initialize` answers in ~3s, stdout carries nothing but JSON-RPC, and
+# `server/discover` -- the probe VirtualMCPServer/agent-tools health-checks
+# every backend with -- gets `-32601 Method not found` and the process
+# SURVIVES it. That is the failure that killed toolhive-postgres's old
+# Python backend every five minutes; the TypeScript SDK does not have it.
+#
+# TOOLS ARE FILTERED: 65 of upstream's 105, by decision (2026-09-25). tdarr-mcp
+# has no read-only or destructive switch of its own, so the MCPToolConfig
+# below is the only gate. It is an ALLOW-list, enforced in the ToolHive proxy:
+# a filtered tool is missing from `tools/list` AND a `tools/call` naming it is
+# rejected there. Toolport and agent-tools both come through this proxy, so
+# both see the same 65. Left out, in the same spirit as ./teamarr.yaml's
+# ENABLE_DESTRUCTIVE=false and arr-mcp's `destructive: false`:
+#
+#   - Deleting from disk or the DB: delete_file, bulk_delete_files,
+#     delete_unhealthy_files, delete_cache_file, remove_library_files,
+#     delete_backup, delete_job_report(s).
+#   - Raw DB writes: cruddb, bulk_update_files (arbitrary fields by ID),
+#     stats_space_saved_add.
+#   - Users and auth: admin_*, auth_*, public_auth_*, use_token.
+#   - Restart and update: restart_server, restart_ui, restart_node,
+#     disconnect_node, updater_relaunch, update_plugins.
+#   - Plugin code: create_plugin, save_plugin_text, delete_plugin,
+#     copy_community_to_local -- nodes execute plugins, so this is code
+#     execution on the GPU nodes.
+#   - run_help_command (passes free text to ffmpeg/HandBrake), and the
+#     endpoints Tdarr NODES call rather than people: get_new_task,
+#     item_proc_end, update_node_relay, log_job_report, poll_worker_limits,
+#     nodes_version_check, read_plugin, download_plugins, file_upload,
+#     file_download.
+#
+# Kept: every read, plus scans, requeues (set_all_status), staged-file
+# verdicts, library codec/plugin-stack/schedule settings, worker limits and
+# cancel/kill, node settings (update_node is how a node is paused), backups,
+# automations. To widen it, add names to `toolsFilter`; the full upstream
+# list is in src/tools-*.ts at the pinned commit.
+#
+# NO SECRET. The Tdarr HelmRelease (kubernetes/apps/equestria/media/tdarr)
+# does not turn on Tdarr's API auth, and its route's protection is Traefik's
+# `local-user` middleware, which this in-cluster call never passes through.
+# So TDARR_API_KEY stays unset -- tdarr-mcp then sends no `x-api-key` at all.
+# If Tdarr auth is ever enabled, add an ExternalSecret and envFrom it here
+# (see ./context7.yaml for the shape), plus the pod-template reloader
+# annotation those servers carry.
+#
+# TDARR_URL is the ClusterIP Service for the web/API port (8265), not the
+# node-facing `tdarr-server` Service on 8266 -- /api/v2 is served on 8265.
+#
+# EXPECTED TO BE UNREACHABLE 02:00-09:00: Tdarr sheds nightly with the rest of
+# `equestria` (docs/cluster-consolidation/24-power-states.md), exactly like
+# ./teamarr.yaml's backend. This pod stays up through the window; a tool call
+# in it returns "Connection error (is Tdarr running?)".
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead, and is in
+# toolport's `media` profile (../toolport/resources/registry.json).
+#
+# `metadata.name` is the tool-name prefix: clients see
+# `mcp__agent-tools__toolhive-tdarr_<tool>`, and toolport shows `tdarr__<tool>`.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPToolConfig
+metadata:
+  name: toolhive-tdarr
+spec:
+  toolsFilter:
+    # server
+    - tdarr_status
+    - tdarr_is_server_alive
+    - tdarr_get_time_now
+    - tdarr_get_res_stats
+    - tdarr_get_db_statuses
+    - tdarr_get_server_log
+    - tdarr_debug
+    - tdarr_debug_vars
+    - tdarr_performance_stats
+    - tdarr_auth_status
+    - tdarr_updater_check
+    - tdarr_updater_package_index
+    - tdarr_stop_dedupe
+    # stats
+    - tdarr_stats_get_pies
+    - tdarr_stats_get_res_hist
+    - tdarr_stats_get_running_worker_hist
+    - tdarr_stats_get_space_saved
+    - tdarr_stats_get_streams
+    - tdarr_stats_get_worker_verdict_hist
+    # processes
+    - tdarr_get_process_info
+    # database (both are reads of the file tables)
+    - tdarr_search_db
+    - tdarr_client
+    # files
+    - tdarr_create_sample
+    - tdarr_find_duplicates
+    - tdarr_rescan_file
+    - tdarr_scan_individual_file
+    - tdarr_set_all_status
+    - tdarr_transcode_user_verdict
+    # jobs
+    - tdarr_search_job_reports
+    - tdarr_read_job_file
+    - tdarr_list_footprint_reports
+    # libraries
+    - tdarr_get_filescanner_status
+    - tdarr_get_subdirectories
+    - tdarr_verify_folder_exists
+    - tdarr_verify_plugin
+    - tdarr_scan_files
+    - tdarr_kill_file_scanner
+    - tdarr_toggle_folder_watch
+    - tdarr_toggle_schedule
+    - tdarr_update_schedule_block
+    - tdarr_add_audio_codec_exclude
+    - tdarr_update_audio_codec_exclude
+    - tdarr_remove_audio_codec_exclude
+    - tdarr_add_video_codec_exclude
+    - tdarr_update_video_codec_exclude
+    - tdarr_remove_video_codec_exclude
+    - tdarr_add_plugin_include
+    - tdarr_update_plugin_include
+    - tdarr_remove_plugin_include
+    # nodes
+    - tdarr_get_nodes
+    - tdarr_get_node_log
+    - tdarr_update_node
+    - tdarr_alter_worker_limit
+    - tdarr_cancel_worker_item
+    - tdarr_kill_worker
+    - tdarr_sync_plugins
+    # plugins (reads only)
+    - tdarr_search_plugins
+    - tdarr_search_flow_plugins
+    - tdarr_search_flow_templates
+    - tdarr_read_plugin_text
+    # backups
+    - tdarr_get_backups
+    - tdarr_get_backup_status
+    - tdarr_create_backup
+    - tdarr_reset_backup_status
+    # automations
+    - tdarr_run_automation
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-tdarr
+spec:
+  image: oven/bun:1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+  toolConfigRef:
+    name: toolhive-tdarr
+
+  env:
+    - name: TDARR_URL
+      value: http://tdarr.equestria.svc.cluster.local:8265
+    # Bun's install cache and the extracted source both live under HOME; the
+    # operator's read-only root filesystem leaves only the emptyDir below.
+    - name: HOME
+      value: /tmp
+
+  podTemplateSpec:
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        # `mcp` is the operator's fixed container name -- see ./docs.yaml.
+        - name: mcp
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              cd /tmp
+              rm -rf tdarr-mcp
+              mkdir tdarr-mcp
+              cd tdarr-mcp
+              wget -qO- https://codeload.github.com/maximeallanic/tdarr-mcp/tar.gz/5c8b54ab361fa30abe5422bdcbd2a2fbde13cd99 | tar -xz --strip-components=1
+              bun install --frozen-lockfile --production 1>&2
+              exec bun src/main.ts
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

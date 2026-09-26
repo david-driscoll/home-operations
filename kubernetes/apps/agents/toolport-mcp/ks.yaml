@@ -1,18 +1,19 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
 #
-# The EXTERNAL door to ../toolport: a ToolHive VirtualMCPServer that gives
-# toolport the one thing it lacks -- an OAuth authorization server, federated
-# to authentik -- published at toolport-mcp.agents.<root domain> on the
-# internal gateway, reachable from the LAN and over Tailscale (./httproute.yaml).
+# The doors to ../toolport, one per profile. toolport itself only speaks
+# static bearer tokens and picks the profile from which one it is shown; these
+# turn that into one URL per profile, with the token held server-side:
 #
-#   client --OAuth--> vmcp-toolport-mcp (this) --bearer per profile-->
-#     MCPRemoteProxy toolport-<profile> --> toolport:8765 --> ToolHive backends
+#   laptop    --OAuth--> vmcp-toolport-<p>-mcp  (toolport-<p>.agents.<root domain>)
+#                          \
+#   agentboard ------------> MCPRemoteProxy toolport-<p> --Bearer <p>-->
+#                              toolport:8765 --> ToolHive backends
 #
-# toolport itself only speaks static bearer tokens, which is fine for
-# agentboard (in-namespace, NetworkPolicy-gated) but not for a laptop. Each
-# profile is one MCPRemoteProxy carrying that profile's token, so a signed-in
-# user sees every profile, prefixed `toolport-<profile>_…`.
+# The vMCPs are on the internal gateway (LAN + Tailscale), each with its own
+# OAuth server federated to authentik. The remote proxies are anonymous and
+# ClusterIP-only, gated by ./networkpolicy.yaml. ./kustomization.yaml has the
+# per-profile shape.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

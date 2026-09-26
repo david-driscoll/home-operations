@@ -74,7 +74,7 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 
 ## What is behind the door
 
-~890 tools, prefixed by backend. Names are the same on both doors:
+~955 tools, prefixed by backend. Names are the same on both doors:
 
 | Prefix | Tools | Prefix | Tools |
 |---|---|---|---|
@@ -85,14 +85,17 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 | `toolhive-microsoft-docs_` | 3 | `toolhive-{postgres,openbao,degoog,context7}_` | 2 each |
 | `toolhive-ecm_` | ~197 | `toolhive-teamarr_` | ~180 |
 | `toolhive-arr-mcp-{plex,jellyfin}_` | 38 each | `toolhive-homelable_` | 58 |
-| `toolhive-home-assistant_` | ~21 | | |
+| `toolhive-home-assistant_` | ~21 | `toolhive-tdarr_` | 65 |
 
 `toolhive-teamarr_`'s set is built from Teamarr's live `/openapi.json` when its
 pod starts (destructive tools hidden), so the count moves with Teamarr's version
 and is only fixed until the next restart. `toolhive-home-assistant_`'s depends on
-what Home Assistant exposes. `toolhive-ecm_`, `toolhive-arr-mcp-*_` and
-`toolhive-teamarr_` all front `equestria` apps and fail 02:00-09:00, when that
-namespace is shed. For what the ECM and Teamarr tools are for — and which ECM
+what Home Assistant exposes. `toolhive-tdarr_` is 65 of tdarr-mcp's 105 tools,
+cut down by an `MCPToolConfig` allow-list in `agent-tools-servers/tdarr.yaml`.
+The cut removes every tool that deletes media, writes the Tdarr DB directly, or
+touches users or plugin code. `toolhive-ecm_`, `toolhive-arr-mcp-*_`,
+`toolhive-teamarr_` and `toolhive-tdarr_` all front `equestria` apps and fail
+02:00-09:00, when that namespace is shed. For what the ECM and Teamarr tools are for — and which ECM
 write tools currently fail with a 401 — see [iptv.md](iptv.md).
 
 Note `toolhive-kubernetes_*` is the working Kubernetes path from this pod. The
@@ -281,17 +284,17 @@ workloads need `reloader.stakater.com/ignore: "true"` first.
 over the **same** ToolHive backends, alongside `agent-tools`, as its intended
 replacement. Four differences matter to an agent:
 
-- **Profiles, not one catalogue.** There is one MCP entry per profile,
-  `toolport-{infrastructure,networking,home,media,postgres,research}`, both in
-  `agentboard/resources/mcp.json` and in the repo's `.mcp.json`. They all point at
-  one endpoint, `${TOOLPORT_URL}`. agentboard sets that to the in-cluster
-  `http://toolport.agents.svc.cluster.local:8765/mcp`. Off the cluster it
-  defaults to `https://toolport.agents.driscoll.tech/mcp`, the same gateway
-  exposed through the internal Traefik gateway (`toolport/httproute.yaml`),
-  which accepts only LAN and Tailscale clients. The bearer token in each
-  entry's `headers` (`TOOLPORT_TOKEN_<PROFILE>`, from the `toolport` Secret)
-  decides which servers that entry can see. Off the cluster, you have to export
-  those variables yourself. The profile membership is in
+- **Profiles, not one catalogue, one URL each.** There is one MCP entry per
+  profile, `toolport-{infrastructure,networking,home,media,postgres,research}`,
+  both in `agentboard/resources/mcp.json` and in the repo's `.mcp.json`, and no
+  entry carries a token. Off the cluster, entry `toolport-<profile>` defaults to
+  `https://toolport-<profile>.agents.driscoll.tech/mcp`, that profile's OAuth
+  door (LAN + Tailscale). Each door is a separate authentik login. agentboard
+  overrides the URL with `TOOLPORT_<PROFILE>_URL`, pointing at the profile's
+  in-cluster remote proxy
+  (`http://mcp-toolport-<profile>-remote-proxy.agents.svc.cluster.local:8080/mcp`),
+  which is anonymous and adds the profile's bearer itself. The gateway still
+  picks the profile from that bearer. The profile membership is in
   `toolport/resources/registry.json`.
   - `toolport-postgres` reaches **every** database, not only `postgres`. Its
     DBHub backend (`agent-tools-servers/postgres.yaml`) runs one source per
@@ -317,10 +320,19 @@ replacement. Four differences matter to an agent:
     its `MCPExternalAuthConfig` only when a vMCP calls it; a direct call gets a 401
     from the backend. `homelable` is left out because it needs `X-API-Key`, and
     toolport can only send `Authorization: Bearer`.
-- **External door.** `kubernetes/apps/agents/toolport-mcp` is a vMCP whose
-  backends are toolport itself, one MCPRemoteProxy per profile token. It is
-  published on the internal gateway (`toolport-mcp.agents.<root domain>`, LAN + Tailscale), with the same
-  authentik-federated OAuth as `agent-tools-mcp`.
+- **The doors.** `kubernetes/apps/agents/toolport-mcp` holds one door per
+  profile, each built from the same template:
+  - an anonymous MCPRemoteProxy `toolport-<profile>`, which injects the
+    profile's bearer through `headerForward` (the in-cluster door);
+  - a vMCP `toolport-<profile>-mcp` in front of that proxy, with its own
+    embedded OAuth server federated to authentik. It is published on the
+    internal gateway as `toolport-<profile>.agents.<root domain>`.
+
+  `toolport-mcp/networkpolicy.yaml` admits only agentboard, `ws-david` and those
+  vMCPs to the proxies. `toolport/networkpolicy.yaml` admits only the proxies to
+  the gateway. Each door's OAuth server has its own redirect URI in
+  `toolhive/definition.yaml`, and a door's login fails at authentik until an
+  `applications` stack run registers that URI.
 
 New entries in the repo's `.mcp.json` need the same one-time project-server
 approval as the `Pending approval` row below.

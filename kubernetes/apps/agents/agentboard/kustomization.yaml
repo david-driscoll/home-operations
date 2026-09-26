@@ -66,13 +66,9 @@ configMapGenerator:
       # live here no longer applies: an in-cluster Service DNS name is the same
       # on every cluster.
       #
-      # The `toolport-<profile>` entries are the one exception to "no token":
-      # toolport picks the profile from the bearer, so each entry sends
-      # TOOLPORT_TOKEN_<PROFILE> (./helmrelease.yaml) in its headers. Those are
-      # written with a DOUBLED dollar sign in the file: this ConfigMap goes
-      # through Flux's envsubst, which turns the double into a single one --
-      # an unescaped template would be substituted (strict mode: build failure)
-      # instead of reaching Claude Code for runtime expansion.
+      # The `toolport-<profile>` entries follow the same rule: each points at
+      # its profile's in-cluster remote proxy (../toolport-mcp), which holds
+      # the profile's bearer, so no entry carries a token either.
       - mcp.json=./resources/mcp.json
       # Shell dotfiles, mounted at /root/.bashrc and /root/.bash_profile.
       # Not mise config despite this ConfigMap's name (neither is

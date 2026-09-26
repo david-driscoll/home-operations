@@ -6,45 +6,27 @@
     },
     "toolport-infrastructure": {
       "type": "http",
-      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer $${TOOLPORT_TOKEN_INFRASTRUCTURE}"
-      }
+      "url": "http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp"
     },
     "toolport-networking": {
       "type": "http",
-      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer $${TOOLPORT_TOKEN_NETWORKING}"
-      }
+      "url": "http://mcp-toolport-networking-remote-proxy.agents.svc.cluster.local:8080/mcp"
     },
     "toolport-home": {
       "type": "http",
-      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer $${TOOLPORT_TOKEN_HOME}"
-      }
+      "url": "http://mcp-toolport-home-remote-proxy.agents.svc.cluster.local:8080/mcp"
     },
     "toolport-media": {
       "type": "http",
-      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer $${TOOLPORT_TOKEN_MEDIA}"
-      }
+      "url": "http://mcp-toolport-media-remote-proxy.agents.svc.cluster.local:8080/mcp"
     },
     "toolport-postgres": {
       "type": "http",
-      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer $${TOOLPORT_TOKEN_POSTGRES}"
-      }
+      "url": "http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp"
     },
     "toolport-research": {
       "type": "http",
-      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer $${TOOLPORT_TOKEN_RESEARCH}"
-      }
+      "url": "http://mcp-toolport-research-remote-proxy.agents.svc.cluster.local:8080/mcp"
     }
   }
 }

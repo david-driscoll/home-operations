@@ -1,11 +1,50 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
+#
+# One file per toolport profile, all cut from one template. Each holds the
+# same five objects, named after its profile <p>:
+#
+#   MCPGroup        toolport-<p>      the one-backend group the vMCP aggregates
+#   MCPRemoteProxy  toolport-<p>      ANONYMOUS; injects the <p> bearer
+#                                     (headerForward, from Secret `toolport`
+#                                     key authorization-<p>) and forwards to
+#                                     the single toolport gateway
+#   MCPOIDCConfig   toolport-<p>      validates tokens from the vMCP below
+#   VirtualMCPServer toolport-<p>-mcp OAuth door, its own embedded auth server
+#   HTTPRoute       toolport-<p>-mcp  toolport-<p>.agents.<root domain>
+#
+# WHY A DOOR PER PROFILE. toolport serves one /mcp and picks the profile from
+# the bearer, so a client that does not carry the right token cannot even say
+# which profile it wants. One hostname per profile makes the URL do the
+# routing: .mcp.json names six URLs and carries no tokens at all. Off the
+# cluster each is an OAuth login; in-cluster, TOOLPORT_<PROFILE>_URL points the
+# same entry at that profile's remote proxy, which holds the token itself.
+#
+# WHY SIX AUTH SERVERS. An embedded ToolHive auth server registers exactly one
+# audience, derived from its host's resourceUrl -- one hostname, one auth
+# server, one MCPOIDCConfig whose issuer matches it. Valkey, the signing/HMAC
+# keys and the authentik client are safely shared; each server needs its own
+# redirect URI in ../toolhive/definition.yaml, and a door's login fails at
+# authentik until an `applications` stack run lands it.
+#
+# NAMING IS LOAD-BEARING. The operator names each workload's Deployment after
+# its resource, so no two ToolHive objects here may share a name, and none may
+# be `toolport` (the gateway's own Deployment, ../toolport) -- that collision
+# once had the operator trying to turn the gateway into a vMCP. Hence the
+# `-mcp` on the vMCPs.
+#
+# `conflictResolution: priority` with the group's one backend keeps toolport's
+# meta-tools under their own names (`toolport_search_tools`, ...) instead of
+# the `toolport-<p>_` prefix `prefix` would add.
+#
+# ../toolport/networkpolicy.yaml admits ONLY these six proxies to the gateway,
+# and ./networkpolicy.yaml decides who may reach the proxies.
 resources:
-  - ./mcpgroup.yaml
-  - ./mcpoidcconfig.yaml
-  - ./remoteproxies.yaml
-  - ./virtualmcpserver.yaml
-  - ./httproute.yaml
+  - ./postgres.yaml
+  - ./infrastructure.yaml
+  - ./networking.yaml
+  - ./home.yaml
+  - ./media.yaml
+  - ./research.yaml
+  - ./networkpolicy.yaml
   - ./definition.yaml

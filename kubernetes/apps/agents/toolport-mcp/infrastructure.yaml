@@ -1,0 +1,139 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../agent-tools-servers/docs.yaml.
+#
+# toolport's `infrastructure` profile, behind its own OAuth door at
+# https://toolport-infrastructure.agents.${ROOT_DOMAIN}/mcp. One of six files cut from the
+# same template -- ./kustomization.yaml explains the shape; change all six
+# together.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPGroup
+metadata:
+  name: toolport-infrastructure
+spec:
+  description: toolport's infrastructure profile, for the toolport-infrastructure OAuth door
+---
+# ANONYMOUS, and holds the `infrastructure` bearer. Every request through here reaches
+# toolport as the `infrastructure` profile, whoever sent it -- ./networkpolicy.yaml is
+# what limits who that is.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolport-infrastructure
+spec:
+  remoteUrl: http://toolport.${NAMESPACE}.svc.cluster.local:8765/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: toolport-infrastructure
+  headerForward:
+    addHeadersFromSecret:
+      - headerName: Authorization
+        valueSecretRef:
+          name: toolport
+          key: authorization-infrastructure
+  resourceOverrides:
+    proxyDeployment:
+      annotations:
+        reloader.stakater.com/auto: "true"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPOIDCConfig
+metadata:
+  name: toolport-infrastructure
+spec:
+  type: inline
+  inline:
+    issuer: https://toolport-infrastructure.agents.${ROOT_DOMAIN}
+    jwksAllowPrivateIP: true
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: VirtualMCPServer
+metadata:
+  name: toolport-infrastructure-mcp
+spec:
+  groupRef:
+    name: toolport-infrastructure
+  incomingAuth:
+    type: oidc
+    oidcConfigRef:
+      name: toolport-infrastructure
+      audience: https://toolport-infrastructure.agents.${ROOT_DOMAIN}/mcp
+      resourceUrl: https://toolport-infrastructure.agents.${ROOT_DOMAIN}/mcp
+  authServerConfig:
+    issuer: https://toolport-infrastructure.agents.${ROOT_DOMAIN}
+    upstreamProviders:
+      - name: authentik
+        type: oauth2
+        oauth2Config:
+          allowPrivateIPs: true
+          authorizationEndpoint: https://authentik.${ROOT_DOMAIN}/application/o/authorize/
+          tokenEndpoint: https://authentik.${ROOT_DOMAIN}/application/o/token/
+          userInfo:
+            endpointUrl: https://authentik.${ROOT_DOMAIN}/application/o/userinfo/
+          clientId: toolhive
+          clientSecretRef:
+            name: toolhive-oidc
+            key: client-secret
+          redirectUri: https://toolport-infrastructure.agents.${ROOT_DOMAIN}/oauth/callback
+          scopes:
+            - openid
+            - profile
+            - email
+            - offline_access
+    baselineClientScopes:
+      - openid
+      - offline_access
+    storage:
+      type: redis
+      redis:
+        addr: toolhive-valkey.${NAMESPACE}.svc.cluster.local:6379
+        aclUserConfig:
+          passwordSecretRef:
+            name: toolhive-valkey
+            key: password
+    signingKeySecretRefs:
+      - name: toolhive-authserver-keys
+        key: signing.pem
+    hmacSecretRefs:
+      - name: toolhive-authserver-keys
+        key: hmac
+  outgoingAuth:
+    source: discovered
+  serviceType: ClusterIP
+  config:
+    aggregation:
+      conflictResolution: priority
+      conflictResolutionConfig:
+        priorityOrder:
+          - toolport-infrastructure
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: toolport-infrastructure-mcp
+  annotations:
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "toolport-infrastructure.agents.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        - name: vmcp-toolport-infrastructure-mcp
+          port: 4483
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: local-api

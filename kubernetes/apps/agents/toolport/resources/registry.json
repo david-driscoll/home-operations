@@ -34,6 +34,7 @@
     },
     { "id": "teamarr", "name": "Teamarr", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-teamarr-proxy.agents.svc.cluster.local:8000/mcp" },
     { "id": "ecm", "name": "Enhanced Channel Manager", "transport": "http", "source": "manual", "url": "http://ecm-mcp.equestria.svc.cluster.local:6101/mcp", "env": [{ "key": "ECM_TOKEN", "secret": true }] },
+    { "id": "tdarr", "name": "Tdarr", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-tdarr-proxy.agents.svc.cluster.local:8080/mcp" },
 
     { "id": "context7", "name": "Context7", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-context7-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "microsoft-docs", "name": "Microsoft Learn", "transport": "http", "source": "manual", "url": "https://learn.microsoft.com/api/mcp" },
@@ -49,7 +50,7 @@
     },
     { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale"] },
     { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
-    { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm", "teamarr"] },
+    { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm", "teamarr", "tdarr"] },
     { "id": "research", "name": "Research", "enabledServerIds": ["context7", "microsoft-docs", "nuget", "degoog"] }
   ],
   "activeProfileId": "infrastructure",
