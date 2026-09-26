@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+# The family setup guide that git-pages serves at setup.${ROOT_DOMAIN} (the
+# `setup` route in ./helmrelease.yaml) -- not git-pages itself, hence a fixed
+# name rather than ${APP}. It exists for the Gatus check, and as a side effect
+# gives the family a tile in the authentik library. No `authentik:` block: the
+# site has no login, only the internal-network gate on the route.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: setup-guide
+spec:
+  name: Family Setup Guide
+  category: Applications
+  description: How to set up phones, tablets and TVs for the home services
+  url: &url https://setup.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/astro.svg
+  access_policy:
+    groups:
+      - family
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        # Proves both halves of the route: `/` was rewritten into the project
+        # (rule 2) and the page is the Astro build, whose links all sit under
+        # /setup/ (served by rule 1). git-pages' "site not found" and the docs
+        # index's 404 page contain neither.
+        - "[BODY] == pat(*/setup/_astro/*)"
