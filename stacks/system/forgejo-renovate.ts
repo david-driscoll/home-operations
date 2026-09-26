@@ -538,14 +538,22 @@ export class ForgejoConfigurationComponent extends ComponentResource {
         // every public-to-members repo on the forge, user-owned ones included.
         restricted: true,
       },
-      // Renovate's set plus `read:package` (the packages API is its own scope,
-      // so the team's repo.packages unit alone would still 403). Collapsed
-      // pairs as above -- `write:` only, never with the matching `read:`, or
-      // `scopes` diffs forever and every run mints a new token.
+      // Renovate's set, plus:
+      //   read:package        the packages API is its own scope, so the team's
+      //                       repo.packages unit alone would still 403.
+      //   write:organization  (in place of read:organization) POST
+      //                       /orgs/{org}/repos requires it -- without it the
+      //                       team's canCreateOrgRepo is unusable. A scope only
+      //                       opens API routes; what the token can DO is still
+      //                       the account's permissions, and claude-code is not
+      //                       an org owner, so org settings, teams and members
+      //                       stay out of reach.
+      // Collapsed pairs as above -- `write:` only, never with the matching
+      // `read:`, or `scopes` diffs forever and every run mints a new token.
       //
       // Editing this list REPLACES the token (scopes are ForceNew). The new one
       // reaches the MCP pod via OpenBao -> ExternalSecret (4m) -> Reloader.
-      ["write:repository", "read:user", "read:organization", "read:misc", "write:issue", "read:package"] as TOKEN_SCOPES[],
+      ["write:repository", "read:user", "write:organization", "read:misc", "write:issue", "read:package"] as TOKEN_SCOPES[],
       args.globals,
       this.forgejoProvider,
       { resourcePrefix: "forgejo-claude-code", tokenName: "Claude Code MCP Token", versionTokenName: true },
