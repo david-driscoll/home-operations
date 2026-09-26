@@ -6,7 +6,42 @@
 # auth/ssh tools. Image confirmed live via web search of the project's own
 # docs: `knucklessg1/openbao-mcp:mcp` is the slim MCP-only image (`:latest`
 # bundles a Pydantic-AI agent and epistemic-graph engine this rollout has
-# no use for) -- no digest pin yet, add one before merging.
+# no use for). Pinned to the digest `:mcp` pointed at on 2026-09-25 -- the
+# newest MCP image upstream has published (2026-07-09, openbao-mcp 1.0.1,
+# fastmcp 3.4.4, mcp 1.28.1) and the one the transport below was verified on.
+#
+# WHY streamable-http AND NOT stdio. Under stdio this server answered every
+# request from both aggregators with -32602 "Invalid request parameters"
+# (toolport: `'openbao' failed`; vMCP: `Backend unavailable`) while its
+# MCPServer sat Ready. The backend's own log names the cause: `Failed to
+# validate request: Received request before initialization was complete`.
+# Three things combine to produce it:
+#   1. ToolHive's stdio proxy fans every client onto ONE backend session, so
+#      it forwards `initialize` to the backend once and answers every later
+#      handshake from a cache (toolhive v0.51.2,
+#      pkg/transport/proxy/streamable/initialize_cache.go). That cache is
+#      never reset -- not even when the proxy re-attaches to a NEW backend
+#      process after the container restarts (pkg/transport/stdio.go,
+#      attemptReattachment).
+#   2. This backend restarts every 20 minutes: each ExternalSecret refresh
+#      below mints a new token, and Reloader rolls the pod on the change.
+#   3. The Python MCP SDK, unlike the Go and TypeScript ones, refuses every
+#      request on a session that has not seen `initialize`, with exactly that
+#      -32602. (vMCP's `server/discover` probe also gets a -32602 from this
+#      SDK, but only for that one request -- that part is harmless here.)
+# So after any restart the proxy re-attached, answered `initialize` from its
+# cache, and the fresh process rejected everything until the proxy itself
+# happened to restart. The Go/Node stdio servers in this group (github,
+# pulumi, tailscale) restart the same way and survive it only because their
+# SDKs do not check.
+#
+# Serving HTTP from the process itself takes the stdio multiplexer, and its
+# cache, out of the path. FASTMCP_STATELESS_HTTP makes each request
+# self-contained, so the 20-minute restart does not strand the sessions
+# vMCP and toolport hold -- `tools/list` with no handshake at all returns
+# 200. The image reads TRANSPORT/HOST/PORT, not the operator-injected
+# MCP_TRANSPORT/MCP_PORT, so they are set explicitly below (HOST already
+# defaults to 0.0.0.0 in the image).
 #
 # David's explicit scope answer: "Secrets only, read+write" ->
 # SECRETSTOOL=True, everything else off. Confirmed exact env var names
@@ -26,14 +61,21 @@ kind: MCPServer
 metadata:
   name: toolhive-openbao
 spec:
-  image: knucklessg1/openbao-mcp:mcp
-  transport: stdio
+  image: knucklessg1/openbao-mcp:mcp@sha256:33ad5f9c58657f6bf5abf523e903544e3097be7ffdde8c1681d646720b78128a
+  transport: streamable-http
   proxyPort: 8080
-  proxyMode: streamable-http
+  mcpPort: 8000
   groupRef:
     name: agent-tools
 
   env:
+    - name: TRANSPORT
+      value: streamable-http
+    # Must match `mcpPort` above.
+    - name: PORT
+      value: "8000"
+    - name: FASTMCP_STATELESS_HTTP
+      value: "true"
     - name: SECRETSTOOL
       value: "True"
     - name: SYSTOOL
