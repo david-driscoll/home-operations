@@ -2,7 +2,8 @@
 
 How the live-TV lineup is put together, what keeps it healthy, and how to fix
 it when the guide goes blank, a channel goes dead or a logo disappears. Written
-after the 2026-09-24 clean-up, when all three had happened at once.
+after the 2026-09-24 clean-up, when all three had happened at once. Updated
+2026-09-26 with the free stream sources and a guide-coverage pass.
 
 ## What is where
 
@@ -28,22 +29,44 @@ disabled or in an error state and unused.
 **USNewsON** (MSNOW, CNN, Fox News) has no connection limit, so its stream is
 the **primary** on channels 1, 10 and 12. The playlist lives in xcproxy (above).
 Its upstream refuses any request without `Referer: https://usnewson.com/`
-(403), and Dispatcharr only ever sends a User-Agent. The headers therefore ride
-in the URL fragment (`…m3u8#referer=…&origin=…`), and those three channels use
-the **Wrapper** stream profile (dispatchwrapparr, `/data/dispatchwrapparr/` on
-the PVC). dispatchwrapparr turns the fragment into request headers. The profile
-is set per channel: Dispatcharr ignores a per-stream profile at channel
-playback, and failover to the provider's backup streams uses the same channel
-profile. The upstream hosts (`sN.usnlive.com`) rotate. On 2026-09-24 `s5`
+(403), and Dispatcharr only ever sends a User-Agent. Those three channels
+therefore use stream profile 8, **ffmpeg (USNewsON Referer)**: the stock ffmpeg
+profile plus `-referer https://usnewson.com/`, which ffmpeg's HLS demuxer also
+sends on segment requests. Set it on the channel **and** on the USNewsON
+streams. Channel playback uses the channel's profile (Dispatcharr ignores a
+per-stream profile there), and failover to the provider's backup streams uses
+it too. The UI's direct stream preview uses the stream's profile. The
+`#referer=…&origin=…` fragment still on the playlist URLs is harmless to
+ffmpeg. The **Wrapper** profile (dispatchwrapparr, `/data/dispatchwrapparr/` on
+the PVC) also plays them by turning that fragment into headers, but Dispatcharr
+then records no codec, resolution or bitrate, so it is not used. The upstream
+hosts (`sN.usnlive.com`) rotate. On 2026-09-24 `s5`
 (MSNBC) and `s6` (Fox News) were down while `s15` served all three, so the
 playlist carries `s15` alternates. Edit `playlists.sops.yaml` with `sops`; the
 pod picks up the change without a restart.
+
+**Free sources** (added 2026-09-25), all `max_streams: 0` (no connection limit):
+
+| Account | Playlist | Refresh |
+| --- | --- | --- |
+| iptv-org Canada / United States / United Kingdom | `https://iptv-org.github.io/iptv/countries/{ca,us,uk}.m3u` | 24 h |
+| Pluto TV United States / Canada | [BuddyChewChew/pluto](https://github.com/BuddyChewChew/pluto) `pluto_us.m3u` / `pluto_ca.m3u` | **6 h** |
+
+They add about 2,700 streams and no channels (auto channel sync is off on every
+group). Where one carries exactly what a lineup channel carries, its stream is
+first on that channel; see *Free streams first*. Pluto needs the short refresh.
+Every Pluto URL carries a session JWT that expires 24 h after it was minted, and
+the upstream repo regenerates the playlists every 5-7 h. The URL changing on
+every refresh is safe: Dispatcharr's `m3u_hash_key` is `tvg_id,m3u_id,name`, so
+a refresh rewrites each stream's URL in place and its stream id, and every
+channel link to it, stays. Pluto's Canada streams play from equestria's US
+egress.
 
 **EPG sources** — what actually feeds the guide:
 
 | Source | Feeds |
 | --- | --- |
-| The main provider's own EPG | Its streams, matching its `*.us` tvg-ids |
+| The main provider's own EPG | Its streams, matching its `*.us` tvg-ids. **Refreshes every 6 h**: the file reaches only ~28 h ahead, so at 24 h the guide on ~90 channels ran out around 12:00 UTC every day (fixed 2026-09-26). |
 | A secondary national EPG | Most national cable/premium rows, including the `*west.us` rows. **It is a trial feed — if it stops refreshing, most cable/premium channels lose their guide.** |
 | Teamarr's XMLTV endpoint | Event + team channels. Teamarr's `dispatcharr.epg_id` must point at **this** source. |
 | A West-supplement EPG | The West guides the secondary EPG lacks: `Syfy.HD.(Pacific).us2`, `TNT.HD.(Pacific).us2`, `USA.Network.HD.(Pacific).us2` (added 2026-09-24) |
@@ -52,6 +75,8 @@ pod picks up the change without a restart.
 | Gracenote Canada | Canadian channels |
 | Gracenote UK | Unused |
 | Gracenote Ireland | Unused |
+| iptv-epg.org Canada / UK / US (`https://iptv-epg.org/files/epg-{ca,gb,us}.xml.gz`) | Unused (added 2026-09-25). Loaded as a fallback; the free playlists' tvg-ids (`Name.us@SD`) mostly don't match its ids. |
+| Pluto TV ([i.mjh.nz](https://github.com/matthuisman/i.mjh.nz) `PlutoTV/all.xml.gz`) | Unused (added 2026-09-25), 6 h refresh. For the 24/7 news channels Pluto streams, its guide is only the channel name every 15 minutes. |
 | Twitch | Channel 9000 |
 
 The gracenote sources come from a public EPG aggregator that moved hosts and
@@ -126,6 +151,10 @@ A West channel is the East network time-shifted 3 hours. To keep them correct:
    channel with its East partner and reports any whose guide is not the East
    guide shifted +3h (matched on identically titled programmes that line up to
    the minute). Rerun-heavy channels would match anything on titles alone.
+   **Live sports read as +0h.** Both feeds air a live game at the same moment.
+   On 2026-09-26 TNT (West) was flagged that way over a weekend of NHL, college
+   football and AEW, while its non-live programmes were correctly +3h. Compare
+   the non-live rows before relinking a flagged West channel.
 
 ## What went wrong in 2026-09 (so it is recognisable next time)
 
@@ -183,12 +212,16 @@ Levers, cheapest first:
   failing. That leaves the main provider's slots for the West and premium
   channels only it has. When adding a channel the backup carries, add its
   backup stream last.
-- Lower Dispatcharr's channel shutdown delay (Settings -> Proxy) so a slot is
-  released soon after the viewer leaves.
+- **Free streams first.** Eleven channels now start on a verified free stream
+  with no connection limit, so watching them uses no main-provider slot unless
+  the free stream fails over. See *Free streams first*.
+- Dispatcharr's channel shutdown delay (Settings -> Proxy,
+  `channel_shutdown_delay`) is already `0` (checked 2026-09-26).
 
 **Stream order on a channel** (failover goes down the list):
 
-1. Unlimited sources (USNewsON).
+1. Unlimited sources: USNewsON, and free streams verified as the same channel
+   (see *Free streams first*).
 2. Main-provider feeds of that exact network and feed. Existing, proven streams
    come first, then `US: <NAME>`, `(H)`, `USA`, `(S)`/`(A)`, and the
    `(US) (X2)`/`(US) (CX)` families.
@@ -250,7 +283,10 @@ from [Wikipedia's list of Canadian TV stations](https://en.wikipedia.org/wiki/Li
     Global News National. mybunny maps them onto the over-the-air stations'
     guides, which is the wrong schedule. They are deliberately left unlinked, so
     Dispatcharr gives them its placeholder programmes (titled with the channel
-    name). The audit doesn't flag them.
+    name). The audit doesn't flag them. Re-checked 2026-09-26: Pluto now
+    streams 105, 112, 128 and 132, but its guide rows only repeat the channel
+    name. The provider's `CBC News Edmonton Channel` row has no programmes.
+    Still no real guide anywhere.
 - **Dropped:**
   - OWN Canada (no Canadian guide).
   - ABC Spark (both streams failed their probes).
@@ -264,12 +300,82 @@ from [Wikipedia's list of Canadian TV stations](https://en.wikipedia.org/wiki/Li
   suffix was stripped by a name-only bulk rename. No current ECM rule, stream
   name or repo file produces it, so it was a leftover from an earlier import.
 
+## Free streams first (2026-09-25)
+
+Every United States and Canada channel was matched against the free sources
+(see *Inputs*). A candidate counted only if a frame pulled from it inside the
+Dispatcharr pod showed the channel `/output/epg` said was on air at that moment.
+Eleven passed, and their free stream now sits first, ahead of the channel's
+existing streams, which are unchanged:
+
+| Ch | Channel | Free stream (source) |
+| --- | --- | --- |
+| 7 | ABC NEWS | ABC News Live (Pluto) |
+| 8 | BBC AMERICA | BBC America (iptv-org). MPEG-2 video, so Jellyfin transcodes it. |
+| 9 | BBC WORLD NEWS | BBC News (Pluto) |
+| 14 | CNBC | CNBC (iptv-org) |
+| 20 | SYFY | SYFY East (iptv-org) |
+| 105 | Global News Edmonton | Global News Edmonton (Pluto) |
+| 112 | Global News Toronto | Global News Toronto (Pluto) |
+| 127 | CityNews Toronto | CityNews Toronto (iptv-org, Rogers' own CDN) |
+| 128 | CBC News Toronto | CBC News Toronto (Pluto) |
+| 132 | Global News National | Global News National (Pluto) |
+| 136 | The Weather Network | The Weather Network (Pluto) |
+
+Rejected, and why, so the same candidates aren't re-tried:
+
+- **Local stations' own entries** (iptv-org `ABC KSTP-TV`, `CBS KIRO-TV`,
+  `Fox KTTV`...; Pluto `KIRO Seattle`, `FOX LOCAL Los Angeles`, `NBC Los Angeles
+  News`) and every `CBS News <city>` are the stations' news-only digital
+  streams, not the broadcast. The URLs give it away (`kirobreaking`, Amagi and
+  Tubi playout hosts).
+- **Labels lie.** iptv-org's "Fox News Channel" is *LiveNOW from Fox*, and its
+  "CTV Life Channel" URL is `.../ANIMALPLANETHD/`.
+- **Restreams on bare IP addresses** failed or died within minutes (CP24
+  answered one probe, then 403'd). MS NOW, Comedy Central, Fox Business, CBS
+  East, CTV Toronto, Cottage Life, T+E and CPAC were dead on the day.
+- **Geo-blocked:** the CBC local stations (CBXT, CBLT) 403 outside Canada.
+- **Right content, wrong presentation:** both sources' *CBC News Network*
+  (iptv-org `CBC_News_International`, Pluto *CBC News*) is the live channel
+  inside an L-shaped wrapper with a weather sidebar and headline ticker. 130
+  kept the provider's full-screen feed first. The same wrapper is the whole
+  point of 128 CBC News Toronto, so there it matches.
+- **Different feed:** the US History, Nat Geo and C+I feeds for the Canadian
+  channels; East-only feeds for 3 Comedy Central (West) and 21 SYFY (West);
+  Pluto's own *Comedy Central* and *MTV* channels; CNN Headlines; ABC News
+  Live 1-10 (event feeds); APTN Beyond; Super Channel Hearties.
+
+To try another candidate: pull 8-10 s with `ffmpeg -t 8 ... -update 1 x.jpg`
+inside the Dispatcharr container (so geo-blocking and reachability match real
+playback), look at the frame, and compare it with the channel's current
+`/output/epg` programme. Free sources cost no provider connections, so probing
+them is safe. Put the stream first with Dispatcharr's API: `PATCH
+/api/channels/channels/<id>/ {"streams": [...]}` sets the order exactly. Then
+tune the channel through `/proxy/ts/stream/<uuid>`: `/proxy/ts/status` shows
+which stream served it.
+
+## Guide pass (2026-09-26)
+
+| Change | Why |
+| --- | --- |
+| Main-provider EPG refresh 24 h → **6 h** | ~90 channels had only 9-10 h of guide ahead. See *Traps*. |
+| 214 FXM → gracenote US FXM `14988` | It had no guide link at all. |
+| 644 Viceland → gracenote US *Vice HD* `65732` | It was on mybunny's `vicelandstatic.us`, which is "Viceland Programming" all day. |
+
+After it, every channel outside 24/7 Streams except the five news channels
+above has a real guide reaching at least 20 h ahead. The one exception is 635
+TV Land (West), via mybunny, at about 19.5 h.
+
 ## Plan (open work)
 
 `[UI]` means ECM's MCP cannot do it (see Traps).
 
-1. Shorten Dispatcharr's proxy shutdown delay `[UI]` so the main provider's
-   slots free sooner after a viewer leaves.
+1. **Close the audit's blind spots.** `scripts/iptv-audit.py` counts
+   Dispatcharr's placeholder programmes as a guide, so an unlinked channel
+   passes. It also doesn't check how far ahead a guide reaches, which is how the
+   2026-09 part-day blanks went unnoticed. It should flag channels with no
+   `epg_data_id` (outside the five known news channels) and guides reaching
+   less than ~20 h ahead.
 2. **Guardrails.** Rename the gracenote sources off the aggregator's old host
    name and the secondary national EPG off "trial" `[UI]`. Move ECM's 03:00
    probe to after 09:00. Run `scripts/iptv-audit.py` after every change and
@@ -301,10 +407,17 @@ python3 scripts/iptv-audit.py
 
 It reads the same M3U/XMLTV Jellyfin does (no credentials) and lists channels
 with no guide, dead "Channel No Longer Available" guides, West channels not
-at +3h, and logos that are missing or 404.
+at +3h, and logos that are missing or 404. It does **not** catch a channel with
+no guide link (Dispatcharr fills it with placeholders that the audit counts),
+or a guide that runs out part-way through the day; see *Plan* 1.
 
 ### "The guide is blank for channel X"
 
+0. **Blank only for part of the day, on many channels at once?** That's a
+   source whose file reaches less far ahead than its refresh interval, not a
+   bad link. Compare the source's last `<programme stop=...>` with its
+   `updated_at` plus `refresh_interval`, and shorten the interval. The main
+   provider's EPG did exactly this until 2026-09-26.
 1. Get what Jellyfin sees:
    `curl -s http://dispatcharr.equestria.svc.cluster.local:9191/output/epg` and
    count `<programme channel="<number>">` — `ecm_get_epg_grid(channel_id=...)`
@@ -403,7 +516,18 @@ it, then generate again.
   `ecm_refresh_epg` on that row's source. Gracenote US takes a few minutes
   because the file is several GB.
 - **ECM MCP cannot touch EPG sources, M3U accounts or backups** (403 "a human
-  operator admin is required") — deliberate and hard-coded. Those are UI jobs.
+  operator admin is required") — deliberate and hard-coded. Use the UI, or
+  Dispatcharr's own REST API: port-forward `svc/dispatcharr` 9191 and get a JWT
+  from `POST /api/accounts/token/` with the `dispatcharr` Secret's `username` and
+  `password`. The 2026-09-25/26 source and guide changes were made that way.
+- **A new M3U account stops at `pending_setup`** once its groups load ("Please
+  select groups or refresh M3U to complete setup"). No streams arrive until you
+  refresh it: `POST /api/m3u/refresh/<id>/`, or the UI's refresh button.
+- **A guide source must refresh more often than its file's horizon.** Sources
+  differ: gracenote reaches 7 days ahead and mybunny well over a day, but the
+  main provider's EPG reaches only ~28 h and Pluto's well under a day, so both
+  are on 6 h. Dispatcharr doesn't warn when a guide runs out, so channels just
+  go blank until the next refresh.
 - **ECM's scheduled probe runs at 03:00**, inside the shed window, so it has
   never run; its EPG/M3U refresh tasks show `last run: None` for the same
   reason. Dispatcharr's own refresh schedules are what actually keep data fresh.
