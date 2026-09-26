@@ -1,19 +1,20 @@
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
-# Same shape as ./unifi-network.yaml -- see that file's
-# header for the `uv` image / podTemplateSpec-command reasoning, and
-# ./kubernetes.yaml's for why there is no
-# oidcConfigRef/authServerRef (this server joins ../agent-tools-mcp's
-# MCPGroup instead).
+# unifi-access-mcp (github.com/sirkirby/unifi-mcp, apps/access). Same shape
+# as ./unifi-network.yaml -- see that file's header for why this is
+# upstream's image over streamable-http rather than PyPI under stdio, why the
+# command wraps `main()` to run stateless, and the DNS-rebinding setting. See
+# ./kubernetes.yaml's for why there is no oidcConfigRef/authServerRef (this
+# server joins ../agent-tools-mcp's MCPGroup instead).
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
   name: toolhive-unifi-access
 spec:
-  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-  transport: stdio
+  image: ghcr.io/sirkirby/unifi-access-mcp:0.6.8@sha256:702c075be032c6c095d6825aa32fbdd60db942bc8aab69b8df213688e5a2d450
+  transport: streamable-http
   proxyPort: 8080
-  proxyMode: streamable-http
+  mcpPort: 8000
   groupRef:
     name: agent-tools
 
@@ -23,6 +24,15 @@ spec:
     - name: UNIFI_ACCESS_PORT
       value: "443"
     - name: UNIFI_ACCESS_VERIFY_SSL
+      value: "false"
+    - name: UNIFI_MCP_HTTP_ENABLED
+      value: "true"
+    - name: UNIFI_MCP_HOST
+      value: 0.0.0.0
+    # Must match `mcpPort` above.
+    - name: UNIFI_MCP_PORT
+      value: "8000"
+    - name: UNIFI_MCP_ENABLE_DNS_REBINDING_PROTECTION
       value: "false"
 
   podTemplateSpec:
@@ -42,12 +52,20 @@ spec:
         reloader.stakater.com/auto: "true"
     spec:
       volumes:
-        - name: uv-cache
+        - name: tmp
           emptyDir: {}
       containers:
+        # The stateless wrapper -- see ./unifi-network.yaml.
         - name: mcp
-          command: ["/usr/local/bin/uv"]
-          args: ["tool", "run", "unifi-access-mcp"]
+          command:
+            - python
+            - -c
+            - >-
+              import functools;
+              from mcp.server.mcpserver import MCPServer;
+              MCPServer.run_streamable_http_async = functools.partialmethod(MCPServer.run_streamable_http_async, stateless_http=True);
+              from unifi_access_mcp.main import main;
+              main()
           env:
             - name: HOME
               value: /tmp
@@ -55,7 +73,7 @@ spec:
             - secretRef:
                 name: toolhive-unifi-access
           volumeMounts:
-            - name: uv-cache
+            - name: tmp
               mountPath: /tmp
           # Flagged by Codacy -- see ./unifi-network.yaml's
           # comment.

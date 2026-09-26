@@ -80,7 +80,7 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 |---|---|---|---|
 | `toolhive-proxmox-{twilight-sparkle,luna,celestia,alpha-site}_` | 47 each | `toolhive-pulumi_` | 12 |
 | `toolhive-github_` | 44 | `toolhive-nuget_` | 6 |
-| `toolhive-tailscale_` | 19 | `toolhive-unifi-{network,protect,access}_` | 5 each |
+| `toolhive-tailscale_` | 19 | `toolhive-unifi-{network,protect,access}_` | 6 each |
 | `toolhive-docker-{luna,celestia,alpha-site}_` | 19 each | `toolhive-kubernetes_` | 5 |
 | `toolhive-microsoft-docs_` | 3 | `toolhive-{postgres,openbao,degoog,context7}_` | 2 each |
 | `toolhive-ecm_` | ~197 | `toolhive-teamarr_` | ~180 |
@@ -277,6 +277,65 @@ eight Pulumi Stack workspaces, renovate, maintainerr, dynacat — **every 30
 minutes**, which is exactly the restart loop `agentboard/helmrelease.yaml`
 records as having been removed on purpose. If it is ever enabled, those
 workloads need `reloader.stakater.com/ignore: "true"` first.
+
+### No Python server runs over stdio
+
+Every Python MCP server here serves Streamable HTTP from its own process:
+`openbao`, the three `docker-*` and the three `unifi-*`. Adding one as
+`transport: stdio` brings back a failure that looks like a healthy server: the
+MCPServer is Ready, and every call returns -32602 `Invalid request parameters`
+(toolport: `'<name>' failed`; vMCP: `Backend unavailable`).
+
+Three things combine to cause it:
+
+1. **ToolHive's stdio proxy caches `initialize`.** It puts every client on one
+   backend session, forwards the first handshake, and answers every later one
+   from a cache (`pkg/transport/proxy/streamable/initialize_cache.go`, v0.51.2).
+   When the backend container restarts, the proxy re-attaches to the new
+   process (`pkg/transport/stdio.go`, `attemptReattachment`) and keeps the
+   cache, so the new process never sees `initialize`.
+2. **The Python MCP SDK enforces the handshake.** It refuses every request but
+   `ping` on a session that has not seen `initialize`. mcp 1.x does this in
+   `mcp/server/session.py` (`_received_request`) and logs `Received request
+   before initialization was complete`. mcp 2.x moved it to
+   `mcp/server/runner.py` (`ServerRunner._on_request`) and **logs nothing**, so
+   the only trace in the backend log is the error response itself. The Go and
+   TypeScript SDKs do not check, which is why github, pulumi and tailscale
+   survive the same restarts under stdio. context7 and tdarr are TypeScript
+   too. nuget (.NET) has not been restart-tested.
+3. **Anything that restarts only the backend pod triggers it**: a node drain,
+   an OOM kill, a Reloader roll. Restarting the proxy Deployment clears the
+   cache. So the failure comes and goes, and a server works exactly as long as
+   its proxy pod is newer than its backend pod.
+
+Reproduced 2026-09-26 on a copy of the docker server (mcp 2.2.0): 19 tools
+before the `-0` pod was deleted, then -32602 on both an existing session and a
+new one. The manual fix is `kubectl -n agents rollout restart deploy/<name>`.
+
+**HTTP alone is not enough; the server must also be stateless.** The HTTP
+proxy polls the backend StatefulSet's `readyReplicas` and exits if it sees 0
+(`pkg/container/runtime/monitor.go`, then `pkg/runner/runner.go`). So a backend
+restart often restarts the proxy too: 8 of 12 times in testing. A restarted
+proxy has forgotten its sessions, and vMCP never re-initializes a backend
+session (`pkg/vmcp/session/internal/backend/mcp_session.go`, "no
+reconnection"). A stateful backend then returns `404 Session not found` to
+every client that held a session, until that client reconnects. A stateless
+one has no session to lose. How each server gets there:
+
+| Server | How it runs stateless |
+|---|---|
+| `openbao` | `FASTMCP_STATELESS_HTTP=true`, read by the image's FastMCP 3 |
+| `docker-*` | The package's CLI is stdio-only, so `python -c` calls its exported `app.run("streamable-http", stateless_http=True)` |
+| `unifi-*` | Upstream's image with `UNIFI_MCP_HTTP_ENABLED`. The package has no stateless switch, so a `python -c` wrapper sets the SDK's `stateless_http` default before calling its `main()` |
+
+This proxy behaviour applies to **every** HTTP MCPServer here, Python or not.
+Whether the others (degoog, docs, kubernetes, postgres, proxmox, teamarr, ...)
+are stateless has not been checked.
+
+**To check a server**, delete its `-0` pod (not the proxy) and call `tools/list`
+through `mcp-<name>-proxy:<proxyPort>/mcp` with no handshake and no session
+header. A stateless server answers 200 once its pod is back. The docker and
+unifi servers took 14-45s.
 
 ## toolport, the profile-scoped alternative (trial)
 
