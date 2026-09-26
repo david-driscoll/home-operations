@@ -20,8 +20,55 @@ A **team** is a Forgejo organization (or user).
 `docs.driscoll.tech` 302-redirects to `docs.pages.driscoll.tech`, keeping the
 path. The redirect is the `docs` route in the HelmRelease.
 
+`setup.driscoll.tech` serves `docs/setup` in place. See
+[setup.driscoll.tech](#setupdriscolltech-the-family-setup-guide) below.
+
 Nothing is served until something is published. A host with no site returns
 `site not found`.
+
+## setup.driscoll.tech (the family setup guide)
+
+`docs/setup` is the family-facing guide to setting up phones and TVs for the
+home services. It is published like any project site, to
+`https://docs.pages.driscoll.tech/setup/`. The family is given
+`https://setup.driscoll.tech`, which is a **rewrite, not a redirect**. The
+address bar keeps `setup.driscoll.tech`.
+
+A rewrite is needed for two reasons:
+
+- UniFi DNS can hold `setup.driscoll.tech` but not the `*.pages` wildcard.
+  A phone on home Wi-Fi without Tailscale therefore could not follow a
+  redirect to `docs.pages.driscoll.tech`.
+- git-pages picks the site from the `Host` header alone. Rewriting the Host
+  serves the same published site under a second name, with no second publish.
+
+The `setup` route in the HelmRelease has two rules:
+
+| Request on `setup.driscoll.tech` | Sent to git-pages as |
+| --- | --- |
+| `/setup…` | Same path, `Host: docs.pages.driscoll.tech` |
+| Anything else, e.g. `/` or `/tailscale/` | `/setup` prepended, same Host rewrite |
+
+Longest-prefix precedence keeps `/setup/…` out of the second rule. Without
+that, `/setup/x/` would become `/setup/setup/x/`. Rule order does not matter.
+
+Requirements on the site:
+
+- **The Astro build must use `base: '/setup'`.** Starlight emits absolute links
+  under `base`, and the first rule is what serves them.
+- **`docs/setup` must use the SHA-1 object format.** `actions/checkout` fails
+  on SHA-256 repositories. `docs/pages` is SHA-256, so do not copy its
+  settings. The format can only be chosen when the repo is created.
+- Publish with `site: http://docs.pages.driscoll.tech/setup/`.
+- **Do not ship a `_redirects` file.** git-pages builds the redirect
+  `Location` from the rewritten Host, which would send family to
+  `docs.pages.driscoll.tech`.
+- The route uses `local-api`, like `pages`, so the site's own `404.html` is
+  served instead of error-pages.
+
+[`definition.yaml`](../../kubernetes/apps/coder/git-pages/definition.yaml)
+(`setup-guide`) gives the guide a Gatus check and a family tile in authentik.
+The check fails until `docs/setup` has been published.
 
 ## Adding a team
 
@@ -94,6 +141,8 @@ Notes on the non-obvious fields:
 
 - **Health.** There is no global health endpoint. `/.git-pages/health` is per
   site. Probes are TCP on 3000, and metrics are on 3002 (ServiceMonitor).
+  The one Gatus check is "Family Setup Guide" (`https://setup.driscoll.tech/`),
+  which also covers the rewrite.
 - **Alerts** are in
   [`prometheusrule.yaml`](../../kubernetes/apps/coder/git-pages/prometheusrule.yaml):
   - `GitPagesAbsent` (critical): the scrape target is gone.

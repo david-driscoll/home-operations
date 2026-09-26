@@ -14,7 +14,19 @@ export const Roles = {
   MediaManagers: "media-managers",
 } as const;
 
-import type { TailscaleAutogroups, TailscaleCidr, TailscaleGroups, TailscaleNetworkCapability, TailscaleTags } from "@openapi/tailscale-grants.js";
+import type { TailscaleAutogroups, TailscaleCidr, TailscaleGroups, TailscaleIp, TailscaleNetworkCapability, TailscaleTags } from "@openapi/tailscale-grants.js";
+
+/**
+ * authentik's keepalived VIP (docs/authentik-active-active/PLAN.md). canterlot,
+ * authentik and iris all CNAME to authentik-vip (stacks/home/index.ts), which
+ * resolves here, so every OIDC login in the estate lands on this address.
+ *
+ * Also pinned in files that cannot import this: the keepalived configs
+ * (kubernetes/apps/network/authentik-vip/app/resources/keepalived.conf.tmpl,
+ * docker/alpha-site/authentik-vip/keepalived.conf) and Traefik's externalIPs
+ * (kubernetes/apps/network/traefik/values.yaml). Change them together.
+ */
+export const authentikVip = "10.10.255.10" as TailscaleIp;
 
 const dnsServers = {
   "Alpha Site": {

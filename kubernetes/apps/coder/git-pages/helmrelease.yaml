@@ -188,3 +188,66 @@ spec:
                   hostname: "docs.pages.${ROOT_DOMAIN}"
                   # 302, not 301: browsers cache a 301 indefinitely.
                   statusCode: 302
+      # setup.${ROOT_DOMAIN} -> the docs team's `setup` project (the family setup
+      # guide, published from docs/setup to docs.pages.${ROOT_DOMAIN}/setup/).
+      # SERVED rather than redirected, unlike `docs` above, so the one address
+      # the family is given stays in the address bar. It also has to be: UniFi
+      # DNS holds this name but cannot hold the *.pages wildcard, so a phone on
+      # home Wi-Fi without Tailscale could not follow a redirect to docs.pages.
+      #
+      # The site is an Astro Starlight build with `base: '/setup'`, so every link
+      # and asset it emits is already under /setup/. Rule 1 therefore rewrites
+      # only the Host; rule 2 also prepends /setup, so `/` and hand-typed short
+      # paths land inside the site. Longest-prefix precedence keeps /setup/...
+      # out of rule 2 (which would make it /setup/setup/...), so rule order does
+      # not matter. git-pages picks the site from the Host header alone, so one
+      # publish serves both names. `local-api` for the same reason as `pages`:
+      # error-pages would replace the site's own 404.html.
+      setup:
+        annotations:
+          external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        kind: HTTPRoute
+        hostnames:
+          - "setup.${ROOT_DOMAIN}"
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /setup
+            backendRefs:
+              - identifier: app
+                port: 3000
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api
+              - type: URLRewrite
+                urlRewrite:
+                  hostname: "docs.pages.${ROOT_DOMAIN}"
+          # Exactly one PathPrefix match: Gateway API only allows
+          # ReplacePrefixMatch on a rule whose single match is a PathPrefix.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: app
+                port: 3000
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api
+              - type: URLRewrite
+                urlRewrite:
+                  hostname: "docs.pages.${ROOT_DOMAIN}"
+                  path:
+                    type: ReplacePrefixMatch
+                    replacePrefixMatch: /setup

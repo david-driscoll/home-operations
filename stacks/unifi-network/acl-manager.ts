@@ -8,7 +8,7 @@ import { writeFileSync } from "node:fs";
 import type { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
-import { Roles } from "../../components/constants.ts";
+import { authentikVip, Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { getDnsMachines, getTailscaleIp } from "../../components/tailscale.ts";
@@ -192,7 +192,12 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
     );
 
-    const allowedIps = clusters.flatMap(z => z.publicIps).concat(internalIps);
+    // authentik's VIP rides along with the cluster gateways. Members reach the
+    // apps over the 10.10.0.0/16 route, and without this every SSO sign-in then
+    // fails at the authentik hop -- the VIP is not a cluster publicIp, and only
+    // admins-home-subnet-access covers the rest of the subnet. Appended last so
+    // the generated destination list keeps a stable order across resyncs.
+    const allowedIps = clusters.flatMap(z => z.publicIps).concat(internalIps, [authentikVip]);
 
     manager.setGrant(
       "member-home-subnet-access",
