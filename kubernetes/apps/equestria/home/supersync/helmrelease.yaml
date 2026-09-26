@@ -6,10 +6,8 @@
 #
 #   supersync    upstream's server, untouched. Owns the sync API and the schema.
 #   coordinator  ./resources/App.cs. Behind authentik; turns X-authentik-email
-#                into a verified SuperSync account and a pasteable token. Also
-#                the access gate (/authz) in front of every sync request, see
-#                ./middleware.yaml. The "why this works" is the header of that
-#                file.
+#                into a verified SuperSync account and a pasteable token. The
+#                "why this works" is the header of that file.
 #
 # SuperSync's own passkey / magic-link sign-up and login are never routed: every
 # path the route below does not send to SuperSync lands on the coordinator,
@@ -117,7 +115,7 @@ spec:
               # The web build calls the sync API cross-origin from its own host.
               # The desktop and mobile apps use a native HTTP stack and send no
               # Origin at all, so they need nothing here.
-              CORS_ORIGINS: &corsOrigins https://super-productivity.${ROOT_DOMAIN},https://super-productivity.${TAILSCALE_DOMAIN}
+              CORS_ORIGINS: https://super-productivity.${ROOT_DOMAIN},https://super-productivity.${TAILSCALE_DOMAIN}
             envFrom:
               - secretRef:
                   name: ${APP}-env
@@ -161,21 +159,12 @@ spec:
             securityContext: *securityContext
 
       coordinator:
-        # On the path of every sync request (./middleware.yaml), so it is
-        # always up, exactly like the server.
+        # Left on the nightly shed, unlike the server: it is only needed while
+        # someone is adding a device, and syncing never touches it.
         annotations:
           reloader.stakater.com/auto: "true"
-          downscaler/exclude: "true"
         replicas: 1
-        # Stateless -- a restart only empties the 5-minute verdict cache -- so
-        # the replacement comes up before the old pod goes. That matters here:
-        # `dotnet run` compiles for ~30s on start, and every Postgres password
-        # rotation restarts this pod through Reloader. With Recreate, each one
-        # would be ~30s of failed syncs.
-        strategy: RollingUpdate
-        rollingUpdate:
-          unavailable: 0
-          surge: 1
+        strategy: Recreate
         pod:
           securityContext:
             runAsNonRoot: true
@@ -210,24 +199,12 @@ spec:
               HOME: /work
               DOTNET_CLI_TELEMETRY_OPTOUT: "1"
               DOTNET_NOLOGO: "1"
-              # For the CORS headers on an /authz denial -- the same origins
-              # SuperSync allows.
-              CORS_ORIGINS: *corsOrigins
             envFrom:
               # COORDINATOR_DB, plus DATABASE_URL (unused here).
               - secretRef:
                   name: ${APP}-env
               - secretRef:
                   name: ${APP}-jwt
-              # AUTHENTIK_URL / _TOKEN / _ALLOWED_GROUPS for the access gate.
-              # `optional` so the token page still works on merge day, before
-              # the applications stack has created the account. Until then the
-              # gate denies every sync request, which is the safe side. Reloader
-              # does NOT restart the pod when this Secret is first CREATED --
-              # delete the pod once it exists.
-              - secretRef:
-                  name: ${APP}-authentik
-                  optional: true
             probes:
               startup:
                 enabled: true
@@ -281,17 +258,13 @@ spec:
           - "${APP}.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
-          # The sync API. The apps authenticate with the bearer token and
-          # cannot follow an authentik redirect, so the gates are the network
-          # (`local-api`) and the coordinator's access check
-          # (./middleware.yaml), which re-asks authentik whether the token's
-          # owner is still allowed. `local-api`, not `local-user`: error-pages
-          # would replace SuperSync's JSON 401/409s with HTML the apps cannot
-          # parse.
+          # The sync API. Network gate only: the apps authenticate with the
+          # bearer token and cannot follow an authentik redirect. `local-api`,
+          # not `local-user`: error-pages would replace SuperSync's JSON
+          # 401/409s with HTML the apps cannot parse.
           #
           # /api/sync/ws matches here too, but ./ingressroute-ws.yaml outranks
-          # it so the token in that URL stays out of the access log. It carries
-          # the same two middlewares.
+          # it so the token in that URL stays out of the access log.
           - matches:
               - path:
                   type: PathPrefix
@@ -300,22 +273,7 @@ spec:
               - path:
                   type: Exact
                   value: /api/replace-token
-            backendRefs:
-              - identifier: *app
-                port: *port
-            filters:
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: local-api
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: ${APP}-authz
-          # Gatus (./definition.yaml). No token, so no access check.
-          - matches:
+              # Gatus, see ./definition.yaml.
               - path:
                   type: Exact
                   value: /health

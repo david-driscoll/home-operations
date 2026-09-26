@@ -23,9 +23,6 @@
  *                   BaoStore.proxmoxBackupServers (LIST hosts/pbs)
  *   oidcBaoPath     written by the authentik component, read by ExternalSecrets
  *                   and Dockge `.env` templates that spell the path by hand
- *   accessCheckBaoPath
- *                   written by the authentik component, read by the app's own
- *                   ExternalSecret, which spells the path by hand
  *
  * A change to the slug rule moves the write side only. The read side is a LIST
  * of a prefix, so it does not 404 — it silently returns a smaller set, and a
@@ -34,7 +31,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { accessCheckBaoPath, baoSlug, dockgeBaoPath, oidcBaoPath, pbsBaoPath } from "./bao.ts";
+import { baoSlug, dockgeBaoPath, oidcBaoPath, pbsBaoPath } from "./bao.ts";
 
 describe("baoSlug", () => {
   it("lowercases, collapses non-alphanumerics, and trims", () => {
@@ -91,19 +88,6 @@ describe("oidcBaoPath", () => {
     // a .env file, so nothing type-checks them against this function.
     assert.equal(oidcBaoPath("celestia", "forgejo"), "clusters/celestia/apps/forgejo/oidc");
     assert.equal(oidcBaoPath("alpha-site", "technitium"), "clusters/alpha-site/apps/technitium/oidc");
-  });
-});
-
-describe("accessCheckBaoPath", () => {
-  it("derives the per-app authentik-access path", () => {
-    assert.equal(accessCheckBaoPath("equestria", "supersync"), "clusters/equestria/apps/supersync/authentik-access");
-    assert.equal(accessCheckBaoPath("alpha-site", "Open WebUI"), "clusters/alpha-site/apps/open-webui/authentik-access");
-  });
-
-  it("matches the path kubernetes/apps/equestria/home/supersync/externalsecret.yaml spells by hand", () => {
-    // `clusters/${CLUSTER_CNAME}/apps/${APP}/authentik-access` -- a string in a
-    // manifest, so nothing type-checks it against this function.
-    assert.equal(accessCheckBaoPath("equestria", "supersync"), "clusters/equestria/apps/supersync/authentik-access");
   });
 });
 

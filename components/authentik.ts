@@ -7,7 +7,6 @@ import { CategoryEnum, OnePasswordItem, TypeEnum } from "../dynamic/1password/On
 import type { Application } from "../sdks/authentik/bin/application.js";
 import type { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
 import type { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
-import { createAccessCheckAccount } from "./authentik/access-check.ts";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
 import { baoKvSecret, baoProvenance, oidcBaoPath } from "./bao.ts";
@@ -116,9 +115,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        if (application.spec.access_policy?.serviceAccount) {
-          this.createAccessCheckAccount(application);
-        }
         const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply(defs => {
           const r = Object.assign(result, {
             definition: application,
@@ -549,23 +545,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     }
 
     return app;
-  }
-
-  /** `spec.access_policy.serviceAccount` -- see ./authentik/access-check.ts. */
-  private createAccessCheckAccount(definition: ApplicationDefinitionSchema) {
-    return createAccessCheckAccount(
-      {
-        clusterKey: this.args.clusterKey,
-        appName: definition.metadata.name,
-        displayName: definition.spec.name,
-        resourceName: this.resolveResourceName(definition),
-        groups: definition.spec.access_policy?.groups ?? [],
-        // The host this cluster's outpost talks to (stacks/applications/kubernetes.ts).
-        authentikUrl: this.cluster.apply(cluster => `https://${cluster.authentikDomain}`),
-        baoProvider: this.args.globals.baoDualWriteEnabled ? this.args.globals.baoProvider : undefined,
-      },
-      { parent: this.applicationsComponent },
-    );
   }
 
   private addGatusInstances(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {

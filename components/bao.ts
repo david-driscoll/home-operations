@@ -262,16 +262,6 @@ export function oidcBaoPath(clusterKey: string, appName: string): string {
 }
 
 /**
- * Canonical OpenBao path (within the `secrets` mount) for the read-only
- * authentik service account an ApplicationDefinition asks for with
- * `spec.access_policy.serviceAccount` — `url`, `token` and `groups`, read by
- * that app's ExternalSecret. Same argument shape as `oidcBaoPath`.
- */
-export function accessCheckBaoPath(clusterKey: string, appName: string): string {
-  return `clusters/${clusterKey}/apps/${baoSlug(appName)}/authentik-access`;
-}
-
-/**
  * Canonical OpenBao path (within the `secrets` mount) for an app's database
  * credential on its cluster's shared Postgres —
  * `clusters/<clusterKey>/apps/<slug(app)>/postgres`, the reorg's §A/§C shape.
