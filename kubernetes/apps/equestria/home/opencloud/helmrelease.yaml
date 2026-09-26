@@ -797,6 +797,36 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: local-user
+          # CalDAV/CardDAV and their well-known discovery paths -- the four that
+          # ./resources/proxy.yaml hands to the Radicale sidecar. Same backend
+          # and the same LAN/tailnet gate as `/`, minus error-pages: it rewrites
+          # every 401 into an HTML page and drops WWW-Authenticate, and a DAV
+          # client handed a 401 with no challenge has nothing to answer, so
+          # iOS "Add CalDAV/CardDAV Account" fails outright. Longest prefix wins
+          # (Traefik ranks these far above `/`), so nothing else on this host
+          # changes.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /caldav
+              - path:
+                  type: PathPrefix
+                  value: /carddav
+              - path:
+                  type: PathPrefix
+                  value: /.well-known/caldav
+              - path:
+                  type: PathPrefix
+                  value: /.well-known/carddav
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api
       # The app's original hostname, kept alive for bookmarks, old share links
       # and already-configured clients -- as a REDIRECT, not a second hostname
       # on the route above. The web UI's config.json hardcodes OC_URL as its
