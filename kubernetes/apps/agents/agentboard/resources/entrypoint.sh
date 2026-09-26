@@ -47,10 +47,18 @@ echo "==> installing OS packages"
 # `tini` and `procps` are for the process hygiene at the bottom of this file:
 # tini becomes PID 1 so exited children are reaped, and procps supplies the
 # pgrep/pkill the orphaned-provider sweep runs on (the slim image has no ps).
+#
+# `ripgrep` is agentboard's, and its README does not list it. agentboard shells
+# out to a bare `rg` to tie each tmux window to the Claude transcript running
+# in it; without one on PATH every match attempt failed with `Executable not
+# found` -- 722 times in ~/.agentboard/agentboard.log by 2026-09-25 -- and a
+# window could only be matched to its session by NAME. That fallback is the
+# only reason the resume block below ever worked: it names each window after
+# the session's display_name.
 apt-get update -qq
 apt-get install -y --no-install-recommends \
     tmux git openssh-client ca-certificates curl build-essential \
-    tini procps \
+    tini procps ripgrep \
     >/dev/null
 rm -rf /var/lib/apt/lists/*
 
@@ -286,14 +294,14 @@ npm cache clean --force >/dev/null 2>&1 || true
 # when there are none, so a fresh PVC still comes up with nothing but
 # agentboard's own root window.
 #
-# WHY THE WINDOWS GO IN `agentboard`, which is the whole reason this runs down
-# here in the background rather than earlier in this script. agentboard tags
-# every window it can see as `managed` or `external`, and REFUSES to kill an
-# external one -- "Cannot kill external sessions". Classification is by tmux
-# SESSION NAME: anything under `agentboard` is managed, anything else is not.
-# Ten failed kill attempts in ~/.agentboard/agentboard.log are what surfaced
-# this, back when the bootstrap above still created a `main` session for these
-# windows to land in.
+# WHY THE WINDOWS GO IN `agentboard`, which is the whole reason they are
+# opened down here in the background rather than earlier in this script.
+# agentboard tags every window it can see as `managed` or `external`, and
+# REFUSES to kill an external one -- "Cannot kill external sessions".
+# Classification is by tmux SESSION NAME: anything under `agentboard` is
+# managed, anything else is not. Ten failed kill attempts in
+# ~/.agentboard/agentboard.log are what surfaced this, back when the bootstrap
+# above still created a `main` session for these windows to land in.
 #
 # Verified live 2026-09-05 rather than assumed: a window created with a plain
 # `tmux new-window -t agentboard` -- no agentboard involvement at all -- came
@@ -323,7 +331,129 @@ AGENTBOARD_RESUME_SESSIONS="$${AGENTBOARD_RESUME_SESSIONS:-3}"
 # it -- it is interpolated into a single-quoted `bash -lc` string below.
 AGENTBOARD_RESUME_PROMPT="$${AGENTBOARD_RESUME_PROMPT-continue from where you left off}"
 
+# FIRST, SETTLE agentboard's DATABASE AGAINST THE NEW TMUX SERVER -- here, in
+# the foreground, BEFORE agentboard starts and reads it.
+#
+# A pod restart always means a fresh tmux server, so every `current_window` in
+# agent_sessions at this point names a window that died with the old one. And
+# agentboard does not clear them itself. Read off its 0.15.0 bundle: its
+# reconcile only probes a remembered window once the new server has at least
+# one real window, and with nothing but `__agentboard_root__` it keeps every
+# stale row "active" at status unknown. The browser is handed that phantom,
+# selects it, and gets `ERR_TMUX_SWITCH_FAILED: can't find window: @2` -- which
+# is what every restart showed, and what `branch-management` sat in for eight
+# hours on 2026-09-25. tmux also numbers windows from @1 again on a new server,
+# so the first real window can REUSE a stale id and be claimed by the wrong
+# session. The two failures share a cause, and clearing it here fixes both.
+#
+# What this writes is exactly what agentboard's own `orphanSession` would, on
+# the first reconcile that could see the window was gone: `current_window =
+# NULL, is_hibernating = 1`. It only happens sooner, before any of it can reach
+# a browser. The rows keep their names and land under Hibernating, where the
+# UI offers a one-click Wake for any that are not resumed below.
+#
+# WHICH SESSIONS ARE RESUMED is decided here too, from the same read. It has to
+# be here, not after: past this point the difference between "was running when
+# the pod went down" and "was hibernated on purpose" is gone. The rule:
+#
+#   current_window IS NOT NULL               running when the pod went down
+#   is_hibernating = 1 AND wake_started_at   a Wake still in flight -- the
+#     IS NOT NULL                            UI's, or this block's on a boot
+#                                            that died before it finished
+#
+# A session hibernated from the UI on purpose is NOT resumed. agentboard's
+# README describes Hibernate as closing the window while "keeping them visible
+# across restarts for manual Wake", and resurrecting them every boot would
+# undo that. History (Move to History, or killed from the UI) is excluded for
+# the same reason it always was: someone is finished with it.
+#
+# THE RESUMED ROWS GET agentboard's OWN WAKE MARKER, `wake_started_at = now`,
+# which its Wake button sets before opening a window. That is not bookkeeping:
+# agentboard will not attach a window to a hibernating session unless the
+# marker is under 10 minutes old (`canAttemptDormantRematch`, and
+# WAKE_PENDING_REMATCH_TTL_MS). Without it the resumed `claude` would run in a
+# window the UI never connects to its session. The log poller clears the
+# marker when it claims the window; markers on rows NOT resumed are cleared
+# here, as agentboard's own `recordWakeFailure` does for a Wake that failed.
+#
+# THE HIBERNATION COLUMN WAS `is_pinned` UNTIL agentboard 0.12. Somewhere
+# between 0.5.4 and 0.12.2 a migration renamed it (`ALTER TABLE agent_sessions
+# RENAME COLUMN is_pinned TO is_hibernating`; the meaning did not change), and
+# the resume query, still naming the old column, threw `no such column:
+# is_pinned` on every boot from the 0.12.2 rollout on 2026-09-23 until
+# 2026-09-25. Nobody saw it: stderr went to /dev/null, the loop got zero rows,
+# and "could not look" printed exactly the same nothing as "found nothing to
+# resume". Hence the WARNING path and the lines saying what was found. Note
+# that this runs BEFORE agentboard's own migrations, so it always sees the
+# PREVIOUS version's schema: the boot that rolls out a rename still works, and
+# the WARNING appears on the boot after it.
+#
+# Runs even with resuming switched off (N=0) -- the phantom windows are there
+# either way. NON-FATAL, like everything after the base `mise install`: a
+# failure leaves agentboard exactly as it was before this block existed.
+resume_n=0
 if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
+  resume_n="$$AGENTBOARD_RESUME_SESSIONS"
+fi
+resume_rows=""
+settled=0
+db=/root/.agentboard/agentboard.db
+if [ ! -f "$$db" ]; then
+  echo "==> no agentboard.db yet; nothing to settle or resume"
+elif resume_rows=$(DB="$$db" N="$$resume_n" bun -e '
+  import { Database } from "bun:sqlite";
+  import { existsSync } from "node:fs";
+  const n = parseInt(process.env.N, 10) || 0;
+  const picked = [];
+  try {
+    const db = new Database(process.env.DB);
+    db.transaction(() => {
+      const candidates = db.query(
+        "SELECT session_id, display_name, project_path FROM agent_sessions " +
+        "WHERE project_path IS NOT NULL AND project_path != \x27\x27 " +
+        "AND (current_window IS NOT NULL " +
+        "OR (is_hibernating = 1 AND wake_started_at IS NOT NULL)) " +
+        "ORDER BY last_activity_at DESC").all();
+      const stale = db.query(
+        "UPDATE agent_sessions SET current_window = NULL, is_hibernating = 1 " +
+        "WHERE current_window IS NOT NULL").run().changes;
+      db.query("UPDATE agent_sessions SET wake_started_at = NULL " +
+        "WHERE wake_started_at IS NOT NULL").run();
+      const mark = db.query("UPDATE agent_sessions SET wake_started_at = ?1, " +
+        "last_resume_error = NULL WHERE session_id = ?2");
+      const now = new Date().toISOString();
+      for (const r of candidates) {
+        if (picked.length >= n) break;
+        if (!existsSync(r.project_path)) {
+          console.error("==> not resuming " + r.display_name + ": " + r.project_path + " is gone");
+          continue;
+        }
+        mark.run(now, r.session_id);
+        picked.push(r);
+      }
+      console.error("==> agentboard.db: hibernated " + stale +
+        " session(s) whose windows died with the last pod");
+    })();
+  } catch (e) {
+    console.error("    " + (e && e.message ? e.message : String(e)));
+    process.exit(1);
+  }
+  // agentboard names its own Wake windows this way (createWindow: trim, then
+  // whitespace to "-"), and its log poller copies the window name back into
+  // display_name when it claims the window -- so anything else renames the
+  // session. The id prefix only covers a row with no name at all.
+  for (const r of picked) {
+    const wname = (r.display_name || "").trim().replace(/\s+/g, "-") || r.session_id.split("-")[0];
+    console.log([r.session_id, wname, r.project_path].join("\t"));
+  }
+'); then
+  settled=1
+else
+  echo "==> WARNING: could not settle $$db; nothing resumed, and stale windows may show as \"can't find window\" (error above)" >&2
+  resume_rows=""
+fi
+
+if [ -n "$$resume_rows" ]; then
 (
   # agentboard creates its session shortly after start; give it a minute.
   i=0
@@ -337,57 +467,8 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
     exit 0
   }
 
-  db=/root/.agentboard/agentboard.db
-  [ -f "$$db" ] || exit 0
-
-  # ONLY IN-PROGRESS SESSIONS. A session the UI has moved to History is one
-  # someone has finished with, and resurrecting it every boot is noise -- worse,
-  # it competes for the N slots with the sessions that were actually mid-task.
-  #
-  # THE PREDICATE IS agentboard's OWN, not one invented here. Read off the
-  # prepared statements in its bundle (0.4.27, `bin/agentboard`), which is also
-  # what the sidebar groups by:
-  #
-  #   active       current_window IS NOT NULL
-  #   hibernating  current_window IS NULL AND is_pinned = 1
-  #   history      current_window IS NULL AND is_pinned = 0
-  #
-  # So `NOT (current_window IS NULL AND is_pinned = 0)` is exactly "not in
-  # History", and it covers BOTH remaining states -- which matters, because
-  # which one a restarted session is sitting in is a RACE. This block runs the
-  # moment `tmux has-session -t agentboard` succeeds, and agentboard's own
-  # startup reconcile -- the pass that notices the pre-restart `current_window`
-  # values point at windows the dead tmux server took with it, and rewrites them
-  # to hibernating -- may or may not have run yet. Before it: stale
-  # `current_window`, non-NULL, kept. After it: `is_pinned = 1`, kept. Either
-  # way the row survives the filter and the answer does not depend on who won.
-  #
-  # `is_pinned` is a hibernation marker here, NOT the UI's pin: agentboard sets
-  # it on any window that goes away on its own (`orphanSession` defaults to
-  # `hibernate: true`) and clears it on the two paths that mean "I am done with
-  # this" -- Move to History, and killing the window from the UI. That second one
-  # is why a killed session stays dead across a restart instead of coming back.
-  #
-  # Read-only, and tab-separated so a display_name with spaces survives.
-  DB="$$db" N="$$AGENTBOARD_RESUME_SESSIONS" bun -e '
-    import { Database } from "bun:sqlite";
-    const db = new Database(process.env.DB, { readonly: true });
-    const n = parseInt(process.env.N, 10);
-    const rows = db.query(
-      "SELECT session_id, display_name, project_path FROM agent_sessions " +
-      "WHERE project_path IS NOT NULL AND project_path != \x27\x27 " +
-      "AND NOT (current_window IS NULL AND is_pinned = 0) " +
-      "ORDER BY last_activity_at DESC LIMIT ?1").all(n);
-    for (const r of rows) console.log([r.session_id, r.display_name, r.project_path].join("\t"));
-  ' 2>/dev/null | while IFS="$$(printf '\t')" read -r id name path; do
+  printf '%s\n' "$$resume_rows" | while IFS="$$(printf '\t')" read -r id wname path; do
       [ -n "$$id" ] || continue
-      if [ ! -d "$$path" ]; then
-        echo "==> skipping $$name: $$path is gone"
-        continue
-      fi
-      # tmux window names cannot contain ':' or '.'; fall back to the id.
-      wname=$(printf '%s' "$${name:-$$id}" | tr ':.' '__' | cut -c1-24)
-      [ -n "$$wname" ] || wname="$${id%%-*}"
       cmd="claude --resume $$id"
       if [ -n "$$AGENTBOARD_RESUME_PROMPT" ]; then
         cmd="$$cmd \"$$AGENTBOARD_RESUME_PROMPT\""
@@ -400,6 +481,8 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
         "exec bash -lc '$$cmd'"
     done
 ) &
+elif [ "$$settled" -eq 1 ] && [ "$$resume_n" -gt 0 ]; then
+  echo "==> no in-progress sessions to resume"
 fi
 
 # SWEEP ORPHANED PULUMI PROVIDERS.
