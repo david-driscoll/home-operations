@@ -219,6 +219,54 @@ npm cache clean --force >/dev/null 2>&1 || true
 # curl'd from main at boot, which could drift from what was deployed and
 # failed on an offline boot.
 
+# REMOTE CONTROL ON AT STARTUP, SET EXPLICITLY AT USER SCOPE.
+#
+# Every Claude Code session in this pod is meant to be reachable from the
+# phone, and for a while that happened without anything here asking for it.
+# It was never configured: on 2026-09-26 neither ~/.claude/settings.json nor
+# ~/.claude.json, nor any of the rolling ~/.claude.json backups kept in
+# ~/.claude/backups, carried `remoteControlAtStartup`. What turned it on was
+# Claude Code's own DEFAULT for an unset key -- org policy, else a server-side
+# feature flag (`tengu_cobalt_harbor`, default false), read off the 2.1.283
+# bundle -- and the `remote-control-auto-on` notice counted in ~/.claude.json
+# is the disclosure it shows when that default is what applied. When the
+# default stopped resolving to true, Remote Control stopped starting, with
+# nothing in this repo having changed.
+#
+# An explicit `true` skips that default entirely. It has to be USER scope:
+# `remoteControlAtStartup` is a security-sensitive key that the repo's
+# .claude/settings.json and settings.local.json may only switch OFF -- Claude
+# Code logs "repo-scoped settings cannot enable Remote Control; set it at user
+# scope (/config)" and ignores a `true` there. And it has to be a setting, not
+# a `--remote-control` flag: a flag would need adding to ../resources/bashrc's
+# wrapper, the resume command below, and agentboard's own Wake (which runs
+# CLAUDE_RESUME_CMD through tmux, outside any of those), while a setting
+# reaches all of them.
+#
+# ~/.claude/settings.json is on the PVC and is yours -- theme, autoMode and the
+# rest -- so this MERGES one key and rewrites nothing else. It only ever adds
+# the key: if it is already there, true or false, it is left alone, so turning
+# Remote Control off with /config survives the next boot. Non-fatal, like the
+# rest of the housekeeping above.
+echo "==> Remote Control at startup (user settings)"
+if ! CLAUDE_SETTINGS=/root/.claude/settings.json bun -e '
+  import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+  import { dirname } from "node:path";
+  const p = process.env.CLAUDE_SETTINGS;
+  const s = existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {};
+  if (Object.hasOwn(s, "remoteControlAtStartup")) {
+    console.log("    remoteControlAtStartup is already " + s.remoteControlAtStartup + " in " + p + "; leaving it");
+  } else {
+    s.remoteControlAtStartup = true;
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p + ".tmp", JSON.stringify(s, null, 2) + "\n");
+    renameSync(p + ".tmp", p);
+    console.log("    set remoteControlAtStartup: true in " + p);
+  }
+'; then
+  echo "WARNING: could not set remoteControlAtStartup; sessions will not start Remote Control on their own" >&2
+fi
+
 # NO TMUX SESSION IS CREATED HERE, and that is a deliberate reversal. This
 # used to be
 #
