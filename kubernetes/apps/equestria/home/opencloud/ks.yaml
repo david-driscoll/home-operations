@@ -43,6 +43,9 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      # The app is served as `cloud`, not `opencloud` -- see the `aliases`
+      # route in ./helmrelease.yaml for why APP itself is not renamed.
+      TAILSCALE_HOST: cloud
       # 50Gi as requested. This one volume carries EVERYTHING that has to
       # survive a restart -- see the three subPaths in ./helmrelease.yaml:
       #

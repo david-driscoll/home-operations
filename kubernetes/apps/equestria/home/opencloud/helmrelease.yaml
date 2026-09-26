@@ -135,7 +135,7 @@ spec:
               # components/tailscale works because OpenCloud honours the
               # forwarded headers, and is registered as a redirect URI in
               # ./definition.yaml for the same reason.
-              OC_URL: "https://${APP}.${ROOT_DOMAIN}"
+              OC_URL: "https://cloud.${ROOT_DOMAIN}"
               OC_LOG_LEVEL: info
               OC_LOG_COLOR: "false"
               OC_LOG_PRETTY: "false"
@@ -305,7 +305,7 @@ spec:
               # because internal-network's allow-list already contains
               # ${CLUSTER_NETWORK} and ${SERVICE_NETWORK}
               # (kubernetes/apps/network/traefik/middleware/internal-network.yaml).
-              COLLABORATION_WOPI_SRC: "https://${APP}.${ROOT_DOMAIN}"
+              COLLABORATION_WOPI_SRC: "https://cloud.${ROOT_DOMAIN}"
               # ⚠ Must match `default_app` in ./resources/app-registry.yaml.
               # They are two spellings of one identifier and changing either
               # alone breaks every file association SILENTLY -- no error, files
@@ -563,7 +563,7 @@ spec:
               # whose WOPISrc is not named here -- this is what stops an
               # arbitrary internet host from using this Collabora as a free
               # rendering service. Must match COLLABORATION_WOPI_SRC above.
-              aliasgroup1: "https://${APP}.${ROOT_DOMAIN}"
+              aliasgroup1: "https://cloud.${ROOT_DOMAIN}"
               # The image generates a self-signed certificate at start unless
               # told not to. TLS terminates at Traefik, so it would be a
               # certificate nothing ever presents.
@@ -573,7 +573,7 @@ spec:
                 --o:ssl.ssl_verification=false
                 --o:ssl.termination=true
                 --o:welcome.enable=false
-                --o:net.frame_ancestors=${APP}.${ROOT_DOMAIN}
+                --o:net.frame_ancestors=cloud.${ROOT_DOMAIN}
             resources:
               requests:
                 cpu: 100m
@@ -774,7 +774,7 @@ spec:
             namespace: network
             kind: Gateway
         hostnames:
-          - "${APP}.${ROOT_DOMAIN}"
+          - "cloud.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
           - matches:
@@ -797,6 +797,42 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: local-user
+      # The app's original hostname, kept alive for bookmarks, old share links
+      # and already-configured clients -- as a REDIRECT, not a second hostname
+      # on the route above. The web UI's config.json hardcodes OC_URL as its
+      # API server, so a UI loaded from any other origin makes cross-origin
+      # calls that OpenCloud's own CSP (`connect-src 'self'`,
+      # ./resources/csp.yaml) refuses. Bouncing to the canonical hostname keeps
+      # OC_URL, the authentik redirect URIs and Collabora's frame_ancestors
+      # single-valued. No middleware: the redirect exposes nothing, and the
+      # destination carries the `local-user` gate.
+      #
+      # The hostnames are `cloud`, while APP stays `opencloud`: APP also names
+      # the PVC, the volsync restic repository, the OpenBao path and the
+      # authentik application, so renaming it would provision an empty volume
+      # and prune the real one. Same split as immich/`photos`.
+      aliases:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: "cloud.${ROOT_DOMAIN}"
+                  # 302, not 301: browsers cache a 301 indefinitely, which
+                  # would pin this name to the redirect if it is ever served
+                  # directly again.
+                  statusCode: 302
       collabora:
         parentRefs:
           - name: internal
