@@ -1,0 +1,54 @@
+# git-pages configuration. Unknown keys are a hard error at startup.
+# Upstream reference: https://codeberg.org/git-pages/git-pages (conf/config.example.toml)
+#
+# Flux postBuild substitutes the root domain and namespace variables in here --
+# the configMapGenerator output is an ordinary manifest by the time Flux sees
+# it. Which is also why no comment in this file may spell a variable out.
+
+log-format = "text"
+
+[server]
+pages = "tcp/:3000"
+# The Caddy on-demand-TLS "ask" endpoint. Unused: TLS terminates at the
+# `internal` Gateway on the shared le-production wildcard certificate.
+caddy = "-"
+metrics = "tcp/:3002"
+
+# <org>.pages.<root domain>/        <- <org>/pages
+# <org>.pages.<root domain>/<repo>/ <- <org>/<repo>
+#
+# This block governs who may PUBLISH, not what is served: git-pages serves any
+# Host it holds a site for. Publishing is an archive upload from the git-pages
+# Forgejo Action, carrying the workflow's own `forgejo.token`; git-pages asks
+# the forge at the clone-url's origin whose token it is, and accepts it when
+# that identity is the org/user itself or has push access to the repo.
+#
+# The in-cluster Service rather than the public git hostname: those API calls then
+# stay in the namespace instead of hair-pinning through the Gateway's
+# `local-user` middleware. The forge origin is only ever used for the API --
+# nothing here makes git-pages clone.
+[[wildcard]]
+domain = "pages.${ROOT_DOMAIN}"
+clone-url = "http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000/<user>/<project>.git"
+index-repo = "pages"
+index-repo-branch = "main"
+authorization = "forgejo"
+
+[storage]
+type = "s3"
+
+[storage.s3]
+# host:port, no scheme -- minio-go takes the scheme from `insecure`.
+endpoint = "forgejo-garage.${NAMESPACE}.svc.cluster.local:3900"
+insecure = true
+# Garage is path-style only. No `bucket-lookup` key: it postdates 0.9.1 (an
+# unknown key is fatal), and minio-go's default `auto` already picks path-style
+# for any endpoint that is not AWS or Aliyun.
+# Must equal the GarageCluster's s3Api.region.
+region = "equestria"
+bucket = "git-pages"
+# access-key-id / secret-access-key: PAGES_STORAGE_S3_ACCESS_KEY_ID and
+# PAGES_STORAGE_S3_SECRET_ACCESS_KEY from the GarageKey Secret (helmrelease.yaml).
+
+[limits]
+max-site-size = "512M"

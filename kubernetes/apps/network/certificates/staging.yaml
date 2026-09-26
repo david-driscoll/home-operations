@@ -48,3 +48,5 @@ spec:
     - "*.agents.${ROOT_DOMAIN}"
     # kube-coder workspaces; reasoning on the production twin.
     - "*.dev.${ROOT_DOMAIN}"
+    # git-pages team sites; reasoning on the production twin.
+    - "*.pages.${ROOT_DOMAIN}"

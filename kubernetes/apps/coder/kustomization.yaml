@@ -15,6 +15,7 @@ resources:
   - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml
+  - ./git-pages/ks.yaml
   # Disabled for now, not quite what I'm looking for at the moment.
   # - ./kube-coder/ks.yaml
   # The operator first: ./renovate/ks.yaml is nothing but a RenovateJob, and
