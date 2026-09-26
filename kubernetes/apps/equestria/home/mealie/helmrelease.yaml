@@ -148,6 +148,13 @@ spec:
               # form gone is the lockout described above with no page left to
               # notice it from.
               OIDC_AUTO_REDIRECT: "false"
+              # Stands in for the "Remember me" box the SSO path cannot show.
+              # Without it the session cookie dies with the browser session, and
+              # a Home Screen web app counts as closing the browser, so family
+              # were signed out every time they swiped it away. With it the
+              # cookie gets Max-Age=TOKEN_TIME (48h default) and survives
+              # refresh. It does not make the token itself live longer.
+              OIDC_REMEMBER_ME: "true"
             resources:
               requests:
                 cpu: 100m
