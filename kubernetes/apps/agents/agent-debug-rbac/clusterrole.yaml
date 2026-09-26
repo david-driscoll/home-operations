@@ -95,7 +95,13 @@
 #       out of a Stack deadlocked on an Update whose Flux artifact no longer
 #       exists (see the rule for the 2026-09-15 case). Both are operator-
 #       created side effects rebuilt on the next reconcile, not desired
-#       state; `stacks` themselves stay read-only, as Flux renders those.
+#       state.
+#
+#     - Pulumi Stacks (pulumi.com): patch/update, narrowed by
+#       ./stack-reconcile-only.yaml to ONE annotation,
+#       `pulumi.com/reconciliation-request` -- the documented way to re-run a
+#       Stack the operator has marked Stalled. Everything else about a Stack
+#       stays exactly as Flux rendered it.
 #
 #     - PersistentVolumeClaims: delete, plus the `/resize` subresource --
 #       the actual fix for a "volume full" diagnosis, and occasionally
@@ -235,12 +241,42 @@ rules:
   # cost is a partially-applied update the next run reconciles, which is the
   # same exposure as the pod delete grant above.
   #
-  # `stacks` (pulumi.com) stay read-only, matching the Flux reasoning: Stacks
-  # are the declarative objects Flux renders from git, and this SA has no
-  # business authoring one. No `create` either -- the operator creates these.
+  # No `create` -- the operator creates these.
   - apiGroups: ["auto.pulumi.com"]
     resources: ["updates", "workspaces"]
     verbs: ["delete"]
+
+  # Pulumi Stacks: patch/update -- for the `pulumi.com/reconciliation-request`
+  # annotation and NOTHING else, which ./stack-reconcile-only.yaml enforces;
+  # this grant ships in the same Kustomization as its limit, like `nodes`.
+  #
+  # WHY IT IS NEEDED. After three failed `up`s the operator marks a Stack
+  # Stalled -- "not retrying until the spec or source changes" -- and waits
+  # for the next commit or for that annotation. The estate's own new-app
+  # runbook depends on it: kubernetes/components/postgres/ks.yaml, step 3,
+  #
+  #   kubectl annotate stack -n pulumi system \
+  #     pulumi.com/reconciliation-request=$(date +%s) --overwrite
+  #
+  # because the `system` stack reliably loses the race with CNPG for a new
+  # app's login role and stalls. 2026-09-26, supersync (#2108): the agent
+  # watching the rollout diagnosed exactly that, confirmed the DatabaseRole
+  # had applied, and was then refused the one-line recovery -- "cannot update
+  # resource stacks" -- and had to hand it back to David.
+  #
+  # WHY `update` AND NOT JUST `patch`. Same as `nodes` below: mkp 0.4.3's
+  # apply_resource is a GET then a full PUT, so `update` is the only verb that
+  # authorises an mkp annotation. `kubectl annotate` is a PATCH.
+  #
+  # WHY THE POLICY IS NOT OPTIONAL. Unnarrowed, `update` on `stacks` would let
+  # this SA rewrite a Stack's spec: its program directory, its envRefs and
+  # secretsRef (which Secrets the operator injects into a `pulumi up` running
+  # with the estate's OpenBao AppRole, 1Password and cloud credentials), its
+  # workspace image. That is "author a Pulumi run", which the header rules out
+  # for the same reason it rules out authoring a Kustomization.
+  - apiGroups: ["pulumi.com"]
+    resources: ["stacks"]
+    verbs: ["patch", "update"]
 
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]

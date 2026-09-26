@@ -1,0 +1,128 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# NARROWS ./clusterrole.yaml's `stacks (pulumi.com): patch, update` GRANT TO
+# THE ONE THING IT IS FOR: setting `pulumi.com/reconciliation-request`, which
+# makes the Pulumi operator re-run a Stack it has marked Stalled. Added
+# 2026-09-26. Same shape as ./node-cordon-only.yaml, for the same reason:
+# RBAC authorises a verb on a resource, never a field, and `update` on a
+# Stack is "rewrite the Stack" -- its program, its envRefs/secretsRef, its
+# workspace image and credentials.
+#
+# WHY `update` HAS TO BE IN THE GRANT AT ALL is in ./clusterrole.yaml: mkp
+# 0.4.3's apply_resource is a GET followed by a full PUT.
+#
+# WHAT THIS POLICY DOES. For requests from the two identities that hold
+# `agent-debug` (see matchConditions), an UPDATE on a Stack -- which is what a
+# PATCH is too, by the time admission sees it -- is denied unless everything
+# the request could change is what it was in `oldObject`, apart from that one
+# annotation:
+#
+#   spec          compared whole. A full-PUT client resends the spec it just
+#                 read, and the apiserver has already applied the CRD's
+#                 defaulting to both sides, so an untouched spec compares
+#                 equal. A client that re-serialises lossily will be refused
+#                 here -- which is the point: that is also a client that
+#                 would have silently rewritten the Stack.
+#   status        not compared, and does not need to be: `status` is a
+#                 subresource on the Stack CRD, so a write to the main
+#                 resource has it reset to the stored value before admission,
+#                 and `stacks/status` is not granted.
+#   metadata      labels, ownerReferences and finalizers compared whole.
+#                 Annotations compared key by key in BOTH directions,
+#                 skipping only `pulumi.com/reconciliation-request`, so it can
+#                 be added, changed or removed and nothing else can. (Flux's
+#                 own `kustomize.toolkit.fluxcd.io/*` markers live there, and
+#                 dropping one would be a quiet way to break Flux's ownership.)
+#                 name/uid/creationTimestamp are immutable anyway;
+#                 resourceVersion/managedFields/generation are server-owned.
+#
+# EVERY FIELD READ IS `has()`-GUARDED, as ./node-cordon-only.yaml explains:
+# with `failurePolicy: Fail` an absent-field error DENIES, and most Stacks
+# carry no annotations at all until the first reconciliation request.
+#
+# NO TERNARIES OVER MAPS. `has(x) ? x : {}` looks tidier but asks the
+# type-checker to unify the CRD's map(string, string) with an untyped empty
+# literal, which is exactly the kind of compile-time surprise that turns into
+# "every request denied" under failurePolicy: Fail. The has()-guarded `all()`
+# form below type-checks without that.
+#
+# IF THIS SEEMS TO BLOCK A LEGITIMATE RECONCILIATION REQUEST, read the denial:
+# it names the part that differed.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agent-debug-stack-reconcile-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      # `stacks` only, not `stacks/*`: ./clusterrole.yaml grants no Stack
+      # subresource, so RBAC already refuses those.
+      - apiGroups: ["pulumi.com"]
+        apiVersions: ["*"]
+        operations: ["UPDATE"]
+        resources: ["stacks"]
+  # Keep in step with every ClusterRoleBinding to `agent-debug`, exactly as in
+  # ./node-cordon-only.yaml:
+  #   ../agent-tools-servers/kubernetes.yaml  -> agents/toolhive-kubernetes
+  #   ../agentboard/rbac.yaml                 -> agents/agentboard
+  # A new binding of the role that is not added here gets the unnarrowed
+  # `update` on every Stack.
+  matchConditions:
+    - name: is-agent-debug-identity
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:agents:toolhive-kubernetes",
+          "system:serviceaccount:agents:agentboard"
+        ]
+  validations:
+    - expression: >
+        has(object.spec) == has(oldObject.spec)
+        && (!has(object.spec) || object.spec == oldObject.spec)
+      message: >-
+        agent-debug may only set pulumi.com/reconciliation-request on a
+        Stack: spec must not change
+    - expression: >
+        has(object.metadata.labels) == has(oldObject.metadata.labels)
+        && (!has(object.metadata.labels)
+            || object.metadata.labels == oldObject.metadata.labels)
+      message: >-
+        agent-debug may only set pulumi.com/reconciliation-request on a
+        Stack: metadata.labels must not change
+    - expression: >
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)
+        && (!has(object.metadata.ownerReferences)
+            || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)
+        && has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)
+        && (!has(object.metadata.finalizers)
+            || object.metadata.finalizers == oldObject.metadata.finalizers)
+      message: >-
+        agent-debug may only set pulumi.com/reconciliation-request on a
+        Stack: metadata.ownerReferences and metadata.finalizers must not
+        change
+    - expression: >
+        (!has(object.metadata.annotations)
+          || object.metadata.annotations.all(k,
+               k == 'pulumi.com/reconciliation-request'
+               || (has(oldObject.metadata.annotations)
+                   && k in oldObject.metadata.annotations
+                   && oldObject.metadata.annotations[k] == object.metadata.annotations[k])))
+        && (!has(oldObject.metadata.annotations)
+          || oldObject.metadata.annotations.all(k,
+               k == 'pulumi.com/reconciliation-request'
+               || (has(object.metadata.annotations)
+                   && k in object.metadata.annotations
+                   && object.metadata.annotations[k] == oldObject.metadata.annotations[k])))
+      message: >-
+        agent-debug may only set pulumi.com/reconciliation-request on a
+        Stack: no other annotation may be added, changed or removed
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agent-debug-stack-reconcile-only
+spec:
+  policyName: agent-debug-stack-reconcile-only
+  validationActions: ["Deny"]
