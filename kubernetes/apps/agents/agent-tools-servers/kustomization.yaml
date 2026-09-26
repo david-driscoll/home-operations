@@ -74,6 +74,11 @@ resources:
   # Teamarr's API as tools. No secret (Teamarr has no auth), destructive tools
   # off, and the tool set is fixed at pod start -- see the file's header.
   - ./teamarr.yaml
+  # Tdarr's API as tools, run from a pinned upstream commit under Bun (no
+  # image exists). 65 of 105 tools via an MCPToolConfig allow-list -- nothing
+  # that deletes media, edits the DB raw, or touches users/plugin code. See
+  # the file's header.
+  - ./tdarr.yaml
 configMapGenerator:
   # The `sources` sidecar of ./postgres.yaml: renders DBHub's dbhub.toml from
   # the live database list. Literal name (mounted by name in the MCPServer's

@@ -74,7 +74,7 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 
 ## What is behind the door
 
-~890 tools, prefixed by backend. Names are the same on both doors:
+~955 tools, prefixed by backend. Names are the same on both doors:
 
 | Prefix | Tools | Prefix | Tools |
 |---|---|---|---|
@@ -85,14 +85,17 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 | `toolhive-microsoft-docs_` | 3 | `toolhive-{postgres,openbao,degoog,context7}_` | 2 each |
 | `toolhive-ecm_` | ~197 | `toolhive-teamarr_` | ~180 |
 | `toolhive-arr-mcp-{plex,jellyfin}_` | 38 each | `toolhive-homelable_` | 58 |
-| `toolhive-home-assistant_` | ~21 | | |
+| `toolhive-home-assistant_` | ~21 | `toolhive-tdarr_` | 65 |
 
 `toolhive-teamarr_`'s set is built from Teamarr's live `/openapi.json` when its
 pod starts (destructive tools hidden), so the count moves with Teamarr's version
 and is only fixed until the next restart. `toolhive-home-assistant_`'s depends on
-what Home Assistant exposes. `toolhive-ecm_`, `toolhive-arr-mcp-*_` and
-`toolhive-teamarr_` all front `equestria` apps and fail 02:00-09:00, when that
-namespace is shed. For what the ECM and Teamarr tools are for — and which ECM
+what Home Assistant exposes. `toolhive-tdarr_` is 65 of tdarr-mcp's 105 tools,
+cut down by an `MCPToolConfig` allow-list in `agent-tools-servers/tdarr.yaml`.
+The cut removes every tool that deletes media, writes the Tdarr DB directly, or
+touches users or plugin code. `toolhive-ecm_`, `toolhive-arr-mcp-*_`,
+`toolhive-teamarr_` and `toolhive-tdarr_` all front `equestria` apps and fail
+02:00-09:00, when that namespace is shed. For what the ECM and Teamarr tools are for — and which ECM
 write tools currently fail with a 401 — see [iptv.md](iptv.md).
 
 Note `toolhive-kubernetes_*` is the working Kubernetes path from this pod. The

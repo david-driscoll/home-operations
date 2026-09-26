@@ -95,7 +95,9 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
     `docker-{celestia,luna,alpha-site}`, `github`, `pulumi`, `openbao`
   - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`
   - `toolport-home`: `home-assistant`
-  - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`
+  - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr`
+    (Tdarr's API; 65 of its 105 tools -- nothing that deletes media from
+    disk, writes the DB raw, or touches users or plugin code)
   - `toolport-postgres`: `postgres` -- every database in the estate, one
     DBHub source each. Its tools are per database:
     `postgres__execute_sql_<db>` and `postgres__search_objects_<db>`, with `-`
