@@ -1,23 +1,5 @@
 {
   "mcpServers": {
-    "kubernetes": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "kubernetes-mcp-server"]
-    },
-    "pulumi": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@pulumi/mcp-server", "stdio"]
-    },
-    "HA": {
-      "type": "http",
-      "url": "https://home.driscoll.tech/api/mcp",
-      "oauth": {
-        "clientId": "http://localhost:12345",
-        "callbackPort": 12345
-      }
-    },
     "agent-tools": {
       "type": "http",
       "url": "${AGENT_TOOLS_MCP_URL:-https://agent-tools-mcp.agents.driscoll.tech/mcp}"
@@ -63,12 +45,6 @@
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_RESEARCH:-}"
       }
-    },
-    "crew_state": {
-      "command": "crew",
-      "args": ["state-mcp"],
-      "env": {},
-      "tools": ["*"]
     },
     "mise": {
       "args": ["mcp"],
