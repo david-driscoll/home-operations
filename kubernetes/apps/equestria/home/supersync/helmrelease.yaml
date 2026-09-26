@@ -1,0 +1,346 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# SuperSync, the Super Productivity sync server, with authentik as its only
+# way in. Two controllers:
+#
+#   supersync    upstream's server, untouched. Owns the sync API and the schema.
+#   coordinator  ./resources/App.cs. Behind authentik; turns X-authentik-email
+#                into a verified SuperSync account and a pasteable token. The
+#                "why this works" is the header of that file.
+#
+# SuperSync's own passkey / magic-link sign-up and login are never routed: every
+# path the route below does not send to SuperSync lands on the coordinator,
+# which 404s it. That is what makes authentik the only door, and why no SMTP is
+# configured -- nothing can ask SuperSync to send mail.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app supersync
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+          # Always up. The apps queue changes locally and retry, so a nightly
+          # shed loses nothing -- but it turns every early-morning sync into a
+          # visible "sync failed", which is exactly when people open a todo list.
+          downscaler/exclude: "true"
+        # ONE replica, and Recreate: WebSocket connections, passkey challenges
+        # and the 30-second auth cache are all process-local. Upstream's chart
+        # refuses replicaCount > 1 outright.
+        replicas: 1
+        strategy: Recreate
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            fsGroup: 1001
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+        initContainers:
+          # Upstream's Helm chart runs migrations the same way: once, before the
+          # server starts, from the same image. The image CMD's own
+          # RUN_MIGRATIONS_ON_STARTUP stays at its default `false`.
+          #
+          # REQUIRE_DATABASE_POOL_LIMITS makes the script refuse a DATABASE_URL
+          # without connection_limit/pool_timeout -- see ./externalsecret.yaml.
+          migrate:
+            image: &image
+              # There are no release tags: the registry publishes `latest` and
+              # `master-<sha>` only, both built from master. This digest is
+              # master-069d07a (org.opencontainers.image.revision
+              # 069d07a0ad7aba4dd339a33f498aabcf231d4791, 2026-09-26). Tracking
+              # `latest` lets Renovate propose digest bumps; each one runs this
+              # initContainer's migrations before the server starts.
+              repository: ghcr.io/super-productivity/supersync
+              tag: latest@sha256:118a8a64d7755f45285dc0898cee32dd9c45b64e9da4b1a02016586ee17859f1
+              pullPolicy: IfNotPresent
+            command: ["sh", "scripts/migrate-deploy.sh"]
+            env:
+              REQUIRE_DATABASE_POOL_LIMITS: "true"
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            securityContext: &securityContext
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+          # The server rewrites public/index.html at every boot (server.ts
+          # generateIndexHtml), so a read-only root needs public/ on an
+          # emptyDir seeded from the image. Upstream's chart does the same.
+          copy-public:
+            image: *image
+            command: ["sh", "-c", "cp -r /app/public/. /seed/"]
+            securityContext: *securityContext
+        containers:
+          *app :
+            image: *image
+            env:
+              TZ: "${TIMEZONE}"
+              NODE_ENV: production
+              PORT: "1900"
+              # Required in production and must be https. Used for links in
+              # emails, which this deployment never sends.
+              PUBLIC_URL: https://${APP}.${ROOT_DOMAIN}
+              # The web build calls the sync API cross-origin from its own host.
+              # The desktop and mobile apps use a native HTTP stack and send no
+              # Origin at all, so they need nothing here.
+              CORS_ORIGINS: https://super-productivity.${ROOT_DOMAIN},https://super-productivity.${TAILSCALE_DOMAIN}
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-jwt
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 1900
+                  periodSeconds: 5
+                  failureThreshold: 30
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /live
+                    port: 1900
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 1900
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+            resources:
+              requests:
+                cpu: 20m
+                memory: 256Mi
+              limits:
+                # The image caps V8's old space at 576M (NODE_OPTIONS).
+                memory: 1Gi
+            securityContext: *securityContext
+
+      coordinator:
+        # Left on the nightly shed, unlike the server: it is only needed while
+        # someone is adding a device, and syncing never touches it.
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        strategy: Recreate
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            # `app`, the unprivileged user every mcr.microsoft.com/dotnet image ships.
+            runAsUser: 1654
+            runAsGroup: 1654
+            fsGroup: 1654
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+        containers:
+          app:
+            # Same pattern as pvr/xcproxy: the stock SDK image runs the
+            # single-file app straight from the ConfigMap. `dotnet run` restores
+            # and compiles on every start (~30s, needs nuget.org), which is the
+            # price of not having an image to build and publish.
+            image:
+              repository: mcr.microsoft.com/dotnet/sdk
+              tag: 10.0-noble@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29
+              pullPolicy: IfNotPresent
+            command: ["dotnet", "run", "/scripts/App.cs"]
+            env:
+              TZ: "${TIMEZONE}"
+              ASPNETCORE_HTTP_PORTS: "8080"
+              # Shown on the page and returned with every token -- the URL each
+              # device is told to sync against.
+              SUPERSYNC_PUBLIC_URL: https://${APP}.${ROOT_DOMAIN}
+              # `dotnet run` writes everything under HOME: first-run state,
+              # the NuGet cache and config, and the compiled app itself
+              # (~/.local/share/dotnet/runfile -- NOT $TMPDIR). /work is an
+              # emptyDir, so the root filesystem can stay read-only.
+              HOME: /work
+              DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+              DOTNET_NOLOGO: "1"
+            envFrom:
+              # COORDINATOR_DB, plus DATABASE_URL (unused here).
+              - secretRef:
+                  name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-jwt
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: 8080
+                  periodSeconds: 10
+                  failureThreshold: 30
+              liveness: &coordinatorProbe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: 8080
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness: *coordinatorProbe
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                # The compile at startup, not the app, sets this.
+                memory: 1Gi
+            securityContext: *securityContext
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: &port 1900
+      coordinator:
+        controller: coordinator
+        type: ClusterIP
+        ports:
+          http:
+            port: &coordinatorPort 8080
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # The sync API, including the /api/sync/ws WebSocket. Network gate
+          # only: the apps authenticate with the bearer token and cannot follow
+          # an authentik redirect. `local-api`, not `local-user`: error-pages
+          # would replace SuperSync's JSON 401/409s with HTML the apps cannot
+          # parse.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api/sync
+              # The apps' own "Revoke & replace token" button.
+              - path:
+                  type: Exact
+                  value: /api/replace-token
+              # Gatus, see ./definition.yaml.
+              - path:
+                  type: Exact
+                  value: /health
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api
+          # Everything else -- including SuperSync's /api/register, /api/login,
+          # /api/recover and its HTML pages -- goes to the coordinator behind
+          # authentik, and the coordinator 404s whatever it does not serve.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: coordinator
+                port: *coordinatorPort
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user
+
+    persistence:
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            migrate:
+              - path: /tmp
+            *app :
+              - path: /tmp
+          coordinator:
+            app:
+              - path: /tmp
+      public:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            copy-public:
+              - path: /seed
+            *app :
+              - path: /app/public
+      data:
+        # DATA_DIR. Only ever holds operator legal pages, which this deployment
+        # does not use; SuperSync creates the directory at boot regardless.
+        type: emptyDir
+        advancedMounts:
+          *app :
+            *app :
+              - path: /app/data
+      script:
+        type: configMap
+        name: supersync-coordinator-script
+        advancedMounts:
+          coordinator:
+            app:
+              - path: /scripts/App.cs
+                subPath: App.cs
+                readOnly: true
+      work:
+        type: emptyDir
+        advancedMounts:
+          coordinator:
+            app:
+              - path: /work

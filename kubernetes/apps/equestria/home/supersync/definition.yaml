@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "SuperSync"
+  category: Applications
+  description: "Sync server for Super Productivity -- one account per authentik user"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/super-productivity.png
+  # Who may get a SuperSync account at all. The coordinator creates one for any
+  # email authentik vouches for, so this binding IS the allowlist -- SuperSync's
+  # own ALLOWED_EMAILS never runs, its registration routes are not routed.
+  access_policy:
+    groups:
+      - family
+  # forward_single guards only the coordinator page (`/`). The sync API
+  # (/api/sync/*) is routed around it in ./helmrelease.yaml: the desktop and
+  # mobile apps send a bearer token and cannot follow an authentik redirect.
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      # /health is on the unauthenticated sync side, so this checks SuperSync
+      # itself (including its database) rather than the outpost's login page.
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

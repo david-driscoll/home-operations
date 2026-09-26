@@ -8,6 +8,7 @@ resources:
   - ./dynacat/ks.yaml
   - ./obsidian-sync/ks.yaml
   - ./super-productivity/ks.yaml
+  - ./supersync/ks.yaml
   - ./windmill/ks.yaml
   - ./rustdesk/ks.yaml
   - ./tandoor/ks.yaml

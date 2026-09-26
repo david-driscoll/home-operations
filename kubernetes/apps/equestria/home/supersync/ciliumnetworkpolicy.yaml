@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Traefik may talk to the coordinator.
+#
+# The coordinator trusts X-authentik-email outright: it creates an account for
+# that address and hands back a token for it. That is safe only because every
+# request reaching it came through the `authenticated-user` chain, where the
+# outpost overwrites the header. Any other pod that could open a connection
+# here could name any user -- so this policy puts the pod into default-deny for
+# ingress and admits Traefik alone. Same shape as media/navidrome.
+#
+# Kubelet probes arrive from the node (`host` entity), allowed explicitly.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}-coordinator
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      app.kubernetes.io/controller: coordinator
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
