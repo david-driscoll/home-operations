@@ -46,6 +46,7 @@
  * exists to delete.
  */
 
+import { createHash } from "node:crypto";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import { awaitOutput } from "@components/helpers.ts";
@@ -546,7 +547,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       ["write:repository", "read:user", "read:organization", "read:misc", "write:issue", "read:package"] as TOKEN_SCOPES[],
       args.globals,
       this.forgejoProvider,
-      { resourcePrefix: "forgejo-claude-code", tokenName: "Claude Code MCP Token" },
+      { resourcePrefix: "forgejo-claude-code", tokenName: "Claude Code MCP Token", versionTokenName: true },
     );
 
     // Organization repositories only, one team per org covering every
@@ -662,7 +663,13 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     });
   }
 
-  private createUser(details: Omit<forgejo.UserArgs, "password" | "email">, scopes: TOKEN_SCOPES[], globals: GlobalResources, forgejoProvider: forgejo.Provider, names: { resourcePrefix: string; tokenName: string }) {
+  private createUser(
+    details: Omit<forgejo.UserArgs, "password" | "email">,
+    scopes: TOKEN_SCOPES[],
+    globals: GlobalResources,
+    forgejoProvider: forgejo.Provider,
+    names: { resourcePrefix: string; tokenName: string; versionTokenName?: boolean },
+  ) {
     const password = new random.RandomPassword(
       `${names.resourcePrefix}-password`,
       {
@@ -684,11 +691,30 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       { provider: forgejoProvider, parent: this },
     );
 
+    // THE NAME HAS TO CHANGE WHEN THE SCOPES DO, or the create-first
+    // replacement below cannot work. Forgejo token names are unique per user,
+    // so a replacement that reuses the name is refused ("access token name has
+    // been used already") while the old token still exists -- which, with
+    // deleteBeforeReplace: false, is always. That stalled stacks/system on
+    // 2026-09-26 (#2114, claude-code gaining read:package).
+    //
+    // A short hash of the sorted scopes makes every scope set a distinct name,
+    // so the new token is created beside the old one and the old one is deleted
+    // after. Opt-in (`versionTokenName`) only because turning it on renames --
+    // and so replaces -- a token; Renovate should adopt it the next time its
+    // scopes change, when it is being replaced anyway.
+    const tokenName = names.versionTokenName
+      ? `${names.tokenName} (${createHash("sha256")
+          .update([...scopes].sort().join(","))
+          .digest("hex")
+          .slice(0, 8)})`
+      : names.tokenName;
+
     const token = new forgejo.PersonalAccessToken(
       `${names.resourcePrefix}-token`,
       {
         user: user.login,
-        name: names.tokenName,
+        name: tokenName,
         scopes: scopes,
       },
       {
