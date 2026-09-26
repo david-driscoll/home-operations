@@ -92,16 +92,8 @@ type TOKEN_SCOPES =
  * job: branch a repository, open a PR, and keep the Dependency Dashboard issue
  * up to date. Nothing else is granted — no wiki, no releases, no actions.
  *
- * Currently UNUSED: the org-walking block that consumed it (adminGetAllOrgs ->
- * one `forgejo.Team` per organization with `includesAllRepositories`, plus a
- * `TeamMember` for the bot) was removed, so nothing grants the bot access to
- * anything yet. Kept because it is the shape that block needs if it comes
- * back, and re-deriving it means re-reading the provider's `units_map` docs.
- *
- * Exported only to keep the linter honest about that — an unused `const` is a
- * lint error, and silencing it with a comment would hide the real point, which
- * is that REPOSITORY ACCESS IS NOT WIRED UP. Until it is, Renovate
- * authenticates fine and discovers nothing.
+ * Used by both per-organization teams: `renovate` and `claude-code`. The
+ * Claude Code account needs exactly the same three units for the same job.
  */
 export const TEAM_UNITS = {
   "repo.code": "write",
@@ -111,6 +103,9 @@ export const TEAM_UNITS = {
 
 /** The bot's login. Shared by the user resource and every grant that filters it out. */
 const RENOVATE_LOGIN = "renovate";
+
+/** The Claude Code account's login, also the name of its per-org team. */
+const CLAUDE_CODE_LOGIN = "claude-code";
 
 /** One page of the Forgejo API, and the instance default for MAX_RESPONSE_ITEMS. */
 const PAGE_SIZE = 50;
@@ -285,6 +280,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
   public forgejoProvider;
   public forgejoToken;
   public renovateBot;
+  public claudeCode;
 
   constructor(args: ForgejoConfigurationArgs, opts?: ComponentResourceOptions) {
     super("custom:forgejo:configuration", "forgejo-configuration", args, opts);
@@ -403,6 +399,9 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       ["write:repository", "read:user", "read:organization", "read:misc", "write:issue"] as TOKEN_SCOPES[],
       args.globals,
       this.forgejoProvider,
+      // The resource names this bot had before createUser took a prefix.
+      // Changing them would replace the user -- and with it every token.
+      { resourcePrefix: "forgejo-renovate", tokenName: "Renovate Bot Token" },
     );
 
     // Repository access. THIS is what decides what Renovate manages -- without
@@ -480,6 +479,101 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       );
     }
 
+    // ## The Claude Code account
+    //
+    // What agentboard sessions act as on the forge, through the Forgejo MCP
+    // server (kubernetes/apps/agents/agent-tools-servers/forgejo.yaml) -- so a
+    // branch, commit or pull request an agent makes is attributed to
+    // `claude-code`, not to a human or to Renovate.
+    //
+    // Same construction as the Renovate bot above, and for the same reasons:
+    // generated password nobody logs in with, `prohibitLogin: false` because
+    // Forgejo applies that flag to TOKEN auth as well, and the PAT written to
+    // OpenBao for an ExternalSecret to pick up.
+    this.claudeCode = this.createUser(
+      {
+        fullName: "Claude Code",
+        login: CLAUDE_CODE_LOGIN,
+        description: "Agentboard sessions, via the Forgejo MCP server. Managed by stacks/system.",
+        active: true,
+        admin: false,
+        mustChangePassword: false,
+        visibility: "limited",
+        deactivateOnDestroy: true,
+        location: "Equestria",
+        prohibitLogin: false,
+        allowGitHook: false,
+        // The MCP server exposes create_repo and fork_repo, and nothing else
+        // stops an agent calling them. 0 is "may not create any" (-1 would be
+        // the instance default).
+        maxRepoCreation: 0,
+        // A restricted user sees only what its team memberships grant, not
+        // every repository the instance would show a signed-in user. With
+        // REQUIRE_SIGNIN_VIEW on, an unrestricted account could otherwise read
+        // every public-to-members repo on the forge, user-owned ones included.
+        restricted: true,
+      },
+      // Renovate's set. Collapsed pairs as above -- `write:` only, never with
+      // the matching `read:`, or `scopes` diffs forever and every run mints a
+      // new token.
+      ["write:repository", "read:user", "read:organization", "read:misc", "write:issue"] as TOKEN_SCOPES[],
+      args.globals,
+      this.forgejoProvider,
+      { resourcePrefix: "forgejo-claude-code", tokenName: "Claude Code MCP Token" },
+    );
+
+    // Organization repositories only, one team per org covering every
+    // repository in it -- including ones created later. User-owned
+    // repositories are deliberately NOT granted: those belong to a person, and
+    // an agent writing to them should be something that person opts into per
+    // repository, not something a nightly resync hands out.
+    for (const org of args.targets.organizations) {
+      const team = new forgejo.Team(
+        `forgejo-claude-code-${org}-team`,
+        {
+          organization: org,
+          name: CLAUDE_CODE_LOGIN,
+          description: "Claude Code (agentboard). Managed by stacks/system.",
+          // Same shape as the renovate team: read baseline, write on code,
+          // issues and pull requests. No admin, so no webhooks, settings or
+          // branch-protection changes.
+          permission: "read",
+          includesAllRepositories: true,
+          unitsMap: TEAM_UNITS,
+        },
+        { provider: this.forgejoProvider, parent: this },
+      );
+
+      new forgejo.TeamMember(
+        `forgejo-claude-code-${org}-team-member`,
+        {
+          teamId: team.teamId,
+          user: this.claudeCode.user.login,
+        },
+        { provider: this.forgejoProvider, parent: team },
+      );
+    }
+
+    // Read by kubernetes/apps/agents/agent-tools-servers/forgejo.yaml. Field
+    // names are load-bearing there.
+    const claudeCodeCredentials = baoKvSecret(
+      "forgejo-claude-code-credentials",
+      {
+        mount: "secrets",
+        path: "clusters/equestria/apps/forgejo/claude-code",
+        data: {
+          token: this.claudeCode.token.token,
+          password: this.claudeCode.password.result,
+        },
+        concealedFields: ["token", "password"],
+        customMetadata: baoProvenance({
+          source_title: "Forgejo Claude Code account",
+          source_tags: "forgejo,agents",
+        }),
+      },
+      { provider: args.globals.baoProvider, parent: this },
+    );
+
     // The operator's UI session key. Not a Forgejo credential at all, and it
     // lands under a DIFFERENT app prefix (`renovate-operator`, matching the
     // Kubernetes app of that name) -- but it is generated, has no meaning outside
@@ -537,12 +631,13 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       adminToken,
       sessionSecret,
       renovateCredentials,
+      claudeCodeCredentials,
     });
   }
 
-  private createUser(details: Omit<forgejo.UserArgs, "password" | "email">, scopes: TOKEN_SCOPES[], globals: GlobalResources, forgejoProvider: forgejo.Provider) {
+  private createUser(details: Omit<forgejo.UserArgs, "password" | "email">, scopes: TOKEN_SCOPES[], globals: GlobalResources, forgejoProvider: forgejo.Provider, names: { resourcePrefix: string; tokenName: string }) {
     const password = new random.RandomPassword(
-      "forgejo-renovate-password",
+      `${names.resourcePrefix}-password`,
       {
         length: 48,
         // No punctuation. It travels through `forgejo admin`-shaped code paths and
@@ -553,7 +648,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     );
 
     const user = new forgejo.User(
-      "forgejo-renovate",
+      names.resourcePrefix,
       {
         email: pulumi.interpolate`${details.login}@git.${globals.searchDomain}`,
         password: password.result,
@@ -563,10 +658,10 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     );
 
     const token = new forgejo.PersonalAccessToken(
-      "forgejo-renovate-token",
+      `${names.resourcePrefix}-token`,
       {
         user: user.login,
-        name: "Renovate Bot Token",
+        name: names.tokenName,
         scopes: scopes,
       },
       {
