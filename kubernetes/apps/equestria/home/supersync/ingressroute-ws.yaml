@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/traefik.io/ingressroute_v1alpha1.json
+#
+# The sync WebSocket, with Traefik's access log switched OFF.
+#
+# The apps open it as /api/sync/ws?token=<JWT>&clientId=... -- the full,
+# year-long access token in the query string (upstream's
+# super-sync-websocket.service.ts; browsers cannot set headers on a WebSocket).
+# Traefik's access log keeps RequestPath with its query (network/traefik
+# values.yaml, `accessLog.fields.defaultMode: keep`), so every connect would
+# ship a live credential to Loki. Upstream says the same: proxies in front of
+# SuperSync must keep that query out of their logs. SuperSync's own request
+# logging is off (Fastify `logger: false`), so this is the only leak.
+#
+# WHY AN IngressRoute AND NOT THE HTTPRoute. Per-router `observability` exists
+# only on Traefik's own CRD; the Gateway API has no field for it. This router
+# and the HTTPRoute's routers sit on the same entrypoint (the internal Gateway's
+# 443 listener IS `websecure` -- Traefik maps listeners to entrypoints by port),
+# and Traefik picks the highest priority among ALL routers there, whatever
+# provider made them.
+#
+# THE PRIORITY. Traefik's Gateway provider derives priorities from the match
+# (pkg/provider/kubernetes/gateway/httproute.go, v3.7.13): PathPrefix
+# `/api/sync` scores 10000 + 9*100 plus the hostname length, and even an Exact
+# match only 100000 + hostname. 1000000 therefore outranks everything the
+# HTTPRoute can generate. If this object is ever missing, the HTTPRoute's
+# /api/sync prefix still serves the socket -- sync keeps working, the tokens
+# just go back into the log.
+#
+# Verified against a local Traefik v3.7.13 with this router, the two
+# Gateway-generated ones and the estate's access-log settings: the socket
+# upgrades, nothing with `token=` is logged, other sync calls still are.
+#
+# TLS comes from the entrypoint (`ports.websecure.http.tls`) and the default
+# store, whose certificate is le-production-tls -- the same one the internal
+# Gateway's listener presents.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${APP}-ws
+  annotations:
+    # providers.kubernetesCRD.ingressClass is `internal`; without this the CRD
+    # provider ignores the object.
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      # Path, not PathPrefix: only the socket carries a token, and a future
+      # /api/sync/ws-something should stay logged. The trailing-slash form is
+      # included because SuperSync itself treats it as the same endpoint.
+      match: Host(`${APP}.${ROOT_DOMAIN}`) && (Path(`/api/sync/ws`) || Path(`/api/sync/ws/`))
+      priority: 1000000
+      observability:
+        accessLogs: false
+      middlewares:
+        # The same network gate the HTTPRoute's sync rule uses.
+        - name: local-api
+          namespace: ${NAMESPACE}
+      services:
+        - name: ${APP}
+          port: http

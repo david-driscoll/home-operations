@@ -258,11 +258,13 @@ spec:
           - "${APP}.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
-          # The sync API, including the /api/sync/ws WebSocket. Network gate
-          # only: the apps authenticate with the bearer token and cannot follow
-          # an authentik redirect. `local-api`, not `local-user`: error-pages
-          # would replace SuperSync's JSON 401/409s with HTML the apps cannot
-          # parse.
+          # The sync API. Network gate only: the apps authenticate with the
+          # bearer token and cannot follow an authentik redirect. `local-api`,
+          # not `local-user`: error-pages would replace SuperSync's JSON
+          # 401/409s with HTML the apps cannot parse.
+          #
+          # /api/sync/ws matches here too, but ./ingressroute-ws.yaml outranks
+          # it so the token in that URL stays out of the access log.
           - matches:
               - path:
                   type: PathPrefix
