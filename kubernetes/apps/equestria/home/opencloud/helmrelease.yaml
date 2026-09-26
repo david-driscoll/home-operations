@@ -797,6 +797,36 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: local-user
+      # A short name for the app -- a REDIRECT, not a second hostname on the
+      # route above. The web UI's config.json hardcodes OC_URL as its API
+      # server, so a UI loaded from any other origin makes cross-origin calls
+      # that OpenCloud's own CSP (`connect-src 'self'`, ./resources/csp.yaml)
+      # refuses. Bouncing to the canonical hostname keeps OC_URL, the authentik
+      # redirect URIs and Collabora's frame_ancestors single-valued. No
+      # middleware: the redirect exposes nothing, and the destination carries
+      # the `local-user` gate.
+      aliases:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "cloud.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: "${APP}.${ROOT_DOMAIN}"
+                  # 302, not 301: browsers cache a 301 indefinitely, which
+                  # would pin these names to the redirect if they are ever
+                  # served directly.
+                  statusCode: 302
       collabora:
         parentRefs:
           - name: internal
