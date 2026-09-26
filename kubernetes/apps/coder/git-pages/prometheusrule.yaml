@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: git-pages.rules
+      rules:
+        # `job` is the Service's app.kubernetes.io/name -- the ServiceMonitor's
+        # jobLabel -- so this does not depend on app-template's naming.
+        - alert: GitPagesAbsent
+          annotations:
+            description: >-
+              git-pages has disappeared from Prometheus target discovery. Every
+              *.pages site, and the docs redirect's destination, is down with it.
+            summary: git-pages is down.
+          expr: |
+            absent(up{job="${APP}"} == 1)
+          for: 15m
+          labels:
+            severity: critical
+
+        # There is no S3-specific error metric, and there does not need to be:
+        # a Garage outage surfaces here as 500s on every read that misses the
+        # in-memory caches. An absolute count rather than a ratio, because
+        # traffic is low enough that one failed request out of three would make
+        # a ratio alert fire on noise.
+        - alert: GitPagesServerErrors
+          annotations:
+            description: >-
+              git-pages returned {{ humanize $value }} 5xx responses in the last
+              15 minutes. Check the forgejo-garage cluster first -- it is the
+              only backend git-pages reads from.
+            summary: git-pages is returning server errors.
+          expr: |
+            sum(increase(git_pages_http_request_count{code=~"5.."}[15m])) > 5
+          for: 15m
+          labels:
+            severity: warning
+
+        # Publishes that reached the update stage and failed there. `cause` is
+        # only ever `timeout` (limits.update-timeout) or `other` (storage write,
+        # oversized site, malformed archive, ...). Authorization is checked
+        # before the update runs and rejections do NOT count, so a workflow
+        # whose token is being turned away shows up only as a failed Action run.
+        - alert: GitPagesPublishFailing
+          annotations:
+            description: >-
+              {{ humanize $value }} site updates failed in the last hour (cause:
+              {{ $labels.cause }}). The publishing Action run in Forgejo has the
+              per-site error.
+            summary: git-pages site publishes are failing.
+          expr: |
+            sum by (cause) (increase(git_pages_site_update_error[1h])) > 0
+          labels:
+            severity: warning

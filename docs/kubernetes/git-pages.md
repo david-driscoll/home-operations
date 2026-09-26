@@ -94,6 +94,14 @@ Notes on the non-obvious fields:
 
 - **Health.** There is no global health endpoint. `/.git-pages/health` is per
   site. Probes are TCP on 3000, and metrics are on 3002 (ServiceMonitor).
+- **Alerts** are in
+  [`prometheusrule.yaml`](../../kubernetes/apps/coder/git-pages/prometheusrule.yaml):
+  - `GitPagesAbsent` (critical): the scrape target is gone.
+  - `GitPagesServerErrors`: more than 5 5xx responses in 15m, usually
+    forgejo-garage.
+  - `GitPagesPublishFailing`: site updates failing with `timeout` or `other`.
+    Rejected tokens never reach this metric; they show up only as a failed
+    Action run.
 - **Inspecting sites.** Run `kubectl -n coder exec deploy/git-pages -- git-pages
   -config /config/config.toml -list-manifests` to list everything published.
 - **Config.** An unknown key in `config.toml` is fatal at startup. Validate
