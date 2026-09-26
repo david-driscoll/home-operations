@@ -19,6 +19,7 @@
     { "id": "unifi-access", "name": "UniFi Access", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-unifi-access-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "tailscale", "name": "Tailscale", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-tailscale-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "github", "name": "GitHub", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-github-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "forgejo", "name": "Forgejo", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-forgejo-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "pulumi", "name": "Pulumi", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-pulumi-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "openbao", "name": "OpenBao", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-openbao-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "home-assistant", "name": "Home Assistant", "transport": "http", "source": "manual", "url": "https://home.${ROOT_DOMAIN}/api/mcp", "env": [{ "key": "HOME_ASSISTANT_TOKEN", "secret": true }] },
@@ -46,7 +47,20 @@
     {
       "id": "infrastructure",
       "name": "Infrastructure",
-      "enabledServerIds": ["kubernetes", "proxmox-twilight-sparkle", "proxmox-celestia", "proxmox-luna", "proxmox-alpha-site", "docker-celestia", "docker-luna", "docker-alpha-site", "github", "pulumi", "openbao"]
+      "enabledServerIds": [
+        "kubernetes",
+        "proxmox-twilight-sparkle",
+        "proxmox-celestia",
+        "proxmox-luna",
+        "proxmox-alpha-site",
+        "docker-celestia",
+        "docker-luna",
+        "docker-alpha-site",
+        "github",
+        "forgejo",
+        "pulumi",
+        "openbao"
+      ]
     },
     { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale"] },
     { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
