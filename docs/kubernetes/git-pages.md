@@ -76,12 +76,29 @@ No cluster change is needed. The route and certificate already cover
 `*.pages.driscoll.tech`.
 
 1. Create the organization in Forgejo, e.g. `docs`.
-2. Create `<team>/pages` with default branch `main`.
-3. Add the workflow below and push.
+2. Create `<team>/pages` with default branch `main`. The quickest way is from the
+   template (next section). Keep the object format **SHA-1** unless you have a
+   reason not to.
+3. Push. The workflow publishes it.
+
+## Starting from the template
+
+[`home-operations/pages-template`](https://git.driscoll.tech/home-operations/pages-template)
+is a template repository with an Astro + Starlight docs site and a publish
+workflow. Choose it under **New repository → Template**.
+
+- **Nothing to configure.** The workflow derives the target from the repository
+  name: `<org>/pages` publishes to `https://<org>.pages.driscoll.tech/`, and any
+  other name to `/<repo>/`. The Astro `base` and `site` follow automatically.
+- **Toolchain.** `mise.toml` pins Node and defines `mise run dev` / `build` /
+  `preview`. CI runs the same `mise run build`.
+- **Lockfile.** Commit a `package-lock.json` after the first `npm install`. CI
+  switches to `npm ci` once one exists.
 
 ## Publishing workflow
 
-Save this as `.forgejo/workflows/pages.yaml`. For the index repo:
+For a site that needs no build step, save this as
+`.forgejo/workflows/pages.yaml`. This is the index repo's version:
 
 ```yaml
 on:
@@ -107,6 +124,19 @@ jobs:
 For a project repo, use `site: http://<team>.pages.driscoll.tech/<repo>/`.
 
 Notes on the non-obvious fields:
+
+- **SHA-256 repositories need `GIT_DEFAULT_HASH: sha256` on the checkout step.**
+  `actions/checkout` initializes a SHA-1 repo and then fails with
+  `couldn't find remote ref <64-hex sha>`
+  ([actions/checkout#1843](https://github.com/actions/checkout/issues/1843),
+  [forgejo#9431](https://codeberg.org/forgejo/forgejo/issues/9431)). Setting the
+  env var makes its `git init` use SHA-256:
+  ```yaml
+  - uses: actions/checkout@v4
+    env:
+      GIT_DEFAULT_HASH: sha256
+  ```
+  SHA-1 repositories need nothing.
 
 - **The full `https://codeberg.org/...` action URL is required.** Forgejo's
   `DEFAULT_ACTIONS_URL` is GitHub, so a bare `git-pages/action@v2` would be
