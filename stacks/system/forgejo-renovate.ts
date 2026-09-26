@@ -527,9 +527,10 @@ export class ForgejoConfigurationComponent extends ComponentResource {
         location: "Equestria",
         prohibitLogin: false,
         allowGitHook: false,
-        // The MCP server exposes create_repo and fork_repo, and nothing else
-        // stops an agent calling them. 0 is "may not create any" (-1 would be
-        // the instance default).
+        // The MCP server exposes create_repo and fork_repo. 0 is "may not
+        // create any" (-1 would be the instance default) -- under its OWN
+        // account. Organization repositories are governed separately, by the
+        // team's `canCreateOrgRepo` below, and are allowed.
         maxRepoCreation: 0,
         // A restricted user sees only what its team memberships grant, not
         // every repository the instance would show a signed-in user. With
@@ -563,11 +564,17 @@ export class ForgejoConfigurationComponent extends ComponentResource {
           name: CLAUDE_CODE_LOGIN,
           description: "Claude Code (agentboard). Managed by stacks/system.",
           // Read baseline with per-unit grants (see CLAUDE_CODE_TEAM_UNITS).
-          // No admin, so no webhooks, settings, secrets or branch-protection
-          // changes.
+          // No admin on the org's existing repositories, so no webhooks,
+          // settings, secrets or branch-protection changes there.
           permission: "read",
           includesAllRepositories: true,
           unitsMap: CLAUDE_CODE_TEAM_UNITS,
+          // May create repositories in the org (e.g. a pages repo from the
+          // template). Forgejo makes the non-owner creator an admin
+          // collaborator of what it creates, so claude-code ends up admin of
+          // ITS OWN new repositories -- and only those. Deleting or
+          // administering anything it did not create still needs a human.
+          canCreateOrgRepo: true,
         },
         { provider: this.forgejoProvider, parent: this },
       );
