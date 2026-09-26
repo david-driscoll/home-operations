@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   - ./clusterrole.yaml
   - ./node-cordon-only.yaml
+  - ./stack-reconcile-only.yaml
