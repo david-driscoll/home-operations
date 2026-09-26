@@ -97,9 +97,10 @@ The cut removes every tool that deletes media, writes the Tdarr DB directly, or
 touches users or plugin code. `toolhive-ecm_`, `toolhive-arr-mcp-*_`,
 `toolhive-teamarr_` and `toolhive-tdarr_` all front `equestria` apps and fail
 02:00-09:00, when that namespace is shed. `toolhive-forgejo_` is the in-cluster forge as the `claude-code`
-account (created by `stacks/system`): write on code, issues and pull requests in
-every organization repository, nothing in user-owned ones, and no repository
-creation. For what the ECM and Teamarr tools are for — and which ECM
+account (created by `stacks/system`). In every organization repository it can
+write code, issues, pull requests, Actions (logs, re-run, dispatch), releases
+and wiki, and read packages. It has nothing in user-owned repositories, no
+repository creation, and no repo-admin (secrets, webhooks, settings). For what the ECM and Teamarr tools are for — and which ECM
 write tools currently fail with a 401 — see [iptv.md](iptv.md).
 
 Note `toolhive-kubernetes_*` is the working Kubernetes path from this pod. The

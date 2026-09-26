@@ -92,13 +92,36 @@ type TOKEN_SCOPES =
  * job: branch a repository, open a PR, and keep the Dependency Dashboard issue
  * up to date. Nothing else is granted — no wiki, no releases, no actions.
  *
- * Used by both per-organization teams: `renovate` and `claude-code`. The
- * Claude Code account needs exactly the same three units for the same job.
+ * The `renovate` team's units. `claude-code` starts from these and adds more;
+ * see {@link CLAUDE_CODE_TEAM_UNITS}.
  */
 export const TEAM_UNITS = {
   "repo.code": "write",
   "repo.issues": "write",
   "repo.pulls": "write",
+};
+
+/**
+ * The `claude-code` team's units: Renovate's three plus what the Forgejo MCP
+ * server's tools need to do an agent's job end to end.
+ *
+ *   repo.actions  write  read run/job logs (a failed workflow is otherwise
+ *                        invisible to it -- found the hard way on docs/pages
+ *                        run #1), and re-run, cancel or dispatch. Secrets,
+ *                        variables and runners stay repo-admin only.
+ *   repo.releases write  create_release / delete_release. Tags already come
+ *                        with repo.code.
+ *   repo.wiki     write  wiki_read / wiki_write.
+ *   repo.packages read   package_read against the forge's registry. NOT
+ *                        write: publishing a package is a release channel,
+ *                        and that stays a human's (or CI's) call.
+ */
+export const CLAUDE_CODE_TEAM_UNITS = {
+  ...TEAM_UNITS,
+  "repo.actions": "write",
+  "repo.releases": "write",
+  "repo.wiki": "write",
+  "repo.packages": "read",
 };
 
 /** The bot's login. Shared by the user resource and every grant that filters it out. */
@@ -513,10 +536,14 @@ export class ForgejoConfigurationComponent extends ComponentResource {
         // every public-to-members repo on the forge, user-owned ones included.
         restricted: true,
       },
-      // Renovate's set. Collapsed pairs as above -- `write:` only, never with
-      // the matching `read:`, or `scopes` diffs forever and every run mints a
-      // new token.
-      ["write:repository", "read:user", "read:organization", "read:misc", "write:issue"] as TOKEN_SCOPES[],
+      // Renovate's set plus `read:package` (the packages API is its own scope,
+      // so the team's repo.packages unit alone would still 403). Collapsed
+      // pairs as above -- `write:` only, never with the matching `read:`, or
+      // `scopes` diffs forever and every run mints a new token.
+      //
+      // Editing this list REPLACES the token (scopes are ForceNew). The new one
+      // reaches the MCP pod via OpenBao -> ExternalSecret (4m) -> Reloader.
+      ["write:repository", "read:user", "read:organization", "read:misc", "write:issue", "read:package"] as TOKEN_SCOPES[],
       args.globals,
       this.forgejoProvider,
       { resourcePrefix: "forgejo-claude-code", tokenName: "Claude Code MCP Token" },
@@ -534,12 +561,12 @@ export class ForgejoConfigurationComponent extends ComponentResource {
           organization: org,
           name: CLAUDE_CODE_LOGIN,
           description: "Claude Code (agentboard). Managed by stacks/system.",
-          // Same shape as the renovate team: read baseline, write on code,
-          // issues and pull requests. No admin, so no webhooks, settings or
-          // branch-protection changes.
+          // Read baseline with per-unit grants (see CLAUDE_CODE_TEAM_UNITS).
+          // No admin, so no webhooks, settings, secrets or branch-protection
+          // changes.
           permission: "read",
           includesAllRepositories: true,
-          unitsMap: TEAM_UNITS,
+          unitsMap: CLAUDE_CODE_TEAM_UNITS,
         },
         { provider: this.forgejoProvider, parent: this },
       );
