@@ -213,6 +213,48 @@ mise prune --yes || echo "WARNING: mise prune failed; old tool versions remain o
 mise cache prune || true
 npm cache clean --force >/dev/null 2>&1 || true
 
+# REMOVE ANY claude-code THAT LANDED IN NODE'S OWN GLOBAL PREFIX, so the
+# version ../resources/mise.toml pins -- the line Renovate bumps -- is the
+# version that runs.
+#
+# On 2026-09-26 the pin said 2.1.282 and every pane ran 2.1.283, from
+# installs/node/24.21.0/lib/node_modules/@anthropic-ai/claude-code. Claude
+# Code's own updater put it there. It treats any install path containing
+# /node_modules/@anthropic-ai/ as "npm-global", mise's per-tool prefix
+# included, and upgrades it with a bare `npm install -g`. That lands in `npm
+# config get prefix`, which with mise's node is node's install dir, not the
+# prefix the pinned copy lives in. The evidence was on the PVC:
+# ~/.claude/.last-update-result.json said `"path":"npm-global"`, 2.1.282 to
+# 2.1.283, ten seconds after the resume block below started a session, and
+# ~/.npm/_logs held the same updater installing 2.1.282 there the day before.
+# (`npm.shell_out` in mise.toml is not the cause: mise passes its own
+# `--prefix` either way.)
+#
+# ONCE THERE, IT WINS EVERY LOOKUP. A shim runs the first tool, in config
+# declaration order, whose bin dir has the binary. `node` is declared before
+# the pinned tool in ../resources/mise.toml, and inside the checkout the
+# repo's own .config/mise.toml declares `node` and outranks this file anyway,
+# so reordering would not help. `mise prune` never sees it either: these are
+# loose files inside a node install, not a mise-managed version. So the copy
+# outlived every Renovate bump and kept updating itself in place.
+#
+# DISABLE_UPDATES in ../helmrelease.yaml stops new copies arriving. This clears
+# any that arrived before it, or from a hand-run `npm i -g`. The other
+# entries under installs/node/ (24, lts, latest, ...) are mise's alias
+# symlinks to a real version dir, skipped so each copy is handled once.
+# NON-FATAL, like the rest of this housekeeping.
+echo "==> checking node's global prefix for stray claude-code copies"
+for node_dir in "$${MISE_DATA_DIR}"/installs/node/*/; do
+  node_dir="$${node_dir%/}"
+  [ -L "$$node_dir" ] && continue
+  stray="$$node_dir/lib/node_modules/@anthropic-ai/claude-code"
+  [ -d "$$stray" ] || continue
+  stray_version=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$$stray/package.json" 2>/dev/null | head -n 1) || true
+  echo "    removing $$stray ($${stray_version:-unknown version})"
+  rm -rf "$$stray" "$$node_dir/bin/claude" \
+    || echo "WARNING: could not remove $$stray; claude may not be the pinned version" >&2
+done
+
 # User-wide skills (~/.claude/skills/toolport/SKILL.md) are NOT installed here
 # any more: ../helmrelease.yaml mounts them from the `-skills` ConfigMap, built
 # from the repo's .claude/skills/ at the deployed revision. They used to be
