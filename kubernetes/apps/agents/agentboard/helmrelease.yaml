@@ -247,48 +247,26 @@ spec:
               # naming THIS pod is the whole of the access control.
               AGENT_TOOLS_MCP_URL:
                 value: http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp
-              # toolport (../toolport): ONE endpoint, and the bearer decides the
-              # profile. Both ./resources/mcp.json and the repo's .mcp.json
-              # declare a `toolport-<profile>` entry per profile that sends the
-              # matching token below as an Authorization header -- Claude Code
-              # expands env templates in .mcp.json `headers` the same way it
-              # does in `url` (see AGENT_TOOLS_MCP_URL above).
-              #
-              # The tokens are minted in-cluster (../toolport/externalsecret.yaml,
-              # CreatedOnce). Deleting the `toolport` Secret rotates all of them,
-              # and Reloader then restarts this pod too.
-              TOOLPORT_URL:
-                value: http://toolport.agents.svc.cluster.local:8765/mcp
-              TOOLPORT_TOKEN_POSTGRES:
-                valueFrom:
-                  secretKeyRef:
-                    name: toolport
-                    key: TOKEN_POSTGRES
-              TOOLPORT_TOKEN_INFRASTRUCTURE:
-                valueFrom:
-                  secretKeyRef:
-                    name: toolport
-                    key: TOKEN_INFRASTRUCTURE
-              TOOLPORT_TOKEN_NETWORKING:
-                valueFrom:
-                  secretKeyRef:
-                    name: toolport
-                    key: TOKEN_NETWORKING
-              TOOLPORT_TOKEN_HOME:
-                valueFrom:
-                  secretKeyRef:
-                    name: toolport
-                    key: TOKEN_HOME
-              TOOLPORT_TOKEN_MEDIA:
-                valueFrom:
-                  secretKeyRef:
-                    name: toolport
-                    key: TOKEN_MEDIA
-              TOOLPORT_TOKEN_RESEARCH:
-                valueFrom:
-                  secretKeyRef:
-                    name: toolport
-                    key: TOKEN_RESEARCH
+              # toolport: one entry per profile in both ./resources/mcp.json and
+              # the repo's .mcp.json, each defaulting to that profile's OAuth
+              # door (toolport-<profile>.agents.<root domain>) -- the same
+              # can't-log-in-from-here problem as AGENT_TOOLS_MCP_URL above. So
+              # each points instead at its profile's in-cluster remote proxy
+              # (../toolport-mcp), which holds the profile's bearer itself.
+              # No token reaches this pod: ../toolport-mcp/networkpolicy.yaml
+              # naming it is the whole of the access control, as above.
+              TOOLPORT_POSTGRES_URL:
+                value: http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_INFRASTRUCTURE_URL:
+                value: http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_NETWORKING_URL:
+                value: http://mcp-toolport-networking-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_HOME_URL:
+                value: http://mcp-toolport-home-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_MEDIA_URL:
+                value: http://mcp-toolport-media-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_RESEARCH_URL:
+                value: http://mcp-toolport-research-remote-proxy.agents.svc.cluster.local:8080/mcp
             envFrom:
               - secretRef:
                   name: ${APP}-pulumi

@@ -1,0 +1,76 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/networkpolicy-networking-v1.json
+#
+# THE ONLY THING STANDING BETWEEN THE toolport-<profile> REMOTE PROXIES AND THE
+# WHOLE CLUSTER. Each proxy answers /mcp with no token and forwards to toolport
+# carrying its profile's bearer -- so without this policy any pod that can
+# reach a ClusterIP gets toolport-postgres's superuser SQL, toolport-
+# infrastructure's openbao/kubernetes/proxmox, and the rest. Same stance, and
+# the same warning, as ../agent-tools-mcp/networkpolicy.yaml: deleting this
+# file breaks nothing visibly, it just opens everything.
+#
+# Admitted, on the proxy port only:
+#   - agentboard and the ws-david workspace -- the in-cluster callers, which
+#     reach these proxies straight from .mcp.json (TOOLPORT_<PROFILE>_URL).
+#   - the six toolport-<profile>-mcp vMCPs, the OAuth doors in front of them.
+#
+# One policy for all six, so a vMCP could technically reach another profile's
+# proxy. It does not: a vMCP routes only to the backends in its own MCPGroup.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: toolport-profiles-allow-clients
+spec:
+  podSelector:
+    matchExpressions:
+      # The labels ToolHive puts on every MCPRemoteProxy pod.
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [mcpremoteproxy]
+      - key: toolhive-name
+        operator: In
+        values:
+          - toolport-postgres
+          - toolport-infrastructure
+          - toolport-networking
+          - toolport-home
+          - toolport-media
+          - toolport-research
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentboard
+        # kube-coder workspaces, one entry per workspace -- see
+        # ../agent-tools-mcp/networkpolicy.yaml for why never a label selector.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ws-david
+          podSelector:
+            matchLabels:
+              app: ws-david
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [virtualmcpserver]
+              - key: toolhive-name
+                operator: In
+                values:
+                  - toolport-postgres-mcp
+                  - toolport-infrastructure-mcp
+                  - toolport-networking-mcp
+                  - toolport-home-mcp
+                  - toolport-media-mcp
+                  - toolport-research-mcp
+      ports:
+        - protocol: TCP
+          port: 8080

@@ -1,10 +1,16 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/networkpolicy-networking-k8s-io-v1.json
 #
-# Who may reach toolport at all. The bearer tokens decide WHICH profile a
-# caller gets; this decides whether the connection is accepted in the first
-# place. Plain http, no TLS -- confidentiality rests on this policy, exactly as
-# it does for ../agent-tools-mcp/networkpolicy.yaml's internal vMCP.
+# Who may reach toolport at all: the six toolport-<profile> MCPRemoteProxies
+# of ../toolport-mcp, and nothing else. Every client -- agentboard, the
+# ws-david workspace, the OAuth doors -- now comes through one of those, which
+# presents that profile's bearer on the caller's behalf. The bearer decides
+# WHICH profile; this decides whether the connection is accepted. Plain http,
+# no TLS -- confidentiality rests on this policy.
+#
+# There used to be a Traefik rule here for a LAN/tailnet bearer route
+# (toolport.agents.<root domain>). It went when each profile got its own OAuth
+# door; do not re-add it without a token story for off-cluster clients.
 #
 # Selecting the pod makes it deny-by-default for ingress, so any new client
 # (monitoring included) has to be added here explicitly.
@@ -21,31 +27,7 @@ spec:
     - Ingress
   ingress:
     - from:
-        # agentboard -- the agent runner, via its mcp.json entries.
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: agents
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: agentboard
-        # The kube-coder workspace, same as agent-tools-internal allows.
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: ws-david
-          podSelector:
-            matchLabels:
-              app: ws-david
-        # Traefik, for ./httproute.yaml -- the bearer door for clients off
-        # the cluster. The gateway's `local-api` middleware limits that to
-        # the LAN and the tailnet; the bearer still decides the profile.
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: network
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: traefik
-        # The per-profile MCPRemoteProxies of ../toolport-mcp -- the OAuth door's
-        # path in. ToolHive labels every proxy pod it runs this way.
+        # ToolHive labels every proxy pod it runs this way.
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: agents

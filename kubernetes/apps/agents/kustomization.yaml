@@ -54,8 +54,9 @@ resources:
   # infrastructure, networking, home, media, research), trialled alongside
   # agent-tools as its
   # eventual replacement. ./toolport is the gateway (in-cluster, bearer per
-  # profile); ./toolport-mcp is its OAuth door (LAN + Tailscale), a vMCP whose
-  # backends are toolport itself, one per profile.
+  # profile); ./toolport-mcp is its doors, one per profile: an anonymous
+  # in-cluster remote proxy holding that profile's bearer, and an OAuth vMCP
+  # in front of it at toolport-<profile>.agents.<root domain> (LAN + Tailscale).
   - ./toolport/ks.yaml
   - ./toolport-mcp/ks.yaml
   # The agent runner. Depends only on external-secrets and

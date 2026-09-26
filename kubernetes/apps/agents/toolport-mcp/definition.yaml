@@ -1,9 +1,11 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
 #
-# No `authentik:` block: the vMCP runs its own OAuth server federated to the
+# No `authentik:` block: each vMCP runs its own OAuth server federated to the
 # shared `toolhive` client (../toolhive/definition.yaml), exactly like
-# ../agent-tools-mcp, whose gatus checks these mirror.
+# ../agent-tools-mcp, whose gatus checks these mirror -- three per door. The
+# 401 check alone stays green when a door cannot fetch its own JWKS (it fails
+# closed), so the two metadata checks are the real signal.
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
@@ -11,34 +13,159 @@ metadata:
 spec:
   name: toolport MCP
   category: AI
-  description: OAuth-protected door to the toolport profiles (postgres, infrastructure, networking, home, media, research)
+  description: OAuth-protected doors to the toolport profiles, one hostname each (postgres, infrastructure, networking, home, media, research)
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
   access_policy:
     groups:
       - admins
   gatus:
-    - name: toolport MCP rejects unauthenticated
+    - name: toolport-postgres MCP rejects unauthenticated
       group: "Applications"
-      url: https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp
+      url: https://toolport-postgres.agents.${ROOT_DOMAIN}/mcp
       method: POST
       headers:
         Content-Type: application/json
       body: '{}'
       conditions:
         - "[STATUS] == 401"
-    - name: toolport MCP protected-resource metadata
+    - name: toolport-postgres MCP protected-resource metadata
       group: "Applications"
-      url: https://toolport-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      url: https://toolport-postgres.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
       method: GET
       conditions:
         - "[STATUS] == 200"
-        - "[BODY].resource == https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp"
-        - "[BODY].authorization_servers[0] == https://toolport-mcp.agents.${ROOT_DOMAIN}"
-    - name: toolport MCP authorization server
+        - "[BODY].resource == https://toolport-postgres.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-postgres.agents.${ROOT_DOMAIN}"
+    - name: toolport-postgres MCP authorization server
       group: "Applications"
-      url: https://toolport-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      url: https://toolport-postgres.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
       method: GET
       conditions:
         - "[STATUS] == 200"
-        - "[BODY].issuer == https://toolport-mcp.agents.${ROOT_DOMAIN}"
-        - "[BODY].registration_endpoint == https://toolport-mcp.agents.${ROOT_DOMAIN}/oauth/register"
+        - "[BODY].issuer == https://toolport-postgres.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-postgres.agents.${ROOT_DOMAIN}/oauth/register"
+    - name: toolport-infrastructure MCP rejects unauthenticated
+      group: "Applications"
+      url: https://toolport-infrastructure.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"
+    - name: toolport-infrastructure MCP protected-resource metadata
+      group: "Applications"
+      url: https://toolport-infrastructure.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://toolport-infrastructure.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-infrastructure.agents.${ROOT_DOMAIN}"
+    - name: toolport-infrastructure MCP authorization server
+      group: "Applications"
+      url: https://toolport-infrastructure.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://toolport-infrastructure.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-infrastructure.agents.${ROOT_DOMAIN}/oauth/register"
+    - name: toolport-networking MCP rejects unauthenticated
+      group: "Applications"
+      url: https://toolport-networking.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"
+    - name: toolport-networking MCP protected-resource metadata
+      group: "Applications"
+      url: https://toolport-networking.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://toolport-networking.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-networking.agents.${ROOT_DOMAIN}"
+    - name: toolport-networking MCP authorization server
+      group: "Applications"
+      url: https://toolport-networking.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://toolport-networking.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-networking.agents.${ROOT_DOMAIN}/oauth/register"
+    - name: toolport-home MCP rejects unauthenticated
+      group: "Applications"
+      url: https://toolport-home.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"
+    - name: toolport-home MCP protected-resource metadata
+      group: "Applications"
+      url: https://toolport-home.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://toolport-home.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-home.agents.${ROOT_DOMAIN}"
+    - name: toolport-home MCP authorization server
+      group: "Applications"
+      url: https://toolport-home.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://toolport-home.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-home.agents.${ROOT_DOMAIN}/oauth/register"
+    - name: toolport-media MCP rejects unauthenticated
+      group: "Applications"
+      url: https://toolport-media.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"
+    - name: toolport-media MCP protected-resource metadata
+      group: "Applications"
+      url: https://toolport-media.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://toolport-media.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-media.agents.${ROOT_DOMAIN}"
+    - name: toolport-media MCP authorization server
+      group: "Applications"
+      url: https://toolport-media.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://toolport-media.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-media.agents.${ROOT_DOMAIN}/oauth/register"
+    - name: toolport-research MCP rejects unauthenticated
+      group: "Applications"
+      url: https://toolport-research.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"
+    - name: toolport-research MCP protected-resource metadata
+      group: "Applications"
+      url: https://toolport-research.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://toolport-research.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-research.agents.${ROOT_DOMAIN}"
+    - name: toolport-research MCP authorization server
+      group: "Applications"
+      url: https://toolport-research.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://toolport-research.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-research.agents.${ROOT_DOMAIN}/oauth/register"

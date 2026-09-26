@@ -119,7 +119,11 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
   control is off, and the registry is rendered from git by External Secrets
   anyway -- servers and profiles are changed in
   `kubernetes/apps/agents/toolport/resources/registry.json`.
-- **Where it is reachable.** In agentboard the profile entries are already in
-  `.mcp.json`, each sending its profile's bearer. Off-cluster (LAN or Tailscale), the
-  OAuth door is `https://toolport-mcp.agents.<root domain>/mcp`; there every profile
-  appears at once, prefixed `toolport-<profile>_`.
+- **Where it is reachable.** Every profile has its own URL, and no client
+  holds a token. The `toolport-<profile>` entries in `.mcp.json` default to
+  `https://toolport-<profile>.agents.<root domain>/mcp`, an OAuth door (LAN or
+  Tailscale) with its own authentik login per profile. In agentboard,
+  `TOOLPORT_<PROFILE>_URL` points the same entry at that profile's in-cluster
+  remote proxy instead, which presents the bearer itself -- so a
+  `Needs authentication` there means the env var is missing, not a login to
+  do.
