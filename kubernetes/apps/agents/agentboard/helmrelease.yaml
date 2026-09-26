@@ -146,6 +146,34 @@ spec:
               # extending it, so the standard entries have to be spelled out
               # here too or nothing on the base image resolves any more.
               PATH: /root/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              # The claude-code version ./resources/mise.toml pins is the one
+              # that runs, so Claude Code must not update itself. Its updater
+              # counts mise's per-tool install as an "npm-global" one and
+              # upgrades it with a bare `npm install -g`, which lands in
+              # node's OWN install dir -- and node's bin dir comes ahead of
+              # the pinned tool in every shim lookup here. On 2026-09-26 the
+              # pin said 2.1.282 and every pane ran 2.1.283 from
+              # node/24.21.0/lib/node_modules. ./resources/entrypoint.sh's
+              # stray-copy sweep has the full trace, and removes a copy that
+              # got there anyway.
+              #
+              # DISABLE_UPDATES, not DISABLE_AUTOUPDATER. Read off the
+              # 2.1.282 and 2.1.283 binaries: every update path goes through
+              # one check that tests DISABLE_UPDATES first and
+              # DISABLE_AUTOUPDATER second, so both stop the background
+              # updater. Only DISABLE_UPDATES also makes a hand-run `claude
+              # update` refuse, and that command takes the same path into
+              # node's prefix. Its refusal says "Updates are disabled by your
+              # administrator" -- this line is that administrator. To upgrade,
+              # bump the pin.
+              DISABLE_UPDATES: "1"
+              # Either variable ALSO turns off plugin and marketplace
+              # auto-updates, through that same check ("Plugin autoupdate:
+              # skipped (auto-updater disabled)"). Plugins are not what the pin
+              # governs, and they install under ~/.claude/plugins rather than
+              # node's prefix, so this switches them back on and leaves them
+              # behaving as they did before.
+              FORCE_AUTOUPDATE_PLUGINS: "1"
               # ANTHROPIC_API_KEY:
               #   valueFrom:
               #     secretKeyRef:
