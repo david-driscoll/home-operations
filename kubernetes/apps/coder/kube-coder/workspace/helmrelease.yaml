@@ -54,7 +54,7 @@ spec:
       # DigitalOcean registry. Keep the tag on the same release as the
       # GitRepository ref in ../source/gitrepository.yaml.
       repository: ghcr.io/imran31415/kube-coder/devlaptop
-      tag: 1.66.0@sha256:3f13130d65224799f4c7075a726c49d2fd3ce1722c9e761bf2f8c0788425bdb5
+      tag: 1.67.0@sha256:ca0c6f02702a1118bb80b4d0e749a6169d5843003c6599ae3d015a49359572f9
       # Chart default is Always, which re-resolves a ~3 GB image on every
       # restart. The digest pin makes that pointless.
       pullPolicy: IfNotPresent
