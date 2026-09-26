@@ -79,6 +79,10 @@ resources:
   # that deletes media, edits the DB raw, or touches users/plugin code. See
   # the file's header.
   - ./tdarr.yaml
+  # The in-cluster Forgejo, acting as the `claude-code` account that
+  # stacks/system creates. Its token only exists after that Pulumi run -- see
+  # the file's header for the first-deploy ordering.
+  - ./forgejo.yaml
 configMapGenerator:
   # The `sources` sidecar of ./postgres.yaml: renders DBHub's dbhub.toml from
   # the live database list. Literal name (mounted by name in the MCPServer's

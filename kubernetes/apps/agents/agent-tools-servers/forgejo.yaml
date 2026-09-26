@@ -1,0 +1,105 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# The in-cluster Forgejo (git.${ROOT_DOMAIN}) as tools -- toolhive-forgejo_*
+# in agent-tools, forgejo__* in toolport's infrastructure profile.
+#
+# THE IMAGE IS GITEA'S OWN MCP SERVER, not a Forgejo one, on purpose. Forgejo
+# serves the Gitea-compatible /api/v1 this talks to (repos, branches,
+# contents, pull requests, issues -- the shared surface), and it is the option
+# with a multi-arch image, stdio that a Go binary handles cleanly behind
+# ToolHive's proxy, and a read-only switch. The Forgejo-native alternative
+# (agentic-forges/forgejo-mcp) is amd64-only and insists on a per-request
+# Authorization header, which nothing in front of this server would send.
+# A Gitea-only endpoint added after Forgejo's fork will 404 -- expected, and
+# limited to a tool or two.
+#
+# WHO IT ACTS AS: the `claude-code` Forgejo account, which stacks/system
+# creates along with its PAT (stacks/system/forgejo-renovate.ts) and writes to
+# OpenBao. It can write code, issues and pull requests in every ORGANIZATION
+# repository via a per-org team, and nothing in user-owned repositories. That
+# grant is the real permission boundary; this server has no filter of its own.
+#
+# FIRST DEPLOY ORDERING: the OpenBao item below only exists once the
+# stacks/system Pulumi run for the same commit has applied. Until then this
+# ExternalSecret cannot sync and ./ks.yaml (wait: true) reports not-ready for
+# the whole directory -- it clears on its own at the next retry after Pulumi
+# finishes.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-forgejo
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-forgejo
+    creationPolicy: Owner
+    template:
+      data:
+        # The in-cluster Service, not git.${ROOT_DOMAIN}: no hair-pin through
+        # the Gateway's `local-user` middleware, and no TLS to trust.
+        GITEA_HOST: "http://forgejo-http.coder.svc.cluster.local:3000"
+        GITEA_ACCESS_TOKEN: "{{ .token }}"
+  data:
+    - secretKey: token
+      remoteRef:
+        key: clusters/equestria/apps/forgejo/claude-code
+        property: token
+---
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-forgejo
+spec:
+  image: docker.gitea.com/gitea-mcp-server:1.7.0@sha256:273827c5cf8fec3846c09bd35461b59bdd06941bdcfcfefd388cbc22f2343f6b
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  podTemplateSpec:
+    # Reloader on the POD TEMPLATE -- see ./github.yaml for why. A rotated
+    # PAT (any change to TOKEN_SCOPES in stacks/system mints a new one) is
+    # read only at process start, so the pod has to roll.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      volumes:
+        - name: home
+          emptyDir: {}
+      containers:
+        - name: mcp
+          # The image's binary is its Cmd, with no Entrypoint -- so a bare
+          # `args` would REPLACE the binary rather than add to it. Stated as
+          # the command outright; stdio is the default transport and every
+          # setting comes from the environment, so no args at all.
+          command: ["/app/gitea-mcp"]
+          envFrom:
+            - secretRef:
+                name: toolhive-forgejo
+          env:
+            # Logs and downloaded Actions logs/artifacts go under $HOME,
+            # which the image's `nonroot` user does not have writable here.
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: home
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

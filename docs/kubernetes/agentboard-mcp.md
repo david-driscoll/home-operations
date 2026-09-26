@@ -74,7 +74,7 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 
 ## What is behind the door
 
-~955 tools, prefixed by backend. Names are the same on both doors:
+~1010 tools, prefixed by backend. Names are the same on both doors:
 
 | Prefix | Tools | Prefix | Tools |
 |---|---|---|---|
@@ -86,6 +86,7 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 | `toolhive-ecm_` | ~197 | `toolhive-teamarr_` | ~180 |
 | `toolhive-arr-mcp-{plex,jellyfin}_` | 38 each | `toolhive-homelable_` | 58 |
 | `toolhive-home-assistant_` | ~21 | `toolhive-tdarr_` | 65 |
+| `toolhive-forgejo_` | 54 | | |
 
 `toolhive-teamarr_`'s set is built from Teamarr's live `/openapi.json` when its
 pod starts (destructive tools hidden), so the count moves with Teamarr's version
@@ -95,7 +96,10 @@ cut down by an `MCPToolConfig` allow-list in `agent-tools-servers/tdarr.yaml`.
 The cut removes every tool that deletes media, writes the Tdarr DB directly, or
 touches users or plugin code. `toolhive-ecm_`, `toolhive-arr-mcp-*_`,
 `toolhive-teamarr_` and `toolhive-tdarr_` all front `equestria` apps and fail
-02:00-09:00, when that namespace is shed. For what the ECM and Teamarr tools are for — and which ECM
+02:00-09:00, when that namespace is shed. `toolhive-forgejo_` is the in-cluster forge as the `claude-code`
+account (created by `stacks/system`): write on code, issues and pull requests in
+every organization repository, nothing in user-owned ones, and no repository
+creation. For what the ECM and Teamarr tools are for — and which ECM
 write tools currently fail with a 401 — see [iptv.md](iptv.md).
 
 Note `toolhive-kubernetes_*` is the working Kubernetes path from this pod. The
