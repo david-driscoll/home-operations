@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# The access gate on every sync request: Traefik asks the coordinator's /authz
+# (./resources/App.cs, AccessGate) before passing a request to SuperSync. A 2xx
+# lets it through untouched. Anything else goes back to the client as-is,
+# status, headers and body (traefik pkg/middlewares/auth/forward.go, v3.7.13),
+# which is how the apps receive a SuperSync-shaped 401.
+#
+# Attached to the HTTPRoute's sync rule (./helmrelease.yaml) and to the
+# WebSocket carve-out (./ingressroute-ws.yaml). NOT to /health, which Gatus
+# calls without a token.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ${APP}-authz
+spec:
+  forwardAuth:
+    # In-cluster, like network/outpost. The coordinator's CiliumNetworkPolicy
+    # admits Traefik, which is where this call comes from.
+    address: http://${APP}-coordinator.${NAMESPACE}:8080/authz
+    # `false`, explicitly. Traefik then deletes every client-sent X-Forwarded-*
+    # and rebuilds them from the real request, so X-Forwarded-Uri -- where the
+    # gate finds the WebSocket's ?token= -- cannot be forged. Leaving it unset
+    # selects Traefik's legacy header handling, which it warns about at startup.
+    trustForwardHeader: false
+    # Only what the gate reads. Traefik adds the X-Forwarded-* set after this
+    # filter, so X-Forwarded-Method and X-Forwarded-Uri still arrive. `Origin`
+    # is for the CORS headers on a denial.
+    authRequestHeaders:
+      - Authorization
+      - Origin

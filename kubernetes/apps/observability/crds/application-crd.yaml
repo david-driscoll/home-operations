@@ -55,6 +55,11 @@ spec:
                       type: array
                       items:
                         type: string
+                    # See schemas/definition.schema.json. Without it here the
+                    # API server prunes the key and the applications stack never
+                    # creates the account.
+                    serviceAccount:
+                      type: boolean
                 uptime:
                   type: object
                   properties:

@@ -8,6 +8,7 @@ resources:
   - ./externalsecret.yaml
   - ./ciliumnetworkpolicy.yaml
   - ./ingressroute-ws.yaml
+  - ./middleware.yaml
 configMapGenerator:
   - files:
       - App.cs=./resources/App.cs

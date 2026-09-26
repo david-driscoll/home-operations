@@ -10,12 +10,19 @@ spec:
   description: "Sync server for Super Productivity -- one account per authentik user"
   url: &url https://${APP}.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/super-productivity.png
-  # Who may get a SuperSync account at all. The coordinator creates one for any
-  # email authentik vouches for, so this binding IS the allowlist -- SuperSync's
-  # own ALLOWED_EMAILS never runs, its registration routes are not routed.
+  # Who may use SuperSync, checked twice. The authentik binding decides who can
+  # open the coordinator page and get a token. SuperSync's own ALLOWED_EMAILS
+  # never runs, because its registration routes are not routed.
+  #
+  # serviceAccount makes the applications stack create a view_user-only
+  # authentik account and publish it, together with this group list, to
+  # OpenBao. The coordinator's /authz uses it to re-check on every sync
+  # request, so removing someone from `family` stops their devices within
+  # minutes instead of when their token expires a year later.
   access_policy:
     groups:
       - family
+    serviceAccount: true
   # forward_single guards only the coordinator page (`/`). The sync API
   # (/api/sync/*) is routed around it in ./helmrelease.yaml: the desktop and
   # mobile apps send a bearer token and cannot follow an authentik redirect.

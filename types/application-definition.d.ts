@@ -52,6 +52,10 @@ export interface ApplicationDefinitionSchema {
     access_policy?: {
       groups?: RolesValues[];
       entitlements?: string[];
+      /**
+       * Give the application its own read-only authentik service account, so it can re-check on every request that a user it already knows is still in one of `groups`. The applications stack writes the account's API token, the authentik URL and the group list to OpenBao at clusters/<cluster>/apps/<app>/authentik-access. The account can view users and nothing else.
+       */
+      serviceAccount?: boolean;
     };
     uptime?: {
       http?: Http;

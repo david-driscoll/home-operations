@@ -55,8 +55,12 @@ spec:
       observability:
         accessLogs: false
       middlewares:
-        # The same network gate the HTTPRoute's sync rule uses.
+        # The same two gates the HTTPRoute's sync rule uses: network, then the
+        # coordinator's access check (./middleware.yaml), which reads the token
+        # from this URL's query.
         - name: local-api
+          namespace: ${NAMESPACE}
+        - name: ${APP}-authz
           namespace: ${NAMESPACE}
       services:
         - name: ${APP}
