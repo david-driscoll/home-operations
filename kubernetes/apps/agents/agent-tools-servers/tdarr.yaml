@@ -40,18 +40,18 @@
 # SURVIVES it. That is the failure that killed toolhive-postgres's old
 # Python backend every five minutes; the TypeScript SDK does not have it.
 #
-# TOOLS ARE FILTERED: 65 of upstream's 105, by decision (2026-09-25). tdarr-mcp
-# has no read-only or destructive switch of its own, so the MCPToolConfig
-# below is the only gate. It is an ALLOW-list, enforced in the ToolHive proxy:
-# a filtered tool is missing from `tools/list` AND a `tools/call` naming it is
-# rejected there. Toolport and agent-tools both come through this proxy, so
-# both see the same 65. Left out, in the same spirit as ./teamarr.yaml's
-# ENABLE_DESTRUCTIVE=false and arr-mcp's `destructive: false`:
+# TOOLS ARE FILTERED: 66 of upstream's 105, by decision (2026-09-25, widened
+# 2026-09-27). tdarr-mcp has no read-only or destructive switch of its own, so
+# the MCPToolConfig below is the only gate. It is an ALLOW-list, enforced in
+# the ToolHive proxy: a filtered tool is missing from `tools/list` AND a
+# `tools/call` naming it is rejected there. Toolport and agent-tools both come
+# through this proxy, so both see the same 66. Left out, in the same spirit as
+# ./teamarr.yaml's ENABLE_DESTRUCTIVE=false and arr-mcp's `destructive: false`:
 #
 #   - Deleting from disk or the DB: delete_file, bulk_delete_files,
 #     delete_unhealthy_files, delete_cache_file, remove_library_files,
 #     delete_backup, delete_job_report(s).
-#   - Raw DB writes: cruddb, bulk_update_files (arbitrary fields by ID),
+#   - Bulk DB writes: bulk_update_files (arbitrary fields by ID),
 #     stats_space_saved_add.
 #   - Users and auth: admin_*, auth_*, public_auth_*, use_token.
 #   - Restart and update: restart_server, restart_ui, restart_node,
@@ -70,6 +70,20 @@
 # cancel/kill, node settings (update_node is how a node is paused), backups,
 # automations. To widen it, add names to `toolsFilter`; the full upstream
 # list is in src/tools-*.ts at the pinned commit.
+#
+# CRUDDB IS IN, AND IT IS NOT NARROW (2026-09-27). It was left out as a raw
+# DB write; it went back in so agents can manage FLOWS, because tdarr-mcp has
+# no flow tool -- `tdarr_cruddb` on `FlowsJSONDB` is the only way to create
+# or edit one, and on `LibrarySettingsJSONDB` the only way to point a library
+# at it (`flowId`). The allow-list gates tool NAMES, not arguments, so what
+# that actually grants is every collection in every mode, `delete` included:
+# files, libraries, nodes, global settings. It still cannot touch media on
+# disk -- deleting a FileJSONDB row forgets a file, it does not remove it --
+# and `tdarr_create_backup` before a write is the undo. It also means code:
+# a flow can carry a Custom JS Function or Run CLI plugin, which the nodes
+# execute, so this reopens the "code execution on the GPU nodes" the Plugin
+# code bullet above closes. The flow it was opened for, and how it is applied,
+# is docs/kubernetes/tdarr.md.
 #
 # NO SECRET. The Tdarr HelmRelease (kubernetes/apps/equestria/media/tdarr)
 # does not turn on Tdarr's API auth, and its route's protection is Traefik's
@@ -122,9 +136,11 @@ spec:
     - tdarr_stats_get_worker_verdict_hist
     # processes
     - tdarr_get_process_info
-    # database (both are reads of the file tables)
+    # database: two reads of the file tables, and cruddb -- read/write on
+    # every collection, the only path to flows (see the header)
     - tdarr_search_db
     - tdarr_client
+    - tdarr_cruddb
     # files
     - tdarr_create_sample
     - tdarr_find_duplicates

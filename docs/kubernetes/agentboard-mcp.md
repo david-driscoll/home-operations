@@ -115,10 +115,12 @@ profile lists its servers and their tool counts.
 
 `teamarr`'s tool set is built from Teamarr's live `/openapi.json` when its pod
 starts (destructive tools hidden), so the count moves with Teamarr's version.
-`home-assistant`'s depends on what Home Assistant exposes. `tdarr` is 65 of
+`home-assistant`'s depends on what Home Assistant exposes. `tdarr` is 66 of
 tdarr-mcp's 105 tools, cut down by an `MCPToolConfig` allow-list in
-`agent-tools-servers/tdarr.yaml`: nothing that deletes media, writes the Tdarr
-DB directly, or touches users or plugin code. `ecm`, `arr-*`, `teamarr` and
+`agent-tools-servers/tdarr.yaml`: nothing that deletes media from disk or
+touches users or plugin code. The one raw DB tool, `tdarr_cruddb`, is allowed
+because it is the only way to manage flows, and it reaches every collection
+in every mode; see [tdarr.md](tdarr.md). `ecm`, `arr-*`, `teamarr` and
 `tdarr` all front `equestria` apps and fail 02:00-09:00, when that namespace is
 shed. `forgejo` is the in-cluster forge as the `claude-code` account (created
 by `stacks/system`): in every organization repository it can write code,
