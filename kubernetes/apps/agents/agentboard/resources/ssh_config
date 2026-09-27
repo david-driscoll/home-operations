@@ -1,0 +1,19 @@
+# git over SSH to the in-cluster Forgejo as the `claude-code` account.
+# Mounted at /etc/ssh/ssh_config.d/forgejo.conf -- the image's ssh_config
+# `Include`s that directory, so this applies to every shell and to git without
+# touching ~/.ssh on the home-dir PVC.
+#
+# Remotes keep the public name (git@git.driscoll.tech:<org>/<repo>.git); only
+# the connection is redirected. From inside the cluster, git.driscoll.tech:22
+# is the internal gateway's LAN address and does not answer, so HostName goes
+# straight to Forgejo's own SSH Service instead. HostKeyAlias makes the host
+# key check use the public name, which is what known_hosts pins.
+Host git.driscoll.tech
+  HostName forgejo-ssh.coder.svc.cluster.local
+  Port 22
+  User git
+  HostKeyAlias git.driscoll.tech
+  IdentityFile /var/run/secrets/forgejo-ssh/id_ed25519
+  IdentitiesOnly yes
+  UserKnownHostsFile /etc/agentboard/ssh/known_hosts
+  StrictHostKeyChecking yes

@@ -95,6 +95,17 @@ configMapGenerator:
   # template, and Flux's envsubst must not rewrite (or, in strict mode, fail
   # on) it -- which also means the NAME must be literal, not ${APP}-based.
   # disableNameSuffixHash because ./helmrelease.yaml mounts it by name.
+  # git over SSH to Forgejo as claude-code: the ssh_config.d drop-in and the
+  # pinned host key. The key itself is the `${APP}-forgejo-ssh` ExternalSecret.
+  # Substitution off: nothing in either file is a Flux variable.
+  - name: agentboard-ssh
+    files:
+      - forgejo.conf=./resources/ssh_config
+      - known_hosts=./resources/known_hosts
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
   - name: agentboard-skills
     files:
       - toolport-SKILL.md=../../../../.claude/skills/toolport/SKILL.md

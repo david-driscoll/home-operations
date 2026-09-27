@@ -428,6 +428,42 @@ spec:
             *app :
               - path: /var/run/secrets/github-token
                 readOnly: true
+      # git over SSH to Forgejo as `claude-code` -- see
+      # ./externalsecret.yaml (`${APP}-forgejo-ssh`) and ./resources/ssh_config.
+      #
+      # `custom`, not `type: secret`, for two fields app-template's secret type
+      # does not pass through:
+      #   optional: true   the key reaches OpenBao only when stacks/system has
+      #                    run; a pod that rolls before that must still start
+      #                    (this pod is where agent sessions live), just keyless.
+      #   defaultMode 0400 ssh refuses a private key readable by group/other
+      #                    ("UNPROTECTED PRIVATE KEY FILE"); 256 is 0400 in
+      #                    decimal, which is what the API takes.
+      forgejo-ssh:
+        type: custom
+        volumeSpec:
+          secret:
+            secretName: ${APP}-forgejo-ssh
+            optional: true
+            defaultMode: 256
+        advancedMounts:
+          *app :
+            *app :
+              - path: /var/run/secrets/forgejo-ssh
+                readOnly: true
+      ssh-config:
+        type: configMap
+        name: agentboard-ssh
+        advancedMounts:
+          *app :
+            *app :
+              # /etc/ssh/ssh_config `Include`s ssh_config.d/*.conf.
+              - path: /etc/ssh/ssh_config.d/forgejo.conf
+                subPath: forgejo.conf
+                readOnly: true
+              - path: /etc/agentboard/ssh/known_hosts
+                subPath: known_hosts
+                readOnly: true
       sops-age:
         type: secret
         # Same shape as `github-token` above -- NOT `${APP}`, the real,
