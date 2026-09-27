@@ -1,7 +1,32 @@
+/**
+ * Authentik applications, the proxy outpost, and backrest plans for equestria,
+ * discovered from the cluster's own `ApplicationDefinition`s, VolSync secrets
+ * and annotated GarageBuckets.
+ *
+ * This was `stacks/applications`, a project with one stack per cluster. Once
+ * equestria was the only cluster left, the per-cluster machinery (a
+ * `clusterCredential` config, a `switch` on the cluster type, a brand branch
+ * for `sgc`) was overhead, so the code moved here and its state was moved
+ * with `pulumi state move`. That is why every resource name below is spelled
+ * the way the old stack spelled it: the names, types and parent chains ARE the
+ * URNs the moved state is keyed on. Rename one and Pulumi sees a delete plus a
+ * create -- for a RandomPassword that means a new OIDC client secret.
+ *
+ * ## The cluster comes from the YAML, not from OpenBao
+ *
+ * The old stack called `globals.store.getKubernetesCluster()`. That goes
+ * through `getCluster()` and reads `clusters/<key>/details`, which THIS stack
+ * publishes -- exactly the self-read index.ts's header forbids. The definition
+ * is read from `/clusters/equestria.yaml` instead (the same source the publish
+ * loop uses), and the kubeconfig is built by the same function the store used,
+ * so the `equestria-provider` input is byte-identical to what state holds.
+ */
 import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
+import { CLUSTERS } from "@components/store/clusters.ts";
+import { generateTailscaleKubeConfig, type KubernetesClusterDefinition } from "@components/store/index.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import type { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as authentik from "@pulumi/authentik";
@@ -10,7 +35,7 @@ import * as pulumi from "@pulumi/pulumi";
 import { kebabCase } from "moderndash";
 import { concatMap, from, lastValueFrom, map, toArray } from "rxjs";
 import * as yaml from "yaml";
-import { kubernetesBackups } from "./kubernetes-backups.ts";
+import { kubernetesBackups } from "./application-backups.ts";
 
 /**
  * Where the cluster's authentik proxy outpost runs, and where the
@@ -19,7 +44,66 @@ import { kubernetesBackups } from "./kubernetes-backups.ts";
  */
 const OUTPOST_NAMESPACE = "stargate-command";
 
-export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
+export type KubernetesCluster = KubernetesClusterDefinition & { kubeConfig: string };
+
+function equestriaDefinition(): KubernetesClusterDefinition {
+  const entry = CLUSTERS.find(c => c.key === "equestria");
+  if (entry?.type !== "kubernetes") throw new Error("clusters/equestria.yaml is missing or is not `type: kubernetes`");
+  // Loader bookkeeping, not part of the definition the store used to return.
+  const { sourceTitle: _sourceTitle, secretField: _secretField, ...definition } = entry;
+  return definition;
+}
+
+export async function configureApplications(globals: GlobalResources) {
+  const definition = equestriaDefinition();
+  const kubeConfig = await awaitOutput(generateTailscaleKubeConfig(definition.key, globals.tailscaleDomain));
+  const clusterDefinition: KubernetesCluster = { ...definition, kubeConfig };
+
+  const outputs = await awaitOutput(globals.store.getSecretByTitle<AuthentikOutputs>("Authentik Outputs"));
+
+  const _brand = new authentik.Brand(
+    clusterDefinition.key,
+    {
+      domain: clusterDefinition.authentikDomain,
+      brandingLogo: clusterDefinition.icon,
+      brandingTitle: clusterDefinition.title,
+      brandingFavicon: clusterDefinition.favicon ?? "",
+      brandingDefaultFlowBackground: clusterDefinition.background ?? "/static/dist/assets/images/flow_background.jpg",
+      flowAuthentication: outputs.flows.authenticationFlow,
+      flowInvalidation: outputs.flows.providerLogoutFlow,
+      flowUserSettings: outputs.flows.userSettingsFlow,
+    },
+    { deleteBeforeReplace: true },
+  );
+
+  // `iris.driscoll.tech`, re-homed onto equestria's instance when SGC was
+  // decommissioned (docs/cluster-consolidation/22-decommission-sgc.md). `iris`
+  // is not an SGC app: it is one of the estate's three public SSO names and it
+  // answers from alpha-site. The asset URLs are the exact values
+  // `clusters/sgc.yaml` carried, as literals, so the rendered brand stayed
+  // byte-identical through the re-home and carries no dependency on a cluster
+  // definition that no longer exists. Alpha Site declares the same
+  // `authentikDomain` with different imagery, and adopting it would be a
+  // visible change nobody asked for.
+  const _irisBrand = new authentik.Brand(
+    "iris",
+    {
+      domain: "iris.driscoll.tech",
+      brandingLogo: "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg",
+      brandingTitle: "Stargate Command",
+      brandingFavicon: "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg",
+      brandingDefaultFlowBackground: "https://wallpapercave.com/wp/wp10853006.jpg",
+      flowAuthentication: outputs.flows.authenticationFlow,
+      flowInvalidation: outputs.flows.providerLogoutFlow,
+      flowUserSettings: outputs.flows.userSettingsFlow,
+    },
+    { deleteBeforeReplace: true },
+  );
+
+  await kubernetesApplications(globals, outputs, clusterDefinition);
+}
+
+async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: KubernetesCluster) {
   const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
     kubeconfig: clusterDefinition.kubeConfig,
   });
@@ -204,10 +288,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     }),
   );
 
-  // if (clusterDefinition.key === "equestria") {
-  //   await createWarpgateTargets(globals, provider);
-  // }
-
   return {};
 }
 
@@ -235,7 +315,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
  *     writer of the shared store, and would have kept a second copy of the
  *     credential forever. This keeps zero copies in either store.
  */
-async function outpostKubeConfig(coreApi: kubernetes.CoreV1Api, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
+async function outpostKubeConfig(coreApi: kubernetes.CoreV1Api, clusterDefinition: KubernetesCluster) {
   // Created by the authentik-remote-cluster HelmRelease in the target cluster,
   // in the outpost's namespace (kubernetes/apps/stargate-command/authentik-remote-cluster/).
   // The chart's Role is namespaced, so the ServiceAccount can only manage an

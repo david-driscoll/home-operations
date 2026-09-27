@@ -60,7 +60,7 @@ GlobalResources (credentials + providers)
     ↓
 ComponentResources (ProxmoxHost, DockgeLxc, etc.)
     ↓
-Pulumi Stacks (home, authentik, applications, etc.)
+Pulumi Stacks (home, authentik, system, etc.)
     ↓
 Infrastructure Resources ↔ 1Password (outputs)
 ```

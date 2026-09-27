@@ -80,7 +80,7 @@ spec:
                   name: ${APP}-db
               - secretRef:
                   name: ${APP}-metrics
-              # Absent until `stacks/applications` has run; see
+              # Absent until `stacks/system` has run; see
               # ./externalsecret.yaml.
               - secretRef:
                   name: ${APP}-oidc

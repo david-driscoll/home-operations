@@ -96,7 +96,7 @@ Pulumi TypeScript monorepo managing homelab infrastructure across multiple clust
 ```
 bootstrap/      # Bootstrap-tier secrets (SOPS) + INVENTORY/RUNBOOK: the OpenBao seal chain, recovery shares, Pulumi AppRole/passphrase
 components/     # Shared Pulumi ComponentResource code (providers, helpers)
-stacks/         # Deployable Pulumi stacks (home, authentik, applications, backups, unifi-network, system, vault, ...)
+stacks/         # Deployable Pulumi stacks (home, authentik, backups, unifi-network, system, vault, ...)
 sdks/           # Vendor SDK wrappers (unifi, authentik, adguard, b2, pbs, terrifi)
 dynamic/        # Code-generated Pulumi resources (1Password item types)
 docker/         # Docker/Dockge stack configs per cluster

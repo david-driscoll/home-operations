@@ -19,7 +19,7 @@
 | Backblaze B2 | S3-compatible API | Off-site backup storage | Application key (currently disabled/commented) | Low | `package.json` (commented out in globals) |
 | GitHub | REST API | GitHub resource management via Pulumi | [ASK USER] — token not visible in scanned files | Low | `package.json` (`@pulumi/github`) |
 | Remote hosts (SSH) | SSH | Direct command execution on Proxmox/LXC hosts | SSH key (from 1Password `sftpKey`) | High | `components/DockgeLxc.ts`, `@pulumi/command` |
-| Kubernetes clusters | K8s API | Reading ApplicationDefinition CRDs; creating Volsync secrets | Kubeconfig stored in 1Password per cluster | High | `stacks/applications/kubernetes.ts` |
+| Kubernetes clusters | K8s API | Reading ApplicationDefinition CRDs; creating Volsync secrets | Kubeconfig stored in 1Password per cluster | High | `stacks/system/applications.ts` |
 
 ### 2) Data Stores
 
@@ -29,7 +29,7 @@
 | Minio (TrueNAS S3) | Pulumi stack state, Thanos metrics, backup data | `@pulumi/minio`, direct S3 API | Data loss if TrueNAS is unreachable; `retainOnDelete: true` set on critical buckets | `stacks/home/index.ts` |
 | Tailscale state | Device registry, ACL, subnet routes | `@pulumi/tailscale` | ACL misconfiguration can cut off all remote access | `components/tailscale.ts` |
 | Cloudflare DNS | Public DNS records for all services | `@pulumi/cloudflare` | DNS misconfiguration breaks external access | `components/StandardDns.ts` |
-| Kubernetes etcd | ApplicationDefinition CRDs | `@kubernetes/client-node` direct API | External dependency; stacks/applications requires live cluster access | `stacks/applications/kubernetes.ts` |
+| Kubernetes etcd | ApplicationDefinition CRDs | `@kubernetes/client-node` direct API | External dependency; stacks/system requires live cluster access | `stacks/system/applications.ts` |
 
 ### 3) Secrets and Credentials Handling
 
@@ -50,7 +50,7 @@
 
 - **Gatus uptime monitoring:** Every deployed service registers a health check via `addUptimeGatus()` in `components/helpers.ts`. Config is written via SSH to the uptime host at `/opt/stacks-data/uptime/config/uptime-<name>.yaml`.
 - **Prometheus:** Deployed on Dockge clusters via `docker/_common/prometheus/`; scrapes node/container metrics.
-- **Logging around external calls:** `console.error()` on all `OPClient` failures. Pulumi deployment-time `pulumi.log.info()` used in `stacks/applications/kubernetes.ts` for namespace enumeration.
+- **Logging around external calls:** `console.error()` on all `OPClient` failures. Pulumi deployment-time `pulumi.log.info()` used in `stacks/system/applications.ts` for namespace enumeration.
 - **Missing visibility:** No distributed tracing, no APM, no alerting on Pulumi stack failures.
 
 ### 6) Tailscale Detail
@@ -107,7 +107,7 @@ Alertmanager runs in the **Equestria** cluster, `observability` namespace.
 - `components/helpers.ts` — Gatus uptime integration
 - `components/constants.ts` — Tailscale ACL tags and port groups
 - `components/tailscale.ts` — Tailscale integration
-- `stacks/applications/kubernetes.ts` — K8s API usage
+- `stacks/system/applications.ts` — K8s API usage
 - `.mise.toml` — env var injection pattern
 - `docker/_common/prometheus/` — Prometheus monitoring
 - `sdks/` — vendor SDK wrappers

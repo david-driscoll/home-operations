@@ -62,11 +62,30 @@
  * would force anything that wants the icon URL to be granted the cluster's Flux
  * substitution key as well, and an ACL cannot separate them once they share a
  * path.
+ *
+ * ## The authentik applications live here too, and they have no kill switch
+ *
+ * applications.ts was `stacks/applications` until equestria became the only
+ * cluster; its state was moved into this stack rather than recreated. It
+ * widens what this stack depends on at run time: the authentik API, 1Password
+ * Connect (the OIDC credential and backup-plan items are still written there),
+ * and equestria's API through the tailnet kubeproxy. Any of those being down
+ * now fails this stack, where it used to fail only the applications one. It is
+ * also why the Stack CR resyncs every 300s: a new ApplicationDefinition gets
+ * its SSO from the next run.
+ *
+ * Unlike `BOT_ENABLED` and `ENGINE_ENABLED`, there is deliberately no flag to
+ * switch it off. Not declaring these resources is not "off" -- it is a plan to
+ * DELETE every authentik application, provider and OIDC client secret in the
+ * estate. To stop it running, set `spec.preview: true` on the Stack CR
+ * (kubernetes/apps/pulumi/system/stack.yaml), which makes the operator
+ * preview-only.
  */
 
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
+import { configureApplications } from "./applications.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
@@ -152,3 +171,8 @@ new OpenBaoMcpComponent({ globals });
 // last time.
 const forgejoTargets = await discoverForgejoTargets(globals);
 new ForgejoConfigurationComponent({ globals, targets: forgejoTargets });
+
+// Authentik applications, the proxy outpost and backrest plans for equestria,
+// discovered from the cluster. Last, because it is the part most likely to
+// fail on something outside OpenBao -- see "no kill switch" in the header.
+await configureApplications(globals);

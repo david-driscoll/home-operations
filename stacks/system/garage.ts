@@ -274,7 +274,7 @@ RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
   // hooks already maintain for every GarageBucket annotated
   // `driscoll.dev/backup: "true"`, across BOTH in-cluster Garage instances
   // (garage-system and coder/forgejo-garage; the scan is
-  // stacks/applications/kubernetes-backups.ts garageBucketBackups). Riding
+  // stacks/system/application-backups.ts garageBucketBackups). Riding
   // that tree means the mirror inherits the estate's opt-in contract and its
   // exclusion rules instead of inventing a second bucket-enumeration path.
   const mirrorBucket = backupBucket("garage-mirror", MIRROR_BUCKET_QUOTA);

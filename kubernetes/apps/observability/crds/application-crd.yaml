@@ -40,7 +40,7 @@ spec:
                 # schemas/definition.schema.json: this is a structural schema, so
                 # a field the CRD does not declare is PRUNED by the API server
                 # rather than rejected -- the definition would apply cleanly, the
-                # field would silently vanish, and stacks/applications would build
+                # field would silently vanish, and stacks/system would build
                 # no tailnet provider while everything looked healthy.
                 tailnetUrl:
                   type: string
@@ -806,7 +806,7 @@ spec:
                           DEPRECATED / NO-OP. Gatus has no endpoint-level timeout -- the
                           request timeout is `client.timeout`. Gatus parses its config with a
                           non-strict yaml.Unmarshal, so this key is accepted and then ignored.
-                          Kept because stacks/applications/kubernetes.ts still emits it.
+                          Kept because stacks/system/applications.ts still emits it.
                         default: "10s"
                         pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
                       maintenance-windows:
@@ -1044,7 +1044,7 @@ spec:
                           DEPRECATED / NO-OP at the endpoint level. Gatus reads
                           `disable-monitoring-lock` only from the top level of its config
                           (config/config.go). Accepted and then ignored; kept because
-                          stacks/applications/kubernetes.ts still emits it.
+                          stacks/system/applications.ts still emits it.
                 authentik:
                   type: object
                   properties:

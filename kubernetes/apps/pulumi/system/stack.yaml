@@ -13,10 +13,14 @@ spec:
     dir: stacks/system
   serviceAccountName: ${APP}
   stack: system
-  resyncFrequencySeconds: 86400
+  # 300s since stacks/applications moved in (stacks/system/applications.ts): a
+  # new ApplicationDefinition gets its authentik app and OIDC Secret from the
+  # next run, and the run a commit triggers usually races Flux applying the
+  # ApplicationDefinition itself -- so it is the resync that picks it up.
+  resyncFrequencySeconds: 300
   retryMaxBackoffDurationSeconds: 60
   backend: s3://home-operations/backups?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
-  continueResyncOnCommitMatch: false
+  continueResyncOnCommitMatch: true
   destroyOnFinalize: false
   # PAUSED: preview-only while stacks/applications' state is moved into this
   # stack. The operator runs `pulumi preview`, never `up`. This comes off in a
@@ -52,14 +56,29 @@ spec:
       type: Literal
       literal:
         value: "home-operations"
-    # No CONNECT_* deliberately: this stack reads nothing from 1Password and
-    # writes nothing to it. It reads /clusters/*.yaml out of the checkout and
-    # writes OpenBao.
     GITHUB_TOKEN:
       type: Secret
       secret:
         name: github-token
         key: token
+    # Only for stacks/system/applications.ts: it still WRITES the per-app OIDC
+    # credential items and the "Equestria Backup Plan" item to 1Password
+    # (dynamic/1password/OnePasswordItem.ts). Nothing here reads 1Password, but
+    # that provider builds an OPClient even to diff, so without these every
+    # preview of those resources fails.
+    CONNECT_HOST:
+      type: Literal
+      literal:
+        value: "http://onepassword-connect.kube-system.svc.cluster.local:8080"
+    CONNECT_VAULT:
+      type: Literal
+      literal:
+        value: "Eris"
+    CONNECT_TOKEN:
+      type: Secret
+      secret:
+        name: pulumi-operator-connect-token
+        key: credential
     PULUMI_CONFIG_PASSPHRASE:
       type: Secret
       secret:

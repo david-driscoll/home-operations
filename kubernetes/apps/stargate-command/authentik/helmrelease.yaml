@@ -123,7 +123,7 @@ spec:
           value: info
         # Do not let this worker auto-register the cluster it runs in as an
         # outpost integration. The cluster's outpost is already managed through
-        # the authentik-remote-cluster ServiceAccount (stacks/applications), and a
+        # the authentik-remote-cluster ServiceAccount (stacks/system), and a
         # second "Local Kubernetes Cluster" connection would reconcile the same
         # namespace from a different identity.
         - name: AUTHENTIK_OUTPOSTS__DISCOVER

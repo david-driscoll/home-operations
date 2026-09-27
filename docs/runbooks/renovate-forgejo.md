@@ -148,7 +148,7 @@ reason.
 | | `webhook_token` | generated | the `Authorization: Bearer` header, in **both** directions — the operator verifies incoming deliveries with it and writes it onto every repository hook it syncs |
 | | `bot_password` | generated | nothing. The provider authenticates as the admin and Renovate authenticates with the token; this is stored only so a human has a way back into the account |
 | `clusters/equestria/apps/renovate-operator/session_secret` | `session_secret` | generated | UI session encryption. Its own path, not a field on `credentials`, because a different resource writes it |
-| `clusters/equestria/apps/renovate-operator/oidc` | (several) | `stacks/applications` | the operator's OIDC login — see step 3 |
+| `clusters/equestria/apps/renovate-operator/oidc` | (several) | `stacks/system` | the operator's OIDC login — see step 3 |
 | `clusters/equestria/apps/forgejo/admin-token` | `token` | `forgejo_personal_access_token` for the admin | nothing yet. Filed in OpenBao rather than written as a Kubernetes Secret because this stack has no Kubernetes provider and its ServiceAccount holds only `system:auth-delegator` — it cannot create a Secret in any namespace |
 
 The stack authenticates to Forgejo as the **break-glass admin**, reading
@@ -184,7 +184,7 @@ itself in one pass:
    exist yet. Both ExternalSecrets sit in `SecretSyncedError` —
    "could not get secret data from provider" — because the OpenBao OIDC path is
    empty.
-2. The `pulumi/equestria` Stack (`stacks/applications`) reconciles every 300s,
+2. The `pulumi/system` Stack (`stacks/system/applications.ts`) reconciles every 300s,
    lists every `ApplicationDefinition` in the cluster, finds the new one,
    creates the authentik application and provider, and writes the credential to
    `secrets/clusters/equestria/apps/renovate-operator/oidc`.
@@ -193,21 +193,19 @@ itself in one pass:
 
 `forgejo` and `coder` both bootstrapped this way.
 
-**`stacks/system` is the other half and it is independent.** It runs on its own
-commit-driven schedule, creates the bot and writes
-`clusters/equestria/apps/renovate/credentials`, and does not care what the
-operator is doing. So the two Kustomizations unblock separately: the operator
-waits on `pulumi/equestria` (OIDC), and `renovate` waits on `pulumi/system` (the
-bot token). Neither ordering is enforced and neither needs to be.
+**The bot token comes from the same stack.** `stacks/system` also creates the
+bot and writes `clusters/equestria/apps/renovate/credentials`
+(`forgejo-renovate.ts`), so one run unblocks both Kustomizations: the operator
+waits on its OIDC credential, and `renovate` on the bot token. (These were two
+Stacks, `pulumi/equestria` and `pulumi/system`, until `stacks/applications`
+was folded into `stacks/system`.)
 
-To stop waiting on either:
+To stop waiting:
 
 ```bash
-kubectl -n pulumi annotate stack equestria \
-  pulumi.com/reconciliation-request="$(date +%s)" --overwrite
 kubectl -n pulumi annotate stack system \
   pulumi.com/reconciliation-request="$(date +%s)" --overwrite
-kubectl -n pulumi get stack equestria system -w
+kubectl -n pulumi get stack system -w
 flux -n coder reconcile kustomization renovate-operator --with-source
 flux -n coder reconcile kustomization renovate --with-source
 ```

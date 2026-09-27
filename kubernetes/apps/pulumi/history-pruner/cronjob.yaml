@@ -41,9 +41,10 @@ spec:
                   set -euo pipefail
                   KEEP_DAYS=3
                   BUCKET=home-operations
-                  # One prefix per Pulumi backend root; equestria/sgc share the
-                  # "applications" project so they share one prefix here too.
-                  PREFIXES="applications authentik gulf-of-mexico home ocracoke unifi-network vault"
+                  # One prefix per Pulumi backend root. `backups` holds both the
+                  # backups and system stacks, and system resyncs every 300s.
+                  # `applications` only has retired stacks left in it.
+                  PREFIXES="applications authentik backups gulf-of-mexico home ocracoke unifi-network vault"
 
                   mc alias set truenas http://truenas.driscoll.tech:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"
 
