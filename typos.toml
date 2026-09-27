@@ -74,6 +74,11 @@ extend-ignore-re = [
   # reads as a misspelt "AND". A regex rather than an extend-words entry for
   # `ND`, so a bare "nd" in prose is still caught.
   "\\bND_[A-Z_]*",
+  # Tdarr's own field name, misspelled upstream (FlowHelpers' IffmpegCommand):
+  # docs/kubernetes/assets/tdarr/stream-policy.cjs pushes onto
+  # `ffmpegCommand.overallOuputArguments`. "Correcting" it writes to a field
+  # ffmpegCommandExecute never reads, and the flow silently loses its args.
+  "\\boverallOuputArguments\\b",
 ]
 
 [default.extend-words]
