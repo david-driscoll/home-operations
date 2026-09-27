@@ -56,23 +56,26 @@ fi
 if [ -n "$OIDC_CLIENT_ID" ] && [ -n "$OIDC_DISCOVERY_URL" ]; then
   # --unique-uid=0 + preferred_username: the Nextcloud user id IS the authentik
   # username (what OpenCloud used), so do not rename people in authentik.
-  # Group provisioning mirrors ONLY groups matching the whitelist: family and
-  # admins are added AND removed to match the claim on every web login, while
-  # hand-made sharing groups in Nextcloud are left alone.
+  # Group provisioning mirrors ONLY groups matching the whitelist: family,
+  # admins and admin are added AND removed to match the claim on every web
+  # login, while hand-made sharing groups in Nextcloud are left alone. `admin`
+  # is Nextcloud's own administrators group; the nextcloud_groups claim adds it
+  # for members of authentik's `admins`, so admin rights follow authentik. The
+  # local break-glass `ncadmin` never logs in via OIDC and keeps its membership.
   # --clientsecret-env keeps the secret off the command line; output is
   # discarded because the command echoes the provider back.
   occ user_oidc:provider authentik \
     --clientid="$OIDC_CLIENT_ID" \
     --clientsecret-env=OIDC_CLIENT_SECRET \
     --discoveryuri="$OIDC_DISCOVERY_URL" \
-    --scope="openid email profile groups" \
+    --scope="openid email profile groups nextcloud_groups" \
     --unique-uid=0 \
     --mapping-uid=preferred_username \
     --mapping-display-name=name \
     --mapping-email=email \
-    --mapping-groups=groups \
+    --mapping-groups=nextcloud_groups \
     --group-provisioning=1 \
-    --group-whitelist-regex='/^(family|admins)$/' \
+    --group-whitelist-regex='/^(family|admins|admin)$/' \
     --group-restrict-login-to-whitelist=1 \
     --send-id-token-hint=1 \
     --check-bearer=0 >/dev/null \
