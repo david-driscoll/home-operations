@@ -7,8 +7,8 @@
 # natively at /mcp, so like ./degoog.yaml this needs no stdio-proxy plumbing
 # -- only the /tmp emptyDir below.
 #
-# An MCPServer RUNNING THE IMAGE, not an MCPRemoteProxy in front of a sidecar
-# the way ./ecm.yaml and ./arr-mcp.yaml are: teamarr-mcp is stateless. It holds
+# An MCPServer RUNNING THE IMAGE, not a sidecar in the app's own pod the way
+# ECM's and arr-mcp's MCP servers are: teamarr-mcp is stateless. It holds
 # no config file, no volume and no credential, so there is nothing that has to
 # live next to Teamarr in `equestria`.
 #
@@ -37,7 +37,7 @@
 #
 # EXPECTED TO BE UNREACHABLE 02:00-09:00: Teamarr sheds nightly with the rest
 # of `equestria` (docs/cluster-consolidation/24-power-states.md), exactly like
-# ./ecm.yaml's and ./arr-mcp.yaml's backends. This pod stays up through the
+# the ECM and arr-mcp backends. This pod stays up through the
 # window; a tool call in it fails rather than answering from a cache.
 #
 # `latest@sha256:` because upstream publishes only `latest`/`main`; Renovate's

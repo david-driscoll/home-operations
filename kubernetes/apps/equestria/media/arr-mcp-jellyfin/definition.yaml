@@ -27,9 +27,9 @@ spec:
       # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
       # This carries NO `downscaler/exclude`, so it sheds with the namespace --
       # deliberately, because every service it reads sheds too and an arr-mcp
-      # with nothing to talk to answers nothing. The MCPRemoteProxy in
-      # kubernetes/apps/agents/agent-tools-servers/arr-mcp.yaml stays up
-      # through the window and cannot reach this; that is expected.
+      # with nothing to talk to answers nothing. toolport's `media` profile
+      # (kubernetes/apps/agents/toolport) stays up through the window and
+      # cannot reach this; that is expected.
       maintenance-windows:
         - start: "02:00"
           duration: 7h

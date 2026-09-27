@@ -62,8 +62,9 @@ spec:
 # Outgoing auth for the proxy below. Outline's MCP endpoint takes a plain
 # `Authorization: Bearer <api-key>`. Sent as `headerInjection` with the prefix
 # baked into the Secret, NOT `type: bearerToken`: the vMCP cannot convert
-# bearerToken and silently drops such a backend from agent-tools -- see
-# ./arr-mcp.yaml's auth config for the full account.
+# bearerToken and silently dropped such a backend from agent-tools (seen live
+# 2026-09-24 for both arr-mcps and home-assistant, whose proxies were Ready
+# while serving nothing).
 #
 # The CRD requires this to live in the same namespace as the proxy, which it does.
 apiVersion: toolhive.stacklok.dev/v1beta1
@@ -81,7 +82,7 @@ spec:
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
-# `MCPRemoteProxy`, not `MCPServer` -- see ./microsoft-docs.yaml's header for
+# `MCPRemoteProxy`, not `MCPServer` -- see ./homelable.yaml's header for
 # what that CRD is. Outline runs its own MCP server inside the app; ToolHive
 # only fronts it.
 #

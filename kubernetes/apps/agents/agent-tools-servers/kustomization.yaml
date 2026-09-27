@@ -55,8 +55,10 @@ resources:
   - ./openbao.yaml
   - ./postgres.yaml
   - ./tailscale.yaml
-  - ./microsoft-docs.yaml
-  - ./home-assistant.yaml
+  # No ToolHive proxy for Microsoft Learn, Home Assistant, ECM or arr-mcp
+  # (Plex/Jellyfin): toolport calls those backends directly, with its own copy
+  # of each bearer -- ../toolport/externalsecret.yaml. homelable keeps its
+  # proxy because it needs a header toolport cannot send.
   - ./homelable.yaml
   # Outline's built-in MCP server. Commented out because its API key cannot
   # exist until someone has signed into Outline and minted one -- and this
@@ -64,12 +66,6 @@ resources:
   # blocks every server in this directory. Full steps (including wiring it
   # into toolport) in the file.
   # - ./outline.yaml
-  # ECM's MCP sidecar. Its key is minted by an ECM admin and seeded into
-  # OpenBao by hand -- see the file's header before rotating it.
-  - ./ecm.yaml
-  # TWO remote proxies in one file, one per media server -- arr-mcp's schema
-  # refuses a config naming both jellyfin and plex, and the estate runs both.
-  - ./arr-mcp.yaml
   # Teamarr's API as tools. No secret (Teamarr has no auth), destructive tools
   # off, and the tool set is fixed at pod start -- see the file's header.
   - ./teamarr.yaml

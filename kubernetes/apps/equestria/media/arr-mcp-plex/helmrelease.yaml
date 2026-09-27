@@ -15,8 +15,8 @@
 #
 # WHY IT LIVES IN `equestria` AND NOT `agents`. It talks to ten services in
 # this namespace over plain HTTP. The MCP SURFACE is what moves to the agent
-# estate, via an MCPRemoteProxy in
-# kubernetes/apps/agents/agent-tools-servers/arr-mcp.yaml -- the same split
+# estate: toolport's `media` profile (kubernetes/apps/agents/toolport) calls
+# this pod's /mcp directly -- the same split
 # ../../../agents/agent-tools-servers/homelable.yaml makes and for the same
 # reason.
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -129,9 +129,8 @@ spec:
               # a container healthcheck that restarts on a bad config would
               # restart-loop the very process serving the repair page that
               # fixes it. So a probe on this path says "the process is up", not
-              # "the config parses" -- for the latter watch the MCPRemoteProxy
-              # in ../../../agents/agent-tools-servers/arr-mcp.yaml, whose
-              # /mcp answers 503 while the config is broken.
+              # "the config parses" -- for the latter watch /mcp itself (what
+              # toolport calls), which answers 503 while the config is broken.
               liveness: &probes
                 enabled: true
                 custom: true
