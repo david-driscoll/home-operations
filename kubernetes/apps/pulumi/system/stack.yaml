@@ -22,13 +22,6 @@ spec:
   backend: s3://home-operations/backups?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
-  # PAUSED: preview-only while stacks/applications' state is moved into this
-  # stack. The operator runs `pulumi preview`, never `up`. This comes off in a
-  # separate, LATER PR than the code change, never the same one: the Stack's
-  # fluxSource and the Flux Kustomization read two different GitRepositories,
-  # so an unpause riding with the code could run `up` with the OLD program
-  # against the moved state -- which plans to delete every authentik app.
-  preview: true
   workspaceReclaimPolicy: Delete
   prerequisites: []
   # Deliberately none. This stack publishes clusters/<key>/details, which every
