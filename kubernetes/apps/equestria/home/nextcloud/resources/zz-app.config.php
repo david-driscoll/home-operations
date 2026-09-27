@@ -23,6 +23,14 @@ $CONFIG = [
   'trusted_proxies' => ['10.206.0.0/16'],
   'forwarded_for_headers' => ['HTTP_X_FORWARDED_FOR'],
 
+  // Every hostname the server itself fetches -- authentik's OIDC discovery
+  // document, Collabora's /hosting/discovery -- resolves to a LAN or cluster
+  // address, and Nextcloud's HTTP client refuses those by default with a
+  // LocalServerException. For user_oidc that surfaces as a 404 "Could not
+  // reach the OpenID Connect provider" on /apps/user_oidc/login/1 (2026-09-27).
+  // There is no per-host allowlist, so this is all or nothing.
+  'allow_local_remote_servers' => true,
+
   'default_phone_region' => 'US',
   // Hour in UTC: 06:00 UTC is 02:00 America/New_York. Heavy background jobs
   // wait for this window.
