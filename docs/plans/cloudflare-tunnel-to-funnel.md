@@ -1,8 +1,8 @@
 # Cloudflare Tunnel → Tailscale Funnel
 
 **Status:** plan, 2026-09-27. Nothing here is built yet. Decisions marked ✅ were taken by
-David on 2026-09-27. The only item still open in [§J](#j-open-questions) is J4 (TikTok), which
-can wait until a TikTok app exists.
+David on 2026-09-27. Two items in [§J](#j-open-questions) are still open. J6 (`tag:funnel`'s
+tailnet reach) must be decided before step 2. J4 (TikTok) can wait until a TikTok app exists.
 The research, and an adversarial review of this plan, ran as read-only agent sweeps against the
 repo, live cluster, tailnet, Loki and upstream source.
 
@@ -126,9 +126,11 @@ ships `enabled: false`.
     entry whose `attr` contains `funnel`**, keeping every other entry;
   - then change `:788` to `setNodeAttr({ target: [tag.funnel], attr: ["funnel"] })`.
 
-  This removes the stale, unused `tag:operator` funnel grant, and any hand-added funnel grant
-  later. `tag:apps` must **not** get the attribute: tsnet apps on the shared authkey (golink,
-  tsidp, tsiam) could then self-enable Funnel.
+  This removes the stale, unused `tag:operator` funnel grant. A funnel grant hand-added later is
+  removed on the next run that *writes* the policy. The Stack does not refresh, so a run whose
+  stripped output matches state sends no PUT. Until a write happens the stray stays live, and a
+  `pulumi.log.warn` names it on every resync. `tag:apps` must **not** get the attribute: tsnet
+  apps on the shared authkey (golink, tsidp, tsiam) could then self-enable Funnel.
 - **Member grant.** Grant `autogroup:member → tag:funnel tcp:443`. On the tailnet, MagicDNS
   resolves a Funnel name to the device's 100.x address, and postiz's UI loads media previews
   from it.
@@ -448,10 +450,15 @@ Each numbered item is one PR unless marked otherwise.
      - the `tag:operator` funnel entry is gone;
      - the member grant is present;
      - the `mullvad` and drive nodeAttrs are untouched.
-   - **Rollback: not revert-safe.** A revert leaves the live `tag:funnel` nodeAttr pointing at a tag
-     that is no longer in tagOwners. Tailscale then rejects every policy PUT, and unifi-network
-     stalls (the dangling-tag 400 recorded at `components/constants.ts:191-200`). Hand-delete that
-     nodeAttr first, or keep the tag constant permanently.
+   - **Rollback: not revert-safe as a plain revert.** A full revert leaves the live `tag:funnel`
+     nodeAttr pointing at a tag that is no longer in tagOwners. Tailscale then rejects every policy
+     PUT, and unifi-network stalls (the dangling-tag 400 recorded beside `border0Managed` in
+     `components/constants.ts`).
+     - **Preferred:** revert everything **except** the `withoutNodeAttr` call. It strips the
+       `tag:funnel` entry itself.
+     - **To remove all of it:** suspend the Stack, hand-delete the nodeAttr, let the revert sync,
+       then resume. A hand-delete made while the old code still runs is undone by its next write.
+     - Any Funnel Ingress from step 2 onward has to be reverted first.
 2. **Funnel component, `funnel-policy`, and the webhook Funnel** (§C2, §C3). This runs in parallel
    with the tunnel. Nothing is attached to the `external` Gateway, and the ts.net hostname must
    never go on a route attached to it: `deriveTunnelRules` has no domain filter and would push the
@@ -612,6 +619,7 @@ Each numbered item is one PR unless marked otherwise.
 | Path traversal | cloudflared `..` deny rule, plus Traefik path cleaning | tailscaled `path.Clean` before the mount match |
 | Edge | Cloudflare DDoS protection, HSTS and nosniff headers | Tailscale relays, with no WAF or DDoS promise; add HSTS at the cdn if wanted |
 | Internet-facing process's credentials | Traefik: cluster-wide Secret **read** | the `proxies` SA: read, plus write limited to its own `tailscale.com/managed` Secrets by `tailscale-proxies-secret-scope` |
+| Tailnet reach of the internet-facing device | none; cloudflared is not a tailnet node | member-equivalent: `tag:funnel` is in `autogroup:tagged`, so it inherits every grant from `autogroup:tagged` (web ports on `tag:apps`, dockge, dns, idp, ingress and the cluster tags; DNS; `host:idp`). `acceptRoutes` is off, so the subnet and exit-node grants stay inert. See ❓J6 |
 | Client IP | XFF from the cloudflared pod | XFF from tailscaled, plus `Tailscale-Funnel-Request` |
 | Names in CT logs | `*.driscoll.tech` | `*.opossum-yo.ts.net`, already public through the tailnet certs |
 | New credential | tunnel token in OpenBao (removed) | none; the operator OAuth client mints `tag:funnel` |
@@ -652,3 +660,16 @@ Each numbered item is one PR unless marked otherwise.
   (`stacks/system/applications.ts:205`) and `backups` (`stacks/backups/index.ts:110,145,182`) do
   this. vault's Stack CR matches system's in serviceAccount, envRefs and workspace pod shape. Step
   3's preview confirms it. The fallback is a static `docker/alpha-site/uptime/config/funnel.yaml`.
+- ❓ **J6. Should `tag:funnel` stay in `autogroup:tagged`'s grants?** This must be decided before
+  step 2 mints the first `tag:funnel` device. Tailscale grants have no deny, so a device can only be
+  left out of `autogroup:tagged`'s grants by listing tags explicitly.
+  - **Option 1: exclude it.** In those grants, replace `autogroups.tagged` with
+    `Object.values(tag).filter(t => t !== tag.funnel)`. tagOwners is rebuilt from the same
+    constant, so this is exactly `autogroup:tagged` minus `tag:funnel`. Then lock it in by adding
+    `deny: [tag.funnel]` to those grants' test inputs, so a regression fails the PUT.
+  - **Option 2: accept it.** The reach equals any family phone's and every existing `tag:apps`
+    operator proxy's. Using it needs a compromise of tailscaled itself, because the serve config
+    pins one backend. The proxy pod already has pod-network reach to the cluster anyway, since no
+    NetworkPolicy selects `tailscale-system`.
+  - **Recommendation:** Option 1. It costs longer `src` lists in about nine grants, and it makes
+    the one internet-facing device the least-privileged node on the tailnet.

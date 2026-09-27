@@ -11,6 +11,7 @@ import * as tailscale from "@pulumi/tailscale";
 import { authentikVip, Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
+import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
 import { getDnsMachines, getTailscaleIp } from "../../components/tailscale.ts";
 
 interface KubernetesCluster {
@@ -86,6 +87,35 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
     aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
     aclsJson = applyAllEdits(aclsJson, ["hosts"], {});
+    // nodeAttrs is NOT blanked like the sections above: the live policy carries
+    // hand-set entries this file does not own (per-IP `mullvad`, member/group
+    // `drive:*`), and blanking would delete them. Who may FUNNEL -- publish to
+    // the public internet -- is owned here, though: strip every live grant of
+    // it, so the only one this run writes is configureKubernetesAccess's
+    // tag:funnel entry. That is what retires the old tag:operator grant. See
+    // components/tailscale/nodeAttrs.ts.
+    //
+    // A stray grant added by hand LATER is only removed by the next run that
+    // actually writes the policy: this Stack does not refresh, so a run whose
+    // stripped output matches state sends no PUT. Hence the warning, which
+    // fires on every resync for as long as a stray is live.
+    //
+    // ⚠️ To roll this change back, revert everything EXCEPT this call. It then
+    // strips the tag:funnel nodeAttr itself. A full revert strands that entry
+    // (nothing strips it any more) while tag:funnel drops out of the rebuilt
+    // tagOwners, and Tailscale rejects every PUT with the dangling-tag 400
+    // documented beside border0Managed in constants.ts. If it must all go,
+    // suspend the Stack, hand-delete the nodeAttr, let the revert sync, then
+    // resume -- a hand-delete made while this code still runs is undone by its
+    // next write. Any Funnel Ingress (plan step 2+) has to be reverted first.
+    const strayFunnel = nodeAttrHolders(aclsJson, "funnel").filter(entry => !(entry.target.length === 1 && entry.target[0] === tag.funnel && entry.attr?.length === 1));
+    if (strayFunnel.length > 0) {
+      pulumi.log.warn(
+        `Tailnet policy: stripping the funnel nodeAttr from ${strayFunnel.map(entry => JSON.stringify(entry.target)).join(", ")} -- only [${tag.funnel}] may hold it. ` +
+          "It is removed on the next run that writes the policy; until then it is live.",
+      );
+    }
+    aclsJson = withoutNodeAttr(aclsJson, "funnel");
 
     const manager = new TailscaleAclManager(aclsJson, hosts, tests);
     const testData = manager.testData;
@@ -784,9 +814,35 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
   // tag.dns: the tailscale operator creates the dns-<cluster> proxy devices
   // (in-cluster Technitium nodes) with tag:dns
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive, tag.dns]);
-  manager.setNodeAttr({ target: [tag.operator], attr: ["funnel"] });
+  // tag.funnel: the operator mints it onto standalone Funnel Ingress proxies.
+  // Its OAuth client carries tag:operator (confirmed 2026-09-27), and owning a
+  // tag is what lets that client put it on an auth key.
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive, tag.dns, tag.funnel]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
+
+  // Public ingress (docs/plans/cloudflare-tunnel-to-funnel.md). The ONE funnel
+  // grant in the policy -- assignTailscaleAcls strips every other before this
+  // runs. It used to sit on tag:operator, the operator's own device, which
+  // serves nothing publicly; no proxy carries that tag.
+  //
+  // This must be live BEFORE any Funnel Ingress is created: tags are fixed
+  // when the proxy's auth key is minted, and a standalone proxy never re-keys.
+  manager.setNodeAttr({ target: [tag.funnel], attr: ["funnel"] });
+
+  // Members on the tailnet resolve a Funnel name through MagicDNS to the
+  // proxy's 100.x address rather than the public relays, so without this
+  // their browsers cannot load what the rest of the internet can (postiz's
+  // media previews are served from its Funnel host). A Funnel proxy serves
+  // only the paths its Ingress mounts, so this exposes nothing further.
+  manager.setGrant(
+    "member-funnel-access",
+    {
+      src: [autogroups.member],
+      dst: [tag.funnel],
+      ip: ["tcp:443"],
+    },
+    { accept: testData.knownNormalUsers },
+  );
 
   manager.setExitNode(tag.sgc);
   manager.setExitNode(tag.equestria);
