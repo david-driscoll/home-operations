@@ -1,0 +1,122 @@
+services:
+  # A standalone, single-node Garage on alpha-site holding the OFF-SITE copy of
+  # the Pulumi state -- see garage.toml for why it must never join the
+  # celestia/luna/skystar cluster (docker/alpha-site/garage/.ignore still
+  # suppresses that stack here). One bucket, `pulumi-state-backup`, written
+  # only by the backup loop below. docs/garage-offsite-s3.md, "Pulumi state";
+  # bootstrap/RUNBOOK.md Scenario E is how a restore reads it.
+  garage-backup:
+    # Same image and pin as docker/_common/garage (the admin API backup.sh
+    # speaks is v2, so never below v2.0.0). Majors carry on-disk migrations.
+    image: dxflrs/garage:v2.4.1@sha256:9c96caa2612d3411acc5b0e6701fb238dbfba33e533a6d7d3d811a4b12d0d020
+    container_name: garage-backup
+    hostname: garage-backup
+    env_file:
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
+    environment:
+      TZ: ${TIMEZONE}
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    user: "3900:3900"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+      - /opt/stacks-data/${APP}/meta:/var/lib/garage/meta
+      - /opt/stacks-data/${APP}/data:/var/lib/garage/data
+    ports:
+      # S3 only, bound to the tailnet address: a restore (or a read-only
+      # `pulumi stack export` drill) reaches it as dockge-as:3900 under the
+      # garage-mesh / garage-admin grants. The admin API and RPC are not
+      # published -- the backup loop is the only admin client, over the
+      # container network, and a single node has no mesh.
+      - "${tailscaleIpAddress}:3900:3900"
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 1m
+    stop_grace_period: 1m
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1
+    networks:
+      - dockge_default
+
+  # Copies the main cluster's `pulumi-state` bucket here: an hourly mirror of
+  # the current checkpoints plus one dated snapshot per day (30 days), and on
+  # first start the one-time bootstrap of the node above (layout, bucket,
+  # quota, key import). See backup.sh.
+  pulumi-state-backup:
+    image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    container_name: pulumi-state-backup
+    depends_on:
+      garage-backup:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
+    environment:
+      TZ: ${TIMEZONE}
+      # The source: the main cluster through celestia, the same endpoint every
+      # Pulumi backend URL uses. Read-only key.
+      RCLONE_CONFIG_SRC_TYPE: s3
+      RCLONE_CONFIG_SRC_PROVIDER: Other
+      RCLONE_CONFIG_SRC_ENDPOINT: http://dockge-celestia.${tailscaleDomain}:3900
+      RCLONE_CONFIG_SRC_REGION: garage
+      RCLONE_CONFIG_SRC_FORCE_PATH_STYLE: "true"
+      RCLONE_CONFIG_SRC_ACCESS_KEY_ID: ${BACKUP_SOURCE_ACCESS_KEY_ID}
+      RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY: ${BACKUP_SOURCE_SECRET_ACCESS_KEY}
+      # The destination: the node above, over the container network.
+      RCLONE_CONFIG_DST_TYPE: s3
+      RCLONE_CONFIG_DST_PROVIDER: Other
+      RCLONE_CONFIG_DST_ENDPOINT: http://garage-backup:3900
+      RCLONE_CONFIG_DST_REGION: garage
+      RCLONE_CONFIG_DST_FORCE_PATH_STYLE: "true"
+      RCLONE_CONFIG_DST_ACCESS_KEY_ID: ${BACKUP_DEST_ACCESS_KEY_ID}
+      RCLONE_CONFIG_DST_SECRET_ACCESS_KEY: ${BACKUP_DEST_SECRET_ACCESS_KEY}
+      GARAGE_ADMIN_URL: http://garage-backup:3903
+    user: "3900:3900"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - /opt/stacks-data/${APP}/state:/state
+    tmpfs:
+      - /.cache:uid=3900,gid=3900
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    # backup.sh writes "<epoch> ok|failed" after every cycle; stale or failed
+    # means unhealthy. One missed cycle plus an hour of slack.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          set -- $$(cat /state/.last-run 2>/dev/null);
+          [ "$${2:-}" = ok ] || exit 1;
+          [ $$(( $$(date +%s) - $${1:-0} )) -lt $$(( $${BACKUP_MIRROR_INTERVAL_SECONDS:-3600} * 2 + 3600 )) ]
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      start_period: 15m
+    restart: unless-stopped
+    # MagicDNS, for dockge-celestia.<tailnet>.
+    dns:
+      - 100.100.100.100
+    mem_limit: 256m
+    cpus: 1
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true

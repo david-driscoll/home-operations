@@ -1,0 +1,37 @@
+# Standalone single-node Garage on alpha-site: the OFF-SITE copy of the Pulumi
+# state (bucket `pulumi-state-backup`, filled by backup.sh). It is NOT a node
+# of the celestia/luna/skystar cluster -- its own rpc_secret, its own admin
+# token, replication_factor 1, no peers -- and that separation is what makes
+# it a backup: a deleted or corrupted object in the main cluster never
+# replicates here, only backup.sh's deliberate copies do.
+# docs/garage-offsite-s3.md, "Pulumi state".
+#
+# No secrets in this file: rpc_secret and the admin token arrive as
+# GARAGE_RPC_SECRET / GARAGE_ADMIN_TOKEN (compose.yaml, from OpenBao via .env).
+
+metadata_dir = "/var/lib/garage/meta"
+# alpha-site has no ZFS array (the reason docker/alpha-site/garage/.ignore
+# exists), so data sits on the LXC's own disk under /opt/stacks-data. The
+# capacity is a placement weight, not a limit; the bucket quota backup.sh sets
+# is the real ceiling. The payload is checkpoints only -- tens of MB mirrored,
+# plus 30 daily snapshots of the same.
+data_dir = [{ path = "/var/lib/garage/data", capacity = "20G" }]
+db_engine = "lmdb"
+metadata_auto_snapshot_interval = "6h"
+
+replication_factor = 1
+compression_level = 2
+
+# One node, no mesh: RPC never leaves the container, and 3901 is not
+# published. The node still needs an RPC address for its own CLI/healthcheck.
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+# Same region as the main cluster, so one rclone/pulumi config shape fits both.
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+
+[admin]
+# Used only by backup.sh's one-time bootstrap, over the container network.
+api_bind_addr = "[::]:3903"

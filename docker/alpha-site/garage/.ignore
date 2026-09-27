@@ -3,3 +3,8 @@
 # this host has neither a /data ZFS array mount nor a postgres consumer that
 # needs the mirror. Deleting this file would deploy a fourth node with no
 # layout role and a failing init.sh. See docker/_common/garage/compose.yaml.
+#
+# alpha-site DOES run a Garage, just not this one: docker/alpha-site/
+# garage-backup is a standalone single-node instance (its own rpc secret,
+# never joined to the cluster) that holds the off-site copy of the Pulumi
+# state. Keep the two separate -- that separation is what makes it a backup.
