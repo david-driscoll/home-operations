@@ -18,6 +18,10 @@ spec:
   backend: s3://home-operations/applications?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
+  # PAUSED: preview-only while this stack's state is moved into stacks/system.
+  # The PR that lands the code there deletes this CR; destroyOnFinalize: false
+  # means that prune abandons state and destroys nothing.
+  preview: true
   workspaceReclaimPolicy: Delete
   prerequisites: []
   envRefs:
