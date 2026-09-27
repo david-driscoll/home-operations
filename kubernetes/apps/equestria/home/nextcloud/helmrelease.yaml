@@ -1,0 +1,484 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template, not the official nextcloud/helm chart: every other app in this
+# namespace is app-template, which is what lets components/volsync,
+# components/postgres, the umbrella patches and the route/middleware shapes be
+# reused as they are. The pieces the chart would have added are small and all
+# here: the cron sidecar, the exporter sidecar and the .well-known redirects.
+#
+# Upgrades (Renovate bumps the tag): the image runs `occ upgrade` itself on
+# start and REFUSES to skip a major, so take 35 -> 36 -> 37 one PR at a time.
+# The equestria umbrella sets RetryOnFailure on every HelmRelease, so a slow
+# upgrade is retried rather than rolled back -- a rollback after `occ upgrade`
+# has migrated the database would bring back an image that refuses to start
+# ("downgrade").
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app nextcloud
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 20m
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+          # Excluded from the nightly shed (01:00-07:00 ET). Desktop and phone
+          # clients sync continuously, and a calendar that 503s for seven hours
+          # a night is a calendar nobody trusts. Collabora below is NOT
+          # excluded: nobody edits documents at 3am.
+          downscaler/exclude: "true"
+        replicas: 1
+        # Recreate: the volume is ReadWriteOnce, and two Nextclouds running the
+        # upgrade step against one database is not a thing to allow.
+        strategy: Recreate
+        pod:
+          securityContext:
+            # www-data. The app container itself starts as root (the image's
+            # entrypoint rsyncs with --chown and runs occ through `su`, and
+            # Apache drops to www-data after binding :80); the sidecars run as
+            # non-root. fsGroup makes the volume www-data's either way.
+            fsGroup: 33
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+        containers:
+          *app :
+            image:
+              repository: docker.io/library/nextcloud
+              tag: 35.0.1-apache@sha256:276547e033df451770dbf9c0065929e5ea179a613b1884bd3fa807ba1c2703e7
+              pullPolicy: IfNotPresent
+            env:
+              # Read by ./resources/zz-app.config.php (Flux substitution is off
+              # for that ConfigMap, so the domain arrives this way).
+              NC_HOST: &host "cloud.${ROOT_DOMAIN}"
+              COLLABORA_URL: "https://collabora.${ROOT_DOMAIN}"
+              TZ: ${TIMEZONE}
+              PHP_MEMORY_LIMIT: 1024M
+              PHP_UPLOAD_LIMIT: 16G
+              # The image caps request bodies at 1GiB by default. Clients chunk
+              # uploads anyway; this removes the cap for the browser uploader.
+              APACHE_BODY_LIMIT: "0"
+              # Only used by the installer on first boot; afterwards config.php
+              # and ./resources/zz-app.config.php own trusted_domains.
+              NEXTCLOUD_TRUSTED_DOMAINS: *host
+            envFrom:
+              - secretRef:
+                  name: ${APP}-admin
+              - secretRef:
+                  name: ${APP}-db
+              - secretRef:
+                  name: ${APP}-metrics
+              # Absent until `stacks/applications` has run; see
+              # ./externalsecret.yaml.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            probes:
+              # First boot copies Nextcloud into the empty volume and runs the
+              # installer; a major upgrade runs `occ upgrade`. Either can take
+              # several minutes before Apache listens. 90 x 10s = 15m.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &statusProbe
+                    path: /status.php
+                    port: &port 80
+                    httpHeaders:
+                      # `localhost` is always a trusted domain; the pod IP the
+                      # kubelet would otherwise send is not.
+                      - name: Host
+                        value: localhost
+                  periodSeconds: 10
+                  failureThreshold: 90
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *statusProbe
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *statusProbe
+                  periodSeconds: 15
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 250m
+                memory: 768Mi
+              limits:
+                memory: 2Gi
+
+          # Background jobs: cron.php every 5 minutes, as www-data. A sidecar
+          # rather than a CronJob because the volume is ReadWriteOnce -- a Job
+          # pod scheduled onto another node could not mount it.
+          #
+          # `command` replaces the image entrypoint, so none of the install or
+          # upgrade logic runs here. The heartbeat is written only when
+          # cron.php exits 0; the liveness probe restarts the container when it
+          # is older than 15 minutes, and NextcloudCronNotRunning
+          # (./prometheusrule.yaml) alerts on the restart.
+          cron:
+            image:
+              repository: docker.io/library/nextcloud
+              tag: 35.0.1-apache@sha256:276547e033df451770dbf9c0065929e5ea179a613b1884bd3fa807ba1c2703e7
+              pullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                while true; do
+                  if php -f /var/www/html/cron.php; then date +%s > /tmp/heartbeat; fi
+                  sleep 300
+                done
+            env:
+              NC_HOST: *host
+              TZ: ${TIMEZONE}
+            envFrom:
+              # cron.php loads the same config, so it needs the same database
+              # credential the app does.
+              - secretRef:
+                  name: ${APP}-db
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - test $(( $(date +%s) - $(cat /tmp/heartbeat 2>/dev/null || echo 0) )) -lt 900
+                  # The first cron.php run can wait on the app finishing its
+                  # own first boot.
+                  initialDelaySeconds: 900
+                  periodSeconds: 60
+                  failureThreshold: 3
+            securityContext:
+              # cron.php refuses to run as anyone but the owner of config.php.
+              runAsNonRoot: true
+              runAsUser: 33
+              runAsGroup: 33
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 1Gi
+
+          # serverinfo -> Prometheus. Talks to the app over localhost (always a
+          # trusted domain) with the serverinfo token, never an admin login.
+          exporter:
+            image:
+              repository: ghcr.io/xperimental/nextcloud-exporter
+              tag: 0.9.1@sha256:3e90a38976516444d05f5f6758e5d572ca559b69ad3005ec4029786e9daf9129
+              pullPolicy: IfNotPresent
+            env:
+              NEXTCLOUD_SERVER: http://localhost
+              NEXTCLOUD_LISTEN_ADDRESS: ":9205"
+              NEXTCLOUD_TIMEOUT: 30s
+            envFrom:
+              - secretRef:
+                  name: ${APP}-metrics
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+
+      # Nextcloud Office. Carried over from OpenCloud's HelmRelease nearly
+      # verbatim -- the fonts init, MKNOD and uid 1001 are all explained at
+      # length there (git history of
+      # kubernetes/apps/equestria/home/opencloud/helmrelease.yaml, #1982 and
+      # #1994). The short version of the two traps:
+      #   * NO `command` override. This image execs coolwsd directly and has
+      #     no /bin/bash; the chart's wrapper crash-looped with zero logs.
+      #   * apt in the fonts init needs APT::Sandbox::User=root, or it dies in
+      #     a way that looks exactly like a network failure.
+      collabora:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        strategy: RollingUpdate
+        initContainers:
+          # Metric-identical substitutes for the Microsoft fonts (Carlito ~
+          # Calibri, Caladea ~ Cambria, Liberation ~ Arial/Times/Courier), so
+          # .docx/.xlsx keep their pagination. Built into an emptyDir because
+          # there is no host to install onto.
+          fonts:
+            image:
+              repository: docker.io/library/debian
+              tag: trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
+              pullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                set -eu
+                export DEBIAN_FRONTEND=noninteractive
+                # Stay root for downloads: apt's `_apt` sandbox needs
+                # SETUID/SETGID, which this container does not hold.
+                APT_OPTS="-o APT::Sandbox::User=root"
+                # shellcheck disable=SC2086
+                apt-get $APT_OPTS update -qq
+                # shellcheck disable=SC2086
+                apt-get $APT_OPTS install -y --no-install-recommends -qq \
+                  fonts-liberation2 \
+                  fonts-crosextra-carlito \
+                  fonts-crosextra-caladea \
+                  fonts-dejavu \
+                  fonts-noto-core
+                find /usr/share/fonts -type f \( -name '*.ttf' -o -name '*.otf' \) \
+                  -exec cp -n {} /fonts/ \;
+                echo "installed $(ls -1 /fonts | wc -l) font files"
+            securityContext:
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+        containers:
+          app:
+            image:
+              repository: docker.io/collabora/code
+              tag: 26.04.4.2.1@sha256:4e983196eb9878f339cc506c38c21f1cc3473bca3d6de883c5de08f9c0cc3a6c
+              pullPolicy: IfNotPresent
+            envFrom:
+              # `username` / `password` for the admin console.
+              - secretRef:
+                  name: ${APP}-collabora
+            env:
+              # The WOPI host allow-list: Collabora only opens documents whose
+              # WOPISrc is Nextcloud.
+              aliasgroup1: "https://cloud.${ROOT_DOMAIN}"
+              DONT_GEN_SSL_CERT: "YES"
+              extra_params: >-
+                --o:ssl.enable=false
+                --o:ssl.ssl_verification=false
+                --o:ssl.termination=true
+                --o:welcome.enable=false
+                --o:net.frame_ancestors=cloud.${ROOT_DOMAIN}
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                # One LibreOffice core per open document; roughly "a handful at
+                # once". Exceeding it kills the newest session, not the server.
+                memory: 2Gi
+            probes:
+              liveness: &coolProbes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # What richdocuments fetches, so a pass means the
+                    # integration works, not just that a socket is open.
+                    path: /hosting/discovery
+                    port: &coolPort 9980
+                  initialDelaySeconds: 30
+                  periodSeconds: 20
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *coolProbes
+            securityContext:
+              # 1001 is the image's own `cool` user; coolwsd declines to run as
+              # root.
+              runAsNonRoot: true
+              runAsUser: 1001
+              runAsGroup: 1001
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                # coolwsd builds a chroot per open document with device nodes
+                # in it. MKNOD alone is upstream's helm chart's choice, and the
+                # narrow one (their compose asks for SYS_ADMIN).
+                add: ["MKNOD"]
+
+    persistence:
+      # The whole of /var/www/html: code, config/, custom_apps/, themes/ and
+      # data/. See ../ks.yaml for sizing and why it is one volume.
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          *app :
+            *app :
+              - path: /var/www/html
+            cron:
+              - path: /var/www/html
+
+      # From ./kustomization.yaml. Key sorts after `data`, keeping the
+      # alphabetical mount order app-template emits harmless -- though nothing
+      # here nests inside /var/www/html any more (the overlays are copied, not
+      # mounted; see the note in ./kustomization.yaml).
+      files:
+        type: configMap
+        name: ${APP}-config
+        # 0755 (decimal 493): the entrypoint only runs hooks that are
+        # executable.
+        defaultMode: 493
+        advancedMounts:
+          *app :
+            *app :
+              - path: /opt/nextcloud
+                readOnly: true
+              - path: /docker-entrypoint-hooks.d/before-starting/10-configure.sh
+                subPath: 10-configure.sh
+                readOnly: true
+              - path: /usr/local/etc/php/conf.d/zz-nextcloud.ini
+                subPath: zz-nextcloud.ini
+                readOnly: true
+            cron:
+              - path: /usr/local/etc/php/conf.d/zz-nextcloud.ini
+                subPath: zz-nextcloud.ini
+                readOnly: true
+
+      cron-tmp:
+        type: emptyDir
+        sizeLimit: 16Mi
+        advancedMounts:
+          *app :
+            cron:
+              - path: /tmp
+
+      # Built by Collabora's `fonts` init container. BOTH mount points matter:
+      # the second is the template every per-document jail is copied from, and
+      # without it documents render without the fonts even though coolwsd can
+      # see them.
+      fonts:
+        type: emptyDir
+        sizeLimit: 512Mi
+        advancedMounts:
+          collabora:
+            fonts:
+              - path: /fonts
+            app:
+              - path: /usr/share/fonts/truetype/more
+              - path: /opt/cool/systemplate/usr/share/fonts/truetype/more
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+          metrics:
+            port: 9205
+      collabora:
+        controller: collabora
+        type: ClusterIP
+        ports:
+          http:
+            port: *coolPort
+
+    route:
+      app:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - *host
+        kind: HTTPRoute
+        rules:
+          # CalDAV/CardDAV discovery, answered at the GATEWAY with an https://
+          # Location. Nextcloud's own .htaccess rule builds the redirect from
+          # the scheme Apache sees, which behind TLS termination is http://,
+          # and the iPhone "Download the configuration profile" setup then
+          # fails (nextcloud/ios#3333). Exact matches outrank `/` below.
+          - matches:
+              - path:
+                  type: Exact
+                  value: /.well-known/caldav
+              - path:
+                  type: Exact
+                  value: /.well-known/carddav
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  path:
+                    type: ReplaceFullPath
+                    replaceFullPath: /remote.php/dav/
+                  statusCode: 301
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              # `local-api` (LAN + tailnet allow-list), NOT `local-user`, for
+              # the WHOLE host. local-user adds error-pages, which replaces
+              # every 401-599 response with an HTML page and drops
+              # WWW-Authenticate. That breaks the DAV Basic-auth challenge
+              # (iOS "Add CalDAV Account" fails outright -- the same failure
+              # OpenCloud needed 8e2bf833 for), the sync clients' handling of
+              # 409/412/423, and the web UI's JSON errors. Nextcloud renders
+              # its own error pages. No authentik forward-auth either: the app
+              # does OIDC itself (./definition.yaml).
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: ${APP}-headers
+      collabora:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "collabora.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: collabora
+                port: *coolPort
+            filters:
+              # Browser iframe plus Collabora's own WOPI callbacks to Nextcloud;
+              # internal-network admits the pod CIDR as well as the LAN. Not
+              # `authenticated-user`: the iframe has no authentik cookie and a
+              # login redirect cannot render inside it.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

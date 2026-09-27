@@ -1,6 +1,6 @@
 # Nextcloud on equestria — replacing OpenCloud
 
-**Status:** proposed 2026-09-26. Nothing built yet. Decisions marked ✅ were taken by David
+**Status:** built 2026-09-27 (this PR adds `kubernetes/apps/equestria/home/nextcloud` and unlists OpenCloud); not yet merged. Decisions marked ✅ were taken by David
 on 2026-09-26; ❓ items in §G still need an answer.
 
 ## Why, and what changes
@@ -117,9 +117,15 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   two-phase.
 - Nothing is reusable from OpenCloud's `decomposed` store. It's content-addressed blobs, and
   it's empty anyway.
-- **Mount-order trap:** `zz-*.config.php` files are subPath mounts *inside* the PVC path, and
-  app-template emits mounts alphabetically. Name the PVC key `data` and the ConfigMap key
-  `files`, as OpenCloud does. Catch it with `helm template`, not `flux build`.
+- **Config overlays are copied, not mounted** (changed while building). The image's
+  entrypoint seeds `config/` from `/usr/src/nextcloud/config` only when that directory is
+  **empty**. A subPath file mounted there on first boot makes it non-empty and skips the seed,
+  so `apps.config.php` never lands, and apps get installed into the code tree that the next
+  upgrade's `rsync --delete` wipes.
+  - The `zz-*.config.php` files are mounted at `/opt/nextcloud`.
+  - The `before-starting` hook (A9) copies them into `config/` on every start.
+  - That also makes the app-template mount-order trap moot; the render was checked with
+    `helm template`.
 - Pod `fsGroup: 33`. The app container starts as root, which the image's entrypoint and Apache
   need, then drops to www-data.
 
@@ -159,14 +165,20 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   (browser-only iframe, as today).
 
 **A9. Declarative first-run config: image hooks.**
-- `/docker-entrypoint-hooks.d/before-starting/10-config.sh` is a ConfigMap script that runs
-  idempotently on every start. It:
+- `/docker-entrypoint-hooks.d/before-starting/10-configure.sh` is a ConfigMap script. The
+  entrypoint runs it on every start, as www-data, after install or upgrade. It is idempotent.
+  It:
+  - copies the config overlays into `config/` (A7) and refreshes `.htaccess`;
   - enables or installs the apps, tolerating an app-store outage (it returned 503 on
     2026-09-26); apps persist in `custom_apps` after the first success;
   - sets `background:cron`;
-  - applies the `user_oidc` provider (B1), from env out of `nextcloud-oidc`;
-  - sets the `richdocuments` `wopi_url` / `public_wopi_url` / `wopi_allowlist`;
+  - applies the `user_oidc` provider (B1), from env out of `nextcloud-oidc`, only once that
+    Secret exists;
+  - sets the `richdocuments` `wopi_url` / `public_wopi_url`;
   - sets the serverinfo token.
+- Only the config copy may fail the start; network-dependent steps just warn.
+- The ConfigMap has Flux substitution disabled (it is shell and PHP). The domain reaches it as
+  `NC_HOST` / `COLLABORA_URL` environment variables.
 - Apps: `user_oidc calendar contacts notes richdocuments`. Add `deck` once a 35-compatible
   release is in the store.
 - Install itself uses the image's env autoconfig: `POSTGRES_*` plus `NEXTCLOUD_ADMIN_USER` /
@@ -177,31 +189,35 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   verbatim:
   - the fonts init (with `APT::Sandbox::User=root`), `MKNOD`, uid 1001;
   - the image's own entrypoint, with **no `command:` override** (the #1994 lesson).
-- Changes:
-  - `aliasgroup1=https://cloud.driscoll.tech:443`
-  - `server_name=collabora.driscoll.tech`
-  - `extra_params: --o:ssl.enable=false --o:ssl.termination=true`
-  - admin creds from `nextcloud-collabora`
-- richdocuments:
-  - `wopi_url=http://nextcloud-collabora.equestria.svc:9980` (server-to-server)
-  - `public_wopi_url=https://collabora.driscoll.tech` (browser)
-  - `wopi_allowlist=10.206.0.0/16`
+- Changes: the admin creds come from `nextcloud-collabora`. `aliasgroup1`,
+  `frame_ancestors` and `extra_params` stay as OpenCloud had them, already pointing at
+  `cloud.${ROOT_DOMAIN}`.
+- richdocuments: `wopi_url` and `public_wopi_url` are both
+  `https://collabora.${ROOT_DOMAIN}`. The server fetches discovery through the gateway, as
+  OpenCloud did, which avoids a split internal/public URL. No `wopi_allowlist`: the network
+  gate is `local-api`/`local-user`, and WOPI calls carry their own access tokens.
 - Collabora may be shed nightly. Only the `nextcloud` controller gets `downscaler/exclude`.
 
 **A11. Secrets.**
 
-| Secret | Source | Keys | Seeded by |
-|---|---|---|---|
-| `nextcloud-env` | OpenBao `clusters/equestria/apps/nextcloud/config` | `admin_password` | **hand, before merge** |
-| `nextcloud-collabora` | same doc | `collabora_admin_password` | **hand, before merge** |
-| `nextcloud-postgres` | store `database`, rotating static role | `postgres_*` | components/postgres |
-| `nextcloud-oidc` | store `cluster` ← Pulumi `nextcloud-oidc-credentials` | `oidc_client_id`, `oidc_client_secret`, `oidc_openid_configuration_url` | `stacks/applications` |
-| `nextcloud-metrics` | ESO `Password` generator, `refreshPolicy: CreatedOnce` | `token` | generated (regenerable) |
+**Nothing is seeded by hand** (changed while building). Every credential not owned by another
+system comes from an ESO `Password` generator with `refreshPolicy: CreatedOnce`.
 
+| Secret | Source | Keys |
+|---|---|---|
+| `nextcloud-admin` | generator | `NEXTCLOUD_ADMIN_USER=ncadmin`, `NEXTCLOUD_ADMIN_PASSWORD` |
+| `nextcloud-collabora` | generator | `username`, `password` |
+| `nextcloud-metrics` | generator | `NC_METRICS_TOKEN` = `NEXTCLOUD_AUTH_TOKEN` |
+| `nextcloud-db` | store `database` ← `nextcloud-postgres` (rotating static role) | `POSTGRES_HOST` (host:port), `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` |
+| `nextcloud-oidc` | store `cluster` ← Pulumi `nextcloud-oidc-credentials` | `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_DISCOVERY_URL` |
+
+- The break-glass password is read with
+  `kubectl -n equestria get secret nextcloud-admin -o jsonpath='{.data.NEXTCLOUD_ADMIN_PASSWORD}' | base64 -d`.
+- The installer reads it once. If the Secret is ever regenerated, reset the account with
+  `occ user:resetpassword ncadmin`.
 - `secret`, `passwordsalt` and `instanceid` are generated by the installer into `config.php`
   on the PVC. They're covered by volsync, and nothing is imported from OpenCloud.
 - The stale `secrets/shared/opencloud` entry stays untouched.
-- `bao kv put secrets/clusters/equestria/apps/nextcloud/config admin_password=… collabora_admin_password=…`
 
 ## B. Identity
 
@@ -271,7 +287,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 
 ## C. Files from OpenCloud
 
-1. **Prove it's empty** (before PR 1):
+1. **Prove it's empty** (before the PR):
    - `kubectl -n equestria exec deploy/opencloud -c opencloud -- du -sh /var/lib/opencloud/storage`
    - list the space directories;
    - ask each family member.
@@ -293,7 +309,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 
 ## D. Calendars and contacts from Radicale
 
-1. **Export** before PR 1:
+1. **Export** before the PR:
    `kubectl -n equestria exec deploy/opencloud -c radicale -- tar c -C /var/lib/radicale collections > radicale.tar`.
    Collections live at `collection-root/<user>/<collection>/`, one `.ics`/`.vcf` per item.
    `def-calendar` and `def-addressbook` exist for every user who logged in, and are probably
@@ -348,27 +364,33 @@ No parallel run on one hostname is possible: `cloud.driscoll.tech` moves. The em
 makes that cheap. The "read-only OpenCloud" period becomes "OpenCloud directory and restic repo
 kept for 4 weeks".
 
+**One PR, not two** (changed while building). The two-PR split existed to free the `cloud`
+tailnet name, and Nextcloud no longer takes a tailnet name at all. The only overlap is the
+`cloud.` / `collabora.` HTTPRoutes during the minute before Flux prunes OpenCloud. Gateway API
+gives a contested hostname to the older route, so OpenCloud keeps serving until it's gone.
+
+**Step 0 was not run.** It needs `kubectl exec`, which the agentboard pod lacks. The restic
+figure (212 files / 425 KiB for the whole volume) says there is nothing to export. The
+OpenCloud restic repo stays on NFS, so any straggler can still be restored from it later.
+
 | # | PR / step | What | Gate to proceed |
 |---|---|---|---|
-| 0 | — | C1 + D1: prove empty; tar Radicale; tell the family | exports saved |
-| 1 | PR 1 | Remove `./opencloud/ks.yaml` from `home/kustomization.yaml` (directory stays). Then `pulumi up` `stacks/applications` (removes the authentik app) | pods, routes and PVC pruned; tailnet device `cloud` gone; `/repository/opencloud` still on NFS |
-| 2 | — | Seed OpenBao `…/apps/nextcloud/config` | `bao kv get` shows both keys |
-| 3 | PR 2 | `home/nextcloud/` (ks, helmrelease, definition, externalsecret, middleware, prometheusrule, resources/) + list it | Flux Ready (after the postgres race recovery) |
-| 4 | — | `pulumi up` `stacks/applications` → `nextcloud-oidc-credentials`; **delete the pod** (Reloader ignores Secret *creation*, per the aurral lesson) | SSO login works |
-| 5 | — | Verification (below) + the restore drill (F1) while it's still disposable | all green |
-| 6 | — | David-only soak, 1 week | no cron or lock alerts |
-| 7 | — | Family onboarding (D3), per person, using the rewritten setup guide | #2120 merged (authentik VIP grant); each: Files + Calendar + Contacts on the phone, tested once off-LAN on Tailscale |
-| 8 | PR 3 (+4 wks) | Delete `home/opencloud/`, the OpenBao `…/apps/opencloud/config`, and `/repository/opencloud` | — |
+| 1 | PR | Unlist `./opencloud/ks.yaml` (directory stays) **and** add `home/nextcloud/` | Flux Ready (after the postgres race recovery); OpenCloud pods, routes and PVC pruned; `/repository/opencloud` still on NFS |
+| 2 | — | `stacks/applications` (operator, on merge) removes OpenCloud's authentik app and writes `nextcloud-oidc-credentials`; **delete the Nextcloud pod** if SSO hasn't appeared (Reloader ignores Secret *creation*, per the aurral lesson) | SSO login works |
+| 3 | — | Verification (below) + the restore drill (F1) while it's still disposable | all green |
+| 4 | — | David-only soak, 1 week | no cron or lock alerts |
+| 5 | — | Family onboarding (D3), per person, using the rewritten setup guide | #2120 merged (authentik VIP grant); each: Files + Calendar + Contacts on the phone, tested once off-LAN on Tailscale |
+| 6 | follow-up PR (+4 wks) | Delete `home/opencloud/`, the OpenBao `…/apps/opencloud/config`, and `/repository/opencloud` | — |
 
 **Rollback:**
-- **Before step 7:**
-  1. Revert PR 2, then revert PR 1.
+- **Before step 5:**
+  1. Revert the PR, or just swap the two lines in `home/kustomization.yaml`.
   2. OpenCloud's PVC re-seeds from restic via `opencloud-dst` (`restore-once`).
   3. `pulumi up` `stacks/applications` recreates the authentik app. `clientId: web` is pinned
      and public, so there's no secret churn.
   4. Nextcloud's restic repo and DB (`Database` has a retain reclaim policy) survive for a
      retry.
-- **After step 7:** first export each user's calendars and contacts from Nextcloud (Calendar
+- **After step 5:** first export each user's calendars and contacts from Nextcloud (Calendar
   → export `.ics`, Contacts → `.vcf`) and any new files. Rollback then costs a re-import into
   Radicale, so the bar is higher.
 
@@ -384,7 +406,7 @@ kept for 4 weeks".
   `occ maintenance:mode --on` → restore the DB dump → restore the PVC →
   `occ files:scan --all` → `occ maintenance:data-fingerprint` (clients re-sync safely rather
   than delete) → maintenance off.
-- **Restore drill (at step 5, then yearly):**
+- **Restore drill (at step 3, then yearly):**
   1. Scale to 0.
   2. Delete the PVC and let volsync re-seed it.
   3. Drop the `nextcloud` DB and restore last night's dump.
@@ -425,11 +447,11 @@ kept for 4 weeks".
    `member-home-subnet-access` already grants the cluster gateways. `9ecaab10` adds the
    authentik VIP; without it, family members off-LAN reach Nextcloud but fail at the authentik
    hop. It ships in #2120 (`feat/family-setup-guide`, CI green) and is a prerequisite for
-   step 7, not for PR 1/PR 2. That PR's OpenCloud DAV-route commit (`8e2bf833`) is harmless
+   step 5, not for the Nextcloud PR. That PR's OpenCloud DAV-route commit (`8e2bf833`) is harmless
    but moot once OpenCloud is unlisted.
 3. ✅ **Family setup guide** (`setup.driscoll.tech`, Forgejo `docs/setup`) documents
    OpenCloud. The rewrite for D3 is handed to the session that owns the guide (2026-09-26),
-   to land once PR 2 is live.
+   to land once Nextcloud is live.
 4. ❓ **Quotas.** A default quota per user, or none (100Gi PVC, raise as needed)?
 5. ❓ **Admin via authentik.** Is a one-time `occ group:adduser admin` acceptable, or add a
    `nextcloud` scope mapping in `stacks/authentik` that emits `admin` for `admins`?
@@ -442,10 +464,13 @@ kept for 4 weeks".
 9. Optional: re-add `crowdsecurity/nextcloud` in `network/crowdsec/values.yaml`. It's low
    value while nothing is public.
 
-## Verification (definition of done for step 5)
+## Verification (definition of done for step 3)
 
-- `hk check --all` passes. `helm template` of the app-template values shows the PVC mounted
-  before the `zz-*.config.php` subPaths.
+- `hk check` passes, and `helm template` of the app-template values renders cleanly. Both
+  were done before merge.
+- After first boot, `config/` holds the image's seeded files (`apps.config.php` among them)
+  **and** the four `zz-*` overlays:
+  `kubectl -n equestria exec deploy/nextcloud -c nextcloud -- ls /var/www/html/config`.
 - `curl -sI https://cloud.driscoll.tech/.well-known/caldav` and `…/.well-known/carddav` each
   return 301 with `Location: https://cloud.driscoll.tech/remote.php/dav/`, never an `http://`
   Location. The iOS "Download the configuration profile" setup fails otherwise

@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Nextcloud"
+  category: Applications
+  description: "Nextcloud — family files, calendars, contacts and notes, with Collabora document editing"
+  url: &url https://cloud.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/nextcloud.svg
+  access_policy:
+    groups:
+      # Both, as with OpenCloud: this binding decides who may REACH the app, and
+      # an administrator not also in `family` would otherwise be refused at
+      # authentik. user_oidc then mirrors these same two groups into Nextcloud
+      # (./resources/10-configure.sh).
+      - family
+      - admins
+  authentik:
+    # oauth2, not proxy: Nextcloud (user_oidc) is its own OIDC relying party, so
+    # a forward-auth outpost in front would authenticate twice. The route in
+    # ./helmrelease.yaml is therefore gated by network only.
+    oauth2:
+      # CONFIDENTIAL -- no `clientType: public`, unlike OpenCloud. user_oidc
+      # runs the code exchange server-side and holds a client secret; the
+      # desktop and mobile clients never talk to authentik directly (they use
+      # Nextcloud's Login Flow v2, which ends in a web login and an app
+      # password).
+      allowedRedirectUris:
+        # Both spellings: pretty URLs are enabled (htaccess.RewriteBase), but
+        # user_oidc builds the callback from the router, and a request that
+        # arrives via index.php yields the index.php form.
+        - url: "https://cloud.${ROOT_DOMAIN}/apps/user_oidc/code"
+        - url: "https://cloud.${ROOT_DOMAIN}/index.php/apps/user_oidc/code"
+      propertyMappings:
+        - openid
+        - profile
+        - email
+        # Load-bearing: user_oidc's group provisioning reads the `groups` claim
+        # (components/authentik/property-mappings.ts).
+        - groups
+      includeClaimsInIdToken: true
+  gatus:
+    - group: "Applications"
+      # status.php answers unauthenticated and reports install/maintenance
+      # state, so this fails during upgrades and maintenance mode -- which is
+      # the point.
+      url: https://cloud.${ROOT_DOMAIN}/status.php
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].installed == true"
+        - "[BODY].maintenance == false"

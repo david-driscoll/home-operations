@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/servicemonitor_v1.json
+#
+# The nextcloud-exporter sidecar (./helmrelease.yaml) on the `metrics` port of
+# the main Service. It turns serverinfo into nextcloud_* metrics; the alerts
+# are in ./prometheusrule.yaml.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ${APP}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      app.kubernetes.io/service: ${APP}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 1m
+      scrapeTimeout: 30s
