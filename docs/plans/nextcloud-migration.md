@@ -48,6 +48,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 ## A. Deployment design
 
 **A1. Packaging: bjw-s app-template, not the official chart, and not AIO.**
+
 - Every equestria app is app-template. Using it lets us reuse `components/volsync` (PVC,
   restic, nightly test restore), `components/postgres`, the umbrella drift patches, Reloader,
   and the route/middleware shapes as they are.
@@ -58,11 +59,13 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 - AIO needs the Docker socket and runs its own orchestration. That's a non-starter here.
 
 **A2. Image: `nextcloud:35.0.1-apache@sha256:…`.**
+
 - Apache+mod_php: one container, and `.htaccess` handles pretty URLs.
 - fpm+nginx means maintaining Nextcloud's ~150-line nginx config for no gain at family scale.
 - Pin by digest; Renovate rules in §F.
 
 **A3. Database: Postgres on the shared CNPG `Cluster/postgres`.**
+
 - There is no MariaDB operator, and PG 18 is supported by Nextcloud 35.
 - Add `components/postgres` to `ks.yaml` to get `DatabaseRole`/`Database nextcloud` and Secret
   `nextcloud-postgres`, read through the `database` ClusterSecretStore with the `postgres_`
@@ -78,6 +81,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 - Verify it in §verification with a forced rotation.
 
 **A4. Redis: shared Valkey, `dbindex 13`.**
+
 - Set by `zz-redis.config.php`: `memcache.locking` and `memcache.distributed` = Redis,
   `memcache.local` = APCu.
 - Leave `REDIS_HOST` unset so the image's own `redis.config.php` stays inert (it can't set
@@ -86,6 +90,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 - A Valkey restart briefly fails file locking. That's acceptable and already true of 6 apps.
 
 **A5. Cron: sidecar, not a CronJob.**
+
 - The PVC is RWO. A CronJob pod lands on another node and can't mount it (the kometa caveat).
 - The sidecar is the same image running as uid 33:
   `while true; do php -f /var/www/html/cron.php && date +%s > /tmp/hb; sleep 300; done`
@@ -93,6 +98,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 - Set `occ background:cron` once in the hook (A9).
 
 **A6. Previews and PHP tuning (≤10 users).**
+
 - Previews are on-demand only, with no previewgenerator and no Imaginary (Immich owns photos).
 - `preview_max_x/y: 2048`, `preview_max_filesize_image: 50`.
 - Env: `PHP_MEMORY_LIMIT=1024M`, `PHP_UPLOAD_LIMIT=16G`, `APACHE_BODY_LIMIT=0`.
@@ -105,6 +111,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   `log_type: errorlog`, so logs go to stderr and then Loki.
 
 **A7. Storage (✅ Longhorn + volsync).**
+
 - One PVC `nextcloud` from `components/volsync`: `VOLSYNC_CAPACITY: 100Gi`,
   `VOLSYNC_ACCESSMODES: ReadWriteOnce`, `VOLSYNC_CACHE_CAPACITY: 10Gi`,
   `VOLSYNC_PUID/PGID: 33`.
@@ -130,6 +137,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   need, then drops to www-data.
 
 **A8. Routing (Gateway API HTTPRoute via app-template `route:`).**
+
 - `route.app` on `internal`, hostname `cloud.${ROOT_DOMAIN}`, rules in this order:
   1. `Exact /.well-known/caldav` and `Exact /.well-known/carddav` →
      `RequestRedirect {scheme: https, path: ReplaceFullPath /remote.php/dav/, statusCode: 301}`.
@@ -165,6 +173,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   (browser-only iframe, as today).
 
 **A9. Declarative first-run config: image hooks.**
+
 - `/docker-entrypoint-hooks.d/before-starting/10-configure.sh` is a ConfigMap script. The
   entrypoint runs it on every start, as www-data, after install or upgrade. It is idempotent.
   It:
@@ -185,6 +194,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   `NEXTCLOUD_ADMIN_PASSWORD`.
 
 **A10. Collabora (✅ keep).**
+
 - Move the `collabora` controller out of `opencloud/helmrelease.yaml` (lines ~425–639) nearly
   verbatim:
   - the fonts init (with `APT::Sandbox::User=root`), `MKNOD`, uid 1001;
@@ -222,6 +232,7 @@ system comes from an ESO `Password` generator with `refreshPolicy: CreatedOnce`.
 ## B. Identity
 
 **B1. authentik provider (`definition.yaml`).**
+
 - `authentik.oauth2`, **confidential**: omit `clientType: public`, so Pulumi mints a secret.
 - `redirectUris` (strict):
   - `https://cloud.${ROOT_DOMAIN}/apps/user_oidc/code`
@@ -233,21 +244,24 @@ system comes from an ESO `Password` generator with `refreshPolicy: CreatedOnce`.
 - `gatus`: `GET /status.php`, expecting 200, `[BODY].installed == true` and
   `[BODY].maintenance == false`.
 
-`user_oidc` (applied by the hook; confirm the flag names with
-`occ user_oidc:provider --help` on the installed release):
+`user_oidc`, as applied by `resources/10-configure.sh`. The flag names were checked against
+user_oidc's `UpsertProvider.php`, and `--clientsecret-env` keeps the secret off the command
+line:
 
-    occ user_oidc:provider authentik \
-      --clientid="$OIDC_CLIENT_ID" --clientsecret="$OIDC_CLIENT_SECRET" \
-      --discoveryuri="$OIDC_DISCOVERY_URL" \
-      --scope="openid email profile groups" \
-      --unique-uid=0 --mapping-uid=preferred_username \
-      --mapping-display-name=name --mapping-email=email \
-      --mapping-groups=groups --group-provisioning=1 \
-      --group-whitelist-regex='/^(family|admins)$/' \
-      --group-restrict-login-to-whitelist=1 \
-      --send-id-token-hint=1 --check-bearer=0
-    occ config:app:set user_oidc allow_multiple_user_backends --value=0   # auto-redirect to authentik
-    # system config: 'user_oidc' => ['soft_auto_provision' => false]
+```bash
+occ user_oidc:provider authentik \
+  --clientid="$OIDC_CLIENT_ID" --clientsecret-env=OIDC_CLIENT_SECRET \
+  --discoveryuri="$OIDC_DISCOVERY_URL" \
+  --scope="openid email profile groups" \
+  --unique-uid=0 --mapping-uid=preferred_username \
+  --mapping-display-name=name --mapping-email=email \
+  --mapping-groups=groups --group-provisioning=1 \
+  --group-whitelist-regex='/^(family|admins)$/' \
+  --group-restrict-login-to-whitelist=1 \
+  --send-id-token-hint=1 --check-bearer=0
+occ config:app:set user_oidc allow_multiple_user_backends --value=0   # auto-redirect to authentik
+# system config: 'user_oidc' => ['soft_auto_provision' => false]
+```
 
 - **`--unique-uid=0` + `preferred_username`**: the Nextcloud uid *is* the authentik username,
   matching OpenCloud's claim. Same rule as before: don't rename people in authentik.
@@ -383,6 +397,7 @@ OpenCloud restic repo stays on NFS, so any straggler can still be restored from 
 | 6 | follow-up PR (+4 wks) | Delete `home/opencloud/`, the OpenBao `…/apps/opencloud/config`, and `/repository/opencloud` | — |
 
 **Rollback:**
+
 - **Before step 5:**
   1. Revert the PR, or just swap the two lines in `home/kustomization.yaml`.
   2. OpenCloud's PVC re-seeds from restic via `opencloud-dst` (`restore-once`).
@@ -397,6 +412,7 @@ OpenCloud restic repo stays on NFS, so any straggler can still be restored from 
 ## F. Operations
 
 **F1. Backups.**
+
 - Files, config and apps: volsync restic nightly at 14:00 UTC with the automatic nightly test
   restore. Also picked up by `stacks/applications/kubernetes-backups.ts` (backrest).
 - DB:
@@ -413,6 +429,7 @@ OpenCloud restic repo stays on NFS, so any straggler can still be restored from 
   4. Start and run the sequence above; check `occ status` and file counts.
 
 **F2. Monitoring.**
+
 - `xperimental/nextcloud-exporter` sidecar (token auth via serverinfo), PodMonitor on
   `metrics`, and a `GrafanaDashboard` CR (grafana.com dashboard for nextcloud-exporter;
   confirm the ID).
@@ -427,6 +444,7 @@ OpenCloud restic repo stays on NFS, so any straggler can still be restored from 
   (check at build). Otherwise use a Grafana log panel plus the weekly admin overview.
 
 **F3. Upgrades.**
+
 - Renovate (`.github/renovate.json5`): a `nextcloud` packageRule with no automerge for any
   update type, and `separateMultipleMajor: true`, so 35→36 and 36→37 arrive as separate PRs.
   Patches get merged monthly.
