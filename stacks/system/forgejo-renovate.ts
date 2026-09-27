@@ -500,7 +500,23 @@ export class ForgejoConfigurationComponent extends ComponentResource {
           user: this.renovateBot.user.login,
           permission: "admin",
         },
-        { provider: this.forgejoProvider, parent: this },
+        {
+          provider: this.forgejoProvider,
+          parent: this,
+          // Dropping out of `userRepositories` must FORGET the grant, not
+          // delete it. The usual reason a repository drops out is that it was
+          // deleted, and then there is nothing to delete: the forgejo
+          // provider reads the repository first, gets a 404, and fails the
+          // whole update instead of treating the grant as already gone.
+          // stacks/system sat red for six runs on 2026-09-26/27 after
+          // david/home-operations-docs was deleted, until the grant was
+          // `pulumi state delete`d by hand.
+          //
+          // Cost: a repository that drops out while still existing (archived,
+          // turned into a mirror) keeps Renovate's grant until someone removes
+          // it in the UI.
+          retainOnDelete: true,
+        },
       );
     }
 
