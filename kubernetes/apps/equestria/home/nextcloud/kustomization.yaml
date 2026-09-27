@@ -20,7 +20,15 @@ configMapGenerator:
   # installed into the code tree that the next upgrade's rsync --delete wipes.
   # Instead they are mounted at /opt/nextcloud and copied into place by
   # ./resources/10-configure.sh, which runs after install/upgrade on every start.
-  - name: ${APP}-config
+  #
+  # The name is LITERAL, not `${APP}-config`: the `substitute: disabled`
+  # annotation below switches Flux substitution off for the WHOLE object,
+  # metadata.name included, so a variable here reaches the API server as the
+  # literal string and fails the Kustomization's dry-run -- which blocks every
+  # object in it, route included (2026-09-27: cloud.driscoll.tech answered
+  # Traefik's bare 404 for an hour). ./helmrelease.yaml's `${APP}-config` IS
+  # substituted and resolves to this same name.
+  - name: nextcloud-config
     files:
       - resources/10-configure.sh
       - resources/zz-app.config.php
