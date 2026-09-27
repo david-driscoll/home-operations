@@ -1,5 +1,11 @@
 # 04 — Pulumi state backend: Minio-on-truenas → Postgres DIY on celestia
 
+> **Superseded (2026-09-27) — this plan was never built.** Pulumi state moved from the TrueNAS
+> Minio to the dockge Garage cluster instead (bucket `pulumi-state`, pinned to celestia's
+> egress), with versioned restic copies via backrest and an off-site copy on a standalone
+> Garage on alpha-site. The current layout is in `docs/garage-offsite-s3.md` ("Pulumi state")
+> and `bootstrap/RUNBOOK.md` Scenario E. What follows is kept as the record of D2.
+
 Piece **D** of [vault#84](https://github.com/david-driscoll/vault/issues/84) ·
 [Decision D2](README.md#decision-ledger) · depends on
 [03 — secrets bootstrap independence](03-secrets-bootstrap-independence.md) (the `op`

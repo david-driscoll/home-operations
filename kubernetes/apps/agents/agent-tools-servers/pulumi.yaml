@@ -165,21 +165,23 @@ spec:
     creationPolicy: Owner
     template:
       data:
-        AWS_ACCESS_KEY_ID: "{{ .minio_username }}"
-        AWS_SECRET_ACCESS_KEY: "{{ .minio_password }}"
-        AWS_REGION: "home"
+        AWS_ACCESS_KEY_ID: "{{ .state_s3_username }}"
+        AWS_SECRET_ACCESS_KEY: "{{ .state_s3_password }}"
+        AWS_REGION: "garage"
         PULUMI_CONFIG_PASSPHRASE: "{{ .pulumi_passphrase }}"
         CONNECT_TOKEN: "{{ .connect_token }}"
         AUTHENTIK_TOKEN: "{{ .authentik_token }}"
         AUTHENTIK_URL: "{{ .authentik_url }}"
   data:
-    - secretKey: minio_username
+    # The Pulumi state backend key (Garage `pulumi-state` bucket), not the
+    # Minio root credential it replaced.
+    - secretKey: state_s3_username
       remoteRef:
-        key: apps/minio/root
+        key: apps/pulumi/state-s3
         property: username
-    - secretKey: minio_password
+    - secretKey: state_s3_password
       remoteRef:
-        key: apps/minio/root
+        key: apps/pulumi/state-s3
         property: password
     - secretKey: pulumi_passphrase
       remoteRef:

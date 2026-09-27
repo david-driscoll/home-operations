@@ -9,7 +9,7 @@
  *
  * PLAN §G wanted them in Pulumi stack outputs behind a `StackReference`. That
  * is not possible: every stack in this repo has its own DIY backend
- * (`s3://home-operations/<stack>`), so `stacks/unifi-network` cannot reference
+ * (`s3://pulumi-state/<prefix>`), so `stacks/unifi-network` cannot reference
  * `stacks/home`. Estate decision 2026-08-10: since no stack PRODUCES a cluster
  * definition, there is no cross-stack channel to build — the definitions are
  * just config, reviewable in git and diffable in a PR, which is strictly better

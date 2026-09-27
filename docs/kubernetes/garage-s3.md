@@ -48,10 +48,10 @@ workers, which means Garage goes away in Low Power mode (D6) along with the
 rest of the bulk tier.
 
 **Nothing in Tier 0 or Tier 1 may take a hard dependency on it.** Concretely:
-Pulumi state stays on the TrueNAS minio, and CNPG barman backups moved to the
-*other* Garage — the geo-replicated cluster on the celestia/luna/skystar
-dockge hosts (docs/garage-offsite-s3.md), which sits outside this cluster
-entirely. Those are the things you need *when the cluster is broken*; moving
+Pulumi state and CNPG barman backups both live on the *other* Garage — the
+geo-replicated cluster on the celestia/luna/skystar dockge hosts
+(docs/garage-offsite-s3.md; Pulumi state is its `pulumi-state` bucket), which
+sits outside this cluster entirely. Those are the things you need *when the cluster is broken*; moving
 them inside the cluster is a circular dependency, not a consolidation, and
 that rule is exactly why the backup store is the dockge Garage and never this
 one.

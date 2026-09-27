@@ -45,7 +45,8 @@ spec:
     # left untolerated on purpose: nine long-lived workspace pods (~1.1 GiB of
     # requests, `workspaceReclaimPolicy: Retain`, resyncing every 300s) are load a
     # Battery window exists to shed, and 24 §1 notes a `pulumi up` cannot usefully
-    # run mid-outage anyway since its state backend is Postgres on celestia.
+    # run mid-outage anyway: its state backend is the dockge Garage cluster,
+    # reached through celestia (bucket `pulumi-state`).
     # Keeping the operator placeable and letting the workspaces stay down is the
     # intended shape. See docs/cluster-consolidation/20-low-power-tier.md §4.
     # See docs/cluster-consolidation/20-low-power-tier.md §4.

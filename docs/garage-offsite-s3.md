@@ -238,6 +238,40 @@ live and there is no post-flip action to take there. It is rendered from
 whatever the values say at the moment someone sets `mode: recovery`, which is
 the moment it starts mattering. See the note in the Restore section.
 
+## Pulumi state — the one bucket Pulumi does not own
+
+Every Pulumi stack's DIY backend lives in bucket **`pulumi-state`** on this
+cluster, one prefix per Stack exactly as it was on the TrueNAS Minio
+(`authentik`, `backups` — shared by backups and system —, `gulf-of-mexico`,
+`home`, `ocracoke`, `unifi-network`, `vault`). The bucket and its keys are
+made by the ceremony below, **not** by `stacks/system`: that stack's own state
+is in this bucket, so a Pulumi-managed state bucket would be a producer that
+stores itself — the failure lands on the one run that would recreate it.
+
+| Thing | Where |
+|---|---|
+| Bucket | `pulumi-state`, 100 GiB quota (history headroom: every update writes a full checkpoint copy to `.pulumi/history/`, pruned after 3 days by `kubernetes/apps/pulumi/history-pruner`) |
+| Read/write key `pulumi-state` | OpenBao `apps/pulumi/state-s3` (`username`/`password`); break-glass SOPS copy `bootstrap/openbao/pulumi-state-s3.sops.yaml` |
+| Read-only key `pulumi-state-reader` | OpenBao `apps/pulumi/state-s3-reader` — backrest pre-sync and the alpha-site mirror |
+| Endpoint | `http://dockge-celestia.<tailnet>:3900`, region `garage`, path-style. Pinned to celestia: its bootstrap egress (`tailscale-system/services/bootstrap.yaml`) is the only Garage S3 endpoint the cluster reaches. The `garage-s3` VIP is managed by `stacks/unifi-network`, so it cannot back the state that stack is stored in without care. |
+| Consumers | every `kubernetes/apps/pulumi/*/stack.yaml` (`pulumi-state-s3` Secret), `stacks/*/.mise.toml` + `.config/mise.toml` for local runs, the `toolhive-pulumi` MCP and agentboard |
+| Versioned backups | backrest plan `pulumi-state` (`stacks/backups/index.ts`) — Garage has no object versioning, so restic is the point-in-time copy |
+| Off-site copy | the standalone Garage on alpha-site, `docker/alpha-site/garage-backup` (hourly mirror + daily dated snapshots of the checkpoints) |
+
+The ceremony, done once through the Admin API (the same API the Pulumi
+provider uses; `garage` CLI on celestia is equivalent):
+
+```bash
+# CreateBucket {globalAlias: pulumi-state}; UpdateBucket quotas.maxSize = 100 GiB
+# CreateKey pulumi-state        -> AllowBucketKey read+write
+# CreateKey pulumi-state-reader -> AllowBucketKey read
+# both keys -> OpenBao kv-v2 with cas=0 (never overwrite), username/password
+```
+
+Losing the keys loses nothing — mint new ones the same way and update the two
+OpenBao paths and the SOPS copy. Losing the bucket is what the backups exist
+for: see bootstrap/RUNBOOK.md.
+
 ## Restore notes
 
 - **equestria, cluster gone**: set `mode: recovery` and make sure the
@@ -272,9 +306,10 @@ the moment it starts mattering. See the note in the Restore section.
 
 - **`replication_factor` and `s3_region` are effectively immutable** — layout
   rebuild and SigV4 invalidation respectively, same as the in-cluster Garage.
-- **Buckets and keys are Pulumi state.** Hand-created ones collide with
-  `stacks/system` later; hand-deleted ones break consumers it thinks are fed.
-  The webui makes hand-creating them one click — resist it.
+- **Buckets and keys are Pulumi state** — with one exception, `pulumi-state`
+  (below). Hand-created ones collide with `stacks/system` later; hand-deleted
+  ones break consumers it thinks are fed. The webui makes hand-creating them
+  one click — resist it.
 - **Do not add this stack to backrest.** `BACKUP_OPT_OUT_STACKS` documents why;
   restating it here because the symptom of forgetting is silent triple-storage
   of the estate's largest dataset, not an error.

@@ -260,6 +260,10 @@ backupPlanOrchestrator.addBackupPlan(
   }),
 );
 
+// The Pulumi state as it was on the TrueNAS Minio, before every stack moved to
+// the Garage `pulumi-state` bucket below. Frozen since the cutover, so this
+// now snapshots an unchanging tree; it stays for the rollback window and goes
+// when the TrueNAS prefixes are deleted.
 backupPlanOrchestrator.addBackupPlan(
   pulumi.output({
     source: "celestia",
@@ -268,6 +272,39 @@ backupPlanOrchestrator.addBackupPlan(
     path: "/spike/data/minio/home-operations/",
     repository: "home-operations",
   }),
+);
+
+// Every stack's Pulumi state: the dockge Garage cluster's `pulumi-state`
+// bucket (bootstrap/RUNBOOK.md). Garage has no object versioning, so THIS is
+// what provides point-in-time copies -- rclone mirrors the bucket into
+// backrest's staging tree and restic snapshots it, copied to the other PBS
+// hosts nightly. The off-site copy on alpha-site (docker/alpha-site/
+// garage-backup) is a separate, independent path.
+//
+// Staged OUTSIDE /data/staging/garage/: that tree is what garage-mirror copies
+// back into the same Garage cluster, which would be a copy of the bucket into
+// its own cluster. history/ is excluded -- a full checkpoint copy per update,
+// regenerated constantly and pruned after 3 days anyway.
+//
+// Read-only key, so a backup can never write the state it protects.
+const pulumiStateReader = globals.store.getSecretByPath<{ username: string; password: string }>("apps/pulumi/state-s3-reader");
+backupPlanOrchestrator.addBackupPlan(
+  pulumi.all([pulumiStateReader, globals.tailscaleDomain]).apply(([reader, tailnet]) => ({
+    source: "celestia" as const,
+    name: "pulumi-state",
+    title: "Pulumi state",
+    path: "/data/staging/pulumi-state/",
+    repository: "pulumi-state",
+    preSync: {
+      type: "s3" as const,
+      endpoint: `http://dockge-celestia.${tailnet}:3900`,
+      bucket: "pulumi-state",
+      region: "garage",
+      accessKeyId: reader.username,
+      secretAccessKey: reader.password,
+      exclude: ["*/.pulumi/history/**", "*/.pulumi/locks/**"],
+    },
+  })),
 );
 
 backupPlanOrchestrator.addBackupPlan(
