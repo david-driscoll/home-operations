@@ -5,12 +5,13 @@
  */
 
 import { writeFileSync } from "node:fs";
-import type { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
+import type { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags, TailscaleTest } from "@openapi/tailscale-grants.js";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
 import { authentikVip, Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
+import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
 import { getDnsMachines, getTailscaleIp } from "../../components/tailscale.ts";
 
 interface KubernetesCluster {
@@ -20,6 +21,23 @@ interface KubernetesCluster {
   publicIps: TailscaleIp[];
   kubeApiIp: TailscaleIp;
 }
+
+/**
+ * `autogroup:tagged` minus tag:funnel, spelled out -- use it wherever a grant's
+ * `src` would say autogroups.tagged. Grants cannot subtract.
+ *
+ * tag:funnel is carried only by the internet-facing Funnel proxies. They need
+ * no tailnet access at all: their one backend is a cluster Service on the pod
+ * network. Leaving them in autogroup:tagged would give the one device that
+ * parses public traffic the same reach as a member's phone. This makes it the
+ * least-privileged node on the tailnet instead (plan J6, decided 2026-09-27),
+ * and `member-funnel-access`'s tests pin that.
+ *
+ * Every other tagged device keeps exactly what autogroup:tagged gave it.
+ * tagOwners is rebuilt from this same constant, so no tag outside it can be
+ * applied. On 2026-09-27 all 16 tags on the 37 tagged devices were in it.
+ */
+const taggedExceptFunnel = Object.values(tag).filter(t => t !== tag.funnel);
 
 export interface AggregatedNodeExport {
   stackName: string;
@@ -86,6 +104,35 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
     aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
     aclsJson = applyAllEdits(aclsJson, ["hosts"], {});
+    // nodeAttrs is NOT blanked like the sections above: the live policy carries
+    // hand-set entries this file does not own (per-IP `mullvad`, member/group
+    // `drive:*`), and blanking would delete them. Who may FUNNEL -- publish to
+    // the public internet -- is owned here, though: strip every live grant of
+    // it, so the only one this run writes is configureKubernetesAccess's
+    // tag:funnel entry. That is what retires the old tag:operator grant. See
+    // components/tailscale/nodeAttrs.ts.
+    //
+    // A stray grant added by hand LATER is only removed by the next run that
+    // actually writes the policy: this Stack does not refresh, so a run whose
+    // stripped output matches state sends no PUT. Hence the warning, which
+    // fires on every resync for as long as a stray is live.
+    //
+    // ⚠️ To roll this change back, revert everything EXCEPT this call. It then
+    // strips the tag:funnel nodeAttr itself. A full revert strands that entry
+    // (nothing strips it any more) while tag:funnel drops out of the rebuilt
+    // tagOwners, and Tailscale rejects every PUT with the dangling-tag 400
+    // documented beside border0Managed in constants.ts. If it must all go,
+    // suspend the Stack, hand-delete the nodeAttr, let the revert sync, then
+    // resume -- a hand-delete made while this code still runs is undone by its
+    // next write. Any Funnel Ingress (plan step 2+) has to be reverted first.
+    const strayFunnel = nodeAttrHolders(aclsJson, "funnel").filter(entry => !(entry.target.length === 1 && entry.target[0] === tag.funnel && entry.attr?.length === 1));
+    if (strayFunnel.length > 0) {
+      pulumi.log.warn(
+        `Tailnet policy: stripping the funnel nodeAttr from ${strayFunnel.map(entry => JSON.stringify(entry.target)).join(", ")} -- only [${tag.funnel}] may hold it. ` +
+          "It is removed on the next run that writes the policy; until then it is live.",
+      );
+    }
+    aclsJson = withoutNodeAttr(aclsJson, "funnel");
 
     const manager = new TailscaleAclManager(aclsJson, hosts, tests);
     const testData = manager.testData;
@@ -130,7 +177,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "default-apps-access",
       {
-        src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: [tag.apps, tag.dockge, tag.dns, tag.idp],
         ip: [...ports.web],
       },
@@ -146,7 +193,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "forgejo-git-ssh",
       {
-        src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: [tag.apps],
         ip: [...ports.git],
       },
@@ -185,7 +232,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "default-dns",
       {
-        src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: [tag.dns],
         ip: ports.dns,
       },
@@ -202,7 +249,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "member-home-subnet-access",
       {
-        src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: allowedIps,
         ip: [...ports.dns, ...ports.web],
       },
@@ -220,8 +267,9 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     );
 
     manager.setGrant(
+      "member-exit-node",
       {
-        src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: [tag.exitNode, autogroups.internet],
         ip: ["*"],
       },
@@ -229,8 +277,9 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     );
 
     manager.setGrant(
+      "member-idp",
       {
-        src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: ["host:idp"],
         ip: ["tcp:443"],
       },
@@ -323,7 +372,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "member-tsidp-defaults",
       {
-        src: [autogroups.member, autogroups.tagged],
+        src: [autogroups.member, ...taggedExceptFunnel],
         dst: ["*"],
         app: {
           "tailscale.com/cap/tsidp": [
@@ -699,8 +748,9 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
     { accept: [tag.dockge], deny: testData.knownNormalUsers },
   );
   manager.setGrant(
+    "member-dockge-web",
     {
-      src: [autogroups.member, autogroups.tagged],
+      src: [autogroups.member, ...taggedExceptFunnel],
       dst: [tag.dockge],
       ip: ports.web,
     },
@@ -784,9 +834,66 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
   // tag.dns: the tailscale operator creates the dns-<cluster> proxy devices
   // (in-cluster Technitium nodes) with tag:dns
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive, tag.dns]);
-  manager.setNodeAttr({ target: [tag.operator], attr: ["funnel"] });
+  // tag.funnel: the operator mints it onto standalone Funnel Ingress proxies.
+  // Its OAuth client carries tag:operator (confirmed 2026-09-27), and owning a
+  // tag is what lets that client put it on an auth key.
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive, tag.dns, tag.funnel]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
+
+  // Public ingress (docs/plans/cloudflare-tunnel-to-funnel.md). The ONE funnel
+  // grant in the policy -- assignTailscaleAcls strips every other before this
+  // runs. It used to sit on tag:operator, the operator's own device, which
+  // serves nothing publicly; no proxy carries that tag.
+  //
+  // This must be live BEFORE any Funnel Ingress is created: tags are fixed
+  // when the proxy's auth key is minted, and a standalone proxy never re-keys.
+  manager.setNodeAttr({ target: [tag.funnel], attr: ["funnel"] });
+
+  // Members on the tailnet resolve a Funnel name through MagicDNS to the
+  // proxy's 100.x address rather than the public relays, so without this
+  // their browsers cannot load what the rest of the internet can (postiz's
+  // media previews are served from its Funnel host). A Funnel proxy serves
+  // only the paths its Ingress mounts, so this exposes nothing further.
+  //
+  // The tests also pin the other direction: a Funnel proxy reaches NOTHING on
+  // the tailnet (see taggedExceptFunnel). One destination per network grant it
+  // would have inherited through autogroup:tagged -- member-tsidp-defaults is
+  // app-only and no network test can cover it -- checked by Tailscale on every
+  // PUT, so a grant that lets tag:funnel back in fails the Stack. It only holds
+  // for a proxy tagged tag:funnel ALONE (a second tag brings that tag's reach),
+  // which is why the plan's admission policy pins the tags annotation. One test
+  // object on purpose: tests are keyed by `src` (manager.ts getTestName), so a
+  // second tag:funnel test anywhere would silently replace this one. The cast
+  // is manager.ts's own: the host-alias form `idp:443` is what Tailscale takes
+  // (live tests use it) but not what TailscaleTestAcceptSelector spells.
+  manager.setGrant(
+    "member-funnel-access",
+    {
+      src: [autogroups.member],
+      dst: [tag.funnel],
+      ip: ["tcp:443"],
+    },
+    () =>
+      [
+        ...testData.knownNormalUsers.map(user => ({ src: user, proto: "tcp" as const, accept: [`${tag.funnel}:443`] })),
+        {
+          src: tag.funnel,
+          proto: "tcp" as const,
+          deny: [
+            `${tag.apps}:443`, // default-apps-access
+            `${tag.apps}:22`, // forgejo-git-ssh
+            `${tag.dockge}:443`, // default-apps-access, member-dockge-web
+            `${tag.dns}:53`, // default-dns
+            `${tag.idp}:443`, // default-apps-access
+            "idp:443", // member-idp
+            "10.10.206.101:443", // member-home-subnet-access (equestria gateway)
+            `${tag.equestria}:443`, // member-cluster-web
+            `${tag.ingress}:443`, // member-cluster-web
+            `${tag.exitNode}:443`, // member-exit-node (ip "*", so any port)
+          ],
+        },
+      ] as TailscaleTest[],
+  );
 
   manager.setExitNode(tag.sgc);
   manager.setExitNode(tag.equestria);
@@ -890,8 +997,9 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
     { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers },
   );
   manager.setGrant(
+    "member-cluster-web",
     {
-      src: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress],
+      src: [autogroups.member, ...taggedExceptFunnel],
       dst: [...clusterTags, tag.ingress],
       ip: ports.web,
     },

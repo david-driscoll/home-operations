@@ -183,6 +183,14 @@ export const Tailscale = {
     ingress: "tag:ingress" as TailscaleTags,
     management: "tag:management" as TailscaleTags,
     observability: "tag:observability" as TailscaleTags,
+    // Public ingress: the ONLY tag holding the `funnel` nodeAttr, so the only
+    // devices that can publish to the internet. Carried by the standalone
+    // Funnel Ingress proxies the tailscale operator mints (it owns this tag).
+    // Never give `funnel` to tag:apps -- tsnet apps on the shared authkey could
+    // then self-enable it. It is also left out of every autogroup:tagged grant
+    // (taggedExceptFunnel in stacks/unifi-network/acl-manager.ts), so it reaches
+    // nothing on the tailnet. See docs/plans/cloudflare-tunnel-to-funnel.md.
+    funnel: "tag:funnel" as TailscaleTags,
 
     // Tailscale PAM (Border0). NOT a tag this repo applies to anything -- the
     // Tailscale control plane creates it the moment PAM is enabled in the admin
