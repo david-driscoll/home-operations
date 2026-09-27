@@ -1,7 +1,8 @@
 # Cloudflare Tunnel → Tailscale Funnel
 
 **Status:** plan, 2026-09-27. Nothing here is built yet. Decisions marked ✅ were taken by
-David on 2026-09-27. ❓ items in [§J](#j-open-questions) still need an answer or a live check.
+David on 2026-09-27. The only item still open in [§J](#j-open-questions) is J4 (TikTok), which
+can wait until a TikTok app exists.
 The research, and an adversarial review of this plan, ran as read-only agent sweeps against the
 repo, live cluster, tailnet, Loki and upstream source.
 
@@ -432,7 +433,7 @@ Each numbered item is one PR unless marked otherwise.
 - **Step 1 is not revert-safe**, and **step 7 must never be reverted** (see each step).
 
 0. **Pre-flight (read-only, human-assisted).**
-   - Answer ❓J2 and ❓J3.
+   - J2 and J3 were confirmed on 2026-09-27.
    - Test pod DNS egress to Quad9:
      `kubectl run -it --rm dnstest --image=busybox -- nslookup example.com 9.9.9.9`.
    - Run a DB check: no `Integration.picture` or `Post.image` references
@@ -636,12 +637,11 @@ Each numbered item is one PR unless marked otherwise.
     and the `autogroup:member`, `group:family`, `group:friends` and `group:admins` drive entries.
     So **do not** add nodeAttrs to the blanked sections at `acl-manager.ts:83-88`; the targeted
     funnel-only filter is the way.
-- ❓ **J2. OAuth client tags.** Confirm in the admin console that the operator's OAuth client
-  carries `tag:operator`. The live device does, but the client was not readable. If it does not,
-  the `tag:funnel` key mint fails.
-- ❓ **J3. Tailnet HTTPS certificates.** This is inferred from Let's Encrypt
-  `*.opossum-yo.ts.net` certificates in CT logs (latest 2026-09-26). Confirm it in the admin
-  settings.
+- ✅ **J2. OAuth client tags.** Confirmed by David on 2026-09-27: the operator's OAuth client
+  carries `tag:operator`. Adding `tag:funnel` to `tag:operator`'s owned tags (§C1) is therefore
+  enough for the operator to mint Funnel proxy keys.
+- ✅ **J3. Tailnet HTTPS certificates.** Confirmed enabled by David on 2026-09-27. This matches
+  the Let's Encrypt `*.opossum-yo.ts.net` certificates in CT logs.
 - ❓ **J4. TikTok URL prefix on ts.net.** This matters only for TikTok **photo** posts, and only
   once a TikTok app exists. It is a cheap live test: put `tiktok<token>.txt` at the uploads root,
   then verify in the portal. If TikTok rejects it, the options are:
