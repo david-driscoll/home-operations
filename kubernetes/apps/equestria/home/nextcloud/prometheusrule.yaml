@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+#
+# Already covered elsewhere, so not repeated here: PVC fill
+# (longhorn/rules/pvc-usage-rules.yaml), sustained 5xx at the gateway
+# (traefik/rules/silent-failure-rules.yaml) and external uptime (Gatus, from
+# ./definition.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: nextcloud.rules
+      rules:
+        - alert: NextcloudDown
+          annotations:
+            description: >-
+              The exporter cannot read Nextcloud's serverinfo, or the exporter
+              itself has vanished. Family file sync and calendars are likely
+              down; check the nextcloud pod in equestria.
+            summary: Nextcloud is not answering.
+          expr: |
+            (max(nextcloud_up{namespace="equestria"}) == 0)
+              or absent(nextcloud_up{namespace="equestria"})
+          for: 15m
+          labels:
+            severity: critical
+
+        # Nextcloud exports nothing about cron, so this watches the sidecar
+        # instead: its liveness probe fails when cron.php has not completed for
+        # 15 minutes, and the kubelet restarts it. Any restart means background
+        # jobs (cleanup, calendar subscriptions refresh, previews, activity
+        # mails) stopped running for at least that long.
+        - alert: NextcloudCronNotRunning
+          annotations:
+            description: >-
+              The nextcloud `cron` container restarted {{ $value }} times in the
+              last hour. Its liveness probe only fails when cron.php has not
+              finished for 15 minutes; see `kubectl -n equestria logs
+              deploy/nextcloud -c cron --previous`.
+            summary: Nextcloud background jobs are not running.
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="equestria", container="cron", pod=~"nextcloud-[a-z0-9]+-[a-z0-9]+"}[1h]) > 0
+          labels:
+            severity: warning
+
+        - alert: NextcloudAppUpdatesPending
+          annotations:
+            description: >-
+              {{ $value }} Nextcloud app update(s) have been available for a
+              week. Apps update from the app store, not through Renovate --
+              run `occ app:update --all` or use the admin UI.
+            summary: Nextcloud app updates are waiting.
+          expr: |
+            max(nextcloud_apps_updates_available_total{namespace="equestria"}) > 0
+          for: 7d
+          labels:
+            severity: info

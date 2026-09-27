@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Nextcloud: Files, Calendar/Contacts, Notes and Collabora for the family,
+# replacing OpenCloud at cloud.${ROOT_DOMAIN}. Plan and decisions:
+# docs/plans/nextcloud-migration.md.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app nextcloud
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    # File locking and the distributed cache live in the shared Valkey (db 13,
+    # ./resources/zz-redis.config.php).
+    - name: valkey
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/nextcloud
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  # First boot copies ~500MB of Nextcloud into the PVC and runs the installer
+  # before Apache listens; the startup probe in ./helmrelease.yaml allows 15m.
+  timeout: 20m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # New app, so expect the documented first-deploy race (the Pulumi `system`
+    # stack stalls creating the static role before CNPG has the role). Recovery
+    # is the ORDER OF OPERATIONS block in components/postgres/ks.yaml.
+    - ../../../../components/postgres
+    - ../../../../components/volsync
+    # NO components/tailscale. Its IngressRoute chains `tailscale-local`, which
+    # includes error-pages, and error-pages rewrites every 401-599 into HTML --
+    # that breaks the DAV login challenge exactly the way `local-user` would
+    # (see the route in ./helmrelease.yaml). Tailnet devices reach
+    # cloud.${ROOT_DOMAIN} through the internal gateway instead:
+    # internal-network admits 100.64.0.0/10, and member-home-subnet-access
+    # grants the gateways and authentik's VIP (#2120).
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # ONE volume for all of /var/www/html -- code, config/, custom_apps/,
+      # themes/ and data/ -- so a restic snapshot is a single consistent point
+      # in time. Capacity can only ever be RAISED: the volsync component sets
+      # kustomize.toolkit.fluxcd.io/force, so lowering it (or changing the
+      # storage class) deletes and re-restores the PVC.
+      VOLSYNC_CAPACITY: 100Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      VOLSYNC_CACHE_CAPACITY: 10Gi
+      # www-data in the official image. The mover must own files the same way
+      # the app does, or the mismatch only shows up at restore time.
+      VOLSYNC_PUID: "33"
+      VOLSYNC_PGID: "33"

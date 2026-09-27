@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+  - ./middleware.yaml
+  - ./servicemonitor.yaml
+  - ./prometheusrule.yaml
+configMapGenerator:
+  # The start hook, the config.php overlays and the PHP ini, mounted by
+  # ./helmrelease.yaml's `files` persistence entry.
+  #
+  # The overlays are NOT mounted into /var/www/html/config directly. The image's
+  # entrypoint only seeds config/ from /usr/src/nextcloud/config when that
+  # directory is EMPTY -- a subPath file mounted there on first boot makes it
+  # non-empty, the seed is skipped, and apps.config.php never lands, so apps are
+  # installed into the code tree that the next upgrade's rsync --delete wipes.
+  # Instead they are mounted at /opt/nextcloud and copied into place by
+  # ./resources/10-configure.sh, which runs after install/upgrade on every start.
+  - name: ${APP}-config
+    files:
+      - resources/10-configure.sh
+      - resources/zz-app.config.php
+      - resources/zz-db.config.php
+      - resources/zz-redis.config.php
+      - resources/zz-nextcloud.ini
+    options:
+      # Named literally in ./helmrelease.yaml; Reloader restarts the pod when
+      # the content changes.
+      disableNameSuffixHash: true
+      annotations:
+        # These are shell and PHP, full of `$VAR` and `$CONFIG`. Flux's
+        # postBuild substitution would rewrite any `${...}` it found (to empty
+        # for unknown names), so it is switched off for this object; the few
+        # values that need the cluster's settings arrive as environment
+        # variables set in ./helmrelease.yaml instead.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
