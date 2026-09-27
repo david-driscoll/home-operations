@@ -56,6 +56,7 @@ import * as forgejo from "@pulumi/forgejo";
 import * as pulumi from "@pulumi/pulumi";
 import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
+import * as tls from "@pulumi/tls";
 import * as vault from "@pulumi/vault";
 
 /**
@@ -597,7 +598,30 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       );
     }
 
-    // Read by kubernetes/apps/agents/agent-tools-servers/forgejo.yaml. Field
+    // An SSH key for git over SSH as claude-code, for agentboard sessions that
+    // push/pull with plain `git` rather than through the MCP server. Generated
+    // here so the private half never exists anywhere but Pulumi state (which is
+    // encrypted) and OpenBao; kubernetes/apps/agents/agentboard mounts it.
+    //
+    // ed25519: short, fast, and what Forgejo's built-in SSH server accepts. To
+    // rotate, `pulumi up --replace` this resource -- the Forgejo key and the
+    // OpenBao copy follow it (the SshKey's `key` is ForceNew).
+    const claudeCodeSshKey = new tls.PrivateKey("forgejo-claude-code-ssh", { algorithm: "ED25519" }, { parent: this.claudeCode.user });
+
+    new forgejo.SshKey(
+      "forgejo-claude-code-ssh-key",
+      {
+        user: this.claudeCode.user.login,
+        title: "agentboard",
+        // publicKeyOpenssh ends with a newline; Forgejo stores the key verbatim
+        // and would then report a diff against its own trimmed copy.
+        key: claudeCodeSshKey.publicKeyOpenssh.apply(k => k.trim()),
+      },
+      { provider: this.forgejoProvider, parent: this.claudeCode.user },
+    );
+
+    // Read by kubernetes/apps/agents/agent-tools-servers/forgejo.yaml (token)
+    // and kubernetes/apps/agents/agentboard/externalsecret.yaml (ssh_*). Field
     // names are load-bearing there.
     const claudeCodeCredentials = baoKvSecret(
       "forgejo-claude-code-credentials",
@@ -607,8 +631,11 @@ export class ForgejoConfigurationComponent extends ComponentResource {
         data: {
           token: this.claudeCode.token.token,
           password: this.claudeCode.password.result,
+          // OpenSSH format (not PEM): ed25519 private keys only exist in it.
+          ssh_private_key: claudeCodeSshKey.privateKeyOpenssh,
+          ssh_public_key: claudeCodeSshKey.publicKeyOpenssh,
         },
-        concealedFields: ["token", "password"],
+        concealedFields: ["token", "password", "ssh_private_key"],
         customMetadata: baoProvenance({
           source_title: "Forgejo Claude Code account",
           source_tags: "forgejo,agents",
