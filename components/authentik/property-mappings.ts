@@ -56,6 +56,20 @@ return groupsDict`,
     "groups": [group.name for group in request.user.ak_groups.all()],
 }`,
     },
+    // Nextcloud's admin group is literally `admin`, and user_oidc can only
+    // mirror group names as they arrive -- it cannot rename `admins`. So this
+    // claim carries every group plus `admin` for authentik admins, and
+    // user_oidc's group whitelist (nextcloud/resources/10-configure.sh) turns
+    // that into Nextcloud admin rights, granted AND revoked on each login. A
+    // separate claim rather than an extra entry in `groups`, which RomM,
+    // Proxmox and others read.
+    nextcloud_groups: {
+      description: "Nextcloud group claim: every group, plus `admin` for members of authentik's admins",
+      expression: `groups = [group.name for group in request.user.ak_groups.all()]
+if "admins" in groups:
+    groups.append("admin")
+return {"nextcloud_groups": groups}`,
+    },
     remote_user: {
       description: "Set remote-user based on the username",
       expression: `return {

@@ -38,9 +38,11 @@ spec:
         - openid
         - profile
         - email
-        # Load-bearing: user_oidc's group provisioning reads the `groups` claim
-        # (components/authentik/property-mappings.ts).
         - groups
+        # Load-bearing: user_oidc's group provisioning reads this claim, not
+        # `groups` -- it adds `admin` for authentik admins, which is what makes
+        # them Nextcloud admins (components/authentik/property-mappings.ts).
+        - nextcloud_groups
       includeClaimsInIdToken: true
   gatus:
     - group: "Applications"
