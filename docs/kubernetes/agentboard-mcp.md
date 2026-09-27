@@ -383,8 +383,10 @@ toolport reaches a backend one of two ways, and a new server has to pick:
   (`toolport/externalsecret.yaml`, `toolport-backends`, sent as
   `Authorization: Bearer`). A ToolHive MCPRemoteProxy applies its
   `MCPExternalAuthConfig` only when a VirtualMCPServer calls it; a direct call
-  gets a 401 from the backend. Their `toolhive-*` remote proxies are no longer
-  called by anything.
+  gets a 401 from the backend, so these backends have no ToolHive proxy at
+  all. `toolport-backends` is also where each key's rotation steps live
+  (ECM's is human-minted). `microsoft-docs` is called the same way, at
+  Microsoft's public endpoint, with no credential.
 - **A remote backend that needs a different header** — `homelable`, which
   demands `X-API-Key` — goes through its MCPRemoteProxy with `headerForward`
   instead, which applies to every request including direct ones. toolport can

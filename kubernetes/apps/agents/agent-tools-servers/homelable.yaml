@@ -37,7 +37,8 @@ spec:
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
-# `MCPRemoteProxy` -- see ./microsoft-docs.yaml's header for what that CRD is.
+# `MCPRemoteProxy`, not `MCPServer`: it fronts an EXISTING remote MCP HTTP
+# server at `remoteUrl` rather than running a container ToolHive manages.
 #
 # WHY A REMOTE PROXY AND NOT AN MCPServer RUNNING THE IMAGE HERE, the way
 # ./degoog.yaml runs degoog's own sidecar. The two look interchangeable and are
@@ -73,8 +74,8 @@ spec:
 #
 # MCPRemoteProxy runs an SSRF guard over `remoteUrl` that blocks RFC 1918
 # addresses, IPv6 unique-local, and any hostname ending in `cluster.local`
-# unless this flag is set. THAT is why the two remote proxies predating this
-# file (./home-assistant.yaml, ./microsoft-docs.yaml) both name PUBLIC URLs --
+# unless this flag is set. That is why the remote proxies predating this file
+# (Home Assistant, Microsoft Learn -- both since retired) named PUBLIC URLs --
 # a constraint, not a house style. An MCPServer's `env` carries no such guard,
 # so ./degoog.yaml pointing at a ClusterIP with no flag is a misleading
 # precedent to generalise from: the two CRDs differ here.
