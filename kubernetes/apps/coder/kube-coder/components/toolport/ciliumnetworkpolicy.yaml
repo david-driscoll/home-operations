@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ws-${KUBE_CODER_USER}-toolport
+spec:
+  endpointSelector:
+    matchLabels:
+      app: ws-${KUBE_CODER_USER}
+  egress:
+    - toEndpoints:
+        - matchExpressions:
+            - key: io.kubernetes.pod.namespace
+              operator: In
+              values: [agents]
+            # The ToolHive operator's labels for the six profile proxies -- the
+            # same pair apps/agents/toolport-mcp/networkpolicy.yaml selects on
+            # the other side. Not `mcpremoteproxy` alone: that also matches
+            # every backend proxy, some of which attach credentials.
+            - key: app.kubernetes.io/name
+              operator: In
+              values: [mcpremoteproxy]
+            - key: toolhive-name
+              operator: In
+              values:
+                - toolport-postgres
+                - toolport-infrastructure
+                - toolport-networking
+                - toolport-home
+                - toolport-media
+                - toolport-research
+      toPorts:
+        - ports:
+            # The pod port. Cilium evaluates after ClusterIP translation.
+            - port: "8080"
+              protocol: TCP

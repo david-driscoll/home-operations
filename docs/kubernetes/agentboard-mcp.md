@@ -1,19 +1,28 @@
 # MCP under agentboard
 
-How an agent running **inside the agentboard pod** reaches the estate's MCP
-tools, why that path is different from the one a laptop takes, and what to do
-when it looks broken.
+How an agent running **inside the agentboard pod** (or a kube-coder workspace)
+reaches the estate's MCP tools, why that path is different from the one a
+laptop takes, and what to do when it looks broken.
 
 Deployment: [`kubernetes/apps/agents/agentboard/`](../../kubernetes/apps/agents/agentboard/).
-Servers: [`kubernetes/apps/agents/agent-tools-mcp/`](../../kubernetes/apps/agents/agent-tools-mcp/)
-and [`agent-tools-servers/`](../../kubernetes/apps/agents/agent-tools-servers/).
+Gateway: [`kubernetes/apps/agents/toolport/`](../../kubernetes/apps/agents/toolport/)
+and its doors, [`toolport-mcp/`](../../kubernetes/apps/agents/toolport-mcp/).
+Backends: [`agent-tools-servers/`](../../kubernetes/apps/agents/agent-tools-servers/).
+
+The `agent-tools` VirtualMCPServer that used to front these backends (one
+~1000-tool catalogue at `agent-tools-mcp.agents.<root-domain>`, plus an
+anonymous in-cluster twin) is **retired**. toolport is the only front door.
+Only its MCPGroup survives, in `agent-tools-mcp/`, because every backend names
+it in `groupRef`.
 
 ## The one rule
 
-**If you are running under agentboard, use the `agent-tools` MCP server that is
-already reachable from inside the container. Do not try to authenticate to the
-external one, and do not reach for `kubectl`/`curl` wrappers for something
-`agent-tools` already exposes.**
+**If you are running under agentboard, use the `toolport-<profile>` MCP servers
+that are already reachable from inside the container. Do not try to
+authenticate to the external doors, and do not reach for `kubectl`/`curl`
+wrappers for something a profile already exposes.** Load the `toolport` skill
+(`.claude/skills/toolport/SKILL.md`, also mounted user-wide in agentboard) for
+the search-then-call workflow.
 
 You are under agentboard if any of these hold:
 
@@ -23,100 +32,116 @@ test -f /root/.mcp.json             # the mounted in-cluster MCP config
 grep -q agents.svc.cluster.local /etc/resolv.conf
 ```
 
-## Two front doors, one set of backends
+## Profiles, and two doors each
 
-Both doors aggregate the **same** [`MCPGroup`](../../kubernetes/apps/agents/agent-tools-mcp/mcpgroup.yaml),
-with `conflictResolution: prefix`, so **tool names are identical on both**. What
-differs is only who is allowed to knock.
+toolport splits the backends into six profiles, one MCP server entry each:
+`toolport-{infrastructure,networking,home,media,postgres,research}`. Membership
+is in [`toolport/resources/registry.json`](../../kubernetes/apps/agents/toolport/resources/registry.json);
+the `toolport` skill lists it too. Every profile has two doors onto the same
+gateway, and what differs is only who is allowed to knock:
 
-| | External | Internal |
+| | External (OAuth) | Internal |
 |---|---|---|
-| Object | [`virtualmcpserver.yaml`](../../kubernetes/apps/agents/agent-tools-mcp/virtualmcpserver.yaml) | [`virtualmcpserver-internal.yaml`](../../kubernetes/apps/agents/agent-tools-mcp/virtualmcpserver-internal.yaml) |
-| Address | `https://agent-tools-mcp.agents.<root-domain>/mcp` | `http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp` |
-| Auth | OIDC, browser authorization-code flow | `anonymous` |
-| Exposure | HTTPRoute, LAN + tailnet | ClusterIP, no hostname, no certificate |
-| Guarded by | Authentik | [`networkpolicy.yaml`](../../kubernetes/apps/agents/agent-tools-mcp/networkpolicy.yaml) — agentboard pods only |
+| Object | VirtualMCPServer `toolport-<profile>-mcp` | MCPRemoteProxy `toolport-<profile>` |
+| Address | `https://toolport-<profile>.agents.<root-domain>/mcp` | `http://mcp-toolport-<profile>-remote-proxy.agents.svc.cluster.local:8080/mcp` |
+| Auth | OAuth, browser authorization-code flow via authentik | none asked of the caller; the proxy adds the profile's bearer |
+| Exposure | HTTPRoute on the internal gateway, LAN + tailnet | ClusterIP, no hostname, no certificate |
+| Guarded by | authentik | [`toolport-mcp/networkpolicy.yaml`](../../kubernetes/apps/agents/toolport-mcp/networkpolicy.yaml) — agentboard, named kube-coder workspaces, and the six OAuth vMCPs |
 
-The external door is unusable from the pod and always will be: completing an
+Both files for a profile are `toolport-mcp/<profile>.yaml`.
+
+The external doors are unusable from the pod and always will be: completing an
 authorization-code flow needs a browser and a human, and this container has
-neither. **A `Needs authentication` status on `agent-tools` inside agentboard is
-not something to fix by logging in — it means the client resolved the wrong
-URL.** See [Troubleshooting](#troubleshooting).
+neither. **A `Needs authentication` status on a `toolport-*` server inside
+agentboard is not something to fix by logging in — it means the client resolved
+the wrong URL.** See [Troubleshooting](#troubleshooting).
 
-The internal door's *only* access control is that NetworkPolicy. It fronts
-OpenBao, Kubernetes, Proxmox (x5), UniFi, Postgres and Docker (x4) with no token
-and no user identity, so read that policy's header before changing anything
-about it.
+The internal door's *only* access control is that NetworkPolicy. The proxies
+carry bearers for OpenBao, Kubernetes, Proxmox (x5), UniFi, Postgres (as
+superuser) and Docker (x4), so read that policy's header before changing
+anything about it.
 
 ## How the URL gets chosen
 
-The repo's committed [`.mcp.json`](../../.mcp.json) sets the `agent-tools` URL
-from an env template — `AGENT_TOOLS_MCP_URL`, defaulting to the external
-hostname. Claude Code expands that template when it connects.
+The repo's committed [`.mcp.json`](../../.mcp.json) sets each `toolport-<profile>`
+URL from an env template — `TOOLPORT_<PROFILE>_URL`, defaulting to that
+profile's OAuth door. Claude Code expands that template when it connects.
 
-- **Laptop, CI, Codespace** — variable unset, default applies, external
-  authenticated door, unchanged from before.
+- **Laptop, CI, Codespace** — variables unset, defaults apply: the OAuth doors.
+  Needs the LAN or Tailscale, and one authentik login per profile through
+  `/mcp`.
 - **agentboard** — [`helmrelease.yaml`](../../kubernetes/apps/agents/agentboard/helmrelease.yaml)
-  sets `AGENT_TOOLS_MCP_URL` to the internal Service, so the same committed file
-  resolves to the anonymous in-cluster endpoint.
+  sets all six `TOOLPORT_<PROFILE>_URL` to the internal proxies, so the same
+  committed file resolves to the in-cluster doors.
+- **kube-coder workspaces** — the opt-in
+  [`components/toolport`](../../kubernetes/apps/coder/kube-coder/components/toolport/)
+  sets the same six variables and the egress policy; the workspace must also be
+  named in `toolport-mcp/networkpolicy.yaml`.
 
 There is also [`resources/mcp.json`](../../kubernetes/apps/agents/agentboard/resources/mcp.json)
-mounted at `/root/.mcp.json` with the internal URL hardcoded. It is a genuine
-fallback but a *narrow* one, and the reason the env var exists:
+mounted at `/root/.mcp.json` with the internal URLs hardcoded. It is a genuine
+fallback but a *narrow* one, and the reason the env vars exist:
 
 > **Claude Code resolves `.mcp.json` from the session's working directory only.**
 > It does not fall back to `$HOME`, and it does not walk parent directories.
 
 An agent works in `/root/home-operations`, which ships its own `.mcp.json`, so
 the mounted `$HOME` copy is shadowed the moment you `cd` into the checkout. The
-env var is what makes the repo copy resolve correctly too; the mount still
+env vars are what make the repo copy resolve correctly too; the mount still
 covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 
-## What is behind the door
+**A stale checkout breaks this silently.** Before #2092 the repo's `.mcp.json`
+used one `TOOLPORT_URL` and per-profile `TOOLPORT_TOKEN_*` bearers; the pod no
+longer sets either, and the old address times out (`CONNECT_TIMEOUT` on all six
+profiles). If every `toolport-*` fails at once, check `git log -1 -- .mcp.json`
+against `origin/main` before anything else.
 
-~1010 tools, prefixed by backend. Names are the same on both doors:
+## What is behind the doors
 
-| Prefix | Tools | Prefix | Tools |
-|---|---|---|---|
-| `toolhive-proxmox-{twilight-sparkle,luna,celestia,alpha-site}_` | 47 each | `toolhive-pulumi_` | 12 |
-| `toolhive-github_` | 44 | `toolhive-nuget_` | 6 |
-| `toolhive-tailscale_` | 19 | `toolhive-unifi-{network,protect,access}_` | 6 each |
-| `toolhive-docker-{luna,celestia,alpha-site}_` | 19 each | `toolhive-kubernetes_` | 5 |
-| `toolhive-microsoft-docs_` | 3 | `toolhive-{postgres,openbao,degoog,context7}_` | 2 each |
-| `toolhive-ecm_` | ~197 | `toolhive-teamarr_` | ~180 |
-| `toolhive-arr-mcp-{plex,jellyfin}_` | 38 each | `toolhive-homelable_` | 58 |
-| `toolhive-home-assistant_` | ~21 | `toolhive-tdarr_` | 65 |
-| `toolhive-forgejo_` | 54 | | |
+Each profile exposes toolport's meta-tools (`toolport_search_tools`,
+`toolport_call_tool`, `toolport_run_script`, `toolport_fetch_result`,
+`toolport_status`), not the backends' tools directly. Backend tools are named
+`<server id>__<tool>`, e.g. `kubernetes__list_resources`; `toolport_status` in a
+profile lists its servers and their tool counts.
 
-`toolhive-teamarr_`'s set is built from Teamarr's live `/openapi.json` when its
-pod starts (destructive tools hidden), so the count moves with Teamarr's version
-and is only fixed until the next restart. `toolhive-home-assistant_`'s depends on
-what Home Assistant exposes. `toolhive-tdarr_` is 65 of tdarr-mcp's 105 tools,
-cut down by an `MCPToolConfig` allow-list in `agent-tools-servers/tdarr.yaml`.
-The cut removes every tool that deletes media, writes the Tdarr DB directly, or
-touches users or plugin code. `toolhive-ecm_`, `toolhive-arr-mcp-*_`,
-`toolhive-teamarr_` and `toolhive-tdarr_` all front `equestria` apps and fail
-02:00-09:00, when that namespace is shed. `toolhive-forgejo_` is the in-cluster forge as the `claude-code`
-account (created by `stacks/system`). In every organization repository it can
-write code, issues, pull requests, Actions (logs, re-run, dispatch), releases
-and wiki, and read packages. It has nothing in user-owned repositories, no
-repository creation, and no repo-admin (secrets, webhooks, settings). For what the ECM and Teamarr tools are for — and which ECM
-write tools currently fail with a 401 — see [iptv.md](iptv.md).
+| Profile | Servers |
+|---|---|
+| `infrastructure` | `kubernetes`, `proxmox-{twilight-sparkle,celestia,luna,alpha-site}`, `docker-{celestia,luna,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao` |
+| `networking` | `unifi-{network,protect,access}`, `tailscale`, `homelable` |
+| `home` | `home-assistant` |
+| `media` | `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr` |
+| `postgres` | `postgres` — every database, tools per database |
+| `research` | `context7`, `microsoft-docs`, `nuget`, `degoog` |
 
-Note `toolhive-kubernetes_*` is the working Kubernetes path from this pod. The
-separate `kubernetes` entry in `.mcp.json` is an `npx kubernetes-mcp-server`
-stdio server and is **known to fail here** with `CONNECTION_CLOSED`; the
-`crew_state` entry likewise fails with `ENOENT` because `crew` is not installed
-in this image. Neither is a reason to distrust `agent-tools`.
+`teamarr`'s tool set is built from Teamarr's live `/openapi.json` when its pod
+starts (destructive tools hidden), so the count moves with Teamarr's version.
+`home-assistant`'s depends on what Home Assistant exposes. `tdarr` is 65 of
+tdarr-mcp's 105 tools, cut down by an `MCPToolConfig` allow-list in
+`agent-tools-servers/tdarr.yaml`: nothing that deletes media, writes the Tdarr
+DB directly, or touches users or plugin code. `ecm`, `arr-*`, `teamarr` and
+`tdarr` all front `equestria` apps and fail 02:00-09:00, when that namespace is
+shed. `forgejo` is the in-cluster forge as the `claude-code` account (created
+by `stacks/system`): in every organization repository it can write code,
+issues, pull requests, Actions (logs, re-run, dispatch), releases and wiki, and
+read packages; it has nothing in user-owned repositories, no repository
+creation, and no repo-admin. For what the ECM and Teamarr tools are for — and
+which ECM write tools currently fail with a 401 — see [iptv.md](iptv.md).
+
+Note the `infrastructure` profile's `kubernetes` server is the working
+Kubernetes path from this pod. The separate `kubernetes` entry in `.mcp.json` is
+an `npx kubernetes-mcp-server` stdio server and is **known to fail here** with
+`CONNECTION_CLOSED`; the `crew_state` entry likewise fails with `ENOENT` because
+`crew` is not installed in this image. Neither is a reason to distrust toolport.
 
 ## Backend health
 
-The vMCP aggregates independent backends, and a broken one fails *through* it:
-the aggregator proxies the call and hands back the backend's own error. **A tool
+toolport aggregates independent backends, and a broken one fails *through* it:
+the gateway proxies the call and hands back the backend's own error. **A tool
 error is therefore not evidence the MCP path is broken** — check this section
 before diagnosing routing.
 
-Verified by direct read-only tool calls on 2026-09-05:
+Verified by direct read-only tool calls on 2026-09-05, through the since-retired
+`agent-tools` vMCP (hence the `toolhive-` prefixes):
 
 | Backend | State |
 |---|---|
@@ -193,7 +218,9 @@ fallback: `get_version` over `list_devices`, a direct `curl` probe over either.
 
 ### The option not taken: a remote backend with header injection
 
-Worth knowing about, because it would delete the CronJob above entirely.
+Worth knowing about, because it would delete the CronJob above entirely. It was
+weighed while the `agent-tools` vMCP was the front door; toolport calls
+backends directly, so point 1 below would now be asked of toolport instead.
 
 ToolHive can register a backend that runs **no pods at all**. `MCPServerEntry`
 (v1beta1, installed here and the stored version) is a "zero-infrastructure
@@ -342,61 +369,34 @@ through `mcp-<name>-proxy:<proxyPort>/mcp` with no handshake and no session
 header. A stateless server answers 200 once its pod is back. The docker and
 unifi servers took 14-45s.
 
-## toolport, the profile-scoped alternative (trial)
+## Backend paths through toolport
 
-`kubernetes/apps/agents/toolport` runs [toolport](https://github.com/btsouth/toolport)
-over the **same** ToolHive backends, alongside `agent-tools`, as its intended
-replacement. Four differences matter to an agent:
+toolport reaches a backend one of two ways, and a new server has to pick:
 
-- **Profiles, not one catalogue, one URL each.** There is one MCP entry per
-  profile, `toolport-{infrastructure,networking,home,media,postgres,research}`,
-  both in `agentboard/resources/mcp.json` and in the repo's `.mcp.json`, and no
-  entry carries a token. Off the cluster, entry `toolport-<profile>` defaults to
-  `https://toolport-<profile>.agents.driscoll.tech/mcp`, that profile's OAuth
-  door (LAN + Tailscale). Each door is a separate authentik login. agentboard
-  overrides the URL with `TOOLPORT_<PROFILE>_URL`, pointing at the profile's
-  in-cluster remote proxy
-  (`http://mcp-toolport-<profile>-remote-proxy.agents.svc.cluster.local:8080/mcp`),
-  which is anonymous and adds the profile's bearer itself. The gateway still
-  picks the profile from that bearer. The profile membership is in
-  `toolport/resources/registry.json`.
-  - `toolport-postgres` reaches **every** database, not only `postgres`. Its
-    DBHub backend (`agent-tools-servers/postgres.yaml`) runs one source per
-    database. A sidecar regenerates that list from `pg_database` every 5
-    minutes, and the list includes a read-only `authentik` source on the
-    authentik-pg cluster. Tools are therefore per database:
-    `execute_sql_<db>` and `search_objects_<db>`. This also applies to
-    `agent-tools`, where they appear as `toolhive-postgres_execute_sql_<db>`.
-- **Lazy discovery.** Each profile exposes toolport's meta-tools
-  (`toolport_search_tools`, `toolport_call_tool`, `toolport_run_script`,
-  `toolport_fetch_result`, `toolport_status`), not hundreds of tools. The
-  `toolport` skill (`.claude/skills/toolport/SKILL.md`, which agentboard also
-  mounts user-wide from a ConfigMap built from that same file) explains how to
-  use them.
-- **Two backend paths.**
-  - MCPServer backends (stdio or HTTP) are reached through their ToolHive proxy
-    Services (`mcp-toolhive-<name>-proxy`), which hold the credentials inside
-    the pod. The Service listens on the MCPServer's **`proxyPort`**, not always
-    8080: proxmox and teamarr use 8000, degoog uses 4443. Copy the port from the
-    server's manifest when adding one to `registry.json`.
-  - MCPRemoteProxy backends are called **directly** with toolport's own bearer
-    (`toolport/externalsecret.yaml`, `toolport-backends`). A remote proxy applies
-    its `MCPExternalAuthConfig` only when a vMCP calls it; a direct call gets a 401
-    from the backend. `homelable` is left out because it needs `X-API-Key`, and
-    toolport can only send `Authorization: Bearer`.
-- **The doors.** `kubernetes/apps/agents/toolport-mcp` holds one door per
-  profile, each built from the same template:
-  - an anonymous MCPRemoteProxy `toolport-<profile>`, which injects the
-    profile's bearer through `headerForward` (the in-cluster door);
-  - a vMCP `toolport-<profile>-mcp` in front of that proxy, with its own
-    embedded OAuth server federated to authentik. It is published on the
-    internal gateway as `toolport-<profile>.agents.<root domain>`.
+- **MCPServer backends** (stdio or HTTP) through their ToolHive proxy Services
+  (`mcp-toolhive-<name>-proxy`), which hold the credentials inside the pod. The
+  Service listens on the MCPServer's **`proxyPort`**, not always 8080: proxmox
+  and teamarr use 8000, degoog uses 4443. Copy the port from the server's
+  manifest when adding one to `registry.json`.
+- **Remote backends with a bearer** (`arr-plex`, `arr-jellyfin`, `ecm`,
+  `home-assistant`) **directly**, with toolport's own copy of the credential
+  (`toolport/externalsecret.yaml`, `toolport-backends`, sent as
+  `Authorization: Bearer`). A ToolHive MCPRemoteProxy applies its
+  `MCPExternalAuthConfig` only when a VirtualMCPServer calls it; a direct call
+  gets a 401 from the backend. Their `toolhive-*` remote proxies are no longer
+  called by anything.
+- **A remote backend that needs a different header** — `homelable`, which
+  demands `X-API-Key` — goes through its MCPRemoteProxy with `headerForward`
+  instead, which applies to every request including direct ones. toolport can
+  only send `Authorization: Bearer` (upstream `remote.rs`,
+  `first_vaulted_secret`). That makes the proxy's Service a credential, so
+  `agent-tools-servers/homelable.yaml` carries a NetworkPolicy admitting only
+  toolport. Any future header-auth backend needs the same pair.
 
-  `toolport-mcp/networkpolicy.yaml` admits only agentboard, `ws-david` and those
-  vMCPs to the proxies. `toolport/networkpolicy.yaml` admits only the proxies to
-  the gateway. Each door's OAuth server has its own redirect URI in
-  `toolhive/definition.yaml`, and a door's login fails at authentik until an
-  `applications` stack run registers that URI.
+`toolport/networkpolicy.yaml` admits only the six profile proxies to the
+gateway. Each door's OAuth server has its own redirect URI in
+`toolhive/definition.yaml`, and a door's login fails at authentik until an
+`applications` stack run registers that URI.
 
 New entries in the repo's `.mcp.json` need the same one-time project-server
 approval as the `Pending approval` row below.
@@ -406,19 +406,22 @@ approval as the `Pending approval` row below.
 Check what the client actually resolved — the URL, not just the status:
 
 ```bash
-claude mcp get agent-tools
+claude mcp list 2>&1 | grep toolport
+claude mcp get toolport-infrastructure
 ```
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| URL is the `https://` hostname, status `Needs authentication` | `AGENT_TOOLS_MCP_URL` not set in the pod, or a stale pod predating it | Confirm `env \| grep AGENT_TOOLS_MCP_URL`; restart the pod to pick up the HelmRelease change |
-| Status `Pending approval` | Changing the URL in `.mcp.json` re-triggers project-server approval | Run `claude` once and approve, or add `agent-tools` to `.claude/settings.local.json`'s `enabledMcpjsonServers` |
-| Connection refused / timeout on the internal URL | NetworkPolicy no longer selects this pod, or the vMCP is down | Check the `app.kubernetes.io/name: agentboard` selector in `networkpolicy.yaml`; check the `agent-tools-internal` pods |
+| All six `CONNECT_TIMEOUT`, URL shows `TOOLPORT_URL` | Stale checkout: its `.mcp.json` predates the per-profile doors | Update the checkout to `origin/main`, restart `claude` |
+| URL is the `https://` hostname, status `Needs authentication` | `TOOLPORT_<PROFILE>_URL` not set in the pod, or a stale pod predating it | Confirm `env \| grep TOOLPORT_`; restart the pod to pick up the HelmRelease change |
+| Status `Pending approval` | Changing `.mcp.json` re-triggers project-server approval | Run `claude` once and approve, or add the entry to `.claude/settings.local.json`'s `enabledMcpjsonServers` |
+| Connection refused / timeout on an internal URL | NetworkPolicy no longer selects this pod, or the proxy is down | Check the `app.kubernetes.io/name: agentboard` selector in `toolport-mcp/networkpolicy.yaml`; check the `toolport-<profile>` proxy pods |
+| A profile connects but a server is missing from `toolport_status` | It is in another profile, or failed discovery | Check `registry.json`; `toolport_status` in the right profile |
 
-Probe the endpoint directly, bypassing the MCP client entirely:
+Probe a door directly, bypassing the MCP client entirely:
 
 ```bash
-curl -sS -X POST http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp \
+curl -sS -D - -X POST http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{
@@ -426,8 +429,8 @@ curl -sS -X POST http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/
         "clientInfo":{"name":"probe","version":"1"}}}'
 ```
 
-A healthy reply carries `"serverInfo":{"name":"agent-tools-internal",...}` and an
-`Mcp-Session-Id` header. Pass that header back (plus a
-`notifications/initialized` notification) to call `tools/list` or `tools/call`.
-If this succeeds while `claude mcp get` shows a failure, the endpoint is fine and
-the problem is client-side URL resolution — the first row of the table above.
+A healthy reply is a 200 with an `Mcp-Session-Id` header. Pass that header back
+(plus a `notifications/initialized` notification) to call `tools/list` — seven
+`toolport_*` meta-tools — or `tools/call` `toolport_status`, which proves the
+backends too. If this succeeds while `claude mcp get` shows a failure, the
+endpoint is fine and the problem is client-side URL resolution.

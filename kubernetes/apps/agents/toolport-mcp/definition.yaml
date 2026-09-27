@@ -2,8 +2,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
 #
 # No `authentik:` block: each vMCP runs its own OAuth server federated to the
-# shared `toolhive` client (../toolhive/definition.yaml), exactly like
-# ../agent-tools-mcp, whose gatus checks these mirror -- three per door. The
+# shared `toolhive` client (../toolhive/definition.yaml). Three gatus checks
+# per door. The
 # 401 check alone stays green when a door cannot fetch its own JWKS (it fails
 # closed), so the two metadata checks are the real signal.
 apiVersion: driscoll.dev/v1

@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Opt-in, per workspace: access to toolport's six in-cluster profile proxies
+# (mcp-toolport-<profile>-remote-proxy in the agents namespace -- GitHub,
+# Forgejo, Kubernetes, Proxmox, Docker, UniFi, Tailscale, homelable, Pulumi,
+# OpenBao, Postgres, Home Assistant, the *arr stack, docs search). Listed under
+# `components:` on that workspace's Kustomization in ../../ks.yaml, NOT in
+# ../../workspace, so it can never arrive by copying a workspace.
+#
+# IT TAKES TWO HALVES, and this component is only one:
+#
+#   1. here  -- egress from the workspace pod to the proxies, and the URLs in
+#      its env.
+#   2. apps/agents/toolport-mcp/networkpolicy.yaml -- an ingress entry naming
+#      the workspace's namespace. Those proxies hold each profile's bearer and
+#      ask the caller for nothing, so that policy is the only thing gating
+#      them, and each workspace is added by name there, deliberately, rather
+#      than matched by a label.
+#
+# With only half in place the connection is simply dropped.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ciliumnetworkpolicy.yaml
+patches:
+  - target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+      labelSelector: kube-coder.dev/release=workspace
+    # The same variables agentboard sets, and the ones this repo's own
+    # .mcp.json reads -- so a home-operations checkout inside the workspace
+    # picks up every toolport profile with no further setup, and no browser
+    # login. Other MCP clients can be pointed at them from the dashboard's
+    # Settings -> MCP servers.
+    patch: |-
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: TOOLPORT_POSTGRES_URL
+          value: http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: TOOLPORT_INFRASTRUCTURE_URL
+          value: http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: TOOLPORT_NETWORKING_URL
+          value: http://mcp-toolport-networking-remote-proxy.agents.svc.cluster.local:8080/mcp
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: TOOLPORT_HOME_URL
+          value: http://mcp-toolport-home-remote-proxy.agents.svc.cluster.local:8080/mcp
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: TOOLPORT_MEDIA_URL
+          value: http://mcp-toolport-media-remote-proxy.agents.svc.cluster.local:8080/mcp
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: TOOLPORT_RESEARCH_URL
+          value: http://mcp-toolport-research-remote-proxy.agents.svc.cluster.local:8080/mcp

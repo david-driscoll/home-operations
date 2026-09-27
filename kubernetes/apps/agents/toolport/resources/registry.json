@@ -18,6 +18,7 @@
     { "id": "unifi-protect", "name": "UniFi Protect", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-unifi-protect-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "unifi-access", "name": "UniFi Access", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-unifi-access-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "tailscale", "name": "Tailscale", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-tailscale-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "homelable", "name": "Homelable", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-homelable-remote-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "github", "name": "GitHub", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-github-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "forgejo", "name": "Forgejo", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-forgejo-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "pulumi", "name": "Pulumi", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-pulumi-proxy.agents.svc.cluster.local:8080/mcp" },
@@ -62,7 +63,7 @@
         "openbao"
       ]
     },
-    { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale"] },
+    { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale", "homelable"] },
     { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
     { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm", "teamarr", "tdarr"] },
     { "id": "research", "name": "Research", "enabledServerIds": ["context7", "microsoft-docs", "nuget", "degoog"] }

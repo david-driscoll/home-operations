@@ -5,7 +5,7 @@
 # OpenBao item homelable's deployment reads
 # (kubernetes/apps/equestria/home/homelable/externalsecret.yaml extracts the
 # whole thing); this pulls the single `mcp_api_key` property out of it for the
-# header injection below.
+# `X-API-Key` the proxy below adds.
 #
 # The two halves MUST stay equal. This is the value the MCP server compares
 # against with `hmac.compare_digest`, so a rotation that reaches one side and
@@ -37,36 +37,6 @@ spec:
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
-# Outgoing auth for the proxy below, and it is NOT optional the way an unwired
-# `externalAuthConfigRef` usually is.
-#
-# homelable-mcp mounts an unconditional ASGI middleware (`app/auth.py`,
-# `ApiKeyMiddleware`) that demands `X-API-Key` on every path except `/health`,
-# `/register` and `/.well-known/*`. There is no flag to turn it off -- and the
-# failure mode of simply not setting a key is worse than leaving it enforced,
-# because `MCP_API_KEY` defaults to the literal `mcp_sk_changeme`
-# (`app/config.py`), which ships in the public image. Verified by extracting
-# 3.3.5 from ghcr.io, not inferred from docs.
-#
-# `X-API-Key` rather than an `Authorization: Bearer` (what ./home-assistant.yaml
-# injects) because the middleware reads the `x-api-key` header specifically and does a
-# constant-time compare against the raw key -- an `Authorization: Bearer` would
-# never be looked at.
-apiVersion: toolhive.stacklok.dev/v1beta1
-kind: MCPExternalAuthConfig
-metadata:
-  name: homelable
-spec:
-  type: headerInjection
-  headerInjection:
-    headerName: X-API-Key
-    valueSecretRef:
-      name: toolhive-homelable
-      key: apikey
-
----
-# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
-#
 # `MCPRemoteProxy` -- see ./microsoft-docs.yaml's header for what that CRD is.
 #
 # WHY A REMOTE PROXY AND NOT AN MCPServer RUNNING THE IMAGE HERE, the way
@@ -84,10 +54,10 @@ spec:
 #     protect: its search surface carries no key, so exposing it costs nothing.
 #
 # So the container stays next to the backend it privileges, and only the MCP
-# SURFACE moves here. What that buys is the point of the move: clients now
-# arrive through ../agent-tools-mcp's VirtualMCPServer -- one hostname, one OIDC
-# surface -- instead of a bespoke tailnet hostname whose only credential was a
-# static key. The static key survives as an internal detail of the hop above,
+# SURFACE moves here. Clients arrive through toolport's `networking` profile
+# (../toolport/resources/registry.json), which calls this proxy's Service
+# directly -- instead of a bespoke tailnet hostname whose only credential was a
+# static key. The static key survives as an internal detail of this proxy,
 # which is the one place it was ever appropriate.
 #
 # `http://` and a `.svc.cluster.local` address, not the public name: this
@@ -125,8 +95,31 @@ spec:
   transport: streamable-http
   groupRef:
     name: agent-tools
-  externalAuthConfigRef:
-    name: homelable
+  # headerForward, NOT an MCPExternalAuthConfig. homelable-mcp mounts an
+  # unconditional ASGI middleware (`app/auth.py`, `ApiKeyMiddleware`) that
+  # demands `X-API-Key` on every path except `/health`, `/register` and
+  # `/.well-known/*`, compared raw with `hmac.compare_digest` -- an
+  # `Authorization: Bearer` is never looked at. And there is no switching it
+  # off: `MCP_API_KEY` defaults to the literal `mcp_sk_changeme`
+  # (`app/config.py`), public in the image (verified by extracting 3.3.5).
+  #
+  # It used to be an `externalAuthConfigRef` (headerInjection), but a proxy
+  # applies that ONLY when a VirtualMCPServer's outgoingAuth calls it -- a
+  # direct caller got a 401 from homelable (verified 2026-09-24), and toolport
+  # is a direct caller. toolport itself can only send `Authorization: Bearer`
+  # (upstream `remote.rs`, first_vaulted_secret), so the header has to be
+  # added here. `addHeadersFromSecret` applies to every request the proxy
+  # forwards -- the same mechanism ../toolport-mcp's profile proxies use.
+  #
+  # WHICH MAKES THIS SERVICE A CREDENTIAL. Anything that can reach it gets
+  # homelable's MCP with the key already attached. The NetworkPolicy below is
+  # what keeps that to toolport; it is not optional.
+  headerForward:
+    addHeadersFromSecret:
+      - headerName: X-API-Key
+        valueSecretRef:
+          name: toolhive-homelable
+          key: apikey
 
   resources:
     requests:
@@ -134,3 +127,35 @@ spec:
       memory: 32Mi
     limits:
       memory: 128Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone-strict/networkpolicy-networking-v1.json
+#
+# Only toolport may reach the proxy above, which attaches homelable's API key
+# to every request it forwards -- see its headerForward comment. Without this,
+# any pod in the cluster that can resolve the Service has homelable's MCP.
+# Same shape as ../toolport-mcp/networkpolicy.yaml; name the caller
+# explicitly, never by a broad label.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: toolhive-homelable-allow-toolport
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mcpremoteproxy
+      toolhive-name: toolhive-homelable
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: toolport
+              app.kubernetes.io/controller: toolport
+      ports:
+        - protocol: TCP
+          port: 8080

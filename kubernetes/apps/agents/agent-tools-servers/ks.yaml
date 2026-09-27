@@ -24,7 +24,7 @@ spec:
       driscoll.dev/name: *app
   dependsOn:
     # `agent-tools-mcp`, for the MCPGroup every MCPServer's `groupRef`
-    # names -- see ../agent-tools-mcp/ks.yaml's own header.
+    # names -- the only thing left in it (see its ./kustomization.yaml).
     - name: agent-tools-mcp
       namespace: *namespace
     # `agent-debug-rbac`, for the ClusterRole ./kubernetes.yaml's own

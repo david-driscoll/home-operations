@@ -46,8 +46,10 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  # Same reasoning as ../agent-tools-mcp/ks.yaml: `Degraded` (some profile
-  # unreachable) is a normal serving state for this CRD; only `Failed` blocks.
+  # `Degraded` (some profile unreachable) is a normal serving state for this
+  # CRD; only `Failed` blocks. Without this, Flux's kstatus fallback reads
+  # `Degraded` as InProgress and `wait: true` times out forever -- it wedged
+  # the retired agent-tools vMCP, and everything depending on it, for hours.
   healthCheckExprs:
     - apiVersion: toolhive.stacklok.dev/v1beta1
       kind: VirtualMCPServer

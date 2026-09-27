@@ -26,49 +26,21 @@ configMapGenerator:
       # picked up when the tmux session in ./resources/entrypoint.sh starts
       # `claude` from $HOME AND THE SESSION STAYS THERE.
       #
-      # THAT LAST CLAUSE IS THE WHOLE CAVEAT, and it used not to be written
-      # down. Claude Code resolves `.mcp.json` from the session's working
-      # directory only -- it does not fall back to $HOME and does not walk
-      # parent directories. An agent here spends its life inside the repo
-      # checkout, /root/home-operations, which ships its own committed
-      # .mcp.json; that one shadows this mount entirely, and its `agent-tools`
-      # entry pointed at the authenticated external door this pod can never
-      # log in to. Net effect: agent-tools was dead in the only directory the
-      # agent actually works in, and nothing said so -- the server just showed
-      # "Needs authentication" forever.
+      # THAT LAST CLAUSE IS THE WHOLE CAVEAT. Claude Code resolves `.mcp.json`
+      # from the session's working directory only -- it does not fall back to
+      # $HOME and does not walk parent directories. An agent here spends its
+      # life inside the repo checkout, whose committed .mcp.json shadows this
+      # mount entirely. That is why ./helmrelease.yaml also sets
+      # TOOLPORT_<PROFILE>_URL, which the repo's .mcp.json expands -- read that
+      # env block's comment. This file stays for sessions started from $HOME
+      # or any directory with no .mcp.json of its own, and the two agree.
       #
-      # The fix is NOT here. ./helmrelease.yaml now sets AGENT_TOOLS_MCP_URL,
-      # which the repo's .mcp.json expands, so the repo copy resolves to the
-      # internal Service too -- read that env var's comment. This file stays
-      # because it still covers sessions started from $HOME or from any
-      # directory with no .mcp.json of its own, and the two now agree.
-      #
-      # IT POINTS AT THE CLUSTER-INTERNAL Service, over plain http and with no
-      # token: `vmcp-agent-tools-internal.agents.svc.cluster.local:4483`, which
-      # is ../agent-tools-mcp/virtualmcpserver-internal.yaml. JSON cannot carry
-      # a comment, hence this one.
-      #
-      # It used to be `https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp`, the
-      # authenticated door. That door works, but reaching it needs an OAuth
-      # authorization-code flow, and this pod has no browser and no human at
-      # it -- so the login could never be completed from here no matter how
-      # sound the server side was. The external hostname keeps its
-      # authentication for clients that CAN log in; this pod takes the internal
-      # path instead.
-      #
-      # http, not https, and that is not an oversight: the internal Service
-      # terminates no TLS and issues no certificate. Confidentiality here rests
-      # on ../agent-tools-mcp/networkpolicy.yaml restricting the endpoint to
-      # this pod, not on transport security -- read that file before widening
-      # anything.
-      #
-      # No ${ROOT_DOMAIN} in it any more, so the substitution note that used to
-      # live here no longer applies: an in-cluster Service DNS name is the same
-      # on every cluster.
-      #
-      # The `toolport-<profile>` entries follow the same rule: each points at
-      # its profile's in-cluster remote proxy (../toolport-mcp), which holds
-      # the profile's bearer, so no entry carries a token either.
+      # Each `toolport-<profile>` entry points at that profile's in-cluster
+      # remote proxy (../toolport-mcp), over plain http and with no token: the
+      # proxy holds the profile's bearer, and ../toolport-mcp/networkpolicy.yaml
+      # naming this pod is the whole of the access control -- read it before
+      # widening anything. The OAuth doors need a browser this pod does not
+      # have. JSON cannot carry a comment, hence this one.
       - mcp.json=./resources/mcp.json
       # Shell dotfiles, mounted at /root/.bashrc and /root/.bash_profile.
       # Not mise config despite this ConfigMap's name (neither is

@@ -61,9 +61,8 @@ resources:
   # Outline's built-in MCP server. Commented out because its API key cannot
   # exist until someone has signed into Outline and minted one -- and this
   # Kustomization is `wait: true`, so a proxy that cannot resolve its Secret
-  # blocks every server in this directory. Enable together with the
-  # `toolhive-outline` blocks in ../agent-tools-mcp/virtualmcpserver.yaml and
-  # ../agent-tools-mcp/virtualmcpserver-internal.yaml. Full steps in the file.
+  # blocks every server in this directory. Full steps (including wiring it
+  # into toolport) in the file.
   # - ./outline.yaml
   # ECM's MCP sidecar. Its key is minted by an ECM admin and seeded into
   # OpenBao by hand -- see the file's header before rotating it.

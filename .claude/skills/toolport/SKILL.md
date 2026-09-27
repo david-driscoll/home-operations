@@ -1,6 +1,6 @@
 ---
 name: toolport
-description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, GitHub, Forgejo, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, Teamarr, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
+description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, homelable, GitHub, Forgejo, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, Teamarr, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
 ---
 
 <!--
@@ -83,8 +83,9 @@ returns the plan without executing. If a script fails partway,
 ## In this estate
 
 Toolport here is **not** the desktop app. It is a headless gateway in the
-`agents` namespace (`kubernetes/apps/agents/toolport`) in front of the same
-ToolHive-run MCP backends `agent-tools` aggregates. So:
+`agents` namespace (`kubernetes/apps/agents/toolport`) in front of the
+ToolHive-run MCP backends in `kubernetes/apps/agents/agent-tools-servers`. It is
+the only MCP front door: the old `agent-tools` aggregated server is retired. So:
 
 - **Pick the MCP server for the domain.** There is one toolport entry per
   _profile_, and each sees only its own servers -- `toolport_status` in one
@@ -93,7 +94,8 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
   - `toolport-infrastructure`: `kubernetes`,
     `proxmox-{twilight-sparkle,celestia,luna,alpha-site}`,
     `docker-{celestia,luna,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao`
-  - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`
+  - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`,
+    `homelable` (network map, inventory, racks and documentation)
   - `toolport-home`: `home-assistant`
   - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr`
     (Tdarr's API; 65 of its 105 tools -- nothing that deletes media from
@@ -108,8 +110,6 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
   - `toolport-research`: `context7`, `microsoft-docs`, `nuget`, `degoog`
 
   Tool names are `<server id>__<tool>`, e.g. `kubernetes__list_resources`.
-  `homelable` is not in toolport (it needs an `X-API-Key` header toolport cannot
-  send) -- use `agent-tools` for it.
 
 - **There is no human approval step.** `humanApproval` is off, so ignore the
   "a human approves it in the Toolport app" and "the desktop app isn't
@@ -122,8 +122,8 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
 - **Where it is reachable.** Every profile has its own URL, and no client
   holds a token. The `toolport-<profile>` entries in `.mcp.json` default to
   `https://toolport-<profile>.agents.<root domain>/mcp`, an OAuth door (LAN or
-  Tailscale) with its own authentik login per profile. In agentboard,
-  `TOOLPORT_<PROFILE>_URL` points the same entry at that profile's in-cluster
+  Tailscale) with its own authentik login per profile. In agentboard and
+  kube-coder workspaces, `TOOLPORT_<PROFILE>_URL` points the same entry at that profile's in-cluster
   remote proxy instead, which presents the bearer itself -- so a
   `Needs authentication` there means the env var is missing, not a login to
   do.

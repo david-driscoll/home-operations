@@ -93,9 +93,9 @@ spec:
     # split-horizon DNS, and a second hostname would need its own authentik
     # proxy provider for no gain.
     - ../../../../components/volsync
-    # Per-workspace grant to the agents MCP server. Also needs this namespace
-    # named in apps/agents/agent-tools-mcp/networkpolicy.yaml.
-    - ../components/agent-tools
+    # Per-workspace grant to toolport's profile proxies. Also needs this
+    # namespace named in apps/agents/toolport-mcp/networkpolicy.yaml.
+    - ../components/toolport
   postBuild:
     substitute:
       APP: *app
