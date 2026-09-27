@@ -11,10 +11,9 @@
 # of the research for this PR, not guaranteed current at merge time.
 #
 # NO oidcConfigRef/authServerRef here -- this server is no longer exposed on
-# its own. It joins ../agent-tools-mcp's MCPGroup instead, and that
-# group's VirtualMCPServer holds the ONE external hostname and ONE auth
-# surface for every backend in it (see that directory's virtualmcpserver.yaml
-# for why). A dangling `groupRef` before the MCPGroup exists is the same
+# its own. It joins ../agent-tools-mcp's MCPGroup and is reached through
+# toolport (../toolport, ../toolport-mcp), whose OAuth doors are the auth
+# surface for every backend. A dangling `groupRef` before the MCPGroup exists is the same
 # non-fatal "dangling-ref condition" toolhive-docs's own authServerRef
 # comment describes -- ../agent-tools-mcp/ks.yaml's dependsOn just
 # avoids that reconcile cycle.

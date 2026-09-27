@@ -237,52 +237,36 @@ spec:
               # access to it is a deliberate, explicit call, not a default.
               SOPS_AGE_KEY_FILE:
                 value: /var/run/secrets/sops-age/age.agekey
-              # What the repo-root .mcp.json (4 levels up) expands its
-              # `agent-tools` URL to INSIDE THIS POD. That file is committed
-              # with an env-templated URL whose DEFAULT is the authenticated
-              # external door, so every client that does NOT set this var -- a
-              # laptop, CI, a Codespace -- is completely unchanged by it. This
-              # pod sets it, and only this pod, so it takes the internal one:
-              # ../agent-tools-mcp/virtualmcpserver-internal.yaml.
+              # What the repo-root .mcp.json (4 levels up) expands each
+              # `toolport-<profile>` URL to INSIDE THIS POD. That file is
+              # committed with env-templated URLs whose DEFAULT is the
+              # profile's authenticated OAuth door
+              # (toolport-<profile>.agents.<root domain>), so every client that
+              # does NOT set these vars -- a laptop, CI, a Codespace -- is
+              # unchanged by them. This pod has no browser and no human at it,
+              # so it can never finish that login; it takes each profile's
+              # in-cluster remote proxy (../toolport-mcp) instead, which holds
+              # the profile's bearer itself.
               #
-              # WHY THIS EXISTS AT ALL, given ./resources/mcp.json already
-              # mounts the same internal URL at /root/.mcp.json. That mount
-              # only wins while the session's working directory IS $HOME.
-              # Claude Code resolves `.mcp.json` from the CWD, not from $HOME
-              # and not by walking parents, and an agent on this pod spends
-              # its life inside the repo checkout (/root/home-operations) --
-              # where the repo's own committed .mcp.json shadows the mounted
-              # one completely. Verified live: `claude mcp get agent-tools`
-              # from /root reports the internal URL and "Connected", from
-              # /root/home-operations it reported the external URL and "Needs
-              # authentication". So the fallback that was supposed to make
-              # agent-tools work here was silently inert in the one directory
-              # that matters.
+              # WHY ENV VARS AT ALL, given ./resources/mcp.json already mounts
+              # the same URLs at /root/.mcp.json. That mount only wins while
+              # the session's working directory IS $HOME. Claude Code resolves
+              # `.mcp.json` from the CWD, not from $HOME and not by walking
+              # parents, and an agent here spends its life inside the repo
+              # checkout, where the committed .mcp.json shadows the mount
+              # completely. (Learned on the retired agent-tools server: from
+              # /root it was "Connected", from the checkout "Needs
+              # authentication".)
               #
-              # An env var is what fixes that rather than editing the repo's
-              # .mcp.json to hardcode the Service DNS name, because the same
-              # file has to keep working off-cluster, where that name does not
-              # resolve. Claude Code expands shell-style env templates with a
-              # default (dollar-brace VAR colon-dash default) in .mcp.json
-              # values -- verified live against this endpoint, both branches.
-              # Spelled out in words rather than punctuation on purpose: Flux
-              # runs envsubst over this whole file (./ks.yaml `postBuild`),
-              # comments included, so the literal syntax would be REWRITTEN
-              # here and this comment would end up describing something else.
+              # Claude Code expands shell-style env templates with a default
+              # (dollar-brace VAR colon-dash default) in .mcp.json values.
+              # Spelled out in words on purpose: Flux runs envsubst over this
+              # whole file (./ks.yaml `postBuild`), comments included, so the
+              # literal syntax would be REWRITTEN here.
               #
-              # NOT https, and no token: see ./kustomization.yaml's mcp.json
-              # comment and ../agent-tools-mcp/networkpolicy.yaml. That policy
-              # naming THIS pod is the whole of the access control.
-              AGENT_TOOLS_MCP_URL:
-                value: http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp
-              # toolport: one entry per profile in both ./resources/mcp.json and
-              # the repo's .mcp.json, each defaulting to that profile's OAuth
-              # door (toolport-<profile>.agents.<root domain>) -- the same
-              # can't-log-in-from-here problem as AGENT_TOOLS_MCP_URL above. So
-              # each points instead at its profile's in-cluster remote proxy
-              # (../toolport-mcp), which holds the profile's bearer itself.
-              # No token reaches this pod: ../toolport-mcp/networkpolicy.yaml
-              # naming it is the whole of the access control, as above.
+              # NOT https, and no token reaches this pod:
+              # ../toolport-mcp/networkpolicy.yaml naming it is the whole of
+              # the access control.
               TOOLPORT_POSTGRES_URL:
                 value: http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp
               TOOLPORT_INFRASTRUCTURE_URL:

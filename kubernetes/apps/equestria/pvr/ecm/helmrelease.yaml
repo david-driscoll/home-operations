@@ -90,8 +90,9 @@ spec:
           #
           # Reached in-cluster only, by ToolHive's MCPRemoteProxy in the
           # `agents` namespace (kubernetes/apps/agents/agent-tools-servers/
-          # ecm.yaml) and from there through the agent-tools VirtualMCPServer.
-          # No HTTPRoute: agent-tools is the one front door for MCP clients.
+          # ecm.yaml), and directly by toolport's `media` profile
+          # (kubernetes/apps/agents/toolport). No HTTPRoute: toolport is the
+          # front door for MCP clients.
           mcp:
             image:
               repository: ghcr.io/motwakorb/enhancedchannelmanager-mcp

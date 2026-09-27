@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "agent-tools": {
-      "type": "http",
-      "url": "${AGENT_TOOLS_MCP_URL:-https://agent-tools-mcp.agents.driscoll.tech/mcp}"
-    },
     "toolport-infrastructure": {
       "type": "http",
       "url": "${TOOLPORT_INFRASTRUCTURE_URL:-https://toolport-infrastructure.agents.driscoll.tech/mcp}"

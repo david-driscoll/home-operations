@@ -130,19 +130,27 @@ docker/         # Docker/Dockge stack configs per cluster
 
 If you are running **inside the agentboard pod** — `env | grep -q STAKATER_AGENTBOARD`,
 or `/etc/resolv.conf` searches `agents.svc.cluster.local` — then **use the
-`agent-tools` MCP server available inside that container**. It is ~1010 tools
-across GitHub, Forgejo, Kubernetes, Proxmox (x5), UniFi, Docker (x4), Tailscale, Pulumi,
-OpenBao, Postgres, the *arr stack, Tdarr, ECM and Teamarr (IPTV — see
-`docs/kubernetes/iptv.md`), and it is the intended way to reach the estate from here.
+`toolport-*` MCP servers available inside that container**, one per profile:
+`toolport-infrastructure` (Kubernetes, Proxmox x4, Docker x3, GitHub, Forgejo,
+Pulumi, OpenBao), `toolport-networking` (UniFi, Tailscale, homelable),
+`toolport-home` (Home Assistant), `toolport-media` (the *arr stack, ECM,
+Teamarr, Tdarr — IPTV in `docs/kubernetes/iptv.md`), `toolport-postgres` (every
+database) and `toolport-research` (docs search). They are the intended way to
+reach the estate from here. Load the `toolport` skill first: discovery is lazy,
+so you search a profile's tools and then call them.
 
-- The pod resolves `agent-tools` to a cluster-internal, **unauthenticated**
-  Service. Off-cluster clients keep the authenticated external hostname; the
-  same committed `.mcp.json` covers both via `AGENT_TOOLS_MCP_URL`.
-- **`Needs authentication` on `agent-tools` in this pod is never a login
-  problem.** The external door needs a browser-based OAuth flow that cannot be
-  completed here — that status means the client resolved the wrong URL.
+- The pod points each profile at a cluster-internal proxy that adds the
+  profile's credential itself, via `TOOLPORT_<PROFILE>_URL`. Off-cluster
+  clients keep the authenticated `toolport-<profile>.agents.<root domain>`
+  OAuth doors; the same committed `.mcp.json` covers both.
+- **`Needs authentication` on a `toolport-*` server in this pod is never a login
+  problem** — that status means the client resolved the wrong URL. All six
+  timing out at once usually means a stale checkout whose `.mcp.json`
+  predates the per-profile doors.
 - The standalone `kubernetes` and `crew_state` MCP entries are expected to fail
-  in this image. Use `toolhive-kubernetes_*` from `agent-tools` instead.
+  in this image. Use `toolport-infrastructure`'s `kubernetes` server instead.
+- The old `agent-tools` aggregated server is retired; there is no
+  `toolhive-*_` tool prefix any more.
 
 Full detail, tool inventory and troubleshooting: `docs/kubernetes/agentboard-mcp.md`.
 

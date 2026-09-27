@@ -8,6 +8,9 @@
 # `spec.groupRef.name: agent-tools`, not the other way around. The
 # controller populates `status.servers` by watching for that.
 #
+# Its VirtualMCPServers are gone (see ./kustomization.yaml); the group is kept
+# only as the backends' shared `groupRef`.
+#
 # Named `agent-tools` (a literal, not ${APP}) because five OTHER
 # Kustomizations reference it by name in their own `groupRef` -- a templated
 # name here would need to match a value substituted somewhere else, which is
@@ -17,4 +20,4 @@ kind: MCPGroup
 metadata:
   name: agent-tools
 spec:
-  description: Kubernetes, Pulumi and UniFi MCP servers for in-cluster agents (agentboard)
+  description: Backend MCP servers toolport calls (formerly fronted by the agent-tools vMCP)

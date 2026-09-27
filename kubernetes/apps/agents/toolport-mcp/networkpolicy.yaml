@@ -5,8 +5,7 @@
 # WHOLE CLUSTER. Each proxy answers /mcp with no token and forwards to toolport
 # carrying its profile's bearer -- so without this policy any pod that can
 # reach a ClusterIP gets toolport-postgres's superuser SQL, toolport-
-# infrastructure's openbao/kubernetes/proxmox, and the rest. Same stance, and
-# the same warning, as ../agent-tools-mcp/networkpolicy.yaml: deleting this
+# infrastructure's openbao/kubernetes/proxmox, and the rest. Deleting this
 # file breaks nothing visibly, it just opens everything.
 #
 # Admitted, on the proxy port only:
@@ -46,8 +45,10 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: agentboard
-        # kube-coder workspaces, one entry per workspace -- see
-        # ../agent-tools-mcp/networkpolicy.yaml for why never a label selector.
+        # kube-coder workspaces, one entry per workspace, never a label
+        # selector: a label is something any workspace could be given by
+        # copying another, and admission here is a grant of everything above.
+        # The workspace side is kube-coder/components/toolport.
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ws-david

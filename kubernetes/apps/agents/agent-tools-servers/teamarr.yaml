@@ -13,11 +13,9 @@
 # live next to Teamarr in `equestria`.
 #
 # NO SECRET. Teamarr has no API auth, so TEAMARR_API_KEY stays unset and there
-# is no ExternalSecret and no MCPExternalAuthConfig -- and therefore no
-# `outgoingAuth.backends` entry in either ../agent-tools-mcp VirtualMCPServer
-# (those are only for backends carrying an externalAuthConfigRef; see
-# the homelable note there). If Teamarr ever grows auth, all three halves land
-# together.
+# is no ExternalSecret and no MCPExternalAuthConfig, and toolport calls this
+# proxy with no credential. If Teamarr ever grows auth, see
+# ../toolport/externalsecret.yaml for how toolport carries a backend bearer.
 #
 # DESTRUCTIVE TOOLS OFF, by decision: default write mode (READ_ONLY unset), so
 # agents can create and edit, but TEAMARR_MCP_ENABLE_DESTRUCTIVE is "false"

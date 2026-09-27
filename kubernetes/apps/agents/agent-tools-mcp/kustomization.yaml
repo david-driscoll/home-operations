@@ -3,17 +3,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  # All that is left of agent-tools. Its two VirtualMCPServers (the OAuth door
+  # at agent-tools-mcp.agents.<root domain> and the anonymous in-cluster twin)
+  # were retired in favour of toolport (../toolport, ../toolport-mcp). The
+  # MCPGroup stays because every backend in ../agent-tools-servers names it in
+  # `groupRef`, and toolport calls those same backends.
   - ./mcpgroup.yaml
-  # Ahead of ./virtualmcpserver.yaml, which references it by name. Kustomize
-  # does not order the apply, but keeping the accepting side first matches how
-  # ../toolhive lists its own.
-  - ./mcpoidcconfig.yaml
-  - ./virtualmcpserver.yaml
-  # The anonymous in-cluster twin, and the policy that contains it. Keep the
-  # two adjacent: ./networkpolicy.yaml is the only thing keeping
-  # ./virtualmcpserver-internal.yaml from being reachable cluster-wide, and
-  # dropping it from this list is silent.
-  - ./virtualmcpserver-internal.yaml
-  - ./networkpolicy.yaml
-  - ./httproute.yaml
-  - ./definition.yaml

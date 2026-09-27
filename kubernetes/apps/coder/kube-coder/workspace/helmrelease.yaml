@@ -114,7 +114,7 @@ spec:
         # So in-cluster isolation comes from the allowlist being default-deny,
         # and the in-cluster peers a workspace MAY reach are named explicitly:
         # ./ciliumnetworkpolicy.yaml (Forgejo, Coder) and, per workspace,
-        # ../components/agent-tools. Anything whose name resolves to the
+        # ../components/toolport. Anything whose name resolves to the
         # internal Gateway lands on the Traefik pods and is covered by the same
         # rule. The internet, GitHub and model providers are unaffected.
         deniedCIDRs:

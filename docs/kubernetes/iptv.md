@@ -383,16 +383,17 @@ TV Land (West), via mybunny, at about 19.5 h.
 
 ## Runbooks
 
-The MCP route (`toolhive-ecm_*`, `toolhive-teamarr_*` from agentboard) is the
-quickest; the UI does the same.
+The MCP route (`toolport-media`'s `ecm` and `teamarr` servers — search with
+`toolport_search_tools`, call with `toolport_call_tool`) is the quickest; the UI
+does the same.
 
-**From a laptop where `agent-tools` wants an OAuth login** (or the `toolport-*`
-profiles time out), use the in-cluster vMCP. It is unauthenticated and needs
-only kubectl:
+**From a laptop** where the `toolport-media` OAuth door is not an option,
+port-forward that profile's in-cluster proxy. It asks the caller for nothing
+(it adds the profile's bearer itself) and needs only kubectl:
 
 ```bash
-kubectl -n agents port-forward svc/vmcp-agent-tools-internal 14483:4483
-# then speak streamable-HTTP MCP to http://127.0.0.1:14483/mcp
+kubectl -n agents port-forward svc/mcp-toolport-media-remote-proxy 18080:8080
+# then speak streamable-HTTP MCP to http://127.0.0.1:18080/mcp
 ```
 
 Tools that change several things at once (`apply_profile_to_channels`,
@@ -467,7 +468,7 @@ channel creation. Generate again, up to twice, and re-run
 The team channel `channel_id` convention is `<TeamPascal>.<league slug>`
 (e.g. `NorthCarolinaTarHeels.usa.ncaa.w.1`).
 
-`POST /api/v1/teams` (or `toolhive-teamarr_*`) with the provider team id from
+`POST /api/v1/teams` (or toolport-media's `teamarr` server) with the provider team id from
 `GET /api/v1/cache/teams/search?q=...`, `template_id: 2`,
 `managed_channel_enabled: true` and a `managed_channel_number` in 409-4xx. Then
 `POST /api/v1/epg/generate` with body `{}`. If it reports *"Requested channel

@@ -14,9 +14,8 @@
 #
 # No externalAuthConfigRef, no oidcConfigRef -- Microsoft Learn's endpoint
 # needs no credential at all (verified against its own docs: no API key,
-# no OAuth), and incoming auth is centralized at
-# ../agent-tools-mcp/virtualmcpserver.yaml the same way every other
-# group member's is.
+# no OAuth). Incoming auth lives at toolport's OAuth doors
+# (../toolport-mcp), in front of every backend.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPRemoteProxy
 metadata:

@@ -1,10 +1,10 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
 #
-# toolport -- a profile-scoped MCP gateway over the same backends agent-tools
-# aggregates. ToolHive stays the backend RUNTIME (MCPServer pods, stdio->HTTP
-# bridging, per-backend credentials); toolport only replaces the aggregation
-# layer. See ./resources/registry.json for which server lands in which profile.
+# toolport -- a profile-scoped MCP gateway over the ToolHive backends in
+# ../agent-tools-servers. ToolHive stays the backend RUNTIME (MCPServer pods,
+# stdio->HTTP bridging, per-backend credentials); toolport replaced the
+# agent-tools VirtualMCPServer as the aggregation layer. See ./resources/registry.json for which server lands in which profile.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

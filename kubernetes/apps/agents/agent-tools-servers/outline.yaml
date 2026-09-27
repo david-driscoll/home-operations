@@ -2,9 +2,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
 #
 # ⚠️ NOT YET ENABLED. This file is deliberately commented out of
-# ./kustomization.yaml, and the matching `outgoingAuth.backends` entries are
-# commented out in BOTH ../agent-tools-mcp/virtualmcpserver.yaml and
-# ../agent-tools-mcp/virtualmcpserver-internal.yaml.
+# ./kustomization.yaml, and Outline is not yet in toolport's
+# ../toolport/resources/registry.json.
 #
 # It cannot be enabled at merge time, because the credential below does not
 # exist until a human has logged into Outline once:
@@ -16,8 +15,13 @@
 #   3. Settings -> API -> create an API key, then seed it:
 #        bao kv put secrets/clusters/equestria/apps/outline/mcp-api-key \
 #          password="<the key>"
-#   4. Uncomment `- ./outline.yaml` in ./kustomization.yaml AND the
-#      `toolhive-outline:` blocks in both VirtualMCPServers, then merge.
+#   4. Serve it through toolport, which calls a bearer backend DIRECTLY (a
+#      proxy's MCPExternalAuthConfig is not applied to direct callers -- see
+#      ../toolport/externalsecret.yaml): add an `outline` server with a secret
+#      `env` key to ../toolport/resources/registry.json and a profile, and the
+#      matching TOOLPORT_SECRET_<KEY> to ../toolport/externalsecret.yaml.
+#      Uncomment `- ./outline.yaml` in ./kustomization.yaml only if something
+#      still needs the ToolHive proxy.
 #
 # Enabling it early is not a soft failure. ./ks.yaml carries `wait: true`, so an
 # MCPRemoteProxy that cannot resolve its Secret goes Failed and blocks the

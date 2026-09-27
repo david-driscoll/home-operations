@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "agent-tools": {
-      "type": "http",
-      "url": "http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp"
-    },
     "toolport-infrastructure": {
       "type": "http",
       "url": "http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp"
