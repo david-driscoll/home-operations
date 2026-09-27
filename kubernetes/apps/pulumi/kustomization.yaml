@@ -20,7 +20,6 @@ resources:
   - ./backups/ks.yaml
   - ./authentik/ks.yaml
   - ./vault/ks.yaml
-  - ./applications/ks.yaml
   - ./home-operations/ks.yaml
   - ./gulf-of-mexico/ks.yaml
   # disabled due to ocracoke being offline

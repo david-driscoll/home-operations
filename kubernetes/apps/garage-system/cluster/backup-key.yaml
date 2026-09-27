@@ -32,7 +32,7 @@ spec:
   neverExpires: true
   secretTemplate:
     name: ${APP}-backup-credentials
-    # How Pulumi FINDS this Secret. `stacks/applications/kubernetes-backups.ts`
+    # How Pulumi FINDS this Secret. `stacks/system/application-backups.ts`
     # selects on this label rather than on the name above, so the two sides are
     # coupled by an explicit marker instead of a string convention that nothing
     # would catch if it drifted.

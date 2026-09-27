@@ -26,7 +26,7 @@ resources:
   # OpenCloud is replaced by ./nextcloud at the same hostname
   # (docs/plans/nextcloud-migration.md). Unlisting it makes Flux prune the whole
   # app -- pods, routes, the tailnet device and the PVC; the next
-  # `stacks/applications` run removes its authentik app. The directory stays for
+  # `stacks/system` run removes its authentik app. The directory stays for
   # four weeks so rollback is re-adding this one line: the PVC re-seeds from the
   # restic repo (/repository/opencloud), which pruning does not touch.
   # - ./opencloud/ks.yaml

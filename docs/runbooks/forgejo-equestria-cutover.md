@@ -163,7 +163,7 @@ Pulumi Operator off the `home-operations` GitRepository, which tracks `main`:
 | Stack | dir | cadence |
 | --- | --- | --- |
 | `pulumi/home-operations` | `stacks/home` | on each new commit, then daily |
-| `pulumi/equestria` | `stacks/applications` | on each new commit, then every 300s |
+| `pulumi/system` | `stacks/system` | on each new commit, then every 300s |
 
 So merging is what starts everything. Two things happen concurrently, and the
 order is not guaranteed:
@@ -208,7 +208,7 @@ Flux brings up the database role, the PVC and the Deployment. The pod will
 crash-loop until this lands, because `forgejo-oauth` has no data yet and the
 `configure-gitea` init container fails without it.
 
-Nothing to run: `pulumi/equestria` resyncs every 300s, reads the
+Nothing to run: `pulumi/system` resyncs every 300s, reads the
 `ApplicationDefinition` CR out of the live cluster, creates the authentik
 application and provider, and writes `clusters/equestria/apps/forgejo/oidc`. ESO
 picks it up within its 4m refresh and the pod settles — so allow up to ~10
@@ -217,7 +217,7 @@ minutes end to end.
 Verify:
 
 ```bash
-kubectl -n pulumi get stack equestria
+kubectl -n pulumi get stack system
 kubectl -n coder get externalsecret
 kubectl -n coder logs deploy/forgejo -c configure-gitea
 ```

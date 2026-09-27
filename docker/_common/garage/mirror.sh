@@ -5,7 +5,7 @@
 # backrest's pre-sync hooks maintain for every GarageBucket annotated
 # `driscoll.dev/backup: "true"`, across both k8s Garage instances
 # (garage-system and coder/forgejo-garage; the scan is
-# stacks/applications/kubernetes-backups.ts). Destination: the `garage-mirror`
+# stacks/system/application-backups.ts). Destination: the `garage-mirror`
 # bucket, through this node's own S3 API, replicated ×3 by the cluster.
 #
 # ACTIVE ONLY WHERE /gstate/mirror.env EXISTS. stacks/system (garage.ts)

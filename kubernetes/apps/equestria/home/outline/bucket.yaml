@@ -23,7 +23,7 @@ metadata:
   name: ${APP}
   annotations:
     # Opts this bucket into the estate's backup system
-    # (stacks/applications/kubernetes-backups.ts). NOT optional bookkeeping:
+    # (stacks/system/application-backups.ts). NOT optional bookkeeping:
     # FILE_STORAGE=s3 means every attachment a user uploads lives ONLY here,
     # and this app carries no components/volsync precisely because of that.
     # Without this annotation the whole attachment corpus is unbacked while

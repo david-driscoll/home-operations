@@ -5,8 +5,9 @@ import * as kubernetes from "@kubernetes/client-node";
 import type { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 import * as pulumi from "@pulumi/pulumi";
 import { concatMap, from, lastValueFrom, map, mergeMap, toArray } from "rxjs";
+import type { KubernetesCluster } from "./applications.ts";
 
-export async function kubernetesBackups(_globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
+export async function kubernetesBackups(_globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesCluster) {
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(clusterDefinition.kubeConfig);
 
@@ -65,7 +66,7 @@ export async function kubernetesBackups(_globals: GlobalResources, planManager: 
   // Registers its plans on `planManager` as a side effect, exactly like the
   // VolSync branch below; the returned array is only for the log line. Awaited
   // BEFORE the return so every plan is on the orchestrator by the time
-  // kubernetes.ts calls savePlan().
+  // applications.ts calls savePlan().
   const garagePlans = await garageBucketBackups(coreApi, customObjectApi, planManager, clusterDefinition, namespaceNames);
   pulumi.log.info(`Registered ${garagePlans.length} Garage bucket backup plan(s) on ${clusterDefinition.key}`, planManager);
 
@@ -114,8 +115,8 @@ export async function kubernetesBackups(_globals: GlobalResources, planManager: 
  * The opt-in is an annotation on the GarageBucket rather than a list in this
  * file, so adding a backed-up bucket is one manifest in git and the Pulumi run
  * that follows picks it up. The cost is that a Pulumi run is REQUIRED: a new
- * annotated bucket is not backed up until the applications stack next runs and
- * a director run pushes the plan to backrest.
+ * annotated bucket is not backed up until the system stack next runs and a
+ * director run pushes the plan to backrest.
  */
 const BACKUP_ANNOTATION = "driscoll.dev/backup";
 /** Comma-separated rclone --exclude patterns. A bare `/dir` matches FILES only; use `/dir/**`. */
@@ -140,13 +141,7 @@ interface GarageBucketResource {
   status?: { globalAlias?: string; phase?: string };
 }
 
-async function garageBucketBackups(
-  coreApi: kubernetes.CoreV1Api,
-  customObjectApi: kubernetes.CustomObjectsApi,
-  planManager: BackupPlanOrchestrator,
-  clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>,
-  namespaceNames: string[],
-) {
+async function garageBucketBackups(coreApi: kubernetes.CoreV1Api, customObjectApi: kubernetes.CustomObjectsApi, planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesCluster, namespaceNames: string[]) {
   let buckets: GarageBucketResource[];
   try {
     buckets = (
@@ -157,10 +152,10 @@ async function garageBucketBackups(
       })) as { items: GarageBucketResource[] }
     ).items;
   } catch (e) {
-    // ONLY a missing CRD is tolerated. This stack runs against every Kubernetes
-    // cluster in the estate and only equestria has the garage-operator CRDs, so
-    // a 404 is the normal answer everywhere else and failing on it would make
-    // the whole applications stack contingent on an optional operator.
+    // ONLY a missing CRD is tolerated. The garage-operator is optional, and
+    // failing on its absence would make the system stack -- which every other
+    // stack depends on -- contingent on it. (This used to run once per cluster,
+    // where a 404 was the normal answer on every cluster but equestria.)
     //
     // Everything else rethrows deliberately. A blanket catch here would turn an
     // auth failure or an API hiccup into "no Garage buckets found", which is

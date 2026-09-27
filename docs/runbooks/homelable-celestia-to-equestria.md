@@ -186,10 +186,10 @@ comment above the entry, and `docs/openbao-shared-secrets-reorg.md` carries a
 dated correction under the row it signed off; that table itself is left alone,
 because its `✎ Your call` column is a decision record.
 
-### 3. Run the Pulumi applications stack
+### 3. Run the Pulumi system stack
 
 ```bash
-cd stacks/applications && pulumi preview
+cd stacks/system && pulumi preview
 ```
 
 It reads `ApplicationDefinition` CRs out of the cluster, so the merge has to land

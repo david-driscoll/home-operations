@@ -11,7 +11,7 @@
 
 ## What I Own
 
-- `stacks/` — home, authentik, applications, backups, unifi-network, and any new stack
+- `stacks/` — home, authentik, backups, unifi-network, system, and any new stack
 - `components/` — shared `ComponentResource` code, especially `globals.ts` and `op.ts`
 - `sdks/` — vendor SDK wrappers (unifi, authentik, adguard, b2, pbs, terrifi)
 - `dynamic/` — code-generated Pulumi resources (1Password item types)

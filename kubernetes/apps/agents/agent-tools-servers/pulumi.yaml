@@ -10,7 +10,7 @@
 # unifi-* servers next door.
 #
 # NOT PINNED TO ONE STACK. This repo has many (stacks/home, stacks/authentik,
-# stacks/applications, ...) -- the MCP tool surface itself takes a
+# stacks/system, ...) -- the MCP tool surface itself takes a
 # stack/working-directory argument per call rather than this server being
 # scoped to one, same as running `pulumi` by hand from any stacks/* dir.
 #

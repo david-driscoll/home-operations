@@ -18,7 +18,7 @@
 # reports `phase: Ready` and the app keeps reading and writing it perfectly,
 # because the app's OWN key is fine. Only `status.conditions[type=
 # PermissionsConfigured]` goes False, with `reason: ReferenceGrantDenied`, and
-# stacks/applications/kubernetes-backups.ts still finds the labelled credential
+# stacks/system/application-backups.ts still finds the labelled credential
 # in `garage-system` and happily builds a backup plan around a key that Garage
 # will answer 403 to. Observed on equestria/outline the day it shipped.
 #

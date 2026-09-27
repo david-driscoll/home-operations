@@ -50,7 +50,7 @@ fi
 
 # --- 4. SSO via authentik ---------------------------------------------------
 # OIDC_* come from the `nextcloud-oidc` Secret, which does not exist until
-# `stacks/applications` has read ../definition.yaml and created the provider.
+# `stacks/system` has read ../definition.yaml and created the provider.
 # Until then this block is skipped and the local login form stays available;
 # Reloader restarts the pod when the Secret lands and this block runs.
 if [ -n "$OIDC_CLIENT_ID" ] && [ -n "$OIDC_DISCOVERY_URL" ]; then

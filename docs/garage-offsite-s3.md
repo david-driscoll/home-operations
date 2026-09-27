@@ -67,7 +67,7 @@ idle) syncs `/data/staging/garage/` into the `garage-mirror` bucket every 6h.
 That staging tree is the one backrest's pre-sync hooks already maintain for
 every `GarageBucket` annotated `driscoll.dev/backup: "true"`, across **both**
 in-cluster instances (garage-system's shared cluster and coder/forgejo-garage;
-the scan is `stacks/applications/kubernetes-backups.ts`). Riding it means the
+the scan is `stacks/system/application-backups.ts`). Riding it means the
 mirror inherits the estate's opt-in contract, exclusion rules, and freshness
 (nightly) — and needs no credentials against the k8s clusters at all. The
 service refuses to sync an empty staging tree: a mirror of nothing would be a

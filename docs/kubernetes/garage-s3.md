@@ -13,7 +13,7 @@ machinery.
 | `kubernetes/apps/garage-system/cluster/`           | The `GarageCluster`, its secrets, the S3 route, the backup key     |
 | `components/BackupPlanOrchestrator.ts`             | `S3PreSyncArgs` — the new pre-sync variant                         |
 | `components/BackupPlanDirector.ts`                 | Renders the rclone command and `garage.conf` on the backrest host  |
-| `stacks/applications/kubernetes-backups.ts`        | `garageBucketBackups()` — the annotation scan                      |
+| `stacks/system/application-backups.ts`             | `garageBucketBackups()` — the annotation scan                      |
 
 ## Topology
 
@@ -154,7 +154,7 @@ in a `CONDITION_SNAPSHOT_START` hook.
 ```
 GarageBucket (driscoll.dev/backup: "true")
         │
-        │  stacks/applications/kubernetes-backups.ts scans for the annotation,
+        │  stacks/system/application-backups.ts scans for the annotation,
         │  resolves credentials from the Secret labelled
         │  driscoll.dev/garage-backup-credentials
         ▼

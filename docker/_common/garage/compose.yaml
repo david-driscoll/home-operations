@@ -292,7 +292,7 @@ services:
   # and coder/forgejo-garage. It does not talk to either directly; the source
   # is /data/staging/garage/, the local tree backrest's pre-sync hooks already
   # maintain for every GarageBucket annotated `driscoll.dev/backup: "true"`
-  # (stacks/applications/kubernetes-backups.ts). Riding that tree inherits the
+  # (stacks/system/application-backups.ts). Riding that tree inherits the
   # estate's opt-in contract, its exclusion rules, and its freshness (nightly)
   # — and needs no new key against the k8s clusters at all.
   #

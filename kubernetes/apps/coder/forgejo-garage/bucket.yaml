@@ -11,7 +11,7 @@ metadata:
   name: forgejo
   annotations:
     # Opts this bucket into the estate's backup system
-    # (stacks/applications/kubernetes-backups.ts). This is NOT optional
+    # (stacks/system/application-backups.ts). This is NOT optional
     # bookkeeping: moving Forgejo's storage to S3 takes LFS objects, packages
     # and attachments OFF the volsync-backed PVC, so without this annotation
     # they would silently stop being backed up while looking healthy.
@@ -149,7 +149,7 @@ spec:
 #
 # `kubernetes-backups.ts` looks up backup credentials by namespace -- the
 # namespace of the bucket's `clusterRef` -- so a Garage cluster in `coder` needs
-# its own labelled Secret here. Without it the applications stack throws
+# its own labelled Secret here. Without it the system stack throws
 # outright rather than skipping the bucket, which is the correct behaviour: a
 # bucket that asked to be backed up and silently is not is the worst possible
 # outcome.

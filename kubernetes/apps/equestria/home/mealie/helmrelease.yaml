@@ -68,7 +68,7 @@ spec:
                   name: ${APP}-env
               # OIDC_AUTH_ENABLED, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET,
               # OIDC_CONFIGURATION_URL. OPTIONAL, and that is load-bearing: the
-              # authentik credential only exists once stacks/applications has
+              # authentik credential only exists once stacks/system has
               # read ./definition.yaml and created the provider, which is after
               # this pod first boots. With the Secret absent, OIDC_AUTH_ENABLED
               # falls back to its `False` default, Mealie's OIDC_FEATURE stays

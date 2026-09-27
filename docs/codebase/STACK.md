@@ -44,7 +44,7 @@
 | `yaml` | (transitive) | YAML serialization for compose/config files | `components/DockgeLxc.ts` |
 | `confbox` | ^0.2.2 | Config parsing | `package.json` |
 | `jsondiffpatch` | ^0.7.3 | JSON diffing (used in dynamic resources) | `package.json` |
-| `rxjs` | (transitive) | Reactive streams for parallel K8s queries | `stacks/applications/kubernetes.ts` |
+| `rxjs` | (transitive) | Reactive streams for parallel K8s queries | `stacks/system/applications.ts` |
 | `node-ssh` | (transitive) | SSH connections for backup management | `stacks/backups/BackupPlanManager.ts` |
 
 ### 3) Development Toolchain

@@ -52,7 +52,7 @@ Pulumi state backend
 | `components/authentik/` | Authentik IdP resource builders (flows, stages, applications, policies) | Network/infra provisioning | `components/authentik/` |
 | `components/helpers.ts` | Pure utility functions: file copy, hostname generation, Gatus config, temp file management | Stateful resources | `components/helpers.ts` |
 | `stacks/home/index.ts` | Instantiates ProxmoxHost, DockgeLxc, TruenasVm; wires them together | Reusable abstractions, provider creation | `stacks/home/index.ts` |
-| `stacks/applications/` | Reads K8s CRDs from live clusters; creates Authentik apps, Volsync secrets | Host/network provisioning | `stacks/applications/kubernetes.ts` |
+| `stacks/system/applications.ts` | Reads K8s CRDs from live clusters; creates Authentik apps, Volsync secrets | Host/network provisioning | `stacks/system/applications.ts` |
 | `stacks/backups/` | Backup plan management across PBS and Backrest | Application deployment | `stacks/backups/BackupPlanManager.ts` |
 | `dynamic/1password/` | Custom dynamic Pulumi resource for 1Password item CRUD with diff tracking | Any non-1Password resource | `dynamic/1password/OnePasswordItem.ts` |
 | `docker/` | Docker Compose definitions and cluster-specific service configs | TypeScript/Pulumi logic | `docker/_common/`, `docker/alpha-site/` |
@@ -67,7 +67,7 @@ Pulumi state backend
 | **1Password as state store** | `stacks/authentik/index.ts`, `stacks/home/index.ts` | Stack outputs (hostnames, credentials, kubeconfig) are persisted to 1Password for cross-stack consumption |
 | **Remote SSH command execution** | `components/DockgeLxc.ts`, `components/ProxmoxHost.ts` | Proxmox and LXC management APIs are insufficient; SSH + shell commands fill the gap |
 | **ClusterDefinition discriminated union** | `components/globals.ts` — `DockgeClusterDefinition | KubernetesClusterDefinition` | Type-safe handling of Dockge vs. Kubernetes cluster config differences |
-| **ApplicationDefinition CRD** | `stacks/applications/kubernetes.ts` — reads `driscoll.dev/v1/applicationdefinitions` | Custom CRDs drive Authentik application registration from within the cluster |
+| **ApplicationDefinition CRD** | `stacks/system/applications.ts` — reads `driscoll.dev/v1/applicationdefinitions` | Custom CRDs drive Authentik application registration from within the cluster |
 | **Gatus uptime integration** | `components/helpers.ts` → `addUptimeGatus()` | Every service registers its health check endpoint centrally via SSH to the uptime host |
 
 ## Provider Reference
@@ -121,5 +121,5 @@ All providers are constructed once in `components/globals.ts` (`GlobalResources`
 - `components/op.ts` — 1Password Connect client
 - `components/DockgeLxc.ts` — most complex ComponentResource
 - `stacks/home/index.ts` — canonical stack wiring
-- `stacks/applications/kubernetes.ts` — K8s CRD-driven application registration
+- `stacks/system/applications.ts` — K8s CRD-driven application registration
 - `components/helpers.ts` — Gatus and utility patterns

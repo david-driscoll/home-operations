@@ -53,7 +53,7 @@ export abstract class VaultStore {
    * assembled a kubeconfig from its sa/cluster/cluster_api/token/certificate
    * fields. Its only caller was the authentik outpost ServiceConnection, which
    * now reads that credential from the cluster that issued it (Phase 10 --
-   * home-operations stacks/applications/kubernetes.ts).
+   * home-operations stacks/system/applications.ts).
    *
    * Deleted rather than kept: `BaoStore` never overrode it, so under
    * BAO_STORE_READS it read 1Password SILENTLY, with no warning -- the one
@@ -220,7 +220,18 @@ export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(
 
 export type VaultStoreItem = object;
 
-function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<string>) {
+/**
+ * A kubeconfig for `<key>-kubeproxy` on the tailnet. It carries no credential:
+ * the Tailscale kubeproxy authenticates the caller by tailnet identity and
+ * impersonates `tailnet-cluster-ops`.
+ *
+ * Exported for stacks/system/applications.ts, which cannot go through
+ * `getKubernetesCluster()` (that reads the `clusters/<key>/details` paths the
+ * system stack itself publishes). It must stay the one implementation: the
+ * string it returns is the `equestria-provider` kubeconfig input, and any
+ * difference in it is a provider diff.
+ */
+export function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<string>) {
   return jsonStringify({
     kind: "Config",
     apiVersion: "v1",
