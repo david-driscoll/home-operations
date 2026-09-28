@@ -28,6 +28,12 @@ const DOCKGE_GARAGE_SYNC_GROUP = "Dockge Garage Postgres Sync";
 // docker/_common/garage/compose.yaml.
 const DOCKGE_GARAGE_MIRROR_GROUP = "Dockge Garage Bucket Mirror";
 
+// Gatus group for the off-site copy of the Pulumi state: the loop in
+// docker/alpha-site/garage-backup that mirrors the main cluster's
+// `pulumi-state` bucket into alpha-site's standalone Garage. Same token
+// contract (BACKUP_UPTIME_TOKEN in that stack's .env).
+const PULUMI_STATE_OFFSITE_GROUP = "Pulumi State Offsite Backup";
+
 const globals = new GlobalResources({}, {});
 const dockgeDetails = globals.store.getDockgeInstances();
 
@@ -195,6 +201,38 @@ addUptimeGatus("dockge-garage-mirror", globals, {
             // two missed cycles plus drift before the dead-man pages, failed
             // cycles push success=false and alert immediately regardless.
             heartbeat: { interval: "13h" },
+            alerts: [
+              {
+                type: "pushover",
+                enabled: true,
+                "success-threshold": 1,
+                "failure-threshold": 1,
+                "minimum-reminder-interval": "24h",
+              },
+            ],
+          }) as ExternalEndpoint,
+      ),
+  ),
+});
+
+// The off-site Pulumi state copy's heartbeat. Registered only where the
+// garage-backup stack is deployed (alpha-site). Cycles are hourly, so two missed
+// cycles plus an hour of drift is the dead-man threshold; a failing cycle --
+// including a source that is empty or unreachable, which the loop refuses to
+// mirror -- pushes success=false with a reason and pages immediately.
+addUptimeGatus("pulumi-state-offsite-backup", globals, {
+  endpoints: [],
+  "external-endpoints": dockgeDetails.apply(details =>
+    details
+      .filter(detail => hostHasActiveStack(dockerHostDirectory(detail.name), "garage-backup"))
+      .map(
+        detail =>
+          ({
+            enabled: true,
+            name: detail.name,
+            token: toGatusKey(PULUMI_STATE_OFFSITE_GROUP, detail.name),
+            group: PULUMI_STATE_OFFSITE_GROUP,
+            heartbeat: { interval: "3h" },
             alerts: [
               {
                 type: "pushover",
