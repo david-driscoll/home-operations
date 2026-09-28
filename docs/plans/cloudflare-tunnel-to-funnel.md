@@ -1,8 +1,9 @@
 # Cloudflare Tunnel → Tailscale Funnel
 
-**Status:** plan, 2026-09-27. Step 1 is #2162; nothing else is built yet. Decisions marked ✅ were taken by
-David on 2026-09-27. The only item still open in [§J](#j-open-questions) is J4 (TikTok), which
-can wait until a TikTok app exists.
+**Status:** plan, 2026-09-27. Step 1 (#2162) went live 2026-09-28. Step 2 is in review; nothing else is built yet. Decisions marked ✅ were taken by
+David on 2026-09-27. Two items in [§J](#j-open-questions) are still open. J4 (TikTok) can wait
+until a TikTok app exists. J7 (a separate taildrive OAuth client) needs the Tailscale admin
+console.
 The research, and an adversarial review of this plan, ran as read-only agent sweeps against the
 repo, live cluster, tailnet, Loki and upstream source.
 
@@ -116,21 +117,27 @@ ships `enabled: false`.
 ### C1. Tailnet policy (`stacks/unifi-network`)
 
 - **New tag.** `components/constants.ts` gains `funnel: "tag:funnel"`. In
-  `stacks/unifi-network/acl-manager.ts:787`, add `tag.funnel` to the tags `tag:operator` owns, so
+  `stacks/unifi-network/acl-manager.ts` (`setTagOwner(tag.operator, …)` in
+  `configureKubernetesAccess`), add `tag.funnel` to the tags `tag:operator` owns, so
   the operator's OAuth client can mint it.
 - **Who may Funnel is owned by code, and nothing else about nodeAttrs changes.** nodeAttrs are
-  *not* reset on each run (`acl-manager.ts:83-88` blanks tagOwners, grants, tests, ssh, sshTests
+  *not* reset on each run (the `applyAllEdits` block under "Initialise ACL manager" blanks tagOwners, grants, tests, ssh, sshTests
   and hosts, but not nodeAttrs), and the live policy has hand-set entries that must survive (see
   J1). So:
   - before `new TailscaleAclManager(...)`, rewrite `nodeAttrs` to the live array **minus any
     entry whose `attr` contains `funnel`**, keeping every other entry;
-  - then change `:788` to `setNodeAttr({ target: [tag.funnel], attr: ["funnel"] })`.
+  - then change the `setNodeAttr({ target: [tag.operator], … })` beside it to
+    `setNodeAttr({ target: [tag.funnel], attr: ["funnel"] })`.
 
   This removes the stale, unused `tag:operator` funnel grant. A funnel grant hand-added later is
   removed on the next run that *writes* the policy. The Stack does not refresh, so a run whose
   stripped output matches state sends no PUT. Until a write happens the stray stays live, and a
   `pulumi.log.warn` names it on every resync. `tag:apps` must **not** get the attribute: tsnet
   apps on the shared authkey (golink, tsidp, tsiam) could then self-enable Funnel.
+- **Who can mint `tag:funnel`:** anything holding the operator's OAuth client, because
+  `tag:operator` owns the tag. That includes **taildrive**, which mounts `tailscale-oauth` to
+  register `tag:shared-drive`. Its HelmRelease, or a compromise of it, could bring up a Funnel node
+  with no Ingress at all, and no admission policy would see it. See ❓J7.
 - **Member grant.** Grant `autogroup:member → tag:funnel tcp:443`. On the tailnet, MagicDNS
   resolves a Funnel name to the device's 100.x address, and postiz's UI loads media previews
   from it.
@@ -193,9 +200,9 @@ Template rules. Each one is a real failure mode found in review:
 **Admission gate: `kubernetes/apps/tailscale-system/funnel-policy/` (new app).** It is a
 Kustomization of its own, listed in `tailscale-system/kustomization.yaml` and modelled on
 `agents/agent-debug-rbac/`. It must **not** live in the component: two Kustomizations would then
-render and prune the same cluster-scoped objects. It holds two policies, each with its
-`ValidatingAdmissionPolicyBinding` (`validationActions: [Deny]`; a VAP without a binding enforces
-nothing and reports no error):
+render and prune the same cluster-scoped objects. It holds four policies in three groups, each
+policy with its own `ValidatingAdmissionPolicyBinding` (a VAP without a binding enforces nothing
+and reports no error). All four shipped in step 2:
 
 1. **`funnel-ingress-shape`.** Makes the public surface an explicit, reviewed list. This is what
    the 8444 entrypoint was.
@@ -212,9 +219,12 @@ nothing and reports no error):
      - the `tailscale.com/proxy-class` label present;
      - `ingressClassName: tailscale`;
      - no `defaultBackend`;
-     - **exactly one host-less rule with exactly one `Prefix` path**;
-     - **`<namespace>/<service> <path>` in an allow-list**: `flux-system/webhook-receiver /hook/`
-       and `equestria/postiz-cdn /uploads/`.
+     - exactly one `tls.hosts` entry;
+     - **exactly one host-less rule with exactly one `Prefix` path**, other than `/`;
+     - **`<namespace> <Service> <path> <host>` in an allow-list**. As built, the list holds
+       `flux-system webhook-receiver /hook/ flux-equestria-webhook`. Step 5 adds the postiz line.
+       Pinning the host as well means a second Ingress cannot republish the same backend under
+       another name.
 
    A new public endpoint is therefore a one-line, reviewed change here. The component alone would
    not bound it: `equestria` has 79 apps, and any of them could otherwise be published by a
@@ -226,13 +236,34 @@ nothing and reports no error):
    and delete on **every** Secret in `tailscale-system` (`proxy-rbac.yaml:15-18`, no
    resourceNames). Those Secrets include `sops-age`, `cluster-secrets` and `shared-secrets`, the
    decryption key and substitution source of every tailscale-system Kustomization, plus
-   `tailscale-oauth` and `operator-oauth`. Reads are no worse than today: Traefik already has
-   cluster-wide Secret read. Write is new.
-   - The policy denies that user CREATE, UPDATE or DELETE on a Secret unless the Secret (or the
-     old object, for a DELETE) carries `tailscale.com/managed: "true"`. The proxies' own state and
-     cert Secrets carry that label; the sensitive Secrets do not.
-   - The existing standalone proxies (for example `ts-mosquitto-…`) also use `proxies`. Ship this
-     binding with `[Audit]` first, check the audit log for denials, then switch it to `[Deny]`.
+   `tailscale-oauth` and `operator-oauth`.
+   - **The rule, as built:** that identity may only **UPDATE the Secret named after its own pod**.
+     The pod name comes from the bound token's `userInfo.extra`. That Secret is `TS_KUBE_SECRET`,
+     which the operator pre-creates. CREATE and DELETE are denied outright; PATCH and apply arrive
+     as UPDATE.
+   - **Why not a label, as first drafted.** `tailscale.com/managed=true` is written by the caller.
+     An envtest harness showed that, even under Deny, a proxy could CREATE a labelled
+     service-account-token Secret for `kube-apiserver-auth-proxy`. That account holds cluster-wide
+     impersonate, so the result was cluster-admin. Every proxy's state carries the label too, so a
+     tailnet-only proxy could also rewrite the Funnel proxy's `serve-config`. The pod-pinned rule
+     denies both, and still allows the proxy's own strategic-merge, JSON-patch and full-update
+     writes.
+   - **Reads are not covered.** Admission never sees a GET, and every `proxies` pod can still read
+     every Secret there, `operator-oauth` included. That is residual risk, in §H and §I.
+   - **Audit first.** The existing standalone proxies (`ts-mosquitto-…`, the Connector) also use
+     `proxies`. The binding ships as `[Audit]`. Switch it to `[Deny]` after a week with **no
+     violations in Thanos**, a week that includes a restart of every `proxies` pod. A passing
+     check emits no metric, so test for presence (`max_over_time`), not `increase()`. The exact
+     gate and liveness queries are in the policy header. The apiserver audit log is on-node, a few
+     hours deep and not shipped, so it is not the gate.
+3. **`funnel-tag-reserved-services` / `funnel-tag-reserved-tailscale`.** These refuse
+   `tag:funnel` on a Service (in the `tailscale.com/tags` annotation) or on a ProxyGroup,
+   Connector, Recorder or PeerRelay (in `spec.tags`). Those are every `tailscale.com` kind with
+   tags at 1.102.4, pinned to `v1alpha1` so the apiserver actually type-checks the policy. None of those can Funnel at operator 1.102.4, so this
+   closes a door before a future operator opens it. It also keeps `tag:funnel` meaning "a checked
+   public endpoint", which the tailnet policy's `taggedExceptFunnel` relies on. The Service
+   policy only evaluates Services that carry the annotation at all, so ordinary Service writes are
+   never touched under `failurePolicy: Fail`.
 
 No Cilium change is needed. `enable-policy=default`, and no CNP or NetworkPolicy selects
 `tailscale-system`, notification-controller or `postiz-cdn` (checked live).
@@ -242,14 +273,15 @@ No Cilium change is needed. `enable-policy=default`, and no CNP or NetworkPolicy
 | | Flux webhook | Postiz media |
 |---|---|---|
 | Host | `flux-equestria-webhook.opossum-yo.ts.net` | `postiz-media.opossum-yo.ts.net` |
-| Wiring | **new** Kustomization `kubernetes/apps/flux-system/flux-webhook-funnel/`, `dependsOn: [{name: tailscale-operator, namespace: tailscale-system}, {name: funnel-policy, namespace: tailscale-system}]` | `components:` + `postBuild.substitute` in `equestria/home/postiz/ks.yaml`, plus the same `dependsOn: funnel-policy` |
-| Vars | `APP: flux-webhook`, `NAMESPACE: flux-system`, `FUNNEL_HOST: flux-${CLUSTER_CNAME}-webhook`, `FUNNEL_PATH: hook`, `FUNNEL_SERVICE: webhook-receiver`, `FUNNEL_PORT: http` | existing `APP`/`NAMESPACE`, plus `FUNNEL_HOST: postiz-media`, `FUNNEL_PATH: uploads`, `FUNNEL_SERVICE: postiz-cdn` (**literal**), `FUNNEL_PORT: http` |
+| Wiring | **new** Kustomization `kubernetes/apps/flux-system/flux-webhook-funnel/`: `dependsOn` tailscale-operator, **tailscale-resources** (owns the ProxyClass) and funnel-policy (all `tailscale-system`), plus flux-instance; `healthCheckExprs` on the Ingress status hostname | `components:` + `postBuild.substitute` in `equestria/home/postiz/ks.yaml`, plus the same `dependsOn` and a `healthCheckExprs` entry for its own host |
+| Vars | `APP: flux-webhook`, `NAMESPACE: flux-system`, `FUNNEL_HOST: flux-equestria-webhook` (a literal: it is pinned verbatim on the allow-list and in the health check), `FUNNEL_PATH: hook`, `FUNNEL_SERVICE: webhook-receiver`, `FUNNEL_PORT: http` | existing `APP`/`NAMESPACE`, plus `FUNNEL_HOST: postiz-media`, `FUNNEL_PATH: uploads`, `FUNNEL_SERVICE: postiz-cdn` (**literal**), `FUNNEL_PORT: http` |
 
 - **The webhook gets its own Kustomization**, not flux-instance's. A fail-closed render or an
   Ingress apply error must not block reconciliation of the FluxInstance itself.
 - **`APP` is required.** The Ingress is named `${APP}-funnel`, and without `APP` it renders
-  `-funnel`, which the API rejects. `CLUSTER_CNAME` comes from `cluster-secrets`, which the
-  parent `cluster-apps` expands.
+  `-funnel`, which the API rejects. `FUNNEL_HOST` is a literal rather than
+  `flux-` + `CLUSTER_CNAME` + `-webhook`: a missing substitution would render a wrong public name
+  silently instead of failing.
 - **Write `postiz-cdn` literally.** `cluster-apps`' own postBuild
   (`kubernetes/flux/cluster/ks.yaml:111-116`) substitutes only from cluster-secrets and
   shared-secrets, neither of which has `APP`, so `${APP}-cdn` renders `-cdn` and fails the whole
@@ -463,8 +495,8 @@ Each numbered item is one PR unless marked otherwise.
    with the tunnel. Nothing is attached to the `external` Gateway, and the ts.net hostname must
    never go on a route attached to it: `deriveTunnelRules` has no domain filter and would push the
    name into the Cloudflare config.
-   - **Admission checks:**
-     - `kubectl get validatingadmissionpolicybinding` shows both bindings;
+   - **Admission checks** (already proven against a real 1.37 apiserver in envtest, 65 cases):
+     - `kubectl get validatingadmissionpolicybinding` shows all four bindings;
      - the policies' `.status.typeChecking` shows no warnings;
      - `kubectl apply --dry-run=server` of a funnel Ingress is **denied** in each of these cases:
        - in namespace `default`;
@@ -479,9 +511,13 @@ Each numbered item is one PR unless marked otherwise.
      - `curl --path-as-is …/hook/../x` and `…/hook/%2e%2e/x` both return tailscaled's 404.
        Without `--path-as-is`, curl removes the dot segments itself and the probe proves nothing.
    - **Proxy checks:**
-     - the Ingress status hostname has no `-1`;
+     - `flux-webhook-funnel` goes **Ready**. Its `healthCheckExprs` passes only once the operator
+       has written a status hostname starting `flux-equestria-webhook.`, which also rules out a
+       `-1` collision;
      - the device carries `tag:funnel`;
      - the proxy pod is on `control-plane-tolerant`.
+   - **Start the Audit clock** on `tailscale-proxies-secret-scope` (§C2 item 2). The switch to
+     `[Deny]` is a later one-line PR.
 3. **Webhook URL** (vault, §D) plus the webhook Gatus probe (§G).
    - **Verify:** the next push shows a 200 on the new URL in GitHub's "Recent deliveries", and hits
      on the Traefik `tunnel` entrypoint for `/hook/` drop to zero.
@@ -615,14 +651,14 @@ Each numbered item is one PR unless marked otherwise.
 
 | | Cloudflare Tunnel (today) | Funnel (target) |
 |---|---|---|
-| Boundary | shared Traefik, dedicated `tunnel` entrypoint | one proxy per endpoint; one `(namespace, Service, path)` per endpoint from an allow-list, enforced by `funnel-ingress-shape` |
+| Boundary | shared Traefik, dedicated `tunnel` entrypoint | one proxy per endpoint; one `(namespace, Service, path, host)` per endpoint from an allow-list, enforced by `funnel-ingress-shape` |
 | Path traversal | cloudflared `..` deny rule, plus Traefik path cleaning | tailscaled `path.Clean` before the mount match |
 | Edge | Cloudflare DDoS protection, HSTS and nosniff headers | Tailscale relays, with no WAF or DDoS promise; add HSTS at the cdn if wanted |
-| Internet-facing process's credentials | Traefik: cluster-wide Secret **read** | the `proxies` SA: read, plus write limited to its own `tailscale.com/managed` Secrets by `tailscale-proxies-secret-scope` |
+| Internet-facing process's credentials | Traefik: cluster-wide Secret **read** | the `proxies` SA: **read** of every Secret in `tailscale-system` (`operator-oauth` included, which can mint `tag:funnel`); **write** only to its own pod's state Secret once `tailscale-proxies-secret-scope` is on Deny |
 | Tailnet reach of the internet-facing device | none; cloudflared is not a tailnet node | none: `tag:funnel` is left out of every former `autogroup:tagged` grant, and a policy test pins that (J6) |
 | Client IP | XFF from the cloudflared pod | XFF from tailscaled, plus `Tailscale-Funnel-Request` |
 | Names in CT logs | `*.driscoll.tech` | `*.opossum-yo.ts.net`, already public through the tailnet certs |
-| New credential | tunnel token in OpenBao (removed) | none; the operator OAuth client mints `tag:funnel` |
+| New credential | tunnel token in OpenBao (removed) | none. But anything holding the operator OAuth client can mint `tag:funnel`: every `proxies` pod through that read, and taildrive, which mounts it (❓J7) |
 
 ## I. Out of scope, noted
 
@@ -633,6 +669,13 @@ Each numbered item is one PR unless marked otherwise.
   `gateway-routing` and `security-testing` skills describe Istio, Coraza and
   `kubernetes/platform/`. They are APM-vendored from another repo, so they are not edited here.
 - **The qBittorrent WAN forward (18289) is not in Pulumi.**
+- **The `proxies` Role's Secret reads.** No admission policy can gate a GET. Closing it means
+  narrowing the operator chart's Role (for example with a HelmRelease postRenderer), or an
+  upstream request for per-proxy RBAC.
+- **API-server proxy impersonation.** `apiServerProxyConfig` (`mode: "true"`,
+  `allowImpersonation`) gives the `operator` and `kube-apiserver-auth-proxy` accounts cluster-wide
+  impersonate. That is what made a stolen token of theirs equal to cluster-admin in the scenario
+  §C2 item 2 closes. It is worth revisiting on its own.
 - **`stargate-command-cluster` archival (doc 22) unblocks once step 9 lands.** That step removes
   its dead `CLOUDFLARE_*` dependencies.
 
@@ -643,7 +686,7 @@ Each numbered item is one PR unless marked otherwise.
   - The stale `tag:operator` funnel entry **is** live; §C1's filter removes it.
   - nodeAttrs also carry hand-set entries that code does not manage: 7 per-IP `mullvad` entries,
     and the `autogroup:member`, `group:family`, `group:friends` and `group:admins` drive entries.
-    So **do not** add nodeAttrs to the blanked sections at `acl-manager.ts:83-88`; the targeted
+    So **do not** add nodeAttrs to the blanked sections in `acl-manager.ts`; the targeted
     funnel-only filter is the way.
 - ✅ **J2. OAuth client tags.** Confirmed by David on 2026-09-27: the operator's OAuth client
   carries `tag:operator`. Adding `tag:funnel` to `tag:operator`'s owned tags (§C1) is therefore
@@ -672,3 +715,11 @@ Each numbered item is one PR unless marked otherwise.
     grant that lets `tag:funnel` back in fails the Stack.
   - **Why a single test:** tests are keyed by `src`, so a second `tag:funnel` test anywhere would
     replace it.
+- ❓ **J7. Give taildrive its own OAuth client?** taildrive mounts the operator's `tailscale-oauth`
+  only to register `tag:shared-drive`. Since step 1, that client can also mint `tag:funnel` (§C1).
+  - **Fix:** a new Tailscale OAuth client scoped to `auth_keys` with tags `[tag:shared-drive]`,
+    stored at `third-party-tokens/tailscale/oauth-taildrive`, with an ExternalSecret
+    `taildrive-oauth` that the taildrive HelmRelease reads instead.
+  - **Needs a human:** the client can only be created in the Tailscale admin console.
+  - **Risk if deferred:** low. The route is a reviewed HelmRelease change, or a compromise of
+    taildrive, which could already mint every other operator-owned tag.

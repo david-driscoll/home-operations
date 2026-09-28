@@ -1,0 +1,142 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# THE ESTATE'S PUBLIC SURFACE, AS A LIST. Every Tailscale Funnel endpoint is a
+# standalone Ingress (see kubernetes/components/funnel), and this refuses any
+# such Ingress whose namespace, backend Service, path and host are not on the
+# allow-list in the last validation below. Publishing something new means
+# adding one line there, in review -- the job the Cloudflare tunnel's dedicated
+# Traefik entrypoint used to do. docs/plans/cloudflare-tunnel-to-funnel.md §C2.
+#
+# WHY A POLICY AND NOT JUST THE COMPONENT. The operator turns EVERY rule and
+# path of a funnel Ingress into a public handler, for ANY Service in its
+# namespace (cmd/k8s-operator/ingress.go, 1.102.4). A hand-written Ingress in
+# `equestria` could otherwise publish any of its ~80 apps.
+#
+# WHAT MATCHES: any Ingress carrying a `tailscale.com/funnel` annotation (any
+# value) or `tag:funnel` in `tailscale.com/tags`. Plain tailnet Ingresses
+# (kubernetes/components/tailscale) carry neither and are untouched.
+#
+# OBJECTS BEING DELETED ARE EXEMPT. The operator removes its finalizer with a
+# plain UPDATE; without the exemption, tightening this list in the same change
+# that prunes an endpoint would leave that Ingress Terminating for ever.
+#
+# EVERY FIELD READ IS has()-GUARDED and there are no ternaries over maps, as in
+# apps/agents/agent-debug-rbac/: under failurePolicy Fail an absent-field error
+# or a type-check surprise DENIES.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-ingress-shape
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["ingresses"]
+  matchConditions:
+    - name: is-funnel-or-carries-tag-funnel
+      expression: >
+        has(object.metadata.annotations)
+        && ('tailscale.com/funnel' in object.metadata.annotations
+            || ('tailscale.com/tags' in object.metadata.annotations
+                && object.metadata.annotations['tailscale.com/tags'].contains('tag:funnel')))
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    # The operator's opt.Bool treats only the literal "true" as on, so "True"
+    # would render as a tailnet-only proxy carrying tag:funnel. Refuse it.
+    - expression: >
+        has(object.metadata.annotations)
+        && 'tailscale.com/funnel' in object.metadata.annotations
+        && object.metadata.annotations['tailscale.com/funnel'] == 'true'
+      message: >-
+        an Ingress that sets tailscale.com/funnel or carries tag:funnel must be
+        a Funnel Ingress, with tailscale.com/funnel set to exactly "true" (drop
+        both for a tailnet-only Ingress)
+    # Exactly tag:funnel. A second tag would bring that tag's tailnet reach
+    # (tag:funnel is the one tag left out of every autogroup:tagged grant);
+    # a missing one falls back to tag:apps, which cannot Funnel.
+    - expression: >
+        has(object.metadata.annotations)
+        && 'tailscale.com/tags' in object.metadata.annotations
+        && object.metadata.annotations['tailscale.com/tags'] == 'tag:funnel'
+      message: >-
+        a Funnel Ingress must set tailscale.com/tags to exactly "tag:funnel"
+    - expression: >
+        !has(object.metadata.annotations)
+        || (!('tailscale.com/proxy-group' in object.metadata.annotations)
+            && !('tailscale.com/experimental-forward-cluster-traffic-via-ingress' in object.metadata.annotations))
+      message: >-
+        a Funnel Ingress must not set tailscale.com/proxy-group (the
+        ProxyGroup path ignores Funnel) or
+        tailscale.com/experimental-forward-cluster-traffic-via-ingress
+    - expression: >
+        has(object.metadata.labels)
+        && 'tailscale.com/proxy-class' in object.metadata.labels
+        && object.metadata.labels['tailscale.com/proxy-class'] != ''
+      message: >-
+        a Funnel Ingress must carry the tailscale.com/proxy-class label; without
+        it the proxy gets no ProxyClass (no toleration, no metrics)
+    - expression: >
+        has(object.spec.ingressClassName)
+        && object.spec.ingressClassName == 'tailscale'
+      message: a Funnel Ingress must use ingressClassName tailscale
+    - expression: "!has(object.spec.defaultBackend)"
+      message: >-
+        a Funnel Ingress must not have a defaultBackend; publish exactly one
+        path
+    - expression: >
+        has(object.spec.tls) && size(object.spec.tls) == 1
+        && has(object.spec.tls[0].hosts) && size(object.spec.tls[0].hosts) == 1
+      message: >-
+        a Funnel Ingress must name exactly one host, in spec.tls[0].hosts
+    - expression: >
+        has(object.spec.rules) && size(object.spec.rules) == 1
+        && !has(object.spec.rules[0].host)
+        && has(object.spec.rules[0].http)
+        && size(object.spec.rules[0].http.paths) == 1
+        && object.spec.rules[0].http.paths[0].pathType == 'Prefix'
+        && has(object.spec.rules[0].http.paths[0].path)
+        && object.spec.rules[0].http.paths[0].path != '/'
+        && has(object.spec.rules[0].http.paths[0].backend.service)
+      message: >-
+        a Funnel Ingress must have exactly one rule, with no host, holding
+        exactly one Prefix path other than / that points at a Service
+    # THE ALLOW-LIST. One entry per public endpoint:
+    #   "<namespace> <Service> <path> <host>"
+    # <host> is the first label of the public name (tls.hosts[0]).
+    - expression: >
+        has(object.spec.tls) && size(object.spec.tls) == 1
+        && has(object.spec.tls[0].hosts) && size(object.spec.tls[0].hosts) == 1
+        && has(object.spec.rules) && size(object.spec.rules) == 1
+        && has(object.spec.rules[0].http)
+        && size(object.spec.rules[0].http.paths) == 1
+        && has(object.spec.rules[0].http.paths[0].path)
+        && has(object.spec.rules[0].http.paths[0].backend.service)
+        && (request.namespace
+            + ' ' + object.spec.rules[0].http.paths[0].backend.service.name
+            + ' ' + object.spec.rules[0].http.paths[0].path
+            + ' ' + object.spec.tls[0].hosts[0]) in [
+          'flux-system webhook-receiver /hook/ flux-equestria-webhook'
+        ]
+      messageExpression: >
+        'not on the Funnel allow-list (apps/tailscale-system/funnel-policy/funnel-ingress-shape.yaml): '
+        + request.namespace
+        + ' ' + object.spec.rules[0].http.paths[0].backend.service.name
+        + ' ' + object.spec.rules[0].http.paths[0].path
+        + ' ' + object.spec.tls[0].hosts[0]
+      message: >-
+        not on the Funnel allow-list in
+        apps/tailscale-system/funnel-policy/funnel-ingress-shape.yaml
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-ingress-shape
+spec:
+  policyName: funnel-ingress-shape
+  validationActions: ["Deny"]

@@ -1,0 +1,84 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The Flux GitHub webhook on Tailscale Funnel: /hook/ of flux-system's
+# webhook-receiver, public at flux-equestria-webhook.<tailnet>.ts.net.
+# Step 2 of docs/plans/cloudflare-tunnel-to-funnel.md -- it runs alongside the
+# Cloudflare route (../flux-instance/httproute.yaml) until the vault stack
+# points GitHub at it (step 3). Nothing here touches the external Gateway: a
+# ts.net name on a route attached there would leak into the tunnel's config.
+#
+# Its own Kustomization rather than a component on flux-instance: a Funnel
+# render or apply error here must not block reconciling Flux itself.
+#
+# No Traefik in the path. tailscaled mounts /hook/ and nothing else, cleans the
+# path before matching (so /hook/../x is a 404 at the proxy), and dials
+# webhook-receiver:80 directly. Flux's Receiver checks GitHub's HMAC.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app flux-webhook-funnel
+  namespace: &namespace flux-system
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: tailscale-operator
+      namespace: tailscale-system
+    # control-plane-tolerant, the component's default ProxyClass, is
+    # tailscale-resources'. Without it the operator errors "error getting
+    # ProxyClass" until it appears (it does requeue on the ProxyClass watch).
+    - name: tailscale-resources
+      namespace: tailscale-system
+    # The admission gate is in place before the first Funnel Ingress exists.
+    - name: funnel-policy
+      namespace: tailscale-system
+    # webhook-receiver is Flux's own Service.
+    - name: flux-instance
+      namespace: flux-system
+  path: ./kubernetes/apps/flux-system/flux-webhook-funnel
+  prune: true
+  wait: true
+  # `wait` alone would call the Ingress healthy the moment it is applied (kstatus
+  # has no Ingress reader). Operator 1.102.4 writes this hostname only once the
+  # ProxyClass is Ready, the tag:funnel key has minted and the device has
+  # authenticated -- so Ready means the proxy is live, and a failure trips the
+  # flux-system alertmanager Alert. The prefix also rejects a `-1` name
+  # collision. It does NOT prove Funnel is on (a device without the funnel
+  # nodeAttr still gets a hostname); that is the external probe's job.
+  healthCheckExprs:
+    - apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      current: >-
+        has(status.loadBalancer.ingress)
+        && status.loadBalancer.ingress.exists(i, has(i.hostname)
+        && i.hostname.startsWith('flux-equestria-webhook.'))
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/funnel
+  postBuild:
+    substitute:
+      # The Ingress becomes flux-webhook-funnel.
+      APP: flux-webhook
+      NAMESPACE: *namespace
+      # A literal, not flux-CLUSTER_CNAME-webhook: a missing substitution
+      # would render a wrong public name silently rather than failing. It is
+      # also on the funnel-ingress-shape allow-list verbatim, and it is what
+      # stacks/vault/KubernetesFluxWebhooks.ts builds (flux-<cluster.key>-webhook).
+      FUNNEL_HOST: flux-equestria-webhook
+      FUNNEL_PATH: hook
+      FUNNEL_SERVICE: webhook-receiver
+      FUNNEL_PORT: http

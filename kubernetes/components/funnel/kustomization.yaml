@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# A public endpoint on Tailscale Funnel. See ./ingress.yaml for the rules and
+# the variables, and docs/plans/cloudflare-tunnel-to-funnel.md for the design.
+#
+# NO commonLabels, unlike ../tailscale. kustomize's commonLabels also rewrites
+# every NetworkPolicy podSelector in the consuming app, so attaching this to
+# (say) flux-instance would silently point its source-controller policy at
+# nothing. The consuming Kustomization's commonMetadata labels the Ingress.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ingress.yaml

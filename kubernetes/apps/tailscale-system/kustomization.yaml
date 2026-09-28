@@ -9,6 +9,7 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./operator/ks.yaml
+  - ./funnel-policy/ks.yaml
   - ./services/ks.yaml
   - ./resources/ks.yaml
   - ./golink/ks.yaml
