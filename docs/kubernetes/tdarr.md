@@ -54,7 +54,8 @@ right after Begin Command; everything else is stock community plugins.
 | `mov_text`/`tx3g`/WebVTT → SRT. ASS, PGS and VobSub are left alone. | MKV cannot hold `mov_text`; WebVTT made Plex transcode. ASS would lose styling and PGS needs OCR. |
 | Data streams, `eia_608` captions and cover-art streams are dropped. | MKV cannot carry them; players use their own artwork. |
 | After ffmpeg, `mkvpropedit --add-track-statistics-tags`. | ffmpeg copies the source's `BPS` tags, and Jellyfin would believe a re-encode is still a 35 Mbps remux. |
-| Duration must be within 1.5% and size must be smaller (encode) or 30-105% (remux), or the flow fails with the original untouched. | A failed guard shows up under Transcode errors to look at. |
+| Duration must be within 1.5%, or the flow fails with the original untouched. | A failed guard shows up under Transcode errors to look at. |
+| Encode size, by why the file was encoded ([`size-guard.cjs`](assets/tdarr/size-guard.cjs)): **compat** (AV1, Xvid, MPEG-1/2, VC-1, Hi10P, AVI/MPG/TS) keeps up to 120%; **storage** (8-bit H.264, oversized HEVC) keeps only at 85% or less. Remux-only passes keep 30-105%. | From the pilot: one rule ("must shrink") left an AV1 and an Xvid episode undirect-playable over a 1.5% and 3.8% overshoot, and replaced 1.0-1.5 Mbps H.264 episodes for a 1-7% saving and a generation of quality. |
 | Files already fine end at output 4, no ffmpeg run: "Not required". | About 16,000 of 23,218. |
 
 Run over the 2026-09-27 inventory (Tdarr's DB, 23,218 files, 21.6 TB), the
@@ -63,6 +64,28 @@ policy sends **~7,080 files (11.4 TB, ~4,300 hours of video) to re-encode**,
 5-6 TB, but that is an estimate until the pilot measures real ratios. At an
 assumed ~300 fps across both nodes it is two to four weeks of the 17 hours a
 day Tdarr is up.
+
+### The pilot (2026-09-28)
+
+67 files in nine pilot libraries, one per route, under the first version of
+the size guard (a single "must shrink" rule). Checked afterwards for direct
+play on an Apple TV in Plex and Moonfin, and fine.
+
+| Route | Files | Result |
+| --- | --- | --- |
+| H.264 remux + DTS 7.1 | 1 | 11% of original; DTS → EAC3 5.1, AC3 2.0 and 11 PGS kept |
+| H.264 WEB-DL, 7 Mbps | 1 | 32% |
+| Oversized HEVC, 11.7 Mbps | 1 | 36% |
+| MPEG-2 SD (CPU decode) | 10 | 13-17% |
+| Xvid AVI (CPU decode) | 21 | 38-93%, `.avi` → `.mkv`; 1 rejected at 104% |
+| AV1 WEB-DL | 8 | 90-99%; 1 rejected at 101.5% |
+| H.264 MP4, 1.0-1.5 Mbps, `mov_text` | 18 | 8 kept at 93-99%, 10 rejected at 101-106% |
+| DTS-only HEVC (remux path) | 1 | 68%; DTS → EAC3 5.1, video copied |
+| Already direct-play | 6 | "Not required", no ffmpeg run |
+
+49 replaced, 8.9 GB → 5.2 GB. Speed: 60-100 fps per 1080p job and 240-370
+fps per SD job, four jobs at once, so ~300 fps of 1080p across both nodes
+as estimated. The rejections are why the size guard is now split by reason.
 
 ## Applying it
 
@@ -75,18 +98,22 @@ a backup first**, every time.
    `docs/kubernetes/assets/tdarr/build-flow.sh > flow.json`, then
    `tdarr_cruddb` `{collection: "FlowsJSONDB", mode: "insert", docID: "directPlayHevc", obj: <flow.json>}`.
    An existing copy is replaced with `mode: "update"`.
-3. Nodes: `transcodegpu: 2`, `transcodecpu: 0` on each (`tdarr_alter_worker_limit`).
-   Every job uses QSV whichever worker runs it, so a CPU worker would just be
-   a third job on the same iGPU.
-4. **Pilot first.** Point a library at a handful of files that covers the
-   routes (an H.264 remux, an AV1 episode, an Xvid AVI, a DTS-only HEVC file,
-   an interlaced MPEG-2) with `flowId: "directPlayHevc"`, scan it, and read the
-   job reports: real fps, output size, and that the file plays on an Apple TV
-   in Plex **and** Moonfin without transcoding. Tune `ffmpegQuality` in the
-   two Set Video Encoder nodes if the sizes or picture are off.
-5. Then set `flowId: "directPlayHevc"` on TV and Movies, and requeue
-   (`tdarr_set_all_status`) so the files that went "Not required" or errored
-   under the old settings go through the flow too.
+3. Nodes: `transcodegpu: 2`, `transcodecpu: 0` on each (`tdarr_alter_worker_limit`)
+   **and `allowGpuDoCpu: true`** (`tdarr_update_node`). Every job uses QSV
+   whichever worker runs it, so a CPU worker would just be a third job on the
+   same iGPU -- but Tdarr classes a flow job as a CPU task, so with no CPU
+   workers the GPU workers must be allowed to take them or nothing runs.
+4. **Pilot first.** A pilot library needs more than a folder: Tdarr keys files
+   by path and leaves them in the library that first scanned them, so after
+   the scan set each pilot file's `DB` to the pilot library
+   (`tdarr_cruddb` update on `FileJSONDB`). Then read the job reports: real
+   fps, output size, and that the file plays on an Apple TV in Plex **and**
+   Moonfin without transcoding.
+5. Then set `flowId: "directPlayHevc"` on TV and Movies, and requeue so the
+   files that went "Not required" or errored under the old settings go
+   through the flow too: `tdarr_set_all_status`
+   `{dbID, mode: "TranscodeDecisionMaker", table: "", processStatus: "Queued"}`
+   is the UI's "Requeue all items (transcode)".
 
 Sonarr and Radarr pick up a replaced file (and a changed extension, `.mp4` →
 `.mkv`) on their next refresh. Plex and Jellyfin see it on their next scan.
@@ -104,6 +131,26 @@ Sonarr and Radarr pick up a replaced file (and a changed extension, `.mp4` →
 - **Tdarr updates itself.** `autoUpdateServer`/`autoUpdateNodes` are on, so
   the server ran 2.91.01 while the HelmRelease pinned 2.90.01. Renovate and
   the in-app updater are both moving the version.
+- **Staging was full.** 100 finished December encodes (classic plugin stack,
+  auto-accept off) sat in Staging, and at `stagedFileLimit: 100` Tdarr hands
+  out no work at all. Nothing in the server log or `tdarr_get_node_log` says
+  so; only the node **pods'** stdout does: `queueCompleted: staged file limit
+  reached`. They were cleared with Staging → Requeue (`tdarr_client`
+  `staged`, `opts: {applyToAllStaged: true, verdict: "reset"}`), which drops
+  the old encode and requeues the original. Flow jobs do not wait in Staging.
+
+## When nothing is being processed
+
+In the order the pilot hit them:
+
+1. **toolport is holding a dead session.** After any change to the tdarr
+   `MCPToolConfig` the ToolHive proxy restarts, and the `toolport` gateway
+   keeps its old session and old tool list (`404 Session not found`). Restart
+   the `toolport` Deployment in `agents`; its log should then say
+   `connected 'tdarr' (N tools)` with the new count.
+2. **Staging is at its limit** -- read the node pods' logs, see above.
+3. **Workers of the wrong type.** GPU-only nodes need `allowGpuDoCpu`.
+4. **The file is not in the library you think.** Check its `DB`.
 
 ## Not covered
 
