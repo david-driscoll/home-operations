@@ -7,6 +7,16 @@
 # render and prune the same cluster-scoped objects. Funnel consumers dependsOn
 # this, so the gate is admitted before the first Funnel Ingress rather than
 # racing it.
+#
+# Consumers reach it through components/funnel/ks.yaml's dependsOn, which
+# orders it before the first funnel Ingress AND HTTPRoute; network/funnel-gateway
+# depends on it too, so the Gateway is never created unchecked.
+#
+# funnel-httproute-shape and funnel-gateway-shape embed the tailnet domain
+# (TAILSCALE_DOMAIN, a shared-secrets key). No substituteFrom is listed here
+# because components/common, applied by apps/tailscale-system/kustomization.yaml,
+# patches it onto this ks. Outside that umbrella the domain renders empty and
+# the real Gateway and route are refused -- closed, and loudly.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

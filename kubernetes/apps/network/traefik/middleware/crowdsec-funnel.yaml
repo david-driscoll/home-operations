@@ -1,0 +1,108 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# CROWDSEC ENFORCEMENT ON THE TAILSCALE FUNNEL DOOR, AND ONLY THERE.
+# Referenced by nothing but traefik/values.yaml `ports.funnel.http.middlewares`,
+# which makes Traefik prepend it to EVERY router bound to the `funnel`
+# entrypoint, whatever provider built it (pkg/server/aggregator.go:323-362
+# @v3.7.13) -- no route can leave it off. The estate-wide instance
+# (./crowdsec.yaml, `crowdsec-bouncer-plugin`) keeps its `enabled: false` kill
+# switch untouched; this is a second instance of the same plugin, with its own
+# switch. docs/plans/cloudflare-tunnel-to-funnel.md §C4.
+#
+# NOT named `crowdsec-bouncer`: that is components/common's per-namespace
+# alias, and sharing it overwrote the plugin config once (./crowdsec.yaml:6-19).
+#
+# ============ THE LAPI BLOCK MUST EQUAL ./crowdsec.yaml's, VERBATIM ============
+# crowdsecMode, crowdsecLapiScheme/Host/KeyFile, streamStartupBlock,
+# updateMaxFailure, httpTimeoutSeconds and updateIntervalSeconds drive ONE
+# process-wide stream ticker, failure counter and decision cache, started by
+# whichever instance Traefik happens to build FIRST (plugin bouncer.go:65-73,
+# 300-315 @v1.7.1; its README: "only the first one to be instantiated will be
+# bound to the crowdsec stream"). A value that differs here is silently ignored
+# or wins at random, and any change needs a Traefik pod restart to take effect.
+# Change both files together or neither.
+#
+# WHY THIS DOOR MAY ENFORCE BEFORE docs/crowdsec-enforcement-rollout.md (which
+# was never written). That gate guarded against "one proxy IP banned = the whole
+# internet banned". Here the failure cannot take that shape: if the forwarded-
+# header chain ever breaks, the client resolves to the Funnel proxy's POD IP,
+# which CAPI never lists and the agents whitelist (crowdsec/values.yaml:55-69).
+# The failure mode is a silent pass, never a ban-all, and plan §F step 2 checks
+# the client IPs positively (Loki) and with a live 403.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: crowdsec-bouncer-funnel
+spec:
+  plugin:
+    # Must match the key under `experimental.plugins` in traefik/values.yaml.
+    crowdsec-bouncer-traefik-plugin:
+      # ================ THIS DOOR'S KILL SWITCH ================
+      # `false` passes every Funnel request through. A dynamic-config change:
+      # no Traefik roll. Per instance (bouncer.go:334-338). Like the estate
+      # instance it still validates its parameters when off, so the key file
+      # must stay right either way.
+      enabled: true
+      # =========================================================
+      logLevel: INFO
+      # ---- shared with ./crowdsec.yaml: keep identical (see header) ----
+      crowdsecMode: stream
+      crowdsecLapiScheme: http
+      crowdsecLapiHost: crowdsec-service.network.svc.cluster.local:8080
+      crowdsecLapiKeyFile: /etc/secrets/crowdsec/apikey_bouncer
+      streamStartupBlock: false
+      # FAIL-OPEN. In stream mode a LAPI outage keeps enforcing every cached
+      # decision (bouncer.go:381-389) and passes cache misses. Fail-closed
+      # cannot be scoped to this door -- the counter is process-global -- and
+      # would 403 every GitHub delivery and every postiz media fetch during a
+      # restart of the single-replica LAPI. crowdsec/prometheusrule.yaml's
+      # CrowdsecBouncerNotPolling is what notices a stale list.
+      updateMaxFailure: -1
+      httpTimeoutSeconds: 3
+      updateIntervalSeconds: 60
+      # ---- per instance ----
+      # Distinguishable from a 5xx in Gatus and the access log.
+      remediationStatusCode: 403
+      # Which PROXIES to skip while walking X-Forwarded-For right to left
+      # (pkg/ip/ip.go:93-129). Exactly the funnel entrypoint's trustedIPs:
+      # tailscaled sets a single-element XFF, so the first untrusted entry is
+      # the real client.
+      forwardedHeadersTrustedIPs:
+        - "${CLUSTER_NETWORK}"
+      # Which resolved CLIENTS are never evaluated (bouncer.go:347-358).
+      # Deliberately NOT 10/8 or 192.168/16 as in ./crowdsec.yaml: no Funnel
+      # client can resolve to those, and no public client can forge its way
+      # into this list (tailscaled overwrites XFF; Traefik keeps XFF only from
+      # the pod CIDR).
+      clientTrustedIPs:
+        # Tailnet members reaching a Funnel name over MagicDNS (the plan §C1
+        # member grant): tailscaled sets their XFF to their 100.x address.
+        - "100.64.0.0/10"
+        # GitHub webhook delivery, https://api.github.com/meta `.hooks` (checked
+        # live 2026-09-28; this is the list's home once plan step 8b deletes
+        # ./github-hook-ips.yaml). A CAPI entry
+        # must never 403 a delivery: GitHub does not retry, and the failure
+        # is silent until Flux's poll catches up.
+        #
+        # Note what this exempts: EVERY request from GitHub's hook egress, on
+        # EVERY route of the door -- and any GitHub user can point a repo
+        # webhook at any door URL. It does not prove a real Flux delivery.
+        # Harmless today (the Receiver checks the HMAC; postiz-cdn is static),
+        # but it is not "deliveries only". Plan ❓J9.
+        - "192.30.252.0/22"
+        - "185.199.108.0/22"
+        - "140.82.112.0/20"
+        - "143.55.64.0/20"
+        - "2a0a:a440::/29"
+        - "2606:50c0::/32"
+      # crowdsecAppsecEnabled stays false (the default): AppSec, CrowdSec's WAF,
+      # is not deployed -- decided 2026-09-28 (plan J8) -- so Cloudflare's WAF
+      # is not replaced. This door enforces IP reputation: CAPI plus local
+      # scenario decisions.
+      #
+      # STREAM MODE ENFORCES Ip-SCOPED DECISIONS ONLY. The plugin caches each
+      # decision under its value and looks up the exact client address
+      # (bouncer.go:367, 660-673), so a Range decision -- `cscli decisions add
+      # --range`, an IPv6 /64 ban, a range blocklist -- never matches here. Every
+      # live decision is Ip-scoped today (CAPI). Ban an abuser with `--ip`.

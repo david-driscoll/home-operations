@@ -126,6 +126,15 @@ spec:
         # The gate then stops this firing merely because the LAPI is down, which
         # CrowdsecLapiAbsent already owns. `count()` with no `by` returns a
         # label-less series, which is what lets it `and` against `vector(0)`.
+        #
+        # cs_lapi_BOUNCER_requests_total, not cs_lapi_route_requests_total. The
+        # route counter is recorded by a router-wide middleware BEFORE the
+        # API-key check (crowdsec v1.8.1 pkg/apiserver/controllers/controller.go:100),
+        # so a bouncer polling with a rotated key -- 401/403 on every poll -- kept
+        # it non-zero and this alert silent: the exact case it exists for. The
+        # bouncer counter is recorded only after APIKey.Middleware
+        # (controller.go:144). It matters more now that the Funnel door enforces
+        # (traefik/middleware/crowdsec-funnel.yaml).
         - alert: CrowdsecBouncerNotPolling
           annotations:
             description: >-
@@ -136,12 +145,55 @@ spec:
               a rotated apikey_bouncer does NOT re-register itself.
             summary: Traefik's CrowdSec bouncer has stopped fetching decisions.
           expr: |
-            (sum(rate(cs_lapi_route_requests_total{route="/v1/decisions/stream"}[15m])) or vector(0)) == 0
+            (sum(rate(cs_lapi_bouncer_requests_total{route="/v1/decisions/stream"}[15m])) or vector(0)) == 0
               and
             count(up{job="crowdsec-service"} == 1) > 0
           for: 15m
           labels:
             severity: critical
+
+        # ---- the Funnel door blocking someone --------------------------
+        #
+        # The Funnel door is the first place the bouncer ENFORCES
+        # (traefik/middleware/crowdsec-funnel.yaml), and a block there is
+        # silent: the client gets a 403, nothing else notices. The likely
+        # victims are legitimate fetchers -- GitHub is exempt, but Meta's and
+        # TikTok's media crawlers (plan step 5) are not.
+        #
+        # Not noisy by construction: tailscaled 404s everything outside a
+        # device's mount, so only requests to allow-listed paths reach Traefik
+        # at all; scans of / never show up here. A 403 can still come from the
+        # backend itself, which is worth a look too. To see who was blocked:
+        #   {namespace="network", container="traefik"} | json
+        #     | entryPointName="funnel" | DownstreamStatus="403"
+        # and `cscli decisions list --ip <ClientHost>` on the LAPI.
+        - alert: FunnelDoorBlocked
+          annotations:
+            description: >-
+              {{ $value | humanize }} requests on Traefik's funnel entrypoint got a 403 in
+              the last 30 minutes. That is the CrowdSec bouncer blocking a client (or
+              the backend refusing it) on a public Tailscale Funnel endpoint. Check
+              the ClientHost in Traefik's access log and whether it is a legitimate
+              fetcher; the door's kill switch is `enabled` in
+              traefik/middleware/crowdsec-funnel.yaml.
+            summary: The Tailscale Funnel door is returning 403s.
+          # Two halves, because increase() never counts a series' FIRST sample:
+          # Traefik creates the (pod, method, protocol, code) series at value 1
+          # on its first 403 and restarts it with every pod, so on a quiet door
+          # a single block would otherwise be invisible (checked live: the
+          # tailscale entrypoint's 403 series sat at 1 for days with increase()
+          # 0). The `unless ... offset` half catches a series that did not exist
+          # 30 minutes ago.
+          expr: |
+            (sum(increase(traefik_entrypoint_requests_total{entrypoint="funnel", code="403"}[30m])) > 0)
+              or
+            (count(
+              traefik_entrypoint_requests_total{entrypoint="funnel", code="403"}
+                unless
+              traefik_entrypoint_requests_total{entrypoint="funnel", code="403"} offset 30m
+            ) > 0)
+          labels:
+            severity: warning
 
         # ---- the community blocklist -----------------------------------
         #

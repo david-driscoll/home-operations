@@ -1,0 +1,143 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# ONLY Gateway network/funnel MAY BIND TRAEFIK'S FUNNEL DOOR, AND ONLY IN ONE
+# SHAPE. Traefik maps a Gateway listener to an entrypoint by PORT alone
+# (pkg/provider/kubernetes/gateway/kubernetes.go:845-861 @v3.7.13), so any
+# Gateway, in any namespace, with a listener on 8445 would land on the public
+# `funnel` entrypoint -- a TCP listener plus a TCPRoute would take the whole
+# door. This refuses every Gateway on 8445 except network/funnel, and pins
+# network/funnel to the one listener apps/network/funnel-gateway/gateway.yaml
+# declares.
+#
+# The namespace list is NOT pinned here -- funnel-httproute-shape's allow-list
+# already names the namespace of every route -- but HOW it is selected is:
+# only the apiserver-owned, immutable kubernetes.io/metadata.name label, so
+# nobody widens the Gateway by labelling a namespace.
+#
+# GRPCRoute/TCPRoute/TLSRoute need no policy of their own: the listener admits
+# kinds [HTTPRoute] only, and Traefik enforces allowedRoutes.kinds
+# (kubernetes.go:1065-1072).
+#
+# Lives in funnel-policy, but validates an object in network: the Gateway has
+# its own Kustomization (apps/network/funnel-gateway) precisely so that a
+# denial here can fail only that ks, never Traefik's.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-gateway-shape
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["gateway.networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["gateways"]
+  matchConditions:
+    - name: is-funnel-or-listens-on-8445
+      expression: >
+        object.metadata.name == 'funnel'
+        || (has(object.spec.listeners)
+            && object.spec.listeners.exists(l, l.port == 8445))
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: >
+        request.namespace == 'network'
+        && object.metadata.name == 'funnel'
+        && object.spec.gatewayClassName == 'traefik'
+      message: >-
+        only Gateway network/funnel (class traefik) may be named funnel or listen
+        on 8445, Traefik's funnel entrypoint; Traefik binds a listener to an
+        entrypoint by port alone
+    - expression: >
+        size(object.spec.listeners) == 1
+        && object.spec.listeners[0].name == 'http'
+        && object.spec.listeners[0].protocol == 'HTTP'
+        && object.spec.listeners[0].port == 8445
+        && has(object.spec.listeners[0].hostname)
+        && object.spec.listeners[0].hostname == '*.${TAILSCALE_DOMAIN}'
+        && !has(object.spec.listeners[0].tls)
+      message: >-
+        Gateway funnel must have exactly one listener: http, HTTP, port 8445,
+        hostname *.<tailnet>, no tls
+    - expression: >
+        size(object.spec.listeners) == 1
+        && has(object.spec.listeners[0].allowedRoutes)
+        && has(object.spec.listeners[0].allowedRoutes.kinds)
+        && size(object.spec.listeners[0].allowedRoutes.kinds) == 1
+        && object.spec.listeners[0].allowedRoutes.kinds[0].kind == 'HTTPRoute'
+        && has(object.spec.listeners[0].allowedRoutes.namespaces)
+        && has(object.spec.listeners[0].allowedRoutes.namespaces.from)
+        && object.spec.listeners[0].allowedRoutes.namespaces.from == 'Selector'
+        && has(object.spec.listeners[0].allowedRoutes.namespaces.selector)
+        && !has(object.spec.listeners[0].allowedRoutes.namespaces.selector.matchLabels)
+        && has(object.spec.listeners[0].allowedRoutes.namespaces.selector.matchExpressions)
+        && size(object.spec.listeners[0].allowedRoutes.namespaces.selector.matchExpressions) == 1
+        && object.spec.listeners[0].allowedRoutes.namespaces.selector.matchExpressions[0].key == 'kubernetes.io/metadata.name'
+        && object.spec.listeners[0].allowedRoutes.namespaces.selector.matchExpressions[0].operator == 'In'
+      message: >-
+        Gateway funnel must admit only HTTPRoutes, from namespaces selected by
+        the apiserver-owned kubernetes.io/metadata.name label (operator In, no
+        matchLabels)
+    # Experimental-channel field (Gateway API v1.6.2, pinned in
+    # apps/network/traefik-crds). A move to the standard channel removes it and
+    # this line then fails type-checking -- re-run the envtest matrix on every
+    # Gateway API bump.
+    - expression: "!has(object.spec.allowedListeners)"
+      message: Gateway funnel must not accept ListenerSets
+    # Same channel caveat. defaultScope lets routes with useDefaultGateways and
+    # no parentRef attach -- invisible to funnel-httproute-shape, which matches
+    # on a parent named funnel. Traefik 3.7.13 ignores it; a later one may not.
+    - expression: "!has(object.spec.defaultScope)"
+      message: Gateway funnel must not set defaultScope
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-gateway-shape
+spec:
+  policyName: funnel-gateway-shape
+  validationActions: ["Deny"]
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# A ListenerSet on 8445 would be a second way onto the funnel door: it adds
+# listeners to a Gateway from outside it. Traefik 3.7.13 does not implement
+# ListenerSet, so nothing binds today -- this closes the door before a Traefik
+# bump opens it. The CRD (Gateway API v1.6.2 experimental) is installed live.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-listenerset-reserved
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["gateway.networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["listenersets"]
+  matchConditions:
+    - name: listens-on-8445
+      expression: >
+        has(object.spec.listeners)
+        && object.spec.listeners.exists(l, l.port == 8445)
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: "false"
+      message: >-
+        port 8445 is Traefik's funnel entrypoint, the public Tailscale Funnel
+        door; only Gateway network/funnel may listen on it
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-listenerset-reserved
+spec:
+  policyName: funnel-listenerset-reserved
+  validationActions: ["Deny"]

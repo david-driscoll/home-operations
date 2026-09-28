@@ -14,6 +14,9 @@ resources:
   - ./crowdsec/ks.yaml
   - ./crowdsec-ui/ks.yaml
   - ./external-dns
+  # Gateway network/funnel and the Cilium lock on its port: the Tailscale
+  # Funnel door (docs/plans/cloudflare-tunnel-to-funnel.md §C4).
+  - ./funnel-gateway/ks.yaml
   - ./k8s-gateway/ks.yaml
   - ./secrets/ks.yaml
   - ./traefik-crds/ks.yaml

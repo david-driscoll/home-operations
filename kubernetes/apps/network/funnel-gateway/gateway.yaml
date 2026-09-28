@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/gateway.networking.k8s.io/gateway_v1.json
+#
+# THE FUNNEL DOOR'S GATEWAY. Its one listener is HTTP on 8445, which Traefik
+# maps to the `funnel` entrypoint by port alone
+# (pkg/provider/kubernetes/gateway/kubernetes.go:845-861 @v3.7.13) -- and an
+# HTTP listener only binds an entrypoint WITHOUT http.tls (kubernetes.go:852),
+# which is why that entrypoint is plain HTTP. Every route attached here is on
+# the public internet through Tailscale Funnel, behind the entrypoint's CrowdSec
+# bouncer. The shape below is pinned by funnel-gateway-shape; the routes by
+# funnel-httproute-shape (both apps/tailscale-system/funnel-policy).
+#
+# NO external-dns ANNOTATIONS, and nothing else publishes these names:
+# external-dns runs --gateway-name=internal (technitium, unifi) and
+# --gateway-name=external (cloudflare); k8s-gateway serves ROOT_DOMAIN only;
+# the vault stack's tunnel rules read routes on `external` only. The public
+# names are the Funnel devices' own ts.net names.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: funnel
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8445
+      # Routing hygiene: a route naming a non-tailnet host never attaches
+      # (kubernetes.go:1102-1125). Not a boundary -- a Funnel client picks its
+      # own Host header.
+      hostname: "*.${TAILSCALE_DOMAIN}"
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+        namespaces:
+          from: Selector
+          selector:
+            # The apiserver-owned, immutable namespace-name label, so nobody
+            # widens this by labelling a namespace. A new namespace goes here
+            # AND onto funnel-httproute-shape's list in the same PR (postiz's
+            # `equestria` joins in plan step 5).
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - flux-system

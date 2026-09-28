@@ -45,6 +45,15 @@ spec:
       enabled: false
       # ================================================================
       logLevel: INFO
+      # ---- SHARED WITH ./crowdsec-funnel.yaml -----------------------------
+      # crowdsecMode through updateIntervalSeconds below drive ONE process-wide
+      # stream ticker, failure counter and decision cache, owned by whichever
+      # plugin instance Traefik builds first (plugin bouncer.go:65-73, 300-315
+      # @v1.7.1). The Funnel door's instance is ENABLED, so a change here that
+      # is not mirrored there is either ignored or lands on live enforcement at
+      # random. Change both files or neither. The kill switch above is per
+      # instance and unaffected.
+      #
       # stream mode keeps a local copy of the decision list refreshed on an
       # interval, so a LAPI outage degrades to a stale list instead of putting
       # the LAPI in the synchronous request path. Non-negotiable for an ingress

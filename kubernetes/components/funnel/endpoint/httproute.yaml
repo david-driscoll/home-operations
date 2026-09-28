@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# THE ONE ROUTE the Funnel door serves for this endpoint. Rendered into the
+# app's namespace by ../ks.yaml; admitted only if
+# '<namespace> <Service> <port> <path> <hostname>' is on
+# funnel-httproute-shape.yaml's route list.
+#
+# NO FILTERS, EVER -- the policy refuses them. CrowdSec and the header strip
+# come from the entrypoint (traefik values.yaml ports.funnel.http.middlewares),
+# and a URLRewrite ReplacePrefixMatch would re-open the whole backend under the
+# allow-listed prefix.
+#
+# NEVER the `external` Gateway: deriveTunnelRules (components/tunnelRules.ts)
+# has no domain filter and would push a ts.net name into the Cloudflare config.
+# Nothing publishes routes on `funnel`: external-dns runs --gateway-name
+# internal/external, k8s-gateway serves ROOT_DOMAIN only.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: funnel-${FUNNEL_HOST}
+  namespace: ${NAMESPACE}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: network
+      name: funnel
+      sectionName: http
+  # Exactly one. With none Traefik builds no Host rule and the route catches
+  # every Host on the door (pkg/provider/kubernetes/gateway/httproute.go:733-734).
+  # It is routing, not security: a Funnel client picks its own Host header.
+  hostnames:
+    - "${FUNNEL_HOST}.${TAILSCALE_DOMAIN}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /${FUNNEL_PATH}/
+      backendRefs:
+        # `port` is added by ../ks.yaml's `patches` (a number; substitution
+        # cannot carry one through the nested Kustomization). Without it the
+        # CRD refuses the ref -- fails closed.
+        - name: ${FUNNEL_SERVICE}

@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Gateway network/funnel: the only thing allowed to bind Traefik's `funnel`
+# entrypoint (:8445), the Tailscale Funnel door -- and the CiliumNetworkPolicy
+# that lets only the Funnel proxies connect to it.
+# docs/plans/cloudflare-tunnel-to-funnel.md §C4.
+#
+# ITS OWN KUSTOMIZATION, NOT A FILE IN ../traefik, ON PURPOSE. funnel-gateway-shape
+# (apps/tailscale-system/funnel-policy) validates this object on every apply,
+# Flux's server-side dry-run included. Inside ../traefik, a denial -- a policy
+# typo, or a Gateway API CRD bump that breaks the policy's type-check -- would
+# fail the whole traefik apply and freeze Traefik's HelmRelease. Here it fails
+# only this ks, and the funnel endpoints that dependsOn it.
+#
+# NO dependsOn ON network/traefik (the 2026-08-28 deadlock,
+# components/tailscale/ks.yaml:62-99). Ordering against the entrypoint is
+# asserted by health instead: until Traefik runs an entrypoint on 8445 the
+# listener reads Accepted=False, reason PortUnavailable
+# (pkg/provider/kubernetes/gateway/kubernetes.go:478-490 @v3.7.13), so Ready
+# here means "the door exists and this Gateway is bound to it".
+# components/funnel/ks.yaml dependsOn this.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app funnel-gateway
+  namespace: &namespace network
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The Gateway API CRDs (experimental v1.6.2).
+    - name: traefik-crds
+      namespace: network
+    # funnel-gateway-shape is admitted before this Gateway is first created: a
+    # VAP only judges CREATE and UPDATE, so a Gateway that raced ahead of its
+    # policy would go unchecked until its next edit.
+    - name: funnel-policy
+      namespace: tailscale-system
+  path: ./kubernetes/apps/network/funnel-gateway
+  prune: true
+  wait: true
+  # kstatus calls a Gateway Current on sight; this waits for Traefik to bind
+  # the listener. No `failed` expression: during a Traefik roll an old pod can
+  # briefly write PortUnavailable, and that must not fail the ks.
+  healthCheckExprs:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      current: >-
+        has(status.listeners) && status.listeners.exists(l, l.name == 'http'
+        && l.conditions.exists(c, c.type == 'Accepted' && c.status == 'True'
+        && c.observedGeneration == metadata.generation)
+        && l.conditions.exists(c, c.type == 'Programmed' && c.status == 'True'))
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

@@ -1,21 +1,36 @@
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
 #
-# THE ESTATE'S PUBLIC SURFACE, AS A LIST. Every Tailscale Funnel endpoint is a
-# standalone Ingress (see kubernetes/components/funnel), and this refuses any
-# such Ingress whose namespace, backend Service, path and host are not on the
-# allow-list in the last validation below. Publishing something new means
-# adding one line there, in review -- the job the Cloudflare tunnel's dedicated
-# Traefik entrypoint used to do. docs/plans/cloudflare-tunnel-to-funnel.md §C2.
+# THE FUNNEL DEVICES, AS A LIST. Every Tailscale Funnel endpoint is a
+# standalone Ingress in `network` in front of Traefik's funnel door (see
+# kubernetes/components/funnel). This refuses any such Ingress that lives
+# anywhere else, points at anything but traefik-funnel:funnel, or whose
+# "<path> <host>" is not on the device list in the last validation below.
 #
-# WHY A POLICY AND NOT JUST THE COMPONENT. The operator turns EVERY rule and
-# path of a funnel Ingress into a public handler, for ANY Service in its
-# namespace (cmd/k8s-operator/ingress.go, 1.102.4). A hand-written Ingress in
-# `equestria` could otherwise publish any of its ~80 apps.
+# The ROUTES are the other half, and the authoritative one:
+# funnel-httproute-shape.yaml lists what the door actually serves. A Funnel
+# client chooses its own Host header and can step outside its device's mount
+# with an encoded path (see that file), so every device reaches every route on
+# the door. Every device line here has exactly one
+# partner there -- the same path, and host + '.' + tailnet -- added in the same
+# PR. docs/plans/cloudflare-tunnel-to-funnel.md §C2 and §C4.
+#
+# WHY PIN THE BACKEND. The operator turns EVERY rule and path of a funnel
+# Ingress into a public handler for ANY Service in its namespace
+# (cmd/k8s-operator/ingress.go, 1.102.4), and this namespace holds Traefik's
+# own Service. traefik:websecure or traefik:tailscale would put every INTERNAL
+# route on the internet with an attacker-chosen Host, behind an ipAllowList
+# (network/internal-network) that this proxy's pod IP passes -- the 2026-09-15
+# shape. Only port NAME `funnel` on Service traefik-funnel lands on the
+# dedicated entrypoint, and a name (never a number) also keeps the proxy on
+# http:// (a port 443 or one named https flips it to https+insecure://,
+# ingress.go:363-368).
 #
 # WHAT MATCHES: any Ingress carrying a `tailscale.com/funnel` annotation (any
-# value) or `tag:funnel` in `tailscale.com/tags`. Plain tailnet Ingresses
-# (kubernetes/components/tailscale) carry neither and are untouched.
+# value) or `tag:funnel` in `tailscale.com/tags`, and any standalone
+# (no proxy-group) tailscale-class Ingress in `network` -- whose proxy the
+# door's CiliumNetworkPolicy would admit. Plain tailnet Ingresses
+# (kubernetes/components/tailscale) are ProxyGroup-backed and untouched.
 #
 # OBJECTS BEING DELETED ARE EXEMPT. The operator removes its finalizer with a
 # plain UPDATE; without the exemption, tightening this list in the same change
@@ -37,12 +52,25 @@ spec:
         operations: ["CREATE", "UPDATE"]
         resources: ["ingresses"]
   matchConditions:
-    - name: is-funnel-or-carries-tag-funnel
+    # ...or any STANDALONE tailscale Ingress in `network`. Such a proxy carries
+    # the two labels apps/network/funnel-gateway's CiliumNetworkPolicy admits
+    # onto :8445, so it must be a Funnel device on the device list, never a
+    # plain tailnet one. The tailnet Ingresses (components/tailscale) all set
+    # tailscale.com/proxy-group and stay out of scope; live, all 49 in
+    # `network` do (2026-09-28). The exemption tests the VALUE, as the operator
+    # does (ingress.go:294-299 builds a standalone proxy when it is ""), so an
+    # empty proxy-group annotation does not slip a standalone proxy past.
+    - name: is-funnel-or-carries-tag-funnel-or-standalone-in-network
       expression: >
-        has(object.metadata.annotations)
-        && ('tailscale.com/funnel' in object.metadata.annotations
-            || ('tailscale.com/tags' in object.metadata.annotations
-                && object.metadata.annotations['tailscale.com/tags'].contains('tag:funnel')))
+        (has(object.metadata.annotations)
+          && ('tailscale.com/funnel' in object.metadata.annotations
+              || ('tailscale.com/tags' in object.metadata.annotations
+                  && object.metadata.annotations['tailscale.com/tags'].contains('tag:funnel'))))
+        || (request.namespace == 'network'
+            && has(object.spec.ingressClassName) && object.spec.ingressClassName == 'tailscale'
+            && !(has(object.metadata.annotations)
+                 && 'tailscale.com/proxy-group' in object.metadata.annotations
+                 && object.metadata.annotations['tailscale.com/proxy-group'] != ''))
     - name: not-being-deleted
       expression: "!has(object.metadata.deletionTimestamp)"
   validations:
@@ -53,9 +81,10 @@ spec:
         && 'tailscale.com/funnel' in object.metadata.annotations
         && object.metadata.annotations['tailscale.com/funnel'] == 'true'
       message: >-
-        an Ingress that sets tailscale.com/funnel or carries tag:funnel must be
-        a Funnel Ingress, with tailscale.com/funnel set to exactly "true" (drop
-        both for a tailnet-only Ingress)
+        this is a Funnel Ingress (it sets tailscale.com/funnel, carries
+        tag:funnel, or is a standalone tailscale Ingress in network) and must
+        set tailscale.com/funnel to exactly "true"; a tailnet-only Ingress needs
+        neither, and in network it also needs tailscale.com/proxy-group
     # Exactly tag:funnel. A second tag would bring that tag's tailnet reach
     # (tag:funnel is the one tag left out of every autogroup:tagged grant);
     # a missing one falls back to tag:apps, which cannot Funnel.
@@ -105,9 +134,26 @@ spec:
       message: >-
         a Funnel Ingress must have exactly one rule, with no host, holding
         exactly one Prefix path other than / that points at a Service
-    # THE ALLOW-LIST. One entry per public endpoint:
-    #   "<namespace> <Service> <path> <host>"
-    # <host> is the first label of the public name (tls.hosts[0]).
+    # THE DOOR. Namespace network, Service traefik-funnel, port NAME funnel --
+    # the one ClusterIP port that lands on Traefik's funnel entrypoint (see the
+    # header for why every other Traefik port is an internal door).
+    - expression: >
+        request.namespace == 'network'
+        && has(object.spec.rules) && size(object.spec.rules) == 1
+        && has(object.spec.rules[0].http)
+        && size(object.spec.rules[0].http.paths) == 1
+        && has(object.spec.rules[0].http.paths[0].backend.service)
+        && object.spec.rules[0].http.paths[0].backend.service.name == 'traefik-funnel'
+        && has(object.spec.rules[0].http.paths[0].backend.service.port)
+        && has(object.spec.rules[0].http.paths[0].backend.service.port.name)
+        && object.spec.rules[0].http.paths[0].backend.service.port.name == 'funnel'
+      message: >-
+        a Funnel Ingress must live in namespace network and point at Service
+        traefik-funnel, port name funnel (Traefik's funnel entrypoint)
+    # THE DEVICE LIST. One entry per public name:
+    #   "<path> <host>"
+    # <host> is the first label of the public name (tls.hosts[0]). Keep in
+    # step with funnel-httproute-shape.yaml's route list.
     - expression: >
         has(object.spec.tls) && size(object.spec.tls) == 1
         && has(object.spec.tls[0].hosts) && size(object.spec.tls[0].hosts) == 1
@@ -115,21 +161,16 @@ spec:
         && has(object.spec.rules[0].http)
         && size(object.spec.rules[0].http.paths) == 1
         && has(object.spec.rules[0].http.paths[0].path)
-        && has(object.spec.rules[0].http.paths[0].backend.service)
-        && (request.namespace
-            + ' ' + object.spec.rules[0].http.paths[0].backend.service.name
-            + ' ' + object.spec.rules[0].http.paths[0].path
+        && (object.spec.rules[0].http.paths[0].path
             + ' ' + object.spec.tls[0].hosts[0]) in [
-          'flux-system webhook-receiver /hook/ flux-equestria-webhook'
+          '/hook/ flux-equestria-webhook'
         ]
       messageExpression: >
-        'not on the Funnel allow-list (apps/tailscale-system/funnel-policy/funnel-ingress-shape.yaml): '
-        + request.namespace
-        + ' ' + object.spec.rules[0].http.paths[0].backend.service.name
-        + ' ' + object.spec.rules[0].http.paths[0].path
+        'not on the Funnel device list (apps/tailscale-system/funnel-policy/funnel-ingress-shape.yaml): '
+        + object.spec.rules[0].http.paths[0].path
         + ' ' + object.spec.tls[0].hosts[0]
       message: >-
-        not on the Funnel allow-list in
+        not on the Funnel device list in
         apps/tailscale-system/funnel-policy/funnel-ingress-shape.yaml
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
