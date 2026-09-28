@@ -1,7 +1,14 @@
 services:
   bao-transit:
     container_name: bao-transit
-    image: ghcr.io/openbao/openbao:2.7.0@sha256:71156a1c6623a5fa3f5e61b0c6a8ead0faf0df29a778339188443551995d1315
+    # HELD AT 2.6.x. OpenBao 2.7.0 no longer accepts `storage "file"`, which
+    # config.hcl uses: #2008 bumped this to 2.7.0 on 2026-09-23 and the container
+    # crash-looped on "unknown storage type file" from 09-24 until this pin --
+    # four days in which equestria's OpenBao could not have unsealed after a
+    # restart. .github/renovate.json5 holds this file below 2.7; lifting that
+    # needs a storage migration (file -> raft, run with a 2.6 binary that has
+    # both) first, not an image bump.
+    image: ghcr.io/openbao/openbao:2.6.2@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
     restart: unless-stopped
     dns:
       - 100.100.100.100
