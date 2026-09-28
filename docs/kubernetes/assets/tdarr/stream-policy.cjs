@@ -164,6 +164,15 @@ module.exports = async args => {
   }
   // Files with dozens of PGS tracks overflow ffmpeg's default mux queue.
   cmd.overallOuputArguments.push("-max_muxing_queue_size", "9999");
-  log(`decode on ${hw ? "QSV" : "CPU"} (${pix || profile || "unknown format"}), ${interlaced ? "deinterlace, " : ""}filter ${filter}`);
+
+  // Why this file is being encoded decides how size-guard.cjs judges the
+  // result. "compat": the source can't direct-play (AV1, Xvid, MPEG-2, VC-1,
+  // Hi10P, an AVI/MPG/TS container), so HEVC is the point and a slightly
+  // bigger file is still a win. "storage": the source already direct-plays
+  // (8-bit H.264, oversized HEVC), so the encode is only worth keeping if it
+  // is clearly smaller.
+  const compat = !["h264", "hevc"].includes(vcodec) || !["mkv", "mp4", "m4v"].includes(container) || (vcodec === "h264" && !hw);
+  args.variables.user = { ...args.variables.user, dpEncodeReason: compat ? "compat" : "storage" };
+  log(`decode on ${hw ? "QSV" : "CPU"} (${pix || profile || "unknown format"}), ${interlaced ? "deinterlace, " : ""}filter ${filter}; reason ${args.variables.user.dpEncodeReason}`);
   return done(hw ? 1 : 2);
 };

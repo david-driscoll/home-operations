@@ -81,13 +81,13 @@
     },
     {
       "id": "dp-enc-size",
-      "name": "Smaller than original (encode)",
+      "name": "Size guard by encode reason",
       "sourceRepo": "Community",
-      "pluginName": "compareFileSizeRatio",
-      "version": "2.0.0",
+      "pluginName": "customFunction",
+      "version": "1.0.0",
       "fpEnabled": true,
       "position": { "x": 225, "y": 920 },
-      "inputsDB": { "greaterThan": "3", "lessThan": "100" }
+      "inputsDB": { "code": "__SIZE_GUARD__" }
     },
     {
       "id": "dp-rmx-mkv",
@@ -140,8 +140,7 @@
     { "id": "e-enc-dur-short", "source": "dp-enc-dur", "sourceHandle": "2", "target": "dp-fail", "targetHandle": null },
     { "id": "e-enc-dur-long", "source": "dp-enc-dur", "sourceHandle": "3", "target": "dp-fail", "targetHandle": null },
     { "id": "e-enc-size-ok", "source": "dp-enc-size", "sourceHandle": "1", "target": "dp-replace", "targetHandle": null },
-    { "id": "e-enc-size-small", "source": "dp-enc-size", "sourceHandle": "2", "target": "dp-fail", "targetHandle": null },
-    { "id": "e-enc-size-big", "source": "dp-enc-size", "sourceHandle": "3", "target": "dp-fail", "targetHandle": null },
+    { "id": "e-enc-size-reject", "source": "dp-enc-size", "sourceHandle": "2", "target": "dp-fail", "targetHandle": null },
     { "id": "e-rmx-exec", "source": "dp-rmx-mkv", "sourceHandle": "1", "target": "dp-rmx-exec", "targetHandle": null },
     { "id": "e-rmx-stats", "source": "dp-rmx-exec", "sourceHandle": "1", "target": "dp-rmx-stats", "targetHandle": null },
     { "id": "e-rmx-dur", "source": "dp-rmx-stats", "sourceHandle": "1", "target": "dp-rmx-dur", "targetHandle": null },
