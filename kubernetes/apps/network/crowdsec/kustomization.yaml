@@ -8,6 +8,7 @@ resources:
   - ./volsync.yaml
   - ./definition.yaml
   - ./prometheusrule.yaml
+  - ./loki-rules.yaml
 configMapGenerator:
   - name: ${APP}-values
     files:

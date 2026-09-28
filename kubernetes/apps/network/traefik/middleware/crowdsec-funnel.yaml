@@ -27,9 +27,18 @@
 # was never written). That gate guarded against "one proxy IP banned = the whole
 # internet banned". Here the failure cannot take that shape: if the forwarded-
 # header chain ever breaks, the client resolves to the Funnel proxy's POD IP,
-# which CAPI never lists and the agents whitelist (crowdsec/values.yaml:55-69).
-# The failure mode is a silent pass, never a ban-all, and plan §F step 2 checks
+# which CAPI never lists and both the agents and the AppSec pod whitelist
+# (crowdsec/values.yaml config.postoverflows and appsec.postoverflows). The
+# failure mode is a silent pass, never a ban-all, and plan §F step 2 checks
 # the client IPs positively (Loki) and with a live 403.
+#
+# THIS DOOR ALSO RUNS AppSec, CrowdSec's WAF (plan J8, decided 2026-09-28): see
+# the AppSec block at the end. It fails open like the rest, with one exception
+# no flag covers -- an AppSec 401 or 404 blocks every untrusted request.
+#
+# It is not the first thing on the door: traefik/values.yaml
+# `ports.funnel.http.middlewares` runs funnel-strip-headers, funnel-inflight and
+# funnel-ratelimit ahead of it, so a flood is cut before this buffers a body.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -88,21 +97,94 @@ spec:
         # Note what this exempts: EVERY request from GitHub's hook egress, on
         # EVERY route of the door -- and any GitHub user can point a repo
         # webhook at any door URL. It does not prove a real Flux delivery.
-        # Harmless today (the Receiver checks the HMAC; postiz-cdn is static),
-        # but it is not "deliveries only". Plan ❓J9.
+        # It skips the WAF too: a trusted client returns before AppSec is
+        # asked (bouncer.go:355-357). Harmless today (the Receiver checks the
+        # HMAC; postiz-cdn is static), but it is not "deliveries only". Plan
+        # ❓J9.
         - "192.30.252.0/22"
         - "185.199.108.0/22"
         - "140.82.112.0/20"
         - "143.55.64.0/20"
         - "2a0a:a440::/29"
         - "2606:50c0::/32"
-      # crowdsecAppsecEnabled stays false (the default): AppSec, CrowdSec's WAF,
-      # is not deployed -- decided 2026-09-28 (plan J8) -- so Cloudflare's WAF
-      # is not replaced. This door enforces IP reputation: CAPI plus local
-      # scenario decisions.
+      # ---- AppSec (CrowdSec's WAF): THIS INSTANCE ONLY ----
+      # Decided 2026-09-28 (plan J8). Every key below is a field of THIS
+      # instance, with its own HTTP client (plugin bouncer.go:86-95, 205-217,
+      # 252-259 @v1.7.1); no AppSec state is process-global (that is only the
+      # stream, metrics and failure counters, :65-73). So unlike the LAPI block
+      # these must NOT be mirrored into ./crowdsec.yaml, and a change applies
+      # on the next dynamic-config reload, with no roll. The README's "keep
+      # aligned" list and the comment at bouncer.go:47-62, which both name
+      # appsecEnabled, are stale for this version.
+      #
+      # WHO IS INSPECTED: a client that is NOT in clientTrustedIPs above
+      # (trusted clients return at :355-357, before AppSec) and NOT already
+      # banned in the stream cache (:383-388). Tailnet members and GitHub's
+      # hook egress skip the WAF as well as the reputation check (J9).
+      #
+      # `crowdsecAppsecEnabled: false` is the WAF-only kill switch; `enabled`
+      # at the top still switches off both.
+      crowdsecAppsecEnabled: true
+      crowdsecAppsecScheme: http
+      # ROOTED (trailing dot). The plugin opens a fresh connection for every
+      # inspected request -- it closes AppSec's response unread, so Go never
+      # reuses it (:798-816) -- and an unrooted name under ndots:5 would try
+      # the pod's search domains first on every one of those dials.
+      crowdsecAppsecHost: crowdsec-appsec-service.network.svc.cluster.local.:7422
+      # Must equal the :7422 acquisition's `path` in crowdsec/values.yaml.
+      crowdsecAppsecPath: /
+      # FAIL-OPEN (D2). Both default TRUE (pkg/configuration/configuration.go:138-139).
+      #   UnreachableBlock  dial error, timeout (httpTimeoutSeconds, 3s) or a
+      #                     502/503/504 from AppSec -> pass (bouncer.go:790-797)
+      #   FailureBlock      AppSec answered 500     -> pass (bouncer.go:803-809)
+      # NOT COVERED, and blocked whatever these say (:810-812): any other
+      # non-200 from AppSec. Every untrusted request then gets 403 and
+      # FunnelDoorBlocked fires; flip crowdsecAppsecEnabled for relief. In
+      # practice that is AppSec answering 401 because it cannot vouch for the
+      # bouncer key:
+      #   - the key is unknown to the LAPI (rotation: the ROTATION CAVEAT in
+      #     crowdsec/values.yaml);
+      #   - the LAPI answered non-200 to AppSec's re-check (its Postgres query
+      #     failed), which DROPS AppSec's cached entry;
+      #   - AppSec has no cached entry yet -- its cache is in memory, so empty
+      #     after every AppSec start -- and the LAPI is down, restarting or
+      #     slower than auth_timeout when the first untrusted request arrives.
+      # The last is the easy one to miss: before step 3 almost nothing
+      # untrusted arrives, so the cache is usually cold.
+      # Or a 404, from a path mismatch.
+      crowdsecAppsecFailureBlock: false
+      crowdsecAppsecUnreachableBlock: false
+      # Default true, and kept. It refuses an HTTP/2 request that has a body,
+      # no Content-Length and a method of POST, PUT, PATCH or DELETE
+      # (:735-761); any client can get that shape, because tailscaled speaks h2c
+      # to Traefik for a request with Content-Type application/grpc. It does
+      # NOT stop every unread body: the same shape with GET, OPTIONS or any
+      # other method goes to AppSec as a bodiless GET and on to the backend
+      # with its body uninspected. Body inspection here is best-effort -- see
+      # crowdsecAppsecBodyLimit -- and no route on this door may rely on it.
+      crowdsecAppsecUnreadableBodyBlock: true
+      # Default 10MiB. The plugin reads the first N bytes of every inspected
+      # body into Traefik's heap TWICE before the backend sees the request
+      # (:762-772), and the client decides how long that stays pinned (up to
+      # the entrypoint's readTimeout). Traefik carries the whole estate under
+      # a 512Mi limit with about 100Mi of headroom (7d peak, 2026-09-28).
+      # Nothing untrusted has a reason to send a body here: GitHub is trusted
+      # and never reaches AppSec, and postiz media is GET. A longer body is
+      # inspected up to this size and forwarded whole. An error while reading
+      # it (client abort, readTimeout) is a 403.
+      crowdsecAppsecBodyLimit: 16384
+      # crowdsecAppsecKey/KeyFile deliberately unset: the key falls back to the
+      # LAPI key (:191-193), i.e. the `traefik` bouncer, which AppSec checks
+      # against the LAPI. One key, no new secret. A KeyFile would be validated
+      # even with AppSec off (configuration.go:315): one more way to break the door.
       #
       # STREAM MODE ENFORCES Ip-SCOPED DECISIONS ONLY. The plugin caches each
       # decision under its value and looks up the exact client address
       # (bouncer.go:367, 660-673), so a Range decision -- `cscli decisions add
       # --range`, an IPv6 /64 ban, a range blocklist -- never matches here. Every
       # live decision is Ip-scoped today (CAPI). Ban an abuser with `--ip`.
+      # AppSec's own bans are Ip-scoped via profiles.yaml, so they apply here
+      # at the next stream poll (updateIntervalSeconds): crowdsecurity/
+      # appsec-vpatch (two distinct in-band rules from one IP) and
+      # driscoll/appsec-block-flood (the same rule, over and over; see
+      # appsec.scenarios in crowdsec/values.yaml).

@@ -322,9 +322,17 @@ ports:
       # Fully qualified: an unqualified name resolves in the router's own
       # provider (kubernetesgateway) and is not found. A missing or broken one
       # fails every funnel router CLOSED (404) and touches nothing else.
+      #
+      # ORDER MATTERS. The header strip goes first so that no client header it
+      # blanks -- the X-Crowdsec-Appsec-* ones above all -- is still there when
+      # the bouncer copies every request header into its AppSec query. The
+      # throttles go before the bouncer so that a flood is refused before
+      # AppSec buffers and inspects it (middleware/funnel-throttle.yaml).
       middlewares:
-        - network-crowdsec-bouncer-funnel@kubernetescrd
         - network-funnel-strip-headers@kubernetescrd
+        - network-funnel-ratelimit@kubernetescrd
+        - network-funnel-inflight@kubernetescrd
+        - network-crowdsec-bouncer-funnel@kubernetescrd
       # Refuses (400, per router) a request whose ROUTED path still carries an
       # encoded / \ % or NUL -- e.g. /hook/a%2F..%2Fb -- so none reaches a
       # backend. It does NOT make tailscaled and Traefik agree on the path:

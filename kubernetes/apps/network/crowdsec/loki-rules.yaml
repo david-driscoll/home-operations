@@ -1,0 +1,67 @@
+---
+# Loki ruler rules for the Funnel door's WAF. The loki-sc-rules sidecar picks up
+# a ConfigMap labelled `loki_rule` from ANY namespace; see
+# observability/loki/rules/credential-drift-rules.yaml for the plumbing and for
+# how to prove a rule actually loaded (`/loki/api/v1/rules`).
+#
+# WHY A LOG RULE. CrowdsecAppsecAbsent (./prometheusrule.yaml) sees the AppSec
+# POD. What it cannot see is a pod that is up while Traefik cannot reach it: a
+# wrong crowdsecAppsecHost, a Service or DNS fault, a policy dropping :7422.
+# The door's bouncer then fails open (crowdsecAppsecUnreachableBlock: false in
+# traefik/middleware/crowdsec-funnel.yaml) and passes every untrusted request
+# uninspected. Everything is Ready, and the only trace is one line per request
+# in Traefik's own log, from the plugin (bouncer.go @v1.7.1):
+#   :790-797  level=ERROR msg=appsecQuery:unreachable   (dial, timeout, 502-504)
+#   :803-808  level=INFO  msg=appsecQuery:failure       (AppSec answered 500)
+# both tagged component=CrowdsecBouncerTraefikPlugin (pkg/logger/logger.go).
+#
+# Only untrusted requests on the Funnel door reach this code, the estate-wide
+# instance never calls AppSec (`enabled: false`), and a healthy AppSec
+# produces neither line. But AppSec is ONE replica: while it is evicted,
+# drained or restarting it has no endpoints, and the few requests in that gap
+# log `unreachable` (RollingUpdate covers rollouts only). So the rule wants
+# failures that keep coming: the 10m window with `for: 15m` means a lone line,
+# or a burst, never fires, and at least one failure every 10 minutes for a
+# quarter of an hour does. A fault while no untrusted traffic arrives stays
+# silent, and costs nothing until some does.
+#
+# UNPROVEN PATH until plan §F step 2 runs: no line from this plugin has ever
+# reached Loki, because the only instance before this door was disabled and
+# logs nothing. §F's scale-to-0 step checks the line in Loki itself, not just
+# in `kubectl logs`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${APP}-loki-rules
+  labels:
+    loki_rule: "true"
+data:
+  funnel-appsec.yaml: |
+    groups:
+      - name: funnel-appsec
+        rules:
+          - alert: FunnelAppsecUnreachable
+            expr: |
+              sum(
+                count_over_time(
+                  {namespace="network", container="traefik"}
+                    |= "CrowdsecBouncerTraefikPlugin"
+                    |~ "appsecQuery:(unreachable|failure)"
+                  [10m]
+                )
+              ) > 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: The Funnel door is passing requests without WAF inspection.
+              description: >-
+                Traefik's CrowdSec bouncer on the Tailscale Funnel door logged
+                {{ $value }} failed AppSec calls in the last 10 minutes, and has kept
+                failing for 15
+                (appsecQuery:unreachable or appsecQuery:failure). It fails open, so
+                those requests reached their backends uninspected. If
+                CrowdsecAppsecAbsent is not firing as well, AppSec is up but Traefik
+                cannot reach it: compare crowdsecAppsecHost in
+                traefik/middleware/crowdsec-funnel.yaml with the
+                crowdsec-appsec-service Service and its endpoints.

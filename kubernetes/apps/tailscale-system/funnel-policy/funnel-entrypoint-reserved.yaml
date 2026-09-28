@@ -106,20 +106,21 @@ spec:
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
 #
 # THE FUNNEL DOOR'S MIDDLEWARE NAMES ARE RESERVED. Traefik's entrypoint refers
-# to them as network-crowdsec-bouncer-funnel@kubernetescrd and
-# network-funnel-strip-headers@kubernetescrd, and without providers
-# .kubernetesCRD.safeNaming that key is just "<namespace>-<name>"
+# to them as network-funnel-strip-headers, network-funnel-ratelimit,
+# network-funnel-inflight and network-crowdsec-bouncer-funnel (each
+# @kubernetescrd), and without providers.kubernetesCRD.safeNaming that key
+# is just "<namespace>-<name>"
 # (crd/name_builder.go:32-38 @v3.7.13) -- NORMALIZED: provider.Normalize joins
 # the runs of alphanumerics with single '-' (pkg/provider/configuration.go), so
 # dots and doubled hyphens collapse too. `bouncer-funnel` in a namespace
 # `network-crowdsec`, `bouncer.funnel` there, or `crowdsec.bouncer.funnel` in
 # `network` itself all flatten to the door's key. On a collision Traefik keeps
 # whichever it listed last and only logs a warning (crd/kubernetes.go:1524-1530),
-# so a no-op Middleware would silently strip CrowdSec, or the header strip, off
-# every funnel router. This refuses every Middleware whose normalized key is one
-# of the two, except the two real objects. Namespaces are [a-z0-9-] and names
-# [a-z0-9.-], both starting and ending alphanumeric, so collapsing runs of
-# [-.] is exactly what Normalize does to them.
+# so a no-op Middleware would silently strip CrowdSec, the header strip or a
+# throttle off every funnel router. This refuses every Middleware whose
+# normalized key is one of the four, except the four real objects. Namespaces
+# are [a-z0-9-] and names [a-z0-9.-], both starting and ending alphanumeric,
+# so collapsing runs of [-.] is exactly what Normalize does to them.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -136,7 +137,8 @@ spec:
     - name: not-the-real-ones
       expression: >
         !(request.namespace == 'network'
-          && object.metadata.name in ['crowdsec-bouncer-funnel', 'funnel-strip-headers'])
+          && object.metadata.name in ['crowdsec-bouncer-funnel', 'funnel-strip-headers',
+                                      'funnel-ratelimit', 'funnel-inflight'])
     - name: not-being-deleted
       expression: "!has(object.metadata.deletionTimestamp)"
   validations:
@@ -145,10 +147,15 @@ spec:
           '^network[-.]+crowdsec[-.]+bouncer[-.]+funnel$')
         && !(request.namespace + '-' + object.metadata.name).matches(
           '^network[-.]+funnel[-.]+strip[-.]+headers$')
+        && !(request.namespace + '-' + object.metadata.name).matches(
+          '^network[-.]+funnel[-.]+ratelimit$')
+        && !(request.namespace + '-' + object.metadata.name).matches(
+          '^network[-.]+funnel[-.]+inflight$')
       message: >-
-        this Middleware's Traefik key (namespace-name) would collide with the
-        funnel door's network/crowdsec-bouncer-funnel or
-        network/funnel-strip-headers and silently replace it
+        this Middleware's Traefik key (namespace-name) would collide with one of
+        the funnel door's network/crowdsec-bouncer-funnel,
+        network/funnel-strip-headers, network/funnel-ratelimit or
+        network/funnel-inflight and silently replace it
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
 apiVersion: admissionregistration.k8s.io/v1

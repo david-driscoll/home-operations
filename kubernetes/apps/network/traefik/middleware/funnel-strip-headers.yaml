@@ -3,7 +3,8 @@
 #
 # Client-supplied forwarding headers that nothing upstream removes, blanked on
 # the Tailscale Funnel door. Referenced only by traefik/values.yaml
-# `ports.funnel.http.middlewares`, after the CrowdSec bouncer.
+# `ports.funnel.http.middlewares`, FIRST -- ahead of the throttles and the
+# CrowdSec bouncer, for the X-Crowdsec-Appsec-* names below.
 #
 # tailscaled's proxy lets Go strip and then SETS only X-Forwarded-For, -Host
 # and -Proto (ipn/ipnlocal/serve.go:1068-1076 @v1.102.5); everything below
@@ -41,3 +42,19 @@ spec:
       X-Cluster-Client-IP: ""
       X-Original-Forwarded-For: ""
       Fastly-Client-IP: ""
+      # AppSec's own control headers. The bouncer copies EVERY request header
+      # into its query to AppSec and then sets only six of these itself
+      # (plugin bouncer.go:777-788 @v1.7.1). AppSec also honours
+      # -Transaction-Id (the Coraza transaction and the req_uuid in its logs
+      # and alerts) and -Http-Version (REQUEST_PROTOCOL, which rules can test),
+      # so a Funnel client could choose both (crowdsec pkg/appsec/request.go:
+      # 21-30, 427-436 @v1.8.1). All eight are blanked; the bouncer re-sets its
+      # six afterwards. This only works because this middleware runs first.
+      X-Crowdsec-Appsec-Transaction-Id: ""
+      X-Crowdsec-Appsec-Http-Version: ""
+      X-Crowdsec-Appsec-Api-Key: ""
+      X-Crowdsec-Appsec-Ip: ""
+      X-Crowdsec-Appsec-Uri: ""
+      X-Crowdsec-Appsec-Verb: ""
+      X-Crowdsec-Appsec-Host: ""
+      X-Crowdsec-Appsec-User-Agent: ""

@@ -33,5 +33,6 @@ resources:
   # both headers). A missing or broken one fails every funnel router closed.
   - ./crowdsec-funnel.yaml
   - ./funnel-strip-headers.yaml
+  - ./funnel-throttle.yaml
   # - ./fail2ban.yaml
   # - ./tailscale-redirect.yaml

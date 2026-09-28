@@ -32,7 +32,9 @@
 #     earlier rollouts, all sitting at 9,400+ seconds of heartbeat age and
 #     climbing forever. Any threshold on this fires immediately and never
 #     clears. Agent liveness is covered by CrowdsecAgentsMissing below, which
-#     counts scrape targets against the DaemonSet's own desired count.
+#     counts scrape targets against the DaemonSet's own desired count. The
+#     AppSec pod registers the same way (one machine per pod name), so every
+#     crowdsec-appsec rollout leaves one more; CrowdsecAppsecAbsent covers it.
 #
 #   cs_papi_last_pull_timestamp
 #     Flat 0 on every pod, because console enrolment is deliberately OFF
@@ -135,6 +137,15 @@ spec:
         # bouncer counter is recorded only after APIKey.Middleware
         # (controller.go:144). It matters more now that the Funnel door enforces
         # (traefik/middleware/crowdsec-funnel.yaml).
+        #
+        # method="GET", because AppSec shares the route. The Funnel door's WAF
+        # validates the same `traefik` key with HEAD /v1/decisions/stream,
+        # which the LAPI routes to the same handler and counts in this metric
+        # as method="HEAD" (controller.go:148-149, v1/metrics.go:47-57).
+        # Summed across methods, AppSec's key checks would keep this non-zero
+        # while Traefik's stream poll -- the thing that actually delivers bans
+        # -- was dead. HEAD creates no bouncer row and moves no last_pull
+        # (middlewares/v1/api_key.go:149-164).
         - alert: CrowdsecBouncerNotPolling
           annotations:
             description: >-
@@ -145,7 +156,7 @@ spec:
               a rotated apikey_bouncer does NOT re-register itself.
             summary: Traefik's CrowdSec bouncer has stopped fetching decisions.
           expr: |
-            (sum(rate(cs_lapi_bouncer_requests_total{route="/v1/decisions/stream"}[15m])) or vector(0)) == 0
+            (sum(rate(cs_lapi_bouncer_requests_total{route="/v1/decisions/stream", method="GET"}[15m])) or vector(0)) == 0
               and
             count(up{job="crowdsec-service"} == 1) > 0
           for: 15m
@@ -162,20 +173,39 @@ spec:
         #
         # Not noisy by construction: tailscaled 404s everything outside a
         # device's mount, so only requests to allow-listed paths reach Traefik
-        # at all; scans of / never show up here. A 403 can still come from the
-        # backend itself, which is worth a look too. To see who was blocked:
+        # at all; scans of / never show up here. To see who was blocked:
         #   {namespace="network", container="traefik"} | json
         #     | entryPointName="funnel" | DownstreamStatus="403"
-        # and `cscli decisions list --ip <ClientHost>` on the LAPI.
+        # then `cscli alerts list --ip <ClientHost>` on the LAPI. FOUR causes,
+        # and that one command tells three of them apart:
+        #   - an IP-reputation ban: a decision (`cscli decisions list --ip`);
+        #   - an AppSec (WAF) rule match: an alert "WAF block: <rule> from
+        #     <ip>" with no decision -- and cs_appsec_block_total moved;
+        #   - AppSec answering 401 or 404, which the plugin blocks whatever
+        #     its fail-open flags say (bouncer.go:810-812 @v1.7.1): EVERY
+        #     untrusted request 403s, no alert at all, and the crowdsec-appsec
+        #     log says "Unauthorized request". A 401 means AppSec cannot vouch
+        #     for the bouncer key: rotated, the LAPI answering non-200, or a
+        #     freshly started AppSec that has not cached the key yet while the
+        #     LAPI is down (crowdsec/values.yaml, auth_cache_duration);
+        #   - the backend itself.
+        # A deliberate one: plan §F step 2's `/hook/.env` probe fires this.
+        # The door's throttles answer 429, not 403, and are not counted here
+        # (traefik/middleware/funnel-throttle.yaml).
         - alert: FunnelDoorBlocked
           annotations:
             description: >-
               {{ $value | humanize }} requests on Traefik's funnel entrypoint got a 403 in
-              the last 30 minutes. That is the CrowdSec bouncer blocking a client (or
-              the backend refusing it) on a public Tailscale Funnel endpoint. Check
-              the ClientHost in Traefik's access log and whether it is a legitimate
-              fetcher; the door's kill switch is `enabled` in
-              traefik/middleware/crowdsec-funnel.yaml.
+              the last 30 minutes, on a public Tailscale Funnel endpoint. Take the
+              ClientHost from Traefik's access log and run `cscli alerts list --ip` on
+              the LAPI: a ban decision means IP reputation; "WAF block: <rule>" means
+              CrowdSec AppSec matched the request; nothing, with every untrusted request
+              failing, means AppSec is answering 401 (the bouncer key is unknown to the
+              LAPI, the LAPI's database is failing, or AppSec restarted and has not cached
+              the key while the LAPI is down) -- see the crowdsec-appsec log.
+              Otherwise the backend refused it. Kill switches in
+              traefik/middleware/crowdsec-funnel.yaml: `crowdsecAppsecEnabled` for the
+              WAF alone, `enabled` for the whole bouncer.
             summary: The Tailscale Funnel door is returning 403s.
           # Two halves, because increase() never counts a series' FIRST sample:
           # Traefik creates the (pod, method, protocol, code) series at value 1
@@ -192,6 +222,39 @@ spec:
                 unless
               traefik_entrypoint_requests_total{entrypoint="funnel", code="403"} offset 30m
             ) > 0)
+          labels:
+            severity: warning
+
+        # ---- AppSec, the Funnel door's WAF -----------------------------
+        #
+        # The door's bouncer FAILS OPEN on AppSec: unreachable, slower than
+        # httpTimeoutSeconds, or answering 5xx, and the request passes
+        # uninspected (crowdsecAppsecUnreachableBlock/FailureBlock false in
+        # traefik/middleware/crowdsec-funnel.yaml). So a dead AppSec has no
+        # symptom at all: the door keeps serving, it just stops being a WAF.
+        # IP-reputation enforcement is unaffected, which is why this is a
+        # warning where CrowdsecLapiAbsent is critical.
+        #
+        # The job comes from the chart's appsec ServiceMonitor, off by default
+        # and switched on in values.yaml. This sees the POD only. An AppSec that
+        # is up but unreachable from Traefik (wrong host, Service, DNS) shows as
+        # `appsecQuery:unreachable` in Traefik's log instead, and
+        # ./loki-rules.yaml alerts on that.
+        - alert: CrowdsecAppsecAbsent
+          annotations:
+            description: >-
+              CrowdSec AppSec, the WAF behind the Tailscale Funnel door, has been missing
+              from Prometheus for 15 minutes. The door's bouncer fails open on AppSec, so
+              Funnel requests are reaching their backends without WAF inspection;
+              IP-reputation blocking still works. Check
+              `kubectl -n network get deploy crowdsec-appsec` and its
+              wait-for-lapi-and-register init container, which waits on the LAPI. Stuck
+              in Init:CrashLoopBackOff after a node reboot means its registration hit the
+              machine it registered last time (not idempotent): delete the pod.
+            summary: CrowdSec AppSec (the Funnel door's WAF) is down.
+          expr: |
+            absent(up{job="crowdsec-appsec-service"} == 1)
+          for: 15m
           labels:
             severity: warning
 

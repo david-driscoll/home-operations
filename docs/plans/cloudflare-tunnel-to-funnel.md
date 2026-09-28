@@ -1,6 +1,6 @@
 # Cloudflare Tunnel → Tailscale Funnel
 
-**Status:** plan, 2026-09-27. Step 1 (#2162) went live 2026-09-28. Step 2 (#2168) is in review, redesigned 2026-09-28 to route Funnel through a dedicated Traefik door with CrowdSec (§C, §C4); nothing else is built yet. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-27. Step 1 (#2162) went live 2026-09-28. Step 2 (#2168) is in review, redesigned 2026-09-28 to route Funnel through a dedicated Traefik door with CrowdSec, including the AppSec WAF (§C, §C4, J8); nothing else is built yet. Decisions marked ✅ were taken by
 David on 2026-09-27 and 2026-09-28. Still open in [§J](#j-open-questions), none of which blocks
 step 2:
 - J4 (TikTok) can wait until a TikTok app exists.
@@ -93,7 +93,8 @@ This plan removes the **tunnel**, not Cloudflare.
   control reconnect while the pod looks healthy. A pod restart only sometimes clears it.
 - **What we lose compared with Cloudflare:**
   - edge DDoS absorption;
-  - the WAF;
+  - the managed WAF. CrowdSec AppSec at the door replaces its known-exploit virtual patching but
+    not its generic rule sets (§C4, J8);
   - caching;
   - the zone-added `HSTS` and `nosniff` headers.
 
@@ -108,7 +109,9 @@ GitHub ──https──▶ Funnel relay ──SNI──▶ ts-…-0 (tailscale-
                                           ▼
              Traefik entrypoint `funnel` :8445 (plain HTTP, ClusterIP only, not on the LB;
                only Funnel proxy pods may connect -- CiliumNetworkPolicy)
-               ├─ entrypoint middlewares: crowdsec-bouncer-funnel (enabled) → funnel-strip-headers
+               ├─ entrypoint middlewares: funnel-strip-headers → funnel-ratelimit → funnel-inflight
+               │     → crowdsec-bouncer-funnel (enabled): IP reputation, then AppSec (WAF)
+               │                                          ──▶ crowdsec-appsec-service.network:7422
                └─ binds only routes on Gateway network/funnel
                     ▼
                HTTPRoute flux-system/funnel-flux-equestria-webhook → webhook-receiver:80
@@ -129,7 +132,8 @@ CrowdSec can run on it: the bouncer is a Traefik plugin).
   the Funnel proxies connect to it (§C4).
 
 The door brings back Traefik access logs and CrowdSec detection on the public paths, and adds
-CrowdSec **enforcement** there from day one. The estate-wide kill switch stays off (§C4).
+CrowdSec **enforcement** there from day one: IP reputation, plus the AppSec WAF. The estate-wide
+kill switch stays off (§C4).
 
 Still unnecessary once the tunnel goes:
 - the `tunnel` entrypoint;
@@ -239,9 +243,9 @@ own binding:
    or in the Ingress `traefik.ingress.kubernetes.io/router.entrypoints` annotation. The annotation
    **key** is matched case-insensitively too: Traefik decodes it with EqualFold, so
    `router.entryPoints: funnel` binds exactly like the lowercase form.
-7. **`funnel-middleware-names-reserved`**. Refuses any Middleware, except the two real ones, whose
-   **normalized** Traefik key would collide with the door's two middlewares and silently replace
-   them. Without safeNaming, Traefik's key is `<ns>-<name>` with every run of non-alphanumerics
+7. **`funnel-middleware-names-reserved`**. Refuses any Middleware, except the four real ones, whose
+   **normalized** Traefik key would collide with the door's four middlewares (the header strip,
+   the two throttles and the bouncer) and silently replace them. Without safeNaming, Traefik's key is `<ns>-<name>` with every run of non-alphanumerics
    collapsed to one `-`, so `crowdsec.bouncer.funnel` in `network` collides too.
 8. **`tailscale-proxies-secret-scope`**. The `proxies` ServiceAccount may only **UPDATE the Secret
    named after its own pod**. The pod name comes from the bound token's `userInfo.extra`, and that
@@ -297,9 +301,12 @@ Ingress (51 routers live). `asDefault` closes that (§C4).
   - `forwardedHeaders.trustedIPs: [${CLUSTER_NETWORK}]` only, never `insecure`. The CrowdSec
     plugin reads XFF without checking who sent it, so this list is what stands between a forged
     XFF and a bouncer bypass;
-  - `http.middlewares: [network-crowdsec-bouncer-funnel@kubernetescrd,
-    network-funnel-strip-headers@kubernetescrd]`, prepended by Traefik to **every** router on the
-    entrypoint (`aggregator.go:323-362`). A missing one fails the door closed and nothing else;
+  - `http.middlewares`, prepended by Traefik to **every** router on the entrypoint
+    (`aggregator.go:323-362`), all `network-…@kubernetescrd`, in this order:
+    `funnel-strip-headers`, `funnel-ratelimit`, `funnel-inflight`, `crowdsec-bouncer-funnel`. A
+    missing one fails the door closed and nothing else. The strip goes first so that no
+    `X-Crowdsec-Appsec-*` header a client sent reaches the bouncer's AppSec query, and the throttles
+    go before the bouncer so that a flood is refused before AppSec buffers it;
   - `encodedCharacters` refuses encoded slash, backslash, NUL and percent in the routed path;
   - `aliasHeadersStrategy: delete`;
   - Traefik's default 60s readTimeout.
@@ -334,21 +341,91 @@ Ingress (51 routers live). `asDefault` closes that (§C4).
   - It is **fail-open** (`updateMaxFailure: -1`), decided 2026-09-28. Fail-closed cannot be scoped
     to one instance.
   - `clientTrustedIPs` holds tailnet 100.64/10 and GitHub's hooks ranges. The GitHub exemption
-    covers every route on the door and any GitHub-originated request (J9).
+    covers every route on the door and any GitHub-originated request, and it skips the WAF as
+    well as the reputation check (J9).
   - Stream mode enforces **Ip-scoped decisions only**; a `--range` ban has no effect at the door.
+- **Per-client throttles** (`network/traefik/middleware/funnel-throttle.yaml`), added with AppSec:
+  - `funnel-ratelimit`: 10 requests/s, burst 50. `funnel-inflight`: 16 simultaneous requests.
+  - The client is the one XFF entry tailscaled sets (`ipStrategy.depth: 1`), and IPv6 is grouped
+    by /64.
+  - Why: AppSec made each untrusted request cost Traefik memory (the body buffer below), for as long
+    as the client stalls it, up to the 60s readTimeout. Every blocked request is also one LAPI
+    alert. Nothing else bounds either; Funnel promises no rate limit (§E4). One client can now pin
+    well under 2 MiB.
+  - Both answer 429, which `FunnelDoorBlocked` does not count. Both limits sit far above GitHub's
+    deliveries and, at step 5, the platforms' media fetchers.
+  - Many distinct addresses still add up. Load-test the door from alpha-site before step 5 and
+    record Traefik's and AppSec's memory.
+- **AppSec, CrowdSec's WAF, runs on this door** (J8, decided 2026-09-28).
+  - **Path.** `crowdsec-bouncer-funnel` sends each request from a client that is neither trusted
+    nor already banned to `crowdsec-appsec-service:7422` before the backend sees it. The
+    AppSec settings are per plugin instance (`bouncer.go:86-95, 205-217, 252-259` @v1.7.1), so
+    the estate-wide instance and its kill switch are untouched.
+  - **Rules.** `crowdsecurity/appsec-default` from the `appsec-virtual-patching` and
+    `appsec-generic-rules` collections. CVE virtual patches and five generic rules run in-band
+    (they block); experimental rules run out-of-band (they only feed scenarios). There is no OWASP
+    CRS, so this replaces Cloudflare's known-exploit patching, not its generic SQLi/XSS rule sets.
+    The rules are the ones baked into the image and move with the chart pin.
+  - **Fail-open (D2).** If AppSec is unreachable, slower than 3s or answers 5xx, the request
+    passes uninspected (`crowdsecAppsecUnreachableBlock`/`FailureBlock: false`).
+    **Except:** any other non-200 blocks, and no flag covers it (`bouncer.go:810-812`). Every
+    untrusted request then 403s, and `FunnelDoorBlocked` fires. In practice that is AppSec
+    answering 401 because it cannot vouch for the bouncer key:
+    - the key is unknown to the LAPI (rotation; restart Traefik straight after, per the ROTATION
+      CAVEAT in `crowdsec/values.yaml`);
+    - the LAPI answered AppSec's re-check with a non-200 (its Postgres query failed), which drops
+      the cached entry. `auth_cache_duration: 6h` makes that rare;
+    - AppSec has no cached entry yet and the LAPI is down, restarting or slower than 1s. The cache
+      is in memory, so it is empty after every AppSec start, and only an untrusted request fills
+      it. Before step 3 almost nothing untrusted arrives, so it is usually cold. §F's clean probe
+      warms it, and step 3's Gatus probe keeps it warm;
+    - a low-power window with Postgres dark: once the 6h entry expires, the re-check gets a
+      non-200 and every untrusted client gets 403 for the rest of the window.
+
+    The other case is a 404 from a path mismatch. AppSec's probes read `/metrics`, so a pod
+    answering 401 stays Ready.
+  - **Body.** Only the first 16 KiB is inspected (`crowdsecAppsecBodyLimit`). The plugin buffers
+    it twice in Traefik's heap, and nothing untrusted legitimately POSTs here. Body inspection is
+    **best-effort** on this door: a body sent with h2c and a method other than POST, PUT, PATCH or
+    DELETE reaches the backend unread, and so does anything past the limit or in an unusual
+    encoding. URI and headers are always inspected. No route on the door may rely on the WAF
+    reading its bodies.
+  - **Bans and alerts.**
+    - One in-band hit 403s that request and raises a "WAF block" alert with no decision. That alert
+      is shared with CAPI, with its context (URI and ts.net host), under the existing
+      `console.yaml`. Out-of-band matches raise no alert.
+    - Two distinct in-band rules from one IP within about a minute trip `appsec-vpatch`, a 4h Ip
+      ban that the door enforces at the next stream poll.
+    - The same rule over and over trips `driscoll/appsec-block-flood` (`appsec.scenarios`: the 11th
+      block in a burst). `appsec-vpatch` never catches that, and each repeat would otherwise be one
+      more alert row and CAPI signal.
+    - The AppSec pod mounts its own copy of the internal-networks whitelist. It stops **bans** of an
+      internal address, not the per-request alerts: AppSec alerts skip postoverflow whitelists.
+  - **AppSec control headers.** The bouncer copies every client header into its AppSec query and
+    sets only six itself. `funnel-strip-headers` blanks all eight `X-Crowdsec-Appsec-*` names first,
+    so a client cannot choose AppSec's transaction ID or HTTP version.
+  - **Kill switch for the WAF alone:** `crowdsecAppsecEnabled: false`. It is dynamic, with no
+    roll.
 - **Client IP.** tailscaled sets XFF to the real client, and Traefik keeps it only from the pod CIDR,
   which only the Funnel proxies can reach on 8445. The access log's ClientHost is that value, and
-  the agents' traefik-logs parser and the bouncer both use it.
-  - If the chain ever breaks, the client resolves to a whitelisted pod IP: **a silent pass, never a
+  the agents' traefik-logs parser, the bouncer and AppSec (`X-Crowdsec-Appsec-Ip`) all use it.
+  - If the chain ever breaks, the client resolves to a pod IP. That IP is whitelisted in the agents
+    and in the AppSec pod (`appsec.postoverflows`), so the result is **a silent pass, never a
     ban-all.**
   - That is why this door can enforce ahead of `docs/crowdsec-enforcement-rollout.md`, which was
     never written (J13). §F step 2 verifies client IPs positively.
-- **Alerts** (`network/crowdsec/prometheusrule.yaml`):
-  - `FunnelDoorBlocked` fires on any 403 at the door.
-  - `CrowdsecBouncerNotPolling` now counts bouncer-authenticated polls, so a rejected bouncer key
-    is caught too.
-- **AppSec (the WAF) is not deployed**, so Cloudflare's WAF is not replaced. That was decided
-  2026-09-28 (J8).
+- **Alerts:**
+  - `FunnelDoorBlocked` fires on any 403 at the door, WAF blocks included. Its description says
+    how to tell the four causes apart. The throttles' 429s are not counted.
+  - `CrowdsecBouncerNotPolling` counts bouncer-authenticated **GET** polls. A rejected bouncer key
+    is caught, and AppSec's HEAD key checks on the same route cannot mask a dead poller.
+  - `CrowdsecAppsecAbsent` fires when the AppSec pod is gone for 15 minutes; that is invisible
+    otherwise, because the door fails open.
+  - `FunnelAppsecUnreachable` is a Loki rule (`network/crowdsec/loki-rules.yaml`) on the plugin's
+    `appsecQuery:unreachable|failure` lines. It covers an AppSec that is up but that Traefik
+    cannot reach, and fires only on failures that keep coming for 15 minutes; a restart of the
+    single replica produces a few.
+  - The first three live in `network/crowdsec/prometheusrule.yaml`.
 
 ## D. The webhook
 
@@ -577,7 +654,8 @@ Each numbered item is one PR unless marked otherwise.
        - an Ingress annotated `router.entrypoints: funnel`, `router.entryPoints: funnel` or
          `Router.ENTRYPOINTS: websecure,funnel`;
        - a plain (no funnel annotation, no proxy-group) tailscale Ingress in `network`;
-       - a Middleware `crowdsec.bouncer.funnel` in `network`;
+       - a Middleware `crowdsec.bouncer.funnel` in `network`, or `ratelimit` in a namespace
+         `network-funnel`;
        - a Gateway on 8445 in `default`;
        - an HTTPRoute on `funnel` from `equestria`, or with a URLRewrite filter.
    - **Cilium lock** (Hubble): `hubble observe --to-port 8445 --verdict DROPPED` shows
@@ -596,6 +674,64 @@ Each numbered item is one PR unless marked otherwise.
        the mount and routes as `/api`, which is on no route: the mount is not the boundary (§C2).
      - A cellular client given a 5-minute `cscli decisions add --ip` gets **403** (human-run), and
        `FunnelDoorBlocked` fires.
+   - **AppSec (the WAF, J8).** It lands in the same merge as the door. The `crowdsec` and `traefik`
+     Kustomizations reconcile independently, and either order is safe: until the Service exists the
+     plugin fails open and logs `appsecQuery:unreachable`, and the door carries no traffic before
+     step 3. Check the pod, then the plugin config, then probe from outside.
+     - `kubectl -n network rollout status deploy/crowdsec-appsec` completes. The pod log shows the
+       two collections installed and `Appsec Runner ready to process event`, and no
+       `Unauthorized request`.
+     - The HelmRelease upgrade added objects and changed none: the `crowdsec-lapi` pod and the
+       `crowdsec-agent` pods keep their age.
+     - `cscli machines list` on the LAPI shows a validated `crowdsec-appsec-…` machine.
+     - `up{job="crowdsec-appsec-service"} == 1`, `CrowdsecAppsecAbsent` is quiet, and Loki's
+       `/loki/api/v1/rules` lists `FunnelAppsecUnreachable`.
+     - Traefik's `/api/http/middlewares/network-crowdsec-bouncer-funnel@kubernetescrd` is enabled
+       and shows `crowdsecAppsecEnabled: true`, `crowdsecAppsecFailureBlock: false`,
+       `crowdsecAppsecUnreachableBlock: false`, `crowdsecAppsecBodyLimit: 16384` and the rooted
+       host `crowdsec-appsec-service.network.svc.cluster.local.:7422`.
+       `network-crowdsec-bouncer-plugin@kubernetescrd` shows no AppSec key.
+     - `/api/entrypoints` lists the funnel middlewares in order: strip-headers, ratelimit,
+       inflight, bouncer. `/api/http/middlewares` shows `network-funnel-ratelimit` and
+       `network-funnel-inflight` enabled with no error.
+     - **A clean request** from a public client that is neither tailnet nor GitHub (cellular).
+       First check that `cscli decisions list --ip <that IP>` is empty: a CAPI-listed address is
+       refused before AppSec is ever asked.
+       `curl -s -o /dev/null -w '%{http_code}\n' https://flux-equestria-webhook.opossum-yo.ts.net/hook/`
+       returns **404** (the receiver's), and `sum(cs_appsec_reqs_total)` goes up by one. That
+       proves the plugin asks AppSec, through the rooted name. It also puts the bouncer key in
+       AppSec's cache (§C4, Fail-open).
+     - **A blocked request** from the same client, carrying a forged control header:
+       `curl -si -H 'X-Crowdsec-Appsec-Transaction-Id: forged-by-client' https://flux-equestria-webhook.opossum-yo.ts.net/hook/.env`
+       returns **403**.
+       - `cs_appsec_rule_hits{rule_name="crowdsecurity/vpatch-env-access"}` goes up by one.
+       - `cscli alerts list --ip <that IP>` shows `WAF block: crowdsecurity/vpatch-env-access`,
+         and `cscli decisions list --ip` shows no decision.
+       - `cscli alerts inspect -d <id>` shows a generated `request_uuid`, not `forged-by-client`:
+         `funnel-strip-headers` runs before the bouncer.
+       - `FunnelDoorBlocked` fires, as intended.
+       - Send only this one rule, and only a few times. `appsec-vpatch` counts distinct rules, so a
+         second, different probe (for example `/hook/.git/config`) inside a minute bans the IP for
+         4h. `driscoll/appsec-block-flood` bans on the 11th block of one rule in a burst. Clear
+         either with `cscli decisions delete --ip`. Every hit is shared with CAPI under the current
+         `console.yaml`, so do not loop it.
+     - **Throttles:** from the same client,
+       `seq 100 | xargs -P 40 -I{} curl -s -o /dev/null -w '%{http_code}\n' https://flux-equestria-webhook.opossum-yo.ts.net/hook/ | sort | uniq -c`
+       shows some **429**s next to the 404s. The 404s are clean requests, so they raise no alert
+       and ban nothing.
+     - **Trusted clients bypass it:** the same `/hook/.env` from a tailnet device returns **404**
+       (J9).
+     - **Fail-open, proven** (human-run, about 2 minutes):
+       1. `kubectl -n network scale deploy/crowdsec-appsec --replicas=0`.
+       2. Repeat the `/hook/.env` probe. It now returns **404**, and Traefik logs
+          `appsecQuery:unreachable`.
+       3. Confirm the line reached **Loki**, not just `kubectl logs`:
+          `{namespace="network", container="traefik"} |= "appsecQuery:unreachable"`. No line from
+          this plugin has ever reached Loki before, so this is what proves
+          `FunnelAppsecUnreachable` can fire. It will not fire here: it wants 15 minutes of
+          failures.
+       4. Scale back to 1 within 15 minutes, or `CrowdsecAppsecAbsent` fires. Helm does not undo a
+          manual scale. The new pod's cache is cold again: repeat the clean request.
    - **Proxy checks:**
      - `funnel-flux-equestria-webhook` (the nested ks) and `flux-webhook-funnel` go **Ready**.
        The nested ks passes only once the status hostname starts `flux-equestria-webhook.` (no `-1`
@@ -741,6 +877,11 @@ Each numbered item is one PR unless marked otherwise.
     - It must carry `alerts: [{ type: "pushover", enabled: true }]` itself, as
       `stacks/backups/index.ts:125-133` does. `addUptimeGatus` adds only `interval`.
 - **Loki alerts:** on `POSTIZ_MEDIA_PATCH_NOT_APPLIED` and `POSTIZ_FUNNEL_CANARY_NOT_WRITTEN`.
+- **The WAF** (step 2, §C4): `CrowdsecAppsecAbsent` (Prometheus) and `FunnelAppsecUnreachable`
+  (Loki). Neither can see an AppSec that is reachable but never asked. Once step 3's webhook Gatus
+  probe exists, it sends a steady untrusted request from alpha-site through AppSec, and an alert
+  on `rate(cs_appsec_reqs_total[1h]) == 0` becomes meaningful. Before that, only trusted GitHub
+  traffic may be arriving, and it never reaches AppSec.
 - **Runbook: "Funnel endpoint red".**
   1. Find the proxy with
      `kubectl -n tailscale-system get pods -l tailscale.com/parent-resource=funnel-<host>,tailscale.com/parent-resource-ns=network`.
@@ -750,17 +891,44 @@ Each numbered item is one PR unless marked otherwise.
   4. If the device was removed in the admin console, step 3 is also the only fix (#20744).
   5. The webhook falls back to polling, so this is never urgent.
   6. **A legitimate client gets 403** (`FunnelDoorBlocked`). Find its ClientHost in Traefik's access
-     log (`entryPointName=funnel`) and run `cscli decisions list --ip <ip>`. The door's kill switch
-     is `enabled` in `traefik/middleware/crowdsec-funnel.yaml`; flipping it is a dynamic change
-     with no roll.
+     log (`entryPointName=funnel`) and run `cscli alerts list --ip <ip>` on the LAPI.
+     - A ban decision (`cscli decisions list --ip`) means IP reputation; `cscli decisions delete
+       --ip` clears it.
+     - `WAF block: <rule>` with no decision means an AppSec false positive. The WAF-only kill switch
+       is `crowdsecAppsecEnabled: false`. To drop one rule instead, add it to
+       `DISABLE_APPSEC_RULES` in `appsec.env` (`crowdsec/values.yaml`), which rolls the AppSec pod.
+       - Copy the exact name from `kubectl -n network exec deploy/crowdsec-appsec -- cscli
+         appsec-rules list` first. A misspelt name makes the new pod fetch the hub from the CDN,
+         fail again and crash-loop.
+       - Watch `rollout status`. RollingUpdate keeps the old pod serving while the new one fails;
+         revert if it does.
+     - The kill switch for the whole door bouncer is `enabled`. Both switches live in
+       `traefik/middleware/crowdsec-funnel.yaml` and are dynamic changes with no roll.
+     - A **429** instead is the door's throttles (`funnel-throttle.yaml`), not CrowdSec. Raise the
+       limit there if a real fetcher needs more.
   7. **Everything 404s at Traefik.** Check `/api/http/routers` for errors on the funnel routers.
-     - A missing or misconfigured `network/crowdsec-bouncer-funnel` or `network/funnel-strip-headers`
+     - A missing or misconfigured door middleware (`network/funnel-strip-headers`,
+       `network/funnel-ratelimit`, `network/funnel-inflight` or `network/crowdsec-bouncer-funnel`)
        fails only the door closed and leaves internal routes alone.
      - A plugin that failed to download or load is **estate-wide**. The pod logs `Plugins are
        disabled because an error has occurred.` instead of `Plugins loaded.`, and every route
        carrying any plugin middleware 404s too: sablier, and the crowdsec-bouncer chain, which is
        whoami today. Check for `Plugins loaded.` first, and roll the Traefik pods (§F step 2)
        before debugging Funnel.
+  8. **Every untrusted request 403s, and `cscli alerts list` shows nothing.** AppSec is answering
+     401 (or 404), which the plugin blocks despite fail-open; the `crowdsec-appsec` log says
+     `Unauthorized request from`. GitHub and tailnet clients are unaffected, because they are
+     trusted.
+     - After a bouncer-key rotation, restart Traefik (the ROTATION CAVEAT in `crowdsec/values.yaml`).
+     - During a LAPI database outage, it clears once Postgres answers again.
+     - After AppSec restarted while the LAPI was down or slow, it clears once the LAPI answers:
+       AppSec had no cached key to fall back on.
+     - The pod stays Ready throughout, because its probes read `/metrics`.
+     - Immediate relief in every case: `crowdsecAppsecEnabled: false`.
+  9. **`CrowdsecAppsecAbsent`, with the pod in `Init:CrashLoopBackOff`.** Usually after a node
+     rebooted without a drain: the pod kept its name, and the init container's `cscli lapi
+     register` hit the machine it registered the first time (403). Delete the pod. The door fails
+     open until then; IP reputation still works.
 
 ## H. Security posture, before and after
 
@@ -768,8 +936,8 @@ Each numbered item is one PR unless marked otherwise.
 |---|---|---|
 | Boundary | shared Traefik, dedicated `tunnel` entrypoint (which, it turned out, also carried 51 default-bound outpost routers) | the dedicated Traefik `funnel` entrypoint, not on the LB, reachable only from the Funnel proxies (CiliumNetworkPolicy), serving only HTTPRoutes on Gateway `network/funnel` from the `funnel-httproute-shape` allow-list. Every route there is reachable from every device. `asDefault` and the entrypoint, Gateway, ListenerSet and Middleware-name reservations keep everything else off |
 | Path traversal | cloudflared `..` deny rule, plus Traefik path cleaning | tailscaled `path.Clean` before the mount match, then Traefik sanitizePath. An encoded `/`, backslash, `%` or NUL left in the routed path is refused (400). tailscaled and Traefik do **not** see the same path, which is why the mount is not a boundary |
-| Edge | Cloudflare DDoS protection, WAF, HSTS and nosniff headers | Tailscale relays, with no WAF or DDoS promise. CrowdSec IP reputation (CAPI plus local scenarios) is enforced at the door, fail-open. No AppSec WAF (J8). Add HSTS at the cdn if wanted |
-| Internet-facing processes' credentials | Traefik: cluster-wide Secret **read** | two processes. (1) **Traefik, as today**: cluster-wide Secret **read** (chart ClusterRole). It is the same Deployment, and it now parses every Funnel request and runs the CrowdSec plugin on the `funnel` entrypoint, so a Traefik or plugin bug reachable from the internet still means every Secret in the cluster. The direct design had removed that; it is the price of in-process CrowdSec. (2) **the `proxies` SA**: **read** of every Secret in `tailscale-system` (`operator-oauth` included, which can mint `tag:funnel`); **write** only to its own pod's state Secret once `tailscale-proxies-secret-scope` is on Deny |
+| Edge | Cloudflare DDoS protection, WAF, HSTS and nosniff headers | Tailscale relays, with no WAF or DDoS promise. At the door: per-client throttles (10/s, 16 in flight), CrowdSec IP reputation (CAPI plus local scenarios) and the CrowdSec AppSec WAF (CVE virtual patches plus five generic rules; no OWASP CRS). The WAF always sees the URI and headers; body inspection is best-effort (first 16 KiB, and h2c can skip it). Both CrowdSec layers fail open, except that an AppSec 401 or 404 blocks every untrusted request (J8). Tailnet and GitHub hook traffic skips both (J9). Add HSTS at the cdn if wanted |
+| Internet-facing processes' credentials | Traefik: cluster-wide Secret **read** | three processes. (1) **Traefik, as today**: cluster-wide Secret **read** (chart ClusterRole). It is the same Deployment, and it now parses every Funnel request and runs the CrowdSec plugin on the `funnel` entrypoint, so a Traefik or plugin bug reachable from the internet still means every Secret in the cluster. The direct design had removed that; it is the price of in-process CrowdSec. (2) **the `proxies` SA**: **read** of every Secret in `tailscale-system` (`operator-oauth` included, which can mint `tag:funnel`); **write** only to its own pod's state Secret once `tailscale-proxies-secret-scope` is on Deny. (3) **`crowdsec-appsec`**, since J8: it parses every untrusted request's headers and first 16 KiB of body (Coraza and its JSON, XML and multipart parsers). It holds a LAPI **machine** credential, which can create alerts with decisions and delete decisions: a compromise could ban any untrusted client at the door or empty the list the door enforces. It also sees the `traefik` bouncer key on every request. Its pod runs as the `network` default ServiceAccount, with the token mounted and no RBAC granted |
 | Tailnet reach of the internet-facing device | none; cloudflared is not a tailnet node | none: `tag:funnel` is left out of every former `autogroup:tagged` grant, and a policy test pins that (J6) |
 | Client IP | XFF from the cloudflared pod | XFF set by tailscaled, trusted by Traefik only from the pod CIDR, which only the Funnel proxies can reach on 8445; the bouncer and the agents see the real client |
 | Names in CT logs | `*.driscoll.tech` | `*.opossum-yo.ts.net`, already public through the tailnet certs |
@@ -838,21 +1006,67 @@ Each numbered item is one PR unless marked otherwise.
   - **Needs a human:** the client can only be created in the Tailscale admin console.
   - **Risk if deferred:** low. The route is a reviewed HelmRelease change, or a compromise of
     taildrive, which could already mint every other operator-owned tag.
-- ✅ **J8. AppSec (WAF).** Decided 2026-09-28: not deployed. The door enforces IP reputation only,
-  so Cloudflare's WAF is not replaced. If it is ever wanted, it is a separate change: chart appsec,
-  :7422 acquisition, the appsec collections, and `crowdsecAppsecEnabled` with FailureBlock and
-  UnreachableBlock false. Check the plugin README's "align" caveat before enabling it on one
-  instance.
+- ✅ **J8. AppSec (WAF).** Decided 2026-09-28 by David: **deployed, for the Funnel door only, in
+  step 2 (#2168).** This reverses the earlier call the same day ("not deployed").
+  - **What is built:**
+    - chart `appsec` in `network/crowdsec` (Deployment `crowdsec-appsec`, Service :7422);
+    - collections `appsec-virtual-patching` and `appsec-generic-rules` under
+      `crowdsecurity/appsec-default`;
+    - `crowdsecAppsecEnabled` on `crowdsec-bouncer-funnel` only, with a 16 KiB body limit;
+    - the local scenario `driscoll/appsec-block-flood` in the AppSec pod;
+    - hardening on the door, for costs AppSec itself adds: per-client throttles ahead of the
+      bouncer, and the header strip moved first so that it blanks the `X-Crowdsec-Appsec-*`
+      control headers (§C4).
+  - **The README "align" caveat does not apply** to AppSec settings in plugin v1.7.1. They are
+    per-instance fields with a per-instance HTTP client (`bouncer.go:86-95, 205-217, 252-259`).
+    The process-global state is only the stream, metrics and failure counters (`:65-73`). The
+    estate-wide instance returns before AppSec because it is `enabled: false` (`:335`).
+  - **Posture:** fail-open per D2. Two cases no plugin flag covers block every untrusted request
+    (`:810-812`); both are loud, because `FunnelDoorBlocked` fires.
+    - An AppSec 401. Causes: key rotation; the LAPI answering a re-check with a non-200 (its
+      Postgres failing; `auth_cache_duration: 6h` makes that rare); or a freshly started AppSec with
+      a cold cache while the LAPI is down or slow (§C4 has the list).
+    - A 404 from a path mismatch.
+  - **Considered, not built:**
+    - **A keyed readiness probe on `crowdsec-appsec`**, sending a real AppSec query with the
+      bouncer key. It would turn the cold-cache 401 into "not Ready", hence a dial error, hence a
+      pass, and warm the cache at start. Cost: the key in the pod's env, a probe that can hold the
+      HelmRelease NotReady, and a steady heartbeat in `cs_appsec_reqs_total` that the step-3
+      "AppSec not asked" alert would have to filter out. Revisit if the 401 case ever bites.
+    - **An idempotent init container** (a per-run suffix on the machine name, through a
+      postRenderer). It would fix the node-reboot crash-loop (§G runbook 9), but means owning the
+      chart's init command, which the agents share. Documented instead.
+    - **A custom appsec-config without the out-of-band rules.** Out-of-band matches raise no alert
+      in 1.8.1, so there is nothing to save. Dropping them would only be one more startup-failure
+      path.
+    - **`routines: 2`.** With the 16 KiB body limit and the throttles, one runner drains a burst in
+      seconds. Re-measure after the step-5 load test.
+  - **Coverage:** known-exploit virtual patching. There is no OWASP CRS, so generic SQLi/XSS is not
+    covered. Adding `appsec-crs` (out-of-band) is a separate decision.
+  - **Signals:** WAF alerts go to CAPI under the existing `console.yaml`, with `share_context`
+    (URI, target host).
 - ❓ **J9. GitHub hooks bypass.** GitHub's hooks ranges are in the funnel bouncer's
   `clientTrustedIPs`, so a CAPI listing never 403s a delivery. The cost is that every request from
-  GitHub's hook egress skips CrowdSec on every route, and any GitHub user can trigger one. The
-  alternative is to move the ranges to the agents' postoverflow whitelist, which stops local bans,
-  and enforce CAPI uniformly.
+  GitHub's hook egress skips CrowdSec on every route, and any GitHub user can trigger one. Since J8,
+  that includes the WAF: a trusted client returns before AppSec is asked (`bouncer.go:355-357`).
+  The alternative is to move the ranges to the agents' postoverflow whitelist, which stops local
+  bans, and enforce CAPI uniformly.
+  - That alternative would put deliveries through AppSec as well.
+  - Only two literal strings in a push payload match any in-band rule:
+    `freemarker.template.utility.execute` and `class.module.classLoader.resources.`. A match
+    403s the delivery, and GitHub does not retry.
+  - The ranges would then also belong in `appsec.postoverflows`. That stops AppSec's **bans** of
+    them, not its per-delivery alerts: AppSec alerts skip postoverflow whitelists.
 - ❓ **J10. Encoded `;`, `?` and `#`.** Left allowed on the door. Tighten once postiz filenames are
   confirmed; they are 32-hex random names, which suggests it is safe.
 - ❓ **J11. The postiz hairpin (step 5).** postiz's own media fetches reach the door from the
   estate's WAN IP. Step 5 adds that IP to the agents' postoverflow whitelist and to the bouncer's
   `clientTrustedIPs`. No WAN-IP variable exists yet.
+  - **Since J8, also decide the platforms' fetchers.** AppSec makes it cheaper to get an innocent
+    fetcher banned: any path under a door prefix routes, so a crawler steered to fetch
+    `/uploads/.env` and `/uploads/.git/config` within a minute trips `appsec-vpatch` and gets a 4h
+    ban plus a CAPI signal. Either put the platforms' fetcher ranges in `appsec.postoverflows` and
+    the agents' whitelist (still inspected, never banned), or accept it.
 - ✅ **J12. In-cluster XFF forgery on :8445.** Decided 2026-09-28: closed in step 2 by the deny-only
   CiliumNetworkPolicy `traefik-funnel-door` (§C4), including the Connector path.
 - ❓ **J13. `docs/crowdsec-enforcement-rollout.md` does not exist**, and never did (`git log --all`
