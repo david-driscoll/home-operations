@@ -1,6 +1,8 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+It is sent with every prompt, including every subagent's, so it keeps rules and drops the stories;
+the incidents behind them live in [`docs/agents/claude-code.md`](docs/agents/claude-code.md).
 
 ## Developer Workflow
 
@@ -16,10 +18,9 @@ cd stacks/<stack-name>
 pulumi preview        # always preview before deploying
 pulumi up --yes       # deploy
 
-# Required env vars (declared in .config/mise.toml as `vals` refs -- `ref+openbao://`,
-# `ref+sops://`, … -- and resolved per command by `mise run vals-run <cmd>`.
-# They were op:// literals resolved by `op run`; that has not been true since
-# each value started naming its own backend. See that file's [env] header.)
+# Required env vars are `vals` refs in .config/mise.toml (`ref+openbao://`,
+# `ref+sops://`, … -- not op:// any more), resolved per command by
+# `mise run vals-run <cmd>`. See that file's [env] header.
 # CONNECT_HOST, CONNECT_TOKEN, PULUMI_CONFIG_PASSPHRASE
 # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (Minio)
 # AUTHENTIK_TOKEN, AUTHENTIK_URL
@@ -30,59 +31,28 @@ pulumi up --yes       # deploy
 `flux`, `kubectl`, `talosctl`, `sops`, `yq`, `jq`, `pulumi`, `age`, `gh`, `tsc`,
 `biome`, `yamllint`, `shellcheck`, `typos`, `actionlint` and the rest are pinned in
 **`.config/mise.toml`**. There is no `.mise.toml` at the repo root -- the ones under
-`docker/*/`, `stacks/*/` and `dashboard/` are per-directory configs for those
-subtrees, not this. Almost nothing is on the system PATH.
+`docker/*/`, `stacks/*/` and `dashboard/` cover only those subtrees. Almost nothing
+is on the system PATH.
 
-**A tool that looks missing is usually an uninstalled pin -- or an untrusted
-config -- not an absent binary**, and both fail silently. mise will not load a
-config it does not trust, so no shim is created and the tool reports exactly what
-it would if it had never existed. On 2026-09-05 a session concluded from that that
-the repo had no `flux` and no `kustomize`, and shipped a PR whose description said
-the manifest and TypeScript checks could not be run. Both could: `mise trust` then
-`mise install flux2 npm:typescript` took under a minute, and the checks then showed
-the one failing `kustomize build` was already failing on `main` -- which is the
-answer that PR should have carried.
-
-Trust is no longer the likely half of that in an agentboard pod: `trusted_config_paths`
-in [`agentboard/resources/mise.toml`](kubernetes/apps/agents/agentboard/resources/mise.toml)
-covers `/root`, and trust inherits by path, so the checkout and every worktree
-under it are trusted with nobody at the terminal. A fresh clone elsewhere still
-needs `mise trust` once. The pod also installs this config's pins at boot, not
-just its own -- `entrypoint.sh` runs `mise install` twice, once per config -- so
-a tool being `(missing)` here now means the boot install failed or the pin was
-added since, rather than the pod never having tried. Check `mise ls --current`
-either way; that is what tells you which it is.
-
-A third cause is the working directory rather than the install. A shim resolves
-its version from the config covering the CURRENT directory, so `mise ls --current`
-run from `/tmp` lists only the tools
-[`agentboard/resources/mise.toml`](kubernetes/apps/agents/agentboard/resources/mise.toml)
-pins globally -- not this repo's `.config/mise.toml`. Most shims fall back to an
-installed version anyway and work from anywhere, which is exactly what makes the
-exceptions confusing. On 2026-09-06 `python3` in an agent's `/tmp` scratchpad
-instead hard-failed with `No version is set for shim: python3`, and that session
-reported both Python and `graphify` as unavailable; both were fine, and `cd`-ing
-into the checkout was the entire fix. `python` is pinned globally now so that
-instance is closed, but the shape is not -- run this repo's tooling from the
-checkout, not from a scratch directory. `mise use -g` is not the workaround: the
-pod's global config is a read-only ConfigMap mount and the write fails with EBUSY.
-
-So before reporting a tool as unavailable:
+**A tool that looks missing is almost never absent** -- an uninstalled pin, an
+untrusted config and the wrong working directory all fail silently, looking exactly
+like a tool that does not exist. Before reporting one as unavailable:
 
 ```bash
 mise ls --current        # what is pinned here, and which are "(missing)"
-mise install <tool>      # e.g. `flux2`, `npm:typescript` -- beats the whole set
+mise install <tool>      # e.g. `flux2`, `npm:typescript` -- a bare `mise install` pulls ~30 tools incl. dotnet
 mise trust               # only if a config is reported untrusted
-cd <the checkout>        # shims resolve against the CURRENT dir, not $PATH alone
+cd <the checkout>        # shims resolve against the CURRENT dir, so /tmp can fail with "No version is set for shim"
 ```
 
-`mise install` with no arguments pulls ~30 tools including dotnet and
-powershell-core. Name the ones you need instead.
+In the agentboard pod `/root` is already trusted and every pin is installed at boot,
+so `(missing)` there means the boot install failed or the pin is newer than the pod.
+`mise use -g` is not a workaround: the pod's global config is a read-only ConfigMap
+and the write fails with EBUSY.
 
-**There is no standalone `kustomize`** -- `kubectl kustomize <dir>` is it, and the
-pinned kubectl provides it. For a Flux-rendered check (labels, `postBuild`
-substitution) `flux build` also runs fully offline, but only if you hand it the
-Kustomization CR; without `--kustomization-file` it goes looking for a cluster:
+**There is no standalone `kustomize`** -- `kubectl kustomize <dir>` is it. For a
+Flux-rendered check (labels, `postBuild` substitution) `flux build` runs offline,
+but only when handed the Kustomization CR:
 
 ```bash
 flux build kustomization <name> -n <ns> --path <dir> \
@@ -128,53 +98,38 @@ docker/         # Docker/Dockge stack configs per cluster
 
 ## MCP tools when running under agentboard
 
-If you are running **inside the agentboard pod** — `env | grep -q STAKATER_AGENTBOARD`,
-or `/etc/resolv.conf` searches `agents.svc.cluster.local` — then **use the
-`toolport-*` MCP servers available inside that container**, one per profile:
-`toolport-infrastructure` (Kubernetes, Proxmox x4, Docker x3, GitHub, Forgejo,
-Pulumi, OpenBao), `toolport-networking` (UniFi, Tailscale, homelable),
-`toolport-home` (Home Assistant), `toolport-media` (the *arr stack, ECM,
-Teamarr, Tdarr — IPTV in `docs/kubernetes/iptv.md`), `toolport-postgres` (every
-database) and `toolport-research` (docs search). They are the intended way to
-reach the estate from here. Load the `toolport` skill first: discovery is lazy,
-so you search a profile's tools and then call them.
+Inside the agentboard pod (`env | grep -q STAKATER_AGENTBOARD`) reach the estate
+through the **`toolport-*` MCP servers**, one per profile: `toolport-infrastructure`
+(Kubernetes, Proxmox x4, Docker x3, GitHub, Forgejo, Pulumi, OpenBao),
+`toolport-networking` (UniFi, Tailscale, homelable), `toolport-home` (Home
+Assistant), `toolport-media` (the *arr stack, ECM, Teamarr, Tdarr — IPTV in
+`docs/kubernetes/iptv.md`), `toolport-postgres` (every database) and
+`toolport-research` (docs search, Context7, Microsoft Learn). Load the `toolport`
+skill first: discovery is lazy, so you search a profile's tools and then call them.
 
-- The pod points each profile at a cluster-internal proxy that adds the
-  profile's credential itself, via `TOOLPORT_<PROFILE>_URL`. Off-cluster
-  clients keep the authenticated `toolport-<profile>.agents.<root domain>`
-  OAuth doors; the same committed `.mcp.json` covers both.
 - **`Needs authentication` on a `toolport-*` server in this pod is never a login
-  problem** — that status means the client resolved the wrong URL. All six
-  timing out at once usually means a stale checkout whose `.mcp.json`
-  predates the per-profile doors.
-- The standalone `kubernetes` and `crew_state` MCP entries are expected to fail
-  in this image. Use `toolport-infrastructure`'s `kubernetes` server instead.
-- The old `agent-tools` aggregated server is retired; there is no
-  `toolhive-*_` tool prefix any more.
+  problem** — the client resolved the wrong URL (in-pod it is
+  `TOOLPORT_<PROFILE>_URL`). All six timing out at once usually means a stale
+  checkout whose `.mcp.json` predates the per-profile doors.
+- The `agent-tools` server and its `toolhive-*_` tool prefix are retired.
 
 Full detail, tool inventory and troubleshooting: `docs/kubernetes/agentboard-mcp.md`.
 
 ### Work in a git worktree, not the shared checkout
 
-`/root/home-operations` in the agentboard pod is **one checkout on one PVC**, and
-the pod hands out terminals — so more than one session can be in it at once.
-That is not hypothetical: on 2026-09-05 a second session had 138 files modified
-that the first had never touched, five of them `*.sops.yaml`. Neither could
-commit without sweeping up the other's work, and a reflexive `git add -A` would
-have staged encrypted material this repo treats as unrecoverable.
+`/root/home-operations` in the agentboard pod is **one checkout on one PVC** shared
+by every terminal, so another session may be live in it -- and a reflexive
+`git add -A` can sweep up its work, `*.sops.yaml` included.
 
-- A bare `claude` in an agentboard pane already gets `--worktree` — the wrapper
-  is in `agentboard/resources/bashrc`. `--continue` and `--resume` pass through
-  untouched, because a resumed session belongs in the directory its transcript
-  came from.
+- A bare `claude` in an agentboard pane already gets `--worktree` (wrapper in
+  `agentboard/resources/bashrc`); `--continue` and `--resume` pass through
+  untouched, because a resumed session belongs where its transcript came from.
 - **If you are already running in the shared checkout, use `EnterWorktree`
-  before editing anything.** Check first: `git status --short` showing files you
-  did not touch means another session is live in there.
-- Branch point and symlinked directories come from `.claude/settings.json`'s
-  `worktree` block — new worktrees branch from `origin/main` and symlink
-  `node_modules`, so no `npm ci` per worktree.
-- `git worktree add <path> origin/main` is the manual equivalent when you need
-  one outside a session; clean it up with `git worktree remove`.
+  before editing anything.** `git status --short` showing files you did not
+  touch means another session is live in there.
+- New worktrees branch from `origin/main` and symlink `node_modules` (the
+  `worktree` block in `.claude/settings.json`), so no `npm ci` per worktree.
+  `git worktree add <path> origin/main` is the manual equivalent.
 
 Never `git add -A` in the shared checkout without reading `git status` first.
 
@@ -188,7 +143,13 @@ Never `git add -A` in the shared checkout without reading `git status` first.
 
 ## See also
 
-Read AGENTS.md
+- **Don't read `AGENTS.md` whole.** It is APM's Copilot build of `.github/instructions/`
+  -- ~64 KB (~16K tokens) of generic DevOps, C# and HTML guidance. The one
+  estate-specific file there, `.github/instructions/docker-dockge-memory.instructions.md`,
+  is not even in it: read that when working under `docker/`.
+- **Before adding a skill, plugin, MCP server, hook or CLAUDE.md section**, read the
+  context-budget part of [`docs/agents/claude-code.md`](docs/agents/claude-code.md):
+  each one is paid by every agent on every spawn.
 
 <!-- crew:begin -->
 ## Crew — your AI team
