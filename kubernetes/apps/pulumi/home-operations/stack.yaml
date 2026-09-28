@@ -18,11 +18,12 @@ spec:
   backend: s3://home-operations/home?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
-  # Temporarily NOT paused (the other six Stacks are): this Stack deploys
-  # alpha-site's docker stacks, and it must run one `up` to ship the bao-transit
-  # pin (#2169) and the garage-backup LMDB fix (#2170). That happens against
-  # the TrueNAS backend, BEFORE any state is copied to Garage. It is re-paused
-  # by the next PR, and only then is its prefix copied.
+  # PAUSED: preview-only while Pulumi state moves from the TrueNAS Minio to the
+  # dockge Garage cluster (bucket `pulumi-state`). Nothing may `up` against
+  # either backend between the copy and the cutover, or the two diverge.
+  # Removed by a separate, later PR once every Stack previews cleanly against
+  # Garage -- never in the same PR as the backend change.
+  preview: true
   workspaceReclaimPolicy: Delete
   prerequisites:
     - name: backups
