@@ -17,6 +17,13 @@ metadata_dir = "/var/lib/garage/meta"
 # plus 30 daily snapshots of the same.
 data_dir = [{ path = "/var/lib/garage/data", capacity = "20G" }]
 db_engine = "lmdb"
+# alpha-site is a Raspberry Pi 4 (arm64). Its kernel gives userspace a
+# smaller virtual address space than the x86 nodes, and Garage's default LMDB
+# map (1 TiB on 64-bit) cannot be reserved in it: the node refused to start
+# with "OutOfMemory error while trying to open LMDB database". The map is
+# address space, not RAM or disk; 16G is still far beyond this node's
+# metadata (one bucket of checkpoints) and is also the database's size cap.
+lmdb_map_size = "16G"
 metadata_auto_snapshot_interval = "6h"
 
 replication_factor = 1
