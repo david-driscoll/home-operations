@@ -97,7 +97,10 @@ a backup first**, every time.
 2. Render and insert the flow:
    `docs/kubernetes/assets/tdarr/build-flow.sh > flow.json`, then
    `tdarr_cruddb` `{collection: "FlowsJSONDB", mode: "insert", docID: "directPlayHevc", obj: <flow.json>}`.
-   An existing copy is replaced with `mode: "update"`.
+   An existing copy is replaced with `mode: "update"`. To delete a document
+   the mode is `removeOne`: 2.91 rejects the `delete` that tdarr-mcp's tool
+   description lists (`body/data/mode must be equal to one of the allowed
+   values`).
 3. Nodes: `transcodegpu: 2`, `transcodecpu: 0` on each (`tdarr_alter_worker_limit`)
    **and `allowGpuDoCpu: true`** (`tdarr_update_node`). Every job uses QSV
    whichever worker runs it, so a CPU worker would just be a third job on the
@@ -143,9 +146,11 @@ Sonarr and Radarr pick up a replaced file (and a changed extension, `.mp4` →
 
 In the order the pilot hit them:
 
-1. **toolport is holding a dead session.** After any change to the tdarr
-   `MCPToolConfig` the ToolHive proxy restarts, and the `toolport` gateway
-   keeps its old session and old tool list (`404 Session not found`). Restart
+1. **toolport is holding a dead session** (`404 Session not found`). toolport
+   never re-initializes a backend session; its watchdog sidecar restarts it
+   within ~15 minutes (agentboard-mcp.md, "toolport never re-initializes"). A
+   changed tool list -- the tdarr `MCPToolConfig` growing, say -- still needs
+   a toolport restart to show up, since only a new session re-reads it. Restart
    the `toolport` Deployment in `agents`; its log should then say
    `connected 'tdarr' (N tools)` with the new count.
 2. **Staging is at its limit** -- read the node pods' logs, see above.

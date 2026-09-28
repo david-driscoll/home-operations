@@ -121,6 +121,38 @@ spec:
       # never drift from the proxy-runner image it injects into every workload
       # it creates.
 
+      # SESSION STORE FOR EVERY PROXY. Without it a ToolHive proxy keeps MCP
+      # sessions in memory, so a proxy restart forgets every one of them and
+      # the next request carrying an old Mcp-Session-Id gets `404 Session not
+      # found` (pkg/transport/proxy/transparent/transparent_proxy.go). toolport
+      # never re-initializes after that 404 (../toolport's watchdog sidecar
+      # explains), and the github, pulumi, openbao and tailscale backends
+      # restart every 20-60 minutes by design -- Reloader rolls them as their
+      # short-lived tokens rotate -- which restarts their proxy too. With a
+      # shared store the proxy that comes back still knows the session.
+      #
+      # The operator injects this into EVERY MCPServer and MCPRemoteProxy that
+      # sets no `sessionStorage` of its own (controllerutil/defaultredis.go,
+      # controllers/mcpserver_runconfig.go at 0.51.4), with the default key
+      # prefix `thv:proxy:session:` -- session ids are UUIDs, so sharing one
+      # DB between proxies is safe. The password reaches each proxy pod as a
+      # secretKeyRef to the Secret named here, which is why it has to be
+      # ../toolhive-valkey's own, in this same namespace.
+      #
+      # It does NOT cure the 2h idle expiry: sessions stored here keep the
+      # same sliding 2h TTL (session/proxy_session.go DefaultSessionTTL).
+      # toolport's watchdog covers that by calling every backend every 10
+      # minutes.
+      #
+      # The price: toolhive-valkey is now on every proxy's startup path --
+      # a proxy that cannot reach it fails to start (pkg/runner/runner.go,
+      # NewRedisStorage) -- and changing this rolls every proxy once. It was
+      # already a hard dependency of the OAuth doors (../toolhive).
+      defaultRedis:
+        addr: toolhive-valkey.agents.svc.cluster.local:6379
+        existingSecret: toolhive-valkey
+        existingSecretKey: password
+
       env:
         # Stops the operator's periodic call-home to the ToolHive update API,
         # and with it the usage metrics gated on the same check. A homelab

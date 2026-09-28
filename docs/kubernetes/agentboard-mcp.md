@@ -371,6 +371,57 @@ through `mcp-<name>-proxy:<proxyPort>/mcp` with no handshake and no session
 header. A stateless server answers 200 once its pod is back. The docker and
 unifi servers took 14-45s.
 
+**Stateless is not the whole story, though.** That check sends no session
+header, so it skips the check toolport actually hits. The `404 Session not
+found` comes from the **proxy's own session store**
+(`transparent_proxy.go`, and `streamable_proxy.go` for stdio servers), before
+the backend is asked. A proxy fronting a stdio server always issues a session
+id, stateless backend or not. Since 2026-09-28 the operator gives every proxy
+a Valkey session store (`toolhive-operator` `defaultRedis`), so a restarted
+proxy still knows the session.
+
+### toolport never re-initializes
+
+toolport opens one session per backend when it starts. When a backend later
+answers `404 Session not found`, toolport treats that as fatal and never
+re-initializes (upstream `downstream.rs`: `TransportError::Fatal` is not a
+health failure, so its reconnect path never runs). From then on **every** call
+it forwards to that backend fails until toolport restarts. The same happens to
+a backend that failed while toolport started: it is listed with 0 tools and
+never retried.
+
+A ToolHive proxy forgets a session in two ways:
+
+1. **After 2h idle.** `DefaultSessionTTL` is 2h, sliding
+   (`pkg/transport/session/proxy_session.go`). toolport never pings.
+2. **When it restarts** -- which, before the Valkey store, was every time its
+   backend restarted. The github, pulumi, openbao and tailscale backends
+   restart every 20-60 minutes by design: Reloader rolls them as their
+   short-lived tokens rotate.
+
+The **session watchdog** sidecar in the toolport pod
+(`toolport/resources/watchdog.mjs`) handles both. Every 10 minutes it calls one
+read-only canary per backend through toolport
+(`toolport/resources/watchdog-canaries.json`), which keeps every session warm.
+It serves `:8766/healthz` as toolport's liveness probe, and fails it only for
+what a restart fixes:
+
+- a stale session;
+- a 0-tool backend that answers now;
+- toolport not accepting connections for 5 minutes.
+
+A backend that is merely down, such as `equestria`'s nightly shed, never fails
+it. At most one restart per 30 minutes. Its verdicts are JSON lines in the
+`watchdog` container's log.
+
+**Adding a server** to `registry.json` means adding a canary for it too. Any
+read-only tool works, and so do wrong arguments: a validation error still
+proves the session is alive.
+
+**The real fix is upstream**: toolport should clear the session and re-run
+`initialize` on a 404, as the MCP spec requires of clients. When a release
+does that, the watchdog can go.
+
 ## Backend paths through toolport
 
 toolport reaches a backend one of two ways, and a new server has to pick:
@@ -421,6 +472,15 @@ claude mcp get toolport-infrastructure
 | Status `Pending approval` | Changing `.mcp.json` re-triggers project-server approval | Run `claude` once and approve, or add the entry to `.claude/settings.local.json`'s `enabledMcpjsonServers` |
 | Connection refused / timeout on an internal URL | NetworkPolicy no longer selects this pod, or the proxy is down | Check the `app.kubernetes.io/name: agentboard` selector in `toolport-mcp/networkpolicy.yaml`; check the `toolport-<profile>` proxy pods |
 | A profile connects but a server is missing from `toolport_status` | It is in another profile, or failed discovery | Check `registry.json`; `toolport_status` in the right profile |
+| `toolport_status` lists a server under "exposing 0 tools" | It failed while toolport started, and toolport never retries | The watchdog restarts toolport once the backend answers; see "toolport never re-initializes" |
+| `HTTP 404 {"code":-32001,"message":"Session not found"}` from a backend's tools | toolport holds a session that backend's proxy has forgotten | The watchdog restarts toolport within ~15 min; to do it now, restart `deploy/toolport` in `agents` (below) |
+
+**Break glass: restarting toolport without toolport.** When every backend is
+stale, the `kubernetes` tools you would restart it with are stale too. The
+kubernetes MCP server's proxy answers directly from agentboard:
+`initialize` → `notifications/initialized` → `tools/call delete_resource`
+on the toolport pod, all against
+`http://mcp-toolhive-kubernetes-proxy.agents.svc.cluster.local:8080/mcp`.
 
 Probe a door directly, bypassing the MCP client entirely:
 
@@ -435,6 +495,9 @@ curl -sS -D - -X POST http://mcp-toolport-infrastructure-remote-proxy.agents.svc
 
 A healthy reply is a 200 with an `Mcp-Session-Id` header. Pass that header back
 (plus a `notifications/initialized` notification) to call `tools/list` — seven
-`toolport_*` meta-tools — or `tools/call` `toolport_status`, which proves the
-backends too. If this succeeds while `claude mcp get` shows a failure, the
-endpoint is fine and the problem is client-side URL resolution.
+`toolport_*` meta-tools — or `tools/call` `toolport_status`. That proves the
+door and the gateway, **not** the backends: `toolport_status` reads toolport's
+cache, and a backend whose session went stale still shows its full tool count.
+Only a real tool call reaches a backend. If this succeeds while `claude mcp get`
+shows a failure, the endpoint is fine and the problem is client-side URL
+resolution.
