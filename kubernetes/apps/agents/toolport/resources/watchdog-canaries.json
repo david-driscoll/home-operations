@@ -1,0 +1,33 @@
+{
+  "postgres": { "tool": "postgres__execute_sql_app", "args": { "sql": "select 1" } },
+  "kubernetes": {
+    "tool": "kubernetes__list_resources",
+    "args": { "resource_type": "clustered", "version": "v1", "resource": "namespaces", "limit": 1, "include_annotations": false }
+  },
+  "proxmox-twilight-sparkle": { "tool": "proxmox_twilight_sparkle__get_nodes", "args": {} },
+  "proxmox-celestia": { "tool": "proxmox_celestia__get_nodes", "args": {} },
+  "proxmox-luna": { "tool": "proxmox_luna__get_nodes", "args": {} },
+  "proxmox-alpha-site": { "tool": "proxmox_alpha_site__get_nodes", "args": {} },
+  "docker-celestia": { "tool": "docker_celestia__list_networks", "args": {} },
+  "docker-luna": { "tool": "docker_luna__list_networks", "args": {} },
+  "docker-alpha-site": { "tool": "docker_alpha_site__list_networks", "args": {} },
+  "github": { "tool": "github__get_me", "args": {} },
+  "forgejo": { "tool": "forgejo__get_gitea_mcp_server_version", "args": {} },
+  "pulumi": { "tool": "pulumi__pulumi_registry_list_functions", "args": {} },
+  "openbao": { "tool": "openbao__openbao_mcp_logical", "args": {} },
+  "unifi-network": { "tool": "unifi_network__unifi_tool_index", "args": {} },
+  "unifi-protect": { "tool": "unifi_protect__protect_tool_index", "args": {} },
+  "unifi-access": { "tool": "unifi_access__access_tool_index", "args": {} },
+  "tailscale": { "tool": "tailscale__get_tailnet_info", "args": {} },
+  "homelable": { "tool": "homelable__list_zones", "args": {} },
+  "home-assistant": { "tool": "home_assistant__llm__GetDateTime", "args": {} },
+  "arr-plex": { "tool": "arr_plex__get_indexers", "args": {} },
+  "arr-jellyfin": { "tool": "arr_jellyfin__get_indexers", "args": {} },
+  "teamarr": { "tool": "teamarr__get_cache_status", "args": {} },
+  "ecm": { "tool": "ecm__get_activity", "args": { "limit": 1 } },
+  "tdarr": { "tool": "tdarr__tdarr_status", "args": {} },
+  "context7": { "tool": "context7__resolve_library_id", "args": { "libraryName": "react", "query": "hooks" }, "everyChecks": 6 },
+  "microsoft-docs": { "tool": "microsoft_docs__microsoft_docs_search", "args": { "query": "kubernetes" }, "everyChecks": 6 },
+  "nuget": { "tool": "nuget__get_latest_package_version", "args": { "packageId": "Newtonsoft.Json" }, "everyChecks": 6 },
+  "degoog": { "tool": "degoog__search", "args": { "query": "example" }, "everyChecks": 6 }
+}

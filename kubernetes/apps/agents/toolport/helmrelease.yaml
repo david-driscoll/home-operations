@@ -80,9 +80,34 @@ spec:
               - secretRef:
                   name: ${APP}-backends
             probes:
+              # LIVENESS ASKS THE WATCHDOG SIDECAR, not toolport. toolport never
+              # re-initializes a backend session the backend has forgotten
+              # (see the watchdog container below), and nothing it serves
+              # anonymously can show that -- every route sits behind the bearer
+              # check, and toolport_status reads only its own cache. The
+              # watchdog calls a canary on every backend through toolport and
+              # answers 503 here only for what a restart fixes: a stale
+              # session, a backend that failed at startup and is up now, or
+              # toolport not accepting connections for 5 minutes. A backend
+              # that is merely down is not one of those.
+              #
+              # 3 x 60s is under the watchdog's 240s fail window, and the 120s
+              # initial delay outlasts what is left of that window after the
+              # restart, so one verdict costs exactly one restart.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: 8766
+                  initialDelaySeconds: 120
+                  periodSeconds: 60
+                  timeoutSeconds: 5
+                  failureThreshold: 3
               # tcpSocket, not HTTP: every route, `/` included, sits behind the
               # bearer check and answers 401 to an anonymous probe.
-              liveness: &probe
+              readiness:
                 enabled: true
                 custom: true
                 spec:
@@ -91,13 +116,101 @@ spec:
                   initialDelaySeconds: 5
                   periodSeconds: 30
                   failureThreshold: 5
-              readiness: *probe
             resources:
               requests:
                 cpu: 50m
                 memory: 128Mi
               limits:
                 memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+
+          # SESSION WATCHDOG. toolport keeps one MCP session per backend and,
+          # when a backend answers `404 Session not found`, never
+          # re-initializes: every later call to that backend fails until
+          # toolport restarts (btsouth/toolport downstream.rs -- the 404 is a
+          # Fatal transport error, not a health failure, so its reconnect path
+          # never runs). ToolHive proxies forget sessions after 2h idle, and on
+          # restart unless ../toolhive-operator's defaultRedis is set; the
+          # github, pulumi, openbao and tailscale backends restart every
+          # 20-60 minutes by design, as their short-lived tokens rotate.
+          #
+          # Every 10 minutes ./resources/watchdog.mjs calls one read-only canary
+          # per backend THROUGH toolport (./resources/watchdog-canaries.json),
+          # as the profile that owns it. That keeps every session warm, and
+          # finds the states only a restart fixes, which it reports on
+          # :8766/healthz -- toolport's liveness probe above. One restart per
+          # 30 minutes at most.
+          #
+          # Talks to toolport on localhost, so it needs no NetworkPolicy
+          # change, and reads the same registry toolport does. It needs each
+          # profile's plaintext client token, which toolport itself never
+          # holds (it only has their hashes).
+          watchdog:
+            image:
+              # The same pin as agent-tools-servers/tdarr.yaml's MCPServer.
+              repository: oven/bun
+              tag: 1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f
+            command: ["bun", "/watchdog/watchdog.mjs"]
+            env:
+              HOME: /tmp
+              REGISTRY_PATH: /data/registry.json
+              CANARIES_PATH: /watchdog/canaries.json
+              TOKEN_POSTGRES:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOKEN_POSTGRES
+              TOKEN_INFRASTRUCTURE:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOKEN_INFRASTRUCTURE
+              TOKEN_NETWORKING:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOKEN_NETWORKING
+              TOKEN_HOME:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOKEN_HOME
+              TOKEN_MEDIA:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOKEN_MEDIA
+              TOKEN_RESEARCH:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: TOKEN_RESEARCH
+            probes:
+              # Only whether the watchdog itself is serving: its verdict about
+              # toolport is toolport's probe, not this one.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8766
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
@@ -128,6 +241,17 @@ spec:
           - path: /data/registry.json
             subPath: registry.json
             readOnly: true
+      # The watchdog's script and canaries (./kustomization.yaml); the
+      # registry it reads is the /data/registry.json mount above, which is
+      # global and so reaches the sidecar too.
+      watchdog:
+        type: configMap
+        name: toolport-watchdog
+        advancedMounts:
+          *app :
+            watchdog:
+              - path: /watchdog
+                readOnly: true
 
     service:
       *app :

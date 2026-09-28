@@ -25,3 +25,18 @@ configMapGenerator:
       - registry.json=./resources/registry.json
     options:
       disableNameSuffixHash: true
+  # The session watchdog sidecar's script and its canary list (see the
+  # watchdog container in ./helmrelease.yaml). Flux substitution is OFF for
+  # this one ConfigMap: the script is JavaScript, and envsubst would eat its
+  # `${...}` template literals. Which is also why the name is spelled out
+  # rather than `${APP}-watchdog` -- the annotation stops substitution in
+  # metadata too. No hash suffix: the HelmRelease names it literally, and
+  # Reloader rolls the pod when it changes.
+  - name: toolport-watchdog
+    files:
+      - watchdog.mjs=./resources/watchdog.mjs
+      - canaries.json=./resources/watchdog-canaries.json
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
