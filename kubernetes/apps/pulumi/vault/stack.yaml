@@ -38,6 +38,12 @@ spec:
   backend: s3://home-operations/vault?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
+  # PAUSED: preview-only while Pulumi state moves from the TrueNAS Minio to the
+  # dockge Garage cluster (bucket `pulumi-state`). Nothing may `up` against
+  # either backend between the copy and the cutover, or the two diverge.
+  # Removed by a separate, later PR once every Stack previews cleanly against
+  # Garage -- never in the same PR as the backend change.
+  preview: true
   workspaceReclaimPolicy: Delete
   prerequisites:
     - name: backups
