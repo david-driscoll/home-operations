@@ -97,7 +97,10 @@ a backup first**, every time.
 2. Render and insert the flow:
    `docs/kubernetes/assets/tdarr/build-flow.sh > flow.json`, then
    `tdarr_cruddb` `{collection: "FlowsJSONDB", mode: "insert", docID: "directPlayHevc", obj: <flow.json>}`.
-   An existing copy is replaced with `mode: "update"`.
+   An existing copy is replaced with `mode: "update"`. To delete a document
+   the mode is `removeOne`: 2.91 rejects the `delete` that tdarr-mcp's tool
+   description lists (`body/data/mode must be equal to one of the allowed
+   values`).
 3. Nodes: `transcodegpu: 2`, `transcodecpu: 0` on each (`tdarr_alter_worker_limit`)
    **and `allowGpuDoCpu: true`** (`tdarr_update_node`). Every job uses QSV
    whichever worker runs it, so a CPU worker would just be a third job on the
