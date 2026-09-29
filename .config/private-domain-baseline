@@ -8,7 +8,6 @@
 
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
-kubernetes/apps/observability/blackbox-exporter/helmrelease.yaml
 dashboard/externalsecret.yaml
 
 # --- Phase 3: the Cloudflare token's OpenBao path and 1Password title ---

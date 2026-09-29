@@ -69,15 +69,20 @@ configMapGenerator:
   # disableNameSuffixHash because ./helmrelease.yaml mounts it by name.
   # git over SSH to Forgejo as claude-code: the ssh_config.d drop-in and the
   # pinned host key. The key itself is the `${APP}-forgejo-ssh` ExternalSecret.
-  # Substitution off: nothing in either file is a Flux variable.
+  #
+  # Substitution ON, and load-bearing: the Host / HostKeyAlias lines and the
+  # known_hosts entry name Forgejo's public host through ROOT_DOMAIN (SOPS, via
+  # shared-secrets; see docs/plans/private-domain-scrub.md). It was OFF until
+  # #2192 put that variable in, and a disabled ConfigMap renders the literal
+  # placeholder -- ssh then matches neither the Host block nor the pinned key,
+  # and git over SSH to Forgejo fails at the next restart. Neither file has any
+  # other dollar sign, so envsubst has nothing else to touch.
   - name: agentboard-ssh
     files:
       - forgejo.conf=./resources/ssh_config
       - known_hosts=./resources/known_hosts
     options:
       disableNameSuffixHash: true
-      annotations:
-        kustomize.toolkit.fluxcd.io/substitute: disabled
   - name: agentboard-skills
     files:
       - toolport-SKILL.md=../../../../.claude/skills/toolport/SKILL.md
