@@ -14,9 +14,10 @@ actually processed a file for nine months at that point (see
 | The flow | [`assets/tdarr/`](assets/tdarr/) | `flow.template.json` + `stream-policy.cjs`, rendered by `build-flow.sh`. The copy in Tdarr's DB is the live one; this is the reviewed one. |
 | tdarr MCP | [`kubernetes/apps/agents/agent-tools-servers/tdarr.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tdarr.yaml) | `tdarr` in `toolport-media`. `tdarr_cruddb` is allowed so flows can be managed; it writes any collection. |
 
-All of `equestria` is shed nightly 02:00-09:00 local
-([power states](../cluster-consolidation/24-power-states.md)), Tdarr and its
-MCP included, so encoding only happens 09:00-02:00.
+Tdarr (server and nodes) is excluded from the nightly 01:00-07:00 shed of
+`equestria` ([power states](../cluster-consolidation/24-power-states.md)), so
+it encodes around the clock -- the quiet hours are its best window. The tdarr
+MCP server is in `agents`, which is never shed.
 
 ## The target
 
