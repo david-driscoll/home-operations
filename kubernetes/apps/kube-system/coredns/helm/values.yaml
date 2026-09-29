@@ -157,6 +157,44 @@ servers:
         parameters: . "${TECHNITIUM_CLUSTER_IP}" /etc/resolv.conf
         configBlock: |-
           policy sequential
+  # postiz's Funnel media host, resolved PUBLICLY -- to the Funnel relays --
+  # instead of through the ts.net block below.
+  #
+  # WHY. postiz re-reads its own media server-side (mediaSize, mediaChunk,
+  # uploadSimple) through an SSRF guard that rejects the request if ANY
+  # resolved address is private: 10/8, 172.16/12, 192.168/16, 100.64/10 and
+  # friends (ssrf.safe.dispatcher.ts). The ts.net block hands every tailnet
+  # name to the operator's nameserver, which answers with the Funnel proxy's
+  # POD IP -- blocked by the guard, and a userspace proxy that does not serve
+  # :443 there anyway. There is no per-Ingress opt-out. With this block the
+  # one name resolves like it does on the internet, and postiz hairpins
+  # through the real public Funnel path.
+  #
+  # Rejected: DISABLE_SSRF_PROTECTION (postiz also fetches user-supplied
+  # webhook URLs), hostAliases (relay IPs move), a pod dnsConfig (glibc only
+  # tries extra servers after kube-dns has answered).
+  #
+  # Quad9 is the only upstream DNS egress the estate has
+  # (talos/patches/global/machine-network.yaml); pod egress to both addresses
+  # was checked 2026-09-29. CoreDNS routes a query to the most specific zone,
+  # so this wins over ts.net for this name only -- the same mechanism the
+  # dns.driscoll.tech and dockge-* blocks above rely on.
+  #
+  # Harmless before the name exists: it is NXDOMAIN publicly until plan
+  # step 5 (docs/plans/cloudflare-tunnel-to-funnel.md §E3) creates its Funnel.
+  - zones:
+      - zone: postiz-media.${TAILSCALE_DOMAIN}
+        scheme: dns://
+        use_tcp: false
+    port: 53
+    plugins:
+      - name: errors
+      - name: cache
+        parameters: 30
+      - name: forward
+        parameters: . 9.9.9.9 149.112.112.112
+        configBlock: |-
+          policy sequential
   # Tailscale DNS stub zone for ts.net domains
   - zones:
       - zone: ts.net
