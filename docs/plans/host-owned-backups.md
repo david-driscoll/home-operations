@@ -122,6 +122,9 @@ celestia first.
   - Every node also answers on its own LAN route, `https://s3.<host>.<root domain>` (Traefik, a
     Let's Encrypt certificate): the per-instance name in `docker/_common/garage/compose.yaml`. Any
     node serves every object, because `replication_factor 3` puts all of them on all three.
+  - The VIP is `https://garage-s3.<tailnet>`, on 443 only (`tailscale serve` into each node's
+    Traefik); `:3900` on it is refused (#2200). On a Docker host, `http://garage:3900` on
+    `dockge_default` reaches the local node directly.
 - **TrueNAS.**
   - `spike` is a VM on twilight-sparkle, which is not a Garage node.
   - Cloud Sync tasks (rclone underneath) support `PULL` with `SYNC` from an S3-compatible endpoint,
