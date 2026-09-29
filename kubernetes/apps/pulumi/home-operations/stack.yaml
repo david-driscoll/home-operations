@@ -45,6 +45,12 @@ spec:
       type: Literal
       literal:
         value: "garage"
+    # No copy of the previous checkpoint in .pulumi/backups/ per update: history/
+    # already keeps one (see ../history-pruner/cronjob.yaml).
+    PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS:
+      type: Literal
+      literal:
+        value: "true"
     GITHUB_TOKEN:
       type: Secret
       secret:
