@@ -8,7 +8,6 @@
 
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
-kubernetes/apps/network/traefik/middleware/default-cors.yaml
 kubernetes/apps/observability/blackbox-exporter/helmrelease.yaml
 dashboard/externalsecret.yaml
 
