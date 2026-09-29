@@ -46,6 +46,8 @@ right after Begin Command; everything else is stock community plugins.
 | --- | --- |
 | Video that is not HEVC is re-encoded to HEVC Main10: all H.264, plus AV1, Xvid, MPEG-1/2, VC-1. | H.264 → HEVC is where the storage is (3,143 1080p files, 7.6 TB, median 6.2 Mbps). The rest is compatibility. |
 | HEVC is re-encoded only above a bitrate ceiling: 8 Mbps at 1080p, 5 at 720p, 2.5 at SD. | The 14,847 HEVC 1080p files are already at a 2.2 Mbps median. Re-encoding them would only lose quality. |
+| The video bitrate is the stream's `bit_rate`, else its `BPS` tag -- but a tag higher than the whole file's bitrate is stale and ignored (file bitrate minus audio is used). | 2026-09-29: ten 2 Mbps x265 *Harley Quinn* episodes still carried their source's `BPS=9.8M` tag, were re-encoded as "over the ceiling", and all failed the size guard. |
+| 8-bit H.264 below a storage floor -- 2.5 Mbps at 1080p, 1.2 at 720p, 0.6 at SD -- is kept (remuxed only if audio/subtitles need it). Compat encodes (Xvid, AVI, Hi10P...) ignore the floor. | The pilot's 1.0-1.5 Mbps H.264 came out at 93-106% and a 2.2 Mbps film over 85%, so the size guard rejected every one after a full encode. |
 | HDR10, HLG and Dolby Vision are never re-encoded; 4K is never touched. | QSV re-encoding would drop DV and HDR metadata. |
 | `hevc_qsv`, `-global_quality 23`, preset `slow`, 10-bit (`p010le`), deinterlaced when the source is. | 10-bit bands less at the same size. Interlaced MPEG-2 would otherwise keep its combing. |
 | Decode on QSV for 8-bit H.264 and 4:2:0 HEVC/AV1; on the CPU for everything else (encode stays on the GPU). | QSV cannot decode Xvid, MPEG-1, Hi10P H.264 or 4:2:2. |
