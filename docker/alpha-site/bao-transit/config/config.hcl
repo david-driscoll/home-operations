@@ -23,11 +23,11 @@ listener "tcp" {
 // property the file backend was chosen for: it lives entirely on this host's
 // disk and needs nothing else in the estate to be up to start.
 //
-// The move happened once, via the bao-transit-migrate service
-// (../migrate/migrate.sh, `bao operator migrate` on 2.6.x). The old file
-// storage is still at /opt/stacks-data/bao-transit/data, untouched -- it is the
-// rollback: revert this stanza and the compose change, and the node reads it
-// again (anything written after the migration, such as seal-token renewals,
+// The move happened once, via a one-shot bao-transit-migrate service (#2181,
+// `bao operator migrate` on 2.6.x), removed again once raft was confirmed live.
+// The old file storage is still at /opt/stacks-data/bao-transit/data, untouched,
+// but only a 2.6.x node can read it: going back means reverting to #2181's
+// image and config (anything written since, such as seal-token renewals,
 // exists only in raft).
 storage "raft" {
   path    = "/openbao/raft"

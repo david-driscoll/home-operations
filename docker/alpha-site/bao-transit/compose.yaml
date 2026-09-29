@@ -1,35 +1,9 @@
 services:
-  # One-shot, idempotent file -> raft storage migration (migrate/migrate.sh).
-  # Does the work once; on every later deploy it sees raft already present and
-  # exits 0. bao-transit below will not start until it has succeeded.
-  #
-  # PINNED TO 2.6.x ON PURPOSE, independently of bao-transit's own image: it
-  # has to read `storage "file"`, which 2.7.0 removed.
-  bao-transit-migrate:
-    container_name: bao-transit-migrate
-    image: ghcr.io/openbao/openbao:2.6.2@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
-    restart: "no"
-    entrypoint: ["/bin/sh", "/openbao/migrate/migrate.sh"]
-    volumes:
-      # Read-write only because `operator migrate` takes (and releases) a
-      # migration lock in the source; it copies, never modifies, the entries.
-      - /opt/stacks-data/${APP}/data:/openbao/data
-      - /opt/stacks-data/${APP}/raft:/openbao/raft
-      - ./migrate:/openbao/migrate:ro
-    networks:
-      - dockge_default
-
   bao-transit:
     container_name: bao-transit
-    depends_on:
-      bao-transit-migrate:
-        condition: service_completed_successfully
-    # Still 2.6.x in THIS change, deliberately: first move the storage to raft
-    # (bao-transit-migrate above), prove the node unseals and serves the
-    # transit key on raft, and only then let it move to 2.7+ -- 2.7.0 dropped
-    # `storage "file"`, which is what crash-looped this node 2026-09-24..28.
-    # .github/renovate.json5 holds this file below 2.7 until that follow-up.
-    image: ghcr.io/openbao/openbao:2.6.2@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
+    # Raft storage since #2181, so the 2.7+ line is open again (2.7.0 removed
+    # `storage "file"`, which crash-looped this node 2026-09-24..28).
+    image: ghcr.io/openbao/openbao:2.7.0@sha256:71156a1c6623a5fa3f5e61b0c6a8ead0faf0df29a778339188443551995d1315
     restart: unless-stopped
     dns:
       - 100.100.100.100

@@ -851,23 +851,6 @@
       ],
       enabled: false,
     },
-    {
-      // bao-transit (alpha-site's seal root, the thing equestria's OpenBao
-      // auto-unseals through) runs `storage "file"`, which OpenBao 2.7.0 no
-      // longer accepts. The 2.7.0 bump (#2008) left it crash-looping for four
-      // days on "unknown storage type file". Patch releases within 2.6 are
-      // fine; 2.7+ waits for a file -> raft storage migration, done with a 2.6
-      // binary that still has both. Scoped to this one file: the in-cluster
-      // OpenBao runs different storage and is unaffected.
-      description: "Hold bao-transit below OpenBao 2.7 (file storage)",
-      matchFileNames: [
-        "docker/alpha-site/bao-transit/**"
-      ],
-      matchPackageNames: [
-        "ghcr.io/openbao/openbao"
-      ],
-      allowedVersions: "<2.7.0",
-    },
   ],
   customManagers: [
     {
