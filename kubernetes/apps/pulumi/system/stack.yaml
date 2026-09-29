@@ -20,8 +20,10 @@ spec:
   resyncFrequencySeconds: 300
   retryMaxBackoffDurationSeconds: 60
   # Pulumi state on the dockge Garage cluster (celestia/luna/skystar), one
-  # prefix per Stack exactly as on the old TrueNAS Minio. Pinned to celestia:
-  # its bootstrap egress is the only Garage S3 endpoint this cluster reaches.
+  # prefix per Stack exactly as on the old TrueNAS Minio. DELIBERATELY still
+  # pinned to celestia's bootstrap egress, unlike the other Stacks, which use
+  # the garage-s3 VIP: this stack owns `svc:garage-s3` (stacks/system/
+  # garage.ts), and a run that broke the VIP must still reach its own state.
   # Region `garage` is part of every SigV4 signature. docs/garage-offsite-s3.md.
   backend: s3://pulumi-state/backups?endpoint=dockge-celestia.${TAILSCALE_DOMAIN}:3900&s3ForcePathStyle=true&disableSSL=true&region=garage
   continueResyncOnCommitMatch: true
