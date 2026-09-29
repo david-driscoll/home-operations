@@ -104,7 +104,11 @@ a backup first**, every time.
    the mode is `removeOne`: 2.91 rejects the `delete` that tdarr-mcp's tool
    description lists (`body/data/mode must be equal to one of the allowed
    values`).
-3. Nodes: `transcodegpu: 2`, `transcodecpu: 0` on each (`tdarr_alter_worker_limit`)
+3. Nodes: the two media workers (`tdarr-node`, kerfuffle and fluttershy) run
+   `transcodegpu: 2`; the three control planes (`tdarr-node-cp`, one per N150,
+   CPU-limited to 2 cores so etcd and the API server keep the rest) run
+   `transcodegpu: 1`, seeded by env on first registration. On all of them:
+   `transcodegpu: N`, `transcodecpu: 0` (`tdarr_alter_worker_limit`)
    **and `allowGpuDoCpu: true`** (`tdarr_update_node`). Every job uses QSV
    whichever worker runs it, so a CPU worker would just be a third job on the
    same iGPU -- but Tdarr classes a flow job as a CPU task, so with no CPU

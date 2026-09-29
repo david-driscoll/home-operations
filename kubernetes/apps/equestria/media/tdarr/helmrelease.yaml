@@ -74,7 +74,7 @@ spec:
         replicas: 2
         containers:
           app:
-            image:
+            image: &nodeImage
               repository: ghcr.io/haveagitgat/tdarr_node
               tag: 2.91.01@sha256:bd2163c70c2da97e27c60689014d088000d4e3f95bbbd1d23156d1f88991514b
             env:
@@ -103,6 +103,72 @@ spec:
                     operator: In
                     values:
                     - "true"
+      # One extra encoder on each control plane (milky-way, othalla, pegasus:
+      # Intel N150s with a UHD iGPU, 46d4). Stateless -- media is NFS and the
+      # node registers itself by spec.nodeName -- so none of the relocation
+      # pain behind the #1051 revert (volumes, descheduler) applies.
+      #
+      # The control plane is the one thing here that must not starve: the
+      # hard CPU limit keeps a CPU-decoded job (Hi10P, Xvid, MPEG-2) to half
+      # of an N150's four cores, so etcd and the API server keep the rest.
+      # QSV encodes barely touch the CPU either way.
+      tdarr-node-cp:
+        type: deployment
+        annotations:
+          # Always up: excluded from the nightly 01:00-07:00 shed.
+          downscaler/exclude: "true"
+        replicas: 3
+        containers:
+          app:
+            image: *nodeImage
+            env:
+              TZ: ${TIMEZONE}
+              serverURL: http://tdarr-server.${CLUSTER_CNAME}.svc.cluster.local:8266
+              inContainer: true
+              nodeName:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+              # Seed the worker limits on first registration: one GPU
+              # encoder, nothing else. Flow jobs are CPU-class tasks, so the
+              # node also needs allowGpuDoCpu (not settable by env) -- set it
+              # once with tdarr_update_node after the node first appears.
+              transcodegpuWorkers: 1
+              transcodecpuWorkers: 0
+              healthcheckgpuWorkers: 0
+              healthcheckcpuWorkers: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 512Mi
+                gpu.intel.com/i915: 1
+              limits:
+                cpu: "2"
+                memory: 2Gi
+                gpu.intel.com/i915: 1
+        pod:
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+                  - key: intel.feature.node.kubernetes.io/gpu
+                    operator: In
+                    values:
+                    - "true"
+            # One per control plane: three replicas, three N150s.
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/controller: tdarr-node-cp
     defaultPodOptions:
       securityContext:
         fsGroupChangePolicy: OnRootMismatch
