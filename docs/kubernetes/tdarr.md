@@ -112,7 +112,13 @@ a backup first**, every time.
    (`tdarr_cruddb` update on `FileJSONDB`). Then read the job reports: real
    fps, output size, and that the file plays on an Apple TV in Plex **and**
    Moonfin without transcoding.
-5. Then set `flowId: "directPlayHevc"` on TV and Movies, and requeue so the
+5. Then set `flowId: "directPlayHevc"` on TV and Movies **and** switch each
+   to flows: `decisionMaker.settingsFlows: true`, `settingsPlugin: false`. A
+   `flowId` alone does nothing on a library still in plugin mode -- on
+   2026-09-28 Movies was, and for two hours ran the old classic stack
+   (Migz1FFMPEG_CPU, a libx265 CPU encode: both nodes at 95% CPU, 7-30 fps)
+   while TV ran the flow. Read the `decisionMaker` of EVERY library; they
+   were not the same. Requeue so the
    files that went "Not required" or errored under the old settings go
    through the flow too: `tdarr_set_all_status`
    `{dbID, mode: "TranscodeDecisionMaker", table: "", processStatus: "Queued"}`
