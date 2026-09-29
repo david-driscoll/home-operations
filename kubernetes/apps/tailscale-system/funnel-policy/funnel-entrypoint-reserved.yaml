@@ -1,0 +1,167 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# THE `funnel` ENTRYPOINT IS RESERVED FOR GATEWAY network/funnel. Traefik's
+# funnel entrypoint (:8445) is the public Tailscale Funnel door; a router bound
+# to it by any other means is on the internet, reachable with any Host header
+# (tailscaled forwards the client's Host verbatim). Two EXPLICIT means -- ones
+# that name the entrypoint -- exist outside Gateway API, and these two policies
+# refuse them:
+#
+#   - an IngressRoute, IngressRouteTCP or IngressRouteUDP naming `funnel` in
+#     spec.entryPoints. allowCrossNamespace is on, so any namespace could
+#     publish any Service; an IngressRouteTCP HostSNI(`*`) on a plain entrypoint
+#     would take over the whole door. Refused whatever its ingress class.
+#   - a networking.k8s.io Ingress (class internal) naming `funnel` in
+#     traefik.ingress.kubernetes.io/router.entrypoints -- the kubernetesIngress
+#     provider is enabled.
+#
+# NOT CAUGHT HERE, BY DESIGN: a router that names NO entrypoint. Those bind to
+# Traefik's default set, and the authentik outpost's own Ingress (51 routers,
+# no annotation, written by authentik) is exactly that. `asDefault` on
+# web/websecure/tailscale in traefik values.yaml is what keeps them off the
+# door; a policy here would break the outpost instead.
+#
+# Entrypoint names are compared trimmed and lower-cased, and for the Ingress
+# the annotation key is compared lower-cased (keys cannot carry whitespace): a
+# case or whitespace variant must
+# not slip past on a technicality.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-entrypoint-reserved-traefik
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["traefik.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["ingressroutes", "ingressroutetcps", "ingressrouteudps"]
+  matchConditions:
+    - name: names-the-funnel-entrypoint
+      expression: >
+        has(object.spec.entryPoints)
+        && object.spec.entryPoints.exists(e, e.trim().lowerAscii() == 'funnel')
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: "false"
+      message: >-
+        the funnel entrypoint is the public Tailscale Funnel door and is reserved
+        for Gateway network/funnel; publish through kubernetes/components/funnel
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-entrypoint-reserved-traefik
+spec:
+  policyName: funnel-entrypoint-reserved-traefik
+  validationActions: ["Deny"]
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-entrypoint-reserved-ingress
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["ingresses"]
+  matchConditions:
+    # The annotation KEY is matched case-insensitively too, and every variant
+    # is checked: Traefik decodes Ingress router annotations with EqualFold on
+    # the field name (paerser v0.2.2 labels_decode.go:88,
+    # nodes_metadata.go:159), so `router.entryPoints: funnel` binds exactly
+    # like the lowercase form, and which of several variants wins depends on
+    # sort order.
+    - name: names-the-funnel-entrypoint
+      expression: >
+        has(object.metadata.annotations)
+        && object.metadata.annotations.exists(k,
+             k.lowerAscii() == 'traefik.ingress.kubernetes.io/router.entrypoints'
+             && object.metadata.annotations[k].split(',').exists(e, e.trim().lowerAscii() == 'funnel'))
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: "false"
+      message: >-
+        the funnel entrypoint is the public Tailscale Funnel door and is reserved
+        for Gateway network/funnel
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-entrypoint-reserved-ingress
+spec:
+  policyName: funnel-entrypoint-reserved-ingress
+  validationActions: ["Deny"]
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# THE FUNNEL DOOR'S MIDDLEWARE NAMES ARE RESERVED. Traefik's entrypoint refers
+# to them as network-funnel-strip-headers, network-funnel-ratelimit,
+# network-funnel-inflight and network-crowdsec-bouncer-funnel (each
+# @kubernetescrd), and without providers.kubernetesCRD.safeNaming that key
+# is just "<namespace>-<name>"
+# (crd/name_builder.go:32-38 @v3.7.13) -- NORMALIZED: provider.Normalize joins
+# the runs of alphanumerics with single '-' (pkg/provider/configuration.go), so
+# dots and doubled hyphens collapse too. `bouncer-funnel` in a namespace
+# `network-crowdsec`, `bouncer.funnel` there, or `crowdsec.bouncer.funnel` in
+# `network` itself all flatten to the door's key. On a collision Traefik keeps
+# whichever it listed last and only logs a warning (crd/kubernetes.go:1524-1530),
+# so a no-op Middleware would silently strip CrowdSec, the header strip or a
+# throttle off every funnel router. This refuses every Middleware whose
+# normalized key is one of the four, except the four real objects. Namespaces
+# are [a-z0-9-] and names [a-z0-9.-], both starting and ending alphanumeric,
+# so collapsing runs of [-.] is exactly what Normalize does to them.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-middleware-names-reserved
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["traefik.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["middlewares", "middlewaretcps"]
+  matchConditions:
+    - name: not-the-real-ones
+      expression: >
+        !(request.namespace == 'network'
+          && object.metadata.name in ['crowdsec-bouncer-funnel', 'funnel-strip-headers',
+                                      'funnel-ratelimit', 'funnel-inflight'])
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: >
+        !(request.namespace + '-' + object.metadata.name).matches(
+          '^network[-.]+crowdsec[-.]+bouncer[-.]+funnel$')
+        && !(request.namespace + '-' + object.metadata.name).matches(
+          '^network[-.]+funnel[-.]+strip[-.]+headers$')
+        && !(request.namespace + '-' + object.metadata.name).matches(
+          '^network[-.]+funnel[-.]+ratelimit$')
+        && !(request.namespace + '-' + object.metadata.name).matches(
+          '^network[-.]+funnel[-.]+inflight$')
+      message: >-
+        this Middleware's Traefik key (namespace-name) would collide with one of
+        the funnel door's network/crowdsec-bouncer-funnel,
+        network/funnel-strip-headers, network/funnel-ratelimit or
+        network/funnel-inflight and silently replace it
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-middleware-names-reserved
+spec:
+  policyName: funnel-middleware-names-reserved
+  validationActions: ["Deny"]

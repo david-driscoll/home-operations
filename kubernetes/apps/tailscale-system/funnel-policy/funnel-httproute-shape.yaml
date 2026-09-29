@@ -1,0 +1,155 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# THE ESTATE'S PUBLIC SURFACE, AS A LIST. Everything the Tailscale Funnel door
+# serves is an HTTPRoute attached to Gateway network/funnel, which is bound to
+# Traefik's `funnel` entrypoint (apps/network/funnel-gateway). This refuses any
+# such route whose "<namespace> <Service> <port> <path> <hostname>" is not on
+# the allow-list in the last validation below. Publishing something new is one
+# line here, its partner in funnel-ingress-shape.yaml's device list, and -- for
+# a new namespace -- the Gateway's namespace selector, all in one reviewed PR.
+# docs/plans/cloudflare-tunnel-to-funnel.md §C2 and §C4.
+#
+# WHY THIS LIST, NOT THE INGRESS, IS AUTHORITATIVE. tailscaled picks its
+# handler by TLS SNI but forwards the client's own Host header
+# (ipn/ipnlocal/serve.go:807-818, 976-978 @v1.102.5). A Funnel client can
+# therefore name ANY route bound to the door, and the device's path mount does
+# not stop it: tailscaled checks the mount on the decoded, cleaned path but
+# forwards the raw one, so /hook/a%2Fb/../../uploads/x passes a /hook/ mount
+# and Traefik routes it as /uploads/x. Every route here is reachable from every
+# Funnel device. The routes on the door are the public surface -- which also
+# means a route listed here is public the moment it exists, device or not.
+#
+# WHAT MATCHES: any HTTPRoute naming a parent called `funnel`, in any
+# namespace and of any kind, so a near-miss (no namespace, a second parent) is
+# refused rather than ignored. Route status is written through the /status
+# subresource and never reaches this policy.
+#
+# NO FILTERS, rule- or backend-level. That is only correct because CrowdSec
+# and the header strip ride the ENTRYPOINT (traefik values.yaml
+# ports.funnel.http.middlewares). A URLRewrite ReplacePrefixMatch "/" would
+# re-open the whole backend under an allow-listed prefix, and an ExtensionRef
+# resolves a Middleware in the route's own namespace, which this cannot see.
+#
+# EXACTLY ONE HOSTNAME: with none, Traefik builds no Host rule
+# (pkg/provider/kubernetes/gateway/httproute.go:733-734 @v3.7.13) and the route
+# would catch every Host on the door. EXACTLY ONE PathPrefix, never "/": a rule
+# without matches defaults to "/" (httproute.go:750-757).
+#
+# The tailnet domain below is Flux-substituted (TAILSCALE_DOMAIN, a key of
+# shared-secrets, NOT CLUSTER_TAILSCALE_DOMAIN): components/common patches
+# substituteFrom shared-secrets onto this ks through
+# apps/tailscale-system/kustomization.yaml. Rendered empty, the entry ends in
+# "webhook." -- a hostname the HTTPRoute CRD refuses anyway. Fails closed.
+#
+# Objects being deleted are exempt, and every field read is has()-guarded, as
+# in funnel-ingress-shape.yaml.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-httproute-shape
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["gateway.networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["httproutes"]
+  matchConditions:
+    - name: names-a-parent-called-funnel
+      expression: >
+        has(object.spec.parentRefs)
+        && object.spec.parentRefs.exists(p, p.name == 'funnel')
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: >
+        size(object.spec.parentRefs) == 1
+        && has(object.spec.parentRefs[0].namespace)
+        && object.spec.parentRefs[0].namespace == 'network'
+        && (!has(object.spec.parentRefs[0].group)
+            || object.spec.parentRefs[0].group == 'gateway.networking.k8s.io')
+        && (!has(object.spec.parentRefs[0].kind)
+            || object.spec.parentRefs[0].kind == 'Gateway')
+        && (!has(object.spec.parentRefs[0].sectionName)
+            || object.spec.parentRefs[0].sectionName == 'http')
+        && !has(object.spec.parentRefs[0].port)
+      message: >-
+        a route on the funnel Gateway must have exactly one parentRef: Gateway
+        network/funnel (listener http), with an explicit namespace and no port
+    - expression: >
+        has(object.spec.hostnames) && size(object.spec.hostnames) == 1
+      message: >-
+        a funnel route must name exactly one hostname; with none, Traefik
+        builds no Host rule and the route catches every host on the door
+    - expression: >
+        has(object.spec.rules) && size(object.spec.rules) == 1
+        && has(object.spec.rules[0].matches)
+        && size(object.spec.rules[0].matches) == 1
+        && has(object.spec.rules[0].matches[0].path)
+        && has(object.spec.rules[0].matches[0].path.type)
+        && object.spec.rules[0].matches[0].path.type == 'PathPrefix'
+        && has(object.spec.rules[0].matches[0].path.value)
+        && object.spec.rules[0].matches[0].path.value != '/'
+      message: >-
+        a funnel route must have exactly one rule with exactly one PathPrefix
+        match other than /
+    - expression: >
+        has(object.spec.rules) && size(object.spec.rules) == 1
+        && (!has(object.spec.rules[0].filters)
+            || size(object.spec.rules[0].filters) == 0)
+        && has(object.spec.rules[0].backendRefs)
+        && size(object.spec.rules[0].backendRefs) == 1
+        && (!has(object.spec.rules[0].backendRefs[0].filters)
+            || size(object.spec.rules[0].backendRefs[0].filters) == 0)
+        && (!has(object.spec.rules[0].backendRefs[0].group)
+            || object.spec.rules[0].backendRefs[0].group == '')
+        && (!has(object.spec.rules[0].backendRefs[0].kind)
+            || object.spec.rules[0].backendRefs[0].kind == 'Service')
+        && (!has(object.spec.rules[0].backendRefs[0].namespace)
+            || object.spec.rules[0].backendRefs[0].namespace == request.namespace)
+        && has(object.spec.rules[0].backendRefs[0].port)
+      message: >-
+        a funnel route must have no filters (rule- or backend-level) and exactly
+        one backendRef: a Service in its own namespace, with a port
+    # THE ALLOW-LIST. One entry per public endpoint:
+    #   "<namespace> <Service> <port> <path> <hostname>"
+    # Every entry has exactly one partner in funnel-ingress-shape.yaml's device
+    # list: the same <path>, and <hostname> = <host> + '.' + the tailnet.
+    - expression: >
+        has(object.spec.hostnames) && size(object.spec.hostnames) == 1
+        && has(object.spec.rules) && size(object.spec.rules) == 1
+        && has(object.spec.rules[0].matches)
+        && size(object.spec.rules[0].matches) == 1
+        && has(object.spec.rules[0].matches[0].path)
+        && has(object.spec.rules[0].matches[0].path.value)
+        && has(object.spec.rules[0].backendRefs)
+        && size(object.spec.rules[0].backendRefs) == 1
+        && has(object.spec.rules[0].backendRefs[0].port)
+        && (request.namespace
+            + ' ' + object.spec.rules[0].backendRefs[0].name
+            + ' ' + string(object.spec.rules[0].backendRefs[0].port)
+            + ' ' + object.spec.rules[0].matches[0].path.value
+            + ' ' + object.spec.hostnames[0]) in [
+          'flux-system webhook-receiver 80 /hook/ flux-equestria-webhook.${TAILSCALE_DOMAIN}'
+        ]
+      messageExpression: >
+        'not on the Funnel route allow-list (apps/tailscale-system/funnel-policy/funnel-httproute-shape.yaml): '
+        + request.namespace
+        + ' ' + object.spec.rules[0].backendRefs[0].name
+        + ' ' + string(object.spec.rules[0].backendRefs[0].port)
+        + ' ' + object.spec.rules[0].matches[0].path.value
+        + ' ' + object.spec.hostnames[0]
+      message: >-
+        not on the Funnel route allow-list in
+        apps/tailscale-system/funnel-policy/funnel-httproute-shape.yaml
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-httproute-shape
+spec:
+  policyName: funnel-httproute-shape
+  validationActions: ["Deny"]

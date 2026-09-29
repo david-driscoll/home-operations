@@ -59,6 +59,17 @@ service:
     # announced, so keepalived stays the only thing claiming the address.
     externalIPs:
       - 10.10.255.10
+  # A SECOND Service, `traefik-funnel`, for the `funnel` entrypoint only (chart
+  # templates/service.yaml renders one Service per key here, named
+  # traefik-<key>, carrying just the ports with `expose.<key>: true`). The
+  # Tailscale Funnel proxies are its one intended client. ClusterIP: no
+  # LoadBalancer address, and neither the annotations nor the externalIPs above
+  # are inherited (rendered and checked against chart 41.6.0), so the public
+  # door is not on INTERNAL_IP or on 10.10.255.10.
+  additionalServices:
+    funnel:
+      spec:
+        type: ClusterIP
 additionalArguments:
   - '--providers.file.filename=/config/store.yaml'
   - '--serversTransport.insecureSkipVerify=true'
@@ -118,9 +129,27 @@ ports:
   # upstream sends a PROXY header changes how the connection itself is framed and
   # takes the ingress down. Dead config that is dangerous to revive is better
   # removed than moved.
+  #
+  # ---- asDefault: web, websecure and tailscale, and ONLY those -------------
+  #
+  # A router that names no entrypoint -- an Ingress without
+  # traefik.ingress.kubernetes.io/router.entrypoints, an IngressRoute without
+  # spec.entryPoints -- binds to Traefik's DEFAULT entrypoints. With none
+  # flagged `asDefault`, that default is EVERY non-UDP entrypoint except
+  # `traefik` (cmd/traefik/traefik.go:410-441 @v3.7.13). Live on 2026-09-28
+  # that put the 51 authentik-outpost Ingress routers
+  # (stargate-command/authentik-outpost, written by authentik with no
+  # entrypoint annotation) on tunnel, metrics and every database port too.
+  #
+  # Flagging these three keeps those routers exactly where they already are
+  # useful and takes them off every other door -- above all `funnel` below,
+  # which must carry nothing but network/funnel Gateway routes. No admission
+  # policy can do this job: the offending objects name no entrypoint at all.
+  # MUST ship in the same Helm upgrade as the funnel entrypoint, never after.
   web:
     port: 80
     exposedPort: 80
+    asDefault: true
     forwardedHeaders: &forwarded-headers
       trustedIPs:
         - "${CLUSTER_NETWORK}"
@@ -134,6 +163,7 @@ ports:
   websecure:
     port: 443
     exposedPort: 443
+    asDefault: true
     forwardedHeaders: *forwarded-headers
     http:
       tls:
@@ -156,10 +186,13 @@ ports:
   # internal route, and that route's ipAllowList passed because tunnel traffic
   # originates from the in-cluster cloudflared pod.
   #
-  # On this entrypoint only external-Gateway routes exist, so every path the
-  # tunnel delivers -- including ones Traefik normalizes, like /uploads/../api/
-  # into /api/ -- can only match what was published. Nothing internal is
-  # reachable here by construction, not by allowlist.
+  # On this entrypoint only external-Gateway routes exist -- true since
+  # `asDefault` (web/websecure/tailscale) took the default-bound routers off
+  # it. Before that the 51 authentik-outpost Ingress routers sat here too,
+  # harmless only because cloudflared forwards named hostnames and paths. So
+  # every path the tunnel delivers -- including ones Traefik normalizes, like
+  # /uploads/../api/ into /api/ -- can only match what was published. Nothing
+  # internal is reachable here by construction, not by allowlist.
   #
   # Mirrors websecure: TLS on (the external Gateway listener terminates with the
   # same wildcard certificate), the same trusted-proxy set so X-Forwarded-For from
@@ -202,6 +235,8 @@ ports:
     port: 8443
     exposedPort: 8443
     protocol: TCP
+    # See the asDefault note on `web`.
+    asDefault: true
     expose:
       default: true
     # Same key and same trusted set as web/websecure above, and load-bearing here:
@@ -217,6 +252,104 @@ ports:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  # THE TAILSCALE FUNNEL DOOR: the one entrypoint the public internet reaches
+  # once Funnel replaces the Cloudflare tunnel
+  # (docs/plans/cloudflare-tunnel-to-funnel.md §C4). Each Funnel proxy -- a
+  # standalone Ingress in `network` rendered by kubernetes/components/funnel --
+  # dials http://<traefik-funnel ClusterIP>:8445/<path>/, and only routes on
+  # Gateway network/funnel (apps/network/funnel-gateway) are bound here. Same
+  # idea as `tunnel`, for the same 2026-09-15 reason: a public door must be an
+  # entrypoint no internal route binds to.
+  #
+  # What keeps everything else off it:
+  #   - asDefault on web/websecure/tailscale above (routers naming no entrypoint);
+  #   - funnel-entrypoint-reserved-{traefik,ingress} (explicit entryPoints/annotation);
+  #   - funnel-gateway-shape (any Gateway listener on 8445 -- Traefik binds by port);
+  #   - funnel-httproute-shape (the route allow-list), with the Gateway's
+  #     namespace selector as a second layer.
+  # All in apps/tailscale-system/funnel-policy. Who may CONNECT to :8445 is
+  # the CiliumNetworkPolicy in apps/network/funnel-gateway: standalone
+  # tailscale Ingress proxies (tailscale-system) for Ingresses in `network`,
+  # which funnel-ingress-shape makes Funnel devices -- nothing else. The Host header is NOT a
+  # boundary: tailscaled forwards the client's Host verbatim
+  # (ipn/ipnlocal/serve.go:976-978), so a Funnel client can name any route
+  # bound here.
+  #
+  # PLAIN HTTP -- no http.tls, no redirections -- for the reason `tailscale`
+  # gives (tailscaled terminates TLS), and load-bearing twice: an HTTP Gateway
+  # listener skips an entrypoint with TLS (pkg/provider/kubernetes/gateway/
+  # kubernetes.go:852), and the operator dials https+insecure:// only for port
+  # 443 or a port NAMED https (cmd/k8s-operator/ingress.go:363-368). Never give
+  # this port either.
+  #
+  # NOT on the LoadBalancer: expose.default false, expose.funnel true puts the
+  # port on Service traefik-funnel (service.additionalServices) and nowhere else.
+  #
+  # readTimeout stays at Traefik's 60s default, unlike tunnel/websecure's 0s:
+  # this door carries webhook POSTs and media GETs, and reading a request never
+  # needs longer. (Responses are governed by writeTimeout, which is unlimited.)
+  funnel:
+    port: 8445
+    exposedPort: 8445
+    protocol: TCP
+    expose:
+      default: false
+      funnel: true
+    # ONE level above `http` (see the forwardedHeaders note above). The pod CIDR
+    # only, not the shared anchor: the Funnel proxies are pods, and Cilium
+    # load-balances pod traffic to a ClusterIP at tc without SNAT
+    # (socketLB.hostNamespaceOnly is on; live, the `tailscale` entrypoint logs
+    # ClientAddr 10.206.x), so their source arrives intact. Other pods in that
+    # CIDR -- the tailscale Connector above all, which SNATs tailnet subnet
+    # traffic to its own pod IP -- are kept off :8445 entirely by the
+    # CiliumNetworkPolicy in apps/network/funnel-gateway, so only a Funnel
+    # proxy can present a trusted X-Forwarded-For here.
+    # tailscaled SETS X-Forwarded-For to the one real client after Go's
+    # ReverseProxy has stripped any inbound value (ipn/ipnlocal/serve.go:
+    # 1068-1076), so a Funnel client cannot forge it.
+    #
+    # LOAD-BEARING, and never `insecure`: the CrowdSec plugin reads
+    # X-Forwarded-For without checking who sent it (pkg/ip/ip.go:96-129
+    # @v1.7.1), so this list is the only thing between a forged XFF and a
+    # bouncer bypass. Remove it and Traefik strips XFF: CrowdSec then silently
+    # evaluates the proxy pod instead (fail-open, no detection).
+    forwardedHeaders:
+      trustedIPs:
+        - "${CLUSTER_NETWORK}"
+    http:
+      # Prepended to EVERY router on this entrypoint, from every provider
+      # (pkg/server/aggregator.go:323-362), so no route can leave them off.
+      # Fully qualified: an unqualified name resolves in the router's own
+      # provider (kubernetesgateway) and is not found. A missing or broken one
+      # fails every funnel router CLOSED (404) and touches nothing else.
+      #
+      # ORDER MATTERS. The header strip goes first so that no client header it
+      # blanks -- the X-Crowdsec-Appsec-* ones above all -- is still there when
+      # the bouncer copies every request header into its AppSec query. The
+      # throttles go before the bouncer so that a flood is refused before
+      # AppSec buffers and inspects it (middleware/funnel-throttle.yaml).
+      middlewares:
+        - network-funnel-strip-headers@kubernetescrd
+        - network-funnel-ratelimit@kubernetescrd
+        - network-funnel-inflight@kubernetescrd
+        - network-crowdsec-bouncer-funnel@kubernetescrd
+      # Refuses (400, per router) a request whose ROUTED path still carries an
+      # encoded / \ % or NUL -- e.g. /hook/a%2F..%2Fb -- so none reaches a
+      # backend. It does NOT make tailscaled and Traefik agree on the path:
+      # tailscaled matches its mount on the decoded, cleaned path and forwards
+      # the raw one, which Traefik cleans differently, so
+      # /hook/a%2Fb/../../<anything> passes a /hook/ mount and routes as
+      # /<anything>. The device's mount is therefore NOT a boundary between
+      # routes on this door -- the route list (funnel-httproute-shape) is.
+      # Encoded ; ? # stay at the default -- plan ❓J10.
+      encodedCharacters:
+        allowEncodedSlash: false
+        allowEncodedBackSlash: false
+        allowEncodedNullCharacter: false
+        allowEncodedPercent: false
+      # X_Forwarded_For and friends: underscore aliases of managed headers
+      # that tailscaled does not strip (pkg/config/static/entrypoints.go:105).
+      aliasHeadersStrategy: delete
   postgres:
     expose:
       default: true

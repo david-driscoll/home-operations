@@ -51,7 +51,9 @@ config:
   # cloudflared -> Traefik -> CrowdSec forwarded-header chain is ever wrong,
   # every external request looks like it comes from one pod IP; banning that IP
   # bans the entire internet at once. This makes an internal address
-  # unbannable by construction. Mounted in agent pods only.
+  # unbannable by construction. Mounted in agent pods only: the AppSec pod
+  # reads its own copy, appsec.postoverflows at the end of this file. Keep the
+  # two identical.
   postoverflows:
     s01-whitelist:
       driscoll-internal-networks.yaml: |
@@ -201,7 +203,12 @@ lapi:
     # ROTATION CAVEAT: the image only registers a bouncer whose name is not
     # already present (`register_bouncer` in docker-start-custom.sh). Changing
     # the 1Password value alone will NOT update it -- run
-    # `cscli bouncers delete traefik` first, then restart the LAPI.
+    # `cscli bouncers delete traefik` first, then restart the LAPI, then
+    # restart Traefik straight away. Until Traefik re-reads apikey_bouncer the
+    # Funnel door's AppSec check presents the deleted key; AppSec keeps
+    # accepting it only until its cached validation lapses (appsec
+    # auth_cache_duration, below), then answers 401, and the door 403s every
+    # untrusted request. Not fail-open: the plugin blocks on a 401.
     - name: BOUNCER_KEY_traefik
       valueFrom:
         secretKeyRef:
@@ -334,3 +341,203 @@ agent:
     enabled: true
     serviceMonitor:
       enabled: true
+
+# ---- AppSec: CrowdSec's WAF, for the Tailscale Funnel door ----------------
+# Decided 2026-09-28 (docs/plans/cloudflare-tunnel-to-funnel.md J8, reversed
+# the same day). Its one caller is the Funnel door's bouncer instance,
+# traefik/middleware/crowdsec-funnel.yaml, which asks it about every request
+# from a client that is neither in that instance's clientTrustedIPs nor
+# already banned. The estate-wide instance (crowdsec.yaml) is `enabled: false`
+# and returns before it would ever call here.
+#
+# WHAT RUNS: a crowdsec agent with the LAPI and CAPI switched off (the chart
+# sets DISABLE_LOCAL_API and DISABLE_ONLINE_API), listening on :7422 behind
+# the ClusterIP Service crowdsec-appsec-service. Its init container waits for
+# the LAPI, then registers a machine named after the pod with the chart's
+# registration token, exactly as the agents do. crowdsecurity/appsec-default
+# runs base-config, vpatch-* and generic-* IN-BAND (they can answer 403) and
+# experimental-* OUT-OF-BAND (never blocks, never bans).
+#
+# EVERY IN-BAND MATCH IS AN ALERT: one LAPI alert per blocked request
+# (crowdsec pkg/appsec/appsec.go:298-299, appsec_runner.go:369-390 @v1.8.1),
+# written to the shared Postgres and shared with CAPI under console.yaml
+# (share_custom, share_tainted, share_context: the URI and the ts.net host go
+# too). It carries no remediation, so it never becomes a decision by itself;
+# bans come from the scenarios (appsec.scenarios below). An out-of-band match
+# is an event for those scenarios and no alert (SendAlert is cleared before
+# that phase, appsec_runner.go:506).
+#
+# FAIL-OPEN IS THE PLUGIN'S JOB, NOT THIS POD'S. If this pod is down, slow or
+# answers 5xx, the door passes the request uninspected
+# (crowdsecAppsecUnreachableBlock/FailureBlock false in crowdsec-funnel.yaml)
+# and CrowdsecAppsecAbsent / FunnelAppsecUnreachable say so. A 401 from here
+# is NOT failed open -- the plugin 403s it, for every untrusted client. This
+# pod answers 401 whenever it cannot vouch for the bouncer key: see
+# auth_cache_duration below, and the ROTATION CAVEAT under lapi.env. Its
+# probes read /metrics, so a pod answering 401 stays Ready.
+#
+# RULE FRESHNESS: nothing mounts /var/lib/crowdsec/data or the hub index, so
+# docker_start.sh skips hub update and upgrade, and the rules are the ones
+# baked into the image (installed offline from its embedded index). They move
+# when the image does, i.e. with the chart pin in helmrelease.yaml. Deliberate:
+# nothing that changes without a commit, and no CDN egress at startup -- unless
+# a hub install or remove fails. docker_start.sh then runs `cscli hub update`
+# against the CDN and retries once; a second failure exits under `set -e` and
+# the pod crash-loops (docker_start.sh:151-178, 290-293 @v1.8.1). A misspelt
+# name in DISABLE_APPSEC_RULES does exactly that, so check the name with
+# `cscli appsec-rules list` in the running pod first. RollingUpdate keeps the
+# old pod serving while a new one crash-loops.
+#
+# NOT SET, ON PURPOSE: UNREGISTER_ON_EXIT. The init container writes this
+# pod's LAPI credentials ONCE, into an emptyDir. A container restart (liveness
+# failure) after crowdsec had unregistered itself would log in as a deleted
+# machine and crash-loop until the pod is deleted. Each replaced pod leaves one
+# stale machine row instead; `cscli machines prune` clears them.
+#
+# KNOWN TRAP, NOT FIXED HERE: the init container is not idempotent either. If
+# the node reboots without a drain, the pod keeps its name, its init container
+# runs again, and `cscli lapi register` meets the machine it registered the
+# first time: the LAPI answers 403 and the init crash-loops until the pod is
+# deleted (chart templates/appsec-deployment.yaml; seen live on
+# crowdsec-agent-7kk77 after pegasus rebooted, 2026-09-12). The door fails
+# open meanwhile and CrowdsecAppsecAbsent fires after 15m. Relief: delete the
+# pod. The agents' DaemonSet has the same shape.
+appsec:
+  enabled: true
+  # Surge the new pod before the old one stops. The chart default, Recreate,
+  # opens a window in which the door passes everything uninspected -- and on a
+  # crowdsec upgrade that also restarts the LAPI, the new pod's init container
+  # holds that window open until the LAPI is back.
+  strategy:
+    type: RollingUpdate
+  # Tier 1, same as lapi and agent (David's 2026-08-23 ruling). No PVC, so
+  # unlike lapi there is no storage placement to go with it.
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  acquisitions:
+    - source: appsec
+      # The source default is 127.0.0.1:7422, which the Service cannot reach.
+      listen_addr: "0.0.0.0:7422"
+      # Must equal crowdsecAppsecPath in crowdsec-funnel.yaml. A mismatch is
+      # a 404 here, and the plugin 403s every untrusted request on any AppSec
+      # status other than 200/500/502/503/504.
+      path: /
+      appsec_configs:
+        - crowdsecurity/appsec-default
+      # How long AppSec trusts a bouncer key it has validated with the LAPI
+      # (HEAD /v1/decisions/stream) before asking again. Default 1m. While the
+      # entry is fresh there is no LAPI call. When a re-check cannot REACH the
+      # LAPI, an existing entry is extended. But when the LAPI ANSWERS non-200
+      # -- a 403 if its own Postgres query fails, or any 5xx or 429 -- the
+      # entry is dropped, AppSec answers 401, and the door 403s every untrusted
+      # request until the LAPI answers 200 again (appsec config.go:370,
+      # 401-418, 434-437 @v1.8.1). 6h turns "any Postgres blip longer than a
+      # minute" into "a blip that happens to straddle the one re-check in six
+      # hours". Cost: a revoked key keeps working HERE for up to 6h, and
+      # Traefik is the only holder.
+      #
+      # THE CACHE IS IN MEMORY (source.go:37-67), so it is EMPTY after every
+      # start of this pod, and only the first untrusted request fills it. With
+      # no entry there is nothing to extend: if the LAPI is down, restarting
+      # or slower than auth_timeout at that moment, that request -- and every
+      # one after it until the LAPI answers -- gets 401, and so 403 at the
+      # door. Before plan step 3 adds an untrusted heartbeat, door traffic is
+      # nearly all trusted GitHub, so the cache is usually cold. The same goes
+      # for a low-power window with Postgres (Tier 2) dark: once the 6h entry
+      # is stale, untrusted clients get 403 for the rest of the window.
+      auth_cache_duration: 6h
+      # Default 200ms, for that LAPI round-trip. Only a request that finds the
+      # cache empty or stale pays it. Kept well under the plugin's
+      # httpTimeoutSeconds (3), past which the plugin gives up and passes.
+      auth_timeout: 1s
+      labels:
+        type: appsec
+  env:
+    - name: TZ
+      value: ${TIMEZONE}
+    # Both collections install crowdsecurity/appsec-default. virtual-patching
+    # is base-config plus the CVE-specific vpatch-* rules (about 200 at hub
+    # HEAD). generic-rules adds five: freemarker SSTI, two WordPress uploads
+    # rules, a test rule and no-user-agent (out-of-band). No OWASP CRS: it is
+    # heavier, and appsec-crs runs out-of-band only.
+    - name: COLLECTIONS
+      value: >-
+        crowdsecurity/appsec-virtual-patching
+        crowdsecurity/appsec-generic-rules
+  # Chart default is 500m CPU request and a 250Mi limit, for a trickle of
+  # door traffic. The plugin caps what it forwards per request
+  # (crowdsecAppsecBodyLimit, 16KiB) and the door's throttles cap how many
+  # requests one client has in flight (traefik/middleware/funnel-throttle.yaml),
+  # so memory does not scale with upload size. The chart's limits.cpu 500m
+  # survives this partial override, as it does for lapi and agent. Re-measure
+  # after rollout, and load-test from alpha-site before plan step 5.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      # Chart default false. Gives job="crowdsec-appsec-service", which
+      # CrowdsecAppsecAbsent reads.
+      enabled: true
+  # BANS FROM THIS POD. Its scenarios run here, not in the agents:
+  #   crowdsecurity/appsec-vpatch   two DISTINCT in-band rules from one IP
+  #                                 within about 60s (hub, via the collections)
+  #   driscoll/appsec-block-flood   the SAME rule over and over (below)
+  # Both are Ip-scoped, so profiles.yaml bans 4h and the door enforces it at
+  # its next stream poll. appsec-vpatch alone never bans a client that repeats
+  # one rule, and every repeat is a 403 plus one LAPI alert (see EVERY IN-BAND
+  # MATCH IS AN ALERT above), so without the second a single client could write alerts
+  # into Postgres, and signals to CAPI, as fast as the door lets it
+  # (traefik/middleware/funnel-throttle.yaml: 10/s). Capacity 10 leaking one
+  # per 10s: the 11th block in a burst bans; a false positive a legitimate
+  # client trips now and then does not. Same filter as the hub's appsec-vpatch
+  # and appsec-native, with no `distinct`.
+  scenarios:
+    driscoll-appsec-block-flood.yaml: |
+      type: leaky
+      format: 3.0
+      name: driscoll/appsec-block-flood
+      description: "One IP tripping the Funnel door's WAF over and over, even with a single rule"
+      filter: "evt.Meta.log_type == 'appsec-block'"
+      leakspeed: "10s"
+      capacity: 10
+      groupby: evt.Meta.source_ip
+      blackhole: 1m
+      labels:
+        service: http
+        confidence: 2
+        spoofable: 0
+        classification:
+          - attack.T1190
+        label: "Repeatedly blocked by CrowdSec AppSec"
+        behavior: "http:exploit"
+        remediation: true
+  # KEEP IDENTICAL TO config.postoverflows ABOVE. That one is mounted in agent
+  # pods only; this pod reads only appsec.postoverflows. It stops a broken
+  # forwarded-header chain -- every door request arriving as the Funnel
+  # proxy's pod IP -- from getting that pod IP, and so everyone, BANNED by the
+  # scenarios above. It does not stop the per-request WAF alerts: AppSec
+  # alerts skip the postoverflow whitelist (only overflows are whitelisted,
+  # crowdsec pkg/parser/node.go:152-160), so those still reach the LAPI and
+  # CAPI for any address, with no decision attached.
+  postoverflows:
+    s01-whitelist:
+      driscoll-internal-networks.yaml: |
+        name: driscoll/internal-networks
+        description: "Never ban cluster, LAN or tailnet addresses"
+        whitelist:
+          reason: "internal network"
+          cidr:
+            - "${CLUSTER_NETWORK}"
+            - "${SERVICE_NETWORK}"
+            - "127.0.0.1/32"
+            - "10.0.0.0/8"
+            - "172.16.0.0/12"
+            - "192.168.0.0/16"
+            - "100.64.0.0/10"

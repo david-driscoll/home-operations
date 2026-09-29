@@ -1,0 +1,10 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Rendered only by ../ks.yaml (the nested Kustomization), never by an app's own
+# build. Both objects name their own namespace -- do not add `namespace:` here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./ingress.yaml
+  - ./httproute.yaml

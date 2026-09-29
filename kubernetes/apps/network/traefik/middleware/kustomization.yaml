@@ -26,5 +26,13 @@ resources:
   # whoami route (apps/equestria/utils/whoami) is the one live reference today.
   # See docs/crowdsec-enforcement-rollout.md before changing either.
   - ./crowdsec.yaml
+  # The Tailscale Funnel door's own middlewares. Referenced ONLY by the
+  # `funnel` entrypoint (traefik/values.yaml ports.funnel.http.middlewares),
+  # never by a route. crowdsec-funnel.yaml is a second, ENABLED instance of the
+  # plugin above; its LAPI block must stay identical to crowdsec.yaml's (see
+  # both headers). A missing or broken one fails every funnel router closed.
+  - ./crowdsec-funnel.yaml
+  - ./funnel-strip-headers.yaml
+  - ./funnel-throttle.yaml
   # - ./fail2ban.yaml
   # - ./tailscale-redirect.yaml

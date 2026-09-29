@@ -9,4 +9,5 @@ components:
 resources:
   - ./flux-instance/ks.yaml
   - ./flux-operator/ks.yaml
+  - ./flux-webhook-funnel/ks.yaml
   - ./repositories/ks.yaml

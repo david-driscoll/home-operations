@@ -1,0 +1,48 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The admission policies that gate Tailscale Funnel -- see each file's header.
+# Deliberately its own Kustomization, and never part of
+# kubernetes/components/funnel: every consumer of that component would then
+# render and prune the same cluster-scoped objects. Funnel consumers dependsOn
+# this, so the gate is admitted before the first Funnel Ingress rather than
+# racing it.
+#
+# Consumers reach it through components/funnel/ks.yaml's dependsOn, which
+# orders it before the first funnel Ingress AND HTTPRoute; network/funnel-gateway
+# depends on it too, so the Gateway is never created unchecked.
+#
+# funnel-httproute-shape and funnel-gateway-shape embed the tailnet domain
+# (TAILSCALE_DOMAIN, a shared-secrets key). No substituteFrom is listed here
+# because components/common, applied by apps/tailscale-system/kustomization.yaml,
+# patches it onto this ks. Outside that umbrella the domain renders empty and
+# the real Gateway and route are refused -- closed, and loudly.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app funnel-policy
+  namespace: &namespace tailscale-system
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/tailscale-system/funnel-policy
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

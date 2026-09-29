@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# Per-client throttles on the Tailscale Funnel door. Referenced only by
+# traefik/values.yaml `ports.funnel.http.middlewares`, AHEAD of the CrowdSec
+# bouncer, so a flood is refused (429) before the bouncer asks AppSec about it.
+#
+# WHY THEY EXIST: AppSec made each untrusted request cost something inside the
+# shared Traefik. The bouncer buffers up to crowdsecAppsecBodyLimit of the body
+# twice before the backend sees it, and a client that stalls its body keeps that
+# memory pinned until the entrypoint's readTimeout (60s). Traefik carries the
+# whole estate, so an out-of-memory kill there is every ingress, not just this
+# door. Each blocked request is also one LAPI alert, and AppSec runs one runner.
+# Nothing else bounds how many requests one client holds open or sends: Funnel
+# promises no rate limit (plan §E4).
+#
+# THE CLIENT is the one X-Forwarded-For entry tailscaled sets (depth 1; the
+# funnel entrypoint trusts XFF only from the pod CIDR, and only Funnel proxies
+# may connect -- see traefik/values.yaml). Not excludedIPs: ipv6Subnet applies
+# only to the depth and remote-address strategies (pkg/config/dynamic/
+# middlewares.go:486 @v3.7.13). IPv6 clients are grouped by /64, so rotating
+# addresses inside one allocation does not buy a fresh budget.
+#
+# SIZED FOR: GitHub webhook deliveries (a handful per push, and GitHub's egress
+# is shared, but only deliveries to this door count) and, from plan step 5,
+# social-platform media fetchers (a few images per post). Both sit far below
+# either limit. A throttled request is a 429, which FunnelDoorBlocked does not
+# count; look for DownstreamStatus 429 on entryPointName=funnel in the access log.
+#
+# Both names are reserved by funnel-middleware-names-reserved
+# (apps/tailscale-system/funnel-policy/funnel-entrypoint-reserved.yaml): a
+# Middleware elsewhere whose Traefik key collided would silently replace one.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: funnel-ratelimit
+spec:
+  rateLimit:
+    average: 10
+    period: 1s
+    burst: 50
+    sourceCriterion:
+      ipStrategy:
+        depth: 1
+        ipv6Subnet: 64
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# Simultaneous requests per client. This is the bound on buffered bodies: at
+# crowdsecAppsecBodyLimit 16KiB one client can pin well under 2MiB of Traefik's
+# heap, however slowly it sends. See the header above.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: funnel-inflight
+spec:
+  inFlightReq:
+    amount: 16
+    sourceCriterion:
+      ipStrategy:
+        depth: 1
+        ipv6Subnet: 64

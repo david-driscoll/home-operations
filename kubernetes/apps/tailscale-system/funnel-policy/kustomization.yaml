@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # The two allow-lists: Funnel devices (Ingress) and what the door serves
+  # (HTTPRoute). Their entries are paired -- change both together.
+  - ./funnel-ingress-shape.yaml
+  - ./funnel-httproute-shape.yaml
+  # Everything else stays off Traefik's funnel entrypoint.
+  - ./funnel-gateway-shape.yaml
+  - ./funnel-entrypoint-reserved.yaml
+  - ./funnel-tag-reserved.yaml
+  - ./proxies-secret-scope.yaml

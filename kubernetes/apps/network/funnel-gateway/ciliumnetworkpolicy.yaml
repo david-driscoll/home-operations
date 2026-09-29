@@ -1,0 +1,105 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# ONLY THE FUNNEL PROXIES MAY CONNECT TO TRAEFIK'S FUNNEL DOOR (:8445).
+#
+# Why it matters: the funnel entrypoint trusts X-Forwarded-For from the pod CIDR
+# (traefik values.yaml ports.funnel.forwardedHeaders) -- it has to, the Funnel
+# proxies are pods -- and the CrowdSec bouncer believes whatever XFF Traefik
+# keeps (plugin pkg/ip/ip.go:96-129). So anything else that reaches :8445 from a
+# pod IP can name its own client address: dodge the bouncer by claiming a
+# clientTrustedIPs address, or poison CrowdSec by getting any public IP banned.
+# The tailscale Connector makes that more than an in-cluster concern: it SNATs
+# tailnet subnet traffic to its own pod IP, so every tailnet principal granted
+# the cluster CIDRs could do it. This closes both.
+#
+# DENY-ONLY, AND NOTHING ELSE CHANGES. The first CiliumNetworkPolicy to select
+# Traefik would normally put the pod into default-deny for ALL ingress -- every
+# other entrypoint, the metrics port, the kubelet probes. `enableDefaultDeny:
+# false` for both directions stops that: this policy contributes only its
+# ingressDeny rules, which match port 8445 alone. Every other port on Traefik
+# stays exactly as open as before.
+#
+# WHO IS ALLOWED, by what the deny rules leave out: a pod in tailscale-system
+# labelled
+#   tailscale.com/parent-resource-type=ingress
+#   tailscale.com/parent-resource-ns=network
+# -- the standalone proxy the tailscale operator builds, in its own namespace,
+# for an Ingress in `network`. funnel-ingress-shape makes every standalone
+# tailscale Ingress in `network` a Funnel device on its device list, pointed at
+# traefik-funnel; the tailnet Ingresses there are ProxyGroup-backed (label
+# type=proxygroup) and denied here. One deny rule per condition, because a
+# label selector's NotIn also matches a pod WITHOUT the label: together they
+# deny every pod that is not all three. The namespace label is Cilium's own and
+# cannot be forged by a pod, so a copy of the two tailscale labels elsewhere
+# gets nowhere. The namespace Exists expression widens fromEndpoints past this
+# policy's own namespace, which is its default.
+#
+# Non-pod sources (the node, other nodes, anything outside the cluster) are
+# denied by fromEntities. Nothing legitimate reaches :8445 from those: the
+# kubelet probes Traefik on :8080, and the port is not on any Service address
+# outside the cluster.
+#
+# Verify after rollout with Hubble: `hubble observe --to-port 8445 --verdict
+# DROPPED` shows `DROPPED (Policy denied by denylist)` for any other source,
+# and the Funnel proxy's connection is FORWARDED. Plan §F step 2.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: traefik-funnel-door
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+      app.kubernetes.io/instance: traefik-network
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  ingressDeny:
+    - fromEndpoints:
+        - matchExpressions:
+            - key: io.kubernetes.pod.namespace
+              operator: NotIn
+              values:
+                - tailscale-system
+      toPorts:
+        - ports:
+            - port: "8445"
+              protocol: TCP
+    - fromEndpoints:
+        - matchExpressions:
+            - key: io.kubernetes.pod.namespace
+              operator: Exists
+            - key: tailscale.com/parent-resource-type
+              operator: NotIn
+              values:
+                - ingress
+      toPorts:
+        - ports:
+            - port: "8445"
+              protocol: TCP
+    - fromEndpoints:
+        - matchExpressions:
+            - key: io.kubernetes.pod.namespace
+              operator: Exists
+            - key: tailscale.com/parent-resource-ns
+              operator: NotIn
+              values:
+                - network
+      toPorts:
+        - ports:
+            - port: "8445"
+              protocol: TCP
+    - fromEntities:
+        - world
+        - host
+        - remote-node
+        - kube-apiserver
+        - unmanaged
+        - health
+        - init
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8445"
+              protocol: TCP

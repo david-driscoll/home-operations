@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The Flux GitHub webhook on Tailscale Funnel: /hook/ of flux-system's
+# webhook-receiver, public at flux-equestria-webhook.<tailnet>.ts.net.
+# Step 2 of docs/plans/cloudflare-tunnel-to-funnel.md -- it runs alongside the
+# Cloudflare route (../flux-instance/httproute.yaml) until the vault stack
+# points GitHub at it (step 3). Nothing here touches the external Gateway: a
+# ts.net name on a route attached there would leak into the tunnel's config.
+#
+# Its own Kustomization rather than a component on flux-instance: a Funnel
+# render or apply error here must not block reconciling Flux itself.
+#
+# THE PATH. Funnel proxy (mounts /hook/ only; /hook/../x is a 404 there) ->
+# Traefik's `funnel` entrypoint (CrowdSec bouncer, header strip) -> HTTPRoute
+# flux-system/funnel-flux-equestria-webhook -> webhook-receiver:80. Flux's
+# Receiver checks GitHub's HMAC.
+#
+# The component emits ONE object here: the nested Kustomization
+# funnel-flux-equestria-webhook (kubernetes/components/funnel/ks.yaml), which
+# owns the Ingress (in `network`), the HTTPRoute, their dependsOn and their
+# health checks. `wait: true` below health-checks that object, so Ready here
+# still means "proxy authenticated, route accepted, backend resolved". Do NOT
+# re-add an Ingress healthCheckExprs entry: this inventory holds no Ingress any
+# more, and an expression that matches nothing passes silently.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app flux-webhook-funnel
+  namespace: &namespace flux-system
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # webhook-receiver is Flux's own Service. The tailscale-system and
+    # funnel-gateway dependencies live on the nested ks now.
+    - name: flux-instance
+      namespace: flux-system
+  path: ./kubernetes/apps/flux-system/flux-webhook-funnel
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  # Above the nested ks's 5m, so a failure there is reported as that ks's own
+  # message rather than this one timing out first.
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/funnel
+  postBuild:
+    substitute:
+      APP: flux-webhook
+      # The HTTPRoute's namespace (the Ingress always lands in `network`).
+      NAMESPACE: *namespace
+      # A literal, not flux-CLUSTER_CNAME-webhook: a missing substitution
+      # would render a wrong public name silently rather than failing. It is
+      # also on both funnel-policy allow-lists verbatim, and it is what
+      # stacks/vault/KubernetesFluxWebhooks.ts builds (flux-<cluster.key>-webhook).
+      FUNNEL_HOST: flux-equestria-webhook
+      FUNNEL_PATH: hook
+      FUNNEL_SERVICE: webhook-receiver
+      # webhook-receiver's `http` port, as a NUMBER and quoted: HTTPRoute
+      # backendRefs take no port names, and substitute values are strings.
+      FUNNEL_PORT: "80"

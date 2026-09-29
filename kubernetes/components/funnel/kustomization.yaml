@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# A public endpoint on Tailscale Funnel, behind Traefik's `funnel` entrypoint.
+# The component emits ONE object into the consuming app's build: the nested
+# Kustomization in ./ks.yaml, which renders ./endpoint (an Ingress in
+# `network`, an HTTPRoute in the app's namespace). See ./ks.yaml for why, for
+# the variables, and for the three allow-list lines publishing also needs.
+#
+# NO commonLabels, unlike ../tailscale. kustomize's commonLabels also rewrites
+# every NetworkPolicy podSelector in the consuming app, so attaching this to
+# (say) flux-instance would silently point its source-controller policy at
+# nothing. ./ks.yaml labels its objects through commonMetadata.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ks.yaml

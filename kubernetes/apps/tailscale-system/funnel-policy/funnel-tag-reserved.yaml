@@ -1,0 +1,100 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# tag:funnel IS RESERVED FOR FUNNEL INGRESSES. It is the only tag holding the
+# `funnel` nodeAttr, and the operator's OAuth client may mint it onto anything
+# the operator builds -- a LoadBalancer Service, a ProxyGroup, a Connector, a
+# Recorder, a PeerRelay -- not just the Ingresses ./funnel-ingress-shape.yaml
+# checks.
+#
+# It cannot cover a workload that holds the operator's OAuth client itself
+# (taildrive mounts tailscale-oauth to register tag:shared-drive) -- that one
+# can mint tag:funnel with no Kubernetes object involved. See the plan, §C1.
+#
+# None of those can publish through Funnel at operator 1.102.4 (only the
+# standalone Ingress path sets AllowFunnel), so this is closing a door before a
+# future operator version opens it, not an exposure today. It is also what
+# keeps tag:funnel meaning "a checked public endpoint" everywhere else in the
+# estate -- the tailnet policy excludes it from every autogroup:tagged grant on
+# that assumption (stacks/unifi-network/acl-manager.ts, taggedExceptFunnel).
+#
+# Two policies, not one: a Service carries its tags in an annotation and the
+# tailscale.com kinds in spec.tags, and one expression over both would type-
+# check against a schema that lacks the other field.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-tag-reserved-services
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["services"]
+  # Narrowed to Services that carry the annotation at all, so the thousands of
+  # ordinary Service writes are never evaluated: under failurePolicy Fail, an
+  # evaluation error on an unmatched object cannot happen.
+  matchConditions:
+    - name: carries-tailscale-tags
+      expression: >
+        has(object.metadata.annotations)
+        && 'tailscale.com/tags' in object.metadata.annotations
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: >
+        !object.metadata.annotations['tailscale.com/tags'].contains('tag:funnel')
+      message: >-
+        tag:funnel is reserved for Funnel Ingresses (kubernetes/components/funnel);
+        a Service must not carry it
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-tag-reserved-services
+spec:
+  policyName: funnel-tag-reserved-services
+  validationActions: ["Deny"]
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: funnel-tag-reserved-tailscale
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      # Every tailscale.com kind with a spec.tags field at operator 1.102.4
+      # (ProxyClass, DNSConfig, ProxyGroupPolicy and Tailnet have none). Re-check
+      # this list on operator upgrades.
+      #
+      # v1alpha1, not "*": the apiserver's type checker skips a rule with a
+      # wildcard version, which left this policy silently unchecked. matchPolicy
+      # Equivalent still catches writes through any other served version.
+      - apiGroups: ["tailscale.com"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["proxygroups", "connectors", "recorders", "peerrelays"]
+  matchConditions:
+    - name: not-being-deleted
+      expression: "!has(object.metadata.deletionTimestamp)"
+  validations:
+    - expression: >
+        !has(object.spec) || !has(object.spec.tags)
+        || !object.spec.tags.exists(t, t == 'tag:funnel')
+      message: >-
+        tag:funnel is reserved for Funnel Ingresses (kubernetes/components/funnel);
+        a ProxyGroup, Connector, Recorder or PeerRelay must not carry it
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: funnel-tag-reserved-tailscale
+spec:
+  policyName: funnel-tag-reserved-tailscale
+  validationActions: ["Deny"]
