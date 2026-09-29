@@ -11,7 +11,7 @@ actually processed a file for nine months at that point (see
 | --- | --- | --- |
 | Tdarr server + UI | [`kubernetes/apps/equestria/media/tdarr/`](../../kubernetes/apps/equestria/media/tdarr/) — `tdarr.<root domain>` | Library scans, the file DB, flows, the job queue. Its config (libraries, flows, node limits) lives in its DB on the `tdarr` PVC, **not in git**. |
 | Tdarr nodes | same HelmRelease, controller `tdarr-node`, 2 replicas | Run the jobs. Pinned to `intel.feature.node.kubernetes.io/gpu` nodes: `fluttershy` and `kerfuffle`, UN1290s with Iris Xe. Each registers as a node named after its host. |
-| The flow | [`assets/tdarr/`](assets/tdarr/) | `flow.template.json` + `stream-policy.cjs`, rendered by `build-flow.sh`. The copy in Tdarr's DB is the live one; this is the reviewed one. |
+| The flows | [`assets/tdarr/`](assets/tdarr/) | Video: `flow.template.json` + `stream-policy.cjs` + `size-guard.cjs`. Music: `music-flow.template.json` + `music-policy.cjs`. Rendered by `build-flow.sh [video\|music]`. The copy in Tdarr's DB is the live one; this is the reviewed one. |
 | tdarr MCP | [`kubernetes/apps/agents/agent-tools-servers/tdarr.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tdarr.yaml) | `tdarr` in `toolport-media`. `tdarr_cruddb` is allowed so flows can be managed; it writes any collection. |
 
 Tdarr (server and nodes) is excluded from the nightly 01:00-07:00 shed of
@@ -127,6 +127,57 @@ a backup first**, every time.
 
 Sonarr and Radarr pick up a replaced file (and a changed extension, `.mp4` →
 `.mkv`) on their next refresh. Plex and Jellyfin see it on their next scan.
+
+## Health checks
+
+TV and Movies run Tdarr's **quick** health check (HandBrake `--scan` of the
+file headers) since 2026-09-29. It finds files that are truncated or will not
+open. Deeper damage in a file the flow re-encodes shows up as a failed encode
+anyway, so the thorough check (every frame through ffmpeg) is not used.
+
+- **Library:** `processHealthChecks: true`, `handbrake: true`, `ffmpeg: false`
+  (the UI's Quick/Thorough radio is those two booleans).
+- **Workers:** one `healthcheckcpu` on kerfuffle and fluttershy; none on the
+  control planes. Like every worker limit, it is stored per node name in
+  Tdarr's DB, not set by the HelmRelease.
+- **Never add `healthcheckgpu` workers.** Tdarr's GPU health check is
+  hard-wired to NVIDIA (`-hwaccel nvdec ... cuda`) and has no QSV mode
+  (upstream issue 546). On these nodes it dies in under a second, which is how
+  22,996 files ended up "Error" in December 2025.
+- Requeue a library's health checks with `tdarr_set_all_status`
+  `{dbID, mode: "HealthCheck", table: "", processStatus: "Queued"}`.
+
+## Music
+
+The `Music AAC` flow (`musicAac`) converts lossless music to AAC in place. It
+was chosen 2026-09-29 for space: on that day `/media/music/general` held 4,322
+FLAC files (119.7 GB, 659 of them 24-bit) next to 2,120 MP3 and AAC files.
+[`music-policy.cjs`](assets/tdarr/music-policy.cjs) makes the decisions:
+
+| Rule | Why |
+| --- | --- |
+| FLAC, ALAC, WAV/PCM, APE, WavPack, TTA, TAK → AAC 256k (96k per channel above stereo), `.m4a`. | AAC-256 is a Lidarr quality; Lidarr has no Opus quality at all, so Opus files would import as "Unknown". AAC also plays natively on every Apple device. |
+| Above 48 kHz is resampled to 48 kHz. | AAC gains nothing from hi-res sample rates. |
+| MP3, AAC, Opus and Vorbis are left alone: "Not required". | Re-encoding lossy audio only loses quality. |
+| The first JPEG/PNG cover is kept as the attached picture; other streams are dropped. | MP4 holds one cover; players otherwise use the folder art. |
+| Duration within 1.5% and size 3-90% of the original, or the flow fails with the original untouched. | A hi-res FLAC lands near 8%, a CD rip near 30%. Over 90% means a FLAC that was already tiny: not worth a lossy generation. |
+
+It depends on Lidarr to finish each file:
+
+- **Tags.** ffmpeg copies the common tags but not the MusicBrainz IDs (MP4
+  keeps them in freeform atoms ffmpeg does not write). Lidarr has
+  `writeaudiotags: Sync`, so it writes them back when it imports the `.m4a`.
+  Navidrome's track ID (`PID.Track`) prefers the MusicBrainz track ID, which
+  is what should carry stars and play counts across the change of extension;
+  check it on the pilot album before trusting it library-wide.
+- **No re-download.** The `Any` profile (every artist but one) has upgrades
+  off, and FLAC ranks below high-quality lossy, so a converted album is never
+  "upgraded" back to FLAC. New grabs still take FLAC when that is all there
+  is; the flow converts those too.
+
+Only `/media/music/general` (Lidarr's root folder) is in the library.
+`/media/music/soundtracks` is not managed by Lidarr, so nothing would restore
+its MusicBrainz tags.
 
 ## What was wrong on 2026-09-27
 

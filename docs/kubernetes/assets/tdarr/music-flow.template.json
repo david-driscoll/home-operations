@@ -1,0 +1,105 @@
+{
+  "_id": "musicAac",
+  "name": "Music AAC",
+  "priority": 0,
+  "isUiLocked": false,
+  "flowPlugins": [
+    {
+      "id": "mu-input",
+      "name": "Input File",
+      "sourceRepo": "Community",
+      "pluginName": "inputFile",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 0 }
+    },
+    {
+      "id": "mu-medium",
+      "name": "Check File Medium",
+      "sourceRepo": "Community",
+      "pluginName": "checkFileMedium",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 100 }
+    },
+    {
+      "id": "mu-start",
+      "name": "Begin Command",
+      "sourceRepo": "Community",
+      "pluginName": "ffmpegCommandStart",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 200 }
+    },
+    {
+      "id": "mu-policy",
+      "name": "Music policy",
+      "sourceRepo": "Community",
+      "pluginName": "customFunction",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 300 },
+      "inputsDB": { "code": "" }
+    },
+    {
+      "id": "mu-exec",
+      "name": "Execute (AAC)",
+      "sourceRepo": "Community",
+      "pluginName": "ffmpegCommandExecute",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 420 }
+    },
+    {
+      "id": "mu-dur",
+      "name": "Duration within 1.5%",
+      "sourceRepo": "Community",
+      "pluginName": "compareFileDurationRatio",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 540 },
+      "inputsDB": { "greaterThan": "98.5", "lessThan": "101.5" }
+    },
+    {
+      "id": "mu-size",
+      "name": "Size 3-90% of original",
+      "sourceRepo": "Community",
+      "pluginName": "compareFileSizeRatio",
+      "version": "2.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 660 },
+      "inputsDB": { "greaterThan": "3", "lessThan": "90" }
+    },
+    {
+      "id": "mu-replace",
+      "name": "Replace Original File",
+      "sourceRepo": "Community",
+      "pluginName": "replaceOriginalFile",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 400, "y": 780 }
+    },
+    {
+      "id": "mu-fail",
+      "name": "Fail Flow (original kept)",
+      "sourceRepo": "Community",
+      "pluginName": "failFlow",
+      "version": "1.0.0",
+      "fpEnabled": true,
+      "position": { "x": 800, "y": 660 }
+    }
+  ],
+  "flowEdges": [
+    { "id": "m-input-medium", "source": "mu-input", "sourceHandle": "1", "target": "mu-medium", "targetHandle": null },
+    { "id": "m-medium-start", "source": "mu-medium", "sourceHandle": "2", "target": "mu-start", "targetHandle": null },
+    { "id": "m-start-policy", "source": "mu-start", "sourceHandle": "1", "target": "mu-policy", "targetHandle": null },
+    { "id": "m-policy-exec", "source": "mu-policy", "sourceHandle": "1", "target": "mu-exec", "targetHandle": null },
+    { "id": "m-exec-dur", "source": "mu-exec", "sourceHandle": "1", "target": "mu-dur", "targetHandle": null },
+    { "id": "m-dur-size", "source": "mu-dur", "sourceHandle": "1", "target": "mu-size", "targetHandle": null },
+    { "id": "m-dur-fail-lo", "source": "mu-dur", "sourceHandle": "2", "target": "mu-fail", "targetHandle": null },
+    { "id": "m-dur-fail-hi", "source": "mu-dur", "sourceHandle": "3", "target": "mu-fail", "targetHandle": null },
+    { "id": "m-size-replace", "source": "mu-size", "sourceHandle": "1", "target": "mu-replace", "targetHandle": null },
+    { "id": "m-size-fail-lo", "source": "mu-size", "sourceHandle": "2", "target": "mu-fail", "targetHandle": null },
+    { "id": "m-size-fail-hi", "source": "mu-size", "sourceHandle": "3", "target": "mu-fail", "targetHandle": null }
+  ]
+}
