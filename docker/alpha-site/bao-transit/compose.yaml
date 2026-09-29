@@ -1,13 +1,34 @@
 services:
+  # One-shot, idempotent file -> raft storage migration (migrate/migrate.sh).
+  # Does the work once; on every later deploy it sees raft already present and
+  # exits 0. bao-transit below will not start until it has succeeded.
+  #
+  # PINNED TO 2.6.x ON PURPOSE, independently of bao-transit's own image: it
+  # has to read `storage "file"`, which 2.7.0 removed.
+  bao-transit-migrate:
+    container_name: bao-transit-migrate
+    image: ghcr.io/openbao/openbao:2.6.2@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
+    restart: "no"
+    entrypoint: ["/bin/sh", "/openbao/migrate/migrate.sh"]
+    volumes:
+      # Read-write only because `operator migrate` takes (and releases) a
+      # migration lock in the source; it copies, never modifies, the entries.
+      - /opt/stacks-data/${APP}/data:/openbao/data
+      - /opt/stacks-data/${APP}/raft:/openbao/raft
+      - ./migrate:/openbao/migrate:ro
+    networks:
+      - dockge_default
+
   bao-transit:
     container_name: bao-transit
-    # HELD AT 2.6.x. OpenBao 2.7.0 no longer accepts `storage "file"`, which
-    # config.hcl uses: #2008 bumped this to 2.7.0 on 2026-09-23 and the container
-    # crash-looped on "unknown storage type file" from 09-24 until this pin --
-    # four days in which equestria's OpenBao could not have unsealed after a
-    # restart. .github/renovate.json5 holds this file below 2.7; lifting that
-    # needs a storage migration (file -> raft, run with a 2.6 binary that has
-    # both) first, not an image bump.
+    depends_on:
+      bao-transit-migrate:
+        condition: service_completed_successfully
+    # Still 2.6.x in THIS change, deliberately: first move the storage to raft
+    # (bao-transit-migrate above), prove the node unseals and serves the
+    # transit key on raft, and only then let it move to 2.7+ -- 2.7.0 dropped
+    # `storage "file"`, which is what crash-looped this node 2026-09-24..28.
+    # .github/renovate.json5 holds this file below 2.7 until that follow-up.
     image: ghcr.io/openbao/openbao:2.6.2@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
     restart: unless-stopped
     dns:
@@ -55,6 +76,9 @@ services:
       # dials exactly this: http://${tailscaleIpAddress}:8200
       - "${tailscaleIpAddress}:8200:8200"
     volumes:
+      # Raft storage since the migration. /openbao/data (the old file storage)
+      # stays mounted only as the documented rollback; nothing reads it now.
+      - /opt/stacks-data/${APP}/raft:/openbao/raft
       - /opt/stacks-data/${APP}/data:/openbao/data
       - ./config/config.hcl:/openbao/config/config.hcl:ro
     labels:
@@ -91,10 +115,11 @@ x-dockge:
     its parent expiring, periodic so it renews indefinitely.
 
     Do NOT create the transit key exportable — an exportable key can be read by
-    anyone holding a read token. Back up this container's /openbao/data plus the
-    static unseal key instead.
+    anyone holding a read token. Back up this container's /openbao/raft plus the
+    static unseal key instead (/openbao/data is the pre-raft file storage, kept
+    as the migration rollback).
 
-    If the container cannot write /openbao/data on first start, it is the
+    If the container cannot write /openbao/raft on first start, it is the
     volume owner: the image runs as a non-root user. Chown the host directory to
     the image's uid rather than switching the container to root.
   urls:

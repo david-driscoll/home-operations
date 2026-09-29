@@ -17,12 +17,27 @@ listener "tcp" {
   tls_disable = true
 }
 
-// File storage is deliberate. The dataset is one transit key plus its metadata;
-// Postgres or Raft would be more machinery guarding less state, and this node
-// has to be able to start when nothing else in the estate is up.
-storage "file" {
-  path = "/openbao/data"
+// Integrated raft, single node. This was `storage "file"`, which OpenBao
+// 2.7.0 removed -- the bump to 2.7.0 (#2008) left this node crash-looping on
+// "unknown storage type file" from 2026-09-24 to 09-28. Raft keeps the
+// property the file backend was chosen for: it lives entirely on this host's
+// disk and needs nothing else in the estate to be up to start.
+//
+// The move happened once, via the bao-transit-migrate service
+// (../migrate/migrate.sh, `bao operator migrate` on 2.6.x). The old file
+// storage is still at /opt/stacks-data/bao-transit/data, untouched -- it is the
+// rollback: revert this stanza and the compose change, and the node reads it
+// again (anything written after the migration, such as seal-token renewals,
+// exists only in raft).
+storage "raft" {
+  path    = "/openbao/raft"
+  node_id = "bao-transit"
 }
+
+// Raft requires both. Single node, nothing to redirect to or replicate with,
+// so loopback is correct; 8201 is never published.
+api_addr     = "http://127.0.0.1:8200"
+cluster_addr = "http://127.0.0.1:8201"
 
 // Auto-unseal from a 32-byte AES-256-GCM-96 key supplied as an environment
 // variable. Confirmed against the OpenBao source docs (configuration/seal/
