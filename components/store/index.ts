@@ -89,7 +89,7 @@ export abstract class VaultStore {
 
   /**
    * Read a credential by its OpenBao path, e.g.
-   * `third-party-tokens/cloudflare/driscoll-tech`.
+   * `third-party-tokens/cloudflare/dns-zone`.
    *
    * The preferred form for new call sites, and what `resolveBaoPath`'s own
    * error tells you to reach for. `getSecretByTitle` above is the legacy half:

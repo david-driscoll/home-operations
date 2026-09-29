@@ -120,9 +120,9 @@ describe("BaoStore", () => {
   }
 
   it("resolves a 1Password title to the path TITLE_PATHS names", async () => {
-    const store = new BaoStore(stubClient({ "third-party-tokens/cloudflare/driscoll-tech": kv({ zoneId: "z" }) }));
-    const item = await new Promise<any>(res => store.getSecretByTitle<{ zoneId: string }>("Cloudflare (driscoll.tech)").apply(v => (res(v), v)));
-    assert.equal(item.zoneId, "z");
+    const store = new BaoStore(stubClient({ "third-party-tokens/tailscale/pulumi-oauth": kv({ username: "z" }) }));
+    const item = await new Promise<any>(res => store.getSecretByTitle<{ username: string }>("Tailscale Terraform OAuth Client").apply(v => (res(v), v)));
+    assert.equal(item.username, "z");
   });
 
   it("reads a path once however many times it is asked for", async () => {
@@ -130,7 +130,7 @@ describe("BaoStore", () => {
     const client = {
       read: async (_m: string, _p: string) => {
         reads++;
-        return kv({ hostname: "opossum-yo.ts.net" });
+        return kv({ hostname: "host.example.ts.net" });
       },
     } as unknown as ConstructorParameters<typeof BaoStore>[0];
     const store = new BaoStore(client);
@@ -165,7 +165,7 @@ describe("BaoStore", () => {
 
 describe("resolveBaoPath", () => {
   it("resolves a named title through TITLE_PATHS", () => {
-    assert.equal(resolveBaoPath("Cloudflare (driscoll.tech)").path, "third-party-tokens/cloudflare/driscoll-tech");
+    assert.equal(resolveBaoPath("Tailscale Terraform OAuth Client").path, "third-party-tokens/tailscale/pulumi-oauth");
     assert.equal(resolveBaoPath("minio root user").path, "apps/minio/root");
   });
 
@@ -331,8 +331,8 @@ describe("parseClusterDetails", () => {
     title: "Equestria",
     type: "kubernetes",
     location: "home",
-    rootDomain: "equestria.driscoll.tech",
-    authentikDomain: "canterlot.driscoll.tech",
+    rootDomain: "equestria.example.com",
+    authentikDomain: "canterlot.example.com",
     icon: "https://example.invalid/i.png",
     favicon: "https://example.invalid/f.png",
     background: "https://example.invalid/b.jpg",
@@ -345,7 +345,7 @@ describe("parseClusterDetails", () => {
     assert.equal(c.key, "equestria");
     assert.equal(c.sourceTitle, "Cluster: Equestria");
     assert.equal(c.secretField, "secret");
-    assert.equal(c.rootDomain, "equestria.driscoll.tech");
+    assert.equal(c.rootDomain, "equestria.example.com");
   });
 
   it("maps the 'none' sentinel to null rather than carrying it through", () => {
@@ -399,8 +399,8 @@ describe("BaoStore cluster reads", () => {
       title: key,
       type: "dockge",
       location: "home",
-      rootDomain: `${key}.driscoll.tech`,
-      authentikDomain: "a.driscoll.tech",
+      rootDomain: `${key}.example.com`,
+      authentikDomain: "a.example.com",
       icon: "https://i",
       favicon: "https://f",
       background: "https://b",

@@ -8,23 +8,15 @@
 
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
-dashboard/externalsecret.yaml
 
-# --- Phase 3: the Cloudflare token's OpenBao path and 1Password title ---
-kubernetes/apps/cert-manager/cert-issuers/secret.yaml
-kubernetes/apps/network/secrets/cloudflare-default-domain.yaml
+# --- Phase 3b: the break-glass canary, still on the old Cloudflare path ---
+# The consumers moved to third-party-tokens/cloudflare/dns-zone in 3a. These
+# move in lockstep with the live `restore-test` policy (an admin-token step),
+# after a nightly dump contains the new path; then the old path is deleted.
 kubernetes/apps/kube-system/openbao-replica/helmrelease.yaml
-components/bao.test.ts
-components/store/bao.test.ts
-components/store/bao.ts
-components/store/index.ts
-docker/_common/traefik/.env
 docker/alpha-site/bao-standby/restore.sh
 bootstrap/RUNBOOK.md
 bootstrap/openbao/restore-test.sh
-docs/openbao-migration/PLAN.md
-docs/openbao-migration/STATUS.md
-docs/openbao-shared-secrets-reorg.md
 scripts/bao-reorg/plan.ts
 scripts/bao-reorg/run.sh
 

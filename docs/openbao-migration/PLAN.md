@@ -611,7 +611,7 @@ kubectl get clustersecretstore openbao # Valid
 
 # OpenBao health after Phase 3
 bao status                             # 3 nodes, 1 active, unsealed
-bao kv get secrets/shared/cloudflare-driscoll-tech
+bao kv get secrets/shared/cloudflare-<root-domain-slug>
 
 # home-operations / vault — before every deploy
 pulumi preview                         # per stack; expect zero diffs where none intended

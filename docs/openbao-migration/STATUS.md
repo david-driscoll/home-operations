@@ -1111,7 +1111,7 @@ can browse the tree and read no secret value. Worth re-proving as a real token o
 
 ```bash
 bao kv list secrets/shared/                          # PASS
-bao kv get  secrets/shared/cloudflare-driscoll-tech  # MUST FAIL 403
+bao kv get  secrets/shared/cloudflare-<root-domain-slug>  # MUST FAIL 403
 ```
 
 **Remaining step:** a browser login at `/ui` as an `admins` member and as `family`.
@@ -1180,7 +1180,7 @@ holds the one capability needed to open an attempt on the authenticated endpoint
 ```
 policies: ["break-glass","default"]
 GET  sys/generate-root-token/attempt          -> 200, attempt opens and cancels
-secrets/data/shared/cloudflare-driscoll-tech  -> ["deny"]
+secrets/data/shared/cloudflare-<root-domain-slug>  -> ["deny"]
 sys/policies/acl/admin                        -> ["deny"]
 ```
 
@@ -1328,7 +1328,7 @@ and reading a value must fail:
 
 ```bash
 bao kv list secrets/shared/                          # PASS  — viewer has list on secrets/metadata/*
-bao kv get  secrets/shared/cloudflare-driscoll-tech  # MUST FAIL 403 — no capability on secrets/data/*
+bao kv get  secrets/shared/cloudflare-<root-domain-slug>  # MUST FAIL 403 — no capability on secrets/data/*
 ```
 
 If that last command returns data, the policy is wrong — stop and fix it before declaring
@@ -1563,7 +1563,7 @@ bao kv list secrets/shared/
 bao kv list secrets/
 
 # MUST FAIL with 403 permission denied — viewer has NO capability on secrets/data/*
-bao kv get secrets/shared/cloudflare-driscoll-tech
+bao kv get secrets/shared/cloudflare-<root-domain-slug>
 ```
 
 If that last command returns data, the policy is wrong — stop and fix it before
@@ -1706,7 +1706,7 @@ unseal key, Pulumi passphrase), and the personal-scope GitHub PAT.
 **Path scheme note:** the applied layout is FLAT — `secrets/shared/<slug>` — not the
 `shared/providers/…` / `shared/<family>/…` grouping PLAN §A sketched. The mapping was
 reviewed and accepted that way; the canary read in PLAN §Verification and RUNBOOK
-Scenario B now points at `secrets/shared/cloudflare-driscoll-tech`. If grouping is ever
+Scenario B now points at `secrets/shared/cloudflare-<root-domain-slug>`. If grouping is ever
 wanted, it is a KV move + mapping.yaml edit, best done before Phases 6–8 wire consumers
 to the flat paths.
 
