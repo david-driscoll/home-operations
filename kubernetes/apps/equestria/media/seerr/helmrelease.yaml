@@ -36,6 +36,8 @@ spec:
       app:
         annotations:
           reloader.stakater.com/auto: "true"
+          # Always up: excluded from the nightly 01:00-07:00 shed.
+          downscaler/exclude: "true"
         strategy: Recreate
         containers:
           app:

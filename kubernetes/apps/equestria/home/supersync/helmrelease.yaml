@@ -159,10 +159,11 @@ spec:
             securityContext: *securityContext
 
       coordinator:
-        # Left on the nightly shed, unlike the server: it is only needed while
-        # someone is adding a device, and syncing never touches it.
+        # Always up, like the server: excluded from the nightly 01:00-07:00
+        # shed so adding a device works at any hour.
         annotations:
           reloader.stakater.com/auto: "true"
+          downscaler/exclude: "true"
         replicas: 1
         strategy: Recreate
         pod:
