@@ -463,7 +463,7 @@ mount any Longhorn PVC at all.** That is what makes this a blocker for
 
 [20](20-low-power-tier.md) §4 and [24](24-power-states.md) want the control planes to be the
 *surviving* tier: Tier-0 and Tier-1 keep running there when the workers go dark. Their
-mechanism is a **different, custom** taint — `node-role.driscoll.tech/critical:NoSchedule`
+mechanism is a **different, custom** taint — `node-role.<root domain>/critical:NoSchedule`
 — applied via `talconfig.yaml` `nodeTaints`. The standard control-plane taint is a second,
 independent gate: a node carrying both taints admits only pods that tolerate **both**.
 

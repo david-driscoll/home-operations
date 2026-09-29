@@ -19,7 +19,7 @@ break-glass path is what makes a mid-migration backend failure recoverable at al
 
 ## 1. What this delivers
 
-Move the Pulumi state backend for every stack from the Minio bucket on `truenas.driscoll.tech`
+Move the Pulumi state backend for every stack from the Minio bucket on `truenas.<root domain>`
 to a Postgres database on **celestia's** Dockge LXC, using Pulumi's `postgres://` DIY backend
 (`[PREVIEW]` in the CLI, shipped since `v3.176.0`). Minio is **not** decommissioned — it becomes
 a periodic `pulumi stack export` checkpoint archive, versioned, kept as the belt-and-braces
@@ -27,7 +27,7 @@ path back to a known-good file backend for as long as the Postgres backend carri
 `[PREVIEW]` label.
 
 **Why this is worth doing at all**, verified as of today: `spike` (the TrueNAS VM behind
-`truenas.driscoll.tech`, provisioned at `stacks/home/index.ts:64-70`) currently hosts the Pulumi
+`truenas.<root domain>`, provisioned at `stacks/home/index.ts:64-70`) currently hosts the Pulumi
 state Minio bucket, the VolSync restic repository, the `nfs-csi` backing share, the Thanos
 object-storage bucket, and `/spike/data/pgdump/` / `/spike/backup` (celestia's PBS datastore
 mount). **No `stacks/backups/index.ts` backup plan references the Minio dataset** — verified
@@ -56,7 +56,7 @@ from the separate `vault` repo:
 | `kubernetes/apps/pulumi/applications/sgc.yaml` | `stacks/applications` | `sgc` | `s3://home-operations/applications?...` |
 | `kubernetes/apps/pulumi/vault/stack.yaml` | `stacks/vault` (in the **`vault`** repo) | `vault` | `s3://home-operations/vault?...` |
 
-All ten resolve to `endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true`
+All ten resolve to `endpoint=truenas.<root domain>:9000&s3ForcePathStyle=true&disableSSL=true`
 against a single bucket, `home-operations`, with different key prefixes per stack (`equestria`
 and `sgc` deliberately share the `applications` prefix — they are two stacks of one Pulumi
 *project*, distinguished by stack name inside it, exactly as Postgres will distinguish them by
@@ -97,7 +97,7 @@ directly.
 Root `.config/mise.toml [env]` sets the Minio credentials for every local run —
 `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` as `ref+openbao://secrets/shared/minio-root-user#/…`
 literals (`.config/mise.toml:67-68`) — plus `PULUMI_CONFIG_PASSPHRASE` the same way (line 79) and
-`CONNECT_HOST = "https://op-connect.sgc.driscoll.tech/"` (line 80, **still SGC-pointed as of
+`CONNECT_HOST = "https://op-connect.sgc.<root domain>/"` (line 80, **still SGC-pointed as of
 today** — the repoint [03](03-secrets-bootstrap-independence.md) makes). Each stack directory
 additionally carries its own `stacks/<name>/.mise.toml` with a stack-specific
 `PULUMI_BACKEND_URL` literal (§2.1's table) and `PULUMI_STACK`.
@@ -398,7 +398,7 @@ proven reachable.** Order:
    `[env]` by directory, and running it inside the repo tree is exactly the clobber trap §2.3
    warns about:
    ```
-   PULUMI_BACKEND_URL='postgres://pulumi:<password>@dockge-celestia.driscoll.tech:5432/pulumi?sslmode=disable' \
+   PULUMI_BACKEND_URL='postgres://pulumi:<password>@dockge-celestia.${ROOT_DOMAIN}:5432/pulumi?sslmode=disable' \
      pulumi stack ls
    ```
    confirming reachability and auth outside the cluster, then repoint exactly **one**
@@ -515,7 +515,7 @@ last-known-good copy, independent of whether the export-archive CronJob (§6) ha
    `@pulumi/minio ^0.17.0`, not assumed.
 2. **Whether `history-pruner`'s replacement (if any) is this piece's responsibility or
    steady-state operations'** — flagged, not resolved, in §5 step 5.
-3. **The `dockge-celestia.driscoll.tech` FQDN** (§4.3) is derived from
+3. **The `dockge-celestia.<root domain>` FQDN** (§4.3) is derived from
    `components/helpers.ts:68-73` and celestia's `ProxmoxHost` args, not read off a live DNS
    record — confirm it resolves as expected in step 2 of §5 before depending on it further.
 

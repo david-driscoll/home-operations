@@ -25,7 +25,7 @@ configMapGenerator:
   # annotation below switches Flux substitution off for the WHOLE object,
   # metadata.name included, so a variable here reaches the API server as the
   # literal string and fails the Kustomization's dry-run -- which blocks every
-  # object in it, route included (2026-09-27: cloud.driscoll.tech answered
+  # object in it, route included (2026-09-27: cloud.<root domain> answered
   # Traefik's bare 404 for an hour). ./helmrelease.yaml's `${APP}-config` IS
   # substituted and resolves to this same name.
   - name: nextcloud-config

@@ -19,7 +19,7 @@ and the current trees of `home-operations`, `equestria-cluster`,
 
 The July 2026 discovery (issue comments, 2026-07-29/30) described a
 **1Password Connect catch-22**: `.config/mise.toml` pointed `CONNECT_HOST` at
-`op-connect.sgc.driscoll.tech`, so a laptop run of Pulumi depended on the
+`op-connect.sgc.<root domain>`, so a laptop run of Pulumi depended on the
 cluster this plan dissolves. That framing is **obsolete for reads**. Between
 then and now, the
 [1Password → OpenBao migration](../openbao-pulumi-adoption.md) completed —
@@ -82,7 +82,7 @@ than "a human LXC login."
 **The repoint itself.** `.config/mise.toml:80` (this repo) still reads:
 
 ```toml
-CONNECT_HOST = "https://op-connect.sgc.driscoll.tech/"
+CONNECT_HOST = "https://op-connect.sgc.${ROOT_DOMAIN}/"
 ```
 
 `vault/.config/mise.toml:61` — same repo pattern, same stale value, same
@@ -96,11 +96,11 @@ almost everywhere else already made this move.**
 
 | Location | Value today |
 |---|---|
-| `home-operations/.config/mise.toml:80` | ❌ `op-connect.sgc.driscoll.tech` |
-| `vault/.config/mise.toml:61` | ❌ `op-connect.sgc.driscoll.tech` |
-| `home-operations/docker/_common/backups/.env:2` | ✅ `op-connect.equestria.driscoll.tech` |
-| `equestria-cluster/.config/mise.toml:77` | ✅ `op-connect.equestria.driscoll.tech` |
-| `stargate-command-cluster/.config/mise.toml:77` | ✅ `op-connect.equestria.driscoll.tech` (already, and has been since before this migration) |
+| `home-operations/.config/mise.toml:80` | ❌ `op-connect.sgc.<root domain>` |
+| `vault/.config/mise.toml:61` | ❌ `op-connect.sgc.<root domain>` |
+| `home-operations/docker/_common/backups/.env:2` | ✅ `op-connect.equestria.<root domain>` |
+| `equestria-cluster/.config/mise.toml:77` | ✅ `op-connect.equestria.<root domain>` |
+| `stargate-command-cluster/.config/mise.toml:77` | ✅ `op-connect.equestria.<root domain>` (already, and has been since before this migration) |
 
 Both clusters run their own Connect HTTPRoute today
 (`kubernetes/apps/kube-system/1password/httproute.yaml`, identical shape in
@@ -109,7 +109,7 @@ this isn't a "the SGC one is broken" situation, it's a "why is our own repo
 the odd one out" situation.
 
 **This also closes the open item from the discovery comments** ("whether
-anything outside Kubernetes uses `op-connect.sgc.driscoll.tech`",
+anything outside Kubernetes uses `op-connect.sgc.<root domain>`",
 v2 §12 item 7 / v2.1 §9 item 8): grepping all four repos for the literal
 string today turns up exactly the two stale `mise.toml` lines above, plus
 two crew-generated doc mirrors of the same (`docs/codebase/STACK.md` in both
@@ -119,7 +119,7 @@ references `op-connect.sgc` anywhere. The answer is "no, it's just these two
 lines," which is a two-line PR, not an audit.
 
 **Action:** change both `mise.toml` lines to
-`https://op-connect.equestria.driscoll.tech/`. No dependency on anything
+`https://op-connect.equestria.<root domain>/`. No dependency on anything
 else in this plan — do it first, independent of sequencing, the same way
 [06 (age keys)](06-age-key-consolidation.md) is called out as safe to do
 early.
@@ -218,7 +218,7 @@ pulumi-env.sh)"`, run from the vault repo — is what feeds both: it decrypts
 for path 1, and separately exchanges the same AppRole for a `VAULT_TOKEN` for
 path 2 (failing that mint is a warning, not fatal — the AppRole exports still
 work, `vals` just can't resolve references until a token exists). Its
-default `BAO_ADDR` is `https://bao.equestria.driscoll.tech` — i.e. equestria,
+default `BAO_ADDR` is `https://bao.equestria.<root domain>` — i.e. equestria,
 live, by default. `BAO_ADDR` is deliberately overridable, "so a break-glass
 run can point the same credential at a restored standby" (the script's own
 comment) — that override is the entire mechanism §3 below depends on.
@@ -367,7 +367,7 @@ mid-rotation and briefly less available than usual.
 
 ## 5. Concrete deliverables
 
-1. Repoint `CONNECT_HOST` to `op-connect.equestria.driscoll.tech` in
+1. Repoint `CONNECT_HOST` to `op-connect.equestria.<root domain>` in
    `home-operations/.config/mise.toml:80` and `vault/.config/mise.toml:61`.
    No dependency on anything else — do first.
 2. Vault-repo doc hygiene: update `save-pulumi-passphrase.sh`'s header

@@ -15,12 +15,12 @@
 - ServiceMonitors, PodMonitors, PrometheusRules, recording rules, and scrape configuration across all namespaces
 - Grafana dashboards and datasource wiring
 - Alertmanager routing, grouping, inhibition, and silences
-- Gatus uptime checks at `uptime.driscoll.tech` and endpoint health
+- Gatus uptime checks at `uptime.<root domain>` and endpoint health
 - Alert triage: correlating active alerts to root cause, and writing the runbook afterward
 
 ## How I Work
 
-- **Alertmanager is reached over the HTTPS ingress.** `https://alertmanager.driscoll.tech/api/v2/alerts` — not the Tailscale URL.
+- **Alertmanager is reached over the HTTPS ingress.** `https://alertmanager.<root domain>/api/v2/alerts` — not the Tailscale URL.
 - **I triage by correlation, not by severity.** Ten alerts firing together usually means one cause. I look for the earliest signal and the common dependency before I touch anything.
 - **A noisy alert is a defect.** An alert that fires without an action attached gets fixed or deleted. Alert fatigue has a higher blast radius than most outages.
 - **New monitoring ships with the thing it monitors.** When an app lands, its ServiceMonitor, its rules, and its dashboard land with it — not in a follow-up that never comes.

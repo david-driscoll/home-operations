@@ -38,7 +38,7 @@ servers:
       - name: loop
       - name: reload
       - name: loadbalance
-  # Technitium cluster node names: rewrite <node>.dns.driscoll.tech to the
+  # Technitium cluster node names: rewrite <node>.dns.<root domain> to the
   # node's tailnet name (dns-<node>) and resolve it via the tailscale operator
   # nameserver, which maps it to the in-cluster egress service ClusterIP. This
   # is what lets the in-cluster technitium secondary reach its cluster peers
@@ -56,20 +56,20 @@ servers:
         parameters: name regex ([a-z0-9-]+)\.dns\.driscoll\.tech dns-{1}.${TAILSCALE_DOMAIN} answer auto
       - name: forward
         parameters: . "${TAILSCALE_NAMESERVER_IP}"
-  # Dockge hosts by their canonical names: dockge-*.driscoll.tech resolves to
+  # Dockge hosts by their canonical names: dockge-*.<root domain> resolves to
   # tailnet IPs on the estate's split-horizon DNS, which cluster nodes cannot
-  # route. Same trick as the dns.driscoll.tech block above — exact-name zones,
+  # route. Same trick as the dns.<root domain> block above — exact-name zones,
   # rewritten to the tailnet name and resolved via the tailscale operator
   # nameserver to the in-cluster egress service ClusterIP
   # (tailscale-system/services/*.yaml, which carry the matching ports).
-  # This is what lets Home Assistant use dockge-luna.driscoll.tech for the
+  # This is what lets Home Assistant use dockge-luna.<root domain> for the
   # voice pipeline (llm 8080 / stt 10300 / tts 10200) and
-  # dockge-celestia.driscoll.tech for llama-agent (8081); the other two hosts
+  # dockge-celestia.<root domain> for llama-agent (8081); the other two hosts
   # get their standard 443/22 egress under the same names.
   #
-  # Deliberately exact names rather than a driscoll.tech catch-all: the apex
-  # also carries this cluster's own *.<cluster>.driscoll.tech ingresses, other
-  # clusters' VIPs (e.g. alertmanager.driscoll.tech), and the ACME lookups
+  # Deliberately exact names rather than a <root domain> catch-all: the apex
+  # also carries this cluster's own *.<cluster>.<root domain> ingresses, other
+  # clusters' VIPs (e.g. alertmanager.<root domain>), and the ACME lookups
   # cert-manager depends on. CoreDNS's rewrite has no NXDOMAIN fallthrough, so
   # a catch-all would hard-fail every name that has no tailnet counterpart.
   - zones:
@@ -94,10 +94,10 @@ servers:
         parameters: name regex (dockge-[a-z0-9-]+)\.driscoll\.tech {1}.${TAILSCALE_DOMAIN} answer auto
       - name: forward
         parameters: . "${TAILSCALE_NAMESERVER_IP}"
-  # The rest of driscoll.tech, resolved against the INTERNAL authoritative zone
+  # The rest of <root domain>, resolved against the INTERNAL authoritative zone
   # (Technitium) first and the node's upstream only if Technitium is down.
   #
-  # WHY. Until this block, driscoll.tech fell through to `.` above, which
+  # WHY. Until this block, <root domain> fell through to `.` above, which
   # forwards to /etc/resolv.conf -- the node resolver, i.e. public Quad9. So
   # pods resolved internal hostnames through PUBLIC DNS, and only worked because
   # Cloudflare happened to carry a CNAME->RFC1918 record for every internal
@@ -105,7 +105,7 @@ servers:
   # gateways) removed those records, and in-cluster resolution of 12 of the 21
   # internal names workloads here call went NXDOMAIN at once -- git, bao, s3,
   # registry, code, photos, renovate among them. The Pulumi `system` stack
-  # stalled on `getaddrinfo ENOTFOUND git.driscoll.tech`.
+  # stalled on `getaddrinfo ENOTFOUND git.<root domain>`.
   #
   # Pods now resolve these names the way every tailnet device already does:
   # acl-manager.ts sets `overrideLocalDns: true` with the Technitium nodes as
@@ -120,7 +120,7 @@ servers:
   # mentions do not come through here at all: cert-manager checks DNS-01 over
   # DoH to Quad9 with dns01RecursiveNameserversOnly (cert-manager/helm/values.yaml).
   #
-  # The more specific dns.driscoll.tech and dockge-*.driscoll.tech blocks still
+  # The more specific dns.<root domain> and dockge-*.<root domain> blocks still
   # win for their names -- CoreDNS routes a query to the most specific zone.
   #
   # The upstream is the TECHNITIUM_CLUSTER_IP substitution: a pinned ClusterIP
@@ -178,7 +178,7 @@ servers:
   # (talos/patches/global/machine-network.yaml); pod egress to both addresses
   # was checked 2026-09-29. CoreDNS routes a query to the most specific zone,
   # so this wins over ts.net for this name only -- the same mechanism the
-  # dns.driscoll.tech and dockge-* blocks above rely on.
+  # dns.<root domain> and dockge-* blocks above rely on.
   #
   # Harmless before the name exists: it is NXDOMAIN publicly until plan
   # step 5 (docs/plans/cloudflare-tunnel-to-funnel.md §E3) creates its Funnel.

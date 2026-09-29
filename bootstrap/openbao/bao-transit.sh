@@ -17,7 +17,7 @@
 # tailnet address of the dockge-as LXC and tailnet ACLs do not open it to user
 # devices, so the raw-port form works only from a tagged host:
 #
-#   export BAO_ADDR=https://bao-transit.opossum-yo.ts.net   # from anywhere
+#   export BAO_ADDR=https://bao-transit.<tailnet>   # from anywhere
 #   export BAO_ADDR=http://100.111.10.9:8200                # from a tagged host
 #
 set -Eeuo pipefail

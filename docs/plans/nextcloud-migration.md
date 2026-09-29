@@ -12,7 +12,7 @@ desktop clients. Photos stay on Immich, media on Plex/Jellyfin, location on Dawa
 
 | | OpenCloud today | Nextcloud target |
 |---|---|---|
-| Host | `cloud.driscoll.tech` (+`cloud.<tailnet>.ts.net`) | `cloud.driscoll.tech` only |
+| Host | `cloud.<root domain>` (+`cloud.<tailnet>`) | `cloud.<root domain>` only |
 | Exposure | internal gateway, LAN + tailnet | same (✅ nothing public) |
 | Auth | public OIDC client `web`, built-in IDM | confidential OIDC client, `user_oidc`, local break-glass admin |
 | Calendars | Radicale sidecar, `X-Remote-User` trust | Nextcloud DAV, app passwords |
@@ -29,7 +29,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
 
 ```
  iPhone / Mac / PC (LAN, or Tailscale off-LAN)
-        │  https://cloud.driscoll.tech           https://collabora.driscoll.tech
+        │  https://cloud.${ROOT_DOMAIN}           https://collabora.${ROOT_DOMAIN}
         ▼                                               ▼
  Gateway `internal` (Traefik) ── local-api + nextcloud-headers ── local-user
         │                                               │
@@ -159,14 +159,14 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   middleware. Clients chunk uploads (10 MiB pieces).
 - Nextcloud config:
   - `overwriteprotocol: https`
-  - `overwrite.cli.url: https://cloud.driscoll.tech`
-  - `trusted_domains: [cloud.driscoll.tech]`
+  - `overwrite.cli.url: https://cloud.<root domain>`
+  - `trusted_domains: [cloud.<root domain>]`
   - `trusted_proxies: [10.206.0.0/16]` (`talos/talconfig.yaml` clusterPodNets)
   - `forwarded_for_headers: [HTTP_X_FORWARDED_FOR]`
 
   Brute-force protection depends on the last two.
 - **No `components/tailscale` / `TAILSCALE_HOST`.** `tailscale-local` also chains
-  error-pages. Tailnet devices already reach `cloud.driscoll.tech` through the internal
+  error-pages. Tailnet devices already reach `cloud.<root domain>` through the internal
   gateway, since `internal-network` admits 100.64.0.0/10. One hostname means one redirect URI
   and one Collabora alias.
 - `route.collabora`: `collabora.${ROOT_DOMAIN}` → `nextcloud-collabora:9980`, `local-user`
@@ -339,11 +339,11 @@ occ config:app:set user_oidc allow_multiple_user_backends --value=0   # auto-red
      the same hostname and will start failing auth.
    - **iPhone** (flow verified against the nextcloud/ios and server stable35 source,
      2026-09-26; see the note below):
-     1. On the web (`cloud.driscoll.tech`, authentik login): avatar › Settings › Security ›
+     1. On the web (`cloud.<root domain>`, authentik login): avatar › Settings › Security ›
         Devices & sessions › enter an app name › "Create new app password". Keep it on screen
         or copy it. OIDC users get no password-confirm prompt, because user_oidc's
         `canConfirmPassword()` is false.
-     2. Install the Nextcloud app. Server `cloud.driscoll.tech`, then the authentik login.
+     2. Install the Nextcloud app. Server `cloud.<root domain>`, then the authentik login.
         Files are done.
      3. In the app: More › Settings (gear) › "Calendar and Contacts" › "Download the
         configuration profile". This **requires Safari as the default browser**.
@@ -355,7 +355,7 @@ occ config:app:set user_oidc allow_multiple_user_backends --value=0   # auto-red
      `.mobileconfig` from `localhost:8080/install` **without** touching the clipboard. The
      app password has to be created by hand, and that is the one fiddly step for the family.
    - **Android:** DAVx⁵ › Provider-specific login › "Nextcloud" › Continue › "Nextcloud
-     server address" = `cloud.driscoll.tech` (the **base** address; DAVx⁵ appends
+     server address" = `cloud.<root domain>` (the **base** address; DAVx⁵ appends
      `index.php/login/v2` and resolves `remote.php/dav` itself) › Login. It opens authentik
      and mints its own app password. Files come from the Nextcloud Android app.
    - **Mac/PC:** the Nextcloud desktop client (Login Flow v2).
@@ -374,7 +374,7 @@ occ config:app:set user_oidc allow_multiple_user_backends --value=0   # auto-red
 
 ## E. Cutover and rollback
 
-No parallel run on one hostname is possible: `cloud.driscoll.tech` moves. The empty OpenCloud
+No parallel run on one hostname is possible: `cloud.<root domain>` moves. The empty OpenCloud
 makes that cheap. The "read-only OpenCloud" period becomes "OpenCloud directory and restic repo
 kept for 4 weeks".
 
@@ -467,7 +467,7 @@ OpenCloud restic repo stays on NFS, so any straggler can still be restored from 
    hop. It ships in #2120 (`feat/family-setup-guide`, CI green) and is a prerequisite for
    step 5, not for the Nextcloud PR. That PR's OpenCloud DAV-route commit (`8e2bf833`) is harmless
    but moot once OpenCloud is unlisted.
-3. ✅ **Family setup guide** (`setup.driscoll.tech`, Forgejo `docs/setup`) documents
+3. ✅ **Family setup guide** (`setup.<root domain>`, Forgejo `docs/setup`) documents
    OpenCloud. The rewrite for D3 is handed to the session that owns the guide (2026-09-26),
    to land once Nextcloud is live.
 4. ❓ **Quotas.** A default quota per user, or none (100Gi PVC, raise as needed)?
@@ -489,8 +489,8 @@ OpenCloud restic repo stays on NFS, so any straggler can still be restored from 
 - After first boot, `config/` holds the image's seeded files (`apps.config.php` among them)
   **and** the four `zz-*` overlays:
   `kubectl -n equestria exec deploy/nextcloud -c nextcloud -- ls /var/www/html/config`.
-- `curl -sI https://cloud.driscoll.tech/.well-known/caldav` and `…/.well-known/carddav` each
-  return 301 with `Location: https://cloud.driscoll.tech/remote.php/dav/`, never an `http://`
+- `curl -sI https://cloud.<root domain>/.well-known/caldav` and `…/.well-known/carddav` each
+  return 301 with `Location: https://cloud.<root domain>/remote.php/dav/`, never an `http://`
   Location. The iOS "Download the configuration profile" setup fails otherwise
   (nextcloud/ios#3333). This is also a pre-merge item on the setup-guide PR (Forgejo
   docs/setup#1).

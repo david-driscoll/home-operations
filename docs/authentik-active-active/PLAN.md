@@ -156,7 +156,7 @@ missing OpenBao reference would abort the whole run (HO#636).
 | 4a | B | Drop the Pi's unused valkey | `docker/alpha-site/authentik` | `docker rm -f authentik-redis` once |
 | 5 | B | authentik on equestria (staging hostname) | `kubernetes/apps/stargate-command/authentik` (namespace `stargate-command`) | Both sites serve logins against the one DB; both Deployments carry the Tier-1 tolerations |
 | 6 | B | keepalived both sides + Traefik `externalIPs` + the fence's role endpoint | `kubernetes/apps/network/authentik-vip`, `docker/alpha-site/authentik-vip`, `docker/alpha-site/authentik-pg-standby` | See "Phase 6 gate" below |
-| 7 | C | `authentik-vip` A record, equestria's unpublished vanity route, then the CNAME retarget | `stacks/home/index.ts`, `kubernetes/apps/stargate-command/authentik/vanity-route.yaml`, `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | `dig authentik-vip.driscoll.tech` → `10.10.255.10` from all three providers; Gatus green for all four authentik names |
+| 7 | C | `authentik-vip` A record, equestria's unpublished vanity route, then the CNAME retarget | `stacks/home/index.ts`, `kubernetes/apps/stargate-command/authentik/vanity-route.yaml`, `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | `dig authentik-vip.<root domain>` → `10.10.255.10` from all three providers; Gatus green for all four authentik names |
 | 8 | B | Failover runbook | [`docker/alpha-site/authentik-pg-standby/FAILOVER.md`](../../docker/alpha-site/authentik-pg-standby/FAILOVER.md) | Rehearsed once end-to-end |
 | 4b | D | Retire the Pi's shared-postgres tenant | `docker/alpha-site/authentik` | Soak ≥ 7 days after the cutover |
 
@@ -178,7 +178,7 @@ client depends on it:
    (equestria holds it). Scale `equestria/authentik-server` to 0: the Pi takes
    it within ~15 s. Scale back: equestria takes it back after `preempt_delay`.
 4. **Clients across the router see it.** `curl -sk --resolve
-   authentik.driscoll.tech:443:10.10.255.10 https://authentik.driscoll.tech/-/health/ready/`
+   authentik.<root domain>:443:10.10.255.10 https://authentik.<root domain>/-/health/ready/`
    from the LAN, from the IoT VLAN and over the tailnet, with equestria and
    then the Pi holding the VIP. Cilium load-balances in DSR mode, so a reply
    can leave from a different node than the one holding the VIP — this is the
@@ -219,7 +219,7 @@ Recovery, with David's approval to proceed unattended:
      track script, so the script never ran: an equestria node held the VIP as
      MASTER with authentik at zero and Traefik answered 503 on the SSO names.
      `SETGID`/`SETUID` added on both sides (#1690). Until that landed, SSO was
-     down on the vanity names for about four hours (`authentik.as.driscoll.tech`
+     down on the vanity names for about four hours (`authentik.as.<root domain>`
      kept working).
 4. #1690 restored equestria's replicas; the `home-operations` run succeeded at
    05:42 UTC on 2026-09-14 and the VIP has answered 200 since.

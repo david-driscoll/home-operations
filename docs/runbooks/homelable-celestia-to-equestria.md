@@ -26,7 +26,7 @@ is not reproducible from git or from a rescan, and it would have to be copied
 into the PVC before the pod first writes to it.
 
 Public hostnames do not change, with one deliberate exception.
-`celestia` and `equestria` share one root domain, so `homelable.driscoll.tech`
+`celestia` and `equestria` share one root domain, so `homelable.<root domain>`
 and `homelable.<tailnet>` are the same names before and after — only what
 answers on them moves. That is why the OIDC redirect URIs, the Gatus checks and
 the dashboard widget need no hostname edits.
@@ -105,7 +105,7 @@ with the merge:
   it every night.
 - **No MagicDNS resolver.** The compose set `dns: 100.100.100.100` on all three
   containers; the pod uses cluster DNS. The scanner targets IP ranges rather
-  than tailnet names and OIDC discovery is on `driscoll.tech`, so nothing known
+  than tailnet names and OIDC discovery is on `<root domain>`, so nothing known
   depends on this — but reverse lookups of `100.64.0.0/10` addresses will now
   fail where they previously resolved.
 - **A different source address for the scan.** Probes leave SNATed to an
@@ -126,7 +126,7 @@ ssh dockge-celestia 'cd /opt/stacks/homelable && docker compose down'
 
 Stop rather than delete. Both instances answering on the same hostname is the
 one state to avoid, and until [step 5](#5-run-the-pulumi-home-stack-to-release-the-dns-name)
-runs, `homelable.driscoll.tech` still resolves to this host.
+runs, `homelable.<root domain>` still resolves to this host.
 
 Take the data tarball anyway — it costs one command and this is the only moment
 it is available, since the stack directory is deleted by this commit and there
@@ -275,13 +275,13 @@ check covers a hop the previous one does not:
 kubectl -n equestria logs -l app.kubernetes.io/name=homelable -c backend --tail=50
 ```
 
-- `https://homelable.driscoll.tech/api/v1/health` returns `{"status":"ok"}` —
+- `https://homelable.<root domain>/api/v1/health` returns `{"status":"ok"}` —
   proves frontend → nginx → `backend:8000` through the hostAliases entry.
 - The canvas loads empty, then fills after the first scan. An empty map is the
   expected starting state here, not a failure — see the re-create note at the
   top. What is worth checking instead is that the scan ran at all, which
   [step 6](#6-verify-the-scanner-actually-reaches-the-target-vlans) covers.
-- `https://homelable.driscoll.tech/view` returns **not 200** — proves the
+- `https://homelable.<root domain>/view` returns **not 200** — proves the
   live-view block. This is the Gatus "Live View Blocked" check; if it returns
   200, the HTTPRoute rule lost its precedence and the key is being written to
   Traefik's access log on every successful load.
@@ -310,11 +310,11 @@ cd stacks/home && pulumi preview
 
 The stack generates one `StandardDns` CNAME per Traefik `Host()` rule it finds in
 a compose file. With `docker/celestia/homelable` deleted, this run destroys
-`homelable.driscoll.tech → dockge-celestia.driscoll.tech`.
+`homelable.<root domain> → dockge-celestia.<root domain>`.
 
 **Order matters and this cannot be done first.** external-dns on equestria runs
 `policy: sync` with a TXT registry: it will not take over a record it does not
-own, so it can only create `homelable.driscoll.tech` once Pulumi has removed the
+own, so it can only create `homelable.<root domain>` once Pulumi has removed the
 celestia CNAME. Expect a short gap between the two — external-dns picks it up on
 its next loop.
 

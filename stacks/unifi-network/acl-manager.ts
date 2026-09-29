@@ -624,7 +624,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         overrideLocalDns: true,
         // splitDns: [
         //   {
-        //     domain: pulumi.interpolate`driscoll.tech`,
+        //     domain: pulumi.interpolate`<root domain>`,
         //     nameservers: [
         //       // { address: unifiDnsIp, useWithExitNode: false },
         //       ...dns.config.Discord.ips.map(ip => ({

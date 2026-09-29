@@ -87,7 +87,7 @@ spec:
     - name: PROXMOX_PORT
       value: "8006"
     # true, and it costs nothing: every hypervisor already presents a valid
-    # Let's Encrypt cert for its `*.opossum-yo.ts.net` name (verified live
+    # Let's Encrypt cert for its `*.<tailnet>` name (verified live
     # 2026-09-04 -- issuers YE1/YE2, and curl from inside this namespace
     # reports ssl_verify_result=0 against all four reachable hosts). So the
     # overlays address hosts by that HOSTNAME rather than by IP: the certs

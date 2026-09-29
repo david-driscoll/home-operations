@@ -285,11 +285,11 @@ spec:
     staticConfig:
       static:
         # NOT the tailnet name, and not a substitution either. Technitium serves a
-        # certificate whose only SAN is `<server>.dns.driscoll.tech`, so probing
+        # certificate whose only SAN is `<server>.dns.<root domain>`, so probing
         # the tailnet name fails TLS verification -- this mirrors `probeDomain`
         # in tailnet-egress.ts. The domain is a literal because no substitution
-        # var holds a bare `driscoll.tech`: EXTERNAL_DOMAIN is
-        # `castle-of-friendship.driscoll.tech`.
+        # var holds a bare `<root domain>`: EXTERNAL_DOMAIN is
+        # `castle-of-friendship.<root domain>`.
         - https://celestia.dns.driscoll.tech
 ---
 apiVersion: monitoring.coreos.com/v1

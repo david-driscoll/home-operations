@@ -96,7 +96,7 @@ export interface OpenBaoClusterAuthArgs {
   /**
    * API server address OpenBao dials for TokenReview.
    *
-   * Prefer the IP over a `*.driscoll.tech` name: a hostname resolves through
+   * Prefer the IP over a `*.<root domain>` name: a hostname resolves through
    * the estate's split-horizon DNS, which would put Technitium in the login
    * path for every secret read this cluster makes. Whatever is passed must
    * appear in the API server certificate's SANs.

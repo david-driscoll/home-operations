@@ -280,8 +280,8 @@ half-retired. Draining them is a rebuild-per-volume and belongs to 12, not here.
 > MAC `e0:51:d8:19:93:18` — milky-way's own `enp3s0`, which is what ipvlan L2
 > sharing the parent MAC looks like when it has bound the right interface. Its
 > Longhorn volume is `attached` on `milky-way`, `healthy`. `dig @10.10.206.202`
-> answers both an internal name (`home-assistant.driscoll.tech` →
-> `ponyville.driscoll.tech` → `10.10.206.101`) and an external one
+> answers both an internal name (`home-assistant.<root domain>` →
+> `ponyville.<root domain>` → `10.10.206.101`) and an external one
 > (`github.com` → `140.82.113.3`), and the three off-cluster members still agree.
 >
 > The half-applied window this section warned about was real and did occur: PR
@@ -366,7 +366,7 @@ kubectl -n network rollout restart deployment technitium
 
 # 5. Verify from off-cluster, not from inside it
 kubectl -n network get pods -o wide -l app.kubernetes.io/name=technitium
-dig @${TECHNITIUM_VIP} +short home-assistant.driscoll.tech
+dig @${TECHNITIUM_VIP} +short home-assistant.${ROOT_DOMAIN}
 ```
 
 The DNS gap is one pod start. The three off-cluster members answer throughout, and nothing on
@@ -392,7 +392,7 @@ estate already has three Technitium cluster members outside equestria, and the i
 copy is not what LAN clients or cluster nodes actually resolve against.
 
 - `dns-celestia`, `dns-luna` and `dns-skystar` (`100.111.{30,40,50}.101`) each answer for
-  `driscoll.tech` live. They share config sync with the in-cluster member, which the
+  `<root domain>` live. They share config sync with the in-cluster member, which the
   HelmRelease comments already note (*"After the node joins the Technitium cluster, cluster
   sync owns most of these settings"*).
 - LAN clients are handed the **Dockge** hosts, not `TECHNITIUM_VIP`:
@@ -676,7 +676,7 @@ Pod count is not a constraint: 159 across three nodes against a 660 cap.
 
 > ### ⚠ The taint key below is NOT what was built
 >
-> This section was written around a **custom** taint key, `node-role.driscoll.tech/critical`.
+> This section was written around a **custom** taint key, `node-role.<root domain>/critical`.
 > **The estate went the other way and uses the standard
 > `node-role.kubernetes.io/control-plane:NoSchedule`**, applied by flipping
 > `allowSchedulingOnControlPlanes` to `false` in `talos/patches/controller/cluster.yaml:2` —
@@ -705,13 +705,13 @@ Pod count is not a constraint: 159 across three nodes against a 660 cap.
 # talos/talconfig.yaml — on each of milky-way / othalla / pegasus
     nodeLabels:
       <<: *nodeLabels
-      node-role.driscoll.tech/critical: "true"
+      node-role.${ROOT_DOMAIN}/critical: "true"
     nodeTaints:
-      node-role.driscoll.tech/critical: "true:NoSchedule"
+      node-role.${ROOT_DOMAIN}/critical: "true:NoSchedule"
 ```
 
 **Using a custom taint key does not route around §0.1.** Longhorn's system-managed components
-would need to tolerate `node-role.driscoll.tech/critical` too, and the only way to give them a
+would need to tolerate `node-role.<root domain>/critical` too, and the only way to give them a
 toleration is the same `taint-toleration` Setting, behind the same all-volumes-detached gate.
 Whichever key is chosen, the quiesce window in §0.1 is required. The advantage of a custom key
 is only that it decouples the taint from `allowSchedulingOnControlPlanes`, letting the two land
@@ -726,7 +726,7 @@ Every Tier-0 and Tier-1 workload gets **both**:
 
 ```yaml
 tolerations:
-  - key: node-role.driscoll.tech/critical
+  - key: node-role.${ROOT_DOMAIN}/critical
     operator: Equal
     value: "true"
     effect: NoSchedule
@@ -735,7 +735,7 @@ affinity:
     requiredDuringSchedulingIgnoredDuringExecution:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: node-role.driscoll.tech/critical
+            - key: node-role.${ROOT_DOMAIN}/critical
               operator: In
               values: ["true"]
 ```
@@ -1169,7 +1169,7 @@ flux get kustomizations -A --status-selector ready=false
 kubectl -n network get deploy technitium -o jsonpath='{.spec.template.spec.nodeSelector}{"\n"}'
 
 # 9. alpha-site is up and on the battery circuit (§7)
-curl -fsS https://uptime.driscoll.tech/api/v1/endpoints/statuses >/dev/null && echo gatus-ok
+curl -fsS https://uptime.${ROOT_DOMAIN}/api/v1/endpoints/statuses >/dev/null && echo gatus-ok
 ```
 
 ### 6.1 Enter
@@ -1322,11 +1322,11 @@ the nodes are about to lose power anyway, and a drain only adds a step that can 
 **Step 5 — post-check.** Not "did it come up" but "does the estate work":
 
 ```bash
-dig @${TECHNITIUM_VIP} +short home-assistant.driscoll.tech      # or the §0.3 replacement
+dig @${TECHNITIUM_VIP} +short home-assistant.${ROOT_DOMAIN}      # or the §0.3 replacement
 sntp -t 2 ${CHRONY_VIP}
 mosquitto_sub -h ${AUTOMATION_VIP} -t '$SYS/broker/uptime' -C 1
-curl -fsS -o /dev/null -w '%{http_code}\n' https://home-assistant.driscoll.tech
-curl -fsS https://uptime.driscoll.tech/api/v1/endpoints/statuses | jq -r '.[] | select(.results[-1].success==false) | .name'
+curl -fsS -o /dev/null -w '%{http_code}\n' https://home-assistant.${ROOT_DOMAIN}
+curl -fsS https://uptime.${ROOT_DOMAIN}/api/v1/endpoints/statuses | jq -r '.[] | select(.results[-1].success==false) | .name'
 ```
 
 Repeat the post-check at the **1 h, 2 h and 3–4 h marks**, not only at entry. §8's gate depends
@@ -1434,7 +1434,7 @@ undoing in reverse:
 | After Step 2 (Tier 2 scaled to 0) | `kubectl cnpg hibernate off postgres -n database`, then resume Flux — it restores every replica count from Git. Do not hand-scale |
 | After Step 3 (cordon + Tier-1 moved) | `kubectl uncordon hard-hat fluttershy kerfuffle shining-armor`, then resume Flux. Tier-1 pods stay on the control planes until something restarts them; that is harmless and self-corrects |
 | After Step 4, one or more workers off | Power the workers back on **one at a time** per §6.2. This is the same procedure as a normal exit |
-| Path A only: taint applied, something broke | `kubectl taint nodes milky-way othalla pegasus node-role.driscoll.tech/critical-` removes it immediately from the live nodes; revert the talconfig change and re-apply so Talos does not put it back. **Removing the taint does not re-fix Longhorn** — if the §0.1 setting was still pending, any csi-plugin/engine-image pod already lost from a control plane needs the DaemonSet rolled after the taint is gone |
+| Path A only: taint applied, something broke | `kubectl taint nodes milky-way othalla pegasus node-role.<root domain>/critical-` removes it immediately from the live nodes; revert the talconfig change and re-apply so Talos does not put it back. **Removing the taint does not re-fix Longhorn** — if the §0.1 setting was still pending, any csi-plugin/engine-image pod already lost from a control plane needs the DaemonSet rolled after the taint is gone |
 
 The one thing that is *not* cheaply reversible is a `postgres-3` destroy (§2) — that is a CNPG
 re-provision and a full base backup over the SATA disk. Decide it before entry, not during.
@@ -1450,7 +1450,7 @@ verified 2026-08-19 (`docker/alpha-site/`):
 `authentik` + `authentik-outpost` + `postgres` (identity) · `bao-transit` (the transit-seal key
 OpenBao unseals against at exit) · `bao-standby` (break-glass Postgres replica) · `netbootxyz`
 (how bare-metal nodes PXE-boot if a reinstall is needed mid-window) · `uptime` (Gatus,
-`uptime.driscoll.tech` — the observability source for the window) · `prometheus` +
+`uptime.<root domain>` — the observability source for the window) · `prometheus` +
 `prometheus-exporters` (scraping the estate from outside) · `backrest`/`backups` · `zwave`
 (which is why Home Assistant is not node-pinned in the cluster — the radio hardware is here,
 not on a Kubernetes node) · `neo4j`, `lmstudio`, `librespeed`, `openspeedtest`, `arcane-agent`.
@@ -2223,7 +2223,7 @@ through in place rather than moved to the resolved list above — several sectio
 
    Proven end to end rather than by inspection — zot's log shows the pull arriving from
    `User-Agent: containerd/v2.2.7`, `X-Real-Ip: 10.10.206.10`, and the same pull now takes
-   **4.65s against 2m32s**. Note `registry.driscoll.tech` is **celestia's** zot, not a second
+   **4.65s against 2m32s**. Note `registry.<root domain>` is **celestia's** zot, not a second
    name for this one; it serves the same layout and is kept deliberately as a cross-cluster
    fallback on another battery-backed host.
 
@@ -2295,7 +2295,7 @@ through in place rather than moved to the resolved list above — several sectio
    pass; §7's post-flip block re-verified 2026-08-21 and passed clean. The `critical-tier`
    PriorityClass and the three `system-cluster-critical` corrections landed earlier in PR #970.
 
-   PR #764 (`taintToleration` set to the custom `node-role.driscoll.tech/critical` key) was
+   PR #764 (`taintToleration` set to the custom `node-role.<root domain>/critical` key) was
    **closed** the same day: the estate went with the standard `node-role.kubernetes.io/control-plane`
    key instead, and that value is live and `APPLIED: true`, so merging #764 would have stripped
    Longhorn's real toleration exactly as the taint landed.

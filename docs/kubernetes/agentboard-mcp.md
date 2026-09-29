@@ -174,8 +174,8 @@ break the API call — which is why the first two attempts at a single root caus
 both looked right and both were incomplete:
 
 1. **The tailnet name was wrong.** `TAILSCALE_TAILNET` was a `${ROOT_DOMAIN}`
-   substitution, resolving to `driscoll.tech`. The estate's tailnet is actually
-   `opossum-yo.ts.net` — visible in every device name `list_devices` now
+   substitution, resolving to `<root domain>`. The estate's tailnet is actually
+   `<tailnet>` — visible in every device name `list_devices` now
    returns — so that value could never have matched.
 2. **The API key was stale.** It is re-minted every 5 minutes against a ~1h
    lifetime, and the pod had held one from container start for nearly seven

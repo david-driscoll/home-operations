@@ -116,7 +116,7 @@ services:
     # questions and the answer is unfalsifiable, because any of the three may
     # have served it.
     #
-    # `${CLUSTER_DOMAIN}` is per-cluster (celestia/luna/skystar.driscoll.tech),
+    # `${CLUSTER_DOMAIN}` is per-cluster (celestia/luna/skystar.<root domain>),
     # so this one label yields three distinct names. DockgeLxc creates the
     # CNAME for each automatically from the Host rule. Note the near-neighbour:
     # `s3.${ROOT_DOMAIN}` (no cluster segment) is the IN-CLUSTER Garage on

@@ -125,7 +125,7 @@ if (globals.baoDualWriteEnabled) {
 // restyle. They are literals rather than another cluster's definition because
 // this brand covers the TAILNET, not a cluster — there is no cluster whose
 // branding it should inherit. Alpha Site (where authentik now runs, and which
-// shares `authentikDomain: iris.driscoll.tech`) carries different
+// shares `authentikDomain: iris.<root domain>`) carries different
 // icon/favicon/background values, so pointing at it would have been a silent
 // rebrand smuggled in on a decommission. Restyling this brand is a one-line,
 // deliberate change to make here on its own.

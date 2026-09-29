@@ -27,7 +27,7 @@
 #
 # The two substitutions in the directives below are the real, intended ones:
 # ROOT_DOMAIN, and OIDC_ISSUER -- which in this estate is the bare authentik
-# hostname (canterlot.driscoll.tech), not a URL. Flux expands them when it
+# hostname (canterlot.<root domain>), not a URL. Flux expands them when it
 # renders the ConfigMap.
 directives:
   child-src:

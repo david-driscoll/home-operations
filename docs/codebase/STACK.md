@@ -90,7 +90,7 @@ mise run pulumi-refresh # .config/mise/tasks/pulumi-refresh
 
 - Config sources: `.mise.toml` (primary — injects env vars via `op://` references resolved by 1Password CLI)
 - Required env vars (all resolved from 1Password vault "Eris" at runtime):
-  - `CONNECT_HOST` — 1Password Connect server URL (`https://op-connect.sgc.driscoll.tech/`)
+  - `CONNECT_HOST` — 1Password Connect server URL (`https://op-connect.sgc.<root domain>/`)
   - `CONNECT_TOKEN` — 1Password Connect API token
   - `CONNECT_VAULT` — Vault name (`Eris`)
   - `PULUMI_CONFIG_PASSPHRASE` — Stack encryption passphrase

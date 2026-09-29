@@ -1,6 +1,6 @@
 # Renovate for Forgejo
 
-Stands up dependency updates for the repositories on `git.driscoll.tech`, using
+Stands up dependency updates for the repositories on `git.<root domain>`, using
 the [mogenius renovate-operator](https://github.com/mogenius/renovate-operator)
 to schedule Renovate runs from inside the cluster.
 
@@ -8,7 +8,7 @@ Two apps, both in the existing `coder` namespace next to the forge they serve:
 
 | App | Path | What it is |
 | --- | --- | --- |
-| `renovate-operator` | `kubernetes/apps/coder/renovate-operator` | the operator, its CRD, and the web UI at `renovate.driscoll.tech` |
+| `renovate-operator` | `kubernetes/apps/coder/renovate-operator` | the operator, its CRD, and the web UI at `renovate.<root domain>` |
 | `renovate` | `kubernetes/apps/coder/renovate` | one `RenovateJob` — the schedule, the Forgejo endpoint and the Renovate config |
 
 They are split for the same reason `garage-system` splits `cluster` from
@@ -44,7 +44,7 @@ with the merge:
   its credentials.
 - **The policy engine** — on, though the chart ships it off. It bounds every URL
   taken from a RenovateJob: `policy.allowedHosts` admits only Forgejo's
-  ClusterIP name and `git.driscoll.tech` (the webhook host is appended by the
+  ClusterIP name and `git.<root domain>` (the webhook host is appended by the
   chart), `policy.allowedImages` admits only `ghcr.io/renovatebot/renovate`, and
   `policy.requireSecretRefOptIn` means a Secret must label itself
   `renovate-operator.mogenius.com/allow-ref: "true"` before the operator will
@@ -57,7 +57,7 @@ with the merge:
 - **The RenovateJob** — 03:00 nightly, parallelism 2, platform `forgejo`,
   endpoint `http://forgejo-http.coder.svc.cluster.local:3000/api/v1` (the same
   in-cluster Service `forgejo-runner` uses) with `publicEndpoint` set to
-  `https://git.driscoll.tech` for UI links. No discovery filter: what Renovate
+  `https://git.<root domain>` for UI links. No discovery filter: what Renovate
   manages is decided by which repositories the bot account can see.
 - **Webhooks** — the operator runs a receiver on its ClusterIP and syncs a hook
   onto every discovered repository itself, so the Dependency Dashboard
@@ -242,7 +242,7 @@ a token:
 ```bash
 # The bot exists and is not an administrator.
 curl -s -H "Authorization: token $ADMIN_TOKEN" \
-  https://git.driscoll.tech/api/v1/users/renovate | jq '{login, is_admin, active}'
+  https://git.${ROOT_DOMAIN}/api/v1/users/renovate | jq '{login, is_admin, active}'
 
 # Its token carries the five scopes, and nothing else.
 kubectl -n coder get secret renovate-secret \
@@ -254,7 +254,7 @@ at the public hostname — `provider.publicEndpoint` is deliberately unset. That
 is cosmetic; see the note on `policy.allowedHosts` in
 `kubernetes/apps/coder/renovate-operator/helmrelease.yaml` for why.
 
-Then open <https://renovate.driscoll.tech>, sign in through authentik, and
+Then open <https://renovate.<root domain>>, sign in through authentik, and
 confirm the job is visible — an empty job list on a successful login means the
 `groups` claim did not carry `admins`.
 
@@ -312,7 +312,7 @@ not have this delay. To stop waiting, reconcile the stack (step 3).
 the executor Job's log for:
 
 ```
-fatal: could not read Password for 'https://**redacted**@git.driscoll.tech'
+fatal: could not read Password for 'https://**redacted**@git.${ROOT_DOMAIN}'
 ```
 
 Renovate keys its git credential to the host of `endpoint`, which here is the
@@ -356,7 +356,7 @@ start mints a new one.
 
 **Every repository errors with `preset not found`.** The preset chain reached a
 `local>` reference. `local>` resolves against whatever platform the bot is on,
-so on the Forgejo bot it looks for the repo on `git.driscoll.tech` instead of
+so on the Forgejo bot it looks for the repo on `git.<root domain>` instead of
 GitHub. `.github/renovate.json5` therefore names its shared preset as
 `github>david-driscoll/.github:renovate-config`, not `local>` — identical
 behaviour on GitHub, and the only spelling that survives being consumed from a

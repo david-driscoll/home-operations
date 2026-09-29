@@ -22,7 +22,7 @@
 # sealed approle file is left alone, never overwritten.
 #
 # Requires: bao, sops, jq, an age key, BAO_ADDR at the equestria cluster
-# (https://bao.equestria.driscoll.tech), and BAO_TOKEN holding a token with
+# (https://bao.equestria.<root domain>), and BAO_TOKEN holding a token with
 # the `admin` policy — policy and approle writes are beyond the pulumi role.
 # If no admin token exists, regenerating one from the recovery shares needs
 # the listener's `disable_unauthed_generate_root_endpoints` flipped first

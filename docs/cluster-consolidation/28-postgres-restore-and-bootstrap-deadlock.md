@@ -185,7 +185,7 @@ annotated `driscoll.dev/provenance`. ESO should reclaim both once
 `ClusterSecretStore/openbao` is Ready; verify rather than assume:
 
 - `postgres-backup-s3-creds` — copied from `admin@sgc` (same Minio server,
-  `truenas.driscoll.tech:9000`, same estate-shared credentials).
+  `truenas.<root domain>:9000`, same estate-shared credentials).
 - `postgres-values` — hand-rendered with `mode: recovery` and the fresh
   archive path. **This one matters:** git says `mode: standalone`, so when
   ESO overwrites it the rendered values revert. That is correct and harmless

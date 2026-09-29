@@ -179,7 +179,7 @@ standing in for.
 state backend off this bucket onto Postgres DIY on celestia (decision D2).
 Once that lands, the `home-operations` bucket stops being any stack's active
 backend (today all ten `Stack` CRs share it —
-`s3://home-operations/<stack>?endpoint=truenas.driscoll.tech:9000&...`,
+`s3://home-operations/<stack>?endpoint=truenas.<root domain>:9000&...`,
 confirmed across every `kubernetes/apps/pulumi/*/stack.yaml`) and becomes
 purely the versioned `stack export` archive, per the "Expansion v2" discovery
 comment's own recommendation (its §3, "Backend": *"keep the Minio bucket as a

@@ -45,7 +45,7 @@ spec:
       NAMESPACE: observability
       TAILSCALE_SERVICE: thanos-query-frontend
       TAILSCALE_PORT: http
-      # thanos.driscoll.tech is `local-user` (network gate, no SSO) on the
+      # thanos.<root domain> is `local-user` (network gate, no SSO) on the
       # internal route, and Thanos is queried by Grafana and by the Dockge
       # hosts' remote-write agents, not only by browsers.
       TAILSCALE_MIDDLEWARE: tailscale-local

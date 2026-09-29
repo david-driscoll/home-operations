@@ -39,8 +39,8 @@ unrelated control-plane components off their leader-election lease.
 **The specific damage:** after `cilium-operator` came back up and stabilized
 (no further restarts for 28+ minutes), it never elected an L2-announcement
 leader for the `network/traefik` Service — the single Service that
-essentially every `driscoll.tech` hostname routes through (`CNAME
-<app>.driscoll.tech → ponyville.driscoll.tech → A 10.10.206.101`, one shared
+essentially every `<root domain>` hostname routes through (`CNAME
+<app>.<root domain> → ponyville.<root domain> → A 10.10.206.101`, one shared
 name so only one record has to move when the IP changes). `kubectl get
 lease -n kube-system | grep l2announce` showed leases for `rustdesk`,
 `qbittorrent-bittorrent`, `matter`, `mosquitto` — all fine — but **none for
@@ -124,7 +124,7 @@ against `kube_lease` objects matching `cilium-l2announce-<namespace>-<name>`).
 ## Incident: staging an app whose source cluster still has it live can crash Gatus entirely
 
 **2026-08-13, ~19:51 EDT onward**, discovered ~2 hours later via
-`uptime.driscoll.tech` reporting a broad, stale-looking outage. Root cause,
+`uptime.<root domain>` reporting a broad, stale-looking outage. Root cause,
 found by inspecting Gatus's own panic on the host it runs on (alpha-site,
 `docker/alpha-site/uptime/`):
 
@@ -147,7 +147,7 @@ merged config regardless of which cluster/Pulumi stack contributed which
 entry — and **panics** (not "skip the duplicate", a hard crash) the moment
 it sees two. Because Gatus crashed at config-load time, it stopped
 publishing *any* fresh results at all — every endpoint in
-`uptime.driscoll.tech`, not just `tsidp`, showed stale/failing data,
+`uptime.<root domain>`, not just `tsidp`, showed stale/failing data,
 which is what made the actual cause hard to spot from the dashboard alone.
 
 **Resolution:** unrelated to any Flux/git fix on the equestria side — SGC's

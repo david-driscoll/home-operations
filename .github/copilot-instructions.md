@@ -60,8 +60,8 @@ Use the generated `OnePasswordItem` dynamic resource (from `@dynamic/1password/O
 
 | Context | Pattern | Example |
 |---|---|---|
-| Proxmox host | `{name}.host.driscoll.tech` | `twilight-sparkle.host.driscoll.tech` |
-| Container / Dockge | `{cluster}.driscoll.tech` subdomain | `celestia.driscoll.tech` |
+| Proxmox host | `{name}.host.<root domain>` | `twilight-sparkle.host.<root domain>` |
+| Container / Dockge | `{cluster}.<root domain>` subdomain | `celestia.<root domain>` |
 | Tailscale | `{name}.{tailscaleDomain}` | `dockge-celestia.<tailnet>` |
 
 Use `getHostnames` / `getContainerHostnames` from `@components/helpers.ts` — do not interpolate these manually.
@@ -123,6 +123,7 @@ spec:
 ## Safety Rules (summary)
 
 - Never commit plaintext secrets — use `op://Eris/…` references in `.mise.toml`, encrypted config in `Pulumi.*.yaml`.
+- Never write the root domain or tailnet name literally, comments and PR text included. Use `${ROOT_DOMAIN}` / `${TAILSCALE_DOMAIN}` (SOPS-backed) in Flux values and `<root domain>` / `<tailnet>` in prose. `scripts/private-domain-guard` enforces it; see `.github/instructions/private-domains.instructions.md`.
 - Always run `pulumi preview` before `pulumi up`, especially for DNS or provider changes.
 - Test destructive changes on **Alpha Site** before Equestria/Celestia/Luna.
 - `OPClient` writes to the live `Eris` vault — be intentional about create/update/delete calls.

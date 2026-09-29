@@ -88,7 +88,7 @@ export const Tailscale = {
     ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
     dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
     // Forgejo's built-in SSH server (kubernetes/apps/coder/forgejo) — git
-    // clone/push over git@git.driscoll.tech. It arrives through the `gitssh`
+    // clone/push over git@git.<root domain>. It arrives through the `gitssh`
     // Traefik entrypoint and the Gateway listener of the same name, landing on
     // the cluster's internal LoadBalancer IP rather than on a dockge host.
     //

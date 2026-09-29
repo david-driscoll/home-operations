@@ -134,7 +134,7 @@ docs/<slug>
 **Title → path slug rule:** lowercase, non-alphanumerics → `-`, collapse repeats, trim. So
 `Github Actions Runner (david-driscoll)` → `secrets/shared/github/actions-runner-david-driscoll`.
 The mapping is *generated then hand-reviewed* (see §F) — never applied blind, because titles
-like `Cluster: Alpha Site` and `Cloudflare (driscoll.tech)` collide badly under naive slugging.
+like `Cluster: Alpha Site` and `Cloudflare (<root domain>)` collide badly under naive slugging.
 
 **Tag queries → path prefixes.** The five tag queries in `VaultStore` become `LIST` calls:
 
@@ -426,7 +426,7 @@ a new `BaoClient`.
 1. `--plan` → walks vault `Eris`, emits `mapping.yaml` with one row per item:
    source title/UUID/tags → proposed path, field list, concealed-field list, file list.
    **This file is committed and hand-reviewed.** Slug collisions and the awkward titles
-   (`Cluster: Alpha Site`, `Cloudflare (driscoll.tech)`, the four UUID-addressed items) get
+   (`Cluster: Alpha Site`, `Cloudflare (<root domain>)`, the four UUID-addressed items) get
    fixed here by a human.
 2. `--apply` → reads `mapping.yaml`, writes to OpenBao. Idempotent via KV v2 CAS. Handles
    sections → nested objects, `"add more"` hoisting, files → `{content_b64, filename, sha256}`,
@@ -497,7 +497,7 @@ against what equestria actually did rather than assumed:
 | ExternalSecret | equestria precedent | Why |
 |---|---|---|
 | `tailscale-system/tailscale-resources-secret` | **deleted** (#3093) | Rendered a restic B2 config nothing has consumed since 2026-03-12. Confirmed identically dead in SGC: no ReplicationSource/Destination, no pod volume, no manifest reference outside its own file, and `recorder.yaml` — the only thing that would need backups — commented out of the kustomization. |
-| `database/postgres-backup-config` | **Backblaze extract dropped** (#3092) | Not switched to Minio — it was *already* Minio. `endpointURL` is `http://truenas.driscoll.tech:9000` in both clusters; only the bucket NAME still came from the Backblaze item, pointed at a Minio endpoint. That is the vault#119 mismatch. |
+| `database/postgres-backup-config` | **Backblaze extract dropped** (#3092) | Not switched to Minio — it was *already* Minio. `endpointURL` is `http://truenas.<root domain>:9000` in both clusters; only the bucket NAME still came from the Backblaze item, pointed at a Minio endpoint. That is the vault#119 mismatch. |
 | `database/postgres-values` | same | Same file, same fix: drop the `${BACKBLAZE_DATABASE}` extract and the `[backblaze]` rclone block, and replace `{{ .backblaze_bucket }}-restore` with `${BACKBLAZE_DB_BUCKET}-restore`. |
 
 The substitution is byte-safe in SGC exactly as it was in equestria:

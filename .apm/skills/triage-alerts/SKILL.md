@@ -1,6 +1,6 @@
 ---
 name: triage-alerts
-description: "Triage active alerts from Alertmanager (equestria cluster) and failing endpoints from Gatus (uptime.driscoll.tech). Fetches live data, identifies root causes, and proposes remediation steps."
+description: "Triage active alerts from Alertmanager (equestria cluster) and failing endpoints from Gatus (uptime.<root domain>). Fetches live data, identifies root causes, and proposes remediation steps."
 ---
 
 # Triage Alerts
@@ -11,9 +11,9 @@ Fetch live data from AlertManager and the Gatus uptime instance, then identify r
 
 | Source | Access Method | URL |
 |---|---|---|
-| Gatus | Direct HTTPS | `https://uptime.driscoll.tech/api/v1/endpoints/statuses` |
-| AlertManager | Direct HTTPS | `https://alertmanager.driscoll.tech/api/v2/alerts` |
-| AlertManager silences | Direct HTTPS | `https://alertmanager.driscoll.tech/api/v2/silences` |
+| Gatus | Direct HTTPS | `https://uptime.<root domain>/api/v1/endpoints/statuses` |
+| AlertManager | Direct HTTPS | `https://alertmanager.<root domain>/api/v2/alerts` |
+| AlertManager silences | Direct HTTPS | `https://alertmanager.<root domain>/api/v2/silences` |
 
 > AlertManager runs in the equestria cluster (`observability` namespace), the estate's only
 > Kubernetes cluster. Service name: `alertmanager-alertmanager`, port **9093**. If the
@@ -28,7 +28,7 @@ Fetch live data from AlertManager and the Gatus uptime instance, then identify r
 ### Step 1 — Fetch Gatus endpoint statuses
 
 ```bash
-curl -s https://uptime.driscoll.tech/api/v1/endpoints/statuses | \
+curl -s https://uptime.${ROOT_DOMAIN}/api/v1/endpoints/statuses | \
   python3 -c "
 import json, sys
 data = json.load(sys.stdin)
@@ -44,7 +44,7 @@ Parse the response to produce a concise list: `GROUP/NAME — error detail`.
 ### Step 2 — Fetch AlertManager active alerts
 
 ```bash
-curl -s https://alertmanager.driscoll.tech/api/v2/alerts | \
+curl -s https://alertmanager.${ROOT_DOMAIN}/api/v2/alerts | \
   python3 -c "
 import json, sys
 alerts = json.load(sys.stdin)
@@ -60,7 +60,7 @@ for a in sorted(active, key=lambda x: (SEV_ORDER.get(x['labels'].get('severity',
 
 **Check silences** (to understand what is intentionally muted):
 ```bash
-curl -s https://alertmanager.driscoll.tech/api/v2/silences | \
+curl -s https://alertmanager.${ROOT_DOMAIN}/api/v2/silences | \
   python3 -c "
 import json, sys
 silences = [s for s in json.load(sys.stdin) if s['status']['state'] == 'active']
@@ -146,7 +146,7 @@ kubectl delete pod -n <namespace> <pod-name>
 
 After applying fixes, poll Gatus until failures clear:
 ```bash
-watch -n 15 'curl -s https://uptime.driscoll.tech/api/v1/endpoints/statuses | \
+watch -n 15 'curl -s https://uptime.${ROOT_DOMAIN}/api/v1/endpoints/statuses | \
   python3 -c "
 import json, sys
 data = json.load(sys.stdin)
@@ -163,7 +163,7 @@ Produce a triage report in this structure. Sort alerts flat by severity (critica
 ```
 ## Triage Report — <timestamp>
 
-### Gatus: X failing / Y total  (https://uptime.driscoll.tech)
+### Gatus: X failing / Y total  (https://uptime.${ROOT_DOMAIN})
 - [group] NAME — HTTP <status> / error detail
   (sorted by severity: failing → degraded → healthy)
 
@@ -181,13 +181,13 @@ Produce a triage report in this structure. Sort alerts flat by severity (critica
 - [ ] Step 2 — ...
 
 ### Verification
-- Poll https://uptime.driscoll.tech until failing count reaches 0
+- Poll https://uptime.${ROOT_DOMAIN} until failing count reaches 0
 ```
 
 ## Key Gotchas
 
 - **Alertmanager route matchers are ANDed within a route**: `severity=error` AND `severity=critical` in the same route matcher never match simultaneously — use separate routes or `=~` regex.
 - **adguard-dns webhook port**: chart hardcodes `--webhook-provider-url=http://localhost:8888`; sidecar default is 8080. Fix: `SERVER_PORT: "8888"` env var on the sidecar AND set liveness/readiness probes to port 8888.
-- **Authentik outpost depends on DNS**: If adguard-dns is down, `canterlot.driscoll.tech` won't resolve → outpost loops → all ForwardAuth-protected apps return 500.
+- **Authentik outpost depends on DNS**: If adguard-dns is down, `canterlot.<root domain>` won't resolve → outpost loops → all ForwardAuth-protected apps return 500.
 - **Cleanup tasks delete secrets too**: `mise run k8s:cleanup-pods` and friends remove resources including ExternalSecrets and their synced Secrets. Force re-sync after cleanup.
 - **CNPG WAL corruption**: When a postgres pod shows `pg_rewind` failure with `invalid record length`, CNPG auto-provisions a replacement pod. Delete the stuck pod; CNPG cleans the PVC automatically.

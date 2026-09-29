@@ -26,16 +26,16 @@ The public surface is small, and one half of it is idle:
 
 | Public name | Path | Backend | Real traffic | Funnel? |
 |---|---|---|---|---|
-| `flux-equestria-webhook.driscoll.tech` | `^/hook/` | `flux-system/webhook-receiver:80` | 515 GitHub deliveries in 72h, all 200 | ✅ yes, only GitHub ever sees the URL |
-| `postiz.driscoll.tech` | `^/uploads/` | postiz `cdn` controller (`equestria/postiz-cdn:8080`) | 0 external fetches in 30d; postiz has 0 integrations, 0 posts, 0 media | ✅ yes, with a postiz patch (§E) |
-| `castle-of-friendship.driscoll.tech` (`${EXTERNAL_DOMAIN}`) | — | CNAME hop to the tunnel for the two names above | — | deleted last |
+| `flux-equestria-webhook.<root domain>` | `^/hook/` | `flux-system/webhook-receiver:80` | 515 GitHub deliveries in 72h, all 200 | ✅ yes, only GitHub ever sees the URL |
+| `postiz.<root domain>` | `^/uploads/` | postiz `cdn` controller (`equestria/postiz-cdn:8080`) | 0 external fetches in 30d; postiz has 0 integrations, 0 posts, 0 media | ✅ yes, with a postiz patch (§E) |
+| `castle-of-friendship.<root domain>` (`${EXTERNAL_DOMAIN}`) | — | CNAME hop to the tunnel for the two names above | — | deleted last |
 | `destiny`, `flux-sgc-webhook`, `tulip` | — | dead tunnels `d233fc0d…`, `85a16359…` (Cloudflare 1033) | — | stale, delete by hand |
-| `www.driscoll.tech` | — | Cloudflare 1016 | — | stale, delete by hand |
+| `www.<root domain>` | — | Cloudflare 1016 | — | stale, delete by hand |
 
 These figures come from:
 
 - the live cloudflared config and the Traefik access logs, both via Loki;
-- external-dns debug logs, which see only one zone, `driscoll.tech`;
+- external-dns debug logs, which see only one zone, `<root domain>`;
 - public DoH lookups plus edge probes;
 - the postiz DB, read-only.
 
@@ -43,7 +43,7 @@ Nothing on Celestia, Luna or Alpha Site runs cloudflared, and UniFi shows no 80/
 
 **What stays on Cloudflare afterwards:**
 
-- the `driscoll.tech` DNS zone: external-dns `cloudflare-dns` still publishes about 112 other
+- the `<root domain>` DNS zone: external-dns `cloudflare-dns` still publishes about 112 other
   records;
 - ACME DNS-01 for cert-manager and the Dockge Traefiks.
 
@@ -51,10 +51,10 @@ This plan removes the **tunnel**, not Cloudflare.
 
 ## B. What Funnel can and cannot do (verified 2026-09-27)
 
-- **No custom domains.** Funnel serves only `<name>.opossum-yo.ts.net`
+- **No custom domains.** Funnel serves only `<name>.<tailnet>`
   ([KB 1223](https://tailscale.com/kb/1223/funnel)). Funnel relays route by TLS SNI and never
-  decrypt, so a CNAME from `driscoll.tech` still presents the custom SNI and relays drop it.
-  - A probe of relays `208.111.34.11` and `199.38.181.54` with `SNI=postiz.driscoll.tech` gets the
+  decrypt, so a CNAME from `<root domain>` still presents the custom SNI and relays drop it.
+  - A probe of relays `208.111.34.11` and `199.38.181.54` with `SNI=postiz.<root domain>` gets the
     connection closed right after the ClientHello.
   - Node-side bring-your-own-domain plumbing ([#19910](https://github.com/tailscale/tailscale/pull/19910))
     is in 1.102.x, but the relay and control side is not enabled.
@@ -277,7 +277,7 @@ Ingress (51 routers live). `asDefault` closes that (§C4).
 
 | | Flux webhook | Postiz media |
 |---|---|---|
-| Host | `flux-equestria-webhook.opossum-yo.ts.net` | `postiz-media.opossum-yo.ts.net` |
+| Host | `flux-equestria-webhook.<tailnet>` | `postiz-media.<tailnet>` |
 | Wiring | **new** Kustomization `apps/flux-system/flux-webhook-funnel/`: `dependsOn` flux-instance only; `wait: true`; timeout 10m. The nested ks carries the tailscale-system and funnel-gateway dependsOn and all health checks. | **new** Kustomization `apps/equestria/home/postiz-funnel/` (step 5), `dependsOn` postiz, with the component; postiz's own ks is untouched. Step 5 also adds the device and route lines and `equestria` to the Gateway selector. |
 | Vars | `APP: flux-webhook`, `NAMESPACE: flux-system`, `FUNNEL_HOST: flux-equestria-webhook` (literal), `FUNNEL_PATH: hook`, `FUNNEL_SERVICE: webhook-receiver`, `FUNNEL_PORT: "80"` | `APP: postiz`, `NAMESPACE: equestria`, `FUNNEL_HOST: postiz-media`, `FUNNEL_PATH: uploads`, `FUNNEL_SERVICE: postiz-cdn` (**literal**), `FUNNEL_PORT: "8080"` |
 
@@ -445,7 +445,7 @@ webhook is a latency problem, not an outage. `flux-system` polls every 1m and
 
 Postiz v2.24.0 builds every media URL as `process.env.FRONTEND_URL + '/uploads' + path`
 (`local.storage.ts`: `newFilePath()` L48, `removeFile()` L142). `FRONTEND_URL` has to stay
-`https://postiz.driscoll.tech`:
+`https://postiz.<root domain>`:
 
 - the OIDC redirect URI is built from it;
 - ts.net is on the Public Suffix List, so a ts.net `FRONTEND_URL` makes the login cookie `.ts.net`
@@ -532,10 +532,10 @@ guard that blocks 10/8, 172.16/12, 192.168/16, 100.64/10 and similar ranges. It 
 resolved address (`ssrf.safe.dispatcher.ts`). The unguarded `readOrFetch` and the PNG→JPEG axios
 path also fetch the URL.
 
-- **Today**, `postiz.driscoll.tech` resolves in-cluster to `10.10.206.101` (Technitium split
+- **Today**, `postiz.<root domain>` resolves in-cluster to `10.10.206.101` (Technitium split
   horizon). YouTube, TikTok-video, LinkedIn and X media uploads are therefore very likely already
   failing with `Blocked IP`, whether or not the tunnel exists.
-- **After §E2**, the media host is `postiz-media.opossum-yo.ts.net`. CoreDNS forwards all of
+- **After §E2**, the media host is `postiz-media.<tailnet>`. CoreDNS forwards all of
   `ts.net` to the operator's k8s-nameserver (`coredns/helm/values.yaml:160-178`). That nameserver
   answers with the proxy **pod IP** (`dnsrecords.go:40-57`), and there is no per-Ingress opt-out.
   The pod IP is blocked by the guard, and it is a userspace proxy that does not serve :443 there
@@ -563,7 +563,7 @@ path also fetch the URL.
   - Use Quad9, the only upstream DNS egress evidenced
     (`talos/patches/global/machine-network.yaml:14-15`).
   - Keep the `$`-brace form out of comments (`values.yaml:132-134`).
-  - The `dns.driscoll.tech` and `dockge-*` blocks already rely on the more specific zone winning.
+  - The `dns.<root domain>` and `dockge-*` blocks already rely on the more specific zone winning.
 - **Rejected alternatives:**
   - `DISABLE_SSRF_PROTECTION=true` **instead of** the block. It does not reach the media host: the
     name still resolves to the proxy pod IP, which refuses :443 (checked 2026-09-29 against the
@@ -588,7 +588,7 @@ path also fetch the URL.
 - **TikTok video** goes by `FILE_UPLOAD` in postiz v2.24.0 (commit 9dd2c62), so it needs no public
   URL.
 - **TikTok photo** is `PULL_FROM_URL` only, and needs a verified *URL prefix*. Verify
-  `https://postiz-media.opossum-yo.ts.net/uploads/` by serving the portal's `tiktok<token>.txt` at
+  `https://postiz-media.<tailnet>/uploads/` by serving the portal's `tiktok<token>.txt` at
   that prefix, with no DNS involved. The docs allow it, but no one has published a success on a
   shared host, and one vendor says S3's shared hostnames fail. See ❓J4. The `tiktok-business`
   provider (not enabled) is PULL-only for video too.
@@ -614,7 +614,7 @@ Each numbered item is one PR unless marked otherwise.
    - Test pod DNS egress to Quad9:
      `kubectl run -it --rm dnstest --image=busybox -- nslookup example.com 9.9.9.9`.
    - Run a DB check: no `Integration.picture` or `Post.image` references
-     `https://postiz.driscoll.tech/uploads`.
+     `https://postiz.<root domain>/uploads`.
 1. **Tailnet policy** (`stacks/unifi-network`, §C1).
    - **Order:** keep this before step 2, so the first key mint succeeds. If step 2 lands first, the
      operator keeps retrying the mint until the tag is owned, and no cleanup is needed. #20744 only
@@ -669,7 +669,7 @@ Each numbered item is one PR unless marked otherwise.
      probes on :8080 and all other Traefik ports are unaffected.
    - **External probes, run from outside the cluster.** An in-cluster probe resolves via the
      operator nameserver instead.
-     - `curl https://flux-equestria-webhook.opossum-yo.ts.net/hook/` returns a 404 with an
+     - `curl https://flux-equestria-webhook.<tailnet>/hook/` returns a 404 with an
        **empty body**, which is the receiver's. tailscaled's own 404 says "404 page not found".
      - `/` returns tailscaled's 404.
      - `curl --path-as-is …/hook/../x` and `…/hook/%2e%2e/x` both return tailscaled's 404.
@@ -702,12 +702,12 @@ Each numbered item is one PR unless marked otherwise.
      - **A clean request** from a public client that is neither tailnet nor GitHub (cellular).
        First check that `cscli decisions list --ip <that IP>` is empty: a CAPI-listed address is
        refused before AppSec is ever asked.
-       `curl -s -o /dev/null -w '%{http_code}\n' https://flux-equestria-webhook.opossum-yo.ts.net/hook/`
+       `curl -s -o /dev/null -w '%{http_code}\n' https://flux-equestria-webhook.<tailnet>/hook/`
        returns **404** (the receiver's), and `sum(cs_appsec_reqs_total)` goes up by one. That
        proves the plugin asks AppSec, through the rooted name. It also puts the bouncer key in
        AppSec's cache (§C4, Fail-open).
      - **A blocked request** from the same client, carrying a forged control header:
-       `curl -si -H 'X-Crowdsec-Appsec-Transaction-Id: forged-by-client' https://flux-equestria-webhook.opossum-yo.ts.net/hook/.env`
+       `curl -si -H 'X-Crowdsec-Appsec-Transaction-Id: forged-by-client' https://flux-equestria-webhook.<tailnet>/hook/.env`
        returns **403**.
        - `cs_appsec_rule_hits{rule_name="crowdsecurity/vpatch-env-access"}` goes up by one.
        - `cscli alerts list --ip <that IP>` shows `WAF block: crowdsecurity/vpatch-env-access`,
@@ -721,7 +721,7 @@ Each numbered item is one PR unless marked otherwise.
          either with `cscli decisions delete --ip`. Every hit is shared with CAPI under the current
          `console.yaml`, so do not loop it.
      - **Throttles:** from the same client,
-       `seq 100 | xargs -P 40 -I{} curl -s -o /dev/null -w '%{http_code}\n' https://flux-equestria-webhook.opossum-yo.ts.net/hook/ | sort | uniq -c`
+       `seq 100 | xargs -P 40 -I{} curl -s -o /dev/null -w '%{http_code}\n' https://flux-equestria-webhook.<tailnet>/hook/ | sort | uniq -c`
        shows some **429**s next to the 404s. The 404s are clean requests, so they raise no alert
        and ban nothing.
      - **Trusted clients bypass it:** the same `/hook/.env` from a tailnet device returns **404**
@@ -777,7 +777,7 @@ Each numbered item is one PR unless marked otherwise.
      unaffected", the shared-hostname / `--gateway-name` dependency, and the `v2.23.0` label.
 
    Verify:
-   - a new upload's URL is `https://postiz-media.opossum-yo.ts.net/uploads/…`;
+   - a new upload's URL is `https://postiz-media.<tailnet>/uploads/…`;
    - that URL fetches from outside the cluster;
    - `getent hosts` in the postiz pod returns public IPs;
    - postiz's own fetch succeeds, with no `Blocked IP`;
@@ -950,7 +950,7 @@ Each numbered item is one PR unless marked otherwise.
 | Internet-facing processes' credentials | Traefik: cluster-wide Secret **read** | three processes. (1) **Traefik, as today**: cluster-wide Secret **read** (chart ClusterRole). It is the same Deployment, and it now parses every Funnel request and runs the CrowdSec plugin on the `funnel` entrypoint, so a Traefik or plugin bug reachable from the internet still means every Secret in the cluster. The direct design had removed that; it is the price of in-process CrowdSec. (2) **the `proxies` SA**: **read** of every Secret in `tailscale-system` (`operator-oauth` included, which can mint `tag:funnel`); **write** only to its own pod's state Secret once `tailscale-proxies-secret-scope` is on Deny. (3) **`crowdsec-appsec`**, since J8: it parses every untrusted request's headers and first 16 KiB of body (Coraza and its JSON, XML and multipart parsers). It holds a LAPI **machine** credential, which can create alerts with decisions and delete decisions: a compromise could ban any untrusted client at the door or empty the list the door enforces. It also sees the `traefik` bouncer key on every request. Its pod runs as the `network` default ServiceAccount, with the token mounted and no RBAC granted |
 | Tailnet reach of the internet-facing device | none; cloudflared is not a tailnet node | none: `tag:funnel` is left out of every former `autogroup:tagged` grant, and a policy test pins that (J6) |
 | Client IP | XFF from the cloudflared pod | XFF set by tailscaled, trusted by Traefik only from the pod CIDR, which only the Funnel proxies can reach on 8445; the bouncer and the agents see the real client |
-| Names in CT logs | `*.driscoll.tech` | `*.opossum-yo.ts.net`, already public through the tailnet certs |
+| Names in CT logs | `*.<root domain>` | `*.<tailnet>`, already public through the tailnet certs |
 | New credential | tunnel token in OpenBao (removed) | none. But anything holding the operator OAuth client can mint `tag:funnel`: every `proxies` pod through that read, and taildrive, which mounts it (❓J7) |
 
 ## I. Out of scope, noted
@@ -985,7 +985,7 @@ Each numbered item is one PR unless marked otherwise.
   carries `tag:operator`. Adding `tag:funnel` to `tag:operator`'s owned tags (§C1) is therefore
   enough for the operator to mint Funnel proxy keys.
 - ✅ **J3. Tailnet HTTPS certificates.** Confirmed enabled by David on 2026-09-27. This matches
-  the Let's Encrypt `*.opossum-yo.ts.net` certificates in CT logs.
+  the Let's Encrypt `*.<tailnet>` certificates in CT logs.
 - ❓ **J4. TikTok URL prefix on ts.net.** This matters only for TikTok **photo** posts, and only
   once a TikTok app exists. It is a cheap live test: put `tiktok<token>.txt` at the uploads root,
   then verify in the portal. If TikTok rejects it, the options are:

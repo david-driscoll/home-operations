@@ -13,7 +13,7 @@ spec:
   # `<app>-tailscale` router in compose.yaml matches. authentik's
   # ProxyProvider.external_host holds ONE hostname, so without this the outpost
   # has no application for it and answers
-  #   400 {"message":"no app for hostname","host":"backrest-celestia.opossum-yo.ts.net"}
+  #   400 {"message":"no app for hostname","host":"backrest-celestia.<tailnet>"}
   # -- verified against celestia, luna and skystar. Lowercase ${host} and
   # ${tailscaleDomain}: the Dockge substitution table (components/DockgeLxc.ts)
   # has no ${TAILSCALE_DOMAIN}.
