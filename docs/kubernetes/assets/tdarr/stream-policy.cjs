@@ -123,11 +123,26 @@ module.exports = async args => {
   // Bitrate ceilings for keeping an HEVC encode as-is. Past these it is a
   // remux-grade file and worth shrinking; 4K is never touched (it is HDR here).
   const ceiling = width >= 3000 ? Infinity : width >= 1700 ? 8e6 : width >= 1100 ? 5e6 : 2.5e6;
+  // Video bitrate. An MKV video stream has no bit_rate, only the BPS tag
+  // mkvmerge wrote -- and a release re-encoded, then remuxed without
+  // refreshing statistics, keeps its SOURCE's tag: a 2 Mbps x265 episode
+  // tagged BPS=9.8M looked "over the ceiling", was re-encoded, and could only
+  // fail the size guard. A stream cannot out-rate its whole file, so a tag
+  // above the file's overall bitrate is stale: use overall minus audio.
+  const overall = num(file.ffProbeData?.format?.bit_rate) || num(file.bit_rate);
+  const fromOverall = Math.max(0, overall - allAudio.reduce((n, a) => n + bps(a), 0));
   let vbr = bps(video);
   if (!vbr) {
-    const overall = num(file.ffProbeData?.format?.bit_rate) || num(file.bit_rate);
-    vbr = Math.max(0, overall - allAudio.reduce((n, a) => n + bps(a), 0));
+    vbr = fromOverall;
+  } else if (overall && vbr > overall) {
+    log(`video: stream says ${(vbr / 1e6).toFixed(1)} Mbps but the file is ${(overall / 1e6).toFixed(1)} Mbps -- stale BPS tag, using ${(fromOverall / 1e6).toFixed(1)} Mbps`);
+    vbr = fromOverall;
   }
+  // Below these an 8-bit H.264 source is already lean: the pilot's 1.0-1.5
+  // Mbps episodes came out at 93-106% of the original, and a 2.2 Mbps 1080p
+  // film at over 85%, so the size guard rejected every one after a full
+  // encode. It direct-plays as it is; only remux it if something else needs it.
+  const storageFloor = width >= 1700 ? 2.5e6 : width >= 1100 ? 1.2e6 : 0.6e6;
 
   let encode = false;
   if (hdr) {
@@ -138,11 +153,6 @@ module.exports = async args => {
   } else if (vbr > ceiling) {
     encode = true;
     log(`video: hevc at ${(vbr / 1e6).toFixed(1)} Mbps is over the ${ceiling / 1e6} Mbps ceiling -> re-encode`);
-  }
-
-  if (!encode) {
-    if (!remux) log("already direct-play HEVC, nothing to do");
-    return done(remux ? 3 : 4);
   }
 
   // QSV on these Iris Xe iGPUs decodes 8-bit 4:2:0 H.264 and 4:2:0 HEVC/AV1.
@@ -157,6 +167,23 @@ module.exports = async args => {
   if (hwPix && pix) hw = hwPix.includes(pix);
   else if (hwPix) hw = !/4:2:2|4:4:4|rext/.test(profile) && !(vcodec === "h264" && /10/.test(profile));
 
+  // Why this file would be encoded decides how size-guard.cjs judges the
+  // result. "compat": the source can't direct-play (AV1, Xvid, MPEG-2, VC-1,
+  // Hi10P, an AVI/MPG/TS container), so HEVC is the point and a slightly
+  // bigger file is still a win. "storage": the source already direct-plays
+  // (8-bit H.264, oversized HEVC), so the encode is only worth keeping if it
+  // is clearly smaller.
+  const compat = !["h264", "hevc"].includes(vcodec) || !["mkv", "mp4", "m4v"].includes(container) || (vcodec === "h264" && !hw);
+  if (encode && !compat && vcodec === "h264" && vbr && vbr < storageFloor) {
+    encode = false;
+    log(`video: h264 at ${(vbr / 1e6).toFixed(1)} Mbps is under the ${storageFloor / 1e6} Mbps storage floor -- already lean, kept`);
+  }
+
+  if (!encode) {
+    if (!remux) log("already direct-play, nothing to do");
+    return done(remux ? 3 : 4);
+  }
+
   const filter = hw ? `vpp_qsv=${interlaced ? "deinterlace=2:" : ""}format=p010le` : `${interlaced ? "bwdif=mode=send_frame," : ""}format=p010le`;
   video.outputArgs.push("-filter:v:{outputTypeIndex}", filter, "-profile:v:{outputTypeIndex}", "main10");
   if (/avc|h\.?264|x264|hevc|h\.?265|x265|xvid|divx|vc-?1|mpeg|kbps|mbps|\d{3,4}p/.test(title(video))) {
@@ -165,13 +192,6 @@ module.exports = async args => {
   // Files with dozens of PGS tracks overflow ffmpeg's default mux queue.
   cmd.overallOuputArguments.push("-max_muxing_queue_size", "9999");
 
-  // Why this file is being encoded decides how size-guard.cjs judges the
-  // result. "compat": the source can't direct-play (AV1, Xvid, MPEG-2, VC-1,
-  // Hi10P, an AVI/MPG/TS container), so HEVC is the point and a slightly
-  // bigger file is still a win. "storage": the source already direct-plays
-  // (8-bit H.264, oversized HEVC), so the encode is only worth keeping if it
-  // is clearly smaller.
-  const compat = !["h264", "hevc"].includes(vcodec) || !["mkv", "mp4", "m4v"].includes(container) || (vcodec === "h264" && !hw);
   args.variables.user = { ...args.variables.user, dpEncodeReason: compat ? "compat" : "storage" };
   log(`decode on ${hw ? "QSV" : "CPU"} (${pix || profile || "unknown format"}), ${interlaced ? "deinterlace, " : ""}filter ${filter}; reason ${args.variables.user.dpEncodeReason}`);
   return done(hw ? 1 : 2);
