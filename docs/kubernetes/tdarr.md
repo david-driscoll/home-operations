@@ -130,16 +130,19 @@ Sonarr and Radarr pick up a replaced file (and a changed extension, `.mp4` →
 
 ## Health checks
 
-TV and Movies run Tdarr's **quick** health check (HandBrake `--scan` of the
-file headers) since 2026-09-29. It finds files that are truncated or will not
-open. Deeper damage in a file the flow re-encodes shows up as a failed encode
-anyway, so the thorough check (every frame through ffmpeg) is not used.
+**Off** (`processHealthChecks: false` on TV and Movies, no health-check
+workers). A damaged file still surfaces as a failed encode when the flow
+reaches it.
 
-- **Library:** `processHealthChecks: true`, `handbrake: true`, `ffmpeg: false`
-  (the UI's Quick/Thorough radio is those two booleans).
-- **Workers:** one `healthcheckcpu` on kerfuffle and fluttershy; none on the
-  control planes. Like every worker limit, it is stored per node name in
-  Tdarr's DB, not set by the HelmRelease.
+They were tried on 2026-09-29 and turned off after about an hour: the
+**quick** check (`handbrake: true`, `ffmpeg: false` -- the UI's
+Quick/Thorough radio is those two booleans) read whole files, not just
+headers. It ran at 3-260 fps and passed 3 files in an hour. On kerfuffle it
+also starved the two encodes beside it to 4-5 fps from ~200.
+To try again, run it on one node only, outside the encode backlog:
+
+- **Workers:** `healthcheckcpu` is a per-node worker limit, stored per node
+  name in Tdarr's DB like the others, not set by the HelmRelease.
 - **Never add `healthcheckgpu` workers.** Tdarr's GPU health check is
   hard-wired to NVIDIA (`-hwaccel nvdec ... cuda`) and has no QSV mode
   (upstream issue 546). On these nodes it dies in under a second, which is how
