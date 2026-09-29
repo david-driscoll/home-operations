@@ -85,6 +85,15 @@ export const BACKUP_OPT_OUT_STACKS: ReadonlySet<string> = new Set([
   // anyway; metadata_auto_snapshot_interval in garage.toml is the local
   // recovery mechanism for that (docs/garage-offsite-s3.md).
   "garage",
+  // Same category, and the same torn-LMDB argument, one step further out:
+  // docker/alpha-site/garage-backup is the standalone Garage holding the
+  // OFF-SITE copy of the Pulumi state. Backing it up pulled that copy back
+  // on-site as a file copy of a live LMDB, which restores to nothing. The
+  // state's point-in-time copies are the dated snapshots that stack keeps
+  // itself, plus the `pulumi-state` plan in stacks/backups. Its old plan and
+  // repo leave celestia's Backrest through BACKREST_LEDGER_SEED
+  // (components/backrestLedger.ts).
+  "garage-backup",
 ]);
 
 /**

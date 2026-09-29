@@ -28,12 +28,22 @@ using Renci.SshNet.Common;
 
 var httpClient = new HttpClient();
 
-var client = new OnePasswordConnectClient(
-    Environment.GetEnvironmentVariable("CONNECT_TOKEN")!,
-    Environment.GetEnvironmentVariable("CONNECT_HOST")!
-);
-
-var vault = ( await client.GetVaultsAsync($"name eq \"Eris\"") ).Single();
+// 1Password Connect is only needed by a job that names a secret (a b2 or s3
+// backend), and none does: every job BackupPlanDirector writes is sftp or
+// local. Resolving the vault eagerly at startup made the whole copy tier depend
+// on Connect being up -- and on it existing at all, which stops being true once
+// the OpenBao migration retires it. So the client and the vault lookup happen on
+// first use. A failed lookup stays failed until the service restarts, which it
+// does whenever the jobs directory changes.
+var onePassword = new Lazy<Task<(OnePasswordConnectClient Client, string VaultId)>>(async () =>
+{
+    var client = new OnePasswordConnectClient(
+        Environment.GetEnvironmentVariable("CONNECT_TOKEN") ?? throw new InvalidOperationException("A backup job names a 1Password secret, but CONNECT_TOKEN is not set"),
+        Environment.GetEnvironmentVariable("CONNECT_HOST") ?? throw new InvalidOperationException("A backup job names a 1Password secret, but CONNECT_HOST is not set")
+    );
+    var vault = ( await client.GetVaultsAsync($"name eq \"Eris\"") ).Single();
+    return (client, vault.Id);
+});
 // var lunaDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Luna");
 // var alphaSiteDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Alpha Site");
 
@@ -87,7 +97,8 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     if (secret is { Length: > 0 })
     {
         Console.WriteLine($"Fetching secret item '{secret}' for {name} backend");
-        secretItem = await GetItemByTitle(client, vault.Id, secret);
+        var (client, vaultId) = await onePassword.Value;
+        secretItem = await GetItemByTitle(client, vaultId, secret);
     }
     return type switch
     {

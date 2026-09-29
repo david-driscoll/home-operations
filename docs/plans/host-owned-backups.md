@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Nothing is built. Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 started 2026-09-29; 0.6 is answered (A3.1). Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -68,9 +68,16 @@ celestia first.
 ### A3. Live defects (logs 2026-09-27 → 2026-09-29)
 
 1. **Skystar has no fresh backup.** All 4 skystar plans died in the pre-sync on every run in the
-   window, each at exactly 10m00s. Backrest's command hook has no timeout (`exec.Command`), so the
-   cut happens on the rclone/SFTP/WAN side. The copy tier stays green: `DescribeSnapshotlessRepo`
-   only rejects repos with zero snapshots.
+   window, each at exactly 10m00s. The copy tier stays green: `DescribeSnapshotlessRepo` only
+   rejects repos with zero snapshots.
+   - **The cause (found in phase 0, step 0.6):** the whole skystar site has been off the tailnet
+     since 2026-08-31 14:19 UTC. Its Proxmox host and its three LXCs (`dockge-skystar`,
+     `pbs-skystar`, `dns-skystar`) all dropped off within four seconds of each other, and the
+     `ocracoke` Stack is disabled for the same reason. Each pull is a connection that never
+     completes: rclone's 1-minute connect timeout, times its 10 low-level retries, is the 10m00s.
+     Backrest's command hook has no timeout of its own (`exec.Command`).
+   - **What that means while skystar is away:** Garage runs on celestia and luna only, both on
+     the home site, and skystar receives no copies. Nothing in the estate has an off-site copy.
 2. **Four orphaned plans fail nightly**: `celestia-`, `luna-` and `alpha-site-dockge-docker-prune`,
    and `alpha-site-dockge-pecron-monitor`. `updateBackrestConfiguration` only adds and updates; the
    hand-kept `RETIRED_BACKREST_PLANS` is the only thing it ever removes. Their Gatus endpoints are
@@ -324,7 +331,7 @@ criteria are measured over consecutive nights.
 | 0.3 | Make the etcd repo visible to today's copy tier: label its Secret `volsync=true` and give it a `RESTIC_REPOSITORY` key, as the VolSync component does. Phase 3 supersedes this. | `kubernetes/apps/kube-system/etcd/externalsecret.yaml` |
 | 0.4 | Look up 1Password Connect only when a job names a secret. | `docker/_common/backups/Playground.cs` |
 | 0.5 | Default schedules to fixed cron with `CLOCK_LOCAL`, and time the copy jobs after the backup window. | `components/BackupPlanDirector.ts` |
-| 0.6 | Run one skystar pre-sync by hand to find what stops it at 10 minutes. Moot once phase 1 reaches skystar. | on celestia |
+| 0.6 | ✅ Answered: skystar has been offline since 2026-08-31 (A3.1). No code change; its plans recover when the site is back. | — |
 
 **Exit:** no orphan failures in Backrest's log for two nights, and an `equestria-volsync-etcd` copy
 on luna.

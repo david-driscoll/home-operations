@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { addBackupJobs, addUptimeGatus, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import type { ExternalEndpoint } from "@openapi/application-definition.js";
 import type { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
@@ -5,6 +6,7 @@ import { remote } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, jsonStringify, log, type Output, output, type Resource, type Unwrap, type UnwrappedArray } from "@pulumi/pulumi";
 import { NodeSSH } from "node-ssh";
 import type { BackupPlanItem, S3PreSyncArgs } from "./BackupPlanOrchestrator.ts";
+import { BACKREST_LEDGER_PATH, type BackrestLedger, type LedgerRemovals, parseBackrestLedger, planLedgerRemovals, renderBackrestLedger } from "./backrestLedger.ts";
 import type { DockgeLxc } from "./DockgeLxc.ts";
 import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
@@ -15,19 +17,60 @@ import type { ClusterDefinition, ProxmoxBackupServerLxcDefinition } from "./stor
  * are left exactly as they are.
  *
  * These are the four host-level dockge plans that per-stack plans replaced.
- * `updateBackrestConfiguration` merges rather than replaces -- it has no notion
- * of a plan going away -- so simply ceasing to emit them would leave them in
- * config.json, still running their whole-host ON_ERROR_FATAL pre-sync into a
- * staging tree nothing else maintains, still pushing to Gatus tokens whose
- * endpoints no longer exist. Removing the PLAN stops the work; leaving the REPO
- * keeps every existing snapshot restorable, since a restic history cannot be
- * carried across a rename (`BackupPlanItem.name` is the repo id).
+ * When they were retired, `updateBackrestConfiguration` merged rather than
+ * replaced -- it had no notion of a plan going away -- so simply ceasing to emit
+ * them would have left them in config.json, still running their whole-host
+ * ON_ERROR_FATAL pre-sync into a staging tree nothing else maintains, still
+ * pushing to Gatus tokens whose endpoints no longer exist. Removing the PLAN
+ * stops the work; leaving the REPO keeps every existing snapshot restorable,
+ * since a restic history cannot be carried across a rename
+ * (`BackupPlanItem.name` is the repo id).
+ *
+ * Plans the director stops emitting now leave through the ledger
+ * (components/backrestLedger.ts), which takes the repo entry with them. This
+ * list stays for these four because keeping their repos browsable, as a frozen
+ * archive, is the point.
  *
  * The repos keep their own prune/check schedules and will go on tidying
  * themselves. That is harmless. Delete these ids -- and the
  * /data/backup/<id>/ directories -- by hand once the archive has aged out.
  */
 export const RETIRED_BACKREST_PLANS: readonly string[] = ["celestia-dockge", "alpha-site-dockge", "luna-dockge", "skystar-dockge"];
+
+/**
+ * When every plan on a host starts: 01:00 in the host's own timezone.
+ *
+ * A fixed time, not `CLOCK_LAST_RUN_TIME` with `maxFrequencyDays: 1`. That
+ * clock schedules the next run 24 hours after the previous one FINISHES, and
+ * Backrest runs one task at a time, so every queue delay and every slow run
+ * pushed the next start later. `home-operations` started at 23:15, then 01:34,
+ * then 03:28 (2026-09-26 → 09-29), walking the queue around the clock while the
+ * copy jobs below fire at fixed UTC times. With one fixed start the queue drains
+ * in the same window every night, and the copies can be timed after it.
+ *
+ * CLOCK_LOCAL is the backrest container's TZ (TIMEZONE in its compose.yaml).
+ * The repos' prune and check schedules keep CLOCK_LAST_RUN_TIME on purpose:
+ * maintenance may drift.
+ */
+const BACKREST_PLAN_SCHEDULE: BackrestPlan["schedule"] = { cron: "0 1 * * *", clock: "CLOCK_LOCAL" };
+
+/**
+ * Copy-job schedules, in UTC: NCronJob's default, and the backups container
+ * sets no TZ. Each one runs after what it copies, so a copy carries that day's
+ * snapshot:
+ *
+ *   14:00  VolSync movers run (ReplicationSource `0 14 * * *`), done by ~14:20
+ *   15:00  celestia copies the VolSync repos from TrueNAS into /data/backup
+ *   16:00  luna and skystar copy celestia's repos, VolSync and Backrest alike
+ *
+ * Backrest's queue starts at 01:00 local, 05:00 or 06:00 UTC. The longest night
+ * in the 2026-09-27 → 09-29 logs ran about six and a half hours, so it is done
+ * well before 16:00. Before this the copies ran at 10:00 and 04:00 UTC, and a
+ * VolSync snapshot waited about 38 hours to reach luna and skystar; now it is
+ * about two.
+ */
+const VOLSYNC_LOCAL_COPY_SCHEDULE = "0 15 * * *";
+const REMOTE_COPY_SCHEDULE = "0 16 * * *";
 
 export class BackupPlanDirector extends ComponentResource {
   private readonly globals: GlobalResources;
@@ -84,7 +127,7 @@ export class BackupPlanDirector extends ComponentResource {
       const copyToken = toGatusKey(destinationGroupTitle, plan.name);
       return {
         name: plan.name,
-        schedule: "0 4 * * *",
+        schedule: REMOTE_COPY_SCHEDULE,
         sourceType: "sftp" as const,
         source: `${planServer?.dockge.ssh.hostname}/backup/${plan.name}/`,
         destinationType: "local" as const,
@@ -99,7 +142,7 @@ export class BackupPlanDirector extends ComponentResource {
       if (clusterKey === "celestia") {
         return {
           name: plan.name,
-          schedule: "0 10 * * *",
+          schedule: VOLSYNC_LOCAL_COPY_SCHEDULE,
           sourceType: "local" as const,
           source: plan.path,
           destinationType: "local" as const,
@@ -109,7 +152,7 @@ export class BackupPlanDirector extends ComponentResource {
       }
       return {
         name: plan.name,
-        schedule: "0 4 * * *",
+        schedule: REMOTE_COPY_SCHEDULE,
         sourceType: "sftp" as const,
         source: `${celestiaServer?.dockge.ssh.hostname}/backup/${plan.name}/`,
         destinationType: "local" as const,
@@ -246,7 +289,7 @@ export class BackupPlanDirector extends ComponentResource {
         policyTimeBucketed: { daily: 7, weekly: 4, monthly: 3, keepLastN: 10 },
       },
       skipIfUnchanged: true,
-      schedule: { clock: "CLOCK_LAST_RUN_TIME", maxFrequencyDays: 1 },
+      schedule: BACKREST_PLAN_SCHEDULE,
       ...plan.planConfig,
       id: plan.name,
       repo: plan.name,
@@ -273,6 +316,7 @@ export class BackupPlanDirector extends ComponentResource {
       auth: { disabled: true },
       multihost: {},
     };
+    let previousLedger: BackrestLedger | undefined;
 
     {
       const ssh = new NodeSSH();
@@ -290,6 +334,8 @@ export class BackupPlanDirector extends ComponentResource {
         log.warn(`Current config content: ${currentConfig}`);
       }
 
+      previousLedger = await readBackrestLedger(ssh, cluster.key);
+
       ssh.dispose();
     }
 
@@ -306,6 +352,9 @@ export class BackupPlanDirector extends ComponentResource {
 
     updateRepos(updatedConfig, items.repos);
     updatePlans(updatedConfig, items.plans);
+    const emitted = { plans: items.plans.map(p => p.id), repos: items.repos.map(r => r.id) };
+    const removals = planLedgerRemovals({ previous: previousLedger, emitted, config: updatedConfig, host: cluster.key });
+    applyLedgerRemovals(updatedConfig, removals, cluster.key);
     removeRetiredPlans(updatedConfig, cluster.key);
 
     const configOutput = jsonStringify(updatedConfig);
@@ -316,6 +365,20 @@ export class BackupPlanDirector extends ComponentResource {
       remotePath: "/opt/stacks-data/backrest/config/config.json",
       triggers: [configOutput],
       dependsOn: depends,
+      parent: this,
+    });
+
+    // What this run emitted, for the next run to diff against
+    // (components/backrestLedger.ts). Written only once config.json has been:
+    // if this write fails, the next run reads the previous ledger, recomputes
+    // the same removals, finds them already applied, and moves on. The reverse
+    // order could record a removal that config.json never received, and the
+    // leftover would then be forgotten for good.
+    copyFileToRemote("backrest-ledger.json", {
+      content: renderBackrestLedger(emitted),
+      connection: connection,
+      remotePath: BACKREST_LEDGER_PATH,
+      dependsOn: [backrestConfig],
       parent: this,
     });
 
@@ -367,7 +430,7 @@ export class BackupPlanDirector extends ComponentResource {
       `backrest-restart`,
       {
         connection: connection,
-        triggers: [...items.repos.map(z => z.uri), ...items.plans.map(z => z.repo), ...(rcloneConfig ? [rcloneConfig] : [])],
+        triggers: [...items.repos.map(z => z.uri), ...items.plans.map(z => z.repo), ...(rcloneConfig ? [rcloneConfig] : []), managedConfigDigest(items, updatedConfig)],
         create: interpolate`cd /opt/stacks/backrest && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml restart`,
       },
       {
@@ -405,6 +468,79 @@ function removeRetiredPlans(updatedConfig: { repos: BackrestRepository[]; plans:
   if (removed > 0) {
     log.info(`Removed ${removed} retired backrest plan(s) from ${clusterKey}; their repos stay on disk as a frozen archive.`);
   }
+}
+
+/**
+ * The host's ledger, read over the session that just read config.json, or
+ * undefined when there is none and the seed applies.
+ *
+ * A missing file is the normal first-run state. Any other failure, and any
+ * malformed content, is logged and treated the same way rather than failing
+ * the run: see parseBackrestLedger for why falling back to the seed is the safe
+ * direction.
+ */
+async function readBackrestLedger(ssh: NodeSSH, clusterKey: string): Promise<BackrestLedger | undefined> {
+  const result = await ssh.execCommand(`cat ${BACKREST_LEDGER_PATH}`);
+  if (result.code !== 0) {
+    if (!/No such file/.test(result.stderr)) {
+      log.warn(`Could not read ${BACKREST_LEDGER_PATH} on ${clusterKey} (${result.stderr.trim() || `exit ${result.code}`}); falling back to the seed.`);
+    }
+    return undefined;
+  }
+
+  const { ledger, problem } = parseBackrestLedger(result.stdout);
+  if (problem) {
+    log.warn(`Ignoring ${BACKREST_LEDGER_PATH} on ${clusterKey}: ${problem}. Falling back to the seed, so anything only that ledger knew about stays in config.json until removed by hand.`);
+  }
+  return ledger;
+}
+
+/** Applies planLedgerRemovals' result to the config, and says what it did in the run log. */
+function applyLedgerRemovals(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, removals: LedgerRemovals, clusterKey: string) {
+  if (removals.plans.length > 0) {
+    const drop = new Set(removals.plans);
+    updatedConfig.plans = updatedConfig.plans.filter(p => !drop.has(p.id));
+    log.info(`Removed ${removals.plans.length} backrest plan(s) the director no longer emits from ${clusterKey}: ${removals.plans.join(", ")}`);
+  }
+  if (removals.repos.length > 0) {
+    const drop = new Set(removals.repos);
+    updatedConfig.repos = updatedConfig.repos.filter(r => !drop.has(r.id));
+    log.info(`Removed ${removals.repos.length} backrest repo(s) the director no longer emits from ${clusterKey}; their data stays on disk: ${removals.repos.join(", ")}`);
+  }
+  for (const { id, usedBy } of removals.keptRepos) {
+    log.warn(`Kept backrest repo ${id} on ${clusterKey}: the director no longer emits it, but plan(s) ${usedBy.join(", ")} still use it.`);
+  }
+}
+
+/**
+ * A digest of what this run asks Backrest to run, for backrest-restart's
+ * triggers.
+ *
+ * Backrest reads config.json when it starts, so a changed file does nothing
+ * until the container restarts. The other triggers only move when a repo URI or
+ * a plan's repo changes. A new schedule, hook or retention, or a removed plan,
+ * would land on disk and sit there unused until something else restarted
+ * Backrest.
+ *
+ * The digest covers the emitted plans and repos, sorted so an upstream reorder
+ * is not a change, plus the plan and repo ids left in the final config, so a
+ * removal counts once and not again on the next run. Fields Backrest writes for
+ * itself (a repo's `guid` after auto-init, `modno`) are not in it, so the
+ * restart stays tied to changes Pulumi made. It is a one-way hash, so the repo
+ * passwords inside do not reach the stack state.
+ */
+function managedConfigDigest(items: { repos: BackrestRepository[]; plans: BackrestPlan[] }, finalConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }): string {
+  const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+  const ids = (entries: { id: string }[]) => entries.map(e => e.id).sort((a, b) => a.localeCompare(b));
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        plans: [...items.plans].sort(byId),
+        repos: [...items.repos].sort(byId),
+        present: { plans: ids(finalConfig.plans), repos: ids(finalConfig.repos) },
+      }),
+    )
+    .digest("hex");
 }
 
 function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, plans: BackrestPlan[]) {
