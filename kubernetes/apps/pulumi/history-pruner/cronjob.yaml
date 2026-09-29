@@ -10,13 +10,18 @@ spec:
   # - history/: one full checkpoint copy per update. Left alone it also makes
   #   `pulumi stack history` (called by the operator after every up) slow or
   #   hang.
-  # - backups/: the DIY backend's pre-write copy of the checkpoint, taken on
-  #   EVERY checkpoint save, i.e. many times per update. This is the big one:
-  #   6.8 GB of the bucket's 7.7 GB ten hours after the Garage cutover
-  #   (2026-09-29), about 15 GB/day against a 100 GiB bucket quota.
+  # - backups/: the DIY backend's copy of the previous checkpoint, taken before
+  #   it is overwritten -- another full copy per update, beside history/'s
+  #   (system: ~10 MB every ~6 min). It was 6.8 GB of the bucket's 7.7 GB on
+  #   2026-09-29. Every Stack CR and .config/mise.toml now set
+  #   PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS, so nothing should write
+  #   here any more; pruning it anyway drains what is left and catches a run
+  #   that lacks the variable.
   #
-  # Every 6h rather than nightly so backups/ peaks at ~1.25 days, not ~2.
-  schedule: "17 */6 * * *"
+  # Age is rclone's view of the object's mtime. Pulumi makes backups/ entries
+  # with a server-side copy, which can carry the source's older mtime -- fine
+  # for a tree whose contents are disposable anyway.
+  schedule: "17 3 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -65,8 +70,8 @@ spec:
                 - |
                   set -eu
                   # history/ is the per-update record, so it keeps longer.
-                  # backups/ only exists to recover from a checkpoint write that
-                  # went wrong mid-update; a day covers that. Point-in-time
+                  # backups/ is no longer written (see the schedule comment); a
+                  # day is plenty for anything that still lands there. Point-in-time
                   # copies of the state are the restic plan's job
                   # (stacks/backups/index.ts `pulumi-state`) and alpha-site's
                   # (docker/alpha-site/garage-backup).
