@@ -53,6 +53,12 @@ spec:
       type: Literal
       literal:
         value: "garage"
+    # No pre-write checkpoint copy in .pulumi/backups/ on every save: that was
+    # ~15 GB/day of throwaway copies (see ../history-pruner/cronjob.yaml).
+    PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS:
+      type: Literal
+      literal:
+        value: "true"
     GITHUB_TOKEN:
       type: Secret
       secret:

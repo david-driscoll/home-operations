@@ -202,6 +202,9 @@ activate_aggressive = true
 AWS_ACCESS_KEY_ID = "ref+openbao://secrets/apps/pulumi/state-s3#/username"
 AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/apps/pulumi/state-s3#/password"
 AWS_REGION = "garage"
+# Same as every Stack CR: no pre-write checkpoint copy in .pulumi/backups/ on
+# every save (kubernetes/apps/pulumi/history-pruner/cronjob.yaml).
+PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS = "true"
 # The Pulumi state passphrase. It lives in OpenBao like everything else
 # (estate decision 2026-08-12), reached through the AppRole that
 # pulumi-env.sh exports — so the chain is age key -> sops -> AppRole ->
