@@ -881,7 +881,8 @@ Each numbered item is one PR unless marked otherwise.
   (Loki). Neither can see an AppSec that is reachable but never asked. Once step 3's webhook Gatus
   probe exists, it sends a steady untrusted request from alpha-site through AppSec, and an alert
   on `rate(cs_appsec_reqs_total[1h]) == 0` becomes meaningful. Before that, only trusted GitHub
-  traffic may be arriving, and it never reaches AppSec.
+  traffic may be arriving, and it never reaches AppSec. Step 3 adds it as `FunnelAppsecNotAsked`
+  (`crowdsec/prometheusrule.yaml`), gated on the door carrying traffic and AppSec being up.
 - **Runbook: "Funnel endpoint red".**
   1. Find the proxy with
      `kubectl -n tailscale-system get pods -l tailscale.com/parent-resource=funnel-<host>,tailscale.com/parent-resource-ns=network`.
