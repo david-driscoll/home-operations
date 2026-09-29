@@ -368,11 +368,12 @@ that lives inside Forgejo is manual state and has to be created by hand:
    named `canary`, initialised with a README -- a scheduled workflow only runs
    on a default branch, so an empty repo never fires.
 
-2. **Add two repository secrets** (Settings -> Actions -> Secrets):
+2. **Add three repository secrets** (Settings -> Actions -> Secrets):
 
    | Secret | Value |
    |---|---|
    | `GATUS_TOKEN` | `forgejo-actions_canary` |
+   | `GATUS_URL` | `https://uptime.<root domain>` |
    | `GATUS_CONNECT_TO` | `uptime.<root domain>:443:dockge-as.<tailnet>:443` |
 
    The token is both the URL path segment and the bearer. That is Gatus's

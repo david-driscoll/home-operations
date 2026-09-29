@@ -500,7 +500,9 @@ kubectl -n equestria create configmap jellyfin-pg-migrate \
   --from-file=docs/runbooks/assets/jellyfin-pg/ \
   --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/job.yaml
+# job.yaml takes the root domain from SOPS; substitute only that variable.
+ROOT_DOMAIN="$(sops -d --extract '["stringData"]["ROOT_DOMAIN"]' kubernetes/flux/meta/shared-secrets.sops.yaml)"
+sed "s/\${ROOT_DOMAIN}/$ROOT_DOMAIN/g" docs/runbooks/assets/jellyfin-pg/job.yaml | kubectl -n equestria apply -f -
 kubectl -n equestria logs -f job/jellyfin-pg-migrate --all-containers --prefix
 ```
 

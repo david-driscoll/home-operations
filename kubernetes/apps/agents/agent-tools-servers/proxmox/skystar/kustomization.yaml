@@ -19,7 +19,7 @@ patches:
         value: toolhive-proxmox-skystar
       - op: replace
         path: /spec/env/2/value
-        value: "skystar.opossum-yo.ts.net"
+        value: "skystar.${TAILSCALE_DOMAIN}"
   - target:
       kind: ExternalSecret
     patch: |-

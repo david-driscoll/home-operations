@@ -12,7 +12,9 @@
 #   kubectl -n equestria create configmap jellyfin-pg-migrate \
 #     --from-file=docs/runbooks/assets/jellyfin-pg/ \
 #     --dry-run=client -o yaml | kubectl apply -f -
-#   kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/job.yaml
+#   # ROOT_DOMAIN from SOPS; only that one variable is substituted.
+#   ROOT_DOMAIN="$(sops -d --extract '["stringData"]["ROOT_DOMAIN"]' kubernetes/flux/meta/shared-secrets.sops.yaml)"
+#   sed "s/\${ROOT_DOMAIN}/$ROOT_DOMAIN/g" docs/runbooks/assets/jellyfin-pg/job.yaml | kubectl -n equestria apply -f -
 #   kubectl -n equestria logs -f job/jellyfin-pg-migrate --all-containers --prefix
 #
 # ⚠️ jellyfin-pg MUST BE AT ZERO REPLICAS. Its config PVC is RWO Longhorn, so
@@ -264,7 +266,7 @@ spec:
             # instance, or its plugins talk to -- and hand clients links to --
             # production Jellyfin. Whole-hostname matches, plugins/ only.
             - --rewrite-host=jellyfin.equestria.svc.cluster.local=jellyfin-pg.equestria.svc.cluster.local
-            - --rewrite-host=jellyfin.driscoll.tech=jellyfin-pg.driscoll.tech
+            - --rewrite-host=jellyfin.${ROOT_DOMAIN}=jellyfin-pg.${ROOT_DOMAIN}
           volumeMounts:
             - { name: scripts, mountPath: /scripts }
             - { name: work, mountPath: /work }

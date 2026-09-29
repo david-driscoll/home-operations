@@ -19,7 +19,7 @@ patches:
         value: toolhive-proxmox-luna
       - op: replace
         path: /spec/env/2/value
-        value: "luna.opossum-yo.ts.net"
+        value: "luna.${TAILSCALE_DOMAIN}"
   - target:
       kind: ExternalSecret
     patch: |-

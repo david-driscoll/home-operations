@@ -28,11 +28,12 @@ jobs:
     steps:
       - name: Report to Gatus
         env:
-          # Both are repository secrets. GATUS_TOKEN is the endpoint token,
-          # which Gatus uses as BOTH the path segment and the bearer.
-          # GATUS_CONNECT_TO is a secret only to keep the tailnet host out of
-          # a repository that Forgejo serves; it is not sensitive.
+          # All three are repository secrets. GATUS_TOKEN is the endpoint
+          # token, which Gatus uses as BOTH the path segment and the bearer.
+          # GATUS_URL and GATUS_CONNECT_TO are secrets only to keep the
+          # estate's hostnames out of the repository; they are not sensitive.
           GATUS_TOKEN: ${{ secrets.GATUS_TOKEN }}
+          GATUS_URL: ${{ secrets.GATUS_URL }}
           GATUS_CONNECT_TO: ${{ secrets.GATUS_CONNECT_TO }}
         run: |
           set -euo pipefail
@@ -44,4 +45,4 @@ jobs:
             --max-time 30 \
             --connect-to "$GATUS_CONNECT_TO" \
             -H "Authorization: Bearer $GATUS_TOKEN" \
-            "https://uptime.driscoll.tech/api/v1/endpoints/${GATUS_TOKEN}/external?success=true"
+            "$GATUS_URL/api/v1/endpoints/${GATUS_TOKEN}/external?success=true"

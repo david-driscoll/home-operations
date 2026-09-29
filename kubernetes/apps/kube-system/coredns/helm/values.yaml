@@ -44,7 +44,7 @@ servers:
   # is what lets the in-cluster technitium secondary reach its cluster peers
   # (heartbeat/config sync) without hardcoded addresses.
   - zones:
-      - zone: dns.driscoll.tech
+      - zone: dns.${ROOT_DOMAIN}
         scheme: dns://
         use_tcp: false
     port: 53
@@ -52,8 +52,13 @@ servers:
       - name: errors
       - name: cache
         parameters: 30
+      # The root domain is substituted from shared-secrets, so its own dot
+      # renders UNESCAPED in both rewrite regexes here and matches any
+      # character. Harmless: the exact zones above already admit only names
+      # under that domain. (Placeholder spelling, no dollar-brace form: this
+      # file is slurped into a ConfigMap and envsubst reaches comments too.)
       - name: rewrite
-        parameters: name regex ([a-z0-9-]+)\.dns\.driscoll\.tech dns-{1}.${TAILSCALE_DOMAIN} answer auto
+        parameters: name regex ([a-z0-9-]+)\.dns\.${ROOT_DOMAIN} dns-{1}.${TAILSCALE_DOMAIN} answer auto
       - name: forward
         parameters: . "${TAILSCALE_NAMESERVER_IP}"
   # Dockge hosts by their canonical names: dockge-*.<root domain> resolves to
@@ -73,16 +78,16 @@ servers:
   # cert-manager depends on. CoreDNS's rewrite has no NXDOMAIN fallthrough, so
   # a catch-all would hard-fail every name that has no tailnet counterpart.
   - zones:
-      - zone: dockge-celestia.driscoll.tech
+      - zone: dockge-celestia.${ROOT_DOMAIN}
         scheme: dns://
         use_tcp: false
-      - zone: dockge-luna.driscoll.tech
+      - zone: dockge-luna.${ROOT_DOMAIN}
         scheme: dns://
         use_tcp: false
-      - zone: dockge-as.driscoll.tech
+      - zone: dockge-as.${ROOT_DOMAIN}
         scheme: dns://
         use_tcp: false
-      - zone: dockge-skystar.driscoll.tech
+      - zone: dockge-skystar.${ROOT_DOMAIN}
         scheme: dns://
         use_tcp: false
     port: 53
@@ -91,7 +96,7 @@ servers:
       - name: cache
         parameters: 30
       - name: rewrite
-        parameters: name regex (dockge-[a-z0-9-]+)\.driscoll\.tech {1}.${TAILSCALE_DOMAIN} answer auto
+        parameters: name regex (dockge-[a-z0-9-]+)\.${ROOT_DOMAIN} {1}.${TAILSCALE_DOMAIN} answer auto
       - name: forward
         parameters: . "${TAILSCALE_NAMESERVER_IP}"
   # The rest of <root domain>, resolved against the INTERNAL authoritative zone
@@ -133,7 +138,7 @@ servers:
   # on purpose: this file is slurped into a ConfigMap, and Flux postBuild
   # envsubst expands that form even inside a comment -- eso-values-lint.)
   - zones:
-      - zone: driscoll.tech
+      - zone: ${ROOT_DOMAIN}
         scheme: dns://
         use_tcp: false
     port: 53

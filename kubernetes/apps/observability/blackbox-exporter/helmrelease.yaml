@@ -77,7 +77,7 @@ spec:
           prober: dns
           timeout: 5s
           dns:
-            query_name: "dns.driscoll.tech"
+            query_name: "dns.${ROOT_DOMAIN}"
             query_type: "SOA"
             preferred_ip_protocol: ip4
         ssh_banner:
