@@ -505,16 +505,16 @@ Renovate hops on a weekend schedule. The runtime route has a direct precedent:
 - of the 1,644 non-`node_modules` JS files, only these two contain the text;
 - the frontend does not rebuild media URLs, and there is no frontend CSP.
 
-**Renovate.** The shared preset **automerges docker patch bumps** (for example #2144), so add a
-rule to `.github/renovate.json5`:
+**Renovate.** The shared preset **automerges docker patch bumps** (for example #2144). The plan
+first added a never-automerge rule for postiz; David dropped it on 2026-09-29, so postiz bumps
+flow like any other image. What catches a bump that moves the matched text:
+- the patch fails open, so postiz still starts;
+- the Funnel canary's body turns `patch-not-applied`, and Gatus stays red until it is fixed;
+- `PostizMediaPatchNotApplied` fires on the restart.
 
-```json5
-{ description: "postiz: runtime-patched, never automerge", matchDatasources: ["docker"], matchPackageNames: ["ghcr.io/gitroomhq/postiz-app"], automerge: false }
-```
-
-Then every postiz bump is a reviewed PR. In review, stream the new image layer and run the same
-grep before merging. A native upstream `UPLOAD_PUBLIC_URL` changes the matched text, the guard
-flags it, and the patch can then be deleted.
+Until the pattern is fixed, new media URLs fall back to the internal-only `FRONTEND_URL`. A native
+upstream `UPLOAD_PUBLIC_URL` changes the matched text the same way, and the patch can then be
+deleted.
 
 **Upstream PR** to gitroomhq/postiz-app:
 
@@ -766,7 +766,7 @@ Each numbered item is one PR unless marked otherwise.
    - ~~the estate's WAN IP in the CrowdSec agents' postoverflow whitelist and in the funnel
      bouncer's `clientTrustedIPs`~~ **deferred** by David on 2026-09-29 (J11). postiz's own hairpin
      fetches go through the door's throttles and AppSec like any other client;
-   - the Renovate rule;
+   - ~~the Renovate rule~~ (dropped 2026-09-29: postiz bumps automerge, see §E2);
    - the postiz Gatus entry and the Loki marker rules;
    - **delete `route.external`**. The tunnel config shrinks to the webhook rule on the next vault
      run.

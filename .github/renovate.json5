@@ -219,20 +219,6 @@
   },
   packageRules: [
     {
-      // postiz is runtime-patched: patch-media-url in
-      // kubernetes/apps/equestria/home/postiz/helmrelease.yaml rewrites
-      // `process.env.FRONTEND_URL + '/uploads'` in two compiled files. It fails
-      // open, so a bump that moves that text starts cleanly and silently sends
-      // new media URLs to the internal-only host. The shared preset automerges
-      // docker patch bumps, so every postiz bump is a reviewed PR instead:
-      // check the new image still has that text exactly twice per file (or
-      // that upstream now has its own UPLOAD_PUBLIC_URL) before merging.
-      description: "postiz: runtime-patched, never automerge",
-      matchDatasources: ["docker"],
-      matchPackageNames: ["ghcr.io/gitroomhq/postiz-app"],
-      automerge: false,
-    },
-    {
       // Jellyfin's 12.0 release candidates are tagged `12.0-rcN`, and the
       // DEFAULT `docker` versioning reads everything after the first `-` as an
       // image VARIANT -- the same slot that holds `alpine` or `rootless` --

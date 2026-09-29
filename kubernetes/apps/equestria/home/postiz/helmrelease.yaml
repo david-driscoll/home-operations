@@ -75,11 +75,12 @@ spec:
               # BullMQ-on-Redis release. Do not roll back across that line
               # without also reading apps/database/temporal.
               #
-              # ⚠️ Runtime-patched (patch-media-url above). Before merging a
-              # bump, check the new image's two local.storage.js files still
-              # contain `process.env.FRONTEND_URL + '/uploads'` exactly twice
-              # each -- or that upstream now has its own UPLOAD_PUBLIC_URL, in
-              # which case delete the patch.
+              # ⚠️ Runtime-patched (patch-media-url, in initContainers below).
+              # Bumps automerge like any other image (decided 2026-09-29): the
+              # patch fails open, and a bump that moves the matched text turns
+              # the Funnel canary red (definition.yaml) and fires
+              # PostizMediaPatchNotApplied. Then fix the sed pattern -- or, if
+              # upstream now has its own UPLOAD_PUBLIC_URL, delete the patch.
               tag: v2.24.0@sha256:01b24a4fc1055f6833122c99614805bea702fdc0ee30c9b5d09330b521fa1efa
               pullPolicy: IfNotPresent
             envFrom:
@@ -203,8 +204,8 @@ spec:
           # A Loki rule alerts on the marker (./loki-rules.yaml).
           #
           # Same image as the app via the anchor, so one Renovate bump moves
-          # both -- and .github/renovate.json5 keeps postiz bumps out of
-          # automerge, so each one is reviewed against this.
+          # both. Bumps automerge; the canary and the Loki rule are what catch
+          # one that no longer matches.
           #
           # It also writes /uploads/funnel-canary.txt, which Gatus fetches
           # through the public Funnel path (./definition.yaml): "ok" only when
