@@ -224,11 +224,10 @@ const carvedOutServices = new Set(["dockge-as", "dockge-celestia", "dns-celestia
  * unlike the per-device Services above it is not discovered from the device list
  * and has to be named here. `externalName` is the VIP's own tailnet name.
  *
- * ACL note: no grant names a `svc:` in its `dst`, and none needs to. Tailscale
- * evaluates VIP traffic against the ADVERTISING node, so the existing
- * `garage-s3-backups` grant (src tag:egress -> dst tag:dockge, ports.garageS3)
- * already covers a pod reaching this. Verified against the live policy: 69
- * grants, zero with a `svc:` destination, and the VIP answers today.
+ * ACL note: no grant names a `svc:` in its `dst`, and none needs to. A VIP is
+ * matched by its own tags (`tag:dockge` + `tag:apps`, set where the service is
+ * created), so a grant to `tag:dockge` covers it -- but only on the ports the
+ * VIP actually serves, which are the ones `tailscale serve --service=` binds.
  */
 const vipServices: { name: string; ports: PortDef[] }[] = [
   {
@@ -242,16 +241,21 @@ const vipServices: { name: string; ports: PortDef[] }[] = [
     // to. `svc:garage-s3` is owned by stacks/system's garage.ts and advertised by
     // all three nodes (SHARED_TAILSCALE_SERVICES in components/DockgeLxc.ts).
     //
-    // Inert until something points at it -- the Garage cutover is still staged on
-    // MinIO. See the flip note in
-    // kubernetes/apps/database/postgres/app/resources/values.yaml, which is where
-    // the endpoint is chosen.
+    // HTTPS on 443, NOT 3900. Every node advertises the VIP with
+    // `tailscale serve --service=svc:garage-s3 --https=443` into its traefik,
+    // which routes Host(garage-s3.<tailnet>) to Garage's 3900 and keeps the Host
+    // header SigV4 signs (docker/_common/garage/compose.yaml). Nothing on the VIP
+    // listens on 3900: this Service forwarded 3900 until 2026-09-29 and every
+    // connection was refused. Consumers use https://garage-s3.<tailnet>, which
+    // in-cluster resolves to this Service and matches traefik's LE cert.
+    // The ACL side is `default-apps-access` (every tag -> tag:dockge, 443), the
+    // same grant the per-device `https` ports above rely on.
     //
-    // No probe: the S3 root answers a SigV4 error, not a 2xx (confirmed: it
-    // returns 403 over the tailnet), and the garage stack's own Gatus TCP checks
-    // already cover liveness.
+    // No probe: the S3 root answers a SigV4 error, not a 2xx (confirmed:
+    // https://garage-s3.<tailnet>/ returns 403 from a tailnet host), and the
+    // garage stack's own Gatus TCP checks already cover liveness.
     name: "garage-s3",
-    ports: [{ name: "s3", port: grantedPort("garageS3", Tailscale.ports.garageS3, 3900) }],
+    ports: [{ name: "https", port: 443 }],
   },
 ];
 
