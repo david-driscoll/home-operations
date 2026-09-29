@@ -129,7 +129,7 @@ spec:
       - --interval=60s
       # Flux is a competing writer on `spec.replicas` by construction. The default is
       # 0 retries, which means a single 409 conflict SILENTLY drops that scaling
-      # action for the cycle -- and on the 09:00 upscale that is a workload left at
+      # action for the cycle -- and on the 07:00 upscale that is a workload left at
       # zero until the next cycle notices.
       - --max-retries-on-conflict=3
       # Structured logs, so Loki gets fields rather than a prose blob.
@@ -140,7 +140,7 @@ spec:
       # it is reviewable and it cannot be left half-applied across namespaces.
       # - --force-downtime=true
 
-    # NIGHTLY LOW POWER -- 02:00-09:00 estate-local time, every day.
+    # NIGHTLY LOW POWER -- 01:00-07:00 estate-local time, every day.
     #
     # This is the Low Power tier of docs/cluster-consolidation/24-power-states.md on a
     # schedule rather than a manual toggle. It sheds Tier 2 only: the keep-list
@@ -152,7 +152,7 @@ spec:
     #
     # FORMAT CONSTRAINTS, both load-bearing:
     #   * a spec cannot cross midnight -- a range is interpreted within a single day,
-    #     so `22:00-06:00` would be silently wrong. 02:00 to 09:00 is same-day, which
+    #     so `22:00-06:00` would be silently wrong. 01:00 to 07:00 is same-day, which
     #     is why this window works as written.
     #   * end must be later than start in 24-hour time.
     # Comma-separate for more windows; `Mon-Sun` is every day.
@@ -226,7 +226,7 @@ spec:
 
     # PROMETHEUS METRICS -- the headline reason to migrate. py-kube-downscaler has
     # never had any (caas-team/py-kube-downscaler#164, open since 2025-07), which is
-    # why a missed 09:00 upscale has always been invisible until someone noticed an
+    # why a missed 07:00 upscale has always been invisible until someone noticed an
     # app was down. Alert rules live in ./prometheusrule.yaml.
     #
     # `metrics.enabled` renders `--metrics` and a containerPort 8085. The chart's own

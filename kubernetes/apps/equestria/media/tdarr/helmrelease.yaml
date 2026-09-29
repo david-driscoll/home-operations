@@ -16,6 +16,9 @@ spec:
     controllers:
       *app :
         type: deployment
+        annotations:
+          # Always up: excluded from the nightly 01:00-07:00 shed.
+          downscaler/exclude: "true"
         replicas: 1
         containers:
           app:
@@ -65,6 +68,9 @@ spec:
                 memory: 2Gi
       tdarr-node:
         type: deployment
+        annotations:
+          # Always up: excluded from the nightly 01:00-07:00 shed.
+          downscaler/exclude: "true"
         replicas: 2
         containers:
           app:
