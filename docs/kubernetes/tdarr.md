@@ -159,7 +159,7 @@ FLAC files (119.7 GB, 659 of them 24-bit) next to 2,120 MP3 and AAC files.
 
 | Rule | Why |
 | --- | --- |
-| FLAC, ALAC, WAV/PCM, APE, WavPack, TTA, TAK → AAC 256k (96k per channel above stereo), `.m4a`. | AAC-256 is a Lidarr quality; Lidarr has no Opus quality at all, so Opus files would import as "Unknown". AAC also plays natively on every Apple device. |
+| FLAC, ALAC, WAV/PCM, APE, WavPack, TTA, TAK → AAC 256k (96k per channel above stereo), `.m4a`. | Lidarr has no Opus quality at all, so Opus files would import as "Unknown". Lidarr files ffmpeg's 256k AAC (~260-270 kbps measured) as **AAC-VBR**, in the High Quality Lossy group. AAC also plays natively on every Apple device. |
 | Above 48 kHz is resampled to 48 kHz. | AAC gains nothing from hi-res sample rates. |
 | MP3, AAC, Opus and Vorbis are left alone: "Not required". | Re-encoding lossy audio only loses quality. |
 | The first JPEG/PNG cover is kept as the attached picture; other streams are dropped. | MP4 holds one cover; players otherwise use the folder art. |
@@ -171,12 +171,27 @@ It depends on Lidarr to finish each file:
   keeps them in freeform atoms ffmpeg does not write). Lidarr has
   `writeaudiotags: Sync`, so it writes them back when it imports the `.m4a`.
   Navidrome's track ID (`PID.Track`) prefers the MusicBrainz track ID, which
-  is what should carry stars and play counts across the change of extension;
-  check it on the pilot album before trusting it library-wide.
+  is what should carry stars and play counts across the change of extension.
+  Lidarr only re-imports on a rescan: its own schedule, or `RescanFolders`
+  `{folders: [<artist dir>]}` (no `filter`, which defaults to `known`).
 - **No re-download.** The `Any` profile (every artist but one) has upgrades
   off, and FLAC ranks below high-quality lossy, so a converted album is never
   "upgraded" back to FLAC. New grabs still take FLAC when that is all there
   is; the flow converts those too.
+
+### The music pilot (2026-09-29)
+
+Tina Turner, *GoldenEye* (4 × 16/44.1 FLAC, ~900 kbps), in a one-folder
+"Music pilot" library with its files bumped to the head of the queue:
+
+- **Conversion:** all 4 succeeded in about a minute, 117.8 MB → 34.1 MB
+  (27-31% of the FLAC). Each is AAC at 258-269 kbps with the embedded JPEG
+  cover kept. Title, artists, album, date, track, disc and genre survived; the
+  MusicBrainz IDs did not, as expected.
+- **Lidarr:** a `RescanFolders` of the artist imported all 4 as AAC-VBR, linked
+  to their tracks, and dropped the FLAC track files. It wrote the full
+  MusicBrainz ID set and release tags back into each `.m4a` (about +3.5 KB
+  each), and afterwards `GET /retag` reported no differences.
 
 The Tdarr Music library is `/media/music`, which is also Lidarr's only root
 folder since 2026-09-29. Artists used to sit one level down, in `general/`;
