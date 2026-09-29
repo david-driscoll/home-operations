@@ -88,6 +88,10 @@ mosquitto = "mosquitto"
 Mosquitto = "Mosquitto"
 # home-operations/flate, the Flux renderer this repo now runs in every hook.
 flate = "flate"
+# TAK (Tom's lossless Audio Kompressor), a codec ffprobe names `tak`; the Tdarr
+# music policy (docs/kubernetes/assets/tdarr/music-policy.cjs) matches it.
+tak = "tak"
+TAK = "TAK"
 # Home Assistant's env-var prefix (HASS_*).
 HASS = "HASS"
 # StremThru, the Stremio companion service -- split on the case boundary, like
