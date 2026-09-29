@@ -153,7 +153,7 @@ To try again, run it on one node only, outside the encode backlog:
 ## Music
 
 The `Music AAC` flow (`musicAac`) converts lossless music to AAC in place. It
-was chosen 2026-09-29 for space: on that day `/media/music/general` held 4,322
+was chosen 2026-09-29 for space: on that day the Lidarr library held 4,322
 FLAC files (119.7 GB, 659 of them 24-bit) next to 2,120 MP3 and AAC files.
 [`music-policy.cjs`](assets/tdarr/music-policy.cjs) makes the decisions:
 
@@ -178,9 +178,12 @@ It depends on Lidarr to finish each file:
   "upgraded" back to FLAC. New grabs still take FLAC when that is all there
   is; the flow converts those too.
 
-Only `/media/music/general` (Lidarr's root folder) is in the library.
-`/media/music/soundtracks` is not managed by Lidarr, so nothing would restore
-its MusicBrainz tags.
+The Tdarr Music library is `/media/music`, which is also Lidarr's only root
+folder since 2026-09-29. Artists used to sit one level down, in `general/`;
+Lidarr's Mass Editor moved all 1,329 (Root Folder → `/media/music`, move
+files), and its artist and track-file paths moved with them. Anything added to
+`/media/music` outside Lidarr has nothing to restore its MusicBrainz tags
+after conversion.
 
 ## What was wrong on 2026-09-27
 
