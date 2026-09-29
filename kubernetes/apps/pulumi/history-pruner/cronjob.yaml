@@ -5,12 +5,18 @@ metadata:
   name: pulumi-history-pruner
   namespace: pulumi
 spec:
-  # Nightly; each stack's Pulumi update history can otherwise grow unbounded
-  # in the S3 backend and make `pulumi stack history` (called by the operator
-  # after every up) slow or hang. Every update also writes a full checkpoint
-  # copy into history/, so a stack that resyncs every 300s (system, ~11 MB)
-  # adds gigabytes a day to the bucket until this runs.
-  schedule: "17 3 * * *"
+  # Two trees under each backend root grow without bound:
+  #
+  # - history/: one full checkpoint copy per update. Left alone it also makes
+  #   `pulumi stack history` (called by the operator after every up) slow or
+  #   hang.
+  # - backups/: the DIY backend's pre-write copy of the checkpoint, taken on
+  #   EVERY checkpoint save, i.e. many times per update. This is the big one:
+  #   6.8 GB of the bucket's 7.7 GB ten hours after the Garage cutover
+  #   (2026-09-29), about 15 GB/day against a 100 GiB bucket quota.
+  #
+  # Every 6h rather than nightly so backups/ peaks at ~1.25 days, not ~2.
+  schedule: "17 */6 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -58,19 +64,31 @@ spec:
               args:
                 - |
                   set -eu
-                  KEEP=3d
+                  # history/ is the per-update record, so it keeps longer.
+                  # backups/ only exists to recover from a checkpoint write that
+                  # went wrong mid-update; a day covers that. Point-in-time
+                  # copies of the state are the restic plan's job
+                  # (stacks/backups/index.ts `pulumi-state`) and alpha-site's
+                  # (docker/alpha-site/garage-backup).
+                  KEEP_HISTORY=3d
+                  KEEP_BACKUPS=1d
                   BUCKET=pulumi-state
                   # One prefix per Pulumi backend root. `backups` holds both the
                   # backups and system stacks.
                   PREFIXES="authentik backups gulf-of-mexico home ocracoke unifi-network vault"
 
-                  echo "$(date -u): Pruning Pulumi update history older than $KEEP"
+                  prune() {
+                    echo "  Pruning garage:$BUCKET/$1/.pulumi/$2/ older than $3"
+                    rclone delete --min-age "$3" --s3-no-check-bucket "garage:$BUCKET/$1/.pulumi/$2/" \
+                      || echo "  WARNING: prune of $1/$2 failed (will retry next run)"
+                  }
+
+                  echo "$(date -u): Pruning Pulumi history ($KEEP_HISTORY) and checkpoint backups ($KEEP_BACKUPS)"
                   for prefix in $PREFIXES; do
-                    echo "  Pruning garage:$BUCKET/$prefix/.pulumi/history/"
-                    rclone delete --min-age "$KEEP" --s3-no-check-bucket "garage:$BUCKET/$prefix/.pulumi/history/" \
-                      || echo "  WARNING: prune failed for $prefix (will retry next run)"
+                    prune "$prefix" history "$KEEP_HISTORY"
+                    prune "$prefix" backups "$KEEP_BACKUPS"
                   done
-                  echo "$(date -u): History prune complete"
+                  echo "$(date -u): Prune complete"
               resources:
                 requests:
                   cpu: 10m
