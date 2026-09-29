@@ -763,8 +763,9 @@ Each numbered item is one PR unless marked otherwise.
    - `'/uploads/ postiz-media'` on the device list, and
      `'equestria postiz-cdn 8080 /uploads/ postiz-media.${TAILSCALE_DOMAIN}'` on the route list;
    - `equestria` in the funnel Gateway's namespace selector;
-   - the estate's WAN IP in the CrowdSec agents' postoverflow whitelist and in the funnel bouncer's
-     `clientTrustedIPs`: postiz's own hairpin fetches arrive from it (J11);
+   - ~~the estate's WAN IP in the CrowdSec agents' postoverflow whitelist and in the funnel
+     bouncer's `clientTrustedIPs`~~ **deferred** by David on 2026-09-29 (J11). postiz's own hairpin
+     fetches go through the door's throttles and AppSec like any other client;
    - the Renovate rule;
    - the postiz Gatus entry and the Loki marker rules;
    - **delete `route.external`**. The tunnel config shrinks to the webhook rule on the next vault
@@ -872,6 +873,9 @@ Each numbered item is one PR unless marked otherwise.
   - **Postiz:** a `gatus:` entry in `postiz/definition.yaml`.
     - URL: `https://postiz-media.${TAILSCALE_DOMAIN}/uploads/funnel-canary.txt`.
     - Conditions: `[STATUS] == 200`, `[BODY] == ok`, `[CERTIFICATE_EXPIRATION] > 72h`.
+    - The init container writes `ok` only when **both** files were patched, and
+      `patch-not-applied` otherwise. So this probe also stays red while the patch is off, which
+      the once-per-start Loki markers cannot do.
     - The ApplicationDefinition CRD supports `client`, and Pushover is added automatically for
       ApplicationDefinition entries (`components/authentik.ts:557-561`).
   - **Webhook:** added in `KubernetesFluxWebhooks.ts` via `addUptimeGatus`, next to the URL it
@@ -1065,7 +1069,9 @@ Each numbered item is one PR unless marked otherwise.
     them, not its per-delivery alerts: AppSec alerts skip postoverflow whitelists.
 - ❓ **J10. Encoded `;`, `?` and `#`.** Left allowed on the door. Tighten once postiz filenames are
   confirmed; they are 32-hex random names, which suggests it is safe.
-- ❓ **J11. The postiz hairpin (step 5).** postiz's own media fetches reach the door from the
+- ⏸️ **J11. The postiz hairpin (step 5).** Deferred 2026-09-29 (David): step 5 shipped without
+  the allow-listing, so postiz's own fetches are throttled and WAF-inspected. Revisit if a
+  postiz fetch is ever throttled (429) or blocked (`FunnelDoorBlocked` with postiz's ClientHost). postiz's own media fetches reach the door from the
   estate's WAN IP. Step 5 adds that IP to the agents' postoverflow whitelist and to the bouncer's
   `clientTrustedIPs`. No WAN-IP variable exists yet.
   - **Since J8, also decide the platforms' fetchers.** AppSec makes it cheaper to get an innocent

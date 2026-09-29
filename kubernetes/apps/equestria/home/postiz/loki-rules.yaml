@@ -1,0 +1,66 @@
+---
+# Loki ruler rules for postiz's runtime media-URL patch (patch-media-url in
+# ./helmrelease.yaml). The loki-sc-rules sidecar picks up a ConfigMap labelled
+# `loki_rule` from ANY namespace; see
+# observability/loki/rules/credential-drift-rules.yaml for the plumbing and for
+# how to prove a rule actually loaded (`/loki/api/v1/rules`).
+#
+# The init container fails OPEN: on a mismatch it copies the original files
+# through, postiz starts normally, and every new media URL quietly falls back
+# to FRONTEND_URL, which the internet cannot reach. Media posts to the
+# platforms that pull by URL (Instagram, Facebook, TikTok photos) then fail.
+# Its markers are the only trace, one line per pod start, so these fire on a
+# single line. They clear after the window. The persistent signal is the
+# Funnel canary in ./definition.yaml, whose body is "ok" only while the patch
+# is on.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${APP}-loki-rules
+  labels:
+    loki_rule: "true"
+data:
+  postiz-media-patch.yaml: |
+    groups:
+      - name: postiz-media-patch
+        rules:
+          - alert: PostizMediaPatchNotApplied
+            expr: |
+              sum(
+                count_over_time(
+                  {namespace="equestria", container="patch-media-url"}
+                    |= "POSTIZ_MEDIA_PATCH_NOT_APPLIED"
+                  [6h]
+                )
+              ) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: postiz started without its media-URL patch.
+              description: >-
+                postiz's patch-media-url init container did not find exactly two
+                `process.env.FRONTEND_URL + '/uploads'` in a local.storage.js,
+                most likely after an image bump, and copied the original through.
+                New media URLs point at the internal-only FRONTEND_URL, so
+                Instagram, Facebook and TikTok-photo posts will fail. Check the
+                init log, then either fix the sed pattern in
+                equestria/home/postiz/helmrelease.yaml or, if upstream now has its
+                own UPLOAD_PUBLIC_URL, delete the patch.
+          - alert: PostizFunnelCanaryNotWritten
+            expr: |
+              sum(
+                count_over_time(
+                  {namespace="equestria", container="patch-media-url"}
+                    |= "POSTIZ_FUNNEL_CANARY_NOT_WRITTEN"
+                  [6h]
+                )
+              ) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: postiz could not write its Funnel canary file.
+              description: >-
+                patch-media-url could not write /uploads/funnel-canary.txt, so
+                the Gatus probe of postiz-media will fail even though media may
+                be fine. Check the uploads volume (subPath `uploads` of the
+                postiz PVC) is mounted and writable.

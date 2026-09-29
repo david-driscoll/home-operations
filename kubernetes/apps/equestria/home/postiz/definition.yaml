@@ -40,3 +40,18 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
+    # The public media path, end to end: Funnel relay -> Traefik's funnel door
+    # -> postiz-cdn. The canary file is written on every postiz start by the
+    # patch-media-url init container (helmrelease.yaml). Quad9 as the resolver
+    # so Gatus takes the public path rather than MagicDNS.
+    - name: "media (funnel)"
+      group: "Funnel"
+      url: "https://postiz-media.${TAILSCALE_DOMAIN}/uploads/funnel-canary.txt"
+      method: GET
+      interval: 5m
+      client:
+        dns-resolver: "tcp://9.9.9.9:53"
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY] == ok"
+        - "[CERTIFICATE_EXPIRATION] > 72h"

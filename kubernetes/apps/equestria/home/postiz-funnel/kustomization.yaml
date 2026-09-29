@@ -1,0 +1,9 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Empty on purpose: the one resource is the nested Kustomization that ./ks.yaml
+# pulls in as a component (kubernetes/components/funnel). It in turn renders
+# the Funnel Ingress (in `network`) and the HTTPRoute (here).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: []

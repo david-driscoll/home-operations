@@ -132,7 +132,8 @@ spec:
             + ' ' + string(object.spec.rules[0].backendRefs[0].port)
             + ' ' + object.spec.rules[0].matches[0].path.value
             + ' ' + object.spec.hostnames[0]) in [
-          'flux-system webhook-receiver 80 /hook/ flux-equestria-webhook.${TAILSCALE_DOMAIN}'
+          'flux-system webhook-receiver 80 /hook/ flux-equestria-webhook.${TAILSCALE_DOMAIN}',
+          'equestria postiz-cdn 8080 /uploads/ postiz-media.${TAILSCALE_DOMAIN}'
         ]
       messageExpression: >
         'not on the Funnel route allow-list (apps/tailscale-system/funnel-policy/funnel-httproute-shape.yaml): '

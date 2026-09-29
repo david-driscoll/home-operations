@@ -163,7 +163,8 @@ spec:
         && has(object.spec.rules[0].http.paths[0].path)
         && (object.spec.rules[0].http.paths[0].path
             + ' ' + object.spec.tls[0].hosts[0]) in [
-          '/hook/ flux-equestria-webhook'
+          '/hook/ flux-equestria-webhook',
+          '/uploads/ postiz-media'
         ]
       messageExpression: >
         'not on the Funnel device list (apps/tailscale-system/funnel-policy/funnel-ingress-shape.yaml): '

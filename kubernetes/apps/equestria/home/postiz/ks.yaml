@@ -68,6 +68,6 @@ spec:
       VOLSYNC_CAPACITY: 20Gi
       # ReadWriteMany, not ReadWriteOnce: TWO pods mount this claim -- postiz
       # writes uploads into it, and the `cdn` controller beside it serves them
-      # read-only to the public internet (see helmrelease.yaml for why the media
-      # host cannot be a separate origin). n8n already runs RWX on this storage.
+      # read-only to the public internet through Tailscale Funnel
+      # (../postiz-funnel). n8n already runs RWX on this storage.
       VOLSYNC_ACCESSMODES: ReadWriteMany
