@@ -85,6 +85,12 @@ export const BACKUP_OPT_OUT_STACKS: ReadonlySet<string> = new Set([
   // anyway; metadata_auto_snapshot_interval in garage.toml is the local
   // recovery mechanism for that (docs/garage-offsite-s3.md).
   "garage",
+  // Same category: alpha-site's standalone Garage IS the off-site copy of the
+  // Pulumi state (docs/garage-offsite-s3.md, "Pulumi state"). Its data is a
+  // mirror plus dated snapshots of a bucket that backrest already snapshots
+  // directly (the `pulumi-state` plan in stacks/backups), and a file-level copy
+  // of its live LMDB is torn -- the same reasons as `garage` above.
+  "garage-backup",
 ]);
 
 /**
