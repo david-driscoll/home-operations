@@ -1,4 +1,13 @@
 import { WebSocket } from "node:http";
+// Side effect, and load-bearing: installs vscode-jsonrpc's Node runtime
+// abstraction layer (timers, message buffers). vscode-ws-jsonrpc 4.x only
+// imports vscode-jsonrpc's `common` modules, which never install it -- so
+// without this line every INCOMING message throws "No runtime abstraction
+// layer installed" inside the reader, is reported as a parse error and
+// dropped. Requests then never resolve, TrueNAS closes the idle socket, and
+// the pending call rejects with "Pending response rejected since connection
+// got disposed" -- which failed every stacks/home run from late September.
+import "vscode-jsonrpc/node";
 import type { MessageConnection } from "vscode-jsonrpc";
 import { ConsoleLogger, listen } from "vscode-ws-jsonrpc";
 import {
