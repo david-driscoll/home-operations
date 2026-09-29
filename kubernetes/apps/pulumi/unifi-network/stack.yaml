@@ -149,10 +149,6 @@ spec:
                 type: DirectoryOrCreate
             - name: vals-bin
               emptyDir: {}
-            - name: mise-cache
-              hostPath:
-                path: /var/lib/pulumi-mise-cache
-                type: DirectoryOrCreate
           # Installs the vals binary for the ref+openbao:// resolver
           # (components/store/refs.ts, PLAN §D.1). mise does the fetching so
           # the pin lives in the mise ecosystem — keep the version in step
@@ -202,12 +198,18 @@ spec:
                 # Install STRAIGHT INTO the shared emptyDir instead of into a
                 # private dir followed by a copy -- the copy is what needed a
                 # shell. /opt/vals is already mounted into the pulumi container,
-                # so nothing has to move afterwards. Still pod-local; only the
-                # DOWNLOAD cache below is shared between pods.
+                # so nothing has to move afterwards. Pod-local, cache included.
                 - name: MISE_DATA_DIR
                   value: /opt/vals
+                # Pod-local, NOT the old shared /var/lib/pulumi-mise-cache hostPath.
+                # mise 2026.9.15 keeps no downloaded tarball after an install, so a
+                # shared cache saved nothing -- every pod downloads anyway -- and its
+                # only effect was that workspaces starting together on one node wrote
+                # the same tarball path at once. One of them would extract a half-
+                # written archive, report "installed", and leave no binary: the
+                # intermittent `spawn .../vals ENOENT` from 2026-09-27 onward.
                 - name: MISE_CACHE_DIR
-                  value: /mise-cache
+                  value: /opt/vals/.mise-cache
                 - name: MISE_YES
                   value: "1"
               # The 3-attempt retry loop is gone with the shell, and is not
@@ -219,7 +221,7 @@ spec:
               # under which a root-owned hostPath is unwritable — every EACCES
               # in the first rollout was this, not an install race (the pods
               # that "worked" predated the vals init entirely). This one init
-              # runs as root to use the shared cache; the tree it drops is
+              # runs as root; the tree it drops is
               # 0755 root-owned, which uid 1000 traverses and executes fine.
               securityContext:
                 runAsUser: 0
@@ -228,8 +230,6 @@ spec:
               volumeMounts:
                 - name: vals-bin
                   mountPath: /opt/vals
-                - name: mise-cache
-                  mountPath: /mise-cache
           containers:
             - name: pulumi
               resources:
