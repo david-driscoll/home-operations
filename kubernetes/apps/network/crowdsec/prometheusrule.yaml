@@ -258,6 +258,47 @@ spec:
           labels:
             severity: warning
 
+        # The case neither CrowdsecAppsecAbsent (pod) nor ./loki-rules.yaml's
+        # FunnelAppsecUnreachable (Traefik cannot reach it) can see: AppSec is
+        # up and reachable, and Traefik simply never asks it. A door middleware
+        # dropped from the entrypoint chain, `crowdsecAppsecEnabled` flipped
+        # off and forgotten, or a trusted-IP list grown wide enough to cover
+        # the public -- the door keeps serving, uninspected, and nothing is red.
+        #
+        # Only meaningful because of plan step 3's Gatus probe
+        # (stacks/vault/KubernetesFluxWebhooks.ts): alpha-site fetches
+        # flux-<cluster>-webhook's /hook/ through the public Funnel path every
+        # 5 minutes, from an address that is NOT in the bouncer's
+        # clientTrustedIPs, so a working door asks AppSec ~12 times an hour.
+        # Tailnet and GitHub traffic are trusted and never reach AppSec, so
+        # without the probe a zero here would be normal.
+        #
+        # Gated on the door carrying traffic at all, so a dead Funnel proxy or
+        # a red probe -- which the probe's own Gatus alert owns -- does not
+        # page twice. GitHub's pushes also pass that gate, so this can still
+        # fire when ONLY the probe has stopped (alpha-site down): check Gatus
+        # first.
+        - alert: FunnelAppsecNotAsked
+          annotations:
+            description: >-
+              Traefik's funnel entrypoint served requests in the last hour, but CrowdSec
+              AppSec received none. The alpha-site Gatus probe of the webhook's /hook/
+              is an untrusted client, so a working door asks AppSec about 12 times an
+              hour. Check that the probe is green first; if it is, the WAF is being
+              skipped: confirm `crowdsecAppsecEnabled: true` on
+              network-crowdsec-bouncer-funnel and that the funnel entrypoint's
+              middlewares still end in that bouncer (Traefik /api/entrypoints).
+            summary: The Tailscale Funnel door is not asking its WAF.
+          expr: |
+            (sum(increase(cs_appsec_reqs_total[1h])) or vector(0)) == 0
+              and
+            sum(increase(traefik_entrypoint_requests_total{entrypoint="funnel"}[1h])) > 0
+              and
+            count(up{job="crowdsec-appsec-service"} == 1) > 0
+          for: 30m
+          labels:
+            severity: warning
+
         # ---- the community blocklist -----------------------------------
         #
         # CAPI decisions are, today, the ONLY decisions this estate has (5,155
