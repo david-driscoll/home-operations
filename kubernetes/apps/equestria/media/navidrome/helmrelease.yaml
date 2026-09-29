@@ -34,6 +34,10 @@ spec:
     fullnameOverride: *app
     controllers:
       app:
+        annotations:
+          # Always up: excluded from the nightly 01:00-07:00 shed. Music is
+          # what the family still reaches for at midnight.
+          downscaler/exclude: "true"
         # SQLite on a RWO volume: never two pods at once.
         strategy: Recreate
         containers:
