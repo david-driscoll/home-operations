@@ -12,6 +12,7 @@ import { authentikVip, Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
+import { assertGrantPath } from "../../components/tailscale/policyGuards.ts";
 import { getDnsMachines, getTailscaleIp } from "../../components/tailscale.ts";
 
 interface KubernetesCluster {
@@ -604,7 +605,37 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
-    pulumi.output(manager.getJson()).apply(json => {
+    // Pulumi state (and anything else on the Garage VIP) reaches S3 from the
+    // cluster as tag:egress -> svc:garage-s3 on 443; the VIP carries tag:dockge.
+    // `default-apps-access` happens to allow this today, but that is a web grant
+    // for people, and narrowing it must not silently cut every Stack off from
+    // its state. So this path gets its own grant, and two guards:
+    //
+    //   - the `accept` below becomes a policy TEST, so Tailscale itself rejects
+    //     any policy -- ours or a hand edit in the admin console -- that no
+    //     longer lets tag:egress reach tag:dockge:443;
+    //   - assertGarageVipPath() fails this run before the policy is written if
+    //     the rendered policy has no grant for it, whatever else changed.
+    //
+    // If this path is ever cut, the break-glass endpoint is the per-device
+    // dockge-celestia:3900 egress (tailscale-system/services/bootstrap.yaml,
+    // Flux-owned) with the `garage-s3-backups` grant above.
+    manager.setGrant(
+      "garage-s3-vip-egress",
+      {
+        src: [tag.egress],
+        dst: [tag.dockge],
+        ip: ports.garageS3Vip,
+      },
+      { accept: [tag.egress] },
+    );
+
+    const policyJson = pulumi.output(manager.getJson()).apply(json => {
+      assertGrantPath(json, tag.egress, tag.dockge, ports.garageS3Vip.map(String), "That is the cluster's path to the garage-s3 VIP, and Pulumi state lives behind it -- restore the `garage-s3-vip-egress` grant.");
+      return json;
+    });
+
+    policyJson.apply(json => {
       writeFileSync("tailscale-acl.json", json);
     });
 
@@ -612,7 +643,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     const acl = new tailscale.Acl(
       "acl",
       {
-        acl: pulumi.output(manager.getJson()),
+        acl: policyJson,
         overwriteExistingContent: true,
       },
       cro,

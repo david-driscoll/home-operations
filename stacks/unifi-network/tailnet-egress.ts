@@ -255,7 +255,7 @@ const vipServices: { name: string; ports: PortDef[] }[] = [
     // https://garage-s3.<tailnet>/ returns 403 from a tailnet host), and the
     // garage stack's own Gatus TCP checks already cover liveness.
     name: "garage-s3",
-    ports: [{ name: "https", port: 443 }],
+    ports: [{ name: "https", port: grantedPort("garageS3Vip", Tailscale.ports.garageS3Vip, 443) }],
   },
 ];
 
@@ -544,7 +544,12 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
         },
         // Same operator rewrite as the per-device Services above -- a VIP-backed
         // egress is the same object shape, so it hits the same SSA conflict.
-        { ...opts, ignoreChanges: ["spec.externalName"] },
+        //
+        // protect: Pulumi state reaches Garage through garage-s3, and this
+        // stack's own state is in that bucket. A run that deleted or replaced
+        // this Service would cut every Stack -- this one included -- off from
+        // its state mid-update. Removing it takes a human unprotecting it first.
+        { ...opts, ignoreChanges: ["spec.externalName"], protect: vip.name === "garage-s3" },
       ),
     );
   }

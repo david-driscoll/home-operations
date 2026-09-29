@@ -144,6 +144,11 @@ export const Tailscale = {
     //         management from admin workstations)
     garageRpc: ["tcp:3901"] as TailscaleNetworkCapability[],
     garageS3: ["tcp:3900"] as TailscaleNetworkCapability[],
+    // The same S3 API through the `svc:garage-s3` VIP, which every node serves
+    // as HTTPS on 443 (tailscale serve -> traefik -> 3900), never on 3900.
+    // Pulumi state rides this path, so its grant is guarded -- see
+    // `garage-s3-vip-egress` in stacks/unifi-network/acl-manager.ts.
+    garageS3Vip: ["tcp:443"] as TailscaleNetworkCapability[],
     garageAdmin: ["tcp:3903"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {

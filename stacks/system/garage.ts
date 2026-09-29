@@ -108,7 +108,10 @@ export function configureGarage(globals: GlobalResources) {
         tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
         comment: description,
       },
-      { provider: globals.tailscaleProvider },
+      // protect `svc:garage-s3`: it is the endpoint Pulumi state is reached
+      // through (stacks/unifi-network/tailnet-egress.ts), and this stack's own
+      // state is behind it -- deleting it would strand the run doing the delete.
+      { provider: globals.tailscaleProvider, protect: name === "garage-s3" },
     );
   }
 
