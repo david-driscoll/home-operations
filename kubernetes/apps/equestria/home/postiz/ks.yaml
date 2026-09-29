@@ -58,6 +58,7 @@ spec:
     - ../../../../components/postgres
     - ../../../../components/tailscale
     - ../../../../components/volsync
+    - ../../../../components/funnel
   postBuild:
     substitute:
       APP: *app
@@ -68,6 +69,16 @@ spec:
       VOLSYNC_CAPACITY: 20Gi
       # ReadWriteMany, not ReadWriteOnce: TWO pods mount this claim -- postiz
       # writes uploads into it, and the `cdn` controller beside it serves them
-      # read-only to the public internet through Tailscale Funnel
-      # (../postiz-funnel). n8n already runs RWX on this storage.
+      # read-only to the public internet through Tailscale Funnel (the
+      # funnel component below). n8n already runs RWX on this storage.
       VOLSYNC_ACCESSMODES: ReadWriteMany
+      # postiz's media on Funnel: /uploads/ of the read-only `postiz-cdn`
+      # Service at postiz-media.<tailnet>.ts.net. postiz stamps that base onto
+      # every stored media URL (UPLOAD_PUBLIC_URL in externalsecret.yaml), and
+      # the platforms that pull media by URL fetch it from there. Every value
+      # overrides a default (components/funnel/ks.yaml), and each is on both
+      # funnel-policy allow-lists verbatim.
+      FUNNEL_HOST: postiz-media
+      FUNNEL_PATH: /uploads/
+      FUNNEL_SERVICE: postiz-cdn
+      FUNNEL_PORT: "8080"

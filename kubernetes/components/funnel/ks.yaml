@@ -5,8 +5,8 @@
 # docs/plans/cloudflare-tunnel-to-funnel.md §C2 and §C4.
 #
 #   internet -> Funnel relay -> proxy pod (tailscale-system, tag:funnel)
-#     -> Ingress network/funnel-<host>        mounts /<path>/ only, dials
-#        (./endpoint/ingress.yaml)            http://traefik-funnel:8445/<path>/
+#     -> Ingress network/funnel-<host>        mounts <path> only, dials
+#        (./endpoint/ingress.yaml)            http://traefik-funnel:8445<path>
 #     -> Traefik entrypoint `funnel`          CrowdSec bouncer, header strip
 #     -> HTTPRoute <ns>/funnel-<host>         on Gateway network/funnel
 #        (./endpoint/httproute.yaml)          -> <Service>:<port>
@@ -23,51 +23,65 @@
 # It also CONTAINS FAILURE: a policy denial or an unhealthy proxy fails this
 # object, not the consuming app's own apply.
 #
-# PUBLISHING IS THREE REVIEWED LINES, not a change here:
-#   - funnel-ingress-shape.yaml device list:    '/<path>/ <host>'
-#   - funnel-httproute-shape.yaml route list:   '<ns> <Service> <port> /<path>/ <host>.<tailnet>'
+# USE: add `../components/funnel` to the app's own Kustomization `components`.
+# With every default below, APP and NAMESPACE are all it needs:
+# <app>-public.<tailnet>.ts.net serves the whole of Service <app>, port 80.
+#
+# PUBLISHING STILL TAKES TWO OR THREE REVIEWED LINES -- the defaults only
+# save typing in the consumer. Until they land, admission refuses both objects
+# and this ks stays not-Ready:
+#   - funnel-ingress-shape.yaml device list:    '<path> <host>'
+#   - funnel-httproute-shape.yaml route list:   '<ns> <Service> <port> <path> <host>.<tailnet>'
 #   - apps/network/funnel-gateway/gateway.yaml: <ns> in the selector (new namespaces only)
 #
 # VARIABLES (the consuming Kustomization's postBuild.substitute):
-#   APP                 labels only.
+#   APP                 labels, and the base of the defaults below.
 #   NAMESPACE           the app's namespace; the HTTPRoute lands there. Required.
 #   FUNNEL_HOST         first label of the public name <host>.<tailnet>.ts.net.
-#                       Also names this ks, the Ingress and the HTTPRoute -- a
-#                       host is unique by construction, APP is not. Required,
-#                       and write it literally.
-#   FUNNEL_PATH         the path WITHOUT slashes: `hook` publishes /hook/. Required.
-#   FUNNEL_SERVICE      a Service in NAMESPACE. Required, literal (cluster-apps
-#                       substitutes ks.yaml files without APP, so APP-cdn would
-#                       render as `-cdn`).
+#                       Also names this ks, the Ingress and the HTTPRoute.
+#                       Default <APP>-public -- NOT <APP>: components/tailscale
+#                       already claims the Tailscale Service name svc:<APP>, and
+#                       this proxy is a MACHINE; the same name on both is the
+#                       "name exists but is not a service" collision, and a
+#                       duplicate machine name comes back as <host>-1.
+#   FUNNEL_PATH         the published path prefix, WITH its slashes: `/hook/`.
+#                       Default `/` -- the whole Service. A narrower prefix is
+#                       not a boundary (see funnel-httproute-shape.yaml), but it
+#                       keeps the backend's other paths off this host.
+#   FUNNEL_SERVICE      a Service in NAMESPACE. Default <APP>, app-template's
+#                       main Service. Write any other value literally:
+#                       cluster-apps substitutes ks.yaml files without APP, so
+#                       APP-cdn in a consumer renders as `-cdn`.
 #   FUNNEL_PORT         that Service's port NUMBER, quoted in the consumer
-#                       ("80"). Gateway API backendRefs take no port names. It
-#                       reaches the HTTPRoute through `patches` below, not
-#                       through postBuild.substitute -- see there.
+#                       ("8080"). Default 80. Gateway API backendRefs take no
+#                       port names. It reaches the HTTPRoute through `patches`
+#                       below, not through postBuild.substitute -- see there.
 #   FUNNEL_PROXY_CLASS  default control-plane-tolerant.
 #
-# FAILS CLOSED. Unset, FUNNEL_HOST renders the invalid name `funnel-`,
-# FUNNEL_PATH renders `//`, FUNNEL_PORT a null port; the API or the policies
-# refuse each. Flux's `:?` form does NOT fail -- it falls through.
+# EACH DEFAULT IS SPELLED OUT AT EVERY USE in this file. Flux's `:=` returns
+# the default without assigning it, so a bare FUNNEL_HOST reference further down
+# would still render empty (`funnel-`) when the consumer omits it. The values
+# handed to ./endpoint through postBuild.substitute are already literals.
 #
 # The consuming ks needs no dependsOn and no healthCheckExprs for any of this:
 # its `wait: true` health-checks THIS object, which is Ready only once the
 # dependsOn below are Ready and both objects pass the expressions below.
 #
-# CONSUME ONLY FROM A KUSTOMIZATION NOTHING DEPENDS ON -- a small one of its
-# own, like apps/flux-system/flux-webhook-funnel. The consumer's readiness now
-# carries this object's four dependencies and the proxy's health: attach this to
-# an app's main ks and a tailscale-operator bump, a funnel-policy typo or a
-# Gateway regression turns the APP not-Ready, alerts on the wrong thing, and
-# holds up everything that depends on the app. That is the back-door dependency
-# ../tailscale/ks.yaml:62-113 already rejected (the 2026-08-28 deadlock).
-# Postiz gets kubernetes/apps/equestria/home/postiz-funnel/ at plan step 5.
+# THAT IS ALSO THE COST. The consumer's readiness carries this object's four
+# dependencies and the proxy's health: a tailscale-operator bump, a
+# funnel-policy typo or a Gateway regression turns the APP not-Ready and
+# alerts under its name. Acceptable for an app nothing depends on (postiz); on
+# one with dependents it is the back-door dependency ../tailscale/ks.yaml:62-113
+# rejected (the 2026-08-28 deadlock) -- give that app a small Kustomization of
+# its own to carry this component instead, as apps/flux-system/flux-webhook-funnel
+# does for Flux itself.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   # NOT named after a namespace (a nested ks sharing its namespace's name
   # self-prunes, see observability/repositories/ks.yaml), and not APP-funnel,
   # which collides with the webhook's parent `flux-webhook-funnel`.
-  name: funnel-${FUNNEL_HOST}
+  name: funnel-${FUNNEL_HOST:=${APP}-public}
 spec:
   commonMetadata:
     labels:
@@ -95,8 +109,7 @@ spec:
   # the parent's substitution renders a quoted FUNNEL_PORT placeholder here as
   # the bare integer (checked with `flux build`: `FUNNEL_PORT: 80`), which the
   # Kustomization CRD refuses. A patch body is a string, so the parent writes
-  # the digits into it and this ks's own build applies them as a number. Unset,
-  # the value is null and the HTTPRoute CRD refuses a Service ref without a port.
+  # the digits into it and this ks's own build applies them as a number.
   patches:
     - target:
         group: gateway.networking.k8s.io
@@ -105,7 +118,7 @@ spec:
       patch: |-
         - op: add
           path: /spec/rules/0/backendRefs/0/port
-          value: ${FUNNEL_PORT}
+          value: ${FUNNEL_PORT:=80}
   prune: true
   wait: true
   healthCheckExprs:
@@ -119,7 +132,7 @@ spec:
       current: >-
         has(status.loadBalancer.ingress)
         && status.loadBalancer.ingress.exists(i, has(i.hostname)
-        && i.hostname.startsWith('${FUNNEL_HOST}.'))
+        && i.hostname.startsWith('${FUNNEL_HOST:=${APP}-public}.'))
     # Traefik accepted the route on network/funnel at this generation and
     # resolved its backend. kstatus alone would call an HTTPRoute Current on
     # sight. A brand-new route has no status until Traefik writes one; the
@@ -147,13 +160,14 @@ spec:
     namespace: flux-system
   postBuild:
     # Resolved by the PARENT before this object is applied, so each value here
-    # is already a literal (the `:=` default is evaluated there).
+    # is already a literal (the `:=` default is evaluated there). Keep each
+    # default identical to its other uses above.
     substitute:
       APP: ${APP}
       NAMESPACE: ${NAMESPACE}
-      FUNNEL_HOST: ${FUNNEL_HOST}
-      FUNNEL_PATH: ${FUNNEL_PATH}
-      FUNNEL_SERVICE: ${FUNNEL_SERVICE}
+      FUNNEL_HOST: ${FUNNEL_HOST:=${APP}-public}
+      FUNNEL_PATH: ${FUNNEL_PATH:=/}
+      FUNNEL_SERVICE: ${FUNNEL_SERVICE:=${APP}}
       # (no FUNNEL_PORT: it arrives through `patches` above)
       FUNNEL_PROXY_CLASS: ${FUNNEL_PROXY_CLASS:=control-plane-tolerant}
     # Spelled out: components/common's patch is applied by the UMBRELLA

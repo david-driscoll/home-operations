@@ -265,7 +265,7 @@ spec:
       # stream -- they fetch the media from a URL, so that URL has to be public.
       # postiz records it as UPLOAD_PUBLIC_URL + path (patch-media-url above),
       # which is postiz-media.<tailnet>.ts.net/uploads: Tailscale Funnel, in
-      # ../postiz-funnel. The app itself stays on the internal gateway only.
+      # the funnel component in ./ks.yaml. The app itself stays on the internal gateway only.
       #
       # A separate controller rather than a sidecar on `postiz`: this one is
       # reachable from the internet and that one is not, so they get separate
@@ -462,7 +462,7 @@ spec:
             port: *cdn-port
 
     # Internal only. The media is public through Tailscale Funnel instead,
-    # on its own hostname (../postiz-funnel, plan step 5 of
+    # on its own hostname (the funnel component in ./ks.yaml, plan step 5 of
     # docs/plans/cloudflare-tunnel-to-funnel.md): the Funnel door routes only
     # /uploads/ of postiz-media.<tailnet>.ts.net to the `cdn` Service, and
     # postiz stamps that base on new media URLs (UPLOAD_PUBLIC_URL).

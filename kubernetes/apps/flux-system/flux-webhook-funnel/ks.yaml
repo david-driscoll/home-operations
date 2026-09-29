@@ -67,7 +67,7 @@ spec:
       # also on both funnel-policy allow-lists verbatim, and it is what
       # stacks/vault/KubernetesFluxWebhooks.ts builds (flux-<cluster.key>-webhook).
       FUNNEL_HOST: flux-equestria-webhook
-      FUNNEL_PATH: hook
+      FUNNEL_PATH: /hook/
       FUNNEL_SERVICE: webhook-receiver
       # webhook-receiver's `http` port, as a NUMBER and quoted: HTTPRoute
       # backendRefs take no port names, and substitute values are strings.

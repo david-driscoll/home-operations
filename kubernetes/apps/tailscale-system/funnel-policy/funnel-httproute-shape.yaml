@@ -33,8 +33,11 @@
 #
 # EXACTLY ONE HOSTNAME: with none, Traefik builds no Host rule
 # (pkg/provider/kubernetes/gateway/httproute.go:733-734 @v3.7.13) and the route
-# would catch every Host on the door. EXACTLY ONE PathPrefix, never "/": a rule
-# without matches defaults to "/" (httproute.go:750-757).
+# would catch every Host on the door. EXACTLY ONE explicit PathPrefix match: a
+# rule without matches defaults to "/" (httproute.go:750-757), which the
+# allow-list below could not see. "/" itself is allowed when it is written
+# out and listed -- it publishes the whole Service, but only under the one
+# listed hostname.
 #
 # The tailnet domain below is Flux-substituted (TAILSCALE_DOMAIN, a key of
 # shared-secrets, NOT CLUSTER_TAILSCALE_DOMAIN): components/common patches
@@ -91,10 +94,9 @@ spec:
         && has(object.spec.rules[0].matches[0].path.type)
         && object.spec.rules[0].matches[0].path.type == 'PathPrefix'
         && has(object.spec.rules[0].matches[0].path.value)
-        && object.spec.rules[0].matches[0].path.value != '/'
       message: >-
         a funnel route must have exactly one rule with exactly one PathPrefix
-        match other than /
+        match
     - expression: >
         has(object.spec.rules) && size(object.spec.rules) == 1
         && (!has(object.spec.rules[0].filters)

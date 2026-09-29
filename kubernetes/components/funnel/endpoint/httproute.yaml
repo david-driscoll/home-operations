@@ -36,7 +36,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /${FUNNEL_PATH}/
+            value: ${FUNNEL_PATH}
       backendRefs:
         # `port` is added by ../ks.yaml's `patches` (a number; substitution
         # cannot carry one through the nested Kustomization). Without it the

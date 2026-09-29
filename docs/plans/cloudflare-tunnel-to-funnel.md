@@ -174,15 +174,31 @@ Still unnecessary once the tunnel goes:
 The component emits **one** object into the consuming app's build: a nested Flux Kustomization
 `funnel-${FUNNEL_HOST}` (`components/funnel/ks.yaml`), with **no** `targetNamespace`. Its path,
 `components/funnel/endpoint/`, renders two objects that name their own namespaces:
-- **Ingress `network/funnel-${FUNNEL_HOST}`**, the Funnel device. It mounts `/${FUNNEL_PATH}/`
+- **Ingress `network/funnel-${FUNNEL_HOST}`**, the Funnel device. It mounts `${FUNNEL_PATH}`
   and points at `traefik-funnel`, port name `funnel`. It has to be in `network`: the operator
   resolves the backend Service in the Ingress's own namespace, and a stub Service does not work
   under Cilium (`components/tailscale/ks.yaml:7-36`).
 - **HTTPRoute `${NAMESPACE}/funnel-${FUNNEL_HOST}`** on Gateway `network/funnel`, listener `http`.
-  It has one hostname, `${FUNNEL_HOST}.${TAILSCALE_DOMAIN}`; one PathPrefix, `/${FUNNEL_PATH}/`;
+  It has one hostname, `${FUNNEL_HOST}.${TAILSCALE_DOMAIN}`; one PathPrefix, `${FUNNEL_PATH}`;
   one backendRef, `${FUNNEL_SERVICE}`; and no filters.
   - The port is added by a JSON6902 patch on the nested ks. A postBuild value must be a string, and
     `flux build` shows the parent rendering a quoted port as a bare integer.
+
+**Variables and defaults** (2026-09-29). With only `APP` and `NAMESPACE` set, a consumer publishes
+the whole of Service `<app>`, port 80, at `<app>-public.<tailnet>.ts.net`:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `NAMESPACE` | (required) | Where the HTTPRoute lands. |
+| `FUNNEL_HOST` | `${APP}-public` | Not `${APP}`: `components/tailscale` already holds the Tailscale Service name `svc:<app>`, and a Funnel proxy is a machine; the same name on both is the "name exists but is not a service" collision. |
+| `FUNNEL_PATH` | `/` | The prefix **with** its slashes (`/hook/`). `/` publishes the whole Service. |
+| `FUNNEL_SERVICE` | `${APP}` | Write any other value literally (see C3). |
+| `FUNNEL_PORT` | `80` | A number, quoted in the consumer. Gateway API takes no port names. |
+| `FUNNEL_PROXY_CLASS` | `control-plane-tolerant` | |
+
+Flux's `:=` returns its default without assigning it, so `components/funnel/ks.yaml` spells each
+default out at every use. A defaulted endpoint is still refused at admission until its device and
+route lines are on the two lists: the defaults save typing, not review.
 
 The nested ks and its consumers:
 - It `dependsOn` tailscale-operator, tailscale-resources, funnel-policy (all `tailscale-system`)
@@ -191,20 +207,22 @@ The nested ks and its consumers:
 - It sets `wait: true` with `healthCheckExprs` for both objects: the Ingress status hostname
   starts with `${FUNNEL_HOST}.`, and the HTTPRoute is Accepted and ResolvedRefs on `funnel` at the
   current generation.
-- A consumer needs only `components:` and substitutions; its own `wait: true` checks the nested ks.
-- **Consume it only from a Kustomization nothing depends on** (like `flux-webhook-funnel`). The
-  consumer inherits the nested ks's dependencies and health, so attaching it to an app's main ks
-  would make the app's readiness hostage to the Funnel door.
+- A consumer needs only `components:` and any overrides; its own `wait: true` checks the nested ks.
+- **An app consumes it from its own Kustomization** (postiz, since 2026-09-29; it had a separate
+  `postiz-funnel` ks before). The trade-off: the app's readiness carries the nested ks's
+  dependencies and health, so a Funnel-door problem turns the app not-Ready. That is fine for an
+  app nothing depends on. An app with dependents, and Flux itself (`flux-webhook-funnel`), gets a
+  small Kustomization of its own to carry the component instead.
 
 **The mount is not a boundary.** tailscaled checks the mount on the decoded, cleaned path and
 forwards the raw path, which Traefik cleans differently. So `/hook/a%2Fb/../../uploads/x` passes a
 `/hook/` mount and routes as `/uploads/x`, and a spoofed Host picks the route. **Every route on
 the door is reachable from every Funnel device.** The route list is the only boundary, and a
-route added to it is public the moment it exists. The mount still keeps scans of `/` from
-reaching Traefik.
+route added to it is public the moment it exists. A narrower mount still keeps scans of `/` from
+reaching Traefik; a `/` mount (the default) lets them through to the door's CrowdSec.
 
 **Template rules.** Unchanged:
-- fail closed on unset vars;
+- every var but `NAMESPACE` has a default (above); the two allow-lists are what fail closed;
 - no defaultBackend and no rule host;
 - no proxy-group and no experimental-forward;
 - the ProxyClass label is required;
@@ -227,7 +245,8 @@ own binding:
    HTTPRoute naming a parent `funnel` and requires:
    - exactly one parentRef: Gateway `network/funnel`, section `http`, no port;
    - one hostname;
-   - one rule with one PathPrefix other than `/`;
+   - one rule with exactly one explicit PathPrefix (`/` allowed since 2026-09-29, when written out
+     and listed; a rule with no matches still defaults to `/` and is refused);
    - no rule-level or backend-level filters;
    - one same-namespace Service backend with a port;
    - `"<ns> <Service> <port> <path> <hostname>"` on the **route list**
@@ -278,16 +297,16 @@ Ingress (51 routers live). `asDefault` closes that (§C4).
 | | Flux webhook | Postiz media |
 |---|---|---|
 | Host | `flux-equestria-webhook.<tailnet>` | `postiz-media.<tailnet>` |
-| Wiring | **new** Kustomization `apps/flux-system/flux-webhook-funnel/`: `dependsOn` flux-instance only; `wait: true`; timeout 10m. The nested ks carries the tailscale-system and funnel-gateway dependsOn and all health checks. | **new** Kustomization `apps/equestria/home/postiz-funnel/` (step 5), `dependsOn` postiz, with the component; postiz's own ks is untouched. Step 5 also adds the device and route lines and `equestria` to the Gateway selector. |
-| Vars | `APP: flux-webhook`, `NAMESPACE: flux-system`, `FUNNEL_HOST: flux-equestria-webhook` (literal), `FUNNEL_PATH: hook`, `FUNNEL_SERVICE: webhook-receiver`, `FUNNEL_PORT: "80"` | `APP: postiz`, `NAMESPACE: equestria`, `FUNNEL_HOST: postiz-media`, `FUNNEL_PATH: uploads`, `FUNNEL_SERVICE: postiz-cdn` (**literal**), `FUNNEL_PORT: "8080"` |
+| Wiring | Its own Kustomization, `apps/flux-system/flux-webhook-funnel/`: `dependsOn` flux-instance only; `wait: true`; timeout 10m. The nested ks carries the tailscale-system and funnel-gateway dependsOn and all health checks. | The component on **postiz's own ks** (`apps/equestria/home/postiz/ks.yaml`). It was a separate `postiz-funnel` ks until 2026-09-29. Step 5 also added the device and route lines and `equestria` to the Gateway selector. |
+| Vars | `APP: flux-webhook`, `NAMESPACE: flux-system`, `FUNNEL_HOST: flux-equestria-webhook` (literal), `FUNNEL_PATH: /hook/`, `FUNNEL_SERVICE: webhook-receiver`, `FUNNEL_PORT: "80"` | `APP: postiz`, `NAMESPACE: equestria`, `FUNNEL_HOST: postiz-media`, `FUNNEL_PATH: /uploads/`, `FUNNEL_SERVICE: postiz-cdn` (**literal**), `FUNNEL_PORT: "8080"` |
 
-- **The webhook gets its own Kustomization**, not flux-instance's. A fail-closed render or an
-  Ingress apply error must not block reconciliation of the FluxInstance itself.
+- **The webhook keeps its own Kustomization**, not flux-instance's. A render or apply error in the
+  nested ks must not block reconciliation of the FluxInstance itself.
 - **Objects are named `funnel-${FUNNEL_HOST}`** (nested ks, Ingress and HTTPRoute). A host is
   unique by construction; `APP` is not, and `${APP}-funnel` would collide with the parent
-  `flux-webhook-funnel`. `APP` is now labels only, and `NAMESPACE` is required. `FUNNEL_HOST` is a
-  literal rather than `flux-` + `CLUSTER_CNAME` + `-webhook`: a missing substitution would render a
-  wrong public name silently instead of failing.
+  `flux-webhook-funnel`. `FUNNEL_HOST` is a literal rather than `flux-` +
+  `CLUSTER_CNAME` + `-webhook`, because a missing substitution would silently render a wrong public
+  name.
 - **Write `postiz-cdn` literally.** `cluster-apps`' own postBuild
   (`kubernetes/flux/cluster/ks.yaml:111-116`) substitutes only from cluster-secrets and
   shared-secrets, neither of which has `APP`, so `${APP}-cdn` renders `-cdn` and fails the whole
@@ -759,7 +778,7 @@ Each numbered item is one PR unless marked otherwise.
    - `UPLOAD_PUBLIC_URL`;
    - a new `apps/equestria/home/postiz-funnel/` Kustomization (`dependsOn` postiz) carrying the
      Funnel component for `postiz-cdn`, with `FUNNEL_PORT: "8080"`. Postiz's own ks is untouched
-     (§C2);
+     (§C2). Folded into postiz's own ks on 2026-09-29 (§C3);
    - `'/uploads/ postiz-media'` on the device list, and
      `'equestria postiz-cdn 8080 /uploads/ postiz-media.${TAILSCALE_DOMAIN}'` on the route list;
    - `equestria` in the funnel Gateway's namespace selector;

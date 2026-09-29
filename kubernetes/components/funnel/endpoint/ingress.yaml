@@ -2,9 +2,9 @@
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/networking.k8s.io/ingress_v1.json
 #
 # THE FUNNEL DEVICE: <FUNNEL_HOST>.<tailnet>.ts.net, published to the whole
-# internet, mounting /<FUNNEL_PATH>/ and nothing else, in front of Traefik's
+# internet, mounting <FUNNEL_PATH> and nothing else, in front of Traefik's
 # `funnel` entrypoint. Rendered into `network` by ../ks.yaml. Admitted only if
-# '/<FUNNEL_PATH>/ <FUNNEL_HOST>' is on funnel-ingress-shape.yaml's device list.
+# '<FUNNEL_PATH> <FUNNEL_HOST>' is on funnel-ingress-shape.yaml's device list.
 #
 # THE BACKEND IS NEVER TEMPLATED. Always traefik-funnel, port NAME funnel --
 # the policy refuses anything else. traefik:websecure or traefik:tailscale
@@ -15,12 +15,14 @@
 # listener (cmd/k8s-operator/ingress.go:363-368 @v1.102.4).
 #
 # THE MOUNT IS NOISE REDUCTION, NOT A BOUNDARY. tailscaled 404s anything
-# outside /<path>/ after path.Clean (ipn/ipnlocal/serve.go:830-860), so scans
+# outside <path> after path.Clean (ipn/ipnlocal/serve.go:830-860), so scans
 # of / never reach Traefik. It does NOT confine this device to its own route:
 # the mount is checked on the decoded, cleaned path and the raw path is
-# forwarded, so /<path>/a%2Fb/../../<other> passes it and Traefik routes it as
+# forwarded, so <path>a%2Fb/../../<other> passes it and Traefik routes it as
 # /<other>. The boundary is the set of routes on the door
 # (funnel-httproute-shape). Keep this path equal to the HTTPRoute's PathPrefix.
+# At the default `/` it filters nothing: every scan of the host reaches
+# Traefik's funnel entrypoint, where CrowdSec sees it.
 #
 # DO NOT ADD any of these. Each one silently breaks Funnel or widens it:
 #   tailscale.com/proxy-group -- the ProxyGroup/HA Ingress path never reads
@@ -59,7 +61,7 @@ spec:
   rules:
     - http:
         paths:
-          - path: /${FUNNEL_PATH}/
+          - path: ${FUNNEL_PATH}
             pathType: Prefix
             backend:
               service:

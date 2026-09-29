@@ -129,11 +129,10 @@ spec:
         && size(object.spec.rules[0].http.paths) == 1
         && object.spec.rules[0].http.paths[0].pathType == 'Prefix'
         && has(object.spec.rules[0].http.paths[0].path)
-        && object.spec.rules[0].http.paths[0].path != '/'
         && has(object.spec.rules[0].http.paths[0].backend.service)
       message: >-
         a Funnel Ingress must have exactly one rule, with no host, holding
-        exactly one Prefix path other than / that points at a Service
+        exactly one Prefix path that points at a Service
     # THE DOOR. Namespace network, Service traefik-funnel, port NAME funnel --
     # the one ClusterIP port that lands on Traefik's funnel entrypoint (see the
     # header for why every other Traefik port is an internal door).
