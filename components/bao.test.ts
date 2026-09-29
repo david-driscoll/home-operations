@@ -35,7 +35,7 @@ import { baoSlug, dockgeBaoPath, oidcBaoPath, pbsBaoPath } from "./bao.ts";
 
 describe("baoSlug", () => {
   it("lowercases, collapses non-alphanumerics, and trims", () => {
-    assert.equal(baoSlug("Cloudflare (driscoll.tech)"), "cloudflare-driscoll-tech");
+    assert.equal(baoSlug("Cloudflare (example.com)"), "cloudflare-example-com");
     assert.equal(baoSlug("Cluster: Alpha Site"), "cluster-alpha-site");
     assert.equal(baoSlug("Github Actions Runner (david-driscoll)"), "github-actions-runner-david-driscoll");
     assert.equal(baoSlug("  ...Weird!!  "), "weird");
@@ -46,7 +46,7 @@ describe("baoSlug", () => {
     // Every caller derives a path from a title, and some of those paths get
     // re-derived from a stored `meta.title` on the way back — so slugging a
     // slug has to be a no-op or the round trip lands somewhere else.
-    for (const input of ["Cloudflare (driscoll.tech)", "Luna PBS backup user", "  ...Weird!!  "]) {
+    for (const input of ["Cloudflare (example.com)", "Luna PBS backup user", "  ...Weird!!  "]) {
       assert.equal(baoSlug(baoSlug(input)), baoSlug(input), `not idempotent for ${JSON.stringify(input)}`);
     }
   });

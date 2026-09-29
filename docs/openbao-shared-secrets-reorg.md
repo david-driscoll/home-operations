@@ -165,10 +165,10 @@ data moving alone turns into a hard throw. Rows marked 🅟.
 | `pulumi-passphrase` | `vault/.config/mise.toml` |
 | `tailscale-terraform-oauth-client` 🅟 | `equestria-cluster/.config/mise.toml`, `stargate-command-cluster/.config/mise.toml` (both superseded by the repo consolidation — confirm they are archived before counting them) |
 
-**6. `shared/cloudflare-driscoll-tech` has three non-ESO consumers** that must
+**6. `shared/cloudflare-<root-domain-slug>` has three non-ESO consumers** that must
 change in lockstep:
 - `kubernetes/apps/kube-system/openbao-replica/helmrelease.yaml:230` —
-  `CANARY_PATH: secrets/data/shared/cloudflare-driscoll-tech` (note the KV v2
+  `CANARY_PATH: secrets/data/shared/cloudflare-<root-domain-slug>` (note the KV v2
   `data/` infix). If it 404s, the replica health check fails.
 - `docker/alpha-site/bao-standby/restore.sh:65` and
   `bootstrap/RUNBOOK.md` — the break-glass canary read.
@@ -299,7 +299,7 @@ Straight out of PLAN §A. No ceremony (Constraint 1), no cross-cluster surprises
 
 | Current path | Fields | Read by | Proposed | ✎ Your call |
 | --- | --- | --- | --- | --- |
-| `shared/cloudflare-driscoll-tech` | `accountId`, `credential`, `notesPlain`, `type`, `username`, `zoneId` | traefik (all hosts), cert-issuers, network, dynacat, Pulumi globals, **replica canary**, break-glass runbook | **`KEEP`** — see Constraint 6 | `third-party-tokens/cloudflare/driscoll-tech` |
+| `shared/cloudflare-<root-domain-slug>` | `accountId`, `credential`, `notesPlain`, `type`, `username`, `zoneId` | traefik (all hosts), cert-issuers, network, dynacat, Pulumi globals, **replica canary**, break-glass runbook | **`KEEP`** — see Constraint 6 | `third-party-tokens/cloudflare/<root-domain-slug>` |
 | `shared/unifi-api-key-eris-cluster` | `credential`, `expires`, `hostname`, `valid from` | external-dns, unpoller, dynacat, Pulumi globals | `shared/providers/unifi/eris` | `third-party-tokens/unifi/api-key` |
 | `shared/eris-truenas-credentials` 🅢 | `credential`, `domain`, `hostname`, `username` | `equestria/shared/secrets`, `stargate-command/secrets`, Pulumi globals | `shared/providers/truenas/eris` | `clusters/spike/truenas-credentials` |
 | `shared/proxmox-apikey` 🅟 | `arch`, `credential`, `endpoint`, `luna`, `type`, `url`, `username` | dynacat, Pulumi (`"Proxmox ApiKey"` ×3 stacks) | `shared/providers/proxmox/api-key` | `apps/proxmox/api-key` |
@@ -363,7 +363,7 @@ fields. So `hosts/pbs/` is the wrong home for these.
 
 | Current path | Why | ✎ Your call |
 | --- | --- | --- |
-| `shared/cloudflare-driscoll-tech` | The designated canary in two independent break-glass paths (Constraint 6). Moving it means editing the replica HelmRelease, `restore.sh`, `bootstrap/RUNBOOK.md` and `bootstrap/openbao/restore-test.sh` together. | Use `third-party-tokens/cloudflare/driscoll-tech` |
+| `shared/cloudflare-<root-domain-slug>` | The designated canary in two independent break-glass paths (Constraint 6). Moving it means editing the replica HelmRelease, `restore.sh`, `bootstrap/RUNBOOK.md` and `bootstrap/openbao/restore-test.sh` together. | Use `third-party-tokens/cloudflare/<root-domain-slug>` |
 
 ---
 
@@ -371,7 +371,7 @@ fields. So `hosts/pbs/` is the wrong home for these.
 
 Live in OpenBao, **no reference anywhere in this repo**. All version 1,
 `updated_time` 2026-08-08 — written by `op-to-bao --apply` and never touched.
-The `vault` repo references only `cloudflare-driscoll-tech`, `minio-root-user`,
+The `vault` repo references only `cloudflare-<root-domain-slug>`, `minio-root-user`,
 `pulumi-passphrase` and `pdm-root` (the last in a unit test), so it does not
 account for these.
 

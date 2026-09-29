@@ -57,12 +57,12 @@ export class GlobalResources extends ComponentResource {
       credential: string;
     }>("Tailscale Terraform OAuth Client");
 
-    this.cloudflareCredential = store.getSecretByTitle<{
+    this.cloudflareCredential = store.getSecretByPath<{
       username: string;
       credential: string;
       zoneId: string;
       accountId: string;
-    }>("Cloudflare (driscoll.tech)");
+    }>("third-party-tokens/cloudflare/dns-zone");
     this.unifiCredential = store.getSecretByTitle<{
       credential: string;
       hostname: string;

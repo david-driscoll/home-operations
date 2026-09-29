@@ -123,7 +123,7 @@ export class BaoStore extends VaultStore {
   /**
    * Read a KV path and shape it like `getSecretItem` output. `path` is within
    * the `secrets` mount, no leading slash — e.g.
-   * `third-party-tokens/cloudflare/driscoll-tech`.
+   * `third-party-tokens/cloudflare/dns-zone`.
    */
   public getSecretByPath<T>(path: string): Output<T & Meta> {
     return this.read(path) as Output<T & Meta>;
@@ -404,7 +404,6 @@ const INVENTORY_IN_OPENBAO: Record<string, string> = {
 const TITLE_PATHS: Record<string, string> = {
   // third-party-tokens/ — issued by someone else's service
   "Tailscale Terraform OAuth Client": "third-party-tokens/tailscale/pulumi-oauth",
-  "Cloudflare (driscoll.tech)": "third-party-tokens/cloudflare/driscoll-tech",
   "Unifi Api Key Eris Cluster": "third-party-tokens/unifi/api-key",
   "Authentik Plex Source": "third-party-tokens/plex/authentik-source",
 
