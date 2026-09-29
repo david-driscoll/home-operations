@@ -283,8 +283,10 @@ backupPlanOrchestrator.addBackupPlan(
 //
 // Staged OUTSIDE /data/staging/garage/: that tree is what garage-mirror copies
 // back into the same Garage cluster, which would be a copy of the bucket into
-// its own cluster. history/ is excluded -- a full checkpoint copy per update,
-// regenerated constantly and pruned after 3 days anyway.
+// its own cluster. history/ and backups/ are excluded -- full checkpoint copies
+// (one per update, and one per checkpoint save), regenerated constantly and
+// pruned by kubernetes/apps/pulumi/history-pruner anyway. backups/ alone is
+// most of the bucket's bytes.
 //
 // Read-only key, so a backup can never write the state it protects.
 const pulumiStateReader = globals.store.getSecretByPath<{ username: string; password: string }>("apps/pulumi/state-s3-reader");
@@ -302,7 +304,7 @@ backupPlanOrchestrator.addBackupPlan(
       region: "garage",
       accessKeyId: reader.username,
       secretAccessKey: reader.password,
-      exclude: ["*/.pulumi/history/**", "*/.pulumi/locks/**"],
+      exclude: ["*/.pulumi/history/**", "*/.pulumi/backups/**", "*/.pulumi/locks/**"],
     },
   })),
 );
