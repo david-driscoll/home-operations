@@ -17,5 +17,20 @@ spec:
       - "*"
     accessControlAllowCredentials: true
     accessControlAllowOriginListRegex:
-      - "https?://.*\\.driscoll\\.tech"
+      # Traefik's regexes here are UNANCHORED -- an origin passes if it
+      # merely CONTAINS a match (doc.traefik.io, headers middleware). The
+      # old `https?://.*\\.<root domain>` therefore also accepted
+      # `https://app.<root domain>.attacker.example`, a host anyone can
+      # register, and with accessControlAllowCredentials on. This middleware
+      # sits on every authentik outpost route (stacks/system/applications.ts,
+      # 102 routers on 2026-09-29), so that was every proxied app's
+      # /outpost.goauthentik.io endpoint.
+      #
+      # Now anchored at both ends: one or more subdomain labels, the root
+      # domain, an optional port, then end of text. `\\z` rather than `$`
+      # so nothing downstream mistakes it for a substitution. The domain's
+      # own dot renders unescaped, so it matches any character -- harmless
+      # once anchored, since no registrable host can end that way. The bare
+      # root domain stays disallowed, as it was.
+      - "^https?://([a-z0-9-]+\\.)+${ROOT_DOMAIN}(:[0-9]+)?\\z"
     addVaryHeader: true

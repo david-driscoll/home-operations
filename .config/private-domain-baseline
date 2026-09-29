@@ -18,7 +18,6 @@ kubernetes/apps/coder/forgejo-runner/resources/config.yml
 kubernetes/apps/coder/forgejo/helmrelease.yaml
 kubernetes/apps/kube-system/coredns/helm/values.yaml
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
-kubernetes/apps/network/traefik/middleware/default-cors.yaml
 kubernetes/apps/observability/blackbox-exporter/helmrelease.yaml
 kubernetes/apps/tailscale-system/services/bootstrap.yaml
 dashboard/externalsecret.yaml
