@@ -152,8 +152,9 @@ recovery:
 #      cost (#1233 -> #1235: a 23-Kustomization reconciliation freeze).
 #
 # When flipping: endpointURL/region/bucket/accessKey/secretKey become the
-# garage_* values, and the endpoint should be http://garage-s3.<tailnet>:3900 --
-# the Tailscale VIP, NOT http://dockge-celestia.<tailnet>:3900. Both work; the
+# garage_* values, and the endpoint should be https://garage-s3.<tailnet> --
+# the Tailscale VIP (HTTPS on 443 only; it serves nothing on 3900), NOT
+# http://dockge-celestia.<tailnet>:3900. Both work; the
 # VIP is advertised by all three Garage nodes and answers from whichever is up,
 # whereas the per-node name pins every backup to celestia. This is the OFF-SITE
 # copy, so the node most likely to be unreachable is precisely the one it would
