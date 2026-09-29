@@ -89,7 +89,7 @@ host:
 server:
   connections:
     equestria:
-      # The in-cluster Service, not https://git.driscoll.tech: this is a
+      # The in-cluster Service, not https://git.<root domain>: this is a
       # constant poll and there is no reason to hairpin it through Traefik.
       # Workflow containers still clone over the public URL, because Forgejo
       # builds the clone URL from its own ROOT_URL rather than from this one.

@@ -7,23 +7,10 @@
 # phases is listed once, under the first.
 
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
-kubernetes/apps/agents/agent-tools-servers/proxmox/alpha-site/kustomization.yaml
-kubernetes/apps/agents/agent-tools-servers/proxmox/celestia/kustomization.yaml
-kubernetes/apps/agents/agent-tools-servers/proxmox/luna/kustomization.yaml
-kubernetes/apps/agents/agent-tools-servers/proxmox/skystar/kustomization.yaml
-kubernetes/apps/agents/agent-tools-servers/proxmox/twilight-sparkle/kustomization.yaml
-kubernetes/apps/agents/agentboard/resources/known_hosts
-kubernetes/apps/agents/agentboard/resources/ssh_config
-kubernetes/apps/coder/forgejo-runner/resources/config.yml
-kubernetes/apps/coder/forgejo/helmrelease.yaml
-kubernetes/apps/kube-system/coredns/helm/values.yaml
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 kubernetes/apps/network/traefik/middleware/default-cors.yaml
 kubernetes/apps/observability/blackbox-exporter/helmrelease.yaml
-kubernetes/apps/tailscale-system/services/bootstrap.yaml
 dashboard/externalsecret.yaml
-docs/runbooks/assets/forgejo-runner-canary.yml
-docs/runbooks/assets/jellyfin-pg/job.yaml
 
 # --- Phase 3: the Cloudflare token's OpenBao path and 1Password title ---
 kubernetes/apps/cert-manager/cert-issuers/secret.yaml
@@ -78,7 +65,6 @@ docker/celestia/.mise.toml
 docker/celestia/hermes/config.seed.yaml
 docker/luna/.mise.toml
 docker/skystar/.mise.toml
-docs/runbooks/assets/jellyfin-pg/config-sync.py
 playbook/Thanos Debugging.dib
 playbook/move-media.dib
 playbook/volsync.ipynb

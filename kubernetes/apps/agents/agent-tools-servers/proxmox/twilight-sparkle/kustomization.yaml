@@ -30,7 +30,7 @@ patches:
         value: toolhive-proxmox-twilight-sparkle
       - op: replace
         path: /spec/env/2/value
-        value: "twilight-sparkle.opossum-yo.ts.net"
+        value: "twilight-sparkle.${TAILSCALE_DOMAIN}"
   - target:
       kind: ExternalSecret
     patch: |-

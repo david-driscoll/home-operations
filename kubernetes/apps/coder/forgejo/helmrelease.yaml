@@ -221,7 +221,7 @@ spec:
         # ACCOUNT_LINKING=auto links OIDC logins to local accounts BY EMAIL, and
         # this account must never be silently claimed by an SSO identity.
         existingSecret: ${APP}-admin
-        email: forgejo-admin@driscoll.tech
+        email: forgejo-admin@${ROOT_DOMAIN}
         passwordMode: keepUpdated
 
       metrics:

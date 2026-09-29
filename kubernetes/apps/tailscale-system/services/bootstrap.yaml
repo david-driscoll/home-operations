@@ -287,10 +287,9 @@ spec:
         # NOT the tailnet name, and not a substitution either. Technitium serves a
         # certificate whose only SAN is `<server>.dns.<root domain>`, so probing
         # the tailnet name fails TLS verification -- this mirrors `probeDomain`
-        # in tailnet-egress.ts. The domain is a literal because no substitution
-        # var holds a bare `<root domain>`: EXTERNAL_DOMAIN is
-        # `castle-of-friendship.<root domain>`.
-        - https://celestia.dns.driscoll.tech
+        # in tailnet-egress.ts. The root domain comes from ROOT_DOMAIN in
+        # shared-secrets, which this Kustomization substitutes like every other.
+        - https://celestia.dns.${ROOT_DOMAIN}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule

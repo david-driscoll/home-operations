@@ -69,7 +69,7 @@ before it serves anything:
 PLUGIN SETTINGS THAT NAME PRODUCTION
 
 A plugin configuration copied from production still points at production --
-jellyfin.equestria.svc.cluster.local, jellyfin.driscoll.tech. --rewrite-host
+jellyfin.equestria.svc.cluster.local, jellyfin.<root domain>. --rewrite-host
 OLD=NEW rewrites those in the text files under plugins/ (settings XML/JSON, never
 assemblies), matching whole hostnames only. The same hostnames under config/ and
 in the plugins' SQLite databases are reported, not rewritten.
@@ -142,7 +142,7 @@ def parse_args():
         default=[],
         metavar="OLD=NEW",
         help="rewrite hostname OLD to NEW in plugin settings (repeatable), "
-        "e.g. jellyfin.driscoll.tech=jellyfin-pg.driscoll.tech",
+        "e.g. jellyfin.example.com=jellyfin-pg.example.com",
     )
     p.add_argument("--chown", default="", help="uid:gid to apply to everything written (e.g. 568:568)")
     p.add_argument("--dry-run", action="store_true", help="report what would happen and write nothing")
@@ -450,9 +450,9 @@ TEXT_SUFFIXES = {".xml", ".json", ".yaml", ".yml", ".txt", ".conf", ".ini"}
 def host_pattern(host):
     """Match `host` as a whole hostname, never as part of a longer one.
 
-    Without the boundaries, `jellyfin.driscoll.tech` would also match inside
-    `myjellyfin.driscoll.tech` or `jellyfin.driscoll.tech.example`, and the
-    already-correct `jellyfin-pg.driscoll.tech` is kept safe only by accident.
+    Without the boundaries, `jellyfin.example.com` would also match inside
+    `myjellyfin.example.com` or `jellyfin.example.com.example`, and the
+    already-correct `jellyfin-pg.example.com` is kept safe only by accident.
     Bytes, not str: the XML is rewritten in place without a decode/encode round
     trip, so a BOM or an odd encoding .NET wrote comes through unchanged.
     """
