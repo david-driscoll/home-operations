@@ -260,25 +260,12 @@ backupPlanOrchestrator.addBackupPlan(
   }),
 );
 
-// The Pulumi state as it was on the TrueNAS Minio, before every stack moved to
-// the Garage `pulumi-state` bucket below. Frozen since the cutover, so this
-// now snapshots an unchanging tree; it stays for the rollback window and goes
-// when the TrueNAS prefixes are deleted.
-backupPlanOrchestrator.addBackupPlan(
-  pulumi.output({
-    source: "celestia",
-    name: "home-operations",
-    title: "home-operations",
-    path: "/spike/data/minio/home-operations/",
-    repository: "home-operations",
-  }),
-);
-
 // Every stack's Pulumi state: the dockge Garage cluster's `pulumi-state`
 // bucket (bootstrap/RUNBOOK.md). Garage has no object versioning, so THIS is
 // what provides point-in-time copies -- rclone mirrors the bucket into
 // backrest's staging tree and restic snapshots it, copied to the other PBS
-// hosts nightly. The off-site copy on alpha-site (docker/alpha-site/
+// hosts nightly. (The pre-Garage copy on the TrueNAS Minio, and its plan,
+// were retired once the rollback window closed.) The off-site copy on alpha-site (docker/alpha-site/
 // garage-backup) is a separate, independent path.
 //
 // Staged OUTSIDE /data/staging/garage/: that tree is what garage-mirror copies
