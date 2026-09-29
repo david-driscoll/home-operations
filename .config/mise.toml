@@ -322,18 +322,13 @@ postinstall = [
   { run = "hk install --mise" },
   { run = "npm install" },
   { run = "pulumi install" },
-  { run = "graphify hook install" },
-  # graphify's post-commit hook rebuilds graph.json/GRAPH_REPORT.md in a
-  # DETACHED background process, so its output lands as an uncommitted
-  # working-tree diff against files this repo tracks in git -- there is no
-  # follow-up commit. This installs a second, independently marked block
-  # into .git/hooks/post-commit (same file crew's sync hook and `graphify
-  # hook install` already share, each owning its own section) that folds a
-  # prior rebuild's leftover graphify-out/ diff into its own small commit.
-  # Idempotent -- safe to run on every `mise install`. See
-  # .config/hooks/register-graphify-sweep.sh and
-  # .config/hooks/graphify-sweep-commit.sh for the full rationale, including
-  # why this uses the classic file-based hook and not git's newer
-  # hook.<name>.command config channel (hk's own registration mechanism).
-  { run = ".config/hooks/register-graphify-sweep.sh" }
+  # NOT `graphify hook install` any more. Its post-commit and post-checkout
+  # hooks rebuild graphify-out/ in a DETACHED process, so the output could
+  # only ever land after the commit, as working-tree dirt against tracked
+  # files. hk's pre-commit `graphify` step now rebuilds synchronously on main
+  # and stages the result into the commit itself (.config/hk.pkl,
+  # .config/hooks/graphify-precommit.sh). This strips the old detached
+  # blocks from .git/hooks -- crew's sections stay -- and keeps graph.json's
+  # union merge driver registered. Idempotent.
+  { run = ".config/hooks/retire-graphify-hooks.sh" }
 ]

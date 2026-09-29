@@ -200,4 +200,4 @@ Rules:
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- Do NOT run `graphify update .` after modifying code. hk's pre-commit `graphify` step rebuilds graphify-out/ and stages it into each commit on `main` (`.config/hooks/graphify-precommit.sh`). Branches never touch the graph, so parallel PRs cannot conflict on the ~25 MiB graph.json, and a hand-run update on a branch just leaves uncommitted dirt. (Bare `graphify` can also resolve to the unrelated dotnet `graphify-dotnet`; `mise x pipx:graphifyy -- graphify` is the pinned one.)

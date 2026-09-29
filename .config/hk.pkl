@@ -264,11 +264,31 @@ local linters = new Mapping<String, Step> {
 
 exclude = excludes
 
+// The ONE deliberate exception to the no-mutation posture above, and only in
+// pre-commit: keep graphify-out/ current IN the commit being made. See
+// .config/hooks/graphify-precommit.sh for why this replaced graphify's own
+// detached post-commit/post-checkout rebuilds (their output could only ever
+// land after the commit, as dirt). It writes and stages ONLY graphify-out/,
+// which is generated and never hand-edited, so it cannot sweep up a
+// neighbour's edits; it acts only on `main` (branches never touch the ~25 MiB
+// graph.json, so parallel PRs cannot conflict on it); and it fails open.
+//
+// `exclusive` because it writes the Git index itself: hk only stages a step's
+// output in fix mode, and this hook runs with `fix = false`. Listed last, so
+// under hk's default fail-fast a failing linter cancels it before it runs.
+// Not in `check`/`fix`/pre-push, which stay read-only.
+local graphifyStep = new Step {
+  exclusive = true
+  check = ".config/hooks/graphify-precommit.sh"
+}
+
 hooks {
   ["pre-commit"] {
     fix = false
     stash = "none"
-    steps = linters
+    steps = (linters) {
+      ["graphify"] = graphifyStep
+    }
   }
 
   ["pre-push"] {
