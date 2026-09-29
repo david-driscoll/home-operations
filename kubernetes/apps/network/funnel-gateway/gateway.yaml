@@ -37,10 +37,11 @@ spec:
           selector:
             # The apiserver-owned, immutable namespace-name label, so nobody
             # widens this by labelling a namespace. A new namespace goes here
-            # AND onto funnel-httproute-shape's list in the same PR (postiz's
-            # `equestria` joins in plan step 5).
+            # AND onto funnel-httproute-shape's list in the same PR.
             matchExpressions:
               - key: kubernetes.io/metadata.name
                 operator: In
                 values:
                   - flux-system
+                  # postiz-media: /uploads/ of postiz-cdn (plan step 5).
+                  - equestria

@@ -505,16 +505,16 @@ Renovate hops on a weekend schedule. The runtime route has a direct precedent:
 - of the 1,644 non-`node_modules` JS files, only these two contain the text;
 - the frontend does not rebuild media URLs, and there is no frontend CSP.
 
-**Renovate.** The shared preset **automerges docker patch bumps** (for example #2144), so add a
-rule to `.github/renovate.json5`:
+**Renovate.** The shared preset **automerges docker patch bumps** (for example #2144). The plan
+first added a never-automerge rule for postiz; David dropped it on 2026-09-29, so postiz bumps
+flow like any other image. What catches a bump that moves the matched text:
+- the patch fails open, so postiz still starts;
+- the Funnel canary's body turns `patch-not-applied`, and Gatus stays red until it is fixed;
+- `PostizMediaPatchNotApplied` fires on the restart.
 
-```json5
-{ description: "postiz: runtime-patched, never automerge", matchDatasources: ["docker"], matchPackageNames: ["ghcr.io/gitroomhq/postiz-app"], automerge: false }
-```
-
-Then every postiz bump is a reviewed PR. In review, stream the new image layer and run the same
-grep before merging. A native upstream `UPLOAD_PUBLIC_URL` changes the matched text, the guard
-flags it, and the patch can then be deleted.
+Until the pattern is fixed, new media URLs fall back to the internal-only `FRONTEND_URL`. A native
+upstream `UPLOAD_PUBLIC_URL` changes the matched text the same way, and the patch can then be
+deleted.
 
 **Upstream PR** to gitroomhq/postiz-app:
 
@@ -763,9 +763,10 @@ Each numbered item is one PR unless marked otherwise.
    - `'/uploads/ postiz-media'` on the device list, and
      `'equestria postiz-cdn 8080 /uploads/ postiz-media.${TAILSCALE_DOMAIN}'` on the route list;
    - `equestria` in the funnel Gateway's namespace selector;
-   - the estate's WAN IP in the CrowdSec agents' postoverflow whitelist and in the funnel bouncer's
-     `clientTrustedIPs`: postiz's own hairpin fetches arrive from it (J11);
-   - the Renovate rule;
+   - ~~the estate's WAN IP in the CrowdSec agents' postoverflow whitelist and in the funnel
+     bouncer's `clientTrustedIPs`~~ **deferred** by David on 2026-09-29 (J11). postiz's own hairpin
+     fetches go through the door's throttles and AppSec like any other client;
+   - ~~the Renovate rule~~ (dropped 2026-09-29: postiz bumps automerge, see §E2);
    - the postiz Gatus entry and the Loki marker rules;
    - **delete `route.external`**. The tunnel config shrinks to the webhook rule on the next vault
      run.
@@ -872,6 +873,9 @@ Each numbered item is one PR unless marked otherwise.
   - **Postiz:** a `gatus:` entry in `postiz/definition.yaml`.
     - URL: `https://postiz-media.${TAILSCALE_DOMAIN}/uploads/funnel-canary.txt`.
     - Conditions: `[STATUS] == 200`, `[BODY] == ok`, `[CERTIFICATE_EXPIRATION] > 72h`.
+    - The init container writes `ok` only when **both** files were patched, and
+      `patch-not-applied` otherwise. So this probe also stays red while the patch is off, which
+      the once-per-start Loki markers cannot do.
     - The ApplicationDefinition CRD supports `client`, and Pushover is added automatically for
       ApplicationDefinition entries (`components/authentik.ts:557-561`).
   - **Webhook:** added in `KubernetesFluxWebhooks.ts` via `addUptimeGatus`, next to the URL it
@@ -1065,7 +1069,9 @@ Each numbered item is one PR unless marked otherwise.
     them, not its per-delivery alerts: AppSec alerts skip postoverflow whitelists.
 - ❓ **J10. Encoded `;`, `?` and `#`.** Left allowed on the door. Tighten once postiz filenames are
   confirmed; they are 32-hex random names, which suggests it is safe.
-- ❓ **J11. The postiz hairpin (step 5).** postiz's own media fetches reach the door from the
+- ⏸️ **J11. The postiz hairpin (step 5).** Deferred 2026-09-29 (David): step 5 shipped without
+  the allow-listing, so postiz's own fetches are throttled and WAF-inspected. Revisit if a
+  postiz fetch is ever throttled (429) or blocked (`FunnelDoorBlocked` with postiz's ClientHost). postiz's own media fetches reach the door from the
   estate's WAN IP. Step 5 adds that IP to the agents' postoverflow whitelist and to the bouncer's
   `clientTrustedIPs`. No WAN-IP variable exists yet.
   - **Since J8, also decide the platforms' fetchers.** AppSec makes it cheaper to get an innocent

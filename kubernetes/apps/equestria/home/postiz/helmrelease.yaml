@@ -68,12 +68,19 @@ spec:
         strategy: Recreate
         containers:
           *app :
-            image:
+            image: &image
               repository: ghcr.io/gitroomhq/postiz-app
-              # v2.23.0 (2026-08-04). Anything from v2.12.0 onward requires the
-              # Temporal cluster this app dependsOn; v2.11.x was the last
+              # v2.24.0. Anything from v2.12.0 onward requires the Temporal
+              # cluster this app dependsOn; v2.11.x was the last
               # BullMQ-on-Redis release. Do not roll back across that line
               # without also reading apps/database/temporal.
+              #
+              # ⚠️ Runtime-patched (patch-media-url, in initContainers below).
+              # Bumps automerge like any other image (decided 2026-09-29): the
+              # patch fails open, and a bump that moves the matched text turns
+              # the Funnel canary red (definition.yaml) and fires
+              # PostizMediaPatchNotApplied. Then fix the sed pattern -- or, if
+              # upstream now has its own UPLOAD_PUBLIC_URL, delete the patch.
               tag: v2.24.0@sha256:01b24a4fc1055f6833122c99614805bea702fdc0ee30c9b5d09330b521fa1efa
               pullPolicy: IfNotPresent
             envFrom:
@@ -171,6 +178,84 @@ spec:
                   periodSeconds: 10
                   timeoutSeconds: 10
                   failureThreshold: 60
+        # After `containers`, not before: YAML needs the &image anchor above
+        # to precede the *image alias used here.
+        initContainers:
+          # ---- UPLOAD_PUBLIC_URL, a runtime patch -------------------------
+          #
+          # postiz builds every stored media URL as
+          # `process.env.FRONTEND_URL + '/uploads' + path` (upload/
+          # local.storage.ts: newFilePath and removeFile), and FRONTEND_URL has
+          # to stay postiz.<root domain> -- the OIDC redirect is built from it,
+          # and a ts.net FRONTEND_URL puts the login cookie on a public suffix
+          # that browsers drop. So postiz needs a SEPARATE public media base,
+          # which upstream does not have yet. This rewrites that expression to
+          # `(process.env.UPLOAD_PUBLIC_URL || <the original>)` in the backend's
+          # and the orchestrator's compiled copy, into an emptyDir the main
+          # container mounts over the image's files. Plan §E2
+          # (docs/plans/cloudflare-tunnel-to-funnel.md).
+          #
+          # FAILS OPEN, always exit 0: unless each file has exactly the two
+          # expected matches before AND after, the original is copied through
+          # unchanged and the log says POSTIZ_MEDIA_PATCH_NOT_APPLIED. Failing
+          # closed would turn a mismatched image bump into hours of scheduler
+          # outage (Recreate, 15m timeout, 7 rollback retries); failing open
+          # only sends new media URLs back to the internal-only FRONTEND_URL.
+          # A Loki rule alerts on the marker (./loki-rules.yaml).
+          #
+          # Same image as the app via the anchor, so one Renovate bump moves
+          # both. Bumps automerge; the canary and the Loki rule are what catch
+          # one that no longer matches.
+          #
+          # It also writes /uploads/funnel-canary.txt, which Gatus fetches
+          # through the public Funnel path (./definition.yaml): "ok" only when
+          # BOTH files were patched, "patch-not-applied" otherwise. So the
+          # Gatus probe stays red for as long as the patch is off, where
+          # ./loki-rules.yaml only sees the one log line per start.
+          #
+          # `$$` is Flux's escape for a literal dollar: this file goes through
+          # postBuild envsubst, which would otherwise eat every shell variable.
+          patch-media-url:
+            image: *image
+            command:
+              - sh
+              - -c
+              - |
+                patch_one() {
+                  src="$${1}"; out="$${2}"
+                  n="$$(grep -cF "process.env.FRONTEND_URL + '/uploads'" "$${src}" 2>/dev/null)"
+                  if [ "$${n}" = 2 ]; then
+                    sed "s#process\.env\.FRONTEND_URL + '/uploads'#(process.env.UPLOAD_PUBLIC_URL || process.env.FRONTEND_URL + '/uploads')#g" "$${src}" > "$${out}.tmp"
+                    m="$$(grep -cF 'process.env.UPLOAD_PUBLIC_URL' "$${out}.tmp")"
+                    if [ "$${m}" = 2 ]; then
+                      mv "$${out}.tmp" "$${out}"
+                      echo "POSTIZ_MEDIA_PATCH_APPLIED $${src}"
+                      return 0
+                    fi
+                  fi
+                  rm -f "$${out}.tmp"
+                  cp "$${src}" "$${out}" || : > "$${out}"
+                  echo "POSTIZ_MEDIA_PATCH_NOT_APPLIED $${src} (matched $${n:-0}, want 2)"
+                  return 1
+                }
+                d=/app/apps
+                f=dist/libraries/nestjs-libraries/src/upload/local.storage.js
+                canary=ok
+                patch_one "$${d}/backend/$${f}" /patched/backend-local.storage.js || canary=patch-not-applied
+                patch_one "$${d}/orchestrator/$${f}" /patched/orchestrator-local.storage.js || canary=patch-not-applied
+                echo "$${canary}" > /uploads/funnel-canary.txt || echo POSTIZ_FUNNEL_CANARY_NOT_WRITTEN
+                exit 0
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
 
       # The public half of this app, and the ONLY thing on it the internet is
       # allowed to reach. A read-only static file server over the same volume
@@ -178,12 +263,9 @@ spec:
       #
       # WHY THIS EXISTS AT ALL. TikTok and Meta do not accept an uploaded byte
       # stream -- they fetch the media from a URL, so that URL has to be public.
-      # Under `local` storage postiz records the URL as
-      # `FRONTEND_URL + '/uploads' + path` (upload/local.storage.ts, hard-coded
-      # in both uploadSimple and uploadFile), so the media CANNOT live on its
-      # own hostname: whatever serves it has to answer on FRONTEND_URL's host,
-      # under /uploads. Hence one hostname, two backends, split by path in the
-      # route below.
+      # postiz records it as UPLOAD_PUBLIC_URL + path (patch-media-url above),
+      # which is postiz-media.<tailnet>.ts.net/uploads: Tailscale Funnel, in
+      # ../postiz-funnel. The app itself stays on the internal gateway only.
       #
       # A separate controller rather than a sidecar on `postiz`: this one is
       # reachable from the internet and that one is not, so they get separate
@@ -327,6 +409,11 @@ spec:
               # the half of the volume that grows.
               - path: /uploads
                 subPath: uploads
+            # Only for the canary file (patch-media-url). The image has no
+            # /uploads of its own.
+            patch-media-url:
+              - path: /uploads
+                subPath: uploads
           cdn:
             cdn:
               # Mounted UNDER the server root (SERVER_ROOT=/srv) so the on-disk
@@ -337,6 +424,24 @@ spec:
               # and has no reason to be able to write a byte.
               - path: /srv/uploads
                 subPath: uploads
+                readOnly: true
+
+      # patch-media-url's output: the two patched local.storage.js files,
+      # mounted read-only over the image's own by subPath. The init container
+      # always writes both (the original on a mismatch), so a subPath mount
+      # never meets a missing entry.
+      media-patch:
+        type: emptyDir
+        advancedMounts:
+          ${APP}:
+            patch-media-url:
+              - path: /patched
+            ${APP}:
+              - path: /app/apps/backend/dist/libraries/nestjs-libraries/src/upload/local.storage.js
+                subPath: backend-local.storage.js
+                readOnly: true
+              - path: /app/apps/orchestrator/dist/libraries/nestjs-libraries/src/upload/local.storage.js
+                subPath: orchestrator-local.storage.js
                 readOnly: true
 
     service:
@@ -356,53 +461,21 @@ spec:
           http:
             port: *cdn-port
 
-    # ⚠️ ONE hostname, TWO gateways, split by path -- and that split only works
-    # because the three external-dns instances are scoped by `--gateway-name`
-    # (apps/network/external-dns/{technitium,unifi,cloudflare}). Read the header
-    # in external-dns/technitium before touching either route here: without that
-    # scoping, both instances see both routes, and one name with the internal
-    # gateway's ${INTERNAL_DOMAIN} target and the external gateway's
-    # ${EXTERNAL_DOMAIN} target is a CNAME that cannot hold both.
+    # Internal only. The media is public through Tailscale Funnel instead,
+    # on its own hostname (../postiz-funnel, plan step 5 of
+    # docs/plans/cloudflare-tunnel-to-funnel.md): the Funnel door routes only
+    # /uploads/ of postiz-media.<tailnet>.ts.net to the `cdn` Service, and
+    # postiz stamps that base on new media URLs (UPLOAD_PUBLIC_URL).
     #
-    # WHY THE HOSTNAME HAS TO BE SHARED. Media must be fetchable from the public
-    # internet (TikTok and Meta pull from a URL rather than accepting an
-    # upload), and the URL postiz emits is hard-coded to
-    # `FRONTEND_URL + '/uploads' + path` in upload/local.storage.ts. So whatever
-    # serves media must answer on FRONTEND_URL's host. A CDN on its own hostname
-    # cannot work however the bytes are shared -- postiz would still hand the
-    # providers the old URL.
+    # Until 2026-09-29 an `external` route here put /uploads/ of THIS hostname
+    # on the Cloudflare tunnel. Media stored before then carries
+    # postiz.<root domain>/uploads/... URLs, which stop resolving publicly once
+    # that route is gone; posts already published are unaffected (the
+    # platforms keep their own copy).
     #
-    # Tailscale Funnel cannot serve it either, for two independent reasons: it
-    # answers only on <node>.<tailnet>.ts.net with no custom-domain support, and
-    # TikTok requires media URLs to sit under a domain whose ownership is
-    # verified in its console.
-    #
-    # ⚠️ THE EXTERNAL /uploads/ ROUTE DEPENDS ON TWO THINGS OUTSIDE THIS APP.
-    # Do not copy this shape for another app without both.
-    #
-    # The first version of this route (#1620) published the WHOLE app, login and
-    # open registration included, until #1697 removed it. The cause was not the
-    # route but the path to it:
-    #
-    #   1. The tunnel forwarded every hostname to Traefik on 443, and Traefik
-    #      serves BOTH Gateways there -- a listener maps to an entrypoint by port
-    #      alone -- so a tunneled `postiz.<domain>/` matched the INTERNAL route.
-    #   2. That route's `local-user` gate is an ipAllowList on the TCP source, and
-    #      tunnel traffic comes from the in-cluster cloudflared pod, so it passed.
-    #
-    # What now makes it safe (#1698):
-    #
-    #   - BOUNDARY: the tunnel dials Traefik's dedicated `tunnel` entrypoint
-    #     (8444), which only the external Gateway listens on. Internal routes are
-    #     never bound there, so no path the tunnel delivers -- including ones
-    #     Traefik normalizes, like /uploads/../api/ -> /api/ -- can reach the app.
-    #   - SECOND LAYER: the tunnel's ingress rule for this hostname is derived from
-    #     THIS route's path match, so cloudflared forwards only ^/uploads/ and
-    #     rejects `..` segments before anything reaches the cluster
-    #     (components/tunnelRules.ts).
-    #
-    # Verify from outside after any change here: `/`, `/api/`, `/auth` and
-    # `/uploads/../api/` must 404; only `/uploads/...` may reach the cdn pod.
+    # Verify from outside after any change to the Funnel side: `/`, `/api/`,
+    # `/auth` and `--path-as-is /uploads/../api/` on postiz-media must 404;
+    # only `/uploads/...` may reach the cdn pod.
     route:
       # The app. Internal gateway, network-gated, exactly like every other app
       # in this namespace.
@@ -433,35 +506,3 @@ spec:
                   # it would intercept the /settings callback before the app
                   # ever saw the authorization code. Same shape freshrss uses.
                   name: local-user
-
-      # Media only. The tunnel serves this hostname for ^/uploads/ and nothing
-      # else, derived from the path match below -- see the block above.
-      external:
-        annotations:
-          # CNAME to the tunnel and let Cloudflare proxy it, rather than
-          # advertising a LoadBalancer IP. Same as the Flux webhook route.
-          external-dns.kubernetes.io/target: "${TUNNEL_DOMAIN}"
-          external-dns.kubernetes.io/cloudflare-proxied: "true"
-        parentRefs:
-          - name: external
-            namespace: network
-            kind: Gateway
-        hostnames:
-          - "${APP}.${ROOT_DOMAIN}"
-        kind: HTTPRoute
-        rules:
-          # The ONLY rule, and its path is what the tunnel rule is built from --
-          # widening it here widens what the internet can reach.
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /uploads/
-            backendRefs:
-              - identifier: cdn
-                port: *cdn-port
-            # No filters, deliberately. TikTok and Meta fetch these URLs from
-            # their own infrastructure with no cookies and no client IP of
-            # ours -- any auth or network gate here blocks the publish. The
-            # protection is that the paths are unguessable (32 hex chars), the
-            # backend is a read-only static server with directory listing off,
-            # and it can reach nothing but the uploads subPath.

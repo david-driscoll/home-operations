@@ -20,6 +20,7 @@ resources:
   - ./tududi/ks.yaml
   - ./homelable/ks.yaml
   - ./postiz/ks.yaml
+  - ./postiz-funnel/ks.yaml
   - ./outline/ks.yaml
   - ./mealie/ks.yaml
   - ./dawarich/ks.yaml
