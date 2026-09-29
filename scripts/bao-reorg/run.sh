@@ -41,7 +41,7 @@ if [[ -z "${SOPS_AGE_KEY_FILE:-}" ]]; then
   exec mise exec -- "${BASH_SOURCE[0]}" "$@"
 fi
 
-export BAO_ADDR="${BAO_ADDR:-https://bao.equestria.driscoll.tech}"
+export BAO_ADDR="${BAO_ADDR:?set BAO_ADDR, e.g. https://bao.equestria.<root domain>}"
 
 # Resolved into this script's own environment and exported, then exec'd.
 #

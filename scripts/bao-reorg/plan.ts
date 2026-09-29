@@ -181,8 +181,8 @@ const NEW_PREFIX_MOVES: MoveEntry[] = [
   {
     kind: "move",
     phase: 3,
-    from: "shared/cloudflare-driscoll-tech",
-    to: "third-party-tokens/cloudflare/driscoll-tech",
+    from: "shared/cloudflare-<root-domain-slug>",
+    to: "third-party-tokens/cloudflare/<root-domain-slug>",
     note: "THE CANARY. openbao-replica CANARY_PATH, bao-standby/restore.sh, bootstrap/RUNBOOK.md and bootstrap/openbao/restore-test.sh all name it — they change in lockstep or break-glass verification fails. The last two lagged (they were in the vault repo); repointed when it was absorbed, but the LIVE restore-test policy still grants the old path until `restore-test.sh init` is re-run",
   },
   { kind: "move", phase: 3, from: "shared/unifi-api-key-eris-cluster", to: "third-party-tokens/unifi/api-key" },

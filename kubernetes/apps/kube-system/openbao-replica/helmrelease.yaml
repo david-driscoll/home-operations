@@ -263,7 +263,12 @@ spec:
               # names them and they change in lockstep or break-glass
               # verification fails. The live policy lagging that lockstep on
               # 2026-09-05 is the whole reason canary-check exists.
-              CANARY_PATH: &canaryPath secrets/data/third-party-tokens/cloudflare/driscoll-tech
+              #
+              # Moved 2026-09-29 from the domain-named path to this neutral one
+              # (docs/plans/private-domain-scrub.md, phase 3b). The live policy
+              # follows only when `bootstrap/openbao/restore-test.sh init` is
+              # re-run with an admin token -- do that the moment this merges.
+              CANARY_PATH: &canaryPath secrets/data/third-party-tokens/cloudflare/dns-zone
               VAULT_TRANSIT_SEAL_TOKEN:
                 valueFrom:
                   secretKeyRef:

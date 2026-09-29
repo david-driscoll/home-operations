@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-09-29: audit done, phase 1 in its PR. Owner: David.
+Status 2026-09-29: phases 1 and 2 merged; phase 3 in two PRs (3a, 3b). Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -133,10 +133,22 @@ Kustomization emitted by an app component does not inherit
 
 ### Phase 3: the Cloudflare token's OpenBao path and 1Password title
 
-The token lives at `third-party-tokens/cloudflare/<root-domain-slug>`, and the
-store maps it from the 1Password title `Cloudflare (<root domain>)`. Both are
-identifiers, not values, so they get **renamed** (for example to
-`third-party-tokens/cloudflare/dns-zone`) rather than substituted.
+The token lived at `third-party-tokens/cloudflare/<root-domain-slug>`, and the
+store mapped it from the 1Password title `Cloudflare (<root domain>)`. Both are
+identifiers, not values, so they are **renamed** to
+`third-party-tokens/cloudflare/dns-zone`, in two steps.
+
+- **3a (done):** the secret was copied (kv-v2, `cas=0`, identical hash), and
+  every consumer moved: the ExternalSecrets, Pulumi (now `getSecretByPath`),
+  the Dockge Traefik `.env`.
+- **3b:** the break-glass canary moves in its four lockstep places. Then
+  `bootstrap/openbao/restore-test.sh init` runs with an admin token, so the
+  live `restore-test` policy grants the new path. Order matters: the daily
+  canary-check (04:00 UTC) tests the live grant, the nightly dump (03:00)
+  must carry the new path, and the monthly restore test (1st, 05:00)
+  restores that dump. Once a restore test passes, delete the old path.
+
+The original design notes follow.
 
 1. Copy the secret to the new path. A human does this, with kv-v2 `cas=0`.
 2. Switch every reference in one PR: the two ExternalSecrets, the

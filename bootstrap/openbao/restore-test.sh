@@ -44,7 +44,7 @@ readonly APPROLE_FILE="bootstrap/openbao/restore-test-approle.sops.yaml"
 # (CANARY_PATH), in docker/alpha-site/bao-standby/restore.sh, and in the
 # RUNBOOK together -- scripts/bao-reorg/plan.ts calls those out by name.
 #
-# Moved from secrets/data/shared/cloudflare-driscoll-tech by the reorganisation
+# Moved from secrets/data/shared/cloudflare-<root-domain-slug> by the reorganisation
 # (docs/openbao-shared-secrets-reorg.md). The other three were updated when that
 # landed; this one could not be, because it was still in the vault repo. The
 # `restore-test` POLICY IN THE LIVE SERVER STILL GRANTS THE OLD PATH, and
@@ -61,7 +61,9 @@ readonly APPROLE_FILE="bootstrap/openbao/restore-test-approle.sops.yaml"
 # the policy DOCUMENT is itself an admin operation (the `else` branch below
 # cannot tell "policy missing" from "this token may not read it"). A 403 there
 # is this exact drift and the job says so; `init` here is still the fix.
-readonly CANARY_PATH="secrets/data/third-party-tokens/cloudflare/driscoll-tech"
+# Moved again on 2026-09-29, from the domain-named cloudflare path to the
+# neutral one below (docs/plans/private-domain-scrub.md, phase 3b).
+readonly CANARY_PATH="secrets/data/third-party-tokens/cloudflare/dns-zone"
 
 log()  { printf '  %s\n' "$*"; }
 ok()   { printf '  ✓ %s\n' "$*"; }
@@ -72,7 +74,7 @@ preflight() {
   local missing=()
   for c in bao sops jq; do command -v "$c" >/dev/null || missing+=("$c"); done
   [[ ${#missing[@]} -eq 0 ]] || die "missing command(s): ${missing[*]}"
-  [[ -n "${BAO_ADDR:-}" ]] || die "BAO_ADDR is not set — use https://bao.equestria.driscoll.tech"
+  [[ -n "${BAO_ADDR:-}" ]] || die "BAO_ADDR is not set — use https://bao.equestria.<root domain>"
   [[ -n "${SOPS_AGE_KEY_FILE:-}" && -f "${SOPS_AGE_KEY_FILE}" ]] \
     || die "SOPS_AGE_KEY_FILE is unset or missing — required to write ${APPROLE_FILE}"
   # sops resolves .sops.yaml from the CURRENT DIRECTORY (see equestria-init.sh
@@ -139,8 +141,8 @@ init() {
   # This used to be guarded by `if bao policy read restore-test; then ok
   # "already exists"`, which made the script unable to change a policy it had
   # already written. When the canary moved from
-  # secrets/data/shared/cloudflare-driscoll-tech to
-  # secrets/data/third-party-tokens/cloudflare/driscoll-tech, re-running `init`
+  # secrets/data/shared/cloudflare-<root-domain-slug> to
+  # secrets/data/third-party-tokens/cloudflare/<root-domain-slug>, re-running `init`
   # printed a green "already exists" and repointed nothing; the live policy went
   # on granting a path that the reorganisation then destroyed, leaving the role
   # able to read NOTHING (404 on the old path, 403 on the new one) while every
