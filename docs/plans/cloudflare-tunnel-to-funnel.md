@@ -565,13 +565,18 @@ path also fetch the URL.
   - Keep the `$`-brace form out of comments (`values.yaml:132-134`).
   - The `dns.driscoll.tech` and `dockge-*` blocks already rely on the more specific zone winning.
 - **Rejected alternatives:**
-  - `DISABLE_SSRF_PROTECTION=true` is too broad, because postiz also fetches webhook URLs that
-    users supply.
+  - `DISABLE_SSRF_PROTECTION=true` **instead of** the block. It does not reach the media host: the
+    name still resolves to the proxy pod IP, which refuses :443 (checked 2026-09-29 against the
+    webhook's Funnel: pod IP refused, relay 404).
   - `hostAliases` breaks when relay IPs move.
   - A pod `dnsConfig` doesn't help: glibc only tries the extra servers after kube-dns has already
     answered.
   - The experimental forward annotation means kernel mode, and the name still resolves to a
     10.206.x address.
+- **Also done, 2026-09-29 (David's call):** `DISABLE_SSRF_PROTECTION=true` on postiz as well as
+  the block. It fixes postiz's own reads of the *current* media host, which resolves in-cluster to
+  the internal gateway, without waiting for step 5. The cost is that the guard no longer covers
+  user-supplied URLs. That is accepted, because only authentik's `family` group can sign in.
 - **Cleaner but not chosen:** widen the patch so postiz maps `UPLOAD_PUBLIC_URL` paths to its local
   `/uploads` mount for its own reads. That removes the hairpin, but every provider's read path
   would need auditing, which means more patch surface.
