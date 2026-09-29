@@ -109,7 +109,7 @@ pi$ docker exec authentik-server wget -qO /dev/null --server-response http://loc
 pi$ ip -4 addr show eth0 | grep 10.10.255.10    # the Pi holds the VIP (within ~15 s of ready)
 ```
 
-Log in through `https://authentik.driscoll.tech`, and check one forwardAuth app
+Log in through `https://authentik.<root domain>`, and check one forwardAuth app
 on the Pi.
 
 ### P5. Make git agree — before equestria comes back

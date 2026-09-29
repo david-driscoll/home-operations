@@ -395,7 +395,7 @@ scoped entirely to 20, once only 3 CPs remain and 4 real workers exist to absorb
 - [ ] CNPG cluster `database/postgres` reports `Cluster in healthy state`, `readyInstances: 3`,
       and the `postgres` / `postgres-primary` PodDisruptionBudgets both exist (see below —
       their presence is what makes the per-node CNPG steps below safe to rely on).
-- [ ] OpenBao reports 3/3 unsealed (`bao status` against `bao.equestria.driscoll.tech`, or the
+- [ ] OpenBao reports 3/3 unsealed (`bao status` against `bao.equestria.<root domain>`, or the
       `openbao-sealed=false` label on all three `openbao-N` pods).
 - [ ] No node in the 7-node pool carries a stale taint from an unrelated incident. As of
       2026-08-13, shining-armor's [vault#139](https://github.com/david-driscoll/vault/issues/139)
@@ -903,7 +903,7 @@ fine."
       `node-role.kubernetes.io/control-plane` label.
 - [ ] `kubectl get cluster postgres -n database` reports `readyInstances: 3`, healthy, no
       instance pinned to a node that no longer exists.
-- [ ] OpenBao 3/3 unsealed, `bao status` clean against `bao.equestria.driscoll.tech`.
+- [ ] OpenBao 3/3 unsealed, `bao status` clean against `bao.equestria.<root domain>`.
 - [ ] Technitium DNS pod is `Running` on hard-hat with the `technitium-dns=true` label intact.
 - [ ] Longhorn: zero degraded volumes across the full 7-node pool.
 - [ ] No stray taints left over from a failed intermediate attempt on any of the three nodes.

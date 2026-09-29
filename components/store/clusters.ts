@@ -73,7 +73,7 @@ const SECRET_FIELDS: readonly ClusterSecretField[] = ["secret", "arcane_token"];
 /**
  * The estate's public domain, appended to each cluster's `domainPrefix`.
  *
- * Every cluster's root domain was `<something>.driscoll.tech`, so the suffix
+ * Every cluster's root domain was `<something>.<root domain>`, so the suffix
  * was repeated six times and could drift in one file without the others. The
  * YAML now carries only the prefix (`skystar`) and this is added on load.
  *
@@ -133,7 +133,7 @@ export function parseCluster(file: string, raw: unknown): ClusterEntry {
 
   const domainPrefix = doc.domainPrefix as string;
   // Catch the obvious mistake first and name it, because pasting the old value
-  // back in would otherwise yield `skystar.driscoll.tech.driscoll.tech` — a
+  // back in would otherwise yield `skystar.<root domain>.<root domain>` — a
   // domain that resolves nowhere and looks fine in a diff.
   if (domainPrefix.includes(".")) {
     throw new Error(`${where}: 'domainPrefix' is a single label with no '.${ROOT_DOMAIN}' suffix — use '${domainPrefix.replace(new RegExp(`\\.${ROOT_DOMAIN}$`), "")}', not '${domainPrefix}'`);

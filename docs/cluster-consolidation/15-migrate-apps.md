@@ -344,7 +344,7 @@ passthrough for either integration**, which is also independently confirmed by t
 home-assistant has already run successfully on `shining-armor` — an arbitrary equestria worker,
 not a specially chosen one — without incident.
 
-**Verified reachable (web UI only):** `home.driscoll.tech` resolves to `10.10.206.101` (the
+**Verified reachable (web UI only):** `home.<root domain>` resolves to `10.10.206.101` (the
 traefik VIP) and returns a normal `HTTPS` response, confirming DNS + `HTTPRoute` + ingress are
 wired correctly end to end. This says nothing about the MQTT integration above — the UI loading
 and the app being functionally healthy are different claims, and only the first is currently true.

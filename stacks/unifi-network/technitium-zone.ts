@@ -1,7 +1,7 @@
 /**
  * Technitium zone scaffolding for split-horizon DNS.
  *
- * Creates a Conditional Forwarder zone for driscoll.tech on the Technitium
+ * Creates a Conditional Forwarder zone for <root domain> on the Technitium
  * cluster (created on the primary; cluster sync replicates it). StandardDns
  * records across all stacks land in this zone as overrides; anything without an
  * override follows the FWD record upstream, so public Cloudflare records keep

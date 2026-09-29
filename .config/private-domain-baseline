@@ -1,0 +1,100 @@
+# Files that may still hold the root domain or tailnet name in plaintext.
+# Read by scripts/private-domain-guard. It ONLY shrinks: each phase of
+# docs/plans/private-domain-scrub.md deletes its lines, and the guard fails on
+# any file NOT listed here. When this file is empty, delete it.
+#
+# One path per line; `#` lines and blanks are ignored. A file touched by two
+# phases is listed once, under the first.
+
+# --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
+kubernetes/apps/agents/agent-tools-servers/proxmox/alpha-site/kustomization.yaml
+kubernetes/apps/agents/agent-tools-servers/proxmox/celestia/kustomization.yaml
+kubernetes/apps/agents/agent-tools-servers/proxmox/luna/kustomization.yaml
+kubernetes/apps/agents/agent-tools-servers/proxmox/skystar/kustomization.yaml
+kubernetes/apps/agents/agent-tools-servers/proxmox/twilight-sparkle/kustomization.yaml
+kubernetes/apps/agents/agentboard/resources/known_hosts
+kubernetes/apps/agents/agentboard/resources/ssh_config
+kubernetes/apps/coder/forgejo-runner/resources/config.yml
+kubernetes/apps/coder/forgejo/helmrelease.yaml
+kubernetes/apps/kube-system/coredns/helm/values.yaml
+kubernetes/apps/kube-system/openbao/helmrelease.yaml
+kubernetes/apps/network/traefik/middleware/default-cors.yaml
+kubernetes/apps/observability/blackbox-exporter/helmrelease.yaml
+kubernetes/apps/tailscale-system/services/bootstrap.yaml
+dashboard/externalsecret.yaml
+docs/runbooks/assets/forgejo-runner-canary.yml
+docs/runbooks/assets/jellyfin-pg/job.yaml
+
+# --- Phase 3: the Cloudflare token's OpenBao path and 1Password title ---
+kubernetes/apps/cert-manager/cert-issuers/secret.yaml
+kubernetes/apps/network/secrets/cloudflare-default-domain.yaml
+kubernetes/apps/kube-system/openbao-replica/helmrelease.yaml
+components/bao.test.ts
+components/store/bao.test.ts
+components/store/bao.ts
+components/store/index.ts
+docker/_common/traefik/.env
+docker/alpha-site/bao-standby/restore.sh
+bootstrap/RUNBOOK.md
+bootstrap/openbao/restore-test.sh
+docs/openbao-migration/PLAN.md
+docs/openbao-migration/STATUS.md
+docs/openbao-shared-secrets-reorg.md
+scripts/bao-reorg/plan.ts
+scripts/bao-reorg/run.sh
+
+# --- Phase 4: Pulumi code and cluster definitions ---
+clusters/alpha-site.yaml
+clusters/celestia.yaml
+clusters/equestria.yaml
+clusters/luna.yaml
+clusters/skystar.yaml.disabled
+components/ProxmoxBackupServerLxc.ts
+components/StandardDns.ts
+components/authentik/flows.ts
+components/globals.ts
+components/openbao/oidc.ts
+components/store/clusters.test.ts
+components/store/clusters.ts
+components/tunnelRules.test.ts
+stacks/system/applications.ts
+stacks/unifi-network/local-dns.ts
+stacks/unifi-network/technitium-zone.ts
+
+# --- Phase 5: tooling and hosts outside Flux (mise env, MCP, scripts, Docker, Talos) ---
+.config/mise.toml
+.mcp.json
+.vscode/mcp.json
+bootstrap/openbao/equestria-init.sh
+bootstrap/openbao/eso-parity-check.sh
+bootstrap/openbao/provision-static-unseal.sh
+bootstrap/openbao/pulumi-env.sh
+dashboard/.mise.toml
+dashboard/resources/test.sh
+docker/_common/backups/.env
+docker/alpha-site/.mise.toml
+docker/alpha-site/pecron-monitor/config/config.yaml
+docker/celestia/.mise.toml
+docker/celestia/hermes/config.seed.yaml
+docker/luna/.mise.toml
+docker/skystar/.mise.toml
+docs/runbooks/assets/jellyfin-pg/config-sync.py
+playbook/Thanos Debugging.dib
+playbook/move-media.dib
+playbook/volsync.ipynb
+scripts/iptv-audit.py
+stacks/authentik/.mise.toml
+stacks/backups/.mise.toml
+stacks/gulf-of-mexico/.mise.toml
+stacks/home/.mise.toml
+stacks/ocracoke/.mise.toml
+stacks/system/.mise.toml
+stacks/unifi-network/.mise.toml
+stacks/vault/.mise.toml
+talos/patches/controller/cluster.yaml
+talos/patches/global/machine-registries.yaml
+talos/talconfig.yaml
+
+# --- Generated: clears as the sources above do (graphify update .) ---
+graphify-out/GRAPH_REPORT.md
+graphify-out/graph.json

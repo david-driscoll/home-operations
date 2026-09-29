@@ -176,8 +176,8 @@ spec:
             port: 53443
             protocol: TCP
 
-      # IN-CLUSTER DNS. CoreDNS forwards the driscoll.tech zone here (see the
-      # `driscoll.tech` server block in apps/kube-system/coredns/helm/values.yaml),
+      # IN-CLUSTER DNS. CoreDNS forwards the <root domain> zone here (see the
+      # `<root domain>` server block in apps/kube-system/coredns/helm/values.yaml),
       # so pods resolve internal names against the authoritative internal zone
       # rather than public DNS.
       #

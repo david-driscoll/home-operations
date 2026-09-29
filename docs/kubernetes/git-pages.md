@@ -14,39 +14,39 @@ A **team** is a Forgejo organization (or user).
 
 | Forgejo repository | Served at |
 | --- | --- |
-| `<team>/pages` (the team's index repo) | `https://<team>.pages.driscoll.tech/` |
-| `<team>/<repo>` | `https://<team>.pages.driscoll.tech/<repo>/` |
+| `<team>/pages` (the team's index repo) | `https://<team>.pages.<root domain>/` |
+| `<team>/<repo>` | `https://<team>.pages.<root domain>/<repo>/` |
 
-`docs.driscoll.tech` 302-redirects to `docs.pages.driscoll.tech`, keeping the
+`docs.<root domain>` 302-redirects to `docs.pages.<root domain>`, keeping the
 path. The redirect is the `docs` route in the HelmRelease.
 
-`setup.driscoll.tech` serves `docs/setup` in place. See
-[setup.driscoll.tech](#setupdriscolltech-the-family-setup-guide) below.
+`setup.<root domain>` serves `docs/setup` in place. See
+[setup.<root domain>](#setupdriscolltech-the-family-setup-guide) below.
 
 Nothing is served until something is published. A host with no site returns
 `site not found`.
 
-## setup.driscoll.tech (the family setup guide)
+## setup.<root domain> (the family setup guide)
 
 `docs/setup` is the family-facing guide to setting up phones and TVs for the
 home services. It is published like any project site, to
-`https://docs.pages.driscoll.tech/setup/`. The family is given
-`https://setup.driscoll.tech`, which is a **rewrite, not a redirect**. The
-address bar keeps `setup.driscoll.tech`.
+`https://docs.pages.<root domain>/setup/`. The family is given
+`https://setup.<root domain>`, which is a **rewrite, not a redirect**. The
+address bar keeps `setup.<root domain>`.
 
 A rewrite is needed for two reasons:
 
-- UniFi DNS can hold `setup.driscoll.tech` but not the `*.pages` wildcard.
+- UniFi DNS can hold `setup.<root domain>` but not the `*.pages` wildcard.
   A phone on home Wi-Fi without Tailscale therefore could not follow a
-  redirect to `docs.pages.driscoll.tech`.
+  redirect to `docs.pages.<root domain>`.
 - git-pages picks the site from the `Host` header alone. Rewriting the Host
   serves the same published site under a second name, with no second publish.
 
 The `setup` route in the HelmRelease has two rules:
 
-| Request on `setup.driscoll.tech` | Sent to git-pages as |
+| Request on `setup.<root domain>` | Sent to git-pages as |
 | --- | --- |
-| `/setup…` | Same path, `Host: docs.pages.driscoll.tech` |
+| `/setup…` | Same path, `Host: docs.pages.<root domain>` |
 | Anything else, e.g. `/` or `/tailscale/` | `/setup` prepended, same Host rewrite |
 
 Longest-prefix precedence keeps `/setup/…` out of the second rule. Without
@@ -59,10 +59,10 @@ Requirements on the site:
 - **`docs/setup` must use the SHA-1 object format.** `actions/checkout` fails
   on SHA-256 repositories. `docs/pages` is SHA-256, so do not copy its
   settings. The format can only be chosen when the repo is created.
-- Publish with `site: http://docs.pages.driscoll.tech/setup/`.
+- Publish with `site: http://docs.pages.<root domain>/setup/`.
 - **Do not ship a `_redirects` file.** git-pages builds the redirect
   `Location` from the rewritten Host, which would send family to
-  `docs.pages.driscoll.tech`.
+  `docs.pages.<root domain>`.
 - The route uses `local-api`, like `pages`, so the site's own `404.html` is
   served instead of error-pages.
 
@@ -73,7 +73,7 @@ The check fails until `docs/setup` has been published.
 ## Adding a team
 
 No cluster change is needed. The route and certificate already cover
-`*.pages.driscoll.tech`.
+`*.pages.<root domain>`.
 
 1. Create the organization in Forgejo, e.g. `docs`.
 2. Create `<team>/pages` with default branch `main`. The quickest way is from the
@@ -83,12 +83,12 @@ No cluster change is needed. The route and certificate already cover
 
 ## Starting from the template
 
-[`home-operations/pages-template`](https://git.driscoll.tech/home-operations/pages-template)
+[`home-operations/pages-template`](https://git.<root domain>/home-operations/pages-template)
 is a template repository with an Astro + Starlight docs site and a publish
 workflow. Choose it under **New repository → Template**.
 
 - **Nothing to configure.** The workflow derives the target from the repository
-  name: `<org>/pages` publishes to `https://<org>.pages.driscoll.tech/`, and any
+  name: `<org>/pages` publishes to `https://<org>.pages.<root domain>/`, and any
   other name to `/<repo>/`. The Astro `base` and `site` follow automatically.
 - **Toolchain.** `mise.toml` pins Node and defines `mise run dev` / `build` /
   `preview`. CI runs the same `mise run build`.
@@ -115,13 +115,13 @@ jobs:
       # writing into public/.
       - uses: https://codeberg.org/git-pages/action@v2
         with:
-          site: http://docs.pages.driscoll.tech/
+          site: http://docs.pages.${ROOT_DOMAIN}/
           server: git-pages.coder.svc.cluster.local:3000
           token: ${{ forgejo.token }}
           source: public/
 ```
 
-For a project repo, use `site: http://<team>.pages.driscoll.tech/<repo>/`.
+For a project repo, use `site: http://<team>.pages.<root domain>/<repo>/`.
 
 Notes on the non-obvious fields:
 
@@ -142,7 +142,7 @@ Notes on the non-obvious fields:
   `DEFAULT_ACTIONS_URL` is GitHub, so a bare `git-pages/action@v2` would be
   looked up on GitHub.
 - **`server:` sends the upload straight to the in-cluster Service** while
-  keeping `Host: <team>.pages.driscoll.tech`. That takes DNS, TLS and the
+  keeping `Host: <team>.pages.<root domain>`. That takes DNS, TLS and the
   gateway middleware out of the publish path from the runner's job
   containers.
 - **`server:` replaces only the host, not the scheme.** That is why `site:` is
@@ -154,7 +154,7 @@ Notes on the non-obvious fields:
   - It accepts the upload when that identity has push access to the matching
     repository.
   - So a repo can publish only to its own URL. `docs/foo` cannot overwrite
-    `docs.pages.driscoll.tech/bar/`.
+    `docs.pages.<root domain>/bar/`.
   - Publishing to a different repo's URL needs a personal access token with
     user:read and repository:read+write, stored as an Actions secret.
 
@@ -171,7 +171,7 @@ Notes on the non-obvious fields:
 
 - **Health.** There is no global health endpoint. `/.git-pages/health` is per
   site. Probes are TCP on 3000, and metrics are on 3002 (ServiceMonitor).
-  The one Gatus check is "Family Setup Guide" (`https://setup.driscoll.tech/`),
+  The one Gatus check is "Family Setup Guide" (`https://setup.<root domain>/`),
   which also covers the rewrite.
 - **Alerts** are in
   [`prometheusrule.yaml`](../../kubernetes/apps/coder/git-pages/prometheusrule.yaml):

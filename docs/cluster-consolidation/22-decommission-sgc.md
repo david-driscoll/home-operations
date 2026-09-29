@@ -72,10 +72,10 @@ inventory sections is subordinate to these.
 
 **1. Stop SGC's external-dns before touching any DNS source.** SGC runs three external-dns
 controllers — `cloudflare-dns`, `technitium-dns`, `unifi-dns` — with
-`--policy=sync --txt-owner-id=sgc --domain-filter=driscoll.tech`. That filter is the whole
-estate zone, **not** `sgc.driscoll.tech`. Under `policy=sync` a controller deletes records it
+`--policy=sync --txt-owner-id=sgc --domain-filter=<root domain>`. That filter is the whole
+estate zone, **not** `sgc.<root domain>`. Under `policy=sync` a controller deletes records it
 owns when their source disappears, and Cloudflare-side TXT ownership is confirmed for
-`truenas.driscoll.tech` and `odyssey.driscoll.tech`. So deleting the SGC DNSEndpoints — or
+`truenas.<root domain>` and `odyssey.<root domain>`. So deleting the SGC DNSEndpoints — or
 merely suspending SGC's Flux tree — while those controllers run makes them **delete live
 estate records on the way out**. Suspend the HelmReleases, scale the Deployments to zero,
 confirm zero pods, and only then touch a DNSEndpoint.
@@ -167,20 +167,20 @@ address in SGC's own `talconfig.yaml`, which dies with the node wipe in
 phases 18–19 and the repo archival in §9. No separate release step is needed
 beyond confirming nothing still tries to reach it.
 
-### 2. DNS records — `op-connect.sgc.driscoll.tech` and `*.sgc.driscoll.tech`
+### 2. DNS records — `op-connect.sgc.<root domain>` and `*.sgc.<root domain>`
 
-**Not Pulumi-managed.** Verified: `grep -rn "op-connect\|sgc\.driscoll\.tech" stacks/ components/ --include="*.ts"`
-in `home-operations` finds no DNS-record-creating code for the `sgc.driscoll.tech`
+**Not Pulumi-managed.** Verified: `grep -rn "op-connect\|sgc\.<root domain>" stacks/ components/ --include="*.ts"`
+in `home-operations` finds no DNS-record-creating code for the `sgc.<root domain>`
 zone — SGC's own `network/cloudflare-dns` and `network/technitium-dns`
 external-dns instances create these records *from inside the SGC cluster*
 via Ingress/Service annotations. That means **the records do not clean
 themselves up when the cluster stops existing** — external-dns simply stops
-running. Every record it ever created (`op-connect.sgc.driscoll.tech`,
-`iris.driscoll.tech` per SGC's `authentikDomain`, and whatever else SGC's
+running. Every record it ever created (`op-connect.sgc.<root domain>`,
+`iris.<root domain>` per SGC's `authentikDomain`, and whatever else SGC's
 Ingresses generated) becomes an orphan in Cloudflare and in Technitium.
 
 Action: enumerate live records via the Cloudflare API and Technitium's API
-for anything under `sgc.driscoll.tech` or pointed at `10.10.209.x`, delete
+for anything under `sgc.<root domain>` or pointed at `10.10.209.x`, delete
 them manually. This cannot be done by deleting a Pulumi resource because none
 manages them.
 
@@ -217,7 +217,7 @@ manages them.
   matching code change (it references backend roots, which is unaffected by
   sgc's stack disappearing — the `s3://home-operations/applications` prefix
   stays, just with one fewer stack instance under it).
-- `components/store/clusters.test.ts:204` — `assert.equal(CLUSTERS.find(c => c.key === "sgc")?.rootDomain, "sgc.driscoll.tech")`. Once `clusters/sgc.yaml` is gone (§4) this assertion fails because `.find()` returns `undefined`. Remove the assertion line (keep the `alpha-site`/`skystar` ones next to it).
+- `components/store/clusters.test.ts:204` — `assert.equal(CLUSTERS.find(c => c.key === "sgc")?.rootDomain, "sgc.<root domain>")`. Once `clusters/sgc.yaml` is gone (§4) this assertion fails because `.find()` returns `undefined`. Remove the assertion line (keep the `alpha-site`/`skystar` ones next to it).
 
 ### 4. The cluster definition — `clusters/sgc.yaml` and its OpenBao twin
 
@@ -395,7 +395,7 @@ own sops files and a read-only repo can't take the follow-up PR.
   default branch, so this won't actually break, but it's a stale pointer
   worth fixing while touching the area. **Not checked this session:**
   whether the Gatus config itself (not just its schema comment) has any
-  `endpoints:` entries probing SGC hosts or `*.sgc.driscoll.tech` — verify
+  `endpoints:` entries probing SGC hosts or `*.sgc.<root domain>` — verify
   at execution time.
 
 ### 9. Repos, docs, CI, and the crew's own routing
@@ -485,8 +485,8 @@ deliberately; do not let them be discovered later.
 
 | What | Where | Why it matters |
 |---|---|---|
-| `cloudflare-dns`, `technitium-dns`, `unifi-dns` HelmReleases **suspended**, Deployments scaled to **0** | SGC ns `network`, 2026-08-16 | Rule 1. If SGC's Flux resumes, they return and re-assert `replicator.driscoll.tech → 10.10.209.203`. Needs a `stargate-command-cluster` commit, or must simply outlive SGC |
-| Stale `replicator.driscoll.tech` A records deleted by hand — `10.10.209.202` (Cloudflare, by record id) and `10.10.209.203` (Technitium) | 2026-08-16 | Was a live three-way split-brain: half of all resolutions returned an address with no broker behind it. Fixed; all five Technitium resolvers, MagicDNS and public now return `10.10.206.203` alone |
+| `cloudflare-dns`, `technitium-dns`, `unifi-dns` HelmReleases **suspended**, Deployments scaled to **0** | SGC ns `network`, 2026-08-16 | Rule 1. If SGC's Flux resumes, they return and re-assert `replicator.<root domain> → 10.10.209.203`. Needs a `stargate-command-cluster` commit, or must simply outlive SGC |
+| Stale `replicator.<root domain>` A records deleted by hand — `10.10.209.202` (Cloudflare, by record id) and `10.10.209.203` (Technitium) | 2026-08-16 | Was a live three-way split-brain: half of all resolutions returned an address with no broker behind it. Fixed; all five Technitium resolvers, MagicDNS and public now return `10.10.206.203` alone |
 | `sgc/automation-dns`, `sgc/discord-dns`, `sgc/spike-dns` DNSEndpoints **still present** | SGC ns `sgc` | Inert only because rule 1 stopped their controllers. Delete them in the SGC repo during teardown, never by `kubectl` against a running controller |
 | **`pulumi destroy --stack sgc` executed**, 2026-08-17 09:44 | Minio `applications/sgc` | Established from the state checkpoint (~1.1 MB → 21 KB across three writes in one minute) and corroborated live: authentik applications 128 → 113 (the stack owned exactly 15 `ApplicationDefinition`s), users 12 → 11 (the outpost's service account), no `sgc` outpost or service connection left. **The stack still exists in the backend as an empty checkpoint** — `pulumi stack rm sgc` finishes it |
 | `sgc` Stack CR pruned via `# - ./sgc.yaml`, 2026-08-17 12:37 | `kubernetes/apps/pulumi/applications/kustomization.yaml` | Safe **only because the destroy came first**. `destroyOnFinalize: false` means pruning the CR abandons resources rather than destroying them — had the order been reversed, everything the stack owned would now be live and unmanaged with no reconciler |
@@ -517,7 +517,7 @@ Checked 2026-08-17 and found to need no action. Listed so the same ground is not
   element, so `== 0` cannot match — SGC's remote-write stopping produces no false page.
 - **Alertmanager** routes on `severity` only, with no `cluster` matcher, and no SGC-scoped silence.
 - **1Password Connect.** `kubernetes/apps/kube-system/external-secrets/stores/onepassword-store.yaml:11`
-  points in-cluster on equestria, not at `op-connect.sgc.driscoll.tech`. All 28 consumers are safe.
+  points in-cluster on equestria, not at `op-connect.sgc.<root domain>`. All 28 consumers are safe.
 - **Grafana/Prometheus** carry per-cluster `externalLabels` and label-driven dashboard variables
   that self-prune; the GPU dashboard and intel-gpu-exporter references are comments only.
 - **No arity assumptions.** `components/store/index.ts`'s cluster getters are plain filters; no
@@ -684,7 +684,7 @@ not achievable and never was — it exempted a file that no longer exists and ig
   `stargate-command` **namespace** tree, which stays.
 - **OpenBao is clean.** No `kubernetes-sgc` mount, no `eso-sgc` policy or role, and
   `bao kv list secrets/clusters/sgc/` returns nothing. `equestria-init.sh status` agrees.
-- **No SGC-owned DNS anywhere.** No records under `sgc.driscoll.tech`, no `10.10.209.*` A or
+- **No SGC-owned DNS anywhere.** No records under `sgc.<root domain>`, no `10.10.209.*` A or
   PTR records, and no `sgc.*` TXT ownership litter, in **all three** providers — Cloudflare,
   Technitium (check every one of the five instances, not one resolver's answer) and UniFi.
 - **Nothing pages and nothing is permanently red.** No Prometheus rule or blackbox probe
@@ -702,10 +702,10 @@ and `pulumi preview` is not the gate.
 
 | Step | What breaks | How you'd know | Rollback | Point of no return |
 |---|---|---|---|---|
-| Deleting a DNSEndpoint, or suspending SGC's Flux, while external-dns runs | external-dns `policy=sync` **deletes live estate records** it owns — `truenas.driscoll.tech`, `odyssey.driscoll.tech` — from Cloudflare | Something estate-wide stops resolving; this is the same class as the two prior live-DNS wipes | Re-add from Cloudflare history, or the next `stacks/home` run for Pulumi-owned names | None if rule 1 is followed. **This is the highest-consequence ordering error in the piece** |
+| Deleting a DNSEndpoint, or suspending SGC's Flux, while external-dns runs | external-dns `policy=sync` **deletes live estate records** it owns — `truenas.<root domain>`, `odyssey.<root domain>` — from Cloudflare | Something estate-wide stops resolving; this is the same class as the two prior live-DNS wipes | Re-add from Cloudflare history, or the next `stacks/home` run for Pulumi-owned names | None if rule 1 is followed. **This is the highest-consequence ordering error in the piece** |
 | §3 `pulumi destroy` on the `sgc` stack, before #875 is reconciled | `stacks/home`, `stacks/ocracoke`, `stacks/gulf-of-mexico` all throw on `backupPlanKeys()`; the SSO `authentik` stack throws on `getCluster` | Four stacks fail at once, one of them the stack whose preview output is already untrustworthy | Restore the KV path, or revert the constant | None — but verify #875 is *reconciled*, not merely merged |
 | §3 destroy, after SGC is unreachable | `pulumi preview` cannot run (the program enumerates the live cluster); the destroy cannot delete in-cluster `Secret`s | Preview errors on the provider | Bring the kubeproxy path back, or accept orphaned in-cluster objects that die with the node wipe | Soft — but the clean path closes when SGC does |
-| Deleting the `sgc` Brand | `iris.driscoll.tech` falls back to authentik's default brand. It is **not** unused — alpha-site serves that name now, and only `sgc`/`equestria` get Brands, so alpha-site has none of its own | Visibly different login page on one hostname | Recreate the Brand, or give alpha-site its own | None — cosmetic, but do not be surprised by it |
+| Deleting the `sgc` Brand | `iris.<root domain>` falls back to authentik's default brand. It is **not** unused — alpha-site serves that name now, and only `sgc`/`equestria` get Brands, so alpha-site has none of its own | Visibly different login page on one hostname | Recreate the Brand, or give alpha-site its own | None — cosmetic, but do not be surprised by it |
 | §5 OpenBao mount/policy deletion before SGC's Flux tree is suspended | All 41 of SGC's ExternalSecrets fail login simultaneously | ESO logs, `ClusterSecretStore` unhealthy | Recreate from `equestria-init.sh` | None if ordered |
 | §2/§6 DNS record deletion | Deleting a record an adjacent equestria record shadows | Something can't resolve | Re-add from provider history | None if scoped. **Delete Cloudflare records by record id, never by name** — a name can carry several records, and this estate has wiped live DNS twice from adjacent carelessness |
 | Retiring `/spike/backup/sgc/` | 9 `sgc-volsync-*` Gatus heartbeats page **together** — they stay green after teardown because local copy jobs feed them | Nine simultaneous pushover alerts | Recreate the paths | None — but retire data, jobs and heartbeats in one change |

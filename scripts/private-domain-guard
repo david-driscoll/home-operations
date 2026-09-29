@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# private-domain-guard -- keep the estate's root domain and tailnet name out of
+# every tracked file.
+#
+# WHY. This repo is public, and its history is being scrubbed of both names
+# (docs/plans/private-domain-scrub.md). Their values live ONLY in SOPS:
+# ROOT_DOMAIN and TAILSCALE_DOMAIN in kubernetes/flux/meta/shared-secrets.sops.yaml.
+# This script reads them from there at run time, so it never contains them
+# either, and it never prints matching text -- only paths and line numbers.
+#
+# What counts as a hit (case-insensitive, fixed strings):
+#   - the root domain in any spelling: a.b, a\.b, a\\.b, a-b, a_b (see patterns)
+#   - the tailnet's first label (so the whole MagicDNS suffix, too)
+#
+# Usage:
+#   private-domain-guard check [--cached]  scan tracked files (working tree, or
+#                                          the index with --cached); fail on any
+#                                          file not listed in the baseline
+#   private-domain-guard stdin             exit 1 if stdin contains a name
+#                                          (the Claude Code Write/Edit hook)
+#
+# Exit codes: 0 clean, 1 found, 3 cannot decrypt (the caller decides; `check`
+# and `stdin` both skip with a warning, so a machine without the age key is
+# never blocked -- there is nothing it could compare against).
+#
+# The baseline (.config/private-domain-baseline) lists files that still hold a
+# name on purpose, each waiting on a later phase of the plan. It only shrinks.
+set -euo pipefail
+
+# The repo this script lives in, whatever the caller's working directory (the
+# Claude hook runs from anywhere; a worktree has its own copy).
+top="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+secrets="$top/kubernetes/flux/meta/shared-secrets.sops.yaml"
+baseline="$top/.config/private-domain-baseline"
+
+load_names() {
+  if [[ -n "${PRIVATE_DOMAIN_ROOT:-}" && -n "${PRIVATE_DOMAIN_TAILNET:-}" ]]; then
+    root="$PRIVATE_DOMAIN_ROOT" tailnet="$PRIVATE_DOMAIN_TAILNET"
+    return 0
+  fi
+  # .config/mise.toml points SOPS_AGE_KEY_FILE at a path that does not exist
+  # in the agentboard pod; fall back to the pod's mounted key, then to sops'
+  # own defaults.
+  if [[ -n "${SOPS_AGE_KEY_FILE:-}" && ! -r "$SOPS_AGE_KEY_FILE" ]]; then
+    if [[ -r /var/run/secrets/sops-age/age.agekey ]]; then
+      export SOPS_AGE_KEY_FILE=/var/run/secrets/sops-age/age.agekey
+    else
+      unset SOPS_AGE_KEY_FILE
+    fi
+  fi
+  local json
+  json="$(sops -d --output-type json "$secrets" 2>/dev/null)" || return 3
+  root="$(jq -r '.stringData.ROOT_DOMAIN // empty' <<<"$json")"
+  tailnet="$(jq -r '.stringData.TAILSCALE_DOMAIN // empty' <<<"$json")"
+  [[ -n "$root" && -n "$tailnet" ]] || return 3
+}
+
+# Extended regexes, one per line. The root domain's labels are joined by ANY
+# one to four non-alphanumerics, so every spelling a file actually uses is
+# caught: a.b, a\.b (a regex), a\\.b (a regex inside a YAML string -- the one
+# a fixed-string list missed, in traefik's CORS middleware), a-b / a_b (slugs
+# in secret paths and resource names). The tailnet's first label is
+# distinctive enough to match alone.
+patterns() {
+  local esc
+  esc="$(printf '%s' "$root" | sed -E 's/[][\.^$*+?(){}|/]/\\&/g; s/\\\./[^a-z0-9]{1,4}/g')"
+  printf '%s\n' "$esc" "${tailnet%%.*}"
+}
+
+skip() {
+  echo "private-domain-guard: cannot decrypt $secrets (no age key?) -- skipping" >&2
+  exit 0
+}
+
+cmd="${1:-check}"
+case "$cmd" in
+  stdin)
+    load_names || skip
+    if grep -q -i -E -f <(patterns); then exit 1; fi
+    exit 0
+    ;;
+  check)
+    load_names || skip
+    mode=()
+    [[ "${2:-}" == "--cached" ]] && mode=(--cached)
+    hits="$(git -C "$top" grep "${mode[@]}" -I -i -n -E -f <(patterns) \
+      -- . ':(exclude,glob)**/*.sops.*' | cut -d: -f1-2 || true)"
+    allowed=""
+    [[ -r "$baseline" ]] && allowed="$(grep -v -e '^#' -e '^$' "$baseline" || true)"
+    new="$(awk -F: 'NR==FNR { ok[$0]=1; next } !($1 in ok)' \
+      <(printf '%s\n' "$allowed") <(printf '%s\n' "$hits") | grep -v '^$' || true)"
+    stale="$(comm -23 <(printf '%s\n' "$allowed" | sort -u) \
+      <(printf '%s\n' "$hits" | cut -d: -f1 | sort -u) | grep -v '^$' || true)"
+    if [[ -n "$stale" ]]; then
+      echo "private-domain-guard: now clean -- remove from .config/private-domain-baseline:" >&2
+      sed 's/^/  /' <<<"$stale" >&2
+    fi
+    if [[ -n "$new" ]]; then
+      echo "private-domain-guard: the root domain or tailnet name is written in plaintext at:" >&2
+      sed 's/^/  /' <<<"$new" >&2
+      cat >&2 <<'EOF'
+Use ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} in Flux-rendered values (SOPS-backed
+via shared-secrets), <root domain> / <tailnet> in prose and comments, and read
+them from the environment in code. See docs/plans/private-domain-scrub.md.
+EOF
+      exit 1
+    fi
+    ;;
+  *)
+    sed -n '2,30p' "$0" >&2
+    exit 2
+    ;;
+esac

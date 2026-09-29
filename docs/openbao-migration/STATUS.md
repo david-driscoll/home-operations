@@ -534,7 +534,7 @@ else**. Four more shapes turned up, each wrong for a different reason:
   set, longest first — the same ambiguity `oidcBaoPath` dodges by taking separate arguments.
 - **bare 26-character UUIDs.** Some call sites address an item by id, not title (these are
   the four `UNRESOLVED-` rows mapping.ts flagged). `soz3lyvs6k24e5gh3udqp4sngi` is
-  `Cluster: Alpha Site`; `7ntcze3fqqzun7huc7vyoirco4` is `Cloudflare (driscoll.tech)`.
+  `Cluster: Alpha Site`; `7ntcze3fqqzun7huc7vyoirco4` is `Cloudflare (<root domain>)`.
   Slugging a UUID yields the UUID, i.e. a path that cannot exist.
 - **`Cluster: …`** — inventory, above.
 - **`OpenBao Alpha Site Static Unseal`** — and this one is a *category error*, not a gap.
@@ -642,8 +642,8 @@ Three things about that loader are load-bearing:
 - **The filename must equal `key`.** That is what stops one cluster reading another's
   credential, since `clusterSecretPath` derives from the key.
 - **`domainPrefix`, not `rootDomain`.** The YAML carries `skystar`; the loader appends
-  `driscoll.tech`. A prefix containing a dot is rejected by name, because pasting the old
-  value back yields `skystar.driscoll.tech.driscoll.tech` — resolves nowhere, looks fine in
+  `<root domain>`. A prefix containing a dot is rejected by name, because pasting the old
+  value back yields `skystar.<root domain>.<root domain>` — resolves nowhere, looks fine in
   a diff. `ROOT_DOMAIN` is a literal rather than `GlobalResources.searchDomain`: that is a
   Pulumi `Output` on the class that CONSTRUCTS the store, and these definitions must parse
   with no Pulumi runtime at all. The two are duplicates that must agree.
@@ -854,7 +854,7 @@ guess:
   commented out of the kustomization.
 - **`postgres-backup-config` + `postgres-values` → drop the Backblaze extract**
   (equestria #3092). Not a switch: the endpoint was *already* Minio
-  (`http://truenas.driscoll.tech:9000` in both clusters). Only the bucket NAME still came
+  (`http://truenas.<root domain>:9000` in both clusters). Only the bucket NAME still came
   from the Backblaze item while pointing at a Minio endpoint — the vault#119 mismatch.
   The fix is to delete the `${BACKBLAZE_DATABASE}` extract and the `[backblaze]` rclone
   block, and replace `{{ .backblaze_bucket }}-restore` with `${BACKBLAZE_DB_BUCKET}-restore`.
@@ -911,7 +911,7 @@ change, and the pod logs only start at the restart, so the pod's own logs cannot
 identical `i/o timeout` to `10.196.230.60:53` at 13:37:50Z from the *previous* pod IP, and
 unifi's `code 500` repeatedly. Neither is authentication either: an i/o timeout is a
 transport failure, and the unifi 500 turned out to wrap a `400 Invalid Hostname` on
-`*.code.driscoll.tech`. A direct probe with the migrated key returned 200 where an
+`*.code.<root domain>`. A direct probe with the migrated key returned 200 where an
 unauthenticated control returned 401.
 
 **The lesson is procedural: after a cutover that restarts pods, the workload's own logs
@@ -978,7 +978,7 @@ namespace-independent, so moving it fixed the class rather than the case.
 ## bao-transit is initialised
 
 Done on 2026-08-07. `bao-transit.sh init` completed against
-`https://bao-transit.opossum-yo.ts.net`, and both bootstrap files are committed:
+`https://bao-transit.<tailnet>`, and both bootstrap files are committed:
 
 - `bootstrap/openbao/recovery-keys.sops.yaml` — 5 recovery shares, threshold 3
 - `bootstrap/openbao/transit-token.sops.yaml` — the seal token
@@ -1028,7 +1028,7 @@ left is execution, in dependency order:
      live entries is one). The reason that became an outage is that **external-dns applies a
      batch atomically** — the webhook fails the whole `ApplyChanges` on the first rejected
      name and returns 500 — so one unstorable record blocked every UniFi write for two days,
-     silently. `*.code.driscoll.tech` (the `coder-apps` HTTPRoute) was created at
+     silently. `*.code.<root domain>` (the `coder-apps` HTTPRoute) was created at
      18:25:09Z on 08-08; the first rejection is at 18:25:13Z.
 
      Fixed as a property of the provider, not a named exception for Coder, so the next
@@ -1070,7 +1070,7 @@ left is execution, in dependency order:
    - **RUNBOOK Scenarios B/C** still describe the break-glass flow around
      `bao operator generate-root`, which cannot work, and still assert the unauthenticated
      endpoint is closed.
-2. **Confirm OIDC in a browser** — `https://bao.equestria.driscoll.tech/ui`, method OIDC,
+2. **Confirm OIDC in a browser** — `https://bao.equestria.<root domain>/ui`, method OIDC,
    once as an `admins` member and once as `family`. Everything below the browser is
    verified; this is the last human step. Note `default_role` is `family`, so type `admin`
    in the Role field or you get the read-only `viewer` policy.
@@ -1091,7 +1091,7 @@ generates them and they stay in 1Password (estate decision 2026-08-08).
 
 ## OIDC is live (2026-08-08 ~21:00Z)
 
-Verified against `https://bao.equestria.driscoll.tech`:
+Verified against `https://bao.equestria.<root domain>`:
 
 ```console
 $ bao list auth/oidc/role          →  ["admin","family"]
@@ -1099,8 +1099,8 @@ admin   policies ["admin"]   bound_claims {"groups":["admins"]}  ttl 28800
 family  policies ["viewer"]  bound_claims {"groups":["family"]}  ttl 28800
         both redirect URIs present, user_claim "email"
 
-$ POST auth/oidc/oidc/auth_url role=admin   →  https://authentik.driscoll.tech/application/o/authorize/…
-$ POST auth/oidc/oidc/auth_url role=family  →  https://authentik.driscoll.tech/application/o/authorize/…
+$ POST auth/oidc/oidc/auth_url role=admin   →  https://authentik.${ROOT_DOMAIN}/application/o/authorize/…
+$ POST auth/oidc/oidc/auth_url role=family  →  https://authentik.${ROOT_DOMAIN}/application/o/authorize/…
 ```
 
 That endpoint returned `permission denied` before, because the mount did not exist.
@@ -1239,7 +1239,7 @@ of its blockers was re-checked against the live estate:
 | Pods never rolled on a ConfigMap-only change | **Fixed.** Reloader + `RollingUpdate` (#3072, #3075). `currentRevision == updateRevision`, all 3 pods restarted 17m ago |
 | generate-root 403s, so no root token | **Moot.** The toggle was opened, used, and reverted (#3070); `generate-root -status` 403s again, as intended. Pulumi does not need it |
 | `pulumi` policy too narrow for `sys/auth/*` | **Applied.** `capabilities-self` on the live token returns `["create","delete","read","sudo","update"]` on `sys/auth/oidc`, and the grants on `sys/policies/acl/viewer`, `auth/oidc/config`, `auth/oidc/role/*` are all present |
-| Authentik provider + client credentials | **Live.** 1Password item `equestria-openbao-oidc-credentials` has all 9 fields; `issuer` is `https://authentik.driscoll.tech/application/o/equestria-kube-system-openbao-wolf/` and its discovery document resolves |
+| Authentik provider + client credentials | **Live.** 1Password item `equestria-openbao-oidc-credentials` has all 9 fields; `issuer` is `https://authentik.<root domain>/application/o/equestria-kube-system-openbao-wolf/` and its discovery document resolves |
 | Pod egress to Authentik | **Verified.** `openbao-0` fetches the discovery document over the public hostname |
 | Run `equestria-init.sh oidc` | **Superseded** by Pulumi — running it now would create the same objects outside Pulumi's state and the next `up` would fight it. Break-glass only |
 
@@ -1270,7 +1270,7 @@ import with `Cannot find package '@pulumi/vault'`. `npm install` at the repo roo
 
 ```
 error: failed getting server info: Server error (403 then 502) for GET
-  https://unifi.driscoll.tech/proxy/network/api/s/default/stat/sysinfo
+  https://unifi.${ROOT_DOMAIN}/proxy/network/api/s/default/stat/sysinfo
   old API returned empty server info: Failed to create UniFi client
 ```
 
@@ -1380,7 +1380,7 @@ The policy that grants this is itself written by an admin-capable token, so the 
 4. **`pulumi up` on `stacks/home`** with `BAO_ADDR`/`BAO_TOKEN` from the `pulumi`
    AppRole — this is what actually configures OIDC, and every run after it is a drift
    check.
-5. **Verify** UI login at `https://bao.equestria.driscoll.tech/ui` as an `admins` member
+5. **Verify** UI login at `https://bao.equestria.<root domain>/ui` as an `admins` member
    (policy `admin`) and a `family` member (policy `viewer`: can browse `secrets/` and read
    `docs/`, cannot read any secret value).
 
@@ -1425,7 +1425,7 @@ Every step below assumes:
 ```bash
 export KUBECONFIG=/Users/david/Development/david-driscoll/equestria-cluster/kubeconfig
 export SOPS_AGE_KEY_FILE=/Users/david/Development/david-driscoll/equestria-cluster/age.key
-export BAO_ADDR=https://bao.equestria.driscoll.tech
+export BAO_ADDR=https://bao.equestria.${ROOT_DOMAIN}
 ```
 
 ### Step 1b — roll the pods so the toggle takes effect
@@ -1497,7 +1497,7 @@ Sanity-check without printing anything sensitive (expect `16 / 32 / non-empty`):
 ```bash
 printf 'id=%s secret=%s\n' "${#OPENBAO_OIDC_CLIENT_ID}" "${#OPENBAO_OIDC_CLIENT_SECRET}"
 echo "discovery=${OPENBAO_OIDC_DISCOVERY_URL}"
-# discovery=https://authentik.driscoll.tech/application/o/equestria-kube-system-openbao-wolf/
+# discovery=https://authentik.${ROOT_DOMAIN}/application/o/equestria-kube-system-openbao-wolf/
 ```
 
 `issuer` is the correct field: OpenBao's `oidc_discovery_url` wants the issuer and
@@ -1542,7 +1542,7 @@ Script-level:
 ./bootstrap/openbao/equestria-init.sh status
 ```
 
-UI login at `https://bao.equestria.driscoll.tech/ui`, method **OIDC**, as an `admins`
+UI login at `https://bao.equestria.<root domain>/ui`, method **OIDC**, as an `admins`
 member (role `admin`) and a `family` member (role `family`).
 
 CLI equivalent, per role:
@@ -1612,7 +1612,7 @@ Everything else was checked and is in place:
 | **tcp:2023 ACL grant** | ❌ **missing** — the only blocker |
 
 ```console
-$ kubectl -n kube-system exec openbao-0 -- sh -c 'nc -z -w5 dockge-as.opossum-yo.ts.net 2023 …'
+$ kubectl -n kube-system exec openbao-0 -- sh -c 'nc -z -w5 dockge-as.${TAILSCALE_DOMAIN} 2023 …'
 2023 CLOSED
 8200 OPEN        # bao-transit, for contrast — the egress path itself works
 ```
@@ -1684,7 +1684,7 @@ than from a stack — a useful way to tell the two sources apart.
 
 ## Phase 4 is COMPLETE (2026-08-07, re-applied 2026-08-08)
 
-`--apply` ran against `https://bao.equestria.driscoll.tech` with the `pulumi` AppRole:
+`--apply` ran against `https://bao.equestria.<root domain>` with the `pulumi` AppRole:
 **188 written, 0 failed; `--verify` reports 188/188 in sync.** 1Password stays
 authoritative until Phase 11 — this is the start of dual-run, not a cutover.
 
@@ -1725,7 +1725,7 @@ tests before). State:
   and PBS credentials (`Proxmox Backup Server*`, `*PBS Backup User`) — the Pulumi stacks
   will create these in OpenBao directly (see Phase 8a in PLAN.md §G); `Authentik Outputs`,
   `B2 Database*`, `B2 Backup*`, `Backblaze*`, `Backup Plan`; and everything tagged
-  `opossum-yo.ts.net/user`. Skipped entries keep their would-be path so the mapping stays
+  `<tailnet>/user`. Skipped entries keep their would-be path so the mapping stays
   a complete record. The collision check now ignores skips (--apply never writes them).
 - **Still blocking `--apply`:** the `ProxmoxHost: Alpha Site` duplicate (uuids
   `6eufaqmj…` / `xm4gaahu…`) — a real duplicate pair, dedupe in the 1Password UI; and the
@@ -1744,7 +1744,7 @@ recorded under "facts established the hard way", `bootstrap/openbao/equestria-in
 init` ran clean end to end. Verified live:
 
 - 3/3 pods, 1 active + 2 standbys, all unsealed via transit against bao-transit
-- `https://bao.equestria.driscoll.tech/v1/sys/health` answers through the internal
+- `https://bao.equestria.<root domain>/v1/sys/health` answers through the internal
   gateway (external-dns published the record from the HTTPRoute)
 - mounts `secrets/` `docs/` `meta/` (kv-v2); auth `kubernetes` + `approle`;
   policies `admin` / `pulumi` / `eso-equestria` / `eso-sgc`
@@ -1784,7 +1784,7 @@ real proof that the unseal path works is the pods coming up. If they crash-loop 
 seal, check in this order: the Service actually has the `bao` port
 (`kubectl -n tailscale-system get svc dockge-as -o jsonpath='{.spec.ports[*].name}'`),
 then reachability from a pod
-(`nc -z dockge-as.opossum-yo.ts.net 8200`), then the token.
+(`nc -z dockge-as.<tailnet> 8200`), then the token.
 
 (Resolved: the unseal path worked on the first live attempt — the transit seal
 encrypted the root key against bao-transit during `operator init` and all three
@@ -1797,8 +1797,8 @@ pods auto-unsealed.)
 ## The seal address was wrong (resolved — kept for the reasoning)
 
 Merged and live: the running pods' config reads
-`address = "http://dockge-as.opossum-yo.ts.net:8200"`, the egress Service carries
-`bao=8200`, and `nc -z dockge-as.opossum-yo.ts.net 8200` from `openbao-0` succeeds. The
+`address = "http://dockge-as.<tailnet>:8200"`, the egress Service carries
+`bao=8200`, and `nc -z dockge-as.<tailnet> 8200` from `openbao-0` succeeds. The
 rest of this section is why, and it is the template for the tcp:2023 gap in Phase 5.
 
 `kubernetes/apps/kube-system/openbao/helmrelease.yaml:83` dialed
@@ -1850,7 +1850,7 @@ in `spec.ports`. Port-scanned from a pod:
 
 The MagicDNS name works from inside the cluster because the tailscale operator's
 nameserver resolves it to the egress proxy's ClusterIP — from a pod,
-`dockge-as.opossum-yo.ts.net` and `dockge-as.tailscale-system.svc.cluster.local` both
+`dockge-as.<tailnet>` and `dockge-as.tailscale-system.svc.cluster.local` both
 answer `10.196.81.163`. `${TAILSCALE_DOMAIN}` is in scope for every app Kustomization via
 the global `substituteFrom` patch at `kubernetes/flux/cluster/ks.yaml`.
 
@@ -1931,7 +1931,7 @@ contradict the published documentation.
   fix on the host and will not survive a re-provision; it belongs in the Pulumi
   `DockgeLxc` definition.
 - **Port 8200 is not reachable across the tailnet from a user device**, only from tagged
-  nodes. Use the Traefik route for CLI work: `BAO_ADDR=https://bao-transit.opossum-yo.ts.net`.
+  nodes. Use the Traefik route for CLI work: `BAO_ADDR=https://bao-transit.<tailnet>`.
   The `http://<ip>:8200` form in the script header and README only works from a tagged host.
 - **The 1Password Operator SANITISES Secret keys; OpenBao stores field names verbatim.**
   A field named `valid from` or `one-time password` arrives from OpenBao with the space
@@ -2006,7 +2006,7 @@ contradict the published documentation.
   `sys/generate-root-token/*` path and 403s regardless — exactly the confusion
   `root-ceremony.sh`'s own header documents, then repeated elsewhere as fact.
 
-  Consequences: `bao.equestria.driscoll.tech` load-balances across all three pods, so the
+  Consequences: `bao.equestria.<root domain>` load-balances across all three pods, so the
   ceremony **fails roughly 1 run in 3**, and its error tells you to land the toggle, which
   is neither the cause nor needed. Worse, the ceremony makes several requests (open
   attempt, then three share submissions) that can land on *different* pods, so recovery

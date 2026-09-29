@@ -74,7 +74,7 @@ Pulumi state backend
 
 | Provider | Purpose | Credential Source |
 |----------|---------|-------------------|
-| CloudflareProvider | DNS & CDN | "Cloudflare (driscoll.tech)" |
+| CloudflareProvider | DNS & CDN | "Cloudflare (<root domain>)" |
 | UnifiProvider | Network management | "Unifi Api Key Eris Cluster" |
 | UnifiFirewallProvider | Firewall rules (Terrifi) | "Unifi Api Key Eris Cluster" |
 | AdguardProvider | DNS filtering | "AdGuard Home" |

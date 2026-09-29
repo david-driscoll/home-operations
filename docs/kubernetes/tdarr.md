@@ -9,7 +9,7 @@ actually processed a file for nine months at that point (see
 
 | Piece | Where | What it does |
 | --- | --- | --- |
-| Tdarr server + UI | [`kubernetes/apps/equestria/media/tdarr/`](../../kubernetes/apps/equestria/media/tdarr/) — `tdarr.driscoll.tech` | Library scans, the file DB, flows, the job queue. Its config (libraries, flows, node limits) lives in its DB on the `tdarr` PVC, **not in git**. |
+| Tdarr server + UI | [`kubernetes/apps/equestria/media/tdarr/`](../../kubernetes/apps/equestria/media/tdarr/) — `tdarr.<root domain>` | Library scans, the file DB, flows, the job queue. Its config (libraries, flows, node limits) lives in its DB on the `tdarr` PVC, **not in git**. |
 | Tdarr nodes | same HelmRelease, controller `tdarr-node`, 2 replicas | Run the jobs. Pinned to `intel.feature.node.kubernetes.io/gpu` nodes: `fluttershy` and `kerfuffle`, UN1290s with Iris Xe. Each registers as a node named after its host. |
 | The flow | [`assets/tdarr/`](assets/tdarr/) | `flow.template.json` + `stream-policy.cjs`, rendered by `build-flow.sh`. The copy in Tdarr's DB is the live one; this is the reviewed one. |
 | tdarr MCP | [`kubernetes/apps/agents/agent-tools-servers/tdarr.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tdarr.yaml) | `tdarr` in `toolport-media`. `tdarr_cruddb` is allowed so flows can be managed; it writes any collection. |

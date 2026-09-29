@@ -637,6 +637,7 @@ Fields:
   - [ ] Remediation strategy (retry count, rollback)
 - [ ] nfs.yaml created if using TrueNAS/NFS storage
 - [ ] All variables (${PUID}, ${ROOT_DOMAIN}, etc.) are defined in ks.yaml postBuild or referenced correctly
+- [ ] No literal root domain or tailnet name anywhere, comments included -- `${ROOT_DOMAIN}` / `${TAILSCALE_DOMAIN}` in values, `<root domain>` / `<tailnet>` in comments (`scripts/private-domain-guard check`)
 
 ### Local Validation
 

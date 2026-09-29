@@ -76,7 +76,7 @@ export async function configureApplications(globals: GlobalResources) {
     { deleteBeforeReplace: true },
   );
 
-  // `iris.driscoll.tech`, re-homed onto equestria's instance when SGC was
+  // `iris.<root domain>`, re-homed onto equestria's instance when SGC was
   // decommissioned (docs/cluster-consolidation/22-decommission-sgc.md). `iris`
   // is not an SGC app: it is one of the estate's three public SSO names and it
   // answers from alpha-site. The asset URLs are the exact values
@@ -332,7 +332,7 @@ async function outpostKubeConfig(coreApi: kubernetes.CoreV1Api, clusterDefinitio
   // `sa` is the ServiceAccount this token belongs to; it was a literal in the
   // pushed Secret too. `cluster_api` was `apiserver.${CLUSTER_DOMAIN}`, which is
   // this cluster's rootDomain -- verified against both live values before the
-  // switch (apiserver.equestria.driscoll.tech / apiserver.sgc.driscoll.tech).
+  // switch (apiserver.equestria.<root domain> / apiserver.sgc.<root domain>).
   const kubeConfig = pulumi.jsonStringify({
     kind: "Config",
     apiVersion: "v1",

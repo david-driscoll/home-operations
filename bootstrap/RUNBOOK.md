@@ -322,7 +322,7 @@ previous key on the next pass. Update
   an attempt on that path. Completing one still needs 3 of the 5 recovery shares.
 - **In the cluster, point the ceremony at ONE STANDBY pod, never the ingress.**
   `sys/generate-root/*` is served by standby nodes; the active node answers
-  `unsupported operation`. `bao.equestria.driscoll.tech` fans out across all three, so
+  `unsupported operation`. `bao.equestria.<root domain>` fans out across all three, so
   the attempt and the share submissions can land on different nodes — spending recovery
   shares for nothing. `root-ceremony.sh` now refuses to start in that case, but the
   remedy is yours: `kubectl -n kube-system port-forward pod/<a-standby> 18200:8200`.

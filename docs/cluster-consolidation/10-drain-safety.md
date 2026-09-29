@@ -10,7 +10,7 @@ node should start until this file's rehearsal has actually passed on all seven n
 **What this piece does not do:** it does not create the `critical`/`bulk` Longhorn node tags or
 the `longhorn-critical` StorageClass — that's
 [12-longhorn-critical-tier.md](12-longhorn-critical-tier.md). It does not apply the Talos
-`node-role.driscoll.tech/critical` taint itself — that's
+`node-role.<root domain>/critical` taint itself — that's
 [20-low-power-tier.md](20-low-power-tier.md). It lands the one piece of groundwork those two
 files depend on: Longhorn must already be configured to *tolerate* that taint before it exists,
 because retrofitting tolerance after the taint lands costs an ~1 hour sync delay per
@@ -140,7 +140,7 @@ this piece's starting point. Two of their claims are now stale — verified agai
 
 [12-longhorn-critical-tier.md](12-longhorn-critical-tier.md) tags control planes `critical` and
 workers `bulk`, and [20-low-power-tier.md](20-low-power-tier.md) is what actually applies the
-Talos taint `node-role.driscoll.tech/critical=true:NoSchedule` to the three control planes. Both
+Talos taint `node-role.<root domain>/critical=true:NoSchedule` to the three control planes. Both
 are phases away. The reason this file adds Longhorn's *tolerance* of that taint today, months
 before the taint exists, is entirely about *when* the setting takes effect:
 [Longhorn's docs](https://longhorn.io/docs/1.9.0/advanced-resources/deploy/taint-toleration/) are
@@ -163,7 +163,7 @@ by hand — a `kubectl edit` gets reverted on the next Flux sync:
 
 ```yaml
 # kubernetes/apps/longhorn-system/longhorn/values.yaml, defaultSettings:
-taintToleration: node-role.driscoll.tech/critical=true:NoSchedule
+taintToleration: node-role.${ROOT_DOMAIN}/critical=true:NoSchedule
 ```
 
 This is additive and inert today — there is no matching taint on any node yet (confirmed live,
@@ -174,7 +174,7 @@ own small PR now, not bundled into [12](12-longhorn-critical-tier.md) or
 [20](20-low-power-tier.md)'s later PRs — the whole point is that it lands early and is boring by
 the time it matters.
 
-*Exit:* `taint-toleration` reads `node-role.driscoll.tech/critical=true:NoSchedule` live on both
+*Exit:* `taint-toleration` reads `node-role.<root domain>/critical=true:NoSchedule` live on both
 clusters; no instance-manager pod restarted or moved as a result (verify with
 `kubectl get pods -n longhorn-system -l app=longhorn-instance-manager -o wide` before/after).
 
@@ -367,7 +367,7 @@ done
 # 2. taint-toleration landed and synced, both clusters
 kubectl --context admin@equestria get settings.longhorn.io taint-toleration -n longhorn-system -o jsonpath='{.value}'
 kubectl --context admin@sgc get settings.longhorn.io taint-toleration -n longhorn-system -o jsonpath='{.value}'
-# expect: node-role.driscoll.tech/critical=true:NoSchedule on both
+# expect: node-role.${ROOT_DOMAIN}/critical=true:NoSchedule on both
 
 # 3. node-drain-policy still allow-if-replica-is-stopped (hasn't drifted back)
 kubectl --context admin@equestria get settings.longhorn.io node-drain-policy -n longhorn-system -o jsonpath='{.value}'

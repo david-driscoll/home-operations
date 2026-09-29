@@ -13,8 +13,8 @@ Use `${CLUSTER_DOMAIN}` for service URLs when the hostname must be unique per-cl
 
 | Variable            | Scope         | Example value            |
 | ------------------- | ------------- | ------------------------ |
-| `${searchDomain}`   | Host / global | `driscoll.tech`          |
-| `${CLUSTER_DOMAIN}` | Per cluster   | `celestia.driscoll.tech` |
+| `${searchDomain}`   | Host / global | `<root domain>`          |
+| `${CLUSTER_DOMAIN}` | Per cluster   | `celestia.<root domain>` |
 
 Traefik router rule and `x-dockge.urls` should use `${APP}.${CLUSTER_DOMAIN}` so the URL is distinct per cluster:
 

@@ -70,7 +70,7 @@ spec:
               # `/i/` behind mod_auth_openidc (`<Directory /var/www/FreshRSS/p/i>`
               # with `AuthType openid-connect` inside `<IfDefine OIDC_ENABLED>`, and
               # the container does run with `-D OIDC_ENABLED`), so hop 2 redirects to
-              # authentik.driscoll.tech. The kubelet follows same-host redirects but
+              # authentik.<root domain>. The kubelet follows same-host redirects but
               # returns the last response on a cross-host one, so it lands on that
               # 3xx: the probe PASSES but emits `ProbeWarning: Probe terminated
               # redirects` every cycle, and drives ~1080 mod_auth_openidc warnings

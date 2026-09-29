@@ -228,7 +228,7 @@ pi$ docker logs -f authentik-worker 2>&1 | grep -iE 'migrat|error'    # "No migr
 pi$ docker exec authentik-server wget -qO- --server-response http://localhost:9000/-/health/ready/ 2>&1 | head -1   # 200
 ```
 
-- Log in to `https://authentik.driscoll.tech` in a private window.
+- Log in to `https://authentik.<root domain>` in a private window.
 - One forwardAuth app per outpost type still challenges and passes (doc 07's
   post-checks: embedded on alpha-site, equestria's proxy outpost, a remote
   dockge host).
@@ -246,7 +246,7 @@ pi$ docker ps --format '{{.Names}} {{.Status}}' | grep -E 'authentik-vip|authent
 pi$ docker rm -f authentik-redis                              # the orphaned valkey; the stack no longer declares it
 ws$ kubectl -n stargate-command get deploy authentik-server authentik-worker   # ready
 ws$ kubectl -n network get ds authentik-vip                   # one pod per node
-ws$ curl -sk --resolve authentik.equestria.driscoll.tech:443:10.10.255.10 https://authentik.equestria.driscoll.tech/-/health/ready/ -o /dev/null -w '%{http_code}\n'   # 200 -- equestria holds the VIP
+ws$ curl -sk --resolve authentik.equestria.${ROOT_DOMAIN}:443:10.10.255.10 https://authentik.equestria.${ROOT_DOMAIN}/-/health/ready/ -o /dev/null -w '%{http_code}\n'   # 200 -- equestria holds the VIP
 ```
 
 Then the phase-6 gate in PLAN.md, before PR C.

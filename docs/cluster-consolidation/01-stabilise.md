@@ -218,7 +218,7 @@ $ kubectl --context admin@sgc get svc ts-adguard-home-dns-9j8ct -n tailscale-sys
 
 No backing pod exists for that selector — this is inert, not actively causing anything — but
 it's a stale Tailscale-managed object plus, most likely, a stale device entry in the Tailscale
-admin console (`opossum-yo.ts.net`). Delete the `Service` in `tailscale-system` and check the
+admin console (`<tailnet>`). Delete the `Service` in `tailscale-system` and check the
 admin console for a lingering `adguard-home-dns` device to remove alongside it. Cheap, not
 blocking, worth doing in the same pass as the rest of this phase's cleanup so it doesn't
 resurface as a mystery object during

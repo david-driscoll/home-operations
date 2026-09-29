@@ -301,7 +301,7 @@ spec:
           #   SSH_PORT        22   -- advertised in clone URLs, and the port
           #                           the Service and Gateway listener publish,
           #                           so a clone is plain
-          #                           git@git.driscoll.tech:<owner>/<repo>.git
+          #                           git@git.<root domain>:<owner>/<repo>.git
           #   SSH_LISTEN_PORT 2222 -- what the process actually binds INSIDE
           #                           the container. It cannot be 22: the
           #                           rootless image runs as uid 1000, and
@@ -318,7 +318,7 @@ spec:
           SSH_LISTEN_PORT: 2222
           # What the clone box actually shows, and why each part of it:
           #
-          #   ssh://git@git.driscoll.tech/<owner>/<repo>.git
+          #   ssh://git@git.<root domain>/<owner>/<repo>.git
           #
           # No port, because ComposeSSHCloneURL (models/repo/repo.go) only
           # writes one when SSH_PORT != 22. The `ssh://` form rather than the
@@ -342,7 +342,7 @@ spec:
           # Pinned to the upstream default so a chart or image bump cannot
           # quietly change what the clone box tells people to paste. true keeps
           # the `ssh://` form; false would switch every SSH clone URL to the
-          # scp-style `git@git.driscoll.tech:<owner>/<repo>.git`. The two are
+          # scp-style `git@git.<root domain>:<owner>/<repo>.git`. The two are
           # equivalent to git -- this is a display choice, not a routing one.
           #
           # It belongs HERE and not under `server:` next to the other SSH keys,

@@ -7,7 +7,7 @@
 # already advertises the cluster's service CIDR as a subnet route (`tag:
 # ${CLUSTER_CNAME}`, `tag:exit-node`), so any tailnet device already has a
 # route IN, and this pod already has a route OUT to anything the estate
-# serves over `*.driscoll.tech` (Technitium's split-horizon DNS resolves the
+# serves over `*.<root domain>` (Technitium's split-horizon DNS resolves the
 # same for LAN/tailnet/cluster origins alike -- see the
 # `technitium-split-horizon-standarddns` note). "Join the tailnet directly"
 # would have been a second, redundant way to get access this pod already

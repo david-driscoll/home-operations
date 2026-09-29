@@ -20,7 +20,7 @@
  *      is carried through that write verbatim, after checking it belongs to
  *      this tunnel — it is read from the item, never fetched or regenerated.
  *
- * It owns NO DNS. Every `<app>.driscoll.tech` CNAME that points at
+ * It owns NO DNS. Every `<app>.<root domain>` CNAME that points at
  * `<tunnel-id>.cfargotunnel.com` is created by external-dns in-cluster
  * (`kubernetes/apps/network/external-dns/cloudflare/`, `policy: sync`,
  * `txtOwnerId: equestria`). A Pulumi DNS record for the same name would be a

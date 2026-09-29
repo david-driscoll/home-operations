@@ -35,7 +35,7 @@ with the merge:
   Ingress at `git.${TAILSCALE_DOMAIN}`.
 - **SSH** — a `gitssh` entrypoint and Gateway listener on **22** in
   `kubernetes/apps/network/traefik/values.yaml`, and a `TCPRoute` from the
-  Forgejo chart, so clones are plain `git@git.driscoll.tech:owner/repo.git`.
+  Forgejo chart, so clones are plain `git@git.<root domain>:owner/repo.git`.
   The container still binds 2222 (`SSH_LISTEN_PORT`) because the rootless image
   runs as uid 1000; only the Service, listener and advertised port are 22.
   Talos nodes run no sshd and this binds the Gateway's LoadBalancer IP, so
@@ -170,7 +170,7 @@ order is not guaranteed:
 
 - **`stacks/home` deletes the old CNAME.** `DockgeLxc` reads the
   `traefik.http.routers.*.rule` labels out of each compose file and creates a
-  matching record, so celestia owns `git.driscoll.tech -> celestia.driscoll.tech`
+  matching record, so celestia owns `git.<root domain> -> celestia.<root domain>`
   today. Removing `docker/celestia/forgejo/` removes that resource.
 - **Flux deploys Forgejo, and external-dns tries to claim the same name.** It
   runs `policy: sync` with a `txtOwnerId`, so it will **not** adopt a record it
@@ -178,14 +178,14 @@ order is not guaranteed:
 
 That resolves itself: external-dns retries on its own interval and picks the name
 up once Pulumi has removed the old record. The trap is the window in between,
-during which `git.driscoll.tech` still resolves to celestia — where the old
+during which `git.<root domain>` still resolves to celestia — where the old
 Forgejo is **still running** until step 6. It is entirely possible to log into
 the old instance and conclude the new one is broken. Check what you are looking
 at before believing anything:
 
 ```bash
-kubectl -n network logs deploy/external-dns-technitium | grep git.driscoll.tech
-dig +short git.driscoll.tech
+kubectl -n network logs deploy/external-dns-technitium | grep git.${ROOT_DOMAIN}
+dig +short git.${ROOT_DOMAIN}
 ```
 
 To stop waiting and force the home stack now:
@@ -256,19 +256,19 @@ kubectl -n coder logs statefulset/forgejo-runner -c app
 # HTTP + SSO. /api/healthz is unauthenticated and answers even with
 # REQUIRE_SIGNIN_VIEW, so a 200 with "status": "pass" proves route, TLS,
 # Service endpoints, database and cache in one call.
-curl -s https://git.driscoll.tech/api/healthz
+curl -s https://git.${ROOT_DOMAIN}/api/healthz
 
 # The object store. 403 is the HEALTHY answer -- an unsigned GET / is a
 # ListBuckets that Garage rejects. What is being tested is that the name
-# resolves and TLS verifies against the *.git.driscoll.tech SAN.
-curl -s -o /dev/null -w '%{http_code} tls=%{ssl_verify_result}\n' https://s3.git.driscoll.tech/
+# resolves and TLS verifies against the *.git.${ROOT_DOMAIN} SAN.
+curl -s -o /dev/null -w '%{http_code} tls=%{ssl_verify_result}\n' https://s3.git.${ROOT_DOMAIN}/
 
 # SSH on the default port. "Permission denied (publickey)" with a host key
 # exchanged is a PASS -- it proves the gitssh entrypoint, the Gateway listener,
 # the TCPRoute and Forgejo's Go SSH server. Note the host key CHANGED on
 # 2026-08-24 when the data volume was lost, so an older known_hosts entry will
 # fail loudly rather than connect.
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null git@git.driscoll.tech
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null git@git.${ROOT_DOMAIN}
 ```
 
 Then Actions, which is the only part that exercises the runner, the
@@ -277,7 +277,7 @@ Docker-in-Docker sidecar and the S3 log path together:
 ```bash
 TOK=$(kubectl -n coder exec deploy/forgejo -c forgejo -- forgejo admin user \
   generate-access-token --username forgejo-admin --scopes write:repository --raw)
-API=https://git.driscoll.tech/api/v1
+API=https://git.${ROOT_DOMAIN}/api/v1
 
 curl -s -X POST "$API/user/repos" -H "Authorization: token $TOK" \
   -H 'Content-Type: application/json' \
@@ -323,7 +323,7 @@ Forgejo deliberately refuses to let a token delete tokens — `DELETE
 /users/{user}/tokens/{id}` answers 401 when authenticated with one, and there is
 no `forgejo admin user delete-access-token` subcommand. The only routes are HTTP
 basic auth or the web UI, so finish at
-<https://git.driscoll.tech/user/settings/applications> and revoke the token
+<https://git.<root domain>/user/settings/applications> and revoke the token
 there. Do not skip it: it is a read/write credential on the admin account, and
 nothing expires it.
 
@@ -373,7 +373,7 @@ that lives inside Forgejo is manual state and has to be created by hand:
    | Secret | Value |
    |---|---|
    | `GATUS_TOKEN` | `forgejo-actions_canary` |
-   | `GATUS_CONNECT_TO` | `uptime.driscoll.tech:443:dockge-as.opossum-yo.ts.net:443` |
+   | `GATUS_CONNECT_TO` | `uptime.<root domain>:443:dockge-as.<tailnet>:443` |
 
    The token is both the URL path segment and the bearer. That is Gatus's
    external-endpoint convention, not a copy-paste error.

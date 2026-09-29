@@ -449,13 +449,13 @@ alone, `jellyfin-pg`'s plugins would talk to production and send clients there.
 | From | To |
 | --- | --- |
 | `jellyfin.equestria.svc.cluster.local` | `jellyfin-pg.equestria.svc.cluster.local` |
-| `jellyfin.driscoll.tech` | `jellyfin-pg.driscoll.tech` |
+| `jellyfin.<root domain>` | `jellyfin-pg.<root domain>` |
 
 - **Only the text files under `plugins/`** are rewritten: settings XML and
   JSON. Assemblies are never touched.
-- Only **whole hostnames** match, ignoring case: `myjellyfin.driscoll.tech`,
-  `jellyfin.driscoll.tech.example.com` and the already-correct
-  `jellyfin-pg.driscoll.tech` are left alone. Ports and paths are kept.
+- Only **whole hostnames** match, ignoring case: `myjellyfin.<root domain>`,
+  `jellyfin.<root domain>.example.com` and the already-correct
+  `jellyfin-pg.<root domain>` are left alone. Ports and paths are kept.
 - Files are rewritten as bytes, so the BOM .NET writes survives.
 - The same hostnames under `config/` and inside the plugins' **SQLite
   databases** are **reported, not rewritten**. A URL stored in a plugin's own

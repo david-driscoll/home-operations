@@ -48,7 +48,7 @@ readonly REPO_ROOT
 readonly SOPS_FILE="bootstrap/openbao/alpha-site-static-unseal.sops.yaml"
 readonly OP_REF="op://Eris/OpenBao Alpha Site Static Unseal/current_key"
 # The TAILNET name, not the bare hostname. `dockge-as` alone picks up the local
-# search domain and resolves to dockge-as.driscoll.tech, whose port 22 is
+# search domain and resolves to dockge-as.<root domain>, whose port 22 is
 # refused -- and every ssh here hides stderr, so that surfaced as
 # "/var/local/unseal-key MISSING" and "could not read seal status" rather than
 # as a connection failure. A verify that reports the key is gone when it is

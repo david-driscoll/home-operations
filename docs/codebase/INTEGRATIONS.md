@@ -36,7 +36,7 @@
 - **Credential source:** All credentials are fetched from 1Password Connect at Pulumi run time via `OPClient.getItemByTitle()`. No credentials are hardcoded.
 - **Env var injection:** `.mise.toml` uses `op://Eris/<item>/<field>` references, resolved by the 1Password CLI when running `mise` commands. The resolved values are injected as env vars (`CONNECT_HOST`, `CONNECT_TOKEN`, `PULUMI_CONFIG_PASSPHRASE`, etc.).
 - **Pulumi secret encryption:** `Pulumi.*.yaml` files use `encryptionsalt` for encrypting sensitive config values at rest in the Pulumi stack state.
-- **Hardcoding check:** No plaintext credentials found in source. Two hardcoded network values exist: gateway `10.10.0.1` and search domain `driscoll.tech` in `components/globals.ts` (infrastructure constants, not credentials).
+- **Hardcoding check:** No plaintext credentials found in source. Two hardcoded network values exist: gateway `10.10.0.1` and search domain `<root domain>` in `components/globals.ts` (infrastructure constants, not credentials).
 - **Rotation:** Managed entirely within 1Password vault. No automated rotation tooling configured in this repo.
 
 ### 4) Reliability and Failure Behavior
@@ -55,9 +55,9 @@
 
 ### 6) Tailscale Detail
 
-**Tailnet domain:** `opossum-yo.ts.net`
+**Tailnet domain:** `<tailnet>`
 
-All SSH management connections use `${name}.opossum-yo.ts.net` — no direct IPs are used for host management.
+All SSH management connections use `${name}.<tailnet>` — no direct IPs are used for host management.
 
 **Home subnet routed via Tailscale:** `10.10.0.0/16`
 
@@ -81,8 +81,8 @@ Alertmanager runs in the **Equestria** cluster, `observability` namespace.
 
 | Endpoint | URL |
 |----------|-----|
-| Public HTTPS alerts | `https://alertmanager.driscoll.tech/api/v2/alerts` |
-| Tailscale alerts | `http://alertmanager.opossum-yo.ts.net:9093/api/v2/alerts` |
+| Public HTTPS alerts | `https://alertmanager.<root domain>/api/v2/alerts` |
+| Tailscale alerts | `http://alertmanager.<tailnet>:9093/api/v2/alerts` |
 | Silences | `/api/v2/silences` (append to either base URL) |
 
 **Alert rules cover:** container down, OOM kills, high CPU/memory (>80%), restart loops.

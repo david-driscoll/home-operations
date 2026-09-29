@@ -205,7 +205,7 @@ The exception:
 | `pulumi/pulumi-operator-passphrase` | `Pulumi Passphrase` | `PULUMI_CONFIG_PASSPHRASE` is bootstrap-tier per INVENTORY §2 — Pulumi must decrypt its own state before it can read anything, so it can never come from OpenBao. Move it to SOPS alongside the AppRole, or leave it. |
 
 Four CRs address their item by **UUID** rather than title (`7ntcze3fqqzun7huc7vyoirco4` →
-`Cloudflare (driscoll.tech)`, and similar). Those need the title resolved before rewriting;
+`Cloudflare (<root domain>)`, and similar). Those need the title resolved before rewriting;
 the mapping is recorded in this repo's history and in `mapping.yaml`'s `uuid` field.
 
 Note `pulumi/pulumi-operator-connect-token` is convertible and *not* circular: ESO reads

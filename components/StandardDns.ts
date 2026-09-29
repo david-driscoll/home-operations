@@ -172,7 +172,7 @@ export class StandardDns extends ComponentResource {
       },
     );
 
-    // Override record inside the driscoll.tech conditional-forwarder zone on the
+    // Override record inside the <root domain> conditional-forwarder zone on the
     // Technitium cluster (zone managed by stacks/unifi-network/technitium-zone.ts).
     // Names without an override fall through the zone's FWD record to public DNS.
     this.technitium = new technitium.Record(

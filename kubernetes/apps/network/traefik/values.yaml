@@ -378,7 +378,7 @@ ports:
       respondingTimeouts:
         readTimeout: "0s"
   # Forgejo's built-in Go SSH server (kubernetes/apps/coder/forgejo), on the
-  # standard port so clone URLs are plain `git@git.driscoll.tech:owner/repo`.
+  # standard port so clone URLs are plain `git@git.<root domain>:owner/repo`.
   # Nothing collides: Talos nodes run no sshd, and this binds the Gateway's
   # LoadBalancer IP, not a node. Traefik takes 22 despite running as uid 65532
   # with all capabilities dropped, for the same reason it already takes 80 and

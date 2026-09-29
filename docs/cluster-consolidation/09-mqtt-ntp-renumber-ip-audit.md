@@ -82,7 +82,7 @@ new credential exposure):
 | Service | Old (sgc) | New (equestria) | Pin mechanism |
 |---|---|---|---|
 | chrony (NTP) | `10.10.209.204` (`CHRONY_VIP`) | **`10.10.206.204`** (`CHRONY_VIP`) | `io.cilium/lb-ipam-ips` + `externalIPs`, same as before |
-| mosquitto (MQTT) | `10.10.209.203` (`AUTOMATION_VIP`) | **`10.10.206.203`** (`AUTOMATION_VIP`) | `io.cilium/lb-ipam-ips`, `external-dns` hostname `replicator.driscoll.tech`, Tailscale hostname `replicator` — all carried over unchanged |
+| mosquitto (MQTT) | `10.10.209.203` (`AUTOMATION_VIP`) | **`10.10.206.203`** (`AUTOMATION_VIP`) | `io.cilium/lb-ipam-ips`, `external-dns` hostname `replicator.<root domain>`, Tailscale hostname `replicator` — all carried over unchanged |
 
 Both keep their sgc-era last octet (`.203`/`.204`) and their sgc-era `*_VIP` secret-key names —
 only the third octet changed, `209` → `206`. That's a deliberate mnemonic, not a coincidence to

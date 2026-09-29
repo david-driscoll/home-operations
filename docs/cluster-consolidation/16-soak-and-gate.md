@@ -128,7 +128,7 @@ A TCP-only check for chrony would be a false green — do not add one and call t
 ### 4. DNS and forward-auth working estate-wide
 
 Spot-checked and confirmed working this session as a pattern to replicate more broadly:
-`home.driscoll.tech` resolves to `10.10.206.101` (traefik) and returns a normal HTTPS response —
+`home.<root domain>` resolves to `10.10.206.101` (traefik) and returns a normal HTTPS response —
 DNS → `HTTPRoute` → ingress chain intact end to end for at least that one hostname.
 
 "Estate-wide" for this gate means, at minimum, confirming the same for every hostname this

@@ -242,7 +242,7 @@ Services define routes via Docker labels:
 ```yaml
 labels:
   - traefik.enable=true
-  - traefik.http.routers.myservice.rule=Host(`myservice.driscoll.tech`)
+  - traefik.http.routers.myservice.rule=Host(`myservice.${ROOT_DOMAIN}`)
   - traefik.http.routers.myservice.entrypoints=websecure
   - traefik.http.services.myservice.loadbalancer.server.port=8080
   - traefik.http.routers.myservice.tls.certresolver=letsencrypt

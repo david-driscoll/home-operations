@@ -140,6 +140,7 @@ Never `git add -A` in the shared checkout without reading `git status` first.
 - Test risky changes against a non-production stack (alpha-site) first.
 - Code can create/modify 1Password items — be intentional when touching `OPClient` or stacks that persist outputs.
 - Never run a formatter or editor auto-fix over a `*.sops.yaml`; `bootstrap/openbao/` holds the estate's recovery material and a corrupted MAC is unrecoverable.
+- **Never write the root domain or the tailnet name literally** — not in code, manifests, docs, comments, commit messages, PR/issue text or memory. The repo is public and its history is being scrubbed of both ([`docs/plans/private-domain-scrub.md`](docs/plans/private-domain-scrub.md)). Their only home is SOPS: `ROOT_DOMAIN` / `TAILSCALE_DOMAIN` in `kubernetes/flux/meta/shared-secrets.sops.yaml`. Write `${ROOT_DOMAIN}` / `${TAILSCALE_DOMAIN}` in Flux-rendered values, `<root domain>` / `<tailnet>` in prose and in comments (a `${…}` in a comment gets substituted), and an environment lookup in code. `scripts/private-domain-guard` enforces it at commit (hk) and on every agent Write/Edit (a PreToolUse hook).
 
 ## See also
 

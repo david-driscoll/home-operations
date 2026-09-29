@@ -14,7 +14,7 @@ patches:
   # ../alpha-site use -- luna has no internal LAN IP recorded anywhere in
   # this repo (stacks/gulf-of-mexico/index.ts), only a tailscale one, so
   # its DNS should match that reality rather than resolve through the
-  # driscoll.tech split-horizon zone. Same
+  # <root domain> split-horizon zone. Same
   # `getContainerHostnames`-generated name either way
   # (components/helpers.ts's `tailscaleHostname` field, not `hostname`) --
   # already an established pattern elsewhere in this repo (e.g.

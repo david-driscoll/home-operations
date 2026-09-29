@@ -19,11 +19,11 @@ machine:
       # live: a 2.8 MB `alpine:3.16.9` pull took 2m32s walking dead endpoints
       # before reaching upstream, and zot logged nothing.
       #
-      # `registry.equestria.driscoll.tech` resolves through Technitium (10.10.10.9,
+      # `registry.equestria.<root domain>` resolves through Technitium (10.10.10.9,
       # in the host's list) to the traefik LB on the LAN. Both survive a low-power
       # window — Technitium runs on the control planes and traefik is Tier 1.
       #
-      # Endpoint 2, `registry.driscoll.tech`, is CELESTIA's zot, not a second name
+      # Endpoint 2, `registry.<root domain>`, is CELESTIA's zot, not a second name
       # for this one. Verified: it serves the same `/v2/<registry>/<repo>` layout
       # and returns 200 for the same manifest. Kept deliberately as a cross-cluster
       # fallback — a second cache on a battery-backed host.

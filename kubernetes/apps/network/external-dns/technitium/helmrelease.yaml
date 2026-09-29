@@ -94,7 +94,7 @@ spec:
     env:
       # TSIG key name + shared secret from the "Technitium TSIG Key" 1Password
       # item (username = key name, credential = shared secret). The key is
-      # registered in Technitium under Settings → TSIG, and the driscoll.tech
+      # registered in Technitium under Settings → TSIG, and the <root domain>
       # zone allows updates + zone transfer for it.
       - name: EXTERNAL_DNS_RFC2136_TSIG_KEYNAME
         valueFrom:

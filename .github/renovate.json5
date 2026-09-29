@@ -6,7 +6,7 @@
     // on -- but this file is now also consumed by the self-hosted Forgejo bot
     // through `globalExtends`
     // (kubernetes/apps/coder/renovate/renovatejob.yaml), and there `local>`
-    // resolves to `david-driscoll/.github` ON git.driscoll.tech, which does not
+    // resolves to `david-driscoll/.github` ON git.<root domain>, which does not
     // exist. The lookup fails the whole preset chain, so every Forgejo repo
     // errors instead of inheriting anything.
     //

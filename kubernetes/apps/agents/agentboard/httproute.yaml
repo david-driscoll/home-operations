@@ -36,7 +36,7 @@ spec:
             #   this said until 2026-08-30, and every word of THIS comment
             #   was already true then -- it just named the wrong middleware.
             #   Confirmed live: an unauthenticated request answered 200 with
-            #   the app's own HTML, not a redirect to canterlot.driscoll.tech,
+            #   the app's own HTML, not a redirect to canterlot.<root domain>,
             #   from the first moment agentboard ever actually served traffic.
             #
             # That fix broke the app instead: the outpost's forwardAuth check

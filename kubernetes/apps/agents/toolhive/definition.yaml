@@ -43,7 +43,7 @@ spec:
         # Deliberately NOT ${APP}: the ${ROOT_DOMAIN} hostname above is also this
         # server's OAuth `issuer` (see ./mcpoidcconfig.yaml) and renaming it
         # would invalidate every token and client registration in flight, so the
-        # driscoll.tech side stays exactly as it is.
+        # <root domain> side stays exactly as it is.
         - url: https://mcp.${TAILSCALE_DOMAIN}/oauth/callback
         # ../toolport-mcp's SIX auth servers, one per toolport profile: each
         # profile is its own OAuth door on its own hostname, and one embedded

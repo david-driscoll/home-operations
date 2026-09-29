@@ -97,7 +97,7 @@ All credentials come from 1Password via OPClient:
 
 Example:
 ```typescript
-const credential = output(op.getItemByTitle("Cloudflare (driscoll.tech)"));
+const credential = output(op.getItemByTitle("Cloudflare (${ROOT_DOMAIN})"));
 const provider = new CloudflareProvider("cf", {
   apiToken: credential.apply(c => c.fields.token.value),
 });

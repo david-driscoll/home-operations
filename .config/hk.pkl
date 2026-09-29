@@ -216,6 +216,26 @@ local linters = new Mapping<String, Step> {
   ["newlines"] = Builtins.newlines
 
   // --- Repo-hygiene guards. These are pure checks — they never rewrite a file. ---
+
+  // The estate's root domain and tailnet name must not appear in plaintext in
+  // any tracked file: the repo is public and its history is being scrubbed of
+  // both (docs/plans/private-domain-scrub.md). The script reads the two names
+  // from SOPS at run time and prints only paths and line numbers; files still
+  // waiting on a later phase are listed in .config/private-domain-baseline.
+  //
+  // Whole-repo, like `flate`: no `{{files}}`, and it scans every tracked file
+  // itself -- INCLUDING the .claude/, .apm/, .crew/ and .vscode/ trees the
+  // top-level `exclude` hides from every other step, because agent skills and
+  // memory-adjacent docs are exactly where the names get re-added. The flip
+  // side of that exclude: a commit touching ONLY those trees does not trigger
+  // this step, which is why .claude/hooks/private-domain-guard.sh also checks
+  // every Write/Edit an agent makes. Without the age key it skips with a
+  // warning -- there is nothing to compare against.
+  ["private-domains"] = new Step {
+    glob = List("**/*")
+    check = "scripts/private-domain-guard check --cached"
+  }
+
   ["check-merge-conflict"] = Builtins.check_merge_conflict
   ["detect-private-key"] = Builtins.detect_private_key
   ["check-added-large-files"] = Builtins.check_added_large_files

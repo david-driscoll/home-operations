@@ -53,7 +53,7 @@ this repo.
 ## The admin UI
 
 `garage-webui` runs next to each node and is published the backrest way:
-`https://garage.<cluster>.driscoll.tech` (traefik, LE) and
+`https://garage.<cluster>.<root domain>` (traefik, LE) and
 `https://garage-<host>.<tailnet>` (tailscale service), **both behind authentik
 forward-auth** — the UI holds the admin token and its own login is disabled,
 so the proxy is the login. The per-host tailscale hostname is deliberate: a

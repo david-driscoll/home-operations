@@ -37,10 +37,10 @@ export async function configureLocalDns(globals: GlobalResources) {
   // dns-<cluster> tailscale machines → their dockge-<cluster> hosts from the exports
   const dnsMachines = getDnsMachines(globals);
 
-  // UniFi's dnsmasq is authoritative for driscoll.tech (the LAN domain), so any
+  // UniFi's dnsmasq is authoritative for <root domain> (the LAN domain), so any
   // name it lacks returns empty instead of falling through — publish the cluster
   // node names here so resolver chains that pass through the gateway (e.g.
-  // AdGuard's [/driscoll.tech/] upstream) can reach <node>.dns.driscoll.tech.
+  // AdGuard's [/<root domain>/] upstream) can reach <node>.dns.<root domain>.
   dnsMachines.apply(machines =>
     machines.map(
       machine =>

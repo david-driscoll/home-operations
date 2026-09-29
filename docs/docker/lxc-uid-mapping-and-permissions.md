@@ -63,7 +63,7 @@ On each PVE host, recursively change ownership of `/data/backup` to host UID 165
 corresponds to UID 65534 (nobody) inside the LXC:
 
 ```bash
-# Run on celestia.opossum-yo.ts.net and luna.opossum-yo.ts.net
+# Run on celestia.${TAILSCALE_DOMAIN} and luna.${TAILSCALE_DOMAIN}
 chown -R 165534:165534 /data/backup
 ```
 

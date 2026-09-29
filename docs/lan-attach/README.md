@@ -69,7 +69,7 @@ An avahi publisher advertising `jellyfin.local` would need:
   routes by Host header and would otherwise serve error-pages; and
 - no TLS, because no public CA will issue for `.local`.
 
-Against `jellyfin.driscoll.tech` — which already resolves through Technitium and
+Against `jellyfin.<root domain>` — which already resolves through Technitium and
 already has a real certificate — that is a downgrade. **Recommendation: do not
 build the avahi publisher** unless a specific protocol that is genuinely browsed
 comes up (AirPrint `_ipp._tcp` backed by a real IPP endpoint, or a custom
@@ -254,7 +254,7 @@ from a *different* node (`milky-way`) than the one hosting the pods
 (`fluttershy`):
 
 ```
-Jellyfin  255.255.255.255:7359  -> {"Address":"https://jellyfin.driscoll.tech",
+Jellyfin  255.255.255.255:7359  -> {"Address":"https://jellyfin.${ROOT_DOMAIN}",
                                     "Id":"83f8650c…","Name":"Jellyfin"}
 Plex GDM  255.255.255.255:32414 -> HTTP/1.0 200 OK
                                    Content-Type: plex/media-server
@@ -363,4 +363,4 @@ Until then the pod spec stays as it is.
 | [vfreex/mdns-reflector](https://github.com/vfreex/mdns-reflector) | Router-side interface-to-interface reflector. The UCG-Max already does this job. |
 | [Cilium multicast](https://docs.cilium.io/en/stable/network/multicast/) | Beta; pod-to-pod over the overlay only, never reaches the LAN. Manual `cilium-dbg` group config, no CRD, incompatible with IPsec. |
 | [openshift/coredns-mdns](https://github.com/openshift/coredns-mdns) | Serves mDNS-discovered hosts over unicast DNS — the opposite direction, and Apple clients will not use unicast DNS for `.local` anyway. |
-| avahi publisher for `.local` names | Needs `.local` hostnames on the Traefik gateway and cannot have TLS. Strictly worse than the existing `driscoll.tech` names. See above. |
+| avahi publisher for `.local` names | Needs `.local` hostnames on the Traefik gateway and cannot have TLS. Strictly worse than the existing `<root domain>` names. See above. |

@@ -84,7 +84,7 @@ services:
       # against records external-dns is simultaneously publishing from SGC's
       # HTTPRoute. Two writers on the same names, one of which has wiped live DNS
       # before. Verified 2026-08-15, all four are live and in use:
-      #   authentik/iris/canterlot.driscoll.tech -> odyssey (SGC gateway), 10.10.209.101
+      #   authentik/iris/canterlot.<root domain> -> odyssey (SGC gateway), 10.10.209.101
       #   authentik.<tailnet>                    -> 100.106.100.188
       #
       # So staging runs on names nothing else claims. The cutover swaps these two
@@ -127,7 +127,7 @@ services:
       # This is the name remote Dockge hosts use, NOT a public vanity alias:
       # DockgeLxc.ts:700 hands `remote: true` hosts `authentik.${tailscaleDomain}` as
       # their CLUSTER_AUTHENTIK_DOMAIN. skystar (stacks/ocracoke) is such a host — its
-      # outpost dials https://authentik.opossum-yo.ts.net and is serving through it
+      # outpost dials https://authentik.<tailnet> and is serving through it
       # today — so this has to land before SGC is scaled to zero.
       traefik.http.routers.authentik-tailscale.rule: Host(`authentik.${tailscaleDomain}`)
       traefik.http.routers.authentik-tailscale.entrypoints: tailscale
