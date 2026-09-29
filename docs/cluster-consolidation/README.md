@@ -176,7 +176,7 @@ Decisions David has made on the issue. Plans must not relitigate these.
 | # | Decision | Where decided |
 |---|---|---|
 | D1 | Direction: SGC → equestria; never destructive to the surviving cluster | issue comments (inversion + Q9) |
-| D2 | Pulumi state backend: Postgres DIY on **celestia**; Minio retained as versioned `stack export` archive | Q-A + v2.1 §1.4 |
+| D2 | ~~Pulumi state backend: Postgres DIY on **celestia**; Minio retained as versioned `stack export` archive~~ **Superseded 2026-09-27, never built:** state moved from the TrueNAS Minio to the dockge Garage cluster's `pulumi-state` bucket, with backrest (restic) and an alpha-site Garage copy — see `docs/garage-offsite-s3.md` "Pulumi state" | Q-A + v2.1 §1.4 |
 | D3 | Drop `oxycloud`; drop **SGC's** `crowdsec` db (equestria's becomes live via [vault#111](https://github.com/david-driscoll/vault/issues/111)) | Q-B + vault#111 note |
 | D4 | **Authentik moves to alpha-site** (Pi 4 + USB SSD); outposts stay in-cluster | Q-C |
 | D5 | One age key: equestria's `age1eurl2t7…`; consolidate **before** the migration | Q-D / Q7 |

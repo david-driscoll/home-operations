@@ -207,6 +207,44 @@ replication and the monthly restore test exist to prevent — see Scenario D.
 
 ---
 
+## Scenario E — the Pulumi state backend
+
+Every stack's state is in bucket **`pulumi-state`** on the dockge Garage cluster
+(celestia/luna/skystar), one prefix per Stack, reached at
+`http://dockge-celestia.<tailnet>:3900` with region `garage`. The bucket and its keys are
+bootstrap-tier: made by hand (the ceremony in `docs/garage-offsite-s3.md`, "Pulumi state"),
+never by a stack, because `stacks/system` keeps its own state there.
+
+**Reaching it with OpenBao down.** The two values a local run needs both have SOPS copies:
+
+```bash
+# the key reaches the state; the passphrase decrypts it
+eval "$(sops -d --output-type dotenv bootstrap/openbao/pulumi-state-s3.sops.yaml \
+  | sed -e 's/^username=/export AWS_ACCESS_KEY_ID=/' -e 's/^password=/export AWS_SECRET_ACCESS_KEY=/')"
+export AWS_REGION=garage
+export PULUMI_CONFIG_PASSPHRASE="$(sops -d --extract '["passphrase"]' bootstrap/openbao/pulumi-passphrase.sops.yaml)"
+cd stacks/<stack> && pulumi stack ls   # PULUMI_BACKEND_URL comes from its .mise.toml
+```
+
+**celestia is down.** The backend URL is pinned to celestia's egress. The data is still on
+luna (replication factor 3), so point `PULUMI_BACKEND_URL`'s `endpoint=` at
+`dockge-luna.<tailnet>:3900` from a tailnet machine. The in-cluster egress Service only
+exists for celestia.
+
+**The bucket is lost or a checkpoint is corrupted.** Two independent copies:
+
+1. **alpha-site** — the standalone Garage in `docker/alpha-site/garage-backup`, bucket
+   `pulumi-state-backup`: `mirror/` (hourly, the current checkpoints) and
+   `snapshots/<YYYY-MM-DD>/` (daily, 30 days). Copy the prefix you need back with
+   `rclone copy`, or point a read-only `pulumi stack export` at it directly.
+2. **backrest** — plan `pulumi-state` on celestia (restic, copied to the other PBS hosts).
+   Restore the snapshot into a directory, then `rclone copy` it into the bucket.
+
+Neither holds `.pulumi/history/`. `.pulumi/meta.yaml` plus `.pulumi/stacks/**` is
+everything `pulumi` needs to operate.
+
+---
+
 ## Scenario D — verifying the backup
 
 An unverified backup is not a backup. The `openbao-replica` restore-test CronJob

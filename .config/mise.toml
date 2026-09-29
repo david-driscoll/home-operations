@@ -196,9 +196,12 @@ activate_aggressive = true
 # `eval "$(bootstrap/openbao/pulumi-env.sh)"` step any more. That script
 # still works and is still the break-glass path when the mise AppRole is
 # revoked.
-AWS_ACCESS_KEY_ID = "ref+openbao://secrets/apps/minio/root#/username"
-AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/apps/minio/root#/password"
-AWS_REGION = "home"
+# The Pulumi state backend: a Garage key scoped to the `pulumi-state` bucket
+# on the dockge cluster (every stacks/*/.mise.toml points PULUMI_BACKEND_URL
+# there). Region `garage` is part of every SigV4 signature.
+AWS_ACCESS_KEY_ID = "ref+openbao://secrets/apps/pulumi/state-s3#/username"
+AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/apps/pulumi/state-s3#/password"
+AWS_REGION = "garage"
 # The Pulumi state passphrase. It lives in OpenBao like everything else
 # (estate decision 2026-08-12), reached through the AppRole that
 # pulumi-env.sh exports — so the chain is age key -> sops -> AppRole ->

@@ -4,12 +4,12 @@ kind: CronJob
 metadata:
   name: pulumi-history-pruner
   namespace: pulumi
-  annotations:
-    kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   # Nightly; each stack's Pulumi update history can otherwise grow unbounded
   # in the S3 backend and make `pulumi stack history` (called by the operator
-  # after every up) slow or hang.
+  # after every up) slow or hang. Every update also writes a full checkpoint
+  # copy into history/, so a stack that resyncs every 300s (system, ~11 MB)
+  # adds gigabytes a day to the bucket until this runs.
   schedule: "17 3 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
@@ -22,37 +22,53 @@ spec:
           restartPolicy: Never
           containers:
             - name: history-pruner
-              # renovate: datasource=docker depName=minio/mc
-              image: minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+              # Same pin as the garage-sync / garage-mirror loops
+              # (docker/_common/garage/compose.yaml).
+              # renovate: datasource=docker depName=rclone/rclone
+              image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
               command: ["/bin/sh", "-c"]
               env:
-                - name: AWS_ACCESS_KEY_ID
+                # An env-defined rclone remote named `garage`, the same shape the
+                # dockge Garage stack's own rclone loops use. The endpoint is the
+                # one every Stack CR's backend uses: celestia's bootstrap egress,
+                # the only Garage S3 endpoint this cluster reaches.
+                - name: RCLONE_CONFIG_GARAGE_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_GARAGE_PROVIDER
+                  value: Other
+                - name: RCLONE_CONFIG_GARAGE_ENDPOINT
+                  value: http://dockge-celestia.${TAILSCALE_DOMAIN}:3900
+                - name: RCLONE_CONFIG_GARAGE_REGION
+                  value: garage
+                - name: RCLONE_CONFIG_GARAGE_FORCE_PATH_STYLE
+                  value: "true"
+                - name: RCLONE_CONFIG_GARAGE_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
-                      name: truenas-home-operations
+                      name: pulumi-state-s3
                       key: username
-                - name: AWS_SECRET_ACCESS_KEY
+                - name: RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: truenas-home-operations
+                      name: pulumi-state-s3
                       key: password
+              # Shell variables below are written $NAME, never with braces:
+              # Flux substitutes the braced form cluster-wide (that is what
+              # fills in the endpoint above) and leaves the bare form alone.
               args:
                 - |
-                  set -euo pipefail
-                  KEEP_DAYS=3
-                  BUCKET=home-operations
+                  set -eu
+                  KEEP=3d
+                  BUCKET=pulumi-state
                   # One prefix per Pulumi backend root. `backups` holds both the
-                  # backups and system stacks, and system resyncs every 300s.
-                  # `applications` only has retired stacks left in it.
-                  PREFIXES="applications authentik backups gulf-of-mexico home ocracoke unifi-network vault"
+                  # backups and system stacks.
+                  PREFIXES="authentik backups gulf-of-mexico home ocracoke unifi-network vault"
 
-                  mc alias set truenas http://truenas.driscoll.tech:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"
-
-                  echo "$(date -u): Pruning Pulumi update history older than ${KEEP_DAYS}d"
+                  echo "$(date -u): Pruning Pulumi update history older than $KEEP"
                   for prefix in $PREFIXES; do
-                    echo "  Pruning truenas/${BUCKET}/${prefix}/.pulumi/history/"
-                    mc rm -r --force --older-than "${KEEP_DAYS}d" "truenas/${BUCKET}/${prefix}/.pulumi/history/" \
-                      || echo "  WARNING: prune failed for ${prefix} (will retry next run)"
+                    echo "  Pruning garage:$BUCKET/$prefix/.pulumi/history/"
+                    rclone delete --min-age "$KEEP" --s3-no-check-bucket "garage:$BUCKET/$prefix/.pulumi/history/" \
+                      || echo "  WARNING: prune failed for $prefix (will retry next run)"
                   done
                   echo "$(date -u): History prune complete"
               resources:

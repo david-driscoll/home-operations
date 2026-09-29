@@ -1,7 +1,6 @@
 [env]
 PULUMI_STACK = "system"
 # The `backups` prefix, not `system`: it is where the operator's Stack CR
-# (kubernetes/apps/pulumi/system/stack.yaml) keeps this stack's live state.
-# `s3://home-operations/system` holds a month-stale copy that local runs used
-# to hit instead.
-PULUMI_BACKEND_URL = "s3://home-operations/backups?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true"
+# (kubernetes/apps/pulumi/system/stack.yaml) keeps this stack's live state,
+# shared with the backups stack (distinct project names keep them apart).
+PULUMI_BACKEND_URL = "s3://pulumi-state/backups?endpoint=dockge-celestia.opossum-yo.ts.net:3900&s3ForcePathStyle=true&disableSSL=true&region=garage"

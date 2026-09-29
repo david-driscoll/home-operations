@@ -222,7 +222,7 @@ spec:
               # own workspace pods use (kubernetes/apps/pulumi/*/stack.yaml),
               # sourced from the SAME OpenBao paths via ./externalsecret.yaml.
               AWS_REGION:
-                value: home
+                value: garage
               # Points `sops`/`age` (../resources/mise.toml) at the estate's
               # own identity, mounted below -- the SAME `sops-age` Secret
               # Flux itself uses to decrypt every *.sops.yaml in this repo

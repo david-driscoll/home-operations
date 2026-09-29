@@ -282,9 +282,10 @@ Two things this doesn't resolve, flagged rather than answered here:
   `longhorn-critical`/`longhorn-controlplane` treatment (see below) or are fine
   degrading during the window. Not audited yet.
 - The `pulumi` operator staying up doesn't mean a `pulumi up` can *usefully*
-  run during Battery — its state backend is Postgres DIY on **celestia**
-  (D2), a separate Docker host, whose own power posture during a mains outage
-  is unspecified. Keeping the in-cluster operator alive is necessary but not
+  run during Battery — its state backend is the dockge Garage cluster's
+  `pulumi-state` bucket, reached through **celestia** (D2 was superseded by
+  that move; `docs/garage-offsite-s3.md`), a separate Docker host whose own
+  power posture during a mains outage is unspecified. Keeping the in-cluster operator alive is necessary but not
   sufficient for Pulumi to actually work mid-outage; that's a celestia-side
   question, out of scope here.
 

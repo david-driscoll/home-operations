@@ -15,7 +15,11 @@ spec:
   stack: *stack
   resyncFrequencySeconds: 86400
   retryMaxBackoffDurationSeconds: 60
-  backend: s3://home-operations/ocracoke?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
+  # Pulumi state on the dockge Garage cluster (celestia/luna/skystar), one
+  # prefix per Stack exactly as on the old TrueNAS Minio. Pinned to celestia:
+  # its bootstrap egress is the only Garage S3 endpoint this cluster reaches.
+  # Region `garage` is part of every SigV4 signature. docs/garage-offsite-s3.md.
+  backend: s3://pulumi-state/ocracoke?endpoint=dockge-celestia.${TAILSCALE_DOMAIN}:3900&s3ForcePathStyle=true&disableSSL=true&region=garage
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
   workspaceReclaimPolicy: Delete
@@ -25,12 +29,12 @@ spec:
     AWS_ACCESS_KEY_ID:
       type: Secret
       secret:
-        name: truenas-home-operations
+        name: pulumi-state-s3
         key: username
     AWS_SECRET_ACCESS_KEY:
       type: Secret
       secret:
-        name: truenas-home-operations
+        name: pulumi-state-s3
         key: password
     AWS_USE_PATH_STYLE_ENDPOINT:
       type: Literal
@@ -39,7 +43,7 @@ spec:
     AWS_REGION:
       type: Literal
       literal:
-        value: "home-operations"
+        value: "garage"
     GITHUB_TOKEN:
       type: Secret
       secret:

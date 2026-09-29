@@ -22,7 +22,7 @@ pulumi up --yes       # deploy
 # `ref+sops://`, … -- not op:// any more), resolved per command by
 # `mise run vals-run <cmd>`. See that file's [env] header.
 # CONNECT_HOST, CONNECT_TOKEN, PULUMI_CONFIG_PASSPHRASE
-# AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (Minio)
+# AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (Garage `pulumi-state` key, the state backend)
 # AUTHENTIK_TOKEN, AUTHENTIK_URL
 ```
 
