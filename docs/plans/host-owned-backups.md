@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 started 2026-09-29; 0.6 is answered (A3.1). Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206), plus a follow-up for the leftovers its first run surfaced; 0.6 is answered (A3.1). Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -326,7 +326,7 @@ criteria are measured over consecutive nights.
 
 | Step | Change | Where |
 | --- | --- | --- |
-| 0.1 | Keep a ledger of emitted plan and repo ids, and remove ids that were emitted before but are not now. Seed it with the four orphans (A3.2). | `components/BackupPlanDirector.ts` |
+| 0.1 | Keep a ledger of emitted plan and repo ids, and remove ids that were emitted before but are not now. Seed it with the four orphans (A3.2). ✅ Live 2026-09-29 (#2205). The first run surfaced seven silent leftovers: celestia's `forgejo`, `hermes` and `homelable` (moved to the cluster, or ignored) and skystar's four (no `hosts/dockge` record while `ocracoke` is disabled). The seed now applies on every run and lists their plans; their repos stay as archives. | `components/backrestLedger.ts` |
 | 0.2 | Add `garage-backup` to `BACKUP_OPT_OUT_STACKS`; the ledger then removes its plan. | `components/dockerStackBackups.ts` |
 | 0.3 | Make the etcd repo visible to today's copy tier: label its Secret `volsync=true` and give it a `RESTIC_REPOSITORY` key, as the VolSync component does. Phase 3 supersedes this. | `kubernetes/apps/kube-system/etcd/externalsecret.yaml` |
 | 0.4 | Look up 1Password Connect only when a job names a secret. | `docker/_common/backups/Playground.cs` |

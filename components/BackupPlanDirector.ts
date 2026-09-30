@@ -472,7 +472,7 @@ function removeRetiredPlans(updatedConfig: { repos: BackrestRepository[]; plans:
 
 /**
  * The host's ledger, read over the session that just read config.json, or
- * undefined when there is none and the seed applies.
+ * undefined when there is none, which leaves only the seed owned.
  *
  * A missing file is the normal first-run state. Any other failure, and any
  * malformed content, is logged and treated the same way rather than failing

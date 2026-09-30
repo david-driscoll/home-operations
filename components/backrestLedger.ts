@@ -47,11 +47,16 @@ export interface BackrestLedger {
 export const BACKREST_LEDGER_PATH = "/opt/stacks-data/backrest/config/pulumi-ledger.json";
 
 /**
- * What a host with no ledger yet is treated as having emitted before.
+ * Leftovers from before the ledger existed, owned on every run as if the last
+ * run had emitted them.
  *
- * Every host starts without a ledger, so on its own the ledger could only ever
- * clean up leftovers created AFTER it shipped. These are the ones that already
- * existed, found in celestia's Backrest log for 2026-09-27 → 09-29:
+ * The ledger on its own can only clean up what a director run recorded, so it
+ * could never reach a leftover created before it shipped. These are the ones
+ * that already existed. Being owned is not being removed: an id here only goes
+ * while the director does not emit it, so if one comes back into the inventory
+ * it is kept and updated like any other plan.
+ *
+ * Found in celestia's Backrest log for 2026-09-27 → 09-29:
  *
  *   *-dockge-docker-prune  docker-prune mounts no stacks-data and stopped
  *                          qualifying in #1890; the plans stayed and fail
@@ -59,23 +64,51 @@ export const BACKREST_LEDGER_PATH = "/opt/stacks-data/backrest/config/pulumi-led
  *   alpha-site-dockge-pecron-monitor
  *                          opted out in BACKUP_OPT_OUT_STACKS; same failure.
  *   alpha-site-dockge-garage-backup
- *                          opted out alongside this change: it is the
- *                          off-site Pulumi-state Garage, and a file copy of its
- *                          live LMDB is torn (the reason `garage` is opted out).
- *                          Seeded rather than left to the ledger because the
- *                          backups stack may drop it from the inventory before
- *                          any director run has recorded it.
+ *                          opted out in phase 0: it is the off-site Pulumi-state
+ *                          Garage, and a file copy of its live LMDB is torn (the
+ *                          reason `garage` is opted out).
  *
  * Their repos hold nothing worth browsing (the first four never produced a
- * snapshot), so the repo entries go too. The data, if any, stays on disk.
+ * snapshot), so the repo entries go too.
  *
- * Inert once every host has written a ledger: the seed is only consulted when
- * the file is missing, and none of these ids will be emitted again. Delete it
- * in any later change.
+ * Found after the first ledger run on 2026-09-29, still on the old drifting
+ * schedule because nothing emits them any more. PLANS ONLY -- their repos stay
+ * in config.json on purpose:
+ *
+ *   celestia-dockge-{forgejo,hermes,homelable}
+ *                          forgejo and homelable moved to the cluster (#1474
+ *                          for homelable) and hermes carries an .ignore. Their
+ *                          plans went on pulling leftover stacks-data and
+ *                          reporting green. The repos are those apps' Docker-era
+ *                          history.
+ *   skystar-dockge-{neo4j,postgres,technitium,traefik}
+ *                          skystar has been offline since 2026-08-31, and with
+ *                          the ocracoke Stack disabled it has no hosts/dockge
+ *                          record in OpenBao, so the inventory stopped emitting
+ *                          it. The plans failed nightly at 10m00s each. Their
+ *                          repos on celestia are skystar's only backups while it
+ *                          is away. When ocracoke runs again the plans are
+ *                          emitted, kept, and find their repos still in place.
+ *
+ * Removing a repo from config.json never deletes its data; the ids that do go
+ * leave their /data/backup/<id>/ directories behind.
  */
 export const BACKREST_LEDGER_SEED: BackrestLedger = {
   version: 1,
-  plans: ["alpha-site-dockge-docker-prune", "alpha-site-dockge-garage-backup", "alpha-site-dockge-pecron-monitor", "celestia-dockge-docker-prune", "luna-dockge-docker-prune"],
+  plans: [
+    "alpha-site-dockge-docker-prune",
+    "alpha-site-dockge-garage-backup",
+    "alpha-site-dockge-pecron-monitor",
+    "celestia-dockge-docker-prune",
+    "celestia-dockge-forgejo",
+    "celestia-dockge-hermes",
+    "celestia-dockge-homelable",
+    "luna-dockge-docker-prune",
+    "skystar-dockge-neo4j",
+    "skystar-dockge-postgres",
+    "skystar-dockge-technitium",
+    "skystar-dockge-traefik",
+  ],
   repos: ["alpha-site-dockge-docker-prune", "alpha-site-dockge-garage-backup", "alpha-site-dockge-pecron-monitor", "celestia-dockge-docker-prune", "luna-dockge-docker-prune"],
 };
 
@@ -133,8 +166,8 @@ export interface LedgerRemovals {
 }
 
 /**
- * What to remove from a host's config.json: the ids the previous run emitted
- * (or the seed, when there is no previous run) that this run does not.
+ * What to remove from a host's config.json: the ids the previous run emitted,
+ * plus the seed's known leftovers, that this run does not.
  *
  * Throws, rather than removing, when a host that emitted plans or repos last
  * time emits none of that kind now. An empty set is far more likely a broken
@@ -162,11 +195,10 @@ export function planLedgerRemovals(args: {
     }
   }
 
-  const owned = previous ?? BACKREST_LEDGER_SEED;
   const emittedPlans = new Set(emitted.plans);
   const emittedRepos = new Set(emitted.repos);
-  const ownedPlans = new Set(owned.plans);
-  const ownedRepos = new Set(owned.repos);
+  const ownedPlans = new Set([...(previous?.plans ?? []), ...BACKREST_LEDGER_SEED.plans]);
+  const ownedRepos = new Set([...(previous?.repos ?? []), ...BACKREST_LEDGER_SEED.repos]);
 
   const plans = sortedUnique(config.plans.map(p => p.id ?? "").filter(id => id !== "" && ownedPlans.has(id) && !emittedPlans.has(id)));
   const removedPlans = new Set(plans);
