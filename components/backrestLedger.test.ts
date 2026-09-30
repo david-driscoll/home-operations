@@ -111,6 +111,42 @@ describe("planLedgerRemovals", () => {
     assert.deepEqual(removals, { plans: [seeded], repos: [seeded], keptRepos: [] });
   });
 
+  it("applies the seed even once a ledger exists, and keeps a seeded plan's repo when only the plan is seeded", () => {
+    const planOnly = "skystar-dockge-neo4j";
+    assert.ok(BACKREST_LEDGER_SEED.plans.includes(planOnly));
+    assert.ok(!BACKREST_LEDGER_SEED.repos.includes(planOnly));
+    const removals = planLedgerRemovals({
+      previous: ledger(["live"]),
+      emitted: { plans: ["live"], repos: ["live"] },
+      config: config(
+        [
+          ["live", "live"],
+          [planOnly, planOnly],
+        ],
+        ["live", planOnly],
+      ),
+      host: "celestia",
+    });
+    assert.deepEqual(removals, { plans: [planOnly], repos: [], keptRepos: [] });
+  });
+
+  it("keeps a seeded plan the inventory emits again", () => {
+    const planOnly = "skystar-dockge-neo4j";
+    const removals = planLedgerRemovals({
+      previous: ledger(["live"]),
+      emitted: { plans: ["live", planOnly], repos: ["live", planOnly] },
+      config: config(
+        [
+          ["live", "live"],
+          [planOnly, planOnly],
+        ],
+        ["live", planOnly],
+      ),
+      host: "celestia",
+    });
+    assert.deepEqual(removals, { plans: [], repos: [], keptRepos: [] });
+  });
+
   it("does nothing on a host that never had the seeded leftovers", () => {
     const removals = planLedgerRemovals({
       previous: undefined,
