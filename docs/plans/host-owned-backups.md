@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206), plus a follow-up for the leftovers its first run surfaced; 0.6 is answered (A3.1). Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30 with celestia. Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -151,9 +151,11 @@ celestia first.
   excludes (`/opt/stacks-data/postgres/pgdata`, …). Plan and repo ids keep today's
   `<dockge-name>-<stack>` form, so history carries over.
 - **Backrest takes `rclone-sftp`'s posture.** It runs as uid 0 with `cap_drop: ALL`,
-  `cap_add: DAC_READ_SEARCH` and every data mount read-only, so it can read the 0700 app
-  directories and cannot write to them. Its `./data` and `./cache` move under
-  `/opt/stacks-data/backrest/`, out of the `/opt/stacks` tree DockgeLxc deletes.
+  `cap_add: DAC_READ_SEARCH, DAC_OVERRIDE, FOWNER` and every data mount read-only. It can read the
+  0700 app directories and cannot write to them. The two write capabilities cover its own
+  65534-owned state (as built in phase 1, step 1). Its `./data` and `./cache` move under
+  `/opt/stacks-data/backrest/`, out of the `/opt/stacks` tree DockgeLxc deletes, once nothing
+  stages there any more.
 - **Repos stay local until phase 4.** On celestia, luna and skystar they stay at
   `/data/backup/<id>/` on the owning host until phase 4 moves them into Garage (§C2). Luna and
   skystar each already hold a copy-job mirror of their own repos at exactly that path, so the move
@@ -338,25 +340,43 @@ on luna.
 
 ### Phase 1 — celestia, luna and skystar own their backups
 
-1. **Backrest container** (`docker/_common/backrest/compose.yaml`).
-   - Run as uid 0 with `cap_drop: ALL` and `cap_add: DAC_READ_SEARCH`.
-   - Move `./data` and `./cache` to `/opt/stacks-data/backrest/{data,cache}`.
-   - The director's `backrest-rclone-garage-perms` step chowns `garage.conf` to `0:0` instead of
-     65534.
-2. **One-time chown on each host.** Chown Backrest's config, data and cache, and its own repos
-   under `/data/backup`, to root: Backrest no longer runs as 65534 and has no `DAC_OVERRIDE`.
-   Repos it only browses (copies, VolSync) keep their owner and get `flags: ["--no-lock"]`.
-3. **Plans** (`stacks/backups/index.ts`), for celestia, luna and skystar.
+1. **Backrest container** (`docker/_common/backrest/compose.yaml`). ✅ Built with celestia's
+   cutover.
+   - Runs as uid 0 with `cap_drop: ALL`, `cap_add: DAC_READ_SEARCH, DAC_OVERRIDE, FOWNER`, and
+     `no-new-privileges`.
+   - **Changed from the plan:** the two write capabilities replace the one-time chown and the
+     `--no-lock` flags (the old step 2). Everything Backrest writes was created as 65534: the repos,
+     config, data, cache and the S3 staging tree. `DAC_OVERRIDE` keeps that writable, and `FOWNER`
+     lets rclone's S3 pre-sync set modtimes on it. Every data mount stays `:ro`, so the extra reach
+     is the backup system's own storage. `garage.conf` stays 65534-owned; `DAC_READ_SEARCH` reads
+     it.
+   - **Deferred:** moving `./data` and `./cache` under `/opt/stacks-data/backrest/`. The staging
+     tree lives in `./data`, `garage-mirror` reads it by host path, and alpha-site's pre-sync and
+     the bucket plans still use it. Move it once they don't (phase 2 for alpha-site, phase 5 for
+     the buckets).
+2. *(Folded into step 1.)*
+3. **Plans** (`stacks/backups/index.ts`), for celestia, luna and skystar. ✅ The mechanism is
+   `HOST_OWNED_BACKUP_HOSTS` plus `resticExcludesFor` (`components/dockerStackBackups.ts`).
    - `source` = the host's cluster key, `path` = `/opt/stacks-data/<stack>/`, no `preSync`.
    - `planConfig.excludes` is built from `BACKUP_STACK_EXCLUDES`, rewritten as absolute restic
      patterns.
    - Ids stay the same. alpha-site stays on celestia's pull path.
 4. **Cutover, one host at a time.**
-   - Celestia first: its repos are already local, so only the path changes.
-   - Then luna, then skystar. Each already holds a mirror of its repos at the same path.
-   - The director then turns those repos into copy jobs on celestia and on the other host, and
-     drops the host's own copy job for them. The ledger removes the plans and repos from
-     celestia's Backrest.
+   - **Celestia first** (in its own PR): its repos are already local, so only the path changes.
+     The plan ids, repo ids and Gatus tokens stay the same, and Backrest's `forget` keeps one
+     retention series across the path change, because it groups by tag (`--group-by ""`).
+   - **Then luna** (its own PR, with step 5). Luna already holds a mirror of its repos at the same
+     path, and Backrest adopts an existing repo rather than re-initialising it (its `init` is a
+     no-op once `restic cat config` succeeds).
+     - The director turns those repos into copy jobs on celestia and on the other host, and drops
+       the host's own copy job for them. The ledger removes the plans and repos from celestia's
+       Backrest, since celestia emitted them before.
+     - Merge after luna's 16:00 UTC copy, so luna's mirror carries celestia's latest snapshot.
+     - Backrest's `forget` also filters by `created-by:<instance>`. So luna never prunes the
+       snapshots celestia made in those repos: at most one retention window's worth per repo,
+       frozen. Remove them by hand if they matter.
+   - **skystar** joins when it is back online. It has no `hosts/dockge` record while `ocracoke` is
+     disabled.
    - The first snapshot on the new path has no parent, so restic reads everything once (from
      local disk) but uploads little.
 5. **`rclone-sftp`** drops `/opt/stacks-data/:/data/stacks/:ro` in `_common`. alpha-site keeps the
@@ -366,7 +386,7 @@ on luna.
 
 - **Verify.**
   - Each host's Backrest lists its own plans, and its `Backups: <Cluster>` group is green in Gatus.
-  - Skystar's four plans are green.
+  - Skystar's plans are green once it is back.
   - `restic check` passes on each moved repo.
   - One file restores per host.
 - **Rollback.** Revert the `stacks/backups` change. The plans go back to celestia with their

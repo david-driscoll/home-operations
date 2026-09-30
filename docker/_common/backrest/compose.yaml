@@ -1,6 +1,34 @@
 services:
   backrest:
-    user: "65534:65534"
+    # uid 0 with three file capabilities and nothing else -- rclone-sftp's
+    # posture, for the same reason (docs/plans/host-owned-backups.md, phase 1).
+    # A host-owned plan snapshots /opt/stacks-data/<stack>/ in place, and as uid
+    # 65534 restic could not read the 0700 app directories in it (forgejo's git
+    # repositories, hermes, pdm, technitium/tailscale): the same silent gap
+    # rclone-sftp's comment describes. A non-root user cannot hold a capability
+    # here, because compose cannot set ambient caps.
+    #
+    #   DAC_READ_SEARCH  read every file and directory it backs up.
+    #   DAC_OVERRIDE     write to its own state, which this container created as
+    #                    65534: the repos under /data/backup, config/, data/,
+    #                    cache/, and the S3 staging tree.
+    #   FOWNER           set modtimes on those 65534-owned staging files.
+    #                    rclone's S3 pre-sync updates a changed object's mtime
+    #                    in place, and without this that fails and takes the
+    #                    plan down with it.
+    #
+    # Every mount of data it backs up is :ro, so none of this lets it change
+    # what it protects. What it can write is the backup system's own storage,
+    # which it already holds every password for.
+    user: "0:0"
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH
+      - DAC_OVERRIDE
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
     image: garethgeorge/backrest:v1.14.1@sha256:b852979754281026230cc69fb11428e6d57c9a97784ab4a444ffc7934c53a215
     container_name: backrest
     hostname: backrest

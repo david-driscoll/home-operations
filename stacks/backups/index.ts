@@ -1,5 +1,5 @@
-import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
-import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets } from "@components/dockerStackBackups.ts";
+import { type BackupPlanItem, BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets, resticExcludesFor, STACKS_DATA_ROOT } from "@components/dockerStackBackups.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { addUptimeGatus, toGatusKey } from "@components/helpers.ts";
 import type { ExternalEndpoint } from "@openapi/application-definition.js";
@@ -39,6 +39,25 @@ const dockgeDetails = globals.store.getDockgeInstances();
 
 const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator", globals);
 
+// Dockge hosts whose own backrest snapshots their stacks in place
+// (docs/plans/host-owned-backups.md, phase 1). The key is the docker/<host>/
+// directory, which is also the cluster key BackupPlanDirector matches `source`
+// against. Every other host is still pulled over SFTP into celestia's staging
+// tree, below.
+//
+// Rolled out one host at a time, as the plan says. celestia goes first because
+// its repos already live on celestia: only the snapshot path changes, and the
+// plan ids, repo ids and Gatus tokens stay as they are. luna follows in its own
+// change, and skystar joins when it is back online (it has no hosts/dockge
+// record while the ocracoke Stack is disabled, so it emits no plans at all
+// today). alpha-site has no /data for local repos and moves straight to Garage
+// in phase 2.
+const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia"]);
+
+function isHostOwned(hostDir: string): hostDir is BackupPlanItem["source"] {
+  return (HOST_OWNED_BACKUP_HOSTS as ReadonlySet<string>).has(hostDir);
+}
+
 // One backrest plan per STACK, not per host.
 //
 // The old shape was a single plan per dockge host whose pre-sync pulled the
@@ -65,6 +84,33 @@ const dockgeInstances = dockgeDetails.apply(details =>
     if (targets.length === 0) {
       throw new Error(
         `docker/${hostDir}/ resolved to no backup-eligible stacks for dockge instance '${detail.name}'. Every dockge host should have at least traefik and technitium; an empty result means the directory or the stacks-data rule is wrong, not that the host has nothing to back up.`,
+      );
+    }
+
+    if (isHostOwned(hostDir)) {
+      return targets.map(target =>
+        backupPlanOrchestrator.addBackupPlan(
+          pulumi.output({
+            source: hostDir,
+            // Same identity as the pulled shape below, so the host's backrest
+            // keeps appending to the same repo: the history carries over, and
+            // the first snapshot on the new path reads the tree once from local
+            // disk and uploads little.
+            name: `${detail.name}-${target.stack}`,
+            title: `${detail.title ?? detail.name}: ${target.stack}`,
+            // The stack's own directory, read in place. The backrest container
+            // mounts /opt/stacks-data read-only at the same path and runs with
+            // DAC_READ_SEARCH (docker/_common/backrest/compose.yaml), so the
+            // 0700 app directories that were the reason rclone-sftp runs as
+            // uid 0 are readable here too.
+            path: `${STACKS_DATA_ROOT}/${target.stack}/`,
+            repository: `${detail.name}-${target.stack}`,
+            // Always set, even when empty: BackupPlanDirector merges plans into
+            // config.json key by key, so an omitted `excludes` would leave the
+            // last run's list in place.
+            planConfig: { excludes: resticExcludesFor(target) },
+          }),
+        ),
       );
     }
 
