@@ -287,3 +287,36 @@ export function listStackBackupTargets(hostDir: string): DockerStackBackupTarget
 
   return targets;
 }
+
+/** Where every stack's persistent state lives on a dockge host, and inside the backrest container (bind-mounted read-only at the same path). */
+export const STACKS_DATA_ROOT = "/opt/stacks-data";
+
+/**
+ * A stack's excludes as restic patterns, for a plan that snapshots
+ * `/opt/stacks-data/<stack>/` in place (docs/plans/host-owned-backups.md,
+ * phase 1).
+ *
+ * `BACKUP_STACK_EXCLUDES` is written for rclone's SFTP pre-sync: filters rooted
+ * at the stack's own directory, where `/dir/**` is how you exclude a
+ * directory. restic matches patterns against the absolute path, and excluding
+ * a directory excludes everything under it, so `/pgdata/**` for `postgres`
+ * becomes `/opt/stacks-data/postgres/pgdata`. A glob in the last segment
+ * (`/tailscale/tailscaled.log*`) means the same thing to both.
+ *
+ * Throws on anything it cannot translate faithfully -- an unrooted pattern, or
+ * a `**` anywhere but the end. A pattern that quietly stops matching is how the
+ * old whole-host list excluded nothing at all for months; failing the run
+ * puts the error in front of whoever edited the list.
+ */
+export function resticExcludesFor(target: Pick<DockerStackBackupTarget, "stack" | "excludes">): string[] {
+  return target.excludes.map(pattern => {
+    if (!pattern.startsWith("/")) {
+      throw new Error(`BACKUP_STACK_EXCLUDES['${target.stack}'] entry '${pattern}' is not rooted at the stack directory; start it with '/'.`);
+    }
+    const body = pattern.endsWith("/**") ? pattern.slice(0, -"/**".length) : pattern;
+    if (body.includes("**") || body === "") {
+      throw new Error(`BACKUP_STACK_EXCLUDES['${target.stack}'] entry '${pattern}' cannot be translated to a restic exclude: use '/dir/**' for a directory or a glob in the last segment.`);
+    }
+    return `${STACKS_DATA_ROOT}/${target.stack}${body}`;
+  });
+}
