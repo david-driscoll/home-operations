@@ -5,37 +5,22 @@ import { all, ComponentResource, type ComponentResourceOptions, type Input, json
 import { baoKvSecret, baoProvenance, baoSlug } from "./bao.ts";
 import type { GlobalResources } from "./globals.ts";
 /**
- * Stage a remote filesystem over SFTP before the snapshot.
+ * Stage the contents of an S3 bucket before the snapshot. This is the only
+ * pre-sync left.
  *
- * `type` is OPTIONAL and defaults to "sftp" on purpose. Plans are serialized
- * into 1Password/OpenBao and read back by `BackupPlanDirector` on a later,
- * separate run, so every plan already persisted out there predates this field
- * and has no `type` at all. Making sftp the fall-through means those keep
- * rendering exactly the same rclone command they always did; requiring the
- * discriminant would have silently reclassified all of them at the first
- * director run after this shipped.
- */
-export interface SftpPreSyncArgs {
-  type?: "sftp";
-  /** SFTP hostname of the host whose data should be staged before the backup */
-  sftpHost: string;
-  /** Absolute path on the remote host to sync from (e.g. "/opt/stacks-data/") */
-  sourcePath: string;
-  /** SFTP port — defaults to 2022 (rclone-sftp entrypoint) */
-  sftpPort?: number;
-  exclude?: string[];
-}
-
-/**
- * Stage the contents of an S3 bucket before the snapshot.
+ * Its SFTP sibling, which pulled a Docker host's stacks into celestia's staging
+ * tree, went once every Docker host backed up its own stacks
+ * (docs/plans/host-owned-backups.md; skystar, the last pulled host, backs up
+ * straight to Garage when it returns, David's call on 2026-10-01).
+ * `BackupPlanDirector` refuses a persisted plan that still carries the old
+ * shape (no `type`) rather than read it as S3.
  *
  * This exists because restic cannot read an S3 bucket as a SOURCE — its S3
  * support is for the repository DESTINATION, which is the opposite direction.
- * So a bucket is backed up the same way a dockge host already is: rclone
- * mirrors it onto backrest's local staging tree, and restic snapshots that
- * tree. Everything downstream — repo, retention, prune/check, the Gatus
- * heartbeat, the copy jobs to the other Proxmox Backup Servers — is then the
- * mechanism that was already there.
+ * So rclone mirrors the bucket onto backrest's local staging tree, and restic
+ * snapshots that tree. Everything downstream — repo, retention, prune/check,
+ * the Gatus heartbeat, the copy jobs to the other Proxmox Backup Servers — is
+ * then the mechanism every other plan uses.
  *
  * Credentials are NOT rendered into the hook command. They go into
  * `rclone.conf` on the backrest host (see `renderRcloneConfig`), which keeps
@@ -58,7 +43,7 @@ export interface S3PreSyncArgs {
   exclude?: string[];
 }
 
-export type PreSyncArgs = SftpPreSyncArgs | S3PreSyncArgs;
+export type PreSyncArgs = S3PreSyncArgs;
 
 /**
  * A plan whose repo lives in the geo Garage instead of /data/backup on the host

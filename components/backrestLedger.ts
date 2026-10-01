@@ -98,8 +98,11 @@ export const BACKREST_LEDGER_PATH = "/opt/stacks-data/backrest/config/pulumi-led
  *                          record in OpenBao, so the inventory stopped emitting
  *                          it. The plans failed nightly at 10m00s each. Their
  *                          repos on celestia are skystar's only backups while it
- *                          is away. When ocracoke runs again the plans are
- *                          emitted, kept, and find their repos still in place.
+ *                          is away. When ocracoke runs again, skystar backs up
+ *                          straight to Garage, as alpha-site does (David,
+ *                          2026-10-01). Its plans then belong to another host,
+ *                          so celestia drops these repo entries too. The data
+ *                          stays in /data/backup as a frozen archive.
  *
  * Removing a repo from config.json never deletes its data; the ids that do go
  * leave their /data/backup/<id>/ directories behind.
