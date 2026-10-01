@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# image-check -- prove that every container image a PR introduces can be pulled.
+#
+# WHY. flate renders and diffs kubernetes/**, but a render never asks a
+# registry anything: a tag that was never pushed, a digest from the wrong
+# repository, or an arm64-only build all render cleanly and fail later as
+# ImagePullBackOff -- after merge, in the cluster, or on a Docker host that
+# nothing renders at all. This is the pre-merge gate in front of Renovate's
+# automerge (docs/renovate-automerge.md).
+#
+# Usage:
+#   image-check flate <diff-file>   images from `flate diff -o github` output
+#                                   (the rendered objects, so HelmRelease
+#                                   repository/tag pairs arrive already joined)
+#   image-check compose <base-ref>  every docker/**/compose.y*ml changed since
+#                                   <base-ref>: validate it with `docker compose
+#                                   config`, then check each image line it adds
+#   image-check refs <ref>...       check the given references (for testing)
+#
+# Each reference must resolve by tag, resolve by digest when it is pinned
+# (`repo:tag@sha256:...`), and offer linux/amd64 -- every node and Docker host
+# in the estate is amd64. References still holding `${...}` are skipped: Flux
+# and Compose substitute those at apply time, so there is nothing to look up.
+#
+# Needs `crane` (go-containerregistry) and `jq`; `docker` only for `compose`.
+# Exit codes: 0 every image checked out (or none changed), 1 at least one did
+# not, 2 usage error.
+set -euo pipefail
+
+for tool in crane jq; do
+  command -v "$tool" >/dev/null || { echo "image-check: $tool not found" >&2; exit 2; }
+done
+
+summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+failures=0
+checked=0
+
+annotate() { # level message
+  if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    echo "::$1::$2"
+  else
+    echo "$1: $2" >&2
+  fi
+}
+
+# crane with three attempts, so one registry hiccup does not block a merge.
+crane_retry() {
+  local out attempt
+  for attempt in 1 2 3; do
+    if out=$(crane "$@" 2>&1); then
+      printf '%s' "$out"
+      return 0
+    fi
+    sleep $((attempt * 5))
+  done
+  printf '%s' "$out"
+  return 1
+}
+
+check_ref() {
+  local ref="$1" name digest="" repo out arch
+  ref="${ref%\"}"
+  ref="${ref#\"}"
+  ref="${ref%\'}"
+  ref="${ref#\'}"
+  [[ -z "$ref" ]] && return 0
+  if [[ "$ref" == *'$'* ]]; then
+    echo "| \`$ref\` | skipped (substituted at apply time) |" >>"$summary"
+    return 0
+  fi
+  checked=$((checked + 1))
+
+  name="${ref%%@*}"
+  [[ "$ref" == *@sha256:* ]] && digest="${ref#*@}"
+  # The tag is whatever follows the last `:` AFTER the last `/`, so a registry
+  # port (`host:5000/app`) is not mistaken for one.
+  repo="$name"
+  if [[ "${name##*/}" == *:* ]]; then
+    repo="${name%:*}"
+  fi
+
+  if ! out=$(crane_retry digest "$name"); then
+    annotate error "image-check: $name does not resolve: $out"
+    echo "| \`$ref\` | :x: tag does not resolve |" >>"$summary"
+    failures=$((failures + 1))
+    return 0
+  fi
+  if [[ -n "$digest" ]] && ! out=$(crane_retry manifest "$repo@$digest"); then
+    annotate error "image-check: $repo@$digest does not exist: $out"
+    echo "| \`$ref\` | :x: pinned digest not in repository |" >>"$summary"
+    failures=$((failures + 1))
+    return 0
+  fi
+
+  local target="$name"
+  [[ -n "$digest" ]] && target="$repo@$digest"
+  if ! out=$(crane_retry manifest "$target"); then
+    annotate error "image-check: cannot read the manifest of $target: $out"
+    echo "| \`$ref\` | :x: manifest unreadable |" >>"$summary"
+    failures=$((failures + 1))
+    return 0
+  fi
+  if jq -e 'has("manifests")' >/dev/null <<<"$out"; then
+    # An index: amd64 must be one of its platforms.
+    if ! jq -e 'any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64")' >/dev/null <<<"$out"; then
+      annotate error "image-check: $ref has no linux/amd64 image ($(jq -r '[.manifests[].platform | "\(.os)/\(.architecture)"] | join(", ")' <<<"$out"))"
+      echo "| \`$ref\` | :x: no linux/amd64 |" >>"$summary"
+      failures=$((failures + 1))
+      return 0
+    fi
+  else
+    # A single image: its config says what it was built for.
+    if ! arch=$(crane_retry config "$target" | jq -r '.architecture // "unknown"'); then
+      arch=unknown
+    fi
+    if [[ "$arch" != "amd64" ]]; then
+      annotate error "image-check: $ref is a single-platform image for $arch, not amd64"
+      echo "| \`$ref\` | :x: built for $arch |" >>"$summary"
+      failures=$((failures + 1))
+      return 0
+    fi
+  fi
+  echo "| \`$ref\` | :white_check_mark: |" >>"$summary"
+}
+
+# Images from flate's rendered diff. Two shapes carry one:
+#   @@ spec.template.spec.containers.app.image @@   (a changed value; the new
+#   + ghcr.io/app:v2@sha256:...                      one is on the `+` line)
+# and a whole added object, whose lines include `+ ... image: <ref>`.
+extract_flate() {
+  awk '
+    /^@@ .* @@$/ { inimage = ($2 ~ /(^|\.)image$/); next }
+    inimage && /^\+ / { sub(/^\+ +/, ""); print; next }
+    /^\+.*[[:space:]]image:[[:space:]]*[^[:space:]]/ {
+      sub(/^.*[[:space:]]image:[[:space:]]*/, ""); print
+    }
+  ' "$1" | sort -u
+}
+
+compose_config() {
+  docker compose -f "$1" config --quiet --no-interpolate --no-env-resolution --no-path-resolution 2>&1
+}
+
+compose_files() {
+  git diff --name-only --diff-filter=AM "$1...HEAD" -- \
+    'docker/**/compose.yaml' 'docker/**/compose.yml' \
+    'docker/**/docker-compose.yaml' 'docker/**/docker-compose.yml'
+}
+
+run_checks() {
+  echo "| Image | Result |" >>"$summary"
+  echo "| --- | --- |" >>"$summary"
+  local ref
+  while IFS= read -r ref; do
+    check_ref "$ref"
+  done
+}
+
+finish() {
+  echo >>"$summary"
+  echo "image-check: $checked image(s) checked, $failures failed"
+  [[ "$failures" -eq 0 ]]
+}
+
+case "${1:-}" in
+  flate)
+    [[ $# -eq 2 ]] || { echo "usage: $0 flate <diff-file>" >&2; exit 2; }
+    echo "### Rendered images" >>"$summary"
+    run_checks < <(extract_flate "$2")
+    finish
+    ;;
+  compose)
+    [[ $# -eq 2 ]] || { echo "usage: $0 compose <base-ref>" >&2; exit 2; }
+    mapfile -t files < <(compose_files "$2")
+    if [[ ${#files[@]} -eq 0 ]]; then
+      echo "image-check: no compose files changed"
+      exit 0
+    fi
+    echo "### Compose files" >>"$summary"
+    for f in "${files[@]}"; do
+      # No interpolation and no env-file reads: the hosts' variables and
+      # `.env` files are not in CI. This proves the file is valid Compose.
+      if out=$(compose_config "$f"); then
+        echo "- \`$f\` :white_check_mark:" >>"$summary"
+        continue
+      fi
+      # Uninterpolated, a `${VAR}` in a typed field can fail on its own. Only
+      # a file this PR BROKE fails the check: if the base version fails the
+      # same way, it is a pre-existing quirk and the bump is not to blame.
+      base_copy="$(dirname "$f")/.image-check-base.$(basename "$f")"
+      if git show "$2:$f" >"$base_copy" 2>/dev/null && ! compose_config "$base_copy" >/dev/null; then
+        annotate warning "image-check: $f does not validate without interpolation, and did not on the base branch either: $out"
+        echo "- \`$f\` :warning: fails here and on the base branch" >>"$summary"
+      else
+        annotate error "image-check: $f is not valid Compose: $out"
+        echo "- \`$f\` :x: invalid Compose" >>"$summary"
+        failures=$((failures + 1))
+      fi
+      rm -f "$base_copy"
+    done
+    echo "### Compose images" >>"$summary"
+    run_checks < <(
+      git diff --unified=0 "$2...HEAD" -- "${files[@]}" |
+        sed -n -E 's/^\+[[:space:]]*image:[[:space:]]*([^[:space:]#]+).*/\1/p' | sort -u
+    )
+    finish
+    ;;
+  refs)
+    shift
+    run_checks < <(printf '%s\n' "$@")
+    finish
+    ;;
+  *)
+    sed -n '2,27p' "$0" >&2
+    exit 2
+    ;;
+esac

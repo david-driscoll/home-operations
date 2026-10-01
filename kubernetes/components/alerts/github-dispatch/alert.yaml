@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/notification.toolkit.fluxcd.io/alert_v1beta3.json
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-dispatch
+spec:
+  providerRef:
+    name: github-dispatch
+  eventSeverity: error
+  eventSources:
+    - kind: HelmRelease
+      name: "*"
+    - kind: Kustomization
+      name: "*"
+  # The same transient noise the alertmanager Alert drops: a failed lookup or
+  # a timed-out dial is the network, not the release.
+  exclusionList:
+    - error.*lookup.*github
+    - dial.*tcp.*timeout
+    - waiting.*socket
+  suspend: false

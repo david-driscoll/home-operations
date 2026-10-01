@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# The post-merge half of the Renovate automerge gate (docs/renovate-automerge.md).
+# A HelmRelease or Kustomization that reports an error is dispatched to
+# .github/workflows/renovate-watchdog.yaml, which reverts the automerged PR
+# behind it -- if there is one. Errors with no automerged PR behind them are
+# logged there and dropped, so this is safe to send everything to.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./alert.yaml
+  - ./provider.yaml
