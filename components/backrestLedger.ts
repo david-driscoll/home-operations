@@ -27,13 +27,16 @@
  * prune from celestia's Backrest would be rewriting a repo another host now
  * writes.
  *
- * One more kind of id is owned without being recorded: every repo this host
- * receives as a COPY from another host. The copy job rclone-syncs that repo
- * over whatever is on disk, so a plan here writing into it would lose its
- * snapshots at the next copy, and Backrest's own prune or check would race the
- * sync. When a plan moves from celestia to the host that owns the stack,
- * celestia's ledger removes it anyway, because celestia emitted it. Owning the
- * copied ids as well means the move does not depend on that ledger surviving.
+ * One more kind of id is owned without being recorded: every plan ANOTHER host
+ * runs. This host at most receives such a repo as a copy, and a copy job
+ * rclone-syncs it over whatever is on disk, so a plan here writing into it
+ * would lose its snapshots at the next copy and Backrest's own prune or check
+ * would race the sync. A Garage repo of another host's cannot even be opened:
+ * the key is that host's. On 2026-10-01 celestia's config.json was overwritten
+ * with alpha-site's, and celestia's Backrest crash-looped trying to initialize
+ * alpha-site's Garage repos. Owning foreign ids means such entries go on the
+ * next run whatever the ledger says, and a plan that moved to another host
+ * leaves even when the old host's ledger is lost.
  *
  * Everything here is pure and synchronous so it can be unit-tested without a
  * Pulumi runtime or a host (backrestLedger.test.ts). The SSH read, the file
@@ -175,8 +178,8 @@ export interface LedgerRemovals {
 
 /**
  * What to remove from a host's config.json: the ids the previous run emitted,
- * the seed's known leftovers and the repos this host receives as copies, where
- * this run does not emit them.
+ * the seed's known leftovers and the plans other hosts run, where this run
+ * does not emit them.
  *
  * Throws, rather than removing, when a host that emitted plans or repos last
  * time emits none of that kind now. An empty set is far more likely a broken
@@ -186,19 +189,19 @@ export interface LedgerRemovals {
  * `dockerHostDirectory` use. Doing it on purpose means deleting the ledger file
  * first. The seed never trips this: it is only a list of known leftovers.
  *
- * Also throws when an id is both emitted and copied on this host. That is two
- * writers on one repo, and only an inventory in which two plans share a name
- * can produce it.
+ * Also throws when an id is both emitted here and run by another host. That is
+ * two writers on one repo, and only an inventory in which two plans share a
+ * name can produce it.
  */
 export function planLedgerRemovals(args: {
   previous: BackrestLedger | undefined;
   emitted: { plans: readonly string[]; repos: readonly string[] };
   config: { plans: readonly { id?: string; repo?: string }[]; repos: readonly { id?: string }[] };
   host: string;
-  /** Repo ids this host receives as copies from other hosts: BackupPlanDirector's destination copy jobs. */
-  copied?: readonly string[];
+  /** Plan and repo ids other hosts run (every inventory plan whose source is another host). */
+  foreign?: readonly string[];
 }): LedgerRemovals {
-  const { previous, emitted, config, host, copied = [] } = args;
+  const { previous, emitted, config, host, foreign = [] } = args;
 
   if (previous) {
     for (const kind of ["plans", "repos"] as const) {
@@ -213,15 +216,15 @@ export function planLedgerRemovals(args: {
   const emittedPlans = new Set(emitted.plans);
   const emittedRepos = new Set(emitted.repos);
 
-  const runAndCopied = sortedUnique(copied.filter(id => emittedPlans.has(id) || emittedRepos.has(id)));
-  if (runAndCopied.length > 0) {
+  const runHereAndElsewhere = sortedUnique(foreign.filter(id => emittedPlans.has(id) || emittedRepos.has(id)));
+  if (runHereAndElsewhere.length > 0) {
     throw new Error(
-      `The backup director for ${host} both runs and receives a copy of ${runAndCopied.join(", ")}, so a copy job would sync another host's repo over the one ${host} writes. Two backup plans share a name in the inventory; give them distinct names.`,
+      `The backup director for ${host} runs ${runHereAndElsewhere.join(", ")}, which another host runs too: two writers on one repo. Two backup plans share a name in the inventory; give them distinct names.`,
     );
   }
 
-  const ownedPlans = new Set([...(previous?.plans ?? []), ...BACKREST_LEDGER_SEED.plans, ...copied]);
-  const ownedRepos = new Set([...(previous?.repos ?? []), ...BACKREST_LEDGER_SEED.repos, ...copied]);
+  const ownedPlans = new Set([...(previous?.plans ?? []), ...BACKREST_LEDGER_SEED.plans, ...foreign]);
+  const ownedRepos = new Set([...(previous?.repos ?? []), ...BACKREST_LEDGER_SEED.repos, ...foreign]);
 
   const plans = sortedUnique(config.plans.map(p => p.id ?? "").filter(id => id !== "" && ownedPlans.has(id) && !emittedPlans.has(id)));
   const removedPlans = new Set(plans);
