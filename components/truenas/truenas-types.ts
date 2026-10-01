@@ -715,6 +715,9 @@ export interface NFSShare {
   locked: boolean;
 }
 
+/** The settings `ensureNFSShare` writes: a share's fields apart from its id, path and lock state. */
+export type NfsShareInput = Partial<Omit<NFSShare, "id" | "path" | "locked">>;
+
 export interface SMBShare {
   id: number;
   name: string;

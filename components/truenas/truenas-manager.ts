@@ -29,6 +29,7 @@ import {
   NFSQueryRequest,
   type NFSShare,
   NFSUpdateRequest,
+  type NfsShareInput,
   type Pool,
   PoolQueryRequest,
   SMBCreateRequest,
@@ -74,6 +75,12 @@ function sameValue(a: unknown, b: unknown): boolean {
 export function cloudCredentialMatches(existing: CloudCredential, desired: CloudCredentialInput): boolean {
   const provider = existing.provider as unknown as Record<string, unknown>;
   return existing.name === desired.name && Object.entries(desired.provider).every(([field, value]) => value === undefined || sameValue(provider[field], value));
+}
+
+/** Whether an NFS share already matches every field `desired` sets. */
+export function nfsShareMatches(existing: NFSShare, desired: NfsShareInput): boolean {
+  const fields = existing as unknown as Record<string, unknown>;
+  return Object.entries(desired).every(([field, value]) => value === undefined || sameValue(fields[field], value));
 }
 
 /** Whether a Cloud Sync task already matches every field `desired` sets. */
@@ -223,40 +230,23 @@ export class TrueNASResourceManager {
   }
 
   /**
-   * Ensure an NFS share exists with the specified configuration
+   * Ensure an NFS share exists with the specified configuration.
+   *
+   * An existing share is written only when it differs (nfsShareMatches), so a
+   * caller that runs every five minutes (stacks/system) costs one query.
    */
-  async ensureNFSShare(
-    path: string,
-    config: {
-      comment?: string;
-      networks?: string[];
-      hosts?: string[];
-      alldirs?: boolean;
-      quiet?: boolean;
-      ro?: boolean;
-      maproot_user?: string;
-      maproot_group?: string;
-      mapall_user?: string;
-      mapall_group?: string;
-      security?: string[];
-      enabled?: boolean;
-    },
-  ): Promise<NFSShare> {
+  async ensureNFSShare(path: string, config: NfsShareInput): Promise<{ share: NFSShare; changed: boolean }> {
     const connection = await this.client.connection;
     const shares = (await connection.sendRequest(NFSQueryRequest, [["path", "=", path]], {})) as NFSShare[];
 
-    if (shares.length > 0) {
-      const share = shares[0];
-      return await connection.sendRequest(NFSUpdateRequest, share.id, {
-        ...config,
-        path,
-      });
-    } else {
-      return await connection.sendRequest(NFSCreateRequest, {
-        ...config,
-        path,
-      });
+    const existing = shares[0];
+    if (existing && nfsShareMatches(existing, config)) {
+      return { share: existing, changed: false };
     }
+    if (existing) {
+      return { share: await connection.sendRequest(NFSUpdateRequest, existing.id, { ...config, path }), changed: true };
+    }
+    return { share: await connection.sendRequest(NFSCreateRequest, { ...config, path }), changed: true };
   }
 
   /**

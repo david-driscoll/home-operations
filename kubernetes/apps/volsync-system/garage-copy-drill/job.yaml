@@ -1,0 +1,82 @@
+---
+# Restores APPS' latest snapshots from TrueNAS's copy of the VolSync bucket
+# (garage-copy-drill.sh): the drill in docs/plans/host-owned-backups.md §E,
+# run at each phase exit. Run it again by changing APPS or the `drill`
+# annotation below. Either one changes the Job's spec, which is immutable,
+# and the force label has Flux recreate it, as for ../garage-history-copy.
+# That is also why there is no ttlSecondsAfterFinished.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: garage-copy-drill
+  labels:
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      annotations:
+        # Which drill this run is. Change it to run the drill again.
+        driscoll.dev/drill: phase-3-pilot-2026-10-01
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      # The movers' uid, so the restored files' owner (the apps run as 568 by
+      # default) can be set without root.
+      securityContext:
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        runAsNonRoot: true
+      containers:
+        - name: drill
+          image: docker.io/restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+          command:
+            - /bin/sh
+            - /script/garage-copy-drill.sh
+          env:
+            - name: APPS
+              value: kapowarr rustdesk
+            - name: RESTIC_CACHE_DIR
+              value: /cache
+          envFrom:
+            - secretRef:
+                name: garage-copy-drill-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: copy
+              mountPath: /copy
+              readOnly: true
+            - name: script
+              mountPath: /script
+              readOnly: true
+            - name: scratch
+              mountPath: /scratch
+            - name: cache
+              mountPath: /cache
+      volumes:
+        # The read-only export configureGarageCopy (components/truenas.ts)
+        # gives each restic bucket's copy. It holds the bucket's objects as
+        # files: one restic repository per app, in restic's own layout.
+        - name: copy
+          nfs:
+            server: "${SPIKE_IP}"
+            path: /mnt/stash/backup/garage/volsync-equestria
+            readOnly: true
+        - name: script
+          configMap:
+            name: garage-copy-drill-script
+        - name: scratch
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}

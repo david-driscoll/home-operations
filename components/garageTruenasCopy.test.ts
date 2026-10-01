@@ -6,10 +6,20 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { GARAGE_COPY_BUCKETS, GARAGE_COPY_DATASET, GARAGE_COPY_KEYS, GARAGE_COPY_TASK_PREFIX, garageCopyCredential, garageCopySnapshotTasks, garageCopyTask, TRUENAS_GARAGE_COPY_GROUP } from "./garageTruenasCopy.ts";
+import {
+  GARAGE_COPY_BUCKETS,
+  GARAGE_COPY_DATASET,
+  GARAGE_COPY_KEYS,
+  GARAGE_COPY_TASK_PREFIX,
+  garageCopyCredential,
+  garageCopyNfsShare,
+  garageCopySnapshotTasks,
+  garageCopyTask,
+  TRUENAS_GARAGE_COPY_GROUP,
+} from "./garageTruenasCopy.ts";
 import { toGatusKey } from "./helpers.ts";
-import { cloudCredentialMatches, cloudSyncTaskMatches, snapshotTaskMatches } from "./truenas/truenas-manager.ts";
-import type { CloudSyncTask, SnapshotTask } from "./truenas/truenas-types.ts";
+import { cloudCredentialMatches, cloudSyncTaskMatches, nfsShareMatches, snapshotTaskMatches } from "./truenas/truenas-manager.ts";
+import type { CloudSyncTask, NFSShare, SnapshotTask } from "./truenas/truenas-types.ts";
 
 describe("GARAGE_COPY_BUCKETS", () => {
   it("lists each bucket once, each with a known key", () => {
@@ -27,6 +37,23 @@ describe("GARAGE_COPY_BUCKETS", () => {
       GARAGE_COPY_BUCKETS.find(entry => entry.bucket === "pulumi-state"),
       { bucket: "pulumi-state", key: "pulumi-state-reader" },
     );
+  });
+
+  it("exports only restic buckets, never one that is not encrypted client-side", () => {
+    const exported = GARAGE_COPY_BUCKETS.filter(entry => entry.restic).map(entry => entry.bucket);
+    assert.deepEqual(exported.sort(), ["backrest-alpha-site", "volsync-equestria"]);
+    for (const bucket of ["cnpg-equestria", "pulumi-state", "postgres-celestia", "postgres-luna", "postgres-skystar"]) {
+      assert.ok(!exported.includes(bucket), `${bucket} must never get an NFS export`);
+    }
+  });
+});
+
+describe("garageCopyNfsShare", () => {
+  it("exports the bucket's own dataset read-only, every client mapped to apps", () => {
+    assert.deepEqual(garageCopyNfsShare("volsync-equestria"), {
+      path: `/mnt/${GARAGE_COPY_DATASET}/volsync-equestria`,
+      config: { comment: `${GARAGE_COPY_TASK_PREFIX}volsync-equestria (read-only, restic)`, ro: true, mapall_user: "apps", mapall_group: "apps" },
+    });
   });
 });
 
@@ -146,5 +173,29 @@ describe("matchers", () => {
     const existing: SnapshotTask = { ...daily, id: 5, schedule: { ...daily.schedule, begin: "00:00", end: "23:59" }, vmware_sync: false, state: {} };
     assert.equal(snapshotTaskMatches(existing, daily), true);
     assert.equal(snapshotTaskMatches({ ...existing, lifetime_value: 2 }, daily), false);
+  });
+
+  it("treats an unchanged NFS share as unchanged despite TrueNAS's defaults, and a writable one as a change", () => {
+    const { path, config } = garageCopyNfsShare("volsync-equestria");
+    const existing: NFSShare = {
+      id: 9,
+      path,
+      comment: config.comment ?? "",
+      networks: [],
+      hosts: [],
+      ro: true,
+      maproot_user: null,
+      maproot_group: null,
+      mapall_user: "apps",
+      mapall_group: "apps",
+      security: [],
+      enabled: true,
+      locked: false,
+    };
+    assert.equal(nfsShareMatches(existing, config), true);
+    assert.equal(nfsShareMatches({ ...existing, ro: false }, config), false);
+    assert.equal(nfsShareMatches({ ...existing, mapall_user: "root" }, config), false);
+    // TruenasVm.addClusterBackup's shares set only the mapping, so other fields never count.
+    assert.equal(nfsShareMatches({ ...existing, ro: false, comment: "" }, { mapall_user: "apps", mapall_group: "apps" }), true);
   });
 });

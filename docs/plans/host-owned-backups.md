@@ -248,6 +248,8 @@ step 1).
 - **Restores do not need Garage.** Point restic at a ZFS snapshot with `--no-lock`, or at a clone.
   An NFS share, like the ones `addClusterBackup` creates, lets celestia's Backrest browse the copy
   read-only.
+  - ✅ The restic buckets' copies now have read-only exports (phase 3, step 3), and
+    `garage-copy-drill` restores from them.
 - **Managed from Pulumi.** `configureGarageCopy` (`components/truenas.ts`), called from
   `stacks/system`, configures spike from the list in `components/garageTruenasCopy.ts`.
   `TrueNASResourceManager` gains cloud-sync credential, cloud-sync task and snapshot-task helpers
@@ -662,10 +664,19 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
      - The 13:00-local pull carries both prefixes into `stash/backup/garage/volsync-equestria`.
      - The next nightly restore-once restores both apps from Garage.
      - The hosts drop both apps' copy jobs.
-   - **Still to build: the TrueNAS-copy restore.** It needs the copy readable from somewhere that
-     can run restic, such as a read-only NFS export of `stash/backup/garage` (§C3). Check first
-     whether celestia's existing `/mnt/stash/backup` mount already reaches into the new child
-     dataset.
+   - **The TrueNAS-copy restore.**
+     - **Built: an export for each restic bucket's copy.** `configureGarageCopy` gives every
+       bucket marked `restic: true` in `GARAGE_COPY_BUCKETS` a read-only NFS export of its own
+       dataset, mapped to `apps`. Today that is `volsync-equestria` and `backrest-alpha-site`.
+       - Each bucket's copy is its own dataset, so the CNPG archive, the Postgres dumps and the
+         Pulumi state, none of them encrypted client-side, are never exported.
+       - `ensureNFSShare` now writes only when a share differs, as the other TrueNAS helpers do.
+     - **Built: the drill**, `kubernetes/apps/volsync-system/garage-copy-drill`. It restores each
+       app in `APPS` from the copy with `--no-lock`, with no Garage involved, and prints Garage's
+       newest snapshot beside the copy's.
+       - Run it again at each phase exit by changing `APPS` or its `driscoll.dev/drill`
+         annotation.
+       - Merge only after a pull has landed, or the Job finds no repository and fails.
 4. **Everything else.**
    - Give `volsync-lock-canceller` an S3 variant: locks strand on killed movers whatever the
      backend.
