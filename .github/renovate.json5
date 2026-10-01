@@ -306,6 +306,20 @@
       versioning: "semver",
     },
     {
+      // lakker/pulsarr carries a stray `1.1.6` tag that is NOT the project's
+      // current release line (that is 0.x), so Renovate kept raising "0.19.2 ->
+      // 1.1.6" as a major (#1621) and it had to be closed every time. Exclude
+      // exactly that tag; anything genuinely newer still comes through.
+      description: "Pulsarr: never propose the stray 1.1.6 tag",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "lakker/pulsarr"
+      ],
+      allowedVersions: "!/^v?1\\.1\\.6$/",
+    },
+    {
       description: "CoreDNS Group",
       groupName: "CoreDNS",
       matchDatasources: [
@@ -1191,13 +1205,14 @@
       // while the diff reads like an upgrade. Nothing fails; `pulumi up` simply
       // keeps running the old version.
       //
-      // Regenerate before merging one of these:
-      //
-      //   pulumi package add terraform-provider <registry-url> <new-version>
-      //
-      // which rewrites sdks/<name>/ and the entry here. `pulumi package add`
-      // reformats `parameters` as a block sequence; put it back to the flow
-      // style the other entries use so this manager keeps matching it.
+      // .github/workflows/pulumi-sdk-regen.yaml now completes it: on Renovate's
+      // PR it runs `pulumi install` (which regenerates sdks/ from this file
+      // and leaves the flow-style `parameters` alone), commits the result back
+      // to the branch, and fails the `pulumi-sdk-regen` status if the new SDK
+      // breaks a type in components/ or stacks/. Wait for that commit before
+      // merging one of these. By hand, `pulumi install` does the same; avoid
+      // `pulumi package add`, which reformats `parameters` as a block
+      // sequence this manager no longer matches.
       //
       // Nothing tracked these versions before -- all six providers were pinned
       // by hand and updated only when someone noticed.

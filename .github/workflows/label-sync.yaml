@@ -8,6 +8,13 @@ on:
     branches: ["main"]
     paths: [".github/labels.yaml"]
 
+# The repo's default token is read-only, and creating, editing or deleting a
+# label is an Issues write. Without this every run failed with 403 "Resource
+# not accessible by integration" (seen 2026-08-19 and 2026-10-01).
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   label-sync:
     name: Label Sync
