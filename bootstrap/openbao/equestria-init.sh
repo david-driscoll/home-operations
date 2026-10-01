@@ -50,6 +50,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly HERE
 REPO_ROOT="$(git -C "${HERE}" rev-parse --show-toplevel)"
 readonly REPO_ROOT
+# The root domain is never written in the repo (docs/plans/private-domain-scrub.md).
+# private_names takes it from the environment, or decrypts it from SOPS.
+# shellcheck source-path=SCRIPTDIR source=../../scripts/lib/private-names.sh
+source "${REPO_ROOT}/scripts/lib/private-names.sh"
+private_names || exit 1
 readonly RECOVERY_FILE="bootstrap/openbao/equestria-recovery-keys.sops.yaml"
 readonly APPROLE_FILE="bootstrap/openbao/pulumi-approle.sops.yaml"
 
@@ -62,7 +67,7 @@ readonly KV_MOUNTS=(secrets docs meta)
 # "oidc" twice by design: /auth/<mount-path>/oidc/callback with the default
 # mount path "oidc". Port 8250 is the local listener `bao login -method=oidc`
 # runs for the CLI flow.
-readonly OIDC_REDIRECT_UI="https://bao.equestria.driscoll.tech/ui/vault/auth/oidc/oidc/callback"
+readonly OIDC_REDIRECT_UI="https://bao.equestria.${ROOT_DOMAIN}/ui/vault/auth/oidc/oidc/callback"
 readonly OIDC_REDIRECT_CLI="http://localhost:8250/oidc/callback"
 
 log()  { printf '  %s\n' "$*"; }
@@ -662,7 +667,9 @@ Done. Next:
   1. REVERT the disable_unauthed_generate_root_endpoints listener toggle in
      kubernetes/apps/kube-system/openbao/helmrelease.yaml and let the pods
      roll — do not leave generate-root reachable unauthenticated.
-  2. Verify: log in at https://bao.equestria.driscoll.tech/ui with OIDC as an
+NEXT
+  printf '  2. Verify: log in at %s with OIDC as an\n' "${OIDC_REDIRECT_UI%/vault/*}"
+  cat <<'NEXT'
      `admins` member (expect the admin policy) and a `family` member (expect
      viewer: browse secrets/, read docs/, no secret values).
 NEXT

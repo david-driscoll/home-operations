@@ -35,9 +35,13 @@ REPO_ROOT="$(git -C "${HERE}" rev-parse --show-toplevel)"
 readonly REPO_ROOT
 readonly APPROLE_FILE="bootstrap/openbao/pulumi-approle.sops.yaml"
 
-# equestria's OpenBao. Overridable so a break-glass run can point the same
-# credential at a restored standby.
-readonly DEFAULT_BAO_ADDR="https://bao.equestria.driscoll.tech"
+# equestria's OpenBao (bao.equestria.<root domain>) is the default, and
+# BAO_ADDR overrides it so a break-glass run can point the same credential at
+# a restored standby. The root domain is never written in the repo:
+# private_names reads it, from the environment or decrypted from SOPS, only
+# when BAO_ADDR is unset. It writes nothing to stdout, which is eval'd.
+# shellcheck source-path=SCRIPTDIR source=../../scripts/lib/private-names.sh
+source "${REPO_ROOT}/scripts/lib/private-names.sh"
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -81,7 +85,10 @@ extract() {
 
 role_id="$(extract role_id)"
 secret_id="$(extract secret_id)"
-bao_addr="${BAO_ADDR:-${DEFAULT_BAO_ADDR}}"
+if [[ -z "${BAO_ADDR:-}" ]]; then
+  private_names || die "BAO_ADDR is unset, and the root domain for the default could not be read"
+fi
+bao_addr="${BAO_ADDR:-https://bao.equestria.${ROOT_DOMAIN:-}}"
 
 # %q quotes for the shell that will eval this. The values are UUIDs today, but
 # a re-minted secret_id is not guaranteed to stay shell-safe forever.

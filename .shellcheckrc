@@ -20,6 +20,13 @@
 #
 # SC1091 and SC2155 are deliberately NOT disabled -- neither fires here, so
 # disabling them would suppress rules that currently find nothing.
+#
+# `external-sources=true` is the rc-file form of `shellcheck -x`, which the hk
+# step does not pass. It lets shellcheck FOLLOW a `source` whose path a
+# `# shellcheck source=` directive names (scripts/lib/private-names.sh, sourced
+# by the bootstrap scripts), so the sourced code is checked too and SC1091
+# still fires for a source it genuinely cannot find.
+external-sources=true
 disable=SC2015
 disable=SC2329
 disable=SC2001

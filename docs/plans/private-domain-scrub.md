@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is under way, starting with 5a (mise and the MCP clients). Owner: David.
+Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is under way: 5a (mise and the MCP clients) and 5b (scripts, Docker configs, notebooks) are in one PR, and 5c (Talos) follows. Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -234,19 +234,29 @@ live first.
     `${env:ROOT_DOMAIN}`.
   - Gate: in every directory, `mise env` renders each value byte-identical to
     the old literal.
-- **Bootstrap scripts** require `ROOT_DOMAIN` instead of defaulting to it. The
-  break-glass path already assumes SOPS and the age key.
-- **Talos:** `talos/talenv.sops.yaml`. talhelper decrypts it and substitutes
-  into `talconfig.yaml` and `@`-referenced patches. Gate: `talhelper genconfig`
-  output is unchanged.
-- **Docker:** `.env`, compose and config files go through the DockgeLxc deploy
-  path. It substitutes `${ROOT_DOMAIN}` (from `globals.searchDomain`) into
-  every file of a stack.
-- **Notebooks** (David, 2026-10-01):
-  - delete the two stale `.dib` notebooks;
-  - `volsync.ipynb` reads the environment.
-- `scripts/iptv-audit.py` and the dashboard's `resources/test.sh` read the
-  environment too.
+- **5b: scripts, Docker configs, notebooks.**
+  - `scripts/lib/private-names.sh` (sourced) provides `private_names`. It keeps
+    real values from the environment and otherwise decrypts both names from
+    `shared-secrets`, so a break-glass run needs the age key, not mise.
+    - A `ref+` value does not count as set.
+    - It fails closed, writing only to stderr, so it is safe inside the
+      eval'd `pulumi-env.sh`.
+  - The four `bootstrap/openbao` scripts use it; the three that take an
+    address override (`BAO_ADDR`, `BAO_TRANSIT_HOST`) call it only when the
+    override is unset. The dashboard's `resources/test.sh` uses it too.
+  - The three Docker configs use `${ROOT_DOMAIN}`, which DockgeLxc substitutes
+    (from `globals.searchDomain`) into every file of a stack.
+  - Notebooks (David, 2026-10-01): the two stale `.dib` notebooks are deleted,
+    and `volsync.ipynb` reads `$env:ROOT_DOMAIN`. `scripts/iptv-audit.py`
+    defaults `--base` from `ROOT_DOMAIN` and refuses to guess without it.
+  - Gate: each output is identical to the old one, namely
+    - `pulumi-env.sh`'s `BAO_ADDR` line;
+    - `equestria-init.sh`'s closing instructions;
+    - `test.sh`'s kubeconfig;
+    - each Docker file after substitution.
+- **5c, still to do: Talos.** `talos/talenv.sops.yaml`, which talhelper
+  decrypts and substitutes into `talconfig.yaml` and `@`-referenced patches.
+  Gate: `talhelper genconfig` output is unchanged.
 
 ### Phase 6: strict
 
