@@ -661,7 +661,27 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
 4. **Everything else.**
    - Give `volsync-lock-canceller` an S3 variant: locks strand on killed movers whatever the
      backend.
+
+     ✅ As built: `lock-canceller-garage`, a release of its own in
+     `kubernetes/apps/volsync-system/lock-canceller`, so a TrueNAS outage cannot stop it starting.
+     It runs hourly at :35 with the NFS canceller's 6-hour rule.
+     - An rclone init container lists the bucket's repositories and those holding a lock object
+       older than 6 hours.
+     - restic's own `unlock` then removes only the locks it judges stale, the same second guard
+       the NFS canceller relies on.
    - Migrate the remaining apps in batches of about ten.
+     - **The recipe for a batch:**
+       - set `VOLSYNC_BACKEND: garage` in each app's `ks.yaml`;
+       - append the apps to `APPS` in `garage-history-copy/job.yaml`, in the same change;
+       - confirm afterwards that each app's line in the Job's log shows equal NFS and Garage
+         snapshot counts.
+     - **Batch 1:** seedstrem, n8n, homelable, questarr, mylar, tududi, mealie, arr-mcp-jellyfin,
+       arr-mcp-plex and jellyseerr. They were chosen as small, low-stakes `equestria` apps on the
+       component, each under 14 MiB.
+     - **Held for later batches**, because they are larger or carry infrastructure:
+       - `coder/forgejo`, the tailscale-system apps, `stargate-command` and `kube-system/registry`;
+       - crowdsec's bespoke Secrets;
+       - Plex.
    - Then etcd: both CronJobs' `RESTIC_REPOSITORY` → `s3:…/volsync-equestria/etcd`.
 5. **The k8s pg_dump CronJob streams into restic** (§C4).
    - `resources/App.cs` pipes each database into `backrest-pgdump`, and a prune CronJob owns

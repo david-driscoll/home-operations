@@ -5,6 +5,9 @@ kind: Kustomization
 resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
+  # The Garage half, for repositories that moved off NFS (helmrelease-garage.yaml).
+  - ./externalsecret-garage.yaml
+  - ./helmrelease-garage.yaml
 configMapGenerator:
   # The script lives in a real ./unlock-stale-locks.sh rather than inline YAML so
   # shellcheck, editors and `sh -n` can all see it -- hk's shellcheck step picks
@@ -38,6 +41,16 @@ configMapGenerator:
       # --allow-missing-secrets and reports unresolved values as placeholders
       # rather than failing, so a missing annotation passes lint and breaks on
       # the cluster.
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+  # Both containers' scripts for helmrelease-garage.yaml, with the same two
+  # options for the same reasons.
+  - name: lock-canceller-garage-script
+    files:
+      - ./find-stale-garage-locks.sh
+      - ./unlock-stale-garage-locks.sh
+    options:
       disableNameSuffixHash: true
       annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled
