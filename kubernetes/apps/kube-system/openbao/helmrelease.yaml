@@ -132,7 +132,7 @@ spec:
             // reached only through the tailscale-operator egress Services in
             // tailscale-system, and the operator's nameserver resolves the
             // MagicDNS name to that egress proxy's ClusterIP: from a pod,
-            // dockge-as.opossum-yo.ts.net and
+            // dockge-as.<tailnet> and
             // dockge-as.tailscale-system.svc.cluster.local both answer
             // 10.196.81.163. The egress proxy forwards only the ports declared
             // in the Service's spec.ports, so 8200 is declared for dockge-as in
