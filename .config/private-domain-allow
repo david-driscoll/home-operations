@@ -1,0 +1,13 @@
+# Files that may spell the root domain as plain WORDS: its labels separated by
+# whitespace only, the way a display name is written. Read by
+# scripts/private-domain-guard. In these files every other spelling is still a
+# hit, and the tailnet name is never allowed anywhere.
+#
+# Unlike .config/private-domain-baseline, this is not a to-do list. Each entry
+# is a decision David made; add one only on his say-so.
+#
+# One repo-relative path per line; `#` lines and blanks are ignored.
+
+# The authentik login flows' display titles name the estate in words. Kept,
+# 2026-10-01 (docs/plans/private-domain-scrub.md, phase 4).
+components/authentik/flows.ts

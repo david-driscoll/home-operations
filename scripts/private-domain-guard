@@ -8,7 +8,7 @@
 # This script reads them from there at run time, so it never contains them
 # either, and it never prints matching text -- only paths and line numbers.
 #
-# What counts as a hit (case-insensitive, fixed strings):
+# What counts as a hit (case-insensitive extended regexes):
 #   - the root domain in any spelling: a.b, a\.b, a\\.b, a-b, a_b (see patterns)
 #   - the tailnet's first label (so the whole MagicDNS suffix, too)
 #
@@ -16,8 +16,9 @@
 #   private-domain-guard check [--cached]  scan tracked files (working tree, or
 #                                          the index with --cached); fail on any
 #                                          file not listed in the baseline
-#   private-domain-guard stdin             exit 1 if stdin contains a name
-#                                          (the Claude Code Write/Edit hook)
+#   private-domain-guard stdin [path]      exit 1 if stdin contains a name (the
+#                                          Claude Code Write/Edit hook); `path`,
+#                                          repo-relative, applies the allow-list
 #
 # Exit codes: 0 clean, 1 found, 3 cannot decrypt (the caller decides; `check`
 # and `stdin` both skip with a warning, so a machine without the age key is
@@ -25,6 +26,12 @@
 #
 # The baseline (.config/private-domain-baseline) lists files that still hold a
 # name on purpose, each waiting on a later phase of the plan. It only shrinks.
+#
+# The allow-list (.config/private-domain-allow) is not temporary. It names
+# files that may spell the root domain as plain WORDS -- its labels separated
+# by whitespace only, the way a display name is written -- and each entry is a
+# decision David made. In those files every other spelling is still a hit, and
+# so is the tailnet.
 set -euo pipefail
 
 # The repo this script lives in, whatever the caller's working directory (the
@@ -32,6 +39,10 @@ set -euo pipefail
 top="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 secrets="$top/kubernetes/flux/meta/shared-secrets.sops.yaml"
 baseline="$top/.config/private-domain-baseline"
+allowlist="$top/.config/private-domain-allow"
+
+# The entries of a list file: one path per line, `#` lines and blanks ignored.
+entries() { [[ -r "$1" ]] && grep -v -e '^#' -e '^$' "$1" || true; }
 
 load_names() {
   if [[ -n "${PRIVATE_DOMAIN_ROOT:-}" && -n "${PRIVATE_DOMAIN_TAILNET:-}" ]]; then
@@ -61,10 +72,15 @@ load_names() {
 # a fixed-string list missed, in traefik's CORS middleware), a-b / a_b (slugs
 # in secret paths and resource names). The tailnet's first label is
 # distinctive enough to match alone.
+#
+# `patterns words-ok` is for allow-listed files: the separator must then hold
+# at least one character that is not whitespace, so the name written as words
+# no longer matches while every other spelling still does.
 patterns() {
-  local esc
-  esc="$(printf '%s' "$root" | sed -E 's/[][\.^$*+?(){}|/]/\\&/g; s/\\\./[^a-z0-9]{1,4}/g')"
-  printf '%s\n' "$esc" "${tailnet%%.*}"
+  local sep='[^a-z0-9]{1,4}' esc
+  [[ "${1:-}" == words-ok ]] && sep='[^a-z0-9]{0,3}[^a-z0-9[:space:]][^a-z0-9]{0,3}'
+  esc="$(printf '%s' "$root" | sed -E 's/[][\.^$*+?(){}|/]/\\&/g')"
+  printf '%s\n' "${esc//\\./$sep}" "${tailnet%%.*}"
 }
 
 skip() {
@@ -76,20 +92,35 @@ cmd="${1:-check}"
 case "$cmd" in
   stdin)
     load_names || skip
-    if grep -q -i -E -f <(patterns); then exit 1; fi
+    # The hook passes the target's repo-relative path, so an allow-listed file
+    # is held to the same rule here as in `check`.
+    kind=""
+    if [[ -n "${2:-}" ]] && grep -qxF -- "$2" <(entries "$allowlist"); then kind="words-ok"; fi
+    if grep -q -i -E -f <(patterns "$kind"); then exit 1; fi
     exit 0
     ;;
   check)
     load_names || skip
     mode=()
     [[ "${2:-}" == "--cached" ]] && mode=(--cached)
+    words=()
+    mapfile -t words < <(entries "$allowlist")
+    # Allow-listed files get the words-ok patterns; everything else but SOPS
+    # files gets the full set.
     hits="$(git -C "$top" grep "${mode[@]}" -I -i -n -E -f <(patterns) \
-      -- . ':(exclude,glob)**/*.sops.*' | cut -d: -f1-2 || true)"
-    allowed=""
-    [[ -r "$baseline" ]] && allowed="$(grep -v -e '^#' -e '^$' "$baseline" || true)"
+      -- . ':(exclude,glob)**/*.sops.*' "${words[@]/#/:(exclude,literal)}" | cut -d: -f1-2 || true)"
+    if ((${#words[@]})); then
+      hits+=$'\n'"$(git -C "$top" grep "${mode[@]}" -I -i -n -E -f <(patterns words-ok) \
+        -- "${words[@]/#/:(literal)}" | cut -d: -f1-2 || true)"
+      for f in "${words[@]}"; do
+        git -C "$top" grep "${mode[@]}" -q -I -i -E -f <(patterns) -- ":(literal)$f" ||
+          echo "private-domain-guard: $f no longer spells the name -- remove it from .config/private-domain-allow" >&2
+      done
+    fi
+    baselined="$(entries "$baseline")"
     new="$(awk -F: 'NR==FNR { ok[$0]=1; next } !($1 in ok)' \
-      <(printf '%s\n' "$allowed") <(printf '%s\n' "$hits") | grep -v '^$' || true)"
-    stale="$(comm -23 <(printf '%s\n' "$allowed" | sort -u) \
+      <(printf '%s\n' "$baselined") <(printf '%s\n' "$hits") | grep -v '^$' || true)"
+    stale="$(comm -23 <(printf '%s\n' "$baselined" | sort -u) \
       <(printf '%s\n' "$hits" | cut -d: -f1 | sort -u) | grep -v '^$' || true)"
     if [[ -n "$stale" ]]; then
       echo "private-domain-guard: now clean -- remove from .config/private-domain-baseline:" >&2
@@ -107,7 +138,7 @@ EOF
     fi
     ;;
   *)
-    sed -n '2,30p' "$0" >&2
+    sed -n '2,/^set -euo pipefail$/{/^set /!p}' "$0" >&2
     exit 2
     ;;
 esac

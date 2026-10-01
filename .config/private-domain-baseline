@@ -9,12 +9,6 @@
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 
-# --- Phase 4: Pulumi code and cluster definitions ---
-# The code reads ROOT_DOMAIN now (4b). What is left is the login flows' display
-# titles, which spell the estate's name as words; what they should say instead
-# is an open decision (docs/plans/private-domain-scrub.md, section F).
-components/authentik/flows.ts
-
 # --- Phase 5: tooling and hosts outside Flux (mise env, MCP, scripts, Docker, Talos) ---
 .config/mise.toml
 .mcp.json
