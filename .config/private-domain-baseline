@@ -9,17 +9,6 @@
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 
-# --- Phase 3b: the break-glass canary, still on the old Cloudflare path ---
-# The consumers moved to third-party-tokens/cloudflare/dns-zone in 3a. These
-# move in lockstep with the live `restore-test` policy (an admin-token step),
-# after a nightly dump contains the new path; then the old path is deleted.
-kubernetes/apps/kube-system/openbao-replica/helmrelease.yaml
-docker/alpha-site/bao-standby/restore.sh
-bootstrap/RUNBOOK.md
-bootstrap/openbao/restore-test.sh
-scripts/bao-reorg/plan.ts
-scripts/bao-reorg/run.sh
-
 # --- Phase 4: Pulumi code and cluster definitions ---
 clusters/alpha-site.yaml
 clusters/celestia.yaml
