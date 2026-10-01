@@ -35,13 +35,10 @@ function forwarded(entries: ReturnType<typeof buildIngressEntries>, hostname: st
 
 describe("deriveTunnelRules", () => {
   it("restricts postiz to /uploads/ and the webhook to /hook/ (the two live routes)", () => {
-    const rules = deriveTunnelRules([
-      route("postiz-external", ["postiz.driscoll.tech"], [prefix("/uploads/")]),
-      route("flux-webhook", ["flux-equestria-webhook.driscoll.tech"], [prefix("/hook/")], external, "flux-system"),
-    ]);
+    const rules = deriveTunnelRules([route("postiz-external", ["postiz.example.com"], [prefix("/uploads/")]), route("flux-webhook", ["flux-equestria-webhook.example.com"], [prefix("/hook/")], external, "flux-system")]);
     assert.deepEqual(rules, [
-      { hostname: "flux-equestria-webhook.driscoll.tech", path: "^(/hook(/|$))" },
-      { hostname: "postiz.driscoll.tech", path: "^(/uploads(/|$))" },
+      { hostname: "flux-equestria-webhook.example.com", path: "^(/hook(/|$))" },
+      { hostname: "postiz.example.com", path: "^(/uploads(/|$))" },
     ]);
   });
 
@@ -82,29 +79,29 @@ describe("deriveTunnelRules", () => {
 });
 
 describe("buildIngressEntries + path semantics", () => {
-  const entries = buildIngressEntries([{ hostname: "postiz.driscoll.tech", path: "^(/uploads(/|$))" }, { hostname: "whole.example" }], "http_status:404");
+  const entries = buildIngressEntries([{ hostname: "postiz.example.com", path: "^(/uploads(/|$))" }, { hostname: "whole.example" }], "http_status:404");
 
   it("orders deny before serve, and ends with the catch-all", () => {
     assert.deepEqual(entries, [
-      { hostname: "postiz.driscoll.tech", path: TRAVERSAL_PATH, service: TRAVERSAL_DENY_SERVICE },
-      { hostname: "postiz.driscoll.tech", path: "^(/uploads(/|$))", service: "origin" },
+      { hostname: "postiz.example.com", path: TRAVERSAL_PATH, service: TRAVERSAL_DENY_SERVICE },
+      { hostname: "postiz.example.com", path: "^(/uploads(/|$))", service: "origin" },
       { hostname: "whole.example", service: "origin" },
       { service: "http_status:404" },
     ]);
   });
 
   it("forwards uploads and nothing else on a restricted host", () => {
-    for (const path of ["/uploads/", "/uploads", "/uploads/2026/09/15/abc.png"]) assert.equal(forwarded(entries, "postiz.driscoll.tech", path), true, path);
-    for (const path of ["/", "/auth", "/api/", "/settings", "/uploadsx", "/x/uploads/"]) assert.equal(forwarded(entries, "postiz.driscoll.tech", path), false, path);
+    for (const path of ["/uploads/", "/uploads", "/uploads/2026/09/15/abc.png"]) assert.equal(forwarded(entries, "postiz.example.com", path), true, path);
+    for (const path of ["/", "/auth", "/api/", "/settings", "/uploadsx", "/x/uploads/"]) assert.equal(forwarded(entries, "postiz.example.com", path), false, path);
   });
 
   it("blocks the traversals Traefik was measured normalizing into /api/", () => {
     // cloudflared matches the DECODED path, so %2e%2e arrives here as `..`.
     for (const path of ["/uploads/../api/", "/uploads/..", "/uploads//../api/", decodeURIComponent("/uploads/%2e%2e/api/")]) {
-      assert.equal(forwarded(entries, "postiz.driscoll.tech", path), false, path);
+      assert.equal(forwarded(entries, "postiz.example.com", path), false, path);
     }
     // ...without catching ordinary dots in filenames.
-    assert.equal(forwarded(entries, "postiz.driscoll.tech", "/uploads/a..b.png"), true);
+    assert.equal(forwarded(entries, "postiz.example.com", "/uploads/a..b.png"), true);
   });
 
   it("leaves unrestricted hosts whole and unknown hosts to the catch-all", () => {

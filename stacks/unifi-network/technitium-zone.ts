@@ -10,16 +10,20 @@
 
 import * as pulumi from "@pulumi/pulumi";
 import * as technitium from "@pulumi/technitium";
+import { rootDomain, rootDomainSlug } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 
 export function configureTechnitiumZones(globals: GlobalResources) {
   const parent = new pulumi.ComponentResource("custom:technitium:Zones", "technitium-zones", {});
   const cro = { parent, provider: globals.technitiumProvider };
 
+  // Both from the environment (components/domains.ts). The resource name is
+  // the slug it has always been, so this protected zone keeps its URN.
+  const root = rootDomain();
   const zone = new technitium.Zone(
-    "driscoll-tech",
+    rootDomainSlug(),
     {
-      name: "driscoll.tech",
+      name: root,
       type: "Forwarder",
       // external-dns runs `--rfc2136-tsig-axfr` against this zone to learn what
       // already exists before it reconciles. A new Technitium zone denies zone
@@ -34,10 +38,10 @@ export function configureTechnitiumZones(globals: GlobalResources) {
     { ...cro, protect: true, retainOnDelete: true },
   );
 
-  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 ([2620:fe::fe])");
-  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 ([2620:fe::9])");
-  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 (9.9.9.9)");
-  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 (149.112.112.112)");
+  addForwarderRecord(cro, zone, root, "dns.quad9.net:853 ([2620:fe::fe])");
+  addForwarderRecord(cro, zone, root, "dns.quad9.net:853 ([2620:fe::9])");
+  addForwarderRecord(cro, zone, root, "dns.quad9.net:853 (9.9.9.9)");
+  addForwarderRecord(cro, zone, root, "dns.quad9.net:853 (149.112.112.112)");
 
   return { zone };
 }

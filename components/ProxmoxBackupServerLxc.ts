@@ -3,6 +3,7 @@ import { ApplicationCertificate } from "@components/authentik/application-certif
 import type { AuthentikOutputs } from "@components/authentik.ts";
 import { baoKvSecret, baoProvenance, pbsBaoPath } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
+import { rootDomain } from "@components/domains.ts";
 import { installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { TailscaleIp } from "@openapi/tailscale-grants.js";
@@ -262,7 +263,7 @@ echo "PBS post-install complete"`;
       .apply(([c]) =>
         args.host.applicationManager.createApplication(
           output({
-            apiVersion: "home.driscoll.tech/v1",
+            apiVersion: `home.${rootDomain()}/v1`,
             kind: "ApplicationDefinition",
             metadata: { name: `pbs` },
             spec: {

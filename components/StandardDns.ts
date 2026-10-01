@@ -1,4 +1,5 @@
 import { dns } from "@components/constants.ts";
+import { rootDomain } from "@components/domains.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import { type OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { GatusDefinition } from "@openapi/application-definition.js";
@@ -178,7 +179,7 @@ export class StandardDns extends ComponentResource {
     this.technitium = new technitium.Record(
       `${name}-technitium`,
       {
-        zone: "driscoll.tech",
+        zone: rootDomain(),
         name: args.hostname,
         type: args.type,
         value: record,

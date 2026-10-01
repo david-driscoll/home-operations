@@ -1,5 +1,8 @@
 /**
- * npx tsx --test components/store/clusters.test.ts
+ * ROOT_DOMAIN=example.com npx tsx --test components/store/clusters.test.ts
+ *
+ * The loader appends ROOT_DOMAIN at import and fails without it
+ * (components/domains.ts). The assertions read it back, so any value passes.
  *
  * These definitions used to be TypeScript literals, so the compiler caught a
  * misspelled key or a bad enum. YAML gets neither, and a mistyped field would
@@ -11,6 +14,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { rootDomain } from "../domains.ts";
 import { CLUSTER_SECRET_FIELDS, CLUSTERS, clusterBySourceTitle, clusterSecretPath, parseCluster } from "./clusters.ts";
 
 describe("the checked-in cluster definitions", () => {
@@ -93,8 +97,11 @@ describe("the checked-in cluster definitions", () => {
         const value = (cluster as unknown as Record<string, string>)[field];
         assert.ok(typeof value === "string" && value.length > 0, `${cluster.key}.${field} is empty`);
       }
-      assert.match(cluster.rootDomain, /^[a-z0-9.-]+\.driscoll\.tech$/, `${cluster.key}.rootDomain`);
-      assert.match(cluster.authentikDomain, /^[a-z0-9.-]+\.driscoll\.tech$/, `${cluster.key}.authentikDomain`);
+      const suffix = `.${rootDomain()}`;
+      for (const field of ["rootDomain", "authentikDomain"] as const) {
+        const value = cluster[field];
+        assert.ok(value.endsWith(suffix) && /^[a-z0-9-]+$/.test(value.slice(0, -suffix.length)), `${cluster.key}.${field} is '${value}'`);
+      }
       for (const field of ["icon", "favicon", "background"] as const) {
         assert.match((cluster as unknown as Record<string, string>)[field], /^https:\/\//, `${cluster.key}.${field}`);
       }
@@ -110,7 +117,7 @@ describe("parseCluster rejects what the compiler used to", () => {
     type: "dockge",
     location: "home",
     domainPrefix: "test",
-    authentikDomain: "canterlot.driscoll.tech",
+    authentikPrefix: "canterlot",
     icon: "https://example.invalid/i.png",
     favicon: "https://example.invalid/f.png",
     background: "https://example.invalid/b.jpg",
@@ -163,7 +170,7 @@ describe("error messages name the file", () => {
   });
 });
 
-describe("domainPrefix", () => {
+describe("domainPrefix and authentikPrefix", () => {
   const good = {
     sourceTitle: "Cluster: Test",
     key: "test",
@@ -171,7 +178,7 @@ describe("domainPrefix", () => {
     type: "dockge",
     location: "home",
     domainPrefix: "test",
-    authentikDomain: "canterlot.driscoll.tech",
+    authentikPrefix: "canterlot",
     icon: "https://example.invalid/i.png",
     favicon: "https://example.invalid/f.png",
     background: "https://example.invalid/b.jpg",
@@ -179,29 +186,58 @@ describe("domainPrefix", () => {
   };
 
   it("appends the estate domain to build rootDomain", () => {
-    assert.equal(parseCluster("test.yaml", good).rootDomain, "test.driscoll.tech");
+    assert.equal(parseCluster("test.yaml", good).rootDomain, `test.${rootDomain()}`);
   });
 
-  it("does not leak domainPrefix into the object stacks consume", () => {
-    // Stacks read `rootDomain`; an extra key here is a shape difference from
-    // what the 1Password items produced.
-    assert.equal((parseCluster("test.yaml", good) as Record<string, unknown>).domainPrefix, undefined);
+  it("appends the estate domain to build authentikDomain", () => {
+    assert.equal(parseCluster("test.yaml", good).authentikDomain, `canterlot.${rootDomain()}`);
+  });
+
+  it("keeps authentikDomain where authentikPrefix sits, because the published JSON is ordered", () => {
+    // stacks/system writes this object to OpenBao as a JSON string. Appending
+    // authentikDomain instead would reorder it, and every cluster's details
+    // would show a diff with no change behind it.
+    assert.deepEqual(Object.keys(parseCluster("test.yaml", good)), ["sourceTitle", "key", "title", "type", "location", "authentikDomain", "icon", "favicon", "background", "secretField", "rootDomain"]);
+  });
+
+  it("does not leak the prefixes into the object stacks consume", () => {
+    // Stacks read `rootDomain` and `authentikDomain`; an extra key here is a
+    // shape difference from what the 1Password items produced.
+    const parsed = parseCluster("test.yaml", good) as unknown as Record<string, unknown>;
+    assert.equal(parsed.domainPrefix, undefined);
+    assert.equal(parsed.authentikPrefix, undefined);
   });
 
   it("rejects a prefix that still carries the suffix, and says what to use", () => {
     // The realistic mistake while doing this refactor by hand. Left alone it
-    // would produce test.driscoll.tech.driscoll.tech, which looks fine in a diff.
-    assert.throws(() => parseCluster("test.yaml", { ...good, domainPrefix: "test.driscoll.tech" }), /use 'test', not 'test\.driscoll\.tech'/);
+    // would produce test.<root domain>.<root domain>, which looks fine in a diff.
+    for (const field of ["domainPrefix", "authentikPrefix"]) {
+      const full = `test.${rootDomain()}`;
+      assert.throws(
+        () => parseCluster("test.yaml", { ...good, [field]: full }),
+        (e: Error) => e.message.includes(`'${field}' is a single label`) && e.message.includes(`use 'test', not '${full}'`),
+        field,
+      );
+    }
   });
 
   it("rejects anything that is not a DNS label", () => {
-    for (const bad of ["Test", "-test", "test-", "te_st", "test "]) {
-      assert.throws(() => parseCluster("test.yaml", { ...good, domainPrefix: bad }), /must be a DNS label|non-empty string/, `accepted '${bad}'`);
+    for (const field of ["domainPrefix", "authentikPrefix"]) {
+      for (const bad of ["Test", "-test", "test-", "te_st", "test "]) {
+        assert.throws(() => parseCluster("test.yaml", { ...good, [field]: bad }), /must be a DNS label|non-empty string/, `${field} accepted '${bad}'`);
+      }
     }
   });
 
   it("still produces the real clusters' domains", () => {
-    assert.equal(CLUSTERS.find(c => c.key === "alpha-site")?.rootDomain, "as.driscoll.tech");
-    assert.equal(CLUSTERS.find(c => c.key === "skystar")?.rootDomain, "skystar.driscoll.tech");
+    const root = rootDomain();
+    assert.equal(CLUSTERS.find(c => c.key === "alpha-site")?.rootDomain, `as.${root}`);
+    assert.equal(CLUSTERS.find(c => c.key === "skystar")?.rootDomain, `skystar.${root}`);
+  });
+
+  it("still produces the real clusters' authentik domains", () => {
+    const root = rootDomain();
+    assert.equal(CLUSTERS.find(c => c.key === "alpha-site")?.authentikDomain, `iris.${root}`);
+    assert.equal(CLUSTERS.find(c => c.key === "equestria")?.authentikDomain, `canterlot.${root}`);
   });
 });
