@@ -46,4 +46,15 @@ TALOS_SECRETBOX_ENCRYPTION_SECRET="$(sops -d --extract '["secrets"]["secretboxen
 }
 export TALOS_SECRETBOX_ENCRYPTION_SECRET
 
+# talconfig.yaml and the patches name hosts under the root domain as
+# ${ROOT_DOMAIN}, which talhelper substitutes from the environment the same way.
+# The repo never writes the value (docs/plans/private-domain-scrub.md); mise
+# exports it from .config/domains.sops.yaml. Empty, it would render the API
+# server's certSAN and every registry mirror as a name ending in a bare dot --
+# refuse instead.
+[[ -n "${ROOT_DOMAIN:-}" ]] || {
+  printf 'talos:genconfig: ROOT_DOMAIN is empty -- mise exports it from .config/domains.sops.yaml, which needs the age key.\n' >&2
+  exit 1
+}
+
 talhelper genconfig

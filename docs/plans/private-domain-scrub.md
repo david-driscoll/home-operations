@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is under way: 5a (mise and the MCP clients) and 5b (scripts, Docker configs, notebooks) are in one PR, and 5c (Talos) follows. Owner: David.
+Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is done: 5a #2292 (mise and the MCP clients), 5b #2293 (scripts, Docker configs, notebooks) and 5c (Talos). What remains in the baseline is OpenBao's HCL comment (deferred from phase 2) and the generated graph, both phase 6. Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -254,9 +254,17 @@ live first.
     - `equestria-init.sh`'s closing instructions;
     - `test.sh`'s kubeconfig;
     - each Docker file after substitution.
-- **5c, still to do: Talos.** `talos/talenv.sops.yaml`, which talhelper
-  decrypts and substitutes into `talconfig.yaml` and `@`-referenced patches.
-  Gate: `talhelper genconfig` output is unchanged.
+- **5c: Talos.** No `talenv.sops.yaml` was needed. talhelper already
+  substitutes `${VAR}` from the process environment into `talconfig.yaml` and
+  `@`-referenced patches (the secretbox key in `etcd-encryption.yaml` works
+  that way), and mise exports `ROOT_DOMAIN` since 5a.
+  - The API server's certSAN (in `talconfig.yaml` and
+    `patches/controller/cluster.yaml`) and the 14 registry mirror endpoints
+    use `${ROOT_DOMAIN}`.
+  - `talos:genconfig` refuses to render with an empty `ROOT_DOMAIN`.
+  - Gate: `talhelper genconfig --offline-mode` renders all seven machine
+    configs byte-identical, and `talosconfig` identical apart from the client
+    certificate it mints fresh on every run.
 
 ### Phase 6: strict
 
