@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Phase 2 started 2026-10-01 with TrueNAS pulling the buckets already in Garage (steps 3–6). Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Phase 2 started 2026-10-01 with TrueNAS pulling the buckets already in Garage (steps 3–6), and alpha-site writes its repos to Garage (#2215, #2216). Phase 3 started the same day: VolSync alerts on its own metrics (#2217), and each app can switch to Garage on its own (step 2). Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -172,7 +172,7 @@ celestia first.
 
 | Case | Bucket | Writer key | Reached through |
 | --- | --- | --- | --- |
-| VolSync (62 apps) | `volsync-equestria`, one prefix per app | one rw key for the movers | celestia's node, directly over the LAN (`https://s3.celestia.<root domain>`) ✅ |
+| VolSync (62 apps) | `volsync-equestria`, one prefix per app | one rw key for the movers | celestia's node, directly over the LAN: its LAN address, `http://…:3900` (phase 3, "Route") ✅ |
 | etcd | `volsync-equestria`, prefix `etcd` | the same key | the same route |
 | Every other plan a Docker host runs (alpha-site in phase 2, the rest in phase 4) | `backrest-<host>`, one per host | one rw key per host, on its own bucket only | the host's own node (`http://garage:3900` on `dockge_default`); alpha-site through celestia's node (`dockge-celestia:3900`), since no grant lets a Docker host reach the VIP |
 | Immich ✅ | `backrest-immich` | celestia's key, also granted this bucket | celestia's own node; restic still reads the library over NFS |
@@ -224,8 +224,17 @@ step 1).
 - **Pull.** One Cloud Sync task per bucket: direction `PULL`, mode `SYNC`, into
   `stash/backup/garage/<bucket>`, excluding `locks/**`. Each is scheduled after its writers'
   window, and a post-script pushes to Gatus.
-- **Route ✅.** spike reaches celestia's node over the LAN, at `https://s3.celestia.<root domain>`,
-  the same way VolSync does. No tailnet grant is needed.
+- **Route ✅.** spike reaches celestia's node at `https://s3.celestia.<root domain>`.
+  - **As built, it goes over the tailnet**, not the bare LAN (found 2026-10-01, phase 3). DockgeLxc
+    publishes that name as a CNAME to celestia's tailnet address. spike is on the tailnet as
+    `tag:shared-drive`, and `default-apps-access` lets tagged devices reach `tag:dockge` on 443.
+    The two peers connect directly, so the packets still stay on the LAN, inside WireGuard.
+  - **That grant is meant for people.** Narrowing it would cut the pulls off. `garage-s3-vip-egress`
+    guards Pulumi state's path against the same risk, so a dedicated grant like it, with a policy
+    test, is the follow-up.
+  - **Not the movers' route.** VolSync uses celestia's LAN address over plain HTTP (phase 3,
+    "Route"). TrueNAS keeps HTTPS, because `cnpg-equestria` and `pulumi-state` are not encrypted
+    client-side.
 - **Snapshots.** Periodic ZFS snapshot tasks on `stash/backup/garage`, recursive, run after the
   pulls (retention below). The snapshots are the history, and no Garage credential can touch them.
 - **Buckets pulled.**
@@ -459,6 +468,9 @@ on luna.
    - **Deferred (2026-10-01):** the repos could not be read from where this ran, so David set every
      new quota to 100 GiB. Measure each repo in the change that first points a writer at its bucket,
      and raise the quota there. VolSync (phase 3) and Immich (phase 4) are the likely ones.
+   - ✅ **VolSync, measured in phase 3 (step 2):** `volsync-equestria` goes to 300 GiB, and
+     `garage-mirror` comes down from 2 TiB to 1 TiB (it holds about 1.3 MB) to keep the quotas under
+     the 4T share. The numbers are in phase 3, step 2.
 2. **`stacks/system/garage.ts`.**
    - Buckets: `volsync-equestria`, `backrest-{celestia,luna,skystar,alpha-site}`,
      `backrest-immich` and `backrest-pgdump`, each with a quota.
@@ -550,13 +562,22 @@ on luna.
 ### Phase 3 — VolSync, etcd and the k8s pg_dump write to Garage
 
 **Route ✅.** The movers (and the etcd and pg_dump CronJobs) reach celestia's node directly over the
-LAN, at
-`https://s3.celestia.<root domain>` (`${ROOT_DOMAIN}` in the manifest). The nightly restore-once
-reads (about 64.5 GiB) stay on the LAN too. Before the pilot, confirm two things:
+LAN. The nightly restore-once reads (about 64.5 GiB) stay on the LAN too. The plan named
+`https://s3.celestia.<root domain>` and listed two things to confirm before the pilot. Checked from
+a pod on 2026-10-01:
 
-- The name resolves to celestia's LAN address from inside the cluster.
-- The movers' egress policy allows the route. Today they reach TrueNAS NFS on the LAN. No VolSync
-  egress policy lives in this repo, so check the cluster repos as well.
+- **The name does not resolve to a LAN address.** DockgeLxc publishes it as a CNAME to celestia's
+  tailnet address, and no pod can route there, so the connection times out. celestia's LAN address
+  (10.10.18.4) works: plain S3 on 3900 answers in about a millisecond, and so does HTTPS through
+  traefik with the name pinned to that address.
+- **No egress policy is in the way.** The cluster has no CiliumClusterwideNetworkPolicy, and the two
+  namespaced policies in `equestria` select only their own apps' pods (navidrome,
+  supersync-coordinator), for ingress.
+
+So the movers use `http://<celestia's LAN address>:3900`, from the `ipAddress` celestia's DockgeLxc
+records (`stacks/unifi-network` pins it with a DHCP reservation). Plain HTTP suits restic: every
+pack is encrypted before it leaves the pod, and SigV4 never sends the secret key. The same reasoning
+covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS name (§C3).
 
 1. **Alert first.** Add a PrometheusRule on VolSync's own metrics (`volsync_volume_out_of_sync`,
    `volsync_missed_intervals_total`). Step 6 removes the copy-job heartbeats, which are its only
@@ -576,6 +597,42 @@ reads (about 64.5 GiB) stay on the LAN too. Before the pilot, confirm two things
    - It starts as a per-app variable for the migration and becomes the default afterwards.
    - The endpoint is a variable too. While celestia is down, the fallback to the VIP is one change.
    - `volsync-mover-nfs` stops mounting NFS into movers that no longer use it.
+
+   ✅ As built. No app moves in this step; every app renders as before, apart from the additions
+   below. The switch is documented in `kubernetes/components/volsync/AGENTS.md`.
+   - **The switch is `VOLSYNC_BACKEND`** (`nfs` by default, or `garage`), set in the app's
+     `ks.yaml`. In the ExternalSecret's template it picks `RESTIC_REPOSITORY`:
+     `s3:<endpoint>/volsync-equestria/${APP}` or `/repository/${APP}`. Source and destination
+     share the Secret, so they move together.
+   - **Endpoint, bucket and key come from the OpenBao record**
+     (`clusters/equestria/apps/volsync/garage`), so the manifest names no host. The fallback is
+     one change to that record in `stacks/system/garage.ts`.
+     - Every app's Secret now extracts the record and carries the AWS key pair. restic ignores the
+       pair for a local repo.
+     - The record already existed, and `eso-equestria` reads all of `clusters/*`. That matters
+       because ESO fails a whole ExternalSecret on one bad extract.
+   - **The record's endpoint is celestia's LAN address** ("Route" above). If celestia's DockgeLxc
+     record is missing or off the Home subnet, `stacks/system` fails the run rather than hand the
+     movers an unreachable address. The TrueNAS record keeps the HTTPS name.
+   - **NFS stays off Garage movers.** The ReplicationSource and ReplicationDestination label their
+     mover pods `driscoll.dev/volsync-backend: <value>` (`moverPodLabels`). `volsync-mover-nfs`
+     gains a guarded matchCondition that skips `garage`, so a TrueNAS outage cannot hold up a
+     Garage backup.
+   - **The inventory scan skips `s3:` repositories** (`stacks/system/application-backups.ts`), so a
+     moved app leaves the copy tier. The hosts' ledgers remove its copy job and browse repo, and
+     the copies already on disk stay. This brings forward the part of step 6 that concerns moved
+     apps.
+   - **TrueNAS pulls `volsync-equestria`**, empty for now, so the pilot can confirm a new prefix
+     arrives.
+   - **Quota: 300 GiB**, against the 100 GiB placeholder (phase 2, step 1).
+     - The 62 apps' latest snapshots hold 99.5 GiB. The registry cache alone is 44.3 GiB, and Plex
+       13.4 GiB.
+     - The 15 repos that pruned in Loki's three-day window came to about 0.7× their snapshot size,
+       history included, so the full set is roughly 90–145 GiB.
+     - `garage-mirror` comes down from 2 TiB to 1 TiB, which keeps every quota summed at about
+       2.75 TiB, under the 4T share.
+   - **Not yet:** `volsync-lock-canceller` scans only the NFS share until step 4, so a stranded Garage
+     lock is cleared with `VOLSYNC_UNLOCK`.
 3. **Pilot with two small apps.**
    - Run `restic init --from-repo /repository/<app> --copy-chunker-params` against the Garage repo,
      then `restic copy` to bring the history across.
@@ -715,9 +772,14 @@ new snapshot.
   1 yearly (§C3).
 - **H4 — How TrueNAS reaches Garage.** ✅ Decided 2026-09-29: over the LAN to celestia's node, like
   VolSync. No tailnet grant is needed (§C3).
+  - **As built (2026-10-01):** celestia's node, by its HTTPS name. That name resolves to celestia's
+    tailnet address, so the pulls ride WireGuard under `default-apps-access`, peer to peer on the
+    LAN. A dedicated grant is the follow-up (§C3).
 - **H5 — VolSync's route and its nightly restore-once.** ✅ Decided 2026-09-29: celestia's node,
   directly over the LAN. equestria and celestia are co-located, so the restore-once reads stay local
   (§C2, phase 3). Fixing the cycle itself stays out of scope (§G).
+  - **As built (2026-10-01):** celestia's LAN address over plain HTTP, because its HTTPS name is a
+    tailnet name no pod can reach (phase 3, "Route").
 - **H6 — When the copy service can go.** ✅ Answered by H1: every remaining repo moves to Garage in
   phase 4, so the copy service retires at the end of that phase.
 - **H7 — Reading the in-cluster buckets.** ✅ Decided 2026-09-29: read them in place, later

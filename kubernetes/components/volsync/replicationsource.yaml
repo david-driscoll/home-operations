@@ -76,6 +76,13 @@ spec:
       runAsUser: ${VOLSYNC_PUID:=568}
       runAsGroup: ${VOLSYNC_PGID:=568}
       fsGroup: ${VOLSYNC_PGID:=568}
+    # Which store the repository is in (externalsecret.yaml). The mover Job
+    # carries no other trace of it: the repository reaches the pod through
+    # a secretKeyRef. volsync-mover-nfs (apps/volsync-system/volsync)
+    # reads this label to leave NFS out of a Garage mover, so a TrueNAS
+    # outage cannot hold up a backup that never touches it.
+    moverPodLabels:
+      driscoll.dev/volsync-backend: "${VOLSYNC_BACKEND:=nfs}"
 
     # moverResources:
     #   requests:
