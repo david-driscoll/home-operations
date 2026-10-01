@@ -1,0 +1,146 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+#
+# Completes Renovate's half of a bridged-provider bump.
+#
+# A Renovate PR that bumps a provider in the root Pulumi.yaml `packages:` block
+# changes only the human-editable pin. The SDK under sdks/<name>/ still carries
+# the OLD version in its package.json and in the base64 parameterization blob,
+# which is what the bridge actually resolves the provider from -- so merged as
+# is, nothing fails and `pulumi up` quietly keeps running the old provider
+# (see the Pulumi.yaml customManager in .github/renovate.json5).
+#
+# `pulumi install` regenerates every SDK from Pulumi.yaml (verified on the
+# unifi 0.56.1 -> 0.57.0 bump: package.json, utilities.ts, the blob and the
+# new schema fields all move; Pulumi.yaml keeps its flow-style `parameters`,
+# so the Renovate manager still matches). This runs it, type-checks the
+# components and every stack against the new SDK, and commits the result back
+# onto the PR branch.
+#
+# The commit is authored as github-actions[bot], which the shared Renovate
+# preset lists in `gitIgnoredAuthors`, so Renovate still treats the branch as
+# its own (it keeps rebasing it, and this re-runs after every rebase). A push
+# made with GITHUB_TOKEN does not trigger other workflows, so this job posts
+# the `pulumi-sdk-regen` commit status on the commit it pushes; that status,
+# not a re-run of the other checks, is what the new head is judged by.
+name: "Pulumi SDK Regen"
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths: ["Pulumi.yaml"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  regen:
+    name: Regenerate SDKs
+    runs-on: ubuntu-latest
+    # Renovate's own branches in this repository only: pushing to a person's
+    # branch, or a fork's, is not this workflow's business.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == 'renovate[bot]'
+    env:
+      PULUMI_SKIP_UPDATE_CHECK: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      # The same versions the repo pins for everyone else, read from the mise
+      # config rather than repeated here.
+      - name: Read pinned versions
+        id: pins
+        run: |
+          {
+            echo "node=$(yq -p toml -oy '.tools.node' .config/mise.toml)"
+            echo "pulumi=$(yq -p toml -oy '.tools.pulumi' .config/mise.toml)"
+            echo "typescript=$(yq -p toml -oy '.tools["npm:typescript"]' .config/mise.toml)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ steps.pins.outputs.node }}
+
+      - name: Setup Pulumi
+        uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
+        with:
+          pulumi-version: ${{ steps.pins.outputs.pulumi }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check before regeneration
+        env:
+          TS_VERSION: ${{ steps.pins.outputs.typescript }}
+        run: scripts/sdk-typecheck > "$RUNNER_TEMP/before.txt"
+
+      - name: Regenerate SDKs
+        run: pulumi install
+
+      - name: Commit regenerated SDKs
+        id: commit
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git add sdks package-lock.json
+          if git diff --cached --quiet; then
+            echo "SDKs already match Pulumi.yaml; nothing to commit"
+            exit 0
+          fi
+          git diff --cached --stat
+          changed=$(git diff --cached --name-only -- 'sdks/*/package.json' | cut -d/ -f2 | sort -u | paste -sd, -)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(sdks): regenerate ${changed} from Pulumi.yaml" \
+            -m "pulumi install, run by .github/workflows/pulumi-sdk-regen.yaml"
+          git push origin "HEAD:${HEAD_REF}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Only errors the regeneration INTRODUCED fail this. The tree carries
+      # type errors of its own on main, and they are not this PR's to fix.
+      - name: Type-check after regeneration
+        id: check
+        if: ${{ steps.commit.outputs.sha != '' }}
+        env:
+          TS_VERSION: ${{ steps.pins.outputs.typescript }}
+        run: |
+          scripts/sdk-typecheck > "$RUNNER_TEMP/after.txt"
+          new=$(comm -13 "$RUNNER_TEMP/before.txt" "$RUNNER_TEMP/after.txt")
+          if [[ -n "$new" ]]; then
+            {
+              echo "### New type errors against the regenerated SDK"
+              echo '```'
+              echo "$new"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "$new"
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+            echo "desc=$(echo "$new" | wc -l | tr -d ' ') new type error(s) against the new SDK" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=success" >> "$GITHUB_OUTPUT"
+            echo "desc=SDKs regenerated; no new type errors" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report on the pushed commit
+        if: ${{ steps.commit.outputs.sha != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.commit.outputs.sha }}
+          STATE: ${{ steps.check.outputs.result || 'failure' }}
+          DESC: ${{ steps.check.outputs.desc || 'type-check did not run' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+            -f state="$STATE" -f context=pulumi-sdk-regen \
+            -f description="$DESC" -f target_url="$RUN_URL"
+          [[ "$STATE" == success ]]
