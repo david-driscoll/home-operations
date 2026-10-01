@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Phase 2 started 2026-10-01 with TrueNAS pulling the buckets already in Garage (steps 3–6), and alpha-site writes its repos to Garage (#2215, #2216). Phase 3 started the same day: VolSync alerts on its own metrics (#2217), and each app can switch to Garage on its own (step 2). Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Phase 2 started 2026-10-01 with TrueNAS pulling the buckets already in Garage (steps 3–6), and alpha-site writes its repos to Garage (#2215, #2216). Phase 3 started the same day: VolSync alerts on its own metrics (#2217), each app can switch to Garage on its own (#2218), and the pilot moves kapowarr and rustdesk (step 3). Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -639,6 +639,25 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
    - Flip the app and let one mover run.
    - Confirm the TrueNAS pull picks up the new prefix.
    - Restore from Garage (a ReplicationDestination) and from the TrueNAS copy.
+
+   ✅ Started 2026-10-01 with `kapowarr` and `rustdesk`, the two smallest repos (about 400 KiB and
+   17 KiB).
+   - **The copy is a Job**, `kubernetes/apps/volsync-system/garage-history-copy`. It uses the
+     lock-canceller's restic pin, runs as uid 568, and mounts the NFS share. It runs the two
+     commands above for each app in `APPS`, and finishes by logging both snapshot counts.
+     - Every batch reuses it: edit `APPS` in the same change as the apps' `VOLSYNC_BACKEND`.
+     - The force label has Flux recreate it, because a Job's spec is immutable.
+     - It is safe to re-run, and safe in either order with an app's first Garage backup.
+   - **Checks, in the order they come due:**
+     - The Job finishes, and the Garage snapshot count matches the NFS one.
+     - The 14:00 UTC movers back up into Garage, with no NFS volume on their pods.
+     - The 13:00-local pull carries both prefixes into `stash/backup/garage/volsync-equestria`.
+     - The next nightly restore-once restores both apps from Garage.
+     - The hosts drop both apps' copy jobs.
+   - **Still to build: the TrueNAS-copy restore.** It needs the copy readable from somewhere that
+     can run restic, such as a read-only NFS export of `stash/backup/garage` (§C3). Check first
+     whether celestia's existing `/mnt/stash/backup` mount already reaches into the new child
+     dataset.
 4. **Everything else.**
    - Give `volsync-lock-canceller` an S3 variant: locks strand on killed movers whatever the
      backend.

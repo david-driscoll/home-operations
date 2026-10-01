@@ -11,3 +11,4 @@ resources:
   - ./volsync/ks.yaml
   - ./restore-cleanup/ks.yaml
   - ./lock-canceller/ks.yaml
+  - ./garage-history-copy/ks.yaml

@@ -1,0 +1,81 @@
+---
+# Brings each moved app's restic history from the TrueNAS NFS share into
+# Garage (garage-history-copy.sh), docs/plans/host-owned-backups.md phase 3.
+#
+# One Job for the whole migration. Each batch edits APPS below in the same
+# change that sets VOLSYNC_BACKEND: garage on those apps. A Job's spec is
+# immutable, so the force label has Flux delete and recreate it rather than
+# fail the apply. The new run goes over the earlier apps again and finds
+# nothing left to copy. No ttlSecondsAfterFinished, on purpose: a Job
+# deleted after finishing would be recreated by the next reconcile, and
+# would run again every hour.
+#
+# Named without the `volsync-` prefix so that neither MutatingAdmissionPolicy
+# in ../volsync has to rule it out. They also require VolSync's created-by
+# label, which this Job does not carry, so it gets its NFS mount from the
+# volume below.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: garage-history-copy
+  labels:
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  backoffLimit: 2
+  # Generous for the large repos (the registry cache's is the largest); the
+  # pilot's two take seconds.
+  activeDeadlineSeconds: 21600
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      # The movers' uid: the NFS repositories are theirs, and restic writes
+      # a lock into the source while it copies.
+      securityContext:
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        runAsNonRoot: true
+      containers:
+        - name: copy
+          image: docker.io/restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+          command:
+            - /bin/sh
+            - /script/garage-history-copy.sh
+          env:
+            # Phase 3, step 3: the pilot.
+            - name: APPS
+              value: kapowarr rustdesk
+            - name: RESTIC_CACHE_DIR
+              value: /cache
+          envFrom:
+            - secretRef:
+                name: garage-history-copy-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: repository
+              mountPath: /repository
+            - name: script
+              mountPath: /script
+              readOnly: true
+            - name: cache
+              mountPath: /cache
+      volumes:
+        - name: repository
+          nfs:
+            server: "${SPIKE_IP}"
+            path: "/mnt/stash/backup/${CLUSTER_CNAME}/volsync"
+        - name: script
+          configMap:
+            name: garage-history-copy-script
+        - name: cache
+          emptyDir: {}

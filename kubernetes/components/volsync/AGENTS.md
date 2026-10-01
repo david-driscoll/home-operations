@@ -159,9 +159,11 @@ becomes the default once it is done. An app opts in from its `ks.yaml`:
   `driscoll.dev/volsync-backend: <value>`, and `volsync-mover-nfs` skips any pod labelled `garage`.
   A TrueNAS outage therefore cannot keep a Garage backup from starting.
 - **History does not move with the switch.** On its own, a switch starts an empty repository, and
-  the old snapshots stay behind in the NFS repo. Bring them across first (phase 3, step 3: `restic
-  init --from-repo … --copy-chunker-params`, then `restic copy`). Switching back to `nfs` returns
-  to the NFS repo as it stood at the switch.
+  the old snapshots stay behind in the NFS repo. In the same change, add the app to `APPS` in
+  `kubernetes/apps/volsync-system/garage-history-copy/job.yaml`. That Job runs `restic init
+  --from-repo … --copy-chunker-params` once, then `restic copy`. It is safe to re-run, and safe in
+  either order with the app's first Garage backup. Switching back to `nfs` returns to the NFS repo
+  as it stood at the switch.
 - **The copy tier lets go.** `stacks/system/application-backups.ts` skips an `s3:` repository, so
   the hosts drop that app's copy job and Backrest browse repo on their next director run. The
   copies already on their disks stay where they are.
