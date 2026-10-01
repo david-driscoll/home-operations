@@ -43,13 +43,20 @@ spec:
             - /bin/sh
             - /script/garage-history-copy.sh
           env:
-            # Every app moved so far, by batch: the pilot (kapowarr, rustdesk),
-            # then batch 1. A rerun copies only what is new, so the earlier
-            # batches stay listed.
+            # Every app moved so far, one line per batch: the pilot, batch 1,
+            # then batch 2, which is every other deployed app. Batch 2 spans
+            # four lines: equestria's apps, the other namespaces' apps, and
+            # crowdsec's two bespoke repositories (network/crowdsec/volsync.yaml).
+            # A rerun copies only what is new, so the earlier batches stay
+            # listed. etcd is not here yet: it moves on its own, later.
             - name: APPS
               value: >-
                 kapowarr rustdesk
                 seedstrem n8n homelable questarr mylar tududi mealie arr-mcp-jellyfin arr-mcp-plex jellyseerr
+                aiostreams aurral autobrr bazarr dawarich degoog dispatcharr dynacat ecm freshrss game-thumbs identifiarr immich jellyfin kometa lidarr maintainerr navidrome nextcloud
+                obsidian-sync pinepods playerr plex postiz prowlarr pulsarr qbittorrent radarr romm sabnzbd seerr sonarr tandoor tautulli tdarr teamarr tracearr watchstate
+                forgejo registry crowdsec-ui technitium home-assistant matter golink taildrive tsiam tsidp
+                crowdsec-config crowdsec-db
             - name: RESTIC_CACHE_DIR
               value: /cache
           envFrom:
@@ -59,8 +66,11 @@ spec:
             requests:
               cpu: 50m
               memory: 128Mi
+            # restic holds each repository's index in memory while it copies,
+            # and batch 2 brings the big ones: the registry cache (about 44 GiB)
+            # and Plex (about 13 GiB).
             limits:
-              memory: 1Gi
+              memory: 2Gi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

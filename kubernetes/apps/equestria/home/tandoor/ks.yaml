@@ -43,6 +43,10 @@ spec:
     - ../../../../components/sablier
   postBuild:
     substitute:
+      # Phase 3, batch 2 (docs/plans/host-owned-backups.md): the restic repository
+      # lives in Garage. Its NFS history is copied across by
+      # volsync-system/garage-history-copy.
+      VOLSYNC_BACKEND: garage
       # Mirrors this app's internal HTTPRoute, which gates every path behind
       # authentik with no API carve-out -- so this app deliberately does NOT add
       # components/tailscale/api-key.

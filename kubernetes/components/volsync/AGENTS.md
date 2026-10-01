@@ -167,6 +167,15 @@ becomes the default once it is done. An app opts in from its `ks.yaml`:
 - **The copy tier lets go.** `stacks/system/application-backups.ts` skips an `s3:` repository, so
   the hosts drop that app's copy job and Backrest browse repo on their next director run. The
   copies already on their disks stay where they are.
+- **Bespoke wiring is not reached by the variable.** `network/crowdsec/volsync.yaml` builds its own
+  Secrets and ReplicationSources, so phase 3 wrote them out to Garage by hand. Each one extracts
+  the same record, and each source carries the `garage` mover label. Any other bespoke VolSync
+  wiring needs the same treatment.
+- **The mover's restic cache keeps the old repository's directory.** After a switch, the Garage
+  repository is cached in a new directory beside the NFS one, and nothing deletes the old one. On
+  2026-10-01 the largest source caches used under 1 GiB of their 2 Gi volume (romm 958 MiB), so the
+  overlap fits. `restic cache --cleanup` reclaims the old directory once it has gone 30 days
+  unused.
 - **Stale locks:** `volsync-lock-canceller` runs two hourly CronJobs with the same 6-hour rule.
   `lock-canceller` scans the NFS share. `lock-canceller-garage` lists the Garage bucket with rclone
   and hands repositories with an old lock to restic's own `unlock`. The `unlock` field

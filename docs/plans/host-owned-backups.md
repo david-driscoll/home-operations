@@ -701,6 +701,20 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
        - `coder/forgejo`, the tailscale-system apps, `stargate-command` and `kube-system/registry`;
        - crowdsec's bespoke Secrets;
        - Plex.
+     - **Batch 2: everything else.** David, 2026-10-01: "we can probably migrate everything".
+       - The other 48 deployed apps on the component, held-back ones included: 38 in `equestria`,
+         plus `coder/forgejo`, `kube-system/registry`, `network/{crowdsec-ui,technitium}`,
+         `stargate-command/{home-assistant,matter}` and `tailscale-system/{golink,taildrive,tsiam,
+         tsidp}`.
+       - crowdsec's two bespoke repositories (`network/crowdsec/volsync.yaml`), written out by
+         hand. `VOLSYNC_BACKEND` does not reach a bespoke Secret. Their ReplicationSources carry the
+         `garage` mover label, and the repository names stay the same, so `garage-history-copy`
+         carries their history too.
+       - The copy Job's memory limit goes to 2Gi for the big indexes: the registry cache's repo
+         (about 44 GiB of data) and Plex's (about 13 GiB).
+       - Afterwards every deployed app is on Garage. The 13 component apps that are not deployed
+         (the `books` tree, opencloud, habitica, retrom, stremio, karakeep, emby, kube-coder,
+         neo4j) keep the `nfs` default. They pick up Garage when the default flips.
    - Then etcd: both CronJobs' `RESTIC_REPOSITORY` → `s3:…/volsync-equestria/etcd`.
 5. **The k8s pg_dump CronJob streams into restic** (§C4).
    - `resources/App.cs` pipes each database into `backrest-pgdump`, and a prune CronJob owns
