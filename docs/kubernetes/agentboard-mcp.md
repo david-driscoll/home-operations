@@ -64,12 +64,15 @@ anything about it.
 ## How the URL gets chosen
 
 The repo's committed [`.mcp.json`](../../.mcp.json) sets each `toolport-<profile>`
-URL from an env template — `TOOLPORT_<PROFILE>_URL`, defaulting to that
-profile's OAuth door. Claude Code expands that template when it connects.
+URL from `TOOLPORT_<PROFILE>_URL`, which Claude Code expands when it connects.
+There is no default in the file, because a default would name the domain
+([private-domain-scrub](../plans/private-domain-scrub.md)).
 
-- **Laptop, CI, Codespace** — variables unset, defaults apply: the OAuth doors.
-  Needs the LAN or Tailscale, and one authentik login per profile through
-  `/mcp`.
+- **Laptop, Codespace** — [`.config/mise.toml`](../../.config/mise.toml) sets
+  all six to the profiles' OAuth doors, building them from the root domain it
+  decrypts. Start Claude Code from a shell where mise is active in the repo,
+  with the age key present. Needs the LAN or Tailscale, and one authentik
+  login per profile through `/mcp`.
 - **agentboard** — [`helmrelease.yaml`](../../kubernetes/apps/agents/agentboard/helmrelease.yaml)
   sets all six `TOOLPORT_<PROFILE>_URL` to the internal proxies, so the same
   committed file resolves to the in-cluster doors.

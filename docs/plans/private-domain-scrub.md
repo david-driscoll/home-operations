@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Next: phase 5. Owner: David.
+Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is under way, starting with 5a (mise and the MCP clients). Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -213,25 +213,40 @@ live first.
 
 ### Phase 5: tooling and hosts outside Flux
 
-- **mise:** a flat SOPS env file (`.config/domains.sops.yaml`: `ROOT_DOMAIN`,
-  `TAILSCALE_DOMAIN`), loaded by mise's `[env] _.file` and templated into:
-  - `BAO_ADDR` and `CONNECT_HOST`;
-  - every Stack's `PULUMI_BACKEND_URL`;
-  - the Docker hosts' `DOCKER_HOST`;
-  - the dashboard dev env.
-- **MCP config:**
-  - `.mcp.json` drops its default URLs. `TOOLPORT_*_URL` come from mise off
-    cluster and from the pod env in agentboard.
-  - `.vscode/mcp.json` uses `${env:…}`.
+- **5a: mise and the MCP clients.**
+  - `.config/domains.sops.yaml` holds `ROOT_DOMAIN` and `TAILSCALE_DOMAIN`
+    flat, and `.config/mise.toml` loads it with `[env] _.file`.
+    - It is the one exception to resolving values per command: mise decrypts
+      it on every load.
+    - The file is local, so no network is involved.
+    - `sops.strict = false` leaves the names empty instead of breaking mise
+      wherever there is no age key (CI, Renovate).
+  - The file is a copy of the two `shared-secrets` values. Only
+    `mise run private-names-sync` writes it, and the guard fails a commit
+    where the two disagree.
+  - Templated from it:
+    - `BAO_ADDR` and `CONNECT_HOST`;
+    - every Stack's `PULUMI_BACKEND_URL`;
+    - the Docker hosts' `DOCKER_HOST`;
+    - the dashboard dev env;
+    - the six `TOOLPORT_*_URL`, where a pod's own value wins (`get_env`).
+  - `.mcp.json` has no default URLs. `.vscode/mcp.json` uses
+    `${env:ROOT_DOMAIN}`.
+  - Gate: in every directory, `mise env` renders each value byte-identical to
+    the old literal.
 - **Bootstrap scripts** require `ROOT_DOMAIN` instead of defaulting to it. The
   break-glass path already assumes SOPS and the age key.
 - **Talos:** `talos/talenv.sops.yaml`. talhelper decrypts it and substitutes
   into `talconfig.yaml` and `@`-referenced patches. Gate: `talhelper genconfig`
   output is unchanged.
 - **Docker:** `.env`, compose and config files go through the DockgeLxc deploy
-  path; confirm its substitution first.
-- **Notebooks, `scripts/iptv-audit.py`, and a runbook asset:** read the
-  environment, or delete the stale ones.
+  path. It substitutes `${ROOT_DOMAIN}` (from `globals.searchDomain`) into
+  every file of a stack.
+- **Notebooks** (David, 2026-10-01):
+  - delete the two stale `.dib` notebooks;
+  - `volsync.ipynb` reads the environment.
+- `scripts/iptv-audit.py` and the dashboard's `resources/test.sh` read the
+  environment too.
 
 ### Phase 6: strict
 
@@ -284,6 +299,6 @@ live first.
 
 ## F. Open decisions
 
-- Delete the stale notebooks and finished migration scripts, or parametrize
-  them (phase 5)?
+- Delete the finished migration scripts (`scripts/bao-reorg/`)? They name
+  nothing private any more, so this is housekeeping, not scrub work.
 - Whether OpenBao's HCL comment is worth a config roll (phase 2).

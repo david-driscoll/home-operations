@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#MISE description="Re-create .config/domains.sops.yaml, mise's copy of the root domain and tailnet, from shared-secrets"
+#
+# The repo never writes the estate's root domain or tailnet name
+# (docs/plans/private-domain-scrub.md). Their home is ROOT_DOMAIN and
+# TAILSCALE_DOMAIN in kubernetes/flux/meta/shared-secrets.sops.yaml, which Flux
+# reads. mise cannot read that file -- it is a Secret manifest, and mise's
+# `_.file` wants flat keys -- so .config/domains.sops.yaml carries a flat copy
+# that .config/mise.toml decrypts on load.
+#
+# A copy can drift, so this is the only way to write it, and
+# scripts/private-domain-guard fails the commit when the two disagree. Run it
+# after changing either name in shared-secrets.
+#
+# The plaintext only ever exists in a private temp directory, removed on exit.
+set -Eeuo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+src="$root/kubernetes/flux/meta/shared-secrets.sops.yaml"
+dst="$root/.config/domains.sops.yaml"
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/private-names.XXXXXX")"
+trap 'rm -rf "$tmp"' EXIT
+chmod 700 "$tmp"
+
+sops -d --output-type json "$src" |
+  jq -e '{ROOT_DOMAIN: .stringData.ROOT_DOMAIN, TAILSCALE_DOMAIN: .stringData.TAILSCALE_DOMAIN}
+         | if (.ROOT_DOMAIN // "") == "" or (.TAILSCALE_DOMAIN // "") == "" then error("a name is missing from shared-secrets") else . end' \
+    >"$tmp/names.json"
+
+# --filename-override picks the .config/ creation rule in .sops.yaml (and the
+# YAML output format) for a source file that lives elsewhere.
+sops --encrypt --input-type json --output-type yaml --filename-override "$dst" --output "$dst" "$tmp/names.json"
+printf 'private-names-sync: wrote %s\n' "${dst#"$root"/}"

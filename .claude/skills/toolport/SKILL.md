@@ -120,10 +120,15 @@ the only MCP front door: the old `agent-tools` aggregated server is retired. So:
   anyway -- servers and profiles are changed in
   `kubernetes/apps/agents/toolport/resources/registry.json`.
 - **Where it is reachable.** Every profile has its own URL, and no client
-  holds a token. The `toolport-<profile>` entries in `.mcp.json` default to
-  `https://toolport-<profile>.agents.<root domain>/mcp`, an OAuth door (LAN or
-  Tailscale) with its own authentik login per profile. In agentboard and
-  kube-coder workspaces, `TOOLPORT_<PROFILE>_URL` points the same entry at that profile's in-cluster
-  remote proxy instead, which presents the bearer itself -- so a
-  `Needs authentication` there means the env var is missing, not a login to
-  do.
+  holds a token. The `toolport-<profile>` entries in `.mcp.json` read
+  `TOOLPORT_<PROFILE>_URL` and have no default, because a default would name
+  the domain.
+  - Off-cluster, `.config/mise.toml` sets each one to
+    `https://toolport-<profile>.agents.<root domain>/mcp`, an OAuth door (LAN
+    or Tailscale) with its own authentik login per profile. Start the client
+    from a shell where mise is active in the repo.
+  - In agentboard and kube-coder workspaces, the pod's own
+    `TOOLPORT_<PROFILE>_URL` points the same entry at that profile's
+    in-cluster remote proxy instead, which presents the bearer itself. So a
+    `Needs authentication` there means the env var is missing, not a login
+    to do.

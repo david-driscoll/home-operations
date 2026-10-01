@@ -3,4 +3,4 @@ PULUMI_STACK = "system"
 # The `backups` prefix, not `system`: it is where the operator's Stack CR
 # (kubernetes/apps/pulumi/system/stack.yaml) keeps this stack's live state,
 # shared with the backups stack (distinct project names keep them apart).
-PULUMI_BACKEND_URL = "s3://pulumi-state/backups?endpoint=dockge-celestia.opossum-yo.ts.net:3900&s3ForcePathStyle=true&disableSSL=true&region=garage"
+PULUMI_BACKEND_URL = "s3://pulumi-state/backups?endpoint=dockge-celestia.{{ env.TAILSCALE_DOMAIN }}:3900&s3ForcePathStyle=true&disableSSL=true&region=garage"

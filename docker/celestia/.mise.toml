@@ -1,2 +1,2 @@
 [env]
-DOCKER_HOST="tcp://dockge.celestia.driscoll.tech:2375"
+DOCKER_HOST="tcp://dockge.celestia.{{ env.ROOT_DOMAIN }}:2375"

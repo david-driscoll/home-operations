@@ -10,34 +10,18 @@
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 
 # --- Phase 5: tooling and hosts outside Flux (mise env, MCP, scripts, Docker, Talos) ---
-.config/mise.toml
-.mcp.json
-.vscode/mcp.json
 bootstrap/openbao/equestria-init.sh
 bootstrap/openbao/eso-parity-check.sh
 bootstrap/openbao/provision-static-unseal.sh
 bootstrap/openbao/pulumi-env.sh
-dashboard/.mise.toml
 dashboard/resources/test.sh
 docker/_common/backups/.env
-docker/alpha-site/.mise.toml
 docker/alpha-site/pecron-monitor/config/config.yaml
-docker/celestia/.mise.toml
 docker/celestia/hermes/config.seed.yaml
-docker/luna/.mise.toml
-docker/skystar/.mise.toml
 playbook/Thanos Debugging.dib
 playbook/move-media.dib
 playbook/volsync.ipynb
 scripts/iptv-audit.py
-stacks/authentik/.mise.toml
-stacks/backups/.mise.toml
-stacks/gulf-of-mexico/.mise.toml
-stacks/home/.mise.toml
-stacks/ocracoke/.mise.toml
-stacks/system/.mise.toml
-stacks/unifi-network/.mise.toml
-stacks/vault/.mise.toml
 talos/patches/controller/cluster.yaml
 talos/patches/global/machine-registries.yaml
 talos/talconfig.yaml
