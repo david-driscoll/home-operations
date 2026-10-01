@@ -91,10 +91,10 @@ export async function configureGarageCopy(args: {
 
     const { written, deleted } = await manager.reconcileCloudSyncTasks(
       GARAGE_COPY_TASK_PREFIX,
-      GARAGE_COPY_BUCKETS.map(({ bucket, key }) => {
+      GARAGE_COPY_BUCKETS.map(({ bucket, key, rcloneArgs }) => {
         const credentialsId = credentialIds.get(key);
         if (credentialsId === undefined) throw new Error(`no cloud credential for key '${key}'`);
-        return garageCopyTask({ bucket, credentialsId, uptimeUrl: args.uptimeUrl });
+        return garageCopyTask({ bucket, credentialsId, uptimeUrl: args.uptimeUrl, rcloneArgs });
       }),
     );
     changes.push(...written.map(description => `task '${description}'`));

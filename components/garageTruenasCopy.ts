@@ -70,13 +70,23 @@ export type GarageCopyKey = keyof typeof GARAGE_COPY_KEYS;
  * restore drill read them without Garage. Never mark one that is not
  * encrypted client-side: the CNPG archive, the Postgres dumps and the Pulumi
  * state would be readable by anything that can mount the share.
+ *
+ * `rcloneArgs` are extra rclone flags for that bucket's pull only.
  */
-export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey; restic?: true }[] = [
+export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey; restic?: true; rcloneArgs?: string }[] = [
   { bucket: "cnpg-equestria", key: "truenas-copy" },
   { bucket: "postgres-celestia", key: "truenas-copy" },
   { bucket: "postgres-luna", key: "truenas-copy" },
   { bucket: "postgres-skystar", key: "truenas-copy" },
-  { bucket: "pulumi-state", key: "pulumi-state-reader" },
+  // The first pull (2026-10-01) failed: 1394 of 4272 objects were "corrupted
+  // on transfer". The MD5 of what rclone downloaded did not match the ETag
+  // Garage serves. The objects themselves are sound: Pulumi reads this state
+  // on every run. Garage's ETag is just not the content's MD5 for some of
+  // them, likely the ones Pulumi's AWS SDK uploads with checksum framing, so
+  // rclone's post-copy check cannot apply. Size and modification time still
+  // decide what is copied, and the ZFS snapshots keep each day's state. The
+  // other pulls keep the check: their ETags match.
+  { bucket: "pulumi-state", key: "pulumi-state-reader", rcloneArgs: "--ignore-checksum" },
   { bucket: "backrest-alpha-site", key: "truenas-copy", restic: true },
   // Pulled from before its first mover writes (phase 3, step 2), so the
   // pilot can confirm a new app's prefix arrives on TrueNAS.
@@ -175,7 +185,7 @@ export function garageCopyNfsShare(bucket: string): { path: string; config: NfsS
  * the 25-hour window runs out. `|| true` keeps a Gatus outage from marking a
  * good pull as failed.
  */
-export function garageCopyTask(args: { bucket: string; credentialsId: number; uptimeUrl: string }): CloudSyncTaskInput {
+export function garageCopyTask(args: { bucket: string; credentialsId: number; uptimeUrl: string; rcloneArgs?: string }): CloudSyncTaskInput {
   const token = toGatusKey(TRUENAS_GARAGE_COPY_GROUP, args.bucket);
   return {
     description: `${GARAGE_COPY_TASK_PREFIX}${args.bucket}`,
@@ -188,6 +198,9 @@ export function garageCopyTask(args: { bucket: string; credentialsId: number; up
     exclude: ["locks/**"],
     pre_script: "",
     post_script: `curl -sf -X POST -H "Authorization: Bearer ${token}" "${args.uptimeUrl}/api/v1/endpoints/${token}/external?success=true" || true`,
+    // Always set, empty by default, so taking a flag off a bucket also takes
+    // it off the task.
+    args: args.rcloneArgs ?? "",
     enabled: true,
   };
 }

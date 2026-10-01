@@ -32,11 +32,16 @@ describe("GARAGE_COPY_BUCKETS", () => {
     assert.ok(!GARAGE_COPY_BUCKETS.some(entry => entry.bucket === "backrest-immich"));
   });
 
-  it("pulls pulumi-state with its ceremony key, not truenas-copy", () => {
+  it("pulls pulumi-state with its ceremony key, not truenas-copy, and without rclone's MD5 check", () => {
     assert.deepEqual(
       GARAGE_COPY_BUCKETS.find(entry => entry.bucket === "pulumi-state"),
-      { bucket: "pulumi-state", key: "pulumi-state-reader" },
+      { bucket: "pulumi-state", key: "pulumi-state-reader", rcloneArgs: "--ignore-checksum" },
     );
+  });
+
+  it("keeps rclone's MD5 check on every other pull", () => {
+    const relaxed = GARAGE_COPY_BUCKETS.filter(entry => entry.rcloneArgs?.includes("--ignore-checksum")).map(entry => entry.bucket);
+    assert.deepEqual(relaxed, ["pulumi-state"]);
   });
 
   it("exports only restic buckets, never one that is not encrypted client-side", () => {
@@ -59,6 +64,11 @@ describe("garageCopyNfsShare", () => {
 
 describe("garageCopyTask", () => {
   const task = garageCopyTask({ bucket: "cnpg-equestria", credentialsId: 7, uptimeUrl: "https://uptime.example.test" });
+
+  it("passes a bucket's extra rclone flags, and sets none by default", () => {
+    assert.equal(task.args, "");
+    assert.equal(garageCopyTask({ bucket: "pulumi-state", credentialsId: 3, uptimeUrl: "https://uptime.example.test", rcloneArgs: "--ignore-checksum" }).args, "--ignore-checksum");
+  });
 
   it("pulls the bucket into its own child dataset, mirroring deletions", () => {
     assert.equal(task.description, `${GARAGE_COPY_TASK_PREFIX}cnpg-equestria`);
