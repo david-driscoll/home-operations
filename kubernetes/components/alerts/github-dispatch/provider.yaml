@@ -8,7 +8,9 @@ spec:
   # A `repository_dispatch` per event: event_type is `<Kind>/<name>.<namespace>`
   # and client_payload is the Flux event itself.
   type: githubdispatch
-  address: https://github.com/${GITHUB_REPOSITORY_OWNER}/home-operations
+  # GITHUB_REPOSITORY_OWNER (cluster-secrets) holds owner/repo, not just the
+  # owner, despite the name -- same as components/alerts/github-status.
+  address: https://github.com/${GITHUB_REPOSITORY_OWNER}
   secretRef:
     # The estate's GitHub App installation token, minted every 30m by
     # kube-system/secrets/github-app-token and reflected into every namespace.
