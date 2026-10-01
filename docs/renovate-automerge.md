@@ -42,6 +42,16 @@ protection, so GitHub's native auto-merge would merge at once. Renovate merges
 the PR itself, and only when every check on it is green. A pending check, such
 as Codacy still running, holds the merge until the check finishes.
 
+**Merges happen overnight only.** `automergeSchedule: ["* 1-6 * * *"]` with
+`timezone: America/New_York`, the estate's `TIMEZONE`, opens a window from
+01:00 to 06:59 local time, through daylight saving changes. PRs still open and
+run CI at any hour; a green one waits for the first Renovate run inside the
+window. The hosted Renovate app chooses when it runs, so a night with no run in
+the window merges nothing, and those PRs wait for the next night. The
+`timezone` is set on the two rules, not at the top level, so the rest of the
+repo and the Forgejo repos keep scheduling in UTC. GitHub Actions automerge,
+the older rule, is not windowed.
+
 ## Layer 3: after merge
 
 `kubernetes/components/alerts/github-dispatch` adds a Flux `githubdispatch`

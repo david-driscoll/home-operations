@@ -641,6 +641,16 @@
       ignoreTests: false,
       minimumReleaseAge: "3 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
+      // Merge only overnight, 01:00-06:59 estate time (TIMEZONE in
+      // shared-secrets). PRs still open and test at any hour; Renovate just
+      // leaves a green one waiting until a run lands in the window.
+      // `timezone` is set here, not at the top level: it also moves these
+      // PRs' "every weekend" to estate time, but the rest of the repo and
+      // every Forgejo repo stay on UTC.
+      automergeSchedule: [
+        "* 1-6 * * *"
+      ],
+      timezone: "America/New_York",
       addLabels: [
         "renovate/automerge"
       ],
@@ -706,6 +716,16 @@
       ignoreTests: false,
       minimumReleaseAge: "3 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
+      // Merge only overnight, 01:00-06:59 estate time (TIMEZONE in
+      // shared-secrets). PRs still open and test at any hour; Renovate just
+      // leaves a green one waiting until a run lands in the window.
+      // `timezone` is set here, not at the top level: it also moves these
+      // PRs' "every weekend" to estate time, but the rest of the repo and
+      // every Forgejo repo stay on UTC.
+      automergeSchedule: [
+        "* 1-6 * * *"
+      ],
+      timezone: "America/New_York",
       addLabels: [
         "renovate/automerge"
       ],
