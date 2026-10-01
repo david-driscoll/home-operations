@@ -33,7 +33,11 @@ content="$(jq -r '[
   ] | map(select(. != null and . != "")) | join("\n")' <<<"$input" 2>/dev/null)"
 [[ -n "$content" ]] || exit 0
 
-printf '%s' "$content" | "$guard" stdin
+# Repo-relative, so the guard can apply .config/private-domain-allow. A target
+# in a worktree under this checkout is relative to that worktree's root.
+rel="${path#"$here"/}"
+[[ "$rel" =~ ^\.claude/worktrees/[^/]+/(.+)$ ]] && rel="${BASH_REMATCH[1]}"
+printf '%s' "$content" | "$guard" stdin "$rel"
 if [[ $? -eq 1 ]]; then
   cat >&2 <<EOF
 private-domain-guard: this write would put the estate's root domain or tailnet

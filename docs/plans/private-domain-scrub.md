@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-10-01: phases 1–3 merged. Phase 4 is two PRs: 4a (#2282) gives the Stacks `ROOT_DOMAIN`, then 4b moves the code onto it. Owner: David.
+Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Next: phase 5. Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -62,7 +62,8 @@ joined by any one to four non-alphanumerics".
   (so it never contains them) and prints only paths and line numbers.
   - `check [--cached]` scans every tracked file except `*.sops.*`. It fails on
     any hit in a file not in the baseline.
-  - `stdin` exits 1 if the text contains a name.
+  - `stdin [path]` exits 1 if the text contains a name. Given the target's
+    repo-relative path, it applies the allow-list as `check` does.
   - Without the age key it skips with a warning; there is nothing to compare
     against.
 - **hk step `private-domains`** (`.config/hk.pkl`). It is whole-repo, so it
@@ -74,6 +75,14 @@ joined by any one to four non-alphanumerics".
   - Its scope is this repo, its worktrees, and this project's Claude memory.
 - **`.config/private-domain-baseline`** lists the files still pending, grouped
   by phase. It only shrinks; the guard reports entries that have come clean.
+- **`.config/private-domain-allow`** names files that may spell the root
+  domain as plain words (its labels separated only by whitespace), for a
+  display name David chose to keep.
+  - In those files every other spelling is still a hit, and the tailnet is
+    never allowed.
+  - It lists decisions, not pending work, so it does not shrink by phase. The
+    guard warns when an entry stops being needed.
+  - The hook passes the target path, so it applies the same rule.
 - **Rules** in `CLAUDE.md`, `.github/instructions/private-domains.instructions.md`
   (and its compiled section in `AGENTS.md`), `.github/copilot-instructions.md`,
   and the `create-k8s-deployment` skill checklist.
@@ -148,7 +157,11 @@ identifiers, not values, so they are **renamed** to
     the nightly dump (03:00) must carry the new path, and the monthly
     restore test (1st, 05:00) restores that dump.
   - The 2026-10-01 restore test passed on the new path.
-  - The old path is still there. Deleting it waits on David's go.
+  - The old path was deleted on 2026-10-01, on David's go, after these checks:
+    - `dns-zone` held identical data;
+    - nothing had written the old path since the 08-22 reorg;
+    - no estate repo referenced it;
+    - nothing had read it since the canary moved.
 
 The original design notes follow.
 
@@ -189,8 +202,9 @@ live first.
     The group itself is unchanged.
   - Test fixtures moved to `example.com`. The loader's tests accept any
     `ROOT_DOMAIN` and read it back.
-  - Left in place: the login flows' display titles, which spell the name as
-    words (section F).
+  - The login flows' display titles, which spell the name as words, stay.
+    That was David's decision on 2026-10-01. `.config/private-domain-allow`
+    lets that one file use that one spelling (section D).
 - **Gate:** zero diff. The Stacks run `up` every five minutes, so 4b was
   proven by evaluation rather than preview, with the real value:
   - the new loader's output is byte-identical JSON to the old one's;
@@ -221,7 +235,8 @@ live first.
 
 ### Phase 6: strict
 
-- The baseline is empty, so delete it; any hit now fails.
+- The baseline is empty, so delete it. Any hit now fails, except the words
+  spelling in the files `.config/private-domain-allow` names.
 - Run a semantic `graphify --update` to drop the doc-derived nodes that still
   quote old text.
 - Scan all branches, not just HEAD.
@@ -243,8 +258,11 @@ live first.
    one regex per spelling mapped to its placeholder. The expressions file
    holds the names, so build it from SOPS at run time, outside the repo, and
    delete it after.
+   - The words spelling gets no expression. The allow-listed titles keep it
+     at HEAD, so rewriting it would change HEAD's tree.
 2. Verify:
-   - `git log --all -p` piped through the guard's pattern finds nothing;
+   - `git log --all -p` piped through the guard's patterns finds nothing
+     except the allow-listed titles;
    - HEAD's tree hash is unchanged.
 3. Force-push every branch and tag, and delete stale remote branches.
 4. Ask GitHub Support to purge cached views and `refs/pull/*` (GitHub's
@@ -259,12 +277,13 @@ live first.
 - Actions logs.
 - The other repos: equestria-cluster, stargate-command-cluster, docs-setup,
   and the `vault` issues.
+  - stargate-command-cluster's `cloudflare-default-domain` ExternalSecret
+    still names `shared/cloudflare-<root-domain-slug>`. That path has not
+    existed since the 2026-08-22 reorg, so the ExternalSecret cannot sync;
+    the Secret it last synced is all that cluster has.
 
 ## F. Open decisions
 
 - Delete the stale notebooks and finished migration scripts, or parametrize
   them (phase 5)?
-- The authentik login flows' display titles spell the estate's name as words
-  (phase 4). Keep them and allow-list the phrase, move them into
-  configuration, or retitle them?
 - Whether OpenBao's HCL comment is worth a config roll (phase 2).
