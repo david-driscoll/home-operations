@@ -24,7 +24,14 @@ set -Eeuo pipefail
 # The age key defaults to this repo's gitignored ./age.key, like .config/mise.toml.
 REPO_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${REPO_ROOT}/age.key}"
-BAO="${BAO_ADDR:-https://bao.equestria.driscoll.tech}"
+# The root domain is never written in the repo; private_names reads it (from
+# the environment, or decrypted from SOPS) only when BAO_ADDR is unset.
+if [[ -z "${BAO_ADDR:-}" ]]; then
+  # shellcheck source-path=SCRIPTDIR source=../../scripts/lib/private-names.sh
+  source "${REPO_ROOT}/scripts/lib/private-names.sh"
+  private_names || exit 1
+fi
+BAO="${BAO_ADDR:-https://bao.equestria.${ROOT_DOMAIN:-}}"
 cd "${REPO_ROOT}"
 
 creds="$(sops -d bootstrap/openbao/pulumi-approle.sops.yaml)"

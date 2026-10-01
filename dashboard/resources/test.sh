@@ -1,13 +1,17 @@
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
-cat >equestria.kubeconfig.json <<'EOF'
+# The tailnet is never written in the repo (docs/plans/private-domain-scrub.md).
+# shellcheck source-path=SCRIPTDIR source=../../scripts/lib/private-names.sh
+source ../../scripts/lib/private-names.sh
+private_names || exit 1
+cat >equestria.kubeconfig.json <<EOF
 {
   "kind": "Config",
   "apiVersion": "v1",
   "clusters": [
     {
       "cluster": {
-        "server": "https://equestria-kubeproxy.opossum-yo.ts.net"
+        "server": "https://equestria-kubeproxy.${TAILSCALE_DOMAIN}"
       },
       "name": "equestria"
     }

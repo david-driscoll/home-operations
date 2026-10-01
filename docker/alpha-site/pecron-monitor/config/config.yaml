@@ -579,7 +579,7 @@ alerts:
     url: ''
 homeassistant:
   enabled: true
-  mqtt_host: replicator.driscoll.tech
+  mqtt_host: replicator.${ROOT_DOMAIN}
   mqtt_port: 1883
   mqtt_user: ''
   mqtt_password: ''

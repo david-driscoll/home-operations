@@ -10,18 +10,6 @@
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 
 # --- Phase 5: tooling and hosts outside Flux (mise env, MCP, scripts, Docker, Talos) ---
-bootstrap/openbao/equestria-init.sh
-bootstrap/openbao/eso-parity-check.sh
-bootstrap/openbao/provision-static-unseal.sh
-bootstrap/openbao/pulumi-env.sh
-dashboard/resources/test.sh
-docker/_common/backups/.env
-docker/alpha-site/pecron-monitor/config/config.yaml
-docker/celestia/hermes/config.seed.yaml
-playbook/Thanos Debugging.dib
-playbook/move-media.dib
-playbook/volsync.ipynb
-scripts/iptv-audit.py
 talos/patches/controller/cluster.yaml
 talos/patches/global/machine-registries.yaml
 talos/talconfig.yaml

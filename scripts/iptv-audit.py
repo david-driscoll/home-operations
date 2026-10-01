@@ -14,7 +14,11 @@ It does NOT probe streams: the main provider allows 2 connections and Dispatchar
 keeps a channel's upstream open after the client leaves, so a sweep reads as
 a wall of 503s. See docs/kubernetes/iptv.md.
 
-Usage: python3 scripts/iptv-audit.py [--base https://dispatcharr.driscoll.tech]
+Usage: python3 scripts/iptv-audit.py [--base https://dispatcharr.<root domain>]
+
+The base defaults to https://dispatcharr.$ROOT_DOMAIN. mise exports ROOT_DOMAIN
+in the repo, because the name is never written here
+(docs/plans/private-domain-scrub.md).
 """
 
 import argparse
@@ -22,6 +26,7 @@ import collections
 import concurrent.futures
 import datetime
 import io
+import os
 import re
 import time
 import urllib.request
@@ -105,8 +110,12 @@ def logo_status(url: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base", default="https://dispatcharr.driscoll.tech")
+    root = os.environ.get("ROOT_DOMAIN", "")
+    default_base = f"https://dispatcharr.{root}" if root and not root.startswith("ref+") else None
+    parser.add_argument("--base", default=default_base, help="Dispatcharr's base URL (default: https://dispatcharr.$ROOT_DOMAIN)")
     args = parser.parse_args()
+    if not args.base:
+        parser.error("ROOT_DOMAIN is not set: pass --base, or run from a shell where mise is active in the repo")
 
     channels = [c for c in parse_m3u(fetch(f"{args.base}/output/m3u", b"#EXTM3U").decode()) if c.get("group-title") not in SKIP_GROUPS]
     programmes = parse_epg(fetch(f"{args.base}/output/epg", b"<tv"))
