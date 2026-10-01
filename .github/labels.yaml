@@ -29,6 +29,13 @@
   color: "027fa0"
 - name: renovate/helm
   color: "027fa0"
+# Renovate automerge gate (.github/renovate.json5, renovate-watchdog.yaml)
+- name: renovate/automerge
+  color: "1d76db"
+- name: renovate/automerge-hold
+  color: "b60205"
+- name: renovate/reverted
+  color: "b60205"
 # Semantic Types
 - name: type/digest
   color: "ffeC19"

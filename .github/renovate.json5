@@ -142,8 +142,15 @@
   // (linked from the dashboard), which show whether these are 429s, timeouts
   // or connection resets. That is the one piece of evidence unobtainable from
   // this side, and no config change should be made without it.
+  //
+  // PRs open whenever an update is found -- this used to be "every weekend".
+  // What is allowed to MERGE unattended, and when, is governed separately by
+  // the automerge rules below (overnight window, docs/renovate-automerge.md),
+  // so a weekday PR is still reviewed or gated exactly like a weekend one.
+  // This is also the house default the Forgejo bot inherits through
+  // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
   schedule: [
-    "every weekend"
+    "at any time"
   ],
   ignorePaths: [
     "**/*.sops.*"
@@ -528,6 +535,22 @@
       },
     },
     {
+      // The shared preset extends `:automergePatch`, so before this rule EVERY
+      // patch in this repo automerged once its checks went green -- Talos,
+      // Traefik, timescaledb and python included, with nothing but a
+      // render-and-diff standing in front of them. Turn that off here and opt
+      // back in below for the narrow set that can afford it. Everything else
+      // waits for a human, as it always appeared to.
+      //
+      // Scoped to this repository: the Forgejo bot inherits this file through
+      // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
+      description: "No automerge in this repo unless a rule below opts in",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      automerge: false,
+    },
+    {
       description: "Auto-merge GitHub Actions",
       matchManagers: [
         "github-actions"
@@ -541,6 +564,176 @@
       ],
       minimumReleaseAge: "3 days",
       ignoreTests: true,
+    },
+    {
+      // App images and charts on the apps clusters and the Docker hosts:
+      // patch and digest bumps merge themselves once every check is green.
+      //
+      // The gate is three layers (docs/renovate-automerge.md):
+      //   1. before merge -- flate renders and diffs kubernetes/**, and
+      //      `image-check.yaml` proves every changed image exists (and, for
+      //      the Docker hosts, ships linux/amd64) and every changed compose
+      //      file still parses;
+      //   2. the merge itself -- Renovate merges only when ALL checks pass.
+      //      `platformAutomerge: false` because main has no branch protection:
+      //      GitHub's native auto-merge would merge straight away without it,
+      //      so Renovate does the check-then-merge itself;
+      //   3. after merge -- a HelmRelease that fails its upgrade dispatches to
+      //      `renovate-watchdog.yaml`, which opens a revert of the automerged
+      //      PR and puts the app on the hold list at the bottom of this file.
+      //
+      // `minimumReleaseAgeBehaviour: timestamp-optional` is load-bearing.
+      // GHCR returns no release timestamps, and under the Renovate 42 default
+      // (`timestamp-required`) an update with no timestamp never ages -- every
+      // ghcr.io bump would be held forever. So the 3-day soak is real for
+      // Docker Hub and absent for GHCR; the post-merge revert is what covers
+      // the difference.
+      //
+      // The negated names are what must never merge unattended: databases and
+      // anything that migrates its schema on start, identity, secrets,
+      // ingress/DNS/tailnet, storage, backups and the registry. KEEP THIS LIST
+      // IN SYNC with the minor rule below.
+      description: "Automerge app image patch/digest bumps once CI is green",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchFileNames: [
+        "kubernetes/apps/equestria/**",
+        "kubernetes/apps/stargate-command/**",
+        "kubernetes/apps/agents/**",
+        "docker/**"
+      ],
+      matchDatasources: [
+        "docker",
+        "helm"
+      ],
+      matchUpdateTypes: [
+        "patch",
+        "digest"
+      ],
+      matchPackageNames: [
+        "!/postgres/",
+        "!/postgis/",
+        "!/timescale/",
+        "!/cloudnative-pg/",
+        "!/mongo/",
+        "!/couchdb/",
+        "!/valkey/",
+        "!/redis/",
+        "!/mariadb/",
+        "!/mysql/",
+        "!/(^|\\/)neo4j$/",
+        "!/meilisearch/",
+        "!/immich/",
+        "!/nextcloud/",
+        "!/opencloud/",
+        "!/openbao/",
+        "!/goauthentik/",
+        "!/garage/",
+        "!/traefik/",
+        "!/tailscale/",
+        "!/technitium/",
+        "!/keepalived/",
+        "!/project-zot/",
+        "!/docker-socket-proxy/",
+        "!/backrest/",
+        "!/rclone/",
+        "!/getarcaneapp/",
+        "!/toolport/",
+        "!/jellyfin\\.pgsql/"
+      ],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
+      ignoreTests: false,
+      minimumReleaseAge: "3 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+      // Merge only overnight, 01:00-06:59 estate time (TIMEZONE in
+      // shared-secrets). PRs still open and test at any hour; Renovate just
+      // leaves a green one waiting until a run lands in the window.
+      // `timezone` is set here, not at the top level, so nothing else in this
+      // repo or the Forgejo repos that inherit it changes timezone.
+      automergeSchedule: [
+        "* 1-6 * * *"
+      ],
+      timezone: "America/New_York",
+      addLabels: [
+        "renovate/automerge"
+      ],
+    },
+    {
+      // Same gate as the rule above, for minors -- minus two kinds of minor
+      // that are really majors: 0.x (semver lets 0.y break anything), and
+      // Home Assistant, whose monthly 2026.N release is a minor to Renovate
+      // and a breaking-changes list to everyone else.
+      description: "Automerge app image minor bumps (not 0.x) once CI is green",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchFileNames: [
+        "kubernetes/apps/equestria/**",
+        "kubernetes/apps/stargate-command/**",
+        "kubernetes/apps/agents/**",
+        "docker/**"
+      ],
+      matchDatasources: [
+        "docker",
+        "helm"
+      ],
+      matchUpdateTypes: [
+        "minor"
+      ],
+      matchCurrentVersion: "!/^v?0\\./",
+      matchPackageNames: [
+        "!/home-assistant$/",
+        "!/postgres/",
+        "!/postgis/",
+        "!/timescale/",
+        "!/cloudnative-pg/",
+        "!/mongo/",
+        "!/couchdb/",
+        "!/valkey/",
+        "!/redis/",
+        "!/mariadb/",
+        "!/mysql/",
+        "!/(^|\\/)neo4j$/",
+        "!/meilisearch/",
+        "!/immich/",
+        "!/nextcloud/",
+        "!/opencloud/",
+        "!/openbao/",
+        "!/goauthentik/",
+        "!/garage/",
+        "!/traefik/",
+        "!/tailscale/",
+        "!/technitium/",
+        "!/keepalived/",
+        "!/project-zot/",
+        "!/docker-socket-proxy/",
+        "!/backrest/",
+        "!/rclone/",
+        "!/getarcaneapp/",
+        "!/toolport/",
+        "!/jellyfin\\.pgsql/"
+      ],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
+      ignoreTests: false,
+      minimumReleaseAge: "3 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+      // Merge only overnight, 01:00-06:59 estate time (TIMEZONE in
+      // shared-secrets). PRs still open and test at any hour; Renovate just
+      // leaves a green one waiting until a run lands in the window.
+      // `timezone` is set here, not at the top level, so nothing else in this
+      // repo or the Forgejo repos that inherit it changes timezone.
+      automergeSchedule: [
+        "* 1-6 * * *"
+      ],
+      timezone: "America/New_York",
+      addLabels: [
+        "renovate/automerge"
+      ],
     },
     {
       // Flux OCIRepository Helm charts are cosign-verified and tag-pinned; the
@@ -850,6 +1043,30 @@
         "sdks/**"
       ],
       enabled: false,
+    },
+    {
+      // The automerge hold list. LAST on purpose, so it beats the automerge
+      // rules above. `.github/workflows/renovate-watchdog.yaml` appends an
+      // app's directory here (between the markers, one glob per line) in the
+      // same PR that reverts a failed automerge. Without it, the reverted
+      // update comes straight back as a new PR and merges itself again.
+      //
+      // Clear an entry by hand once the app is fixed or the bad release is
+      // superseded. The placeholder keeps the list non-empty and matches
+      // nothing.
+      description: "Automerge hold list (maintained by renovate-watchdog)",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchFileNames: [
+        // automerge-hold:start
+        "automerge-hold/placeholder/**",
+        // automerge-hold:end
+      ],
+      automerge: false,
+      addLabels: [
+        "renovate/automerge-hold"
+      ],
     },
   ],
   customManagers: [

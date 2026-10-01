@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/notification.toolkit.fluxcd.io/provider_v1beta3.json
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-dispatch
+spec:
+  # A `repository_dispatch` per event: event_type is `<Kind>/<name>.<namespace>`
+  # and client_payload is the Flux event itself.
+  type: githubdispatch
+  address: https://github.com/${GITHUB_REPOSITORY_OWNER}/home-operations
+  secretRef:
+    # The estate's GitHub App installation token, minted every 30m by
+    # kube-system/secrets/github-app-token and reflected into every namespace.
+    # The provider reads its `token` key on each event, so rotation is free.
+    # Dispatch needs Contents: write on the repo, which that App has -- it is
+    # the identity that pushes and merges this repo's PRs.
+    name: github-token
