@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-09-29: phases 1 and 2 merged; phase 3 in two PRs (3a, 3b). Owner: David.
+Status 2026-10-01: phases 1–3 merged. Phase 4 is two PRs: 4a (#2282) gives the Stacks `ROOT_DOMAIN`, then 4b moves the code onto it. Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -141,12 +141,14 @@ identifiers, not values, so they are **renamed** to
 - **3a (done):** the secret was copied (kv-v2, `cas=0`, identical hash), and
   every consumer moved: the ExternalSecrets, Pulumi (now `getSecretByPath`),
   the Dockge Traefik `.env`.
-- **3b:** the break-glass canary moves in its four lockstep places. Then
-  `bootstrap/openbao/restore-test.sh init` runs with an admin token, so the
-  live `restore-test` policy grants the new path. Order matters: the daily
-  canary-check (04:00 UTC) tests the live grant, the nightly dump (03:00)
-  must carry the new path, and the monthly restore test (1st, 05:00)
-  restores that dump. Once a restore test passes, delete the old path.
+- **3b (done):** the break-glass canary moved in its four lockstep places.
+  Then `bootstrap/openbao/restore-test.sh init` re-ran with an admin token,
+  so the live `restore-test` policy grants the new path.
+  - Order mattered: the daily canary-check (04:00 UTC) tests the live grant,
+    the nightly dump (03:00) must carry the new path, and the monthly
+    restore test (1st, 05:00) restores that dump.
+  - The 2026-10-01 restore test passed on the new path.
+  - The old path is still there. Deleting it waits on David's go.
 
 The original design notes follow.
 
@@ -164,25 +166,36 @@ scripts are candidates for deletion.
 
 ### Phase 4: Pulumi code and cluster definitions
 
-- **Where the values come from:**
-  - locally, from mise's SOPS env file (phase 5);
-  - in-cluster, the Stack CRs get them through `envRefs` from a new
-    SOPS-encrypted Secret in `pulumi`.
-- **Code changes:**
-  - `globals.searchDomain` and the `ROOT_DOMAIN` constant in
-    `components/store/clusters.ts` read the environment.
-  - `clusters/*.yaml` keep only the label (`authentikDomain: canterlot`), and
-    the loader appends the root.
-  - The authentik flow URL, the OpenBao OIDC default, and the StandardDns,
-    local-dns and applications literals.
-  - `technitium-zone.ts`: its Pulumi resource **name** is the slug. Rename it,
-    with an `aliases` entry computed from the environment, so the URN does not
-    change and no literal survives.
-  - `ProxmoxBackupServerLxc.ts` emits `apiVersion: home.<root domain>/v1`.
-    Find its consumer before changing the group.
-  - Test fixtures move to `example.com`.
-- **Gate:** every affected Stack previews with **zero diff**. The Stacks are
-  preview-only during the Garage move, which suits this.
+Two PRs, because the code fails closed without the value: the variable goes
+live first.
+
+- **4a (#2282): every run gets `ROOT_DOMAIN`.**
+  - In the cluster, each Stack CR carries `envRefs.ROOT_DOMAIN`, a `Literal`
+    that Flux substitutes from `shared-secrets`. No new Secret was needed.
+  - Locally, `.config/mise.toml` declares it as a `ref+sops://` that
+    `mise run vals-run` resolves.
+- **4b: the code reads it** through `rootDomain()` in `components/domains.ts`,
+  which throws when the value is unset.
+  - `globals.searchDomain`, the cluster loader's suffix, the authentik flow
+    URL, the OpenBao address and OIDC defaults, and the StandardDns, local-dns
+    and applications literals.
+  - `clusters/*.yaml` keep only the label, renamed to match `domainPrefix`
+    (`authentikPrefix: canterlot`). The loader appends the root and still
+    emits `authentikDomain` in the same key position, because stacks/system
+    publishes the parsed object as order-sensitive JSON.
+  - `technitium-zone.ts`: the resource **name** is `rootDomainSlug()`, the
+    slug it always was. The URN is unchanged and no alias is needed.
+  - `ProxmoxBackupServerLxc.ts` computes `apiVersion: home.<root domain>/v1`.
+    The group itself is unchanged.
+  - Test fixtures moved to `example.com`. The loader's tests accept any
+    `ROOT_DOMAIN` and read it back.
+  - Left in place: the login flows' display titles, which spell the name as
+    words (section F).
+- **Gate:** zero diff. The Stacks run `up` every five minutes, so 4b was
+  proven by evaluation rather than preview, with the real value:
+  - the new loader's output is byte-identical JSON to the old one's;
+  - every other changed file, with each computed expression replaced by the
+    literal it evaluates to, is identical to its pre-4b version.
 
 ### Phase 5: tooling and hosts outside Flux
 
@@ -251,5 +264,7 @@ scripts are candidates for deletion.
 
 - Delete the stale notebooks and finished migration scripts, or parametrize
   them (phase 5)?
-- The neutral name for the Cloudflare token path (phase 3).
+- The authentik login flows' display titles spell the estate's name as words
+  (phase 4). Keep them and allow-list the phrase, move them into
+  configuration, or retitle them?
 - Whether OpenBao's HCL comment is worth a config roll (phase 2).

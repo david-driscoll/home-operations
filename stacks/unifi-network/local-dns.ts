@@ -27,6 +27,7 @@ import * as purrl from "@pulumiverse/purrl";
 import * as unifi from "@pulumiverse/unifi";
 import CIDRMatcher from "cidr-matcher";
 import { dns, Tailscale } from "../../components/constants.ts";
+import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { getDnsMachines } from "../../components/tailscale.ts";
 
@@ -47,7 +48,7 @@ export async function configureLocalDns(globals: GlobalResources) {
         new unifi.dns.Record(
           `dns-node-record-${machine.key}`,
           {
-            name: `${machine.key}.dns.driscoll.tech`,
+            name: `${machine.key}.dns.${rootDomain()}`,
             type: "A",
             value: machine.ip,
           },

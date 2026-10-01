@@ -27,6 +27,7 @@
 
 import * as pulumi from "@pulumi/pulumi";
 import * as vault from "@pulumi/vault";
+import { rootDomain } from "../domains.ts";
 import type { GlobalResources } from "../globals.ts";
 
 /**
@@ -74,7 +75,7 @@ export class OpenBaoOidc extends pulumi.ComponentResource {
 
     const { globals } = args;
     const credentialTitle = args.credentialTitle ?? "equestria-openbao-oidc-credentials";
-    const publicUrl = args.publicUrl ?? "https://bao.equestria.driscoll.tech";
+    const publicUrl = args.publicUrl ?? `https://bao.equestria.${rootDomain()}`;
 
     // Resources here are provider-backed; without this they would target
     // whatever ambient Vault config happened to be in the environment.

@@ -197,7 +197,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       .apply(clusters =>
         pulumi.all([
           ...clusters.map(z => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`),
-          pulumi.interpolate`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
+          pulumi.interpolate`https://authentik.${this.globals.searchDomain}/source/oauth/callback/tailscale/`,
           pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`,
         ]),
       )
