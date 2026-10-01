@@ -561,6 +561,14 @@ reads (about 64.5 GiB) stay on the LAN too. Before the pilot, confirm two things
 1. **Alert first.** Add a PrometheusRule on VolSync's own metrics (`volsync_volume_out_of_sync`,
    `volsync_missed_intervals_total`). Step 6 removes the copy-job heartbeats, which are its only
    signal today.
+   ✅ As built (`kubernetes/apps/volsync-system/volsync/prometheusrule.yaml`), two alerts:
+   - `VolSyncControllerAbsent`: no healthy `volsync-metrics` target for 15 minutes.
+   - `VolSyncBackupOutOfSync`: `volsync_volume_out_of_sync{role="source"} == 1` for an hour.
+     It covers sources only, because the restore-once destinations run on demand. Missed
+     intervals are the same signal, so they get no rule of their own.
+
+   At the time it shipped, all 51 ReplicationSources readable from here had synced in the last 12
+   hours, so neither alert fires on arrival.
 2. **Component.** `kubernetes/components/volsync/externalsecret.yaml` learns to emit an S3
    repository in place of the NFS path:
    `RESTIC_REPOSITORY=s3:https://s3.celestia.${ROOT_DOMAIN}/volsync-equestria/${APP}`, the AWS key

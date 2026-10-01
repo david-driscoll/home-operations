@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# VolSync's own alerts (docs/plans/host-owned-backups.md, phase 3 step 1).
+#
+# Until phase 3, the copy-job heartbeats were the only freshness signal for
+# VolSync: a mover that stopped succeeding showed up a day later as a stale
+# copy on celestia. Phase 3 moves the repos into Garage and retires those copy
+# jobs, so VolSync has to report on itself first. The metrics come from the
+# controller (the chart's ServiceMonitor, job `volsync-metrics`); their labels
+# are obj_name, obj_namespace, role and method.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: volsync
+spec:
+  groups:
+    - name: volsync.rules
+      rules:
+        - alert: VolSyncControllerAbsent
+          # Missing and down both read as "no backups are being judged at all":
+          # every alert below goes quiet with the controller.
+          expr: absent(up{job="volsync-metrics"} == 1)
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: VolSync's controller is not being scraped
+            description: Prometheus has had no healthy volsync-metrics target for 15 minutes, so no VolSync backup is being checked.
+
+        - alert: VolSyncBackupOutOfSync
+          # Sources only. A ReplicationSource is out of sync when it has not
+          # finished a backup within its schedule. The restore-once
+          # ReplicationDestinations are triggered on demand and judged by
+          # restore-cleanup instead.
+          expr: volsync_volume_out_of_sync{role="source"} == 1
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: "VolSync backup of {{ $labels.obj_namespace }}/{{ $labels.obj_name }} is out of sync"
+            description: "ReplicationSource {{ $labels.obj_namespace }}/{{ $labels.obj_name }} ({{ $labels.method }}) has not completed a backup within its schedule for an hour. Check its latest mover status and the mover pod's logs."
