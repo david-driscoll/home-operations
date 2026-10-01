@@ -630,8 +630,42 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [tag.egress] },
     );
 
+    // TrueNAS (spike, tag:shared-drive) pulls every Garage bucket it keeps an
+    // independent copy of through celestia's own HTTPS name, `s3.celestia.<root
+    // domain>`. DockgeLxc publishes that name as a CNAME to celestia's tailnet
+    // address, so the pulls arrive as tag:shared-drive -> tag:dockge on 443
+    // (components/garageTruenasCopy.ts; docs/plans/host-owned-backups.md §C3).
+    // The first ones ran at 17:00 UTC on 2026-10-01.
+    //
+    // Until this grant, `default-apps-access` was the only thing allowing them:
+    // a web grant for people, which takes every tagged device as a source. The
+    // copy the pulls keep is the backups' last resort, and it fails quietly:
+    // its heartbeats only go red a day later. So narrowing that grant must not
+    // cut it off. The same shape as `garage-s3-vip-egress` above, with the same
+    // two guards: the `accept` is a policy test Tailscale enforces, and
+    // assertGrantPath() below fails the run before a policy without the path is
+    // written. It names tag:dockge, not celestia alone. Every Garage node carries
+    // that tag, so pointing garageCopyEndpoint at another node's name while
+    // celestia is down needs no policy change.
+    manager.setGrant(
+      "garage-truenas-copy",
+      {
+        src: [tag.sharedDrive],
+        dst: [tag.dockge],
+        ip: ports.garageS3Node,
+      },
+      { accept: [tag.sharedDrive] },
+    );
+
     const policyJson = pulumi.output(manager.getJson()).apply(json => {
       assertGrantPath(json, tag.egress, tag.dockge, ports.garageS3Vip.map(String), "That is the cluster's path to the garage-s3 VIP, and Pulumi state lives behind it -- restore the `garage-s3-vip-egress` grant.");
+      assertGrantPath(
+        json,
+        tag.sharedDrive,
+        tag.dockge,
+        ports.garageS3Node.map(String),
+        "That is how TrueNAS pulls its independent copy of the Garage buckets (components/garageTruenasCopy.ts) -- restore the `garage-truenas-copy` grant.",
+      );
       return json;
     });
 
