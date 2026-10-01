@@ -41,10 +41,6 @@ spec:
     - ../../../../components/failover/fast-node-eviction
   postBuild:
     substitute:
-      # Phase 3, batch 1 (docs/plans/host-owned-backups.md): the restic repository
-      # lives in Garage. Its NFS history is copied across by
-      # volsync-system/garage-history-copy.
-      VOLSYNC_BACKEND: garage
       # Browsers take the authentik chain, mirroring this app's internal
       # HTTPRoute. Requests carrying X-Api-Key/?apikey skip it via the
       # components/tailscale/api-key component above -- the same carve-out the

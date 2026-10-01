@@ -61,10 +61,6 @@ spec:
     - ../../../../components/funnel
   postBuild:
     substitute:
-      # Phase 3, batch 2 (docs/plans/host-owned-backups.md): the restic repository
-      # lives in Garage. Its NFS history is copied across by
-      # volsync-system/garage-history-copy.
-      VOLSYNC_BACKEND: garage
       APP: *app
       NAMESPACE: *namespace
       # Two PVCs' worth of data in one claim: /config (small) and /uploads

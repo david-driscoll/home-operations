@@ -58,10 +58,6 @@ spec:
     # grants the gateways and authentik's VIP (#2120).
   postBuild:
     substitute:
-      # Phase 3, batch 2 (docs/plans/host-owned-backups.md): the restic repository
-      # lives in Garage. Its NFS history is copied across by
-      # volsync-system/garage-history-copy.
-      VOLSYNC_BACKEND: garage
       APP: *app
       NAMESPACE: *namespace
       # ONE volume for all of /var/www/html -- code, config/, custom_apps/,

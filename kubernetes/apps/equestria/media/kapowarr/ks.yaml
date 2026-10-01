@@ -43,7 +43,3 @@ spec:
       TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       NAMESPACE: *namespace
-      # Phase 3 pilot (docs/plans/host-owned-backups.md): the restic repository
-      # lives in Garage. Its NFS history is copied across by
-      # volsync-system/garage-history-copy.
-      VOLSYNC_BACKEND: garage
