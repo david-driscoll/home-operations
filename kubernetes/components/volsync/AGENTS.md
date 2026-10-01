@@ -131,8 +131,47 @@ Shipped once — #1084 cut forgejo from 20Gi to 10Gi, Flux deleted the bound PVC
 and #1100 put it back. The data loss was nil only because the volume was a day old and the
 forge's real state was in Postgres.
 
+## Where the repository lives: `VOLSYNC_BACKEND`
+
+`nfs`, the default, keeps the app's restic repository on TrueNAS, at `/repository/${APP}` inside
+the mover. `volsync-mover-nfs` (`apps/volsync-system/volsync`) mounts that share into every mover
+Job. `garage` moves the repository to the app's prefix in the `volsync-equestria` Garage bucket, on
+celestia's node. Moving every app is phase 3 of `docs/plans/host-owned-backups.md`, and `garage`
+becomes the default once it is done. An app opts in from its `ks.yaml`:
+
+```yaml
+  postBuild:
+    substitute:
+      VOLSYNC_BACKEND: garage
+```
+
+- **The source and the restore-once destination move together.** They read the same
+  `${APP}-volsync-secret`, and its `RESTIC_REPOSITORY` is the only thing the variable changes.
+- **Endpoint, bucket and key come from OpenBao** (`clusters/equestria/apps/volsync/garage`,
+  written by `stacks/system/garage.ts`). The endpoint is celestia's LAN address on port 3900, over
+  plain HTTP. restic encrypts every pack before it leaves the mover, so nothing readable crosses
+  the wire. celestia's HTTPS name will not do here, because it resolves to a tailnet address no
+  pod can reach.
+- **Every app's Secret depends on that record**, `nfs` ones included: the AWS key pair is in all
+  of them. ESO fails the whole ExternalSecret on one missing extract, so moving or deleting the
+  record stalls every app's Secret at once.
+- **NFS stays off a Garage mover.** The component labels its mover pods
+  `driscoll.dev/volsync-backend: <value>`, and `volsync-mover-nfs` skips any pod labelled `garage`.
+  A TrueNAS outage therefore cannot keep a Garage backup from starting.
+- **History does not move with the switch.** On its own, a switch starts an empty repository, and
+  the old snapshots stay behind in the NFS repo. Bring them across first (phase 3, step 3: `restic
+  init --from-repo … --copy-chunker-params`, then `restic copy`). Switching back to `nfs` returns
+  to the NFS repo as it stood at the switch.
+- **The copy tier lets go.** `stacks/system/application-backups.ts` skips an `s3:` repository, so
+  the hosts drop that app's copy job and Backrest browse repo on their next director run. The
+  copies already on their disks stay where they are.
+- **Stale locks:** `volsync-lock-canceller` only scans the NFS share until phase 3, step 4 gives it
+  an S3 variant. Until then, clear a stranded Garage lock with the `unlock` field
+  (`VOLSYNC_UNLOCK`).
+
 ## Substitutions worth pinning in the app's `ks.yaml`
 
+- `VOLSYNC_BACKEND` — `nfs` or `garage`; see the section above.
 - `VOLSYNC_CAPACITY` — the app PVC size. Always set it, and only ever raise it (above).
 - `VOLSYNC_CACHE_CAPACITY` — the restic metadata cache. The defaults are **asymmetric**
   (`ReplicationSource` 2Gi, `ReplicationDestination` 8Gi), so pin it explicitly rather than

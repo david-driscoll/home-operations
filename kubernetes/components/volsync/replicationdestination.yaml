@@ -24,6 +24,10 @@ spec:
       runAsUser: ${VOLSYNC_PUID:=568}
       runAsGroup: ${VOLSYNC_PGID:=568}
       fsGroup: ${VOLSYNC_PGID:=568}
+    # Same label, same reason, as the ReplicationSource: the restore reads
+    # the store the shared Secret names.
+    moverPodLabels:
+      driscoll.dev/volsync-backend: "${VOLSYNC_BACKEND:=nfs}"
 
     # moverResources:
     #   requests:

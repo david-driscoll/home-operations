@@ -144,6 +144,19 @@ spec:
       expression: >
         !has(object.spec.template.spec.volumes)
         || !object.spec.template.spec.volumes.exists(item, item.name == "repository")
+    # A mover whose repository is in Garage gets no NFS mount: it would
+    # never read it, and a TrueNAS outage would still keep the pod from
+    # starting. The label comes from the component's `moverPodLabels`
+    # (kubernetes/components/volsync, VOLSYNC_BACKEND). Its absence means
+    # NFS, so movers created before the label existed, and the bespoke
+    # crowdsec ones, keep their mount. Guarded like the rest: a Job with no
+    # pod template labels must evaluate to true here, not to an error.
+    - name: repository-is-not-in-garage
+      expression: >
+        !has(object.spec.template.metadata)
+        || !has(object.spec.template.metadata.labels)
+        || !("driscoll.dev/volsync-backend" in object.spec.template.metadata.labels)
+        || object.spec.template.metadata.labels["driscoll.dev/volsync-backend"] != "garage"
   failurePolicy: Fail
   reinvocationPolicy: IfNeeded
   mutations:

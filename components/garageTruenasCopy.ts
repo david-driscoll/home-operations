@@ -71,6 +71,9 @@ export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey 
   { bucket: "postgres-skystar", key: "truenas-copy" },
   { bucket: "pulumi-state", key: "pulumi-state-reader" },
   { bucket: "backrest-alpha-site", key: "truenas-copy" },
+  // Pulled from before its first mover writes (phase 3, step 2), so the
+  // pilot can confirm a new app's prefix arrives on TrueNAS.
+  { bucket: "volsync-equestria", key: "truenas-copy" },
 ];
 
 /**
@@ -94,10 +97,13 @@ export const GARAGE_COPY_PULL_SCHEDULE: CronSchedule = { minute: "00", hour: "13
 const GARAGE_COPY_SNAPSHOT_HOUR = "18";
 
 /**
- * Where spike reaches Garage: celestia's own node, over the LAN, through the
- * per-node route (`s3.${CLUSTER_DOMAIN}` in docker/_common/garage/compose.yaml).
- * equestria and celestia share a site, the decision behind H4 and H5, so the
- * pulls never cross the tailnet. The trade-off is that they stop while celestia
+ * Where spike reaches Garage: celestia's own node, through the per-node route
+ * (`s3.${CLUSTER_DOMAIN}` in docker/_common/garage/compose.yaml), the decision
+ * behind H4. That name is a CNAME to celestia's tailnet address, so spike
+ * (tag:shared-drive) connects over WireGuard under `default-apps-access`. The
+ * two peers connect directly, so the packets stay on the LAN. HTTPS matters
+ * here: unlike the restic buckets, cnpg-equestria and pulumi-state are not
+ * encrypted client-side. The trade-off is that the pulls stop while celestia
  * is down.
  */
 export function garageCopyEndpoint(searchDomain: string): string {

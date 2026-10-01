@@ -71,22 +71,49 @@ const GiB = 1024 ** 3;
 // stopped pruning, a runaway WAL burst — not that the estate grew.
 const CNPG_BUCKET_QUOTA = 512 * GiB;
 const DUMPS_BUCKET_QUOTA = 128 * GiB;
-const MIRROR_BUCKET_QUOTA = 2048 * GiB;
+// The staging tree of the in-cluster buckets, about 1.3 MB when phase 3 of
+// docs/plans/host-owned-backups.md started. Was 2 TiB until that phase raised
+// VolSync's quota (below); halving it keeps every quota summed under the 4T
+// share. It retires with its bucket at the end of phase 4.
+const MIRROR_BUCKET_QUOTA = 1024 * GiB;
 
 // The restic buckets of docs/plans/host-owned-backups.md §C2 (phase 2, step 2):
 // 100 GiB each, a placeholder David set on 2026-10-01 without measuring the
 // repos. Nothing writes to them yet, so the number is a ceiling to revisit
 // rather than a sizing: check the real repo size in the change that first
-// points a writer at one. VolSync (phase 3) and Immich (phase 4) are the ones
-// likely to need more. Every quota here now sums to about 3.6 TiB against the
-// 4T share; garage-mirror's 2 TiB goes at the end of phase 4.
+// points a writer at one. Immich (phase 4) is the one likely to need more.
 const RESTIC_BUCKET_QUOTA = 100 * GiB;
+
+// VolSync's bucket, measured on 2026-10-01 before the first app moves (phase 3).
+// The 62 apps' latest snapshots hold 99.5 GiB of data. The registry cache
+// alone is 44.3 GiB, and Plex 13.4 GiB. The 15 repos that pruned in Loki's
+// three-day window were about 0.7x their snapshot size once compressed, with
+// history included, so the repos come to roughly 90-145 GiB. Twice the top of
+// that range leaves room for the registry's churn, which no compression
+// touches. Every quota here sums to about 2.75 TiB against the 4T share.
+const VOLSYNC_BUCKET_QUOTA = 300 * GiB;
 
 // The Docker hosts that each get a `backrest-<host>` bucket: the garage nodes,
 // plus alpha-site, which has no node and writes through celestia's. Same rule
 // as GARAGE_CLUSTERS for an offline site: skystar's bucket and key exist while
 // it is away, and only the credential file waits for the host to come back.
 const BACKREST_HOSTS = [...GARAGE_CLUSTERS, "alpha-site"] as const;
+
+/** Whether a dotted IPv4 address is inside an IPv4 CIDR. False for anything that is not one. */
+function inIpv4Cidr(address: string, cidr: string): boolean {
+  const toInt = (dotted: string) => {
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(dotted)) return undefined;
+    const octets = dotted.split(".").map(Number);
+    return octets.every(o => o <= 255) ? octets.reduce((n, o) => n * 256 + o, 0) : undefined;
+  };
+  const [network, prefix] = cidr.split("/");
+  const ip = toInt(address);
+  const net = toInt(network ?? "");
+  const bits = Number(prefix);
+  if (ip === undefined || net === undefined || !Number.isInteger(bits) || bits < 0 || bits > 32) return false;
+  const size = 2 ** (32 - bits);
+  return Math.floor(ip / size) === Math.floor(net / size);
+}
 
 /**
  * Everything Garage: buckets, keys, OpenBao records, and the per-host
@@ -437,11 +464,44 @@ aws_secret_access_key = ${key.secretAccessKey}
   // this file is exactly how the mirror service on luna/skystar knows to idle.
   dockgeInstances.apply(instances => deliverCredentialFile("celestia", "mirror.env", credentialFile(mirrorKey, "mirror.sh"), instances));
 
-  // celestia's own node over the LAN, through its per-node route
-  // (`s3.${CLUSTER_DOMAIN}`, docker/_common/garage/compose.yaml). What spike
-  // (H4), the VolSync movers and the k8s pg_dump CronJob (H5) use: they share
-  // a site with celestia, so their traffic never crosses the tailnet.
-  const celestiaLanEndpoint = pulumi.output(globals.searchDomain).apply(garageCopyEndpoint);
+  // celestia's own node, by its per-node HTTPS name (`s3.${CLUSTER_DOMAIN}`,
+  // docker/_common/garage/compose.yaml). spike pulls through it (H4). DockgeLxc
+  // publishes that name as a CNAME to celestia's TAILNET address, so spike
+  // reaches it over WireGuard, as tag:shared-drive under the
+  // `default-apps-access` grant. Those packets still stay on the LAN, since the
+  // two peers connect directly.
+  const celestiaNodeEndpoint = pulumi.output(globals.searchDomain).apply(garageCopyEndpoint);
+
+  // celestia's node for the cluster's restic writers: the VolSync movers and
+  // the k8s pg_dump CronJob (H5). It uses the LAN address, plain HTTP on 3900,
+  // because the HTTPS name above cannot serve them. No pod routes to the
+  // tailnet. Measured 2026-10-01: from a pod the name resolves to celestia's
+  // tailnet address and the connection times out, while the LAN address
+  // answers in about a millisecond.
+  //
+  // Plain HTTP suits these two writers only. restic encrypts every pack before
+  // it leaves the pod, and SigV4 never sends the secret key. TrueNAS pulls
+  // buckets that are NOT encrypted client-side (cnpg-equestria, pulumi-state),
+  // which is why it keeps the HTTPS name.
+  //
+  // The address is the one celestia's DockgeLxc recorded (`hostname -I` at
+  // creation), and stacks/unifi-network pins it with a DHCP reservation. A
+  // record off the Home subnet means celestia moved and the LAN route with it,
+  // so the run fails rather than hand every mover an address it cannot reach.
+  // While celestia is down, the fallback is to point these records at the
+  // garage-s3 VIP, the cluster's tailnet route to any node.
+  const celestiaLanEndpoint = dockgeInstances.apply(instances => {
+    const celestia = instances.find(i => i.name === "celestia-dockge");
+    if (!celestia) {
+      throw new Error("No celestia-dockge record under hosts/dockge: the VolSync and pg_dump Garage records need celestia's LAN address. Run the home-operations stack first.");
+    }
+    if (!inIpv4Cidr(celestia.ipAddress, Tailscale.subnets.home)) {
+      throw new Error(
+        `celestia-dockge records ${celestia.ipAddress}, which is outside the Home subnet (${Tailscale.subnets.home}). The VolSync movers reach Garage over the LAN, so they need a LAN address. Point the VolSync and pg_dump records at the garage-s3 VIP instead.`,
+      );
+    }
+    return `http://${celestia.ipAddress}:3900`;
+  });
 
   // ── restic repositories (docs/plans/host-owned-backups.md §C2) ─────────────
   // Where the estate's restic repos move: one bucket per writer and one rw key
@@ -450,8 +510,10 @@ aws_secret_access_key = ${key.secretAccessKey}
   // until alpha-site moves (phase 2, step 7), VolSync and the k8s pg_dump
   // (phase 3), and the other Docker hosts and Immich (phase 4).
 
-  // VolSync: one bucket for every mover, one prefix per app.
-  const volsyncBucket = backupBucket("volsync-equestria", RESTIC_BUCKET_QUOTA);
+  // VolSync: one bucket for every mover, one prefix per app. Every app's
+  // backup Secret extracts this record (kubernetes/components/volsync), so
+  // moving or renaming its path is a change to that component too.
+  const volsyncBucket = backupBucket("volsync-equestria", VOLSYNC_BUCKET_QUOTA);
   managedBuckets.set("volsync-equestria", volsyncBucket);
   keyRecord("volsync-equestria-garage-bao", {
     path: "clusters/equestria/apps/volsync/garage",
@@ -552,7 +614,7 @@ aws_secret_access_key = ${key.secretAccessKey}
         mount: "secrets",
         path: GARAGE_COPY_KEYS["truenas-copy"],
         data: {
-          endpoint: celestiaLanEndpoint,
+          endpoint: celestiaNodeEndpoint,
           region: REGION,
           username: truenasCopyKey.accessKeyId,
           password: truenasCopyKey.secretAccessKey,

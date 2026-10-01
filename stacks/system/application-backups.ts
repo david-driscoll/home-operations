@@ -4,7 +4,7 @@ import { awaitOutput } from "@components/helpers.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import type { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 import * as pulumi from "@pulumi/pulumi";
-import { concatMap, from, lastValueFrom, map, mergeMap, toArray } from "rxjs";
+import { concatMap, filter, from, lastValueFrom, map, mergeMap, toArray } from "rxjs";
 import type { KubernetesCluster } from "./applications.ts";
 
 export async function kubernetesBackups(_globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesCluster) {
@@ -34,7 +34,17 @@ export async function kubernetesBackups(_globals: GlobalResources, planManager: 
           ),
           map(result => result.items.map(s => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
           mergeMap(lists => from(lists)),
-          map(item => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
+          map(item => Buffer.from(item, "base64").toString("utf-8")),
+          // A repository in Garage (`VOLSYNC_BACKEND: garage`, docs/plans/
+          // host-owned-backups.md phase 3) leaves the copy tier. Garage
+          // replicates it to three sites and TrueNAS pulls the bucket, so the
+          // hosts have nothing to copy. Its old NFS repo is frozen from the
+          // switch on, and copying it again every night would only repeat
+          // the last copy. Dropping the plan lets each host's ledger remove
+          // that app's copy job and browse repo. The copied data stays on
+          // disk, as every ledger removal leaves it.
+          filter(repository => !repository.startsWith("s3:")),
+          map(repository => repository.split("/").pop()!),
           toArray(),
         ),
       ),
