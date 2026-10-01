@@ -12,3 +12,4 @@ resources:
   - ./restore-cleanup/ks.yaml
   - ./lock-canceller/ks.yaml
   - ./garage-history-copy/ks.yaml
+  - ./garage-copy-drill/ks.yaml

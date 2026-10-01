@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./job.yaml
+configMapGenerator:
+  # Same two options as ../lock-canceller/kustomization.yaml, for the same
+  # reasons: job.yaml mounts it by name, and the script's shell expansions
+  # must not meet Flux's strict envsubst. job.yaml itself needs SPIKE_IP
+  # substituted, so the opt-out goes on the ConfigMap alone.
+  - name: garage-copy-drill-script
+    files:
+      - ./garage-copy-drill.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

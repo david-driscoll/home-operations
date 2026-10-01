@@ -22,7 +22,7 @@
  * Pulumi runtime or a TrueNAS.
  */
 import { toGatusKey } from "./helpers.ts";
-import type { CloudCredentialInput, CloudSyncTaskInput, CronSchedule, SnapshotTaskInput } from "./truenas/truenas-types.ts";
+import type { CloudCredentialInput, CloudSyncTaskInput, CronSchedule, NfsShareInput, SnapshotTaskInput } from "./truenas/truenas-types.ts";
 
 /**
  * The Gatus group every pull's post-script pushes to. Load-bearing on both
@@ -63,17 +63,24 @@ export type GarageCopyKey = keyof typeof GARAGE_COPY_KEYS;
  * Never add `backrest-immich`: the library already lives on TrueNAS, so a copy
  * there would sit next to the original. Removing a bucket here deletes its
  * Cloud Sync task on the next run, and leaves its dataset and snapshots.
+ *
+ * `restic: true` marks a bucket that holds restic repositories and nothing
+ * else, so everything in it is encrypted before it leaves its writer. Only
+ * those copies get a read-only NFS export (garageCopyNfsShare), which lets a
+ * restore drill read them without Garage. Never mark one that is not
+ * encrypted client-side: the CNPG archive, the Postgres dumps and the Pulumi
+ * state would be readable by anything that can mount the share.
  */
-export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey }[] = [
+export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey; restic?: true }[] = [
   { bucket: "cnpg-equestria", key: "truenas-copy" },
   { bucket: "postgres-celestia", key: "truenas-copy" },
   { bucket: "postgres-luna", key: "truenas-copy" },
   { bucket: "postgres-skystar", key: "truenas-copy" },
   { bucket: "pulumi-state", key: "pulumi-state-reader" },
-  { bucket: "backrest-alpha-site", key: "truenas-copy" },
+  { bucket: "backrest-alpha-site", key: "truenas-copy", restic: true },
   // Pulled from before its first mover writes (phase 3, step 2), so the
   // pilot can confirm a new app's prefix arrives on TrueNAS.
-  { bucket: "volsync-equestria", key: "truenas-copy" },
+  { bucket: "volsync-equestria", key: "truenas-copy", restic: true },
 ];
 
 /**
@@ -131,6 +138,26 @@ export function garageCopyCredential(args: { key: GarageCopyKey; endpoint: strin
 /** The local path a bucket is pulled into. */
 export function garageCopyPath(bucket: string): string {
   return `/mnt/${GARAGE_COPY_DATASET}/${bucket}`;
+}
+
+/**
+ * The read-only NFS export of a restic bucket's copy, for restore drills that
+ * must not need Garage (docs/plans/host-owned-backups.md §E).
+ *
+ * The same mapping as the VolSync share TruenasVm.addClusterBackup creates
+ * (every client user maps to `apps`), but read-only: restic reads it with
+ * `--no-lock`. Cloud Sync writes the copy, and nothing else may change it.
+ */
+export function garageCopyNfsShare(bucket: string): { path: string; config: NfsShareInput } {
+  return {
+    path: garageCopyPath(bucket),
+    config: {
+      comment: `${GARAGE_COPY_TASK_PREFIX}${bucket} (read-only, restic)`,
+      ro: true,
+      mapall_user: "apps",
+      mapall_group: "apps",
+    },
+  };
 }
 
 /**

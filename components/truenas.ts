@@ -1,5 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
-import { GARAGE_COPY_BUCKETS, GARAGE_COPY_DATASET, GARAGE_COPY_TASK_PREFIX, type GarageCopyKey, garageCopyCredential, garageCopySnapshotTasks, garageCopyTask } from "./garageTruenasCopy.ts";
+import { GARAGE_COPY_BUCKETS, GARAGE_COPY_DATASET, GARAGE_COPY_TASK_PREFIX, type GarageCopyKey, garageCopyCredential, garageCopyNfsShare, garageCopySnapshotTasks, garageCopyTask } from "./garageTruenasCopy.ts";
 import type { GlobalResources } from "./globals.ts";
 import { awaitOutput } from "./helpers.ts";
 import { AuthLoginWithApiKeyRequest, TrueNASClient } from "./truenas/index.ts";
@@ -79,6 +79,14 @@ export async function configureGarageCopy(args: {
 
     for (const dataset of [GARAGE_COPY_DATASET, ...GARAGE_COPY_BUCKETS.map(({ bucket }) => `${GARAGE_COPY_DATASET}/${bucket}`)]) {
       if ((await manager.ensureDatasetExists(dataset)).created) changes.push(`dataset ${dataset}`);
+    }
+
+    // A restic bucket's copy is exported read-only, so a restore drill can
+    // read it with Garage out of the picture (garageCopyNfsShare). Only the
+    // buckets marked restic: true; the rest are not encrypted client-side.
+    for (const { bucket } of GARAGE_COPY_BUCKETS.filter(entry => entry.restic)) {
+      const { path, config } = garageCopyNfsShare(bucket);
+      if ((await manager.ensureNFSShare(path, config)).changed) changes.push(`NFS share ${path}`);
     }
 
     const { written, deleted } = await manager.reconcileCloudSyncTasks(
