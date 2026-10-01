@@ -1,0 +1,47 @@
+services:
+  # skystar's copy of docker/_common/rclone-sftp/compose.yaml, which this file
+  # replaces whole (DockgeLxc takes a host file over the _common one of the
+  # same name). The one difference is the /opt/stacks-data export: skystar is
+  # not in HOST_OWNED_BACKUP_HOSTS (stacks/backups/index.ts), so when it is
+  # back online celestia's backrest pulls its stacks over SFTP again, as
+  # /stacks/<stack>/, and its plans recover on their own
+  # (docs/plans/host-owned-backups.md, 0.6).
+  #
+  # Delete this file in the change that adds skystar to
+  # HOST_OWNED_BACKUP_HOSTS. Until then keep everything else identical to the
+  # _common file, whose comment explains why it runs as uid 0 with one
+  # capability. Read it before changing `user` or the caps.
+  rclone-sftp:
+    user: "0:0"
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH
+    container_name: rclone-sftp
+    image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    env_file:
+      - path: .env
+    command: >-
+      serve sftp /data/ --addr :2022
+      --authorized-keys /config/ssh/authorized_keys
+      --key /config/ssh/host_key
+    volumes:
+      - /data/backup/:/data/backup/:ro
+      - /opt/stacks-data/:/data/stacks/:ro
+      - /opt/stacks-data/${APP}/keys:/config/ssh:ro
+    tmpfs:
+      - /.cache:uid=0,gid=0
+    networks:
+      - dockge_default
+    labels:
+      traefik.enable: true
+      traefik.tcp.routers.rclone-sftp.rule: HostSNI(`*`)
+      traefik.tcp.routers.rclone-sftp.entrypoints: sftp
+      traefik.tcp.services.rclone-sftp.loadbalancer.server.port: 2022
+
+networks:
+  dockge_default:
+    external: true
