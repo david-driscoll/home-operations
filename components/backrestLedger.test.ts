@@ -183,7 +183,7 @@ describe("planLedgerRemovals", () => {
     );
   });
 
-  it("removes a repo this host receives as a copy, with no ledger to say so", () => {
+  it("removes another host's plan, with no ledger to say so", () => {
     const removals = planLedgerRemovals({
       previous: undefined,
       emitted: { plans: ["celestia-dockge-traefik"], repos: ["celestia-dockge-traefik"] },
@@ -195,12 +195,31 @@ describe("planLedgerRemovals", () => {
         ["celestia-dockge-traefik", "luna-dockge-traefik"],
       ),
       host: "celestia",
-      copied: ["luna-dockge-traefik", "luna-dockge-neo4j"],
+      foreign: ["luna-dockge-traefik", "luna-dockge-neo4j"],
     });
     assert.deepEqual(removals, { plans: ["luna-dockge-traefik"], repos: ["luna-dockge-traefik"], keptRepos: [] });
   });
 
-  it("keeps a copied repo a hand-made plan still points at, and reports it", () => {
+  it("clears another host's whole config when it lands on this host (2026-10-01)", () => {
+    // celestia was handed alpha-site's config.json: alpha-site's Garage plans,
+    // none of celestia's, and a ledger that does not list alpha-site's ids.
+    const removals = planLedgerRemovals({
+      previous: ledger(["celestia-dockge-traefik"]),
+      emitted: { plans: ["celestia-dockge-traefik"], repos: ["celestia-dockge-traefik"] },
+      config: config(
+        [
+          ["alpha-site-dockge-zwave", "alpha-site-dockge-zwave"],
+          ["celestia-dockge-traefik", "celestia-dockge-traefik"],
+        ],
+        ["alpha-site-dockge-zwave", "celestia-dockge-traefik"],
+      ),
+      host: "celestia",
+      foreign: ["alpha-site-dockge-zwave", "luna-dockge-traefik"],
+    });
+    assert.deepEqual(removals, { plans: ["alpha-site-dockge-zwave"], repos: ["alpha-site-dockge-zwave"], keptRepos: [] });
+  });
+
+  it("keeps another host's repo a hand-made plan still points at, and reports it", () => {
     const removals = planLedgerRemovals({
       previous: ledger(["celestia-dockge-traefik"]),
       emitted: { plans: ["celestia-dockge-traefik"], repos: ["celestia-dockge-traefik"] },
@@ -212,12 +231,12 @@ describe("planLedgerRemovals", () => {
         ["celestia-dockge-traefik", "luna-dockge-traefik"],
       ),
       host: "celestia",
-      copied: ["luna-dockge-traefik"],
+      foreign: ["luna-dockge-traefik"],
     });
     assert.deepEqual(removals, { plans: [], repos: [], keptRepos: [{ id: "luna-dockge-traefik", usedBy: ["ui-plan"] }] });
   });
 
-  it("refuses an id this host both runs and receives as a copy", () => {
+  it("refuses an id this host runs that another host runs too", () => {
     assert.throws(
       () =>
         planLedgerRemovals({
@@ -225,9 +244,9 @@ describe("planLedgerRemovals", () => {
           emitted: { plans: ["luna-dockge-traefik"], repos: ["luna-dockge-traefik"] },
           config: config([], []),
           host: "luna",
-          copied: ["luna-dockge-traefik"],
+          foreign: ["luna-dockge-traefik"],
         }),
-      /both runs and receives a copy of luna-dockge-traefik/,
+      /runs luna-dockge-traefik, which another host runs too/,
     );
   });
 

@@ -230,14 +230,16 @@ export class BackupPlanDirector extends ComponentResource {
     // bucket, so shipping it these credentials would be gratuitous spread.
     const rcloneConfig = renderRcloneConfig(sourcePlans);
 
-    // The Backrest repos this host receives from their own hosts. None of them
-    // may be a plan or repo in this host's Backrest as well: the copy job would
-    // sync over whatever it wrote (see planLedgerRemovals). VolSync repos are
-    // not in this list, because the director deliberately registers them here
-    // for browsing.
-    const copied = destinationJobTasks.map(task => task.name);
+    // Every plan another host runs. None of them may be a plan or repo in this
+    // host's Backrest (see planLedgerRemovals): a repo copied here would be
+    // synced over whatever this host wrote, and a Garage repo of another host's
+    // cannot even be opened with this host's key -- on 2026-10-01 celestia was
+    // handed alpha-site's config and its Backrest crash-looped on exactly that.
+    // VolSync repos are not in this list, because the director deliberately
+    // registers them here for browsing.
+    const foreign = plans.filter(p => p.source !== clusterKey && p.source !== "volsync").map(p => p.name);
 
-    return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems, copied, rcloneConfig));
+    return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems, foreign, rcloneConfig));
   }
 
   private _createSourceBackrestPlan(_detail: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, plan: BackupPlanItem, uptimeUrl: string, password: string) {
@@ -341,7 +343,7 @@ export class BackupPlanDirector extends ComponentResource {
     cluster: ClusterDefinition,
     depends: Input<Resource[]>,
     items: { repos: BackrestRepository[]; plans: BackrestPlan[] },
-    copied: readonly string[],
+    foreign: readonly string[],
     rcloneConfig?: string,
   ) {
     let updatedConfig: BackrestConfig = {
@@ -390,13 +392,18 @@ export class BackupPlanDirector extends ComponentResource {
     updateRepos(updatedConfig, items.repos);
     updatePlans(updatedConfig, items.plans);
     const emitted = { plans: items.plans.map(p => p.id), repos: items.repos.map(r => r.id) };
-    const removals = planLedgerRemovals({ previous: previousLedger, emitted, config: updatedConfig, host: cluster.key, copied });
-    applyLedgerRemovals(updatedConfig, removals, cluster.key, copied);
+    const removals = planLedgerRemovals({ previous: previousLedger, emitted, config: updatedConfig, host: cluster.key, foreign });
+    applyLedgerRemovals(updatedConfig, removals, cluster.key, foreign);
     removeRetiredPlans(updatedConfig, cluster.key);
 
     const configOutput = jsonStringify(updatedConfig);
 
-    const backrestConfig = copyFileToRemote("backrest-config.json", {
+    // Every file name below carries the host. copyFileToRemote stages content
+    // in a temp file named after this argument, so two directors in one stack
+    // (stacks/home runs celestia's and alpha-site's) with the same name would
+    // stage into ONE file and both upload whichever was written last. On
+    // 2026-10-01 that put alpha-site's config.json on celestia.
+    const backrestConfig = copyFileToRemote(`${cluster.key}-backrest-config.json`, {
       content: configOutput,
       connection: connection,
       remotePath: "/opt/stacks-data/backrest/config/config.json",
@@ -411,7 +418,7 @@ export class BackupPlanDirector extends ComponentResource {
     // the same removals, finds them already applied, and moves on. The reverse
     // order could record a removal that config.json never received, and the
     // leftover would then be forgotten for good.
-    copyFileToRemote("backrest-ledger.json", {
+    copyFileToRemote(`${cluster.key}-backrest-ledger.json`, {
       content: renderBackrestLedger(emitted),
       connection: connection,
       remotePath: BACKREST_LEDGER_PATH,
@@ -438,7 +445,7 @@ export class BackupPlanDirector extends ComponentResource {
     // absolute path is identical inside and out. See DockgeLxc.ts.
     const rcloneDeps: Input<Resource>[] = [];
     if (rcloneConfig) {
-      const rcloneFile = copyFileToRemote("backrest-rclone-garage.conf", {
+      const rcloneFile = copyFileToRemote(`${cluster.key}-backrest-rclone-garage.conf`, {
         content: rcloneConfig,
         connection: connection,
         remotePath: RCLONE_CONFIG_PATH,
@@ -553,9 +560,9 @@ async function readBackrestLedger(ssh: NodeSSH, clusterKey: string): Promise<Bac
 }
 
 /** Applies planLedgerRemovals' result to the config, and says what it did in the run log. */
-function applyLedgerRemovals(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, removals: LedgerRemovals, clusterKey: string, copied: readonly string[]) {
-  const isCopy = new Set(copied);
-  const describe = (ids: string[]) => ids.map(id => (isCopy.has(id) ? `${id} (received as a copy)` : id)).join(", ");
+function applyLedgerRemovals(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, removals: LedgerRemovals, clusterKey: string, foreign: readonly string[]) {
+  const isForeign = new Set(foreign);
+  const describe = (ids: string[]) => ids.map(id => (isForeign.has(id) ? `${id} (another host's)` : id)).join(", ");
   if (removals.plans.length > 0) {
     const drop = new Set(removals.plans);
     updatedConfig.plans = updatedConfig.plans.filter(p => !drop.has(p.id));
@@ -567,9 +574,9 @@ function applyLedgerRemovals(updatedConfig: { repos: BackrestRepository[]; plans
     log.info(`Removed ${removals.repos.length} backrest repo(s) the director does not manage on ${clusterKey}; their data stays on disk: ${describe(removals.repos)}`);
   }
   for (const { id, usedBy } of removals.keptRepos) {
-    if (isCopy.has(id)) {
+    if (isForeign.has(id)) {
       log.warn(
-        `Kept backrest repo ${id} on ${clusterKey} because plan(s) ${usedBy.join(", ")} still use it, but ${clusterKey} receives this repo as a copy: the copy job syncs over whatever those plans write. Point them at another repo.`,
+        `Kept backrest repo ${id} on ${clusterKey} because plan(s) ${usedBy.join(", ")} still use it, but the repo is another host's: a copy here is synced over, and a Garage repo needs that host's key. Point them at another repo.`,
       );
     } else {
       log.warn(`Kept backrest repo ${id} on ${clusterKey}: the director no longer emits it, but plan(s) ${usedBy.join(", ")} still use it.`);
