@@ -10,10 +10,9 @@ metadata:
   # run, so a rotated token is picked up by the next run with nothing to
   # restart.
 spec:
-  # 03:00 nightly. Deliberately NOT the "every weekend" schedule the GitHub
-  # side uses (.github/renovate.json5): that one is a Mend-hosted app filing
-  # against a repo with CI minutes attached, this one is a cron in the cluster
-  # whose only cost is a couple of pods.
+  # 03:00 nightly. This is when the bot RUNS; when PRs may OPEN is the
+  # inherited `schedule` in .github/renovate.json5, now "at any time", so a
+  # nightly run files its PRs that night.
   schedule: "0 3 * * *"
 
   # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
@@ -133,10 +132,10 @@ spec:
         //
         // Two things it drags along that are worth knowing:
         //
-        //   * `schedule: ["every weekend"]`. Inherited by every Forgejo
-        //     repository, so although the cron below fires nightly, PRs only
-        //     appear at weekends unless a repository overrides it. That is the
-        //     existing house default; change it in the preset, not here.
+        //   * `schedule: ["at any time"]` (it was "every weekend"). Inherited
+        //     by every Forgejo repository, so PRs open on whichever night the
+        //     cron above finds an update, unless a repository overrides it.
+        //     That is the house default; change it in the preset, not here.
         //   * the flux/helm-values/kubernetes/kustomize manager settings are
         //     scoped to `kubernetes/**`, so on a repository without that tree
         //     they are inert rather than wrong.
