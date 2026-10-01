@@ -26,9 +26,11 @@
 import * as garage from "@axnic/pulumi-garage";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
+import { GARAGE_COPY_BUCKETS, GARAGE_COPY_KEYS, garageCopyEndpoint } from "@components/garageTruenasCopy.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import { copyFileToRemote } from "@components/helpers.ts";
 import type { DockgeLxcDefinition } from "@components/store/index.ts";
+import { configureGarageCopy } from "@components/truenas.ts";
 import { remote } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
@@ -315,9 +317,16 @@ RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
   // recovery.
   const dockgeInstances = globals.store.getDockgeInstances();
 
+  // Every bucket this module manages, by name, for the read-only grants below.
+  const managedBuckets = new Map<string, garage.Bucket>([
+    ["cnpg-equestria", cnpgBucket],
+    ["garage-mirror", mirrorBucket],
+  ]);
+
   for (const clusterKey of GARAGE_CLUSTERS) {
     const bucketName = `postgres-${clusterKey}`;
     const bucket = backupBucket(bucketName, DUMPS_BUCKET_QUOTA);
+    managedBuckets.set(bucketName, bucket);
     const key = readWriteKey(bucketName, bucket);
 
     if (globals.baoDualWriteEnabled) {
@@ -357,11 +366,93 @@ RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
   // this file is exactly how the mirror service on luna/skystar knows to idle.
   dockgeInstances.apply(instances => deliverCredentialFile("celestia", "mirror.env", credentialFile(mirrorKey, "mirror.sh"), instances));
 
+  // ── TrueNAS: the independent, versioned copy ───────────────────────────────
+  // One key with read on every bucket spike pulls with it
+  // (components/garageTruenasCopy.ts, docs/plans/host-owned-backups.md §C3).
+  // Read and list only: no write, no delete, no owner rights, so a compromised
+  // TrueNAS can copy these buckets and cannot change them.
+  //
+  // A bucket in that list that this module does not manage is a code error, so
+  // it fails here, on the merge, instead of as a pull TrueNAS is refused.
+  const truenasCopyKey = new garage.Key("truenas-copy", { name: "truenas-copy" }, { provider });
+  const truenasCopyGrants = GARAGE_COPY_BUCKETS.filter(entry => entry.key === "truenas-copy").map(({ bucket }) => {
+    const managed = managedBuckets.get(bucket);
+    if (!managed) {
+      throw new Error(
+        `GARAGE_COPY_BUCKETS (components/garageTruenasCopy.ts) gives '${bucket}' to the truenas-copy key, but stacks/system does not manage a bucket of that name. Create it here first, or pull it with another key.`,
+      );
+    }
+    return new garage.BucketKeyPermission(
+      `truenas-copy-${bucket}-r`,
+      {
+        bucketId: managed.id,
+        accessKeyId: truenasCopyKey.accessKeyId,
+        permissions: { read: true, write: false, owner: false },
+      },
+      { provider },
+    );
+  });
+
+  if (globals.baoDualWriteEnabled) {
+    baoKvSecret(
+      "truenas-copy-garage-bao",
+      {
+        mount: "secrets",
+        path: GARAGE_COPY_KEYS["truenas-copy"],
+        data: {
+          endpoint: pulumi.output(globals.searchDomain).apply(garageCopyEndpoint),
+          region: REGION,
+          username: truenasCopyKey.accessKeyId,
+          password: truenasCopyKey.secretAccessKey,
+        },
+        concealedFields: ["password"],
+        customMetadata: baoProvenance({ source_title: "Garage TrueNAS Copy Key (spike)" }),
+      },
+      { provider: globals.baoProvider },
+    );
+  } else {
+    warnNoBao(`the TrueNAS copy key (${GARAGE_COPY_KEYS["truenas-copy"]})`);
+  }
+
+  // Hand both keys to spike in this same run (components/truenas.ts
+  // configureGarageCopy), the way deliverCredentialFile hands the others to
+  // their hosts. The record above is for humans and recovery. `pulumi-state`
+  // is pulled with the ceremony's reader key, read from OpenBao: a stack that
+  // cannot read OpenBao fails long before this anyway. The grants are inputs
+  // too, so TrueNAS never sees the key before it can read its buckets.
+  const pulumiStateReader = globals.store.getSecretByPath<{ username: string; password: string }>(GARAGE_COPY_KEYS["pulumi-state-reader"]);
+  const truenasCopy = pulumi
+    .all([
+      truenasCopyKey.accessKeyId,
+      truenasCopyKey.secretAccessKey,
+      pulumiStateReader.username,
+      pulumiStateReader.password,
+      globals.truenasCredential.meta.title,
+      globals.searchDomain,
+      pulumi.all(truenasCopyGrants.map(grant => grant.id)),
+    ])
+    .apply(([copyKeyId, copySecret, readerKeyId, readerSecret, truenasCredentialTitle, searchDomain]) =>
+      configureGarageCopy({
+        globals,
+        truenasCredentialTitle,
+        endpoint: garageCopyEndpoint(searchDomain),
+        uptimeUrl: `https://uptime.${searchDomain}`,
+        keys: {
+          "truenas-copy": { accessKeyId: copyKeyId, secretAccessKey: copySecret },
+          "pulumi-state-reader": { accessKeyId: readerKeyId, secretAccessKey: readerSecret },
+        },
+      }),
+    );
+
   return {
     buckets: {
       cnpgEquestria: cnpgBucket.id,
       garageMirror: mirrorBucket.id,
       postgres: GARAGE_CLUSTERS.map(c => `postgres-${c}`),
     },
+    // What this run configured on spike, or why it skipped. Its inputs carry
+    // the keys, so Pulumi marks it secret; the result itself holds bucket names
+    // and a fixed message only, so it is shown in the clear.
+    truenasCopy: pulumi.unsecret(truenasCopy),
   };
 }

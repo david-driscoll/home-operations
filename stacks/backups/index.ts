@@ -1,5 +1,6 @@
 import { type BackupPlanItem, BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets, resticExcludesFor, STACKS_DATA_ROOT } from "@components/dockerStackBackups.ts";
+import { GARAGE_COPY_BUCKETS, TRUENAS_GARAGE_COPY_GROUP } from "@components/garageTruenasCopy.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { addUptimeGatus, toGatusKey } from "@components/helpers.ts";
 import type { ExternalEndpoint } from "@openapi/application-definition.js";
@@ -300,6 +301,34 @@ addUptimeGatus("pulumi-state-offsite-backup", globals, {
             ],
           }) as ExternalEndpoint,
       ),
+  ),
+});
+
+// The TrueNAS copy of the geo Garage (components/garageTruenasCopy.ts): one
+// heartbeat per pulled bucket, pushed by that bucket's Cloud Sync task on
+// spike. TrueNAS runs the push only after a pull succeeds, so a failing pull
+// is silence, and the 25-hour window is what pages. The tokens come from the
+// same group name and bucket on both sides; renaming either orphans the push.
+addUptimeGatus("truenas-garage-copy", globals, {
+  endpoints: [],
+  "external-endpoints": GARAGE_COPY_BUCKETS.map(
+    ({ bucket }) =>
+      ({
+        enabled: true,
+        name: bucket,
+        token: toGatusKey(TRUENAS_GARAGE_COPY_GROUP, bucket),
+        group: TRUENAS_GARAGE_COPY_GROUP,
+        heartbeat: { interval: "25h" },
+        alerts: [
+          {
+            type: "pushover",
+            enabled: true,
+            "success-threshold": 1,
+            "failure-threshold": 1,
+            "minimum-reminder-interval": "24h",
+          },
+        ],
+      }) as ExternalEndpoint,
   ),
 });
 
