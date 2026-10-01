@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# sdk-typecheck -- every TypeScript error in the components and the stacks, one
+# per line, sorted, so two runs can be compared with `comm`.
+#
+# Used by .github/workflows/pulumi-sdk-regen.yaml before and after it
+# regenerates the bridged-provider SDKs: only errors that appear AFTER are
+# blamed on the new SDK, because the tree has type errors of its own on main.
+#
+# Projects: the root tsconfig.json (components/, types/) and each
+# stacks/*/tsconfig.json -- the stacks are what import @pulumi/<provider>.
+#
+# TS_VERSION pins the compiler (the workflow passes .config/mise.toml's
+# npm:typescript); unset, the `tsc` on PATH is used.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+tsc_run() {
+  if [[ -n "${TS_VERSION:-}" ]]; then
+    npm exec --yes --package="typescript@${TS_VERSION}" -- tsc "$@"
+  else
+    tsc "$@"
+  fi
+}
+
+for project in tsconfig.json stacks/*/tsconfig.json; do
+  # tsc exits non-zero whenever there are errors; that is the expected case.
+  tsc_run --noEmit --pretty false -p "$project" 2>&1 | grep -E 'error TS[0-9]+' || true
+done | sort -u
