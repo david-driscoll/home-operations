@@ -39,11 +39,26 @@ spec:
       data:
         # Own repository per source -- restic repositories are per-volume here,
         # matching the one-repo-per-`${APP}` shape the component establishes.
-        RESTIC_REPOSITORY: "/repository/crowdsec-config"
+        #
+        # In Garage since phase 3 of docs/plans/host-owned-backups.md, at the same
+        # repository name it had on NFS, so garage-history-copy (volsync-system)
+        # carried its history across. Written out rather than switched: the
+        # component's VOLSYNC_BACKEND does not reach a bespoke Secret. Endpoint,
+        # bucket and key come from the record every component Secret extracts.
+        RESTIC_REPOSITORY: "s3:{{ .garage_endpoint }}/{{ .garage_bucket }}/crowdsec-config"
         RESTIC_PASSWORD: "{{ .credential }}"
+        AWS_ACCESS_KEY_ID: "{{ .garage_username }}"
+        AWS_SECRET_ACCESS_KEY: "{{ .garage_password }}"
+        AWS_DEFAULT_REGION: "{{ .garage_region }}"
   dataFrom:
     - extract:
         key: apps/volsync/password
+    - extract:
+        key: clusters/equestria/apps/volsync/garage
+      rewrite:
+        - regexp:
+            source: "(.*)"
+            target: "garage_$1"
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -61,11 +76,21 @@ spec:
         labels:
           volsync: "true"
       data:
-        RESTIC_REPOSITORY: "/repository/crowdsec-db"
+        # In Garage, like crowdsec-config above.
+        RESTIC_REPOSITORY: "s3:{{ .garage_endpoint }}/{{ .garage_bucket }}/crowdsec-db"
         RESTIC_PASSWORD: "{{ .credential }}"
+        AWS_ACCESS_KEY_ID: "{{ .garage_username }}"
+        AWS_SECRET_ACCESS_KEY: "{{ .garage_password }}"
+        AWS_DEFAULT_REGION: "{{ .garage_region }}"
   dataFrom:
     - extract:
         key: apps/volsync/password
+    - extract:
+        key: clusters/equestria/apps/volsync/garage
+      rewrite:
+        - regexp:
+            source: "(.*)"
+            target: "garage_$1"
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/volsync.backube/replicationsource_v1alpha1.json
 apiVersion: volsync.backube/v1alpha1
@@ -95,6 +120,10 @@ spec:
       runAsUser: 0
       runAsGroup: 0
       fsGroup: 0
+    # The repository is in Garage, so volsync-mover-nfs (volsync-system) leaves
+    # the NFS share off this mover; see kubernetes/components/volsync.
+    moverPodLabels:
+      driscoll.dev/volsync-backend: garage
     retain:
       hourly: 0
       daily: 7
@@ -127,6 +156,8 @@ spec:
       runAsUser: 0
       runAsGroup: 0
       fsGroup: 0
+    moverPodLabels:
+      driscoll.dev/volsync-backend: garage
     retain:
       hourly: 0
       daily: 7
