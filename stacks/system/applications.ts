@@ -23,6 +23,7 @@
  */
 import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { rootDomain } from "@components/domains.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
@@ -88,7 +89,7 @@ export async function configureApplications(globals: GlobalResources) {
   const _irisBrand = new authentik.Brand(
     "iris",
     {
-      domain: "iris.driscoll.tech",
+      domain: `iris.${rootDomain()}`,
       brandingLogo: "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg",
       brandingTitle: "Stargate Command",
       brandingFavicon: "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg",
