@@ -15,7 +15,9 @@
 # Usage:
 #   private-domain-guard check [--cached]  scan tracked files (working tree, or
 #                                          the index with --cached); fail on any
-#                                          file not listed in the baseline
+#                                          file not listed in the baseline, and
+#                                          when mise's copy of the names
+#                                          (.config/domains.sops.yaml) disagrees
 #   private-domain-guard stdin [path]      exit 1 if stdin contains a name (the
 #                                          Claude Code Write/Edit hook); `path`,
 #                                          repo-relative, applies the allow-list
@@ -101,6 +103,18 @@ case "$cmd" in
     ;;
   check)
     load_names || skip
+    # .config/domains.sops.yaml is mise's flat copy of the two names (mise
+    # cannot read the Secret manifest above). A copy that drifts would hand
+    # every local tool a stale name, so it must agree with the source.
+    copy="$top/.config/domains.sops.yaml"
+    if [[ -r "$copy" ]]; then
+      json="$(sops -d --output-type json "$copy" 2>/dev/null)" || json=""
+      if [[ -n "$json" ]] && { [[ "$(jq -r '.ROOT_DOMAIN // empty' <<<"$json")" != "$root" ]] ||
+        [[ "$(jq -r '.TAILSCALE_DOMAIN // empty' <<<"$json")" != "$tailnet" ]]; }; then
+        echo "private-domain-guard: .config/domains.sops.yaml disagrees with ${secrets#"$top"/} -- run \`mise run private-names-sync\`" >&2
+        exit 1
+      fi
+    fi
     mode=()
     [[ "${2:-}" == "--cached" ]] && mode=(--cached)
     words=()

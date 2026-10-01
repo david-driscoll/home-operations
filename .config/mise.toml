@@ -174,6 +174,11 @@ idiomatic_version_file_enable_tools = ["dotnet"]
 # failure is quiet — a Talos config generated for 1.13.8 validated by a 1.13.5
 # client.
 activate_aggressive = true
+# mise decrypts ONE file itself: .config/domains.sops.yaml, at the top of
+# [env]. Strict mode would fail every mise command in the repo wherever the
+# age key is absent (CI, Renovate, a fresh laptop); off, the two names are
+# just empty there, and nothing that needs them works anyway.
+sops.strict = false
 
 [env]
 # Secret values are `vals` references, resolved per command:
@@ -196,6 +201,34 @@ activate_aggressive = true
 # `eval "$(bootstrap/openbao/pulumi-env.sh)"` step any more. That script
 # still works and is still the break-glass path when the mise AppRole is
 # revoked.
+
+# The estate's root domain and tailnet: the two names this public repo never
+# writes (docs/plans/private-domain-scrub.md). They are the one exception to
+# resolving per command: mise decrypts .config/domains.sops.yaml itself, on
+# every load, so plain commands (docker, bao, an MCP client) see real values.
+# The file is local, so no network is involved, and without the age key the
+# names are just empty (`sops.strict = false` above).
+#
+# It is a flat copy of ROOT_DOMAIN / TAILSCALE_DOMAIN in
+# kubernetes/flux/meta/shared-secrets.sops.yaml, the file Flux reads. Write it
+# only with `mise run private-names-sync`; scripts/private-domain-guard fails
+# a commit where the two disagree.
+#
+# SOPS_AGE_KEY_FILE comes first because mise's own decryption reads it from
+# here.
+#
+# It is only a DEFAULT. An agentboard pod already exports SOPS_AGE_KEY_FILE pointing
+# at the mounted estate identity (/var/run/secrets/sops-age/age.agekey, see
+# kubernetes/apps/agents/agentboard/helmrelease.yaml), and no repo-root age.key
+# exists there. A plain assignment overrode that correct value with a missing
+# file, so every `ref+sops://` failed in the pod with "0 successful groups
+# required, got 0". Verified 2026-09-12: get_env keeps an inherited value and
+# falls back to {{config_root}}/age.key when nothing is set.
+SOPS_AGE_KEY_FILE = "{{ get_env(name='SOPS_AGE_KEY_FILE', default=config_root ~ '/age.key') }}"
+_.file = "{{config_root}}/.config/domains.sops.yaml"
+# Always defined, so the templates below render empty instead of failing.
+ROOT_DOMAIN = "{{ env.ROOT_DOMAIN | default(value='') }}"
+TAILSCALE_DOMAIN = "{{ env.TAILSCALE_DOMAIN | default(value='') }}"
 # The Pulumi state backend: a Garage key scoped to the `pulumi-state` bucket
 # on the dockge cluster (every stacks/*/.mise.toml points PULUMI_BACKEND_URL
 # there). Region `garage` is part of every SigV4 signature.
@@ -215,7 +248,7 @@ PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS = "true"
 # you decrypt state and run Pulumi to fix it. Point this at the sops file
 # if you ever need that.
 PULUMI_CONFIG_PASSPHRASE = "ref+openbao://secrets/apps/pulumi/passphrase#/password"
-CONNECT_HOST = "https://op-connect.equestria.driscoll.tech/"
+CONNECT_HOST = "https://op-connect.equestria.{{ env.ROOT_DOMAIN }}/"
 CONNECT_VAULT = "Eris"
 # Still needed: Pulumi WRITES the PBS items a human logs into the generated
 # LXCs with (Phase 11 estate decision). Nothing READS 1Password any more.
@@ -234,6 +267,18 @@ AUTHENTIK_URL = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#
 # before `secrets/shared/` was drained (scripts/bao-reorg/plan.ts, phase 3).
 TAILSCALE_CLIENT_ID = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/username"
 TAILSCALE_CLIENT_SECRET = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/credential"
+
+# The toolport MCP doors that .mcp.json reads. It has no defaults, because a
+# default would name the domain. An agentboard or kube-coder pod exports its
+# own TOOLPORT_<PROFILE>_URL (the in-cluster proxy that presents the bearer),
+# and get_env keeps that; anywhere else it is the profile's OAuth door
+# (docs/kubernetes/agentboard-mcp.md).
+TOOLPORT_INFRASTRUCTURE_URL = "{{ get_env(name='TOOLPORT_INFRASTRUCTURE_URL', default='https://toolport-infrastructure.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
+TOOLPORT_NETWORKING_URL = "{{ get_env(name='TOOLPORT_NETWORKING_URL', default='https://toolport-networking.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
+TOOLPORT_HOME_URL = "{{ get_env(name='TOOLPORT_HOME_URL', default='https://toolport-home.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
+TOOLPORT_MEDIA_URL = "{{ get_env(name='TOOLPORT_MEDIA_URL', default='https://toolport-media.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
+TOOLPORT_POSTGRES_URL = "{{ get_env(name='TOOLPORT_POSTGRES_URL', default='https://toolport-postgres.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
+TOOLPORT_RESEARCH_URL = "{{ get_env(name='TOOLPORT_RESEARCH_URL', default='https://toolport-research.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 
 # How every ref+openbao:// value above authenticates.
@@ -253,24 +298,10 @@ _.python.venv = { path = "{{config_root}}/.venv", create = true }
 # WITH cannot live in the store it unlocks (bootstrap/INVENTORY.md §2).
 # Create or rotate it with ./scripts/bao-mise-approle.sh — the sealed file is
 # committed, and the age key is what actually gates access.
-BAO_ADDR = "https://bao.equestria.driscoll.tech"
+BAO_ADDR = "https://bao.equestria.{{ env.ROOT_DOMAIN }}"
 BAO_AUTH_METHOD = "approle"
 BAO_ROLE_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/role_id"
 BAO_SECRET_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/secret_id"
-# The estate's root domain for local Pulumi runs (and anything else that needs
-# it), from the same SOPS secret Flux substitutes into the Stack CRs. Resolved
-# per command by `mise run vals-run`, like every ref+ value here. Never write
-# the value itself anywhere: docs/plans/private-domain-scrub.md.
-ROOT_DOMAIN = "ref+sops://{{config_root}}/kubernetes/flux/meta/shared-secrets.sops.yaml#/stringData/ROOT_DOMAIN"
-
-# Only a DEFAULT. An agentboard pod already exports SOPS_AGE_KEY_FILE pointing
-# at the mounted estate identity (/var/run/secrets/sops-age/age.agekey, see
-# kubernetes/apps/agents/agentboard/helmrelease.yaml), and no repo-root age.key
-# exists there. A plain assignment overrode that correct value with a missing
-# file, so every `ref+sops://` failed in the pod with "0 successful groups
-# required, got 0". Verified 2026-09-12: get_env keeps an inherited value and
-# falls back to {{config_root}}/age.key when nothing is set.
-SOPS_AGE_KEY_FILE = "{{ get_env(name='SOPS_AGE_KEY_FILE', default=config_root ~ '/age.key') }}"
 
 # Where talhelper writes the generated admin talosconfig, and where every
 # `talos:*` task expects to find it. Set globally so an ad-hoc `talosctl` in

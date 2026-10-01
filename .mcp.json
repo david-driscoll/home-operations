@@ -2,27 +2,27 @@
   "mcpServers": {
     "toolport-infrastructure": {
       "type": "http",
-      "url": "${TOOLPORT_INFRASTRUCTURE_URL:-https://toolport-infrastructure.agents.driscoll.tech/mcp}"
+      "url": "${TOOLPORT_INFRASTRUCTURE_URL}"
     },
     "toolport-networking": {
       "type": "http",
-      "url": "${TOOLPORT_NETWORKING_URL:-https://toolport-networking.agents.driscoll.tech/mcp}"
+      "url": "${TOOLPORT_NETWORKING_URL}"
     },
     "toolport-home": {
       "type": "http",
-      "url": "${TOOLPORT_HOME_URL:-https://toolport-home.agents.driscoll.tech/mcp}"
+      "url": "${TOOLPORT_HOME_URL}"
     },
     "toolport-media": {
       "type": "http",
-      "url": "${TOOLPORT_MEDIA_URL:-https://toolport-media.agents.driscoll.tech/mcp}"
+      "url": "${TOOLPORT_MEDIA_URL}"
     },
     "toolport-postgres": {
       "type": "http",
-      "url": "${TOOLPORT_POSTGRES_URL:-https://toolport-postgres.agents.driscoll.tech/mcp}"
+      "url": "${TOOLPORT_POSTGRES_URL}"
     },
     "toolport-research": {
       "type": "http",
-      "url": "${TOOLPORT_RESEARCH_URL:-https://toolport-research.agents.driscoll.tech/mcp}"
+      "url": "${TOOLPORT_RESEARCH_URL}"
     },
     "mise": {
       "args": ["mcp"],
