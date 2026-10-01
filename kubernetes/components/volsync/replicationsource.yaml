@@ -82,7 +82,7 @@ spec:
     # reads this label to leave NFS out of a Garage mover, so a TrueNAS
     # outage cannot hold up a backup that never touches it.
     moverPodLabels:
-      driscoll.dev/volsync-backend: "${VOLSYNC_BACKEND:=nfs}"
+      driscoll.dev/volsync-backend: "${VOLSYNC_BACKEND:=garage}"
 
     # moverResources:
     #   requests:

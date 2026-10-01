@@ -626,6 +626,8 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
    `RESTIC_REPOSITORY=s3:https://s3.celestia.${ROOT_DOMAIN}/volsync-equestria/${APP}`, the AWS key
    pair and `AWS_DEFAULT_REGION=garage`.
    - It starts as a per-app variable for the migration and becomes the default afterwards.
+     ✅ The default since 2026-10-01, once every deployed app had moved. The 60 per-app settings
+     are gone, and `VOLSYNC_BACKEND: nfs` is the per-app fallback until step 7.
    - The endpoint is a variable too. While celestia is down, the fallback to the VIP is one change.
    - `volsync-mover-nfs` stops mounting NFS into movers that no longer use it.
 

@@ -27,7 +27,7 @@ spec:
     # Same label, same reason, as the ReplicationSource: the restore reads
     # the store the shared Secret names.
     moverPodLabels:
-      driscoll.dev/volsync-backend: "${VOLSYNC_BACKEND:=nfs}"
+      driscoll.dev/volsync-backend: "${VOLSYNC_BACKEND:=garage}"
 
     # moverResources:
     #   requests:

@@ -2,12 +2,17 @@
 # Brings each moved app's restic history from the TrueNAS NFS share into
 # Garage (garage-history-copy.sh), docs/plans/host-owned-backups.md phase 3.
 #
-# One Job for the whole migration. Each batch edits APPS below in the same
-# change that sets VOLSYNC_BACKEND: garage on those apps. A Job's spec is
-# immutable, so the force label has Flux delete and recreate it rather than
-# fail the apply. The new run goes over the earlier apps again and finds
-# nothing left to copy. No ttlSecondsAfterFinished, on purpose: a Job
-# deleted after finishing would be recreated by the next reconcile, and
+# One Job for the whole migration. Each batch edited APPS below in the same
+# change that moved those apps. Garage has been the component's default
+# since every deployed app moved, so the per-app switch is gone. An app
+# enabled later, such as one of the component apps disabled today, starts
+# with a fresh Garage repository. If its old NFS repository is worth
+# keeping, add it to APPS in the change that enables it.
+#
+# A Job's spec is immutable, so the force label has Flux delete and recreate
+# it rather than fail the apply. The new run goes over the earlier apps again
+# and finds nothing left to copy. No ttlSecondsAfterFinished, on purpose: a
+# Job deleted after finishing would be recreated by the next reconcile, and
 # would run again every hour.
 #
 # Named without the `volsync-` prefix so that neither MutatingAdmissionPolicy
