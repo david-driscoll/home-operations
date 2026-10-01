@@ -6,7 +6,7 @@ title: Alpha Site
 type: dockge
 location: home
 domainPrefix: as
-authentikDomain: iris.driscoll.tech
+authentikPrefix: iris
 icon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
 favicon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
 background: https://images.playground.com/43f58221d361456293f38739b6c69cea.jpeg

@@ -9,6 +9,7 @@ import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as VaultProvider } from "@pulumi/vault";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { BAO_CREDENTIAL_HINT, baoEnv, baoEnvUnresolved } from "./bao.ts";
+import { rootDomain } from "./domains.ts";
 import { BaoStore } from "./store/bao.ts";
 import type { VaultStore } from "./store/index.ts";
 
@@ -43,7 +44,7 @@ export class GlobalResources extends ComponentResource {
     super("custom:home:resources", "globals", args, opts);
 
     const cro: CustomResourceOptions = { parent: this };
-    this.searchDomain = output("driscoll.tech");
+    this.searchDomain = output(rootDomain());
     this.gateway = output("10.10.0.1");
 
     // One store. The 1Password reads were removed in Phase 11 — see
@@ -216,7 +217,7 @@ export class GlobalResources extends ComponentResource {
     this._baoProvider = new VaultProvider(
       "openbao",
       {
-        address: process.env.BAO_ADDR ?? "https://bao.equestria.driscoll.tech",
+        address: process.env.BAO_ADDR ?? `https://bao.equestria.${rootDomain()}`,
         ...(token
           ? { token }
           : haveApprole

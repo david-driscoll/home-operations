@@ -10,22 +10,10 @@
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 
 # --- Phase 4: Pulumi code and cluster definitions ---
-clusters/alpha-site.yaml
-clusters/celestia.yaml
-clusters/equestria.yaml
-clusters/luna.yaml
-clusters/skystar.yaml.disabled
-components/ProxmoxBackupServerLxc.ts
-components/StandardDns.ts
+# The code reads ROOT_DOMAIN now (4b). What is left is the login flows' display
+# titles, which spell the estate's name as words; what they should say instead
+# is an open decision (docs/plans/private-domain-scrub.md, section F).
 components/authentik/flows.ts
-components/globals.ts
-components/openbao/oidc.ts
-components/store/clusters.test.ts
-components/store/clusters.ts
-components/tunnelRules.test.ts
-stacks/system/applications.ts
-stacks/unifi-network/local-dns.ts
-stacks/unifi-network/technitium-zone.ts
 
 # --- Phase 5: tooling and hosts outside Flux (mise env, MCP, scripts, Docker, Talos) ---
 .config/mise.toml
