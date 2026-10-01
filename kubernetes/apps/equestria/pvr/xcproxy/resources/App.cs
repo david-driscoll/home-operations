@@ -1,7 +1,7 @@
 #!/Users/david/.local/share/mise/installs/1password-cli/2.30.3/bin/op run --no-masking -- dotnet run
 // #:package YamlDotNet@16.3.0
 #:sdk Microsoft.NET.Sdk.Web
-#:package Dumpify@0.7.0
+#:package Dumpify@0.8.0
 #:package Lunet.Extensions.Logging.SpectreConsole@1.2.0
 #:package System.Text.Json@10.0.12
 #:package System.Text.RegularExpressions@4.3.1
