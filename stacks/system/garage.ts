@@ -84,14 +84,21 @@ const MIRROR_BUCKET_QUOTA = 1024 * GiB;
 // points a writer at one. Immich (phase 4) is the one likely to need more.
 const RESTIC_BUCKET_QUOTA = 100 * GiB;
 
-// VolSync's bucket, measured on 2026-10-01 before the first app moves (phase 3).
-// The 62 apps' latest snapshots hold 99.5 GiB of data. The registry cache
-// alone is 44.3 GiB, and Plex 13.4 GiB. The 15 repos that pruned in Loki's
-// three-day window were about 0.7x their snapshot size once compressed, with
-// history included, so the repos come to roughly 90-145 GiB. Twice the top of
-// that range leaves room for the registry's churn, which no compression
-// touches. Every quota here sums to about 2.75 TiB against the 4T share.
-const VOLSYNC_BUCKET_QUOTA = 300 * GiB;
+// VolSync's bucket.
+//
+// 300 GiB first (2026-10-01): the 62 apps' latest snapshots hold 99.5 GiB, and
+// 15 small repos ran at about 0.7x their snapshot size, history included,
+// which put the set at roughly 90-145 GiB. The history copy disproved that
+// the same day. game-thumbs alone kept the copy busy for over 40 minutes, and
+// celestia's node took 39.4 GiB in 16.5 minutes of it, with the registry and
+// Plex still to come. A history whose data churns is many times its newest
+// snapshot, and the small repos never showed that.
+//
+// So 1 TiB until the copy finishes and the bucket can be measured. A quota is
+// only a ceiling, and running into it would refuse every mover's write at
+// once, so the margin goes on the side of not failing. Every quota here sums
+// to about 3.46 TiB against the 4T share. Trim it once the real size is known.
+const VOLSYNC_BUCKET_QUOTA = 1024 * GiB;
 
 // The Docker hosts that each get a `backrest-<host>` bucket: the garage nodes,
 // plus alpha-site, which has no node and writes through celestia's. Same rule
