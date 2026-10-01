@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Phase 2 started 2026-10-01 with TrueNAS pulling the buckets already in Garage (steps 3–6). Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -218,7 +218,9 @@ step 1).
 
 ### C3. TrueNAS keeps the independent copy
 
-- **Key.** One read-only Garage key, `truenas-copy`, covers every bucket TrueNAS pulls.
+- **Key.** One read-only Garage key, `truenas-copy`, covers every bucket TrueNAS pulls, except
+  `pulumi-state`. That bucket lives outside Pulumi, so it is pulled with the ceremony's read-only
+  `pulumi-state-reader` key instead (phase 2, step 6).
 - **Pull.** One Cloud Sync task per bucket: direction `PULL`, mode `SYNC`, into
   `stash/backup/garage/<bucket>`, excluding `locks/**`. Each is scheduled after its writers'
   window, and a post-script pushes to Gatus.
@@ -237,8 +239,10 @@ step 1).
 - **Restores do not need Garage.** Point restic at a ZFS snapshot with `--no-lock`, or at a clone.
   An NFS share, like the ones `addClusterBackup` creates, lets celestia's Backrest browse the copy
   read-only.
-- **Managed from Pulumi.** `TruenasVm` gains `addGarageCopy(...)`, and `TrueNASResourceManager`
-  gains cloud-sync credential, cloud-sync task and snapshot-task helpers.
+- **Managed from Pulumi.** `configureGarageCopy` (`components/truenas.ts`), called from
+  `stacks/system`, configures spike from the list in `components/garageTruenasCopy.ts`.
+  `TrueNASResourceManager` gains cloud-sync credential, cloud-sync task and snapshot-task helpers
+  (phase 2, step 3).
 
 **Snapshot retention ✅.** One task per tier. Each has its own naming schema, so TrueNAS keeps
 their retention apart.
@@ -459,17 +463,39 @@ on luna.
      Celestia's also covers `backrest-immich`. The read-only `truenas-copy` key covers every pulled
      bucket.
    - An OpenBao record for each key.
+   - ✅ **In part, first:** the `truenas-copy` key, with read on `cnpg-equestria` and
+     `postgres-{celestia,luna,skystar}`, and its record at `clusters/spike/apps/garage/copy`. The
+     new buckets and their writer keys wait for step 1's numbers.
 3. **TrueNAS** (`components/truenas/*` and `components/TruenasVm.ts`, called from `stacks/home`).
    - Add `cloudsync.credentials.*` and `cloudsync.*` types and manager helpers, plus a
      `pool.snapshottask` helper.
    - Create one dataset and one Cloud Sync task per pulled bucket, plus the four snapshot tasks
      (§C3).
    - Each task's post-script pushes to Gatus.
+   - ✅ **As built, from `stacks/system` instead of `stacks/home`.** `configureGarageCopy`
+     (`components/truenas.ts`) runs in the stack that mints `truenas-copy`, so one run creates the
+     key and hands it to TrueNAS, the way `deliverCredentialFile` hands keys to the Docker hosts.
+     From `stacks/home` it would race the key's creation ("How a change reaches the hosts").
+     - `stacks/system` resyncs every five minutes, so every write is conditional on a difference
+       (the matchers in `truenas-manager.ts`). A steady-state run is one login and a few queries.
+       The cadence is also the retry, and it puts back anything edited by hand.
+     - It never fails the stack, because that stack also mints every app's database
+       credentials. A failure is a warning in the run log and `skipped` in the `garage` stack
+       output.
+     - Managed tasks are described `garage-copy: <bucket>`. A task whose bucket leaves the list
+       is deleted; its dataset and snapshots stay.
+     - The list of buckets and keys is `components/garageTruenasCopy.ts`, shared with
+       `stacks/backups`.
 4. **Network ✅.** spike reaches celestia's node over the LAN (§C3). Confirm that spike resolves
-   `s3.celestia.<root domain>` to celestia's LAN address and can reach it.
+   `s3.celestia.<root domain>` to celestia's LAN address and can reach it. The first scheduled
+   pull confirms it: a failure shows in the TrueNAS task and, a day later, as a red heartbeat.
 5. **Monitoring.** Add a `TrueNAS Garage Copy` Gatus group, with one 25-hour heartbeat per bucket,
-   in `stacks/backups/index.ts`.
-6. **Start pulling** `cnpg-equestria`, `pulumi-state` and `postgres-{celestia,luna,skystar}`.
+   in `stacks/backups/index.ts`. ✅ Built. TrueNAS runs the post-script only after a successful
+   pull, so a failed pull is silence and the window is what pages.
+6. **Start pulling** `cnpg-equestria`, `pulumi-state` and `postgres-{celestia,luna,skystar}`. ✅
+   Built: daily at 13:00 local, then snapshots at 18:00. `pulumi-state` uses the ceremony's
+   `pulumi-state-reader` key (`apps/pulumi/state-s3-reader`), because `stacks/system` has no
+   bucket id to grant `truenas-copy` on (docs/garage-offsite-s3.md).
 7. **alpha-site moves.** It is the first Docker host on Garage and the pilot for phase 4.
    - Delete `docker/alpha-site/backrest/.ignore`.
    - Add alpha-site to the `source` union.

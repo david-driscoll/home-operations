@@ -7,6 +7,18 @@
 
 import type { TrueNASClient } from "./truenas-client.js";
 import {
+  type CloudCredential,
+  CloudCredentialCreateRequest,
+  type CloudCredentialInput,
+  CloudCredentialQueryRequest,
+  CloudCredentialUpdateRequest,
+  CloudSyncCreateRequest,
+  CloudSyncDeleteRequest,
+  CloudSyncQueryRequest,
+  type CloudSyncTask,
+  type CloudSyncTaskInput,
+  CloudSyncUpdateRequest,
+  type CronSchedule,
   type Dataset,
   DatasetCreateRequest,
   DatasetQueryRequest,
@@ -23,8 +35,76 @@ import {
   SMBQueryRequest,
   type SMBShare,
   SMBUpdateRequest,
+  type SnapshotTask,
+  SnapshotTaskCreateRequest,
+  type SnapshotTaskInput,
+  SnapshotTaskQueryRequest,
+  SnapshotTaskUpdateRequest,
   SystemInfoRequest,
 } from "./truenas-types.js";
+
+// ── Matchers ────────────────────────────────────────────────────────────────
+// The ensure/reconcile methods below write only when one of these says the
+// existing object differs. That is not tidiness: stacks/system resyncs every
+// five minutes, every `cloudsync.update` restarts cron on TrueNAS, and a
+// credential update re-validates against the remote. Unconditional writes
+// would be hundreds a day for no change. Each matcher compares only the fields
+// the caller sets, because TrueNAS fills in defaults for the rest.
+
+/** Cron fields compared as values: "00" and "0" are the same minute. */
+function sameCronField(a: unknown, b: unknown): boolean {
+  const normalise = (value: unknown) => (typeof value === "string" && /^\d+$/.test(value) ? String(Number(value)) : String(value ?? ""));
+  return normalise(a) === normalise(b);
+}
+
+function sameSchedule(existing: Partial<CronSchedule> | undefined, desired: CronSchedule): boolean {
+  return (["minute", "hour", "dom", "month", "dow"] as const).every(field => sameCronField(existing?.[field], desired[field]));
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return Array.isArray(a) || Array.isArray(b) ? JSON.stringify(a ?? []) === JSON.stringify(b ?? []) : a === b;
+}
+
+/**
+ * Whether a credential already holds every provider field `desired` sets.
+ * Secret fields come back in the clear to a caller holding the cloud-sync write
+ * role (middlewared main.py, 25.04), and this one must hold it to create them,
+ * so a rotated key is a difference like any other.
+ */
+export function cloudCredentialMatches(existing: CloudCredential, desired: CloudCredentialInput): boolean {
+  const provider = existing.provider as unknown as Record<string, unknown>;
+  return existing.name === desired.name && Object.entries(desired.provider).every(([field, value]) => value === undefined || sameValue(provider[field], value));
+}
+
+/** Whether a Cloud Sync task already matches every field `desired` sets. */
+export function cloudSyncTaskMatches(existing: CloudSyncTask, desired: CloudSyncTaskInput): boolean {
+  const optional = ["pre_script", "post_script", "include", "exclude", "args", "enabled", "transfers"] as const;
+  return (
+    existing.description === desired.description &&
+    existing.path === desired.path &&
+    existing.credentials?.id === desired.credentials &&
+    existing.attributes?.bucket === desired.attributes.bucket &&
+    existing.attributes?.folder === desired.attributes.folder &&
+    sameSchedule(existing.schedule, desired.schedule) &&
+    existing.direction === desired.direction &&
+    existing.transfer_mode === desired.transfer_mode &&
+    optional.every(field => desired[field] === undefined || sameValue(existing[field], desired[field]))
+  );
+}
+
+/** Whether a periodic snapshot task already matches every field `desired` sets. */
+export function snapshotTaskMatches(existing: SnapshotTask, desired: SnapshotTaskInput): boolean {
+  const optional = ["enabled", "exclude", "allow_empty"] as const;
+  return (
+    existing.dataset === desired.dataset &&
+    existing.naming_schema === desired.naming_schema &&
+    existing.recursive === desired.recursive &&
+    existing.lifetime_value === desired.lifetime_value &&
+    existing.lifetime_unit === desired.lifetime_unit &&
+    sameSchedule(existing.schedule, desired.schedule) &&
+    optional.every(field => desired[field] === undefined || sameValue(existing[field], desired[field]))
+  );
+}
 
 /**
  * TrueNAS Resource Manager for Pulumi
@@ -204,6 +284,95 @@ export class TrueNASResourceManager {
     } else {
       return await connection.sendRequest(SMBCreateRequest, config);
     }
+  }
+
+  /**
+   * Create a filesystem dataset if it does not exist. Unlike ensureDataset it
+   * never writes to one that does, so it is free to call on every run.
+   */
+  async ensureDatasetExists(name: string): Promise<{ created: boolean }> {
+    const connection = await this.client.connection;
+    const [existing] = await connection.sendRequest(DatasetQueryRequest, [["name", "=", name]], {});
+    if (existing) return { created: false };
+    await connection.sendRequest(DatasetCreateRequest, { name, type: "FILESYSTEM" });
+    return { created: true };
+  }
+
+  /**
+   * Ensure a cloud credential with this name exists and holds this provider.
+   * It is written only when it differs (cloudCredentialMatches), so a rotated
+   * key reaches TrueNAS on the next run and an unchanged one costs a query.
+   */
+  async ensureCloudCredential(input: CloudCredentialInput): Promise<{ credential: CloudCredential; changed: boolean }> {
+    const connection = await this.client.connection;
+    const [existing] = await connection.sendRequest(CloudCredentialQueryRequest, [["name", "=", input.name]], {});
+    if (existing && cloudCredentialMatches(existing, input)) {
+      return { credential: existing, changed: false };
+    }
+    const credential = existing ? await connection.sendRequest(CloudCredentialUpdateRequest, existing.id, input) : await connection.sendRequest(CloudCredentialCreateRequest, input);
+    return { credential, changed: true };
+  }
+
+  /**
+   * Make the Cloud Sync tasks whose description starts with `prefix` exactly
+   * `tasks`. Each is created, or updated when it differs (cloudSyncTaskMatches),
+   * by its description. A managed task no longer listed is deleted, so dropping
+   * one from the list stops it instead of leaving it to run forever; deleting a
+   * task leaves its dataset alone. Deletions happen only after every listed
+   * task was written, and tasks without the prefix are never touched.
+   */
+  async reconcileCloudSyncTasks(prefix: string, tasks: readonly CloudSyncTaskInput[]): Promise<{ written: string[]; deleted: string[] }> {
+    const unprefixed = tasks.filter(task => !task.description.startsWith(prefix));
+    if (unprefixed.length > 0) {
+      throw new Error(`Cloud Sync tasks must be described '${prefix}…' to be managed: ${unprefixed.map(task => task.description).join(", ")}`);
+    }
+
+    const connection = await this.client.connection;
+    const managed = (await connection.sendRequest(CloudSyncQueryRequest, [], {})).filter(task => task.description.startsWith(prefix));
+
+    const written: string[] = [];
+    for (const task of tasks) {
+      const existing = managed.find(candidate => candidate.description === task.description);
+      if (existing && cloudSyncTaskMatches(existing, task)) continue;
+      if (existing) {
+        await connection.sendRequest(CloudSyncUpdateRequest, existing.id, task);
+      } else {
+        await connection.sendRequest(CloudSyncCreateRequest, task);
+      }
+      written.push(task.description);
+    }
+
+    const wanted = new Set(tasks.map(task => task.description));
+    const deleted: string[] = [];
+    for (const task of managed) {
+      if (wanted.has(task.description)) continue;
+      await connection.sendRequest(CloudSyncDeleteRequest, task.id);
+      deleted.push(task.description);
+    }
+    return { written, deleted };
+  }
+
+  /**
+   * Ensure a periodic snapshot task exists for this dataset and naming schema,
+   * written only when it differs (snapshotTaskMatches). The pair identifies the
+   * task because retention is per naming schema: two tasks on one dataset keep
+   * their snapshots apart only if their schemas differ.
+   */
+  async ensureSnapshotTask(input: SnapshotTaskInput): Promise<{ task: SnapshotTask; changed: boolean }> {
+    const connection = await this.client.connection;
+    const [existing] = await connection.sendRequest(
+      SnapshotTaskQueryRequest,
+      [
+        ["dataset", "=", input.dataset],
+        ["naming_schema", "=", input.naming_schema],
+      ],
+      {},
+    );
+    if (existing && snapshotTaskMatches(existing, input)) {
+      return { task: existing, changed: false };
+    }
+    const task = existing ? await connection.sendRequest(SnapshotTaskUpdateRequest, existing.id, input) : await connection.sendRequest(SnapshotTaskCreateRequest, input);
+    return { task, changed: true };
   }
 
   /**

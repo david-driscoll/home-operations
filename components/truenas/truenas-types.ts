@@ -153,6 +153,19 @@ export const SMBGetAclRequest = new RequestType<number, any, never>("sharing.smb
 export const SMBSetAclRequest = new RequestType2<number, any, void, never>("sharing.smb.setacl");
 export const SMBPresetsRequest = new RequestType0<any[], never>("sharing.smb.presets");
 
+// Cloud Sync Credential Request Types. In 25.04 the credentials API takes the
+// pydantic shape ({name, provider: {type, ...}}, api/v25_04_2/cloud_sync.py),
+// while the task API below ("Cloud Sync Request Types") still takes the legacy
+// flat dict (plugins/cloud_sync.py); the interfaces follow both.
+export const CloudCredentialQueryRequest = new RequestType2<QueryFilterExpression<CloudCredential> | undefined, QueryOptions | undefined, CloudCredential[], never>("cloudsync.credentials.query");
+export const CloudCredentialCreateRequest = new RequestType<CloudCredentialInput, CloudCredential, never>("cloudsync.credentials.create", ParameterStructures.byPosition);
+export const CloudCredentialUpdateRequest = new RequestType2<number, Partial<CloudCredentialInput>, CloudCredential, never>("cloudsync.credentials.update");
+
+// Periodic Snapshot Task Request Types
+export const SnapshotTaskQueryRequest = new RequestType2<QueryFilterExpression<SnapshotTask> | undefined, QueryOptions | undefined, SnapshotTask[], never>("pool.snapshottask.query");
+export const SnapshotTaskCreateRequest = new RequestType<SnapshotTaskInput, SnapshotTask, never>("pool.snapshottask.create", ParameterStructures.byPosition);
+export const SnapshotTaskUpdateRequest = new RequestType2<number, Partial<SnapshotTaskInput>, SnapshotTask, never>("pool.snapshottask.update");
+
 // Pool Scrub Request Types
 export const PoolScrubQueryRequest = new RequestType2<QueryFilterExpression<Scrub> | undefined, QueryOptions | undefined, Scrub[], never>("pool.scrub.query");
 export const PoolScrubGetRequest = new RequestType<number, Scrub, never>("pool.scrub.get_instance", ParameterStructures.byPosition);
@@ -276,9 +289,9 @@ export const FilesystemChdirRequest = new RequestType<string, boolean, never>("f
 export const FilesystemUnlinkRequest = new RequestType<string, boolean, never>("filesystem.unlink", ParameterStructures.byPosition);
 
 // Cloud Sync Request Types
-export const CloudSyncQueryRequest = new RequestType2<QueryFilterExpression<CloudSync> | undefined, QueryOptions | undefined, CloudSync[], never>("cloudsync.query");
-export const CloudSyncCreateRequest = new RequestType<any, any, never>("cloudsync.create", ParameterStructures.byPosition);
-export const CloudSyncUpdateRequest = new RequestType2<number, any, any, never>("cloudsync.update");
+export const CloudSyncQueryRequest = new RequestType2<QueryFilterExpression<CloudSyncTask> | undefined, QueryOptions | undefined, CloudSyncTask[], never>("cloudsync.query");
+export const CloudSyncCreateRequest = new RequestType<CloudSyncTaskInput, CloudSyncTask, never>("cloudsync.create", ParameterStructures.byPosition);
+export const CloudSyncUpdateRequest = new RequestType2<number, Partial<CloudSyncTaskInput>, CloudSyncTask, never>("cloudsync.update");
 export const CloudSyncDeleteRequest = new RequestType<number, boolean, never>("cloudsync.delete", ParameterStructures.byPosition);
 export const CloudSyncSyncRequest = new RequestType<number, number, never>("cloudsync.sync", ParameterStructures.byPosition);
 
@@ -726,6 +739,90 @@ export interface SMBShare {
   purpose: string;
   auxsmbconf: string;
   locked: boolean;
+}
+
+// Cloud Sync and periodic snapshot task types (TrueNAS 25.04.2)
+
+/**
+ * A schedule as TrueNAS takes it, in its own local time. Each field is a value,
+ * a comma-separated list or "*"; `dow` runs "1" (Monday) to "7" (Sunday).
+ */
+export interface CronSchedule {
+  minute: string;
+  hour: string;
+  dom: string;
+  month: string;
+  dow: string;
+}
+
+/** The S3 provider of a cloud credential (`S3CredentialsModel`). */
+export interface S3CredentialProvider {
+  type: "S3";
+  access_key_id: string;
+  secret_access_key: string;
+  endpoint?: string;
+  region?: string;
+  skip_region?: boolean;
+  signatures_v2?: boolean;
+  max_upload_parts?: number;
+}
+
+export interface CloudCredentialInput {
+  name: string;
+  provider: S3CredentialProvider;
+}
+
+export interface CloudCredential extends CloudCredentialInput {
+  id: number;
+}
+
+/** A Cloud Sync task as created or updated (`cloud_sync_create`), the fields this repo sets. */
+export interface CloudSyncTaskInput {
+  description: string;
+  /** The local side, under /mnt. */
+  path: string;
+  /** A cloud credential id. */
+  credentials: number;
+  attributes: { bucket: string; folder: string };
+  schedule: CronSchedule;
+  direction: "PUSH" | "PULL";
+  transfer_mode: "SYNC" | "COPY" | "MOVE";
+  pre_script?: string;
+  /** Runs only after rclone exits 0 (plugins/cloud_sync.py). */
+  post_script?: string;
+  include?: string[];
+  exclude?: string[];
+  args?: string;
+  enabled?: boolean;
+  transfers?: number | null;
+}
+
+/** A Cloud Sync task as queried: `credentials` comes back as the whole credential. */
+export interface CloudSyncTask extends Omit<CloudSyncTaskInput, "credentials"> {
+  id: number;
+  credentials: CloudCredential;
+  locked: boolean;
+  job: Record<string, unknown> | null;
+}
+
+/** A periodic snapshot task (`PoolSnapshotTaskCreate`). Retention is by age, per naming schema. */
+export interface SnapshotTaskInput {
+  dataset: string;
+  recursive: boolean;
+  lifetime_value: number;
+  lifetime_unit: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+  /** Must contain %Y, %m, %d, %H and %M. Retention only ever removes snapshots matching this schema. */
+  naming_schema: string;
+  schedule: CronSchedule & { begin?: string; end?: string };
+  enabled?: boolean;
+  exclude?: string[];
+  allow_empty?: boolean;
+}
+
+export interface SnapshotTask extends SnapshotTaskInput {
+  id: number;
+  vmware_sync: boolean;
+  state: unknown;
 }
 
 // Application types
