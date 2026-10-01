@@ -43,9 +43,13 @@ spec:
             - /bin/sh
             - /script/garage-history-copy.sh
           env:
-            # Phase 3, step 3: the pilot.
+            # Every app moved so far, by batch: the pilot (kapowarr, rustdesk),
+            # then batch 1. A rerun copies only what is new, so the earlier
+            # batches stay listed.
             - name: APPS
-              value: kapowarr rustdesk
+              value: >-
+                kapowarr rustdesk
+                seedstrem n8n homelable questarr mylar tududi mealie arr-mcp-jellyfin arr-mcp-plex jellyseerr
             - name: RESTIC_CACHE_DIR
               value: /cache
           envFrom:
