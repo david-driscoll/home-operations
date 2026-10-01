@@ -24,6 +24,7 @@
  * order of operations making itself known.
  */
 import * as garage from "@axnic/pulumi-garage";
+import { BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE } from "@components/backrestGarage.ts";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { GARAGE_COPY_BUCKETS, GARAGE_COPY_KEYS, garageCopyEndpoint } from "@components/garageTruenasCopy.ts";
@@ -71,6 +72,21 @@ const GiB = 1024 ** 3;
 const CNPG_BUCKET_QUOTA = 512 * GiB;
 const DUMPS_BUCKET_QUOTA = 128 * GiB;
 const MIRROR_BUCKET_QUOTA = 2048 * GiB;
+
+// The restic buckets of docs/plans/host-owned-backups.md §C2 (phase 2, step 2):
+// 100 GiB each, a placeholder David set on 2026-10-01 without measuring the
+// repos. Nothing writes to them yet, so the number is a ceiling to revisit
+// rather than a sizing: check the real repo size in the change that first
+// points a writer at one. VolSync (phase 3) and Immich (phase 4) are the ones
+// likely to need more. Every quota here now sums to about 3.6 TiB against the
+// 4T share; garage-mirror's 2 TiB goes at the end of phase 4.
+const RESTIC_BUCKET_QUOTA = 100 * GiB;
+
+// The Docker hosts that each get a `backrest-<host>` bucket: the garage nodes,
+// plus alpha-site, which has no node and writes through celestia's. Same rule
+// as GARAGE_CLUSTERS for an offline site: skystar's bucket and key exist while
+// it is away, and only the credential file waits for the host to come back.
+const BACKREST_HOSTS = [...GARAGE_CLUSTERS, "alpha-site"] as const;
 
 /**
  * Everything Garage: buckets, keys, OpenBao records, and the per-host
@@ -158,14 +174,23 @@ export function configureGarage(globals: GlobalResources) {
     );
 
   /**
-   * Deliver a credential file to a garage host. The consuming loops
+   * Deliver a credential file to a dockge host. The consuming loops
    * (docker/_common/garage/{sync,mirror}.sh) re-read their file every cycle,
    * so a rotation — or the very first mint — converges on the next cycle with
    * no container restart. Same delivery shape as the backrest garage.conf in
    * components/BackupPlanDirector.ts, for the same reason: the credential
    * stays out of the rendered stack files and rotation is one file write.
+   *
+   * `target` defaults to the garage stack's directory and uid; backrest's
+   * files go to its own directory, owned by the uid it runs as.
    */
-  function deliverCredentialFile(clusterKey: string, fileName: string, content: pulumi.Output<string>, instances: pulumi.Unwrap<DockgeLxcDefinition>[]) {
+  function deliverCredentialFile(
+    clusterKey: string,
+    fileName: string,
+    content: pulumi.Output<string>,
+    instances: pulumi.Unwrap<DockgeLxcDefinition>[],
+    target: { dir: string; owner: string } = { dir: "/opt/stacks-data/garage", owner: "3900:70" },
+  ) {
     const instance = instances.find(i => i.name === `${clusterKey}-dockge`);
     if (!instance) {
       // WARN AND SKIP, NOT THROW — and the difference is the whole point of
@@ -213,22 +238,24 @@ export function configureGarage(globals: GlobalResources) {
     const ssh = instance.ssh as DockgeLxcDefinition["ssh"] & { password: string };
     const connection = { host: ssh.hostname, user: ssh.username, password: pulumi.secret(ssh.password) };
 
+    const remotePath = `${target.dir}/${fileName}`;
     const file = copyFileToRemote(`${clusterKey}-garage-${fileName}`, {
       connection,
-      remotePath: `/opt/stacks-data/garage/${fileName}`,
+      remotePath,
       content,
     });
 
-    // 600 and owned by the consuming service's uid (3900, gid 70 — see the
-    // user: lines in docker/_common/garage/compose.yaml): the file holds a
-    // live S3 credential and nothing but its loop should be able to read it.
+    // 600 and owned by the consuming service's uid (the garage loops run as
+    // 3900, gid 70 — see the user: lines in docker/_common/garage/compose.yaml):
+    // the file holds a live S3 credential and nothing but its consumer should be
+    // able to read it.
     return file.apply(
       f =>
         new remote.Command(
           `${clusterKey}-garage-${fileName}-perms`,
           {
             connection,
-            create: `chown 3900:70 /opt/stacks-data/garage/${fileName} && chmod 600 /opt/stacks-data/garage/${fileName}`,
+            create: `chown ${target.owner} ${remotePath} && chmod 600 ${remotePath}`,
             triggers: [f.id],
           },
           { dependsOn: [f] },
@@ -242,6 +269,50 @@ export function configureGarage(globals: GlobalResources) {
 RCLONE_CONFIG_GARAGE_ACCESS_KEY_ID=${key.accessKeyId}
 RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
 `;
+
+  /**
+   * A host's backrest key as an AWS shared credentials file. A Garage-backed
+   * repo names it in its env (AWS_SHARED_CREDENTIALS_FILE, AWS_PROFILE) and
+   * restic's credential chain reads it, so no key lands in config.json or in
+   * Backrest's UI — the rule garage.conf follows too
+   * (docs/plans/host-owned-backups.md §C2).
+   */
+  const backrestCredentialFile = (key: garage.Key) =>
+    pulumi.interpolate`# Written by stacks/system (garage.ts) — do not edit by hand; a rotation reruns that stack.
+# Consumed by this host's backrest, through each Garage-backed repo's env:
+# AWS_SHARED_CREDENTIALS_FILE=${BACKREST_CREDENTIALS_DIR}/${BACKREST_CREDENTIALS_FILE} and AWS_PROFILE=${BACKREST_CREDENTIALS_PROFILE}.
+[${BACKREST_CREDENTIALS_PROFILE}]
+aws_access_key_id = ${key.accessKeyId}
+aws_secret_access_key = ${key.secretAccessKey}
+`;
+
+  /**
+   * The OpenBao record of a key, in the shape every record here has. For its
+   * consumer where one reads OpenBao, and for humans and recovery always.
+   */
+  function keyRecord(resourceName: string, args: { path: string; endpoint: pulumi.Input<string>; bucket: string; key: garage.Key; sourceTitle: string; cluster?: string }) {
+    if (!globals.baoDualWriteEnabled) {
+      warnNoBao(`${args.sourceTitle} (${args.path})`);
+      return;
+    }
+    baoKvSecret(
+      resourceName,
+      {
+        mount: "secrets",
+        path: args.path,
+        data: {
+          endpoint: args.endpoint,
+          region: REGION,
+          bucket: args.bucket,
+          username: args.key.accessKeyId,
+          password: args.key.secretAccessKey,
+        },
+        concealedFields: ["password"],
+        customMetadata: baoProvenance({ ...(args.cluster ? { cluster: args.cluster } : {}), source_title: args.sourceTitle }),
+      },
+      { provider: globals.baoProvider },
+    );
+  }
 
   // ── equestria: the CNPG barman-cloud archive ───────────────────────────────
   // One bucket, one rw key. kubernetes/apps/database/postgres/app reads this
@@ -366,6 +437,90 @@ RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
   // this file is exactly how the mirror service on luna/skystar knows to idle.
   dockgeInstances.apply(instances => deliverCredentialFile("celestia", "mirror.env", credentialFile(mirrorKey, "mirror.sh"), instances));
 
+  // celestia's own node over the LAN, through its per-node route
+  // (`s3.${CLUSTER_DOMAIN}`, docker/_common/garage/compose.yaml). What spike
+  // (H4), the VolSync movers and the k8s pg_dump CronJob (H5) use: they share
+  // a site with celestia, so their traffic never crosses the tailnet.
+  const celestiaLanEndpoint = pulumi.output(globals.searchDomain).apply(garageCopyEndpoint);
+
+  // ── restic repositories (docs/plans/host-owned-backups.md §C2) ─────────────
+  // Where the estate's restic repos move: one bucket per writer and one rw key
+  // per bucket, so a leaked key exposes one writer's history and no more.
+  // Created ahead of their writers (phase 2, step 2). Nothing writes to them
+  // until alpha-site moves (phase 2, step 7), VolSync and the k8s pg_dump
+  // (phase 3), and the other Docker hosts and Immich (phase 4).
+
+  // VolSync: one bucket for every mover, one prefix per app.
+  const volsyncBucket = backupBucket("volsync-equestria", RESTIC_BUCKET_QUOTA);
+  managedBuckets.set("volsync-equestria", volsyncBucket);
+  keyRecord("volsync-equestria-garage-bao", {
+    path: "clusters/equestria/apps/volsync/garage",
+    endpoint: celestiaLanEndpoint,
+    bucket: "volsync-equestria",
+    key: readWriteKey("volsync-equestria", volsyncBucket),
+    sourceTitle: "Garage VolSync Key (equestria)",
+  });
+
+  // The k8s pg_dump CronJob (kubernetes/apps/database/postgres/backups), which
+  // streams each dump into restic instead of writing files (§C4).
+  const pgdumpBucket = backupBucket("backrest-pgdump", RESTIC_BUCKET_QUOTA);
+  managedBuckets.set("backrest-pgdump", pgdumpBucket);
+  keyRecord("backrest-pgdump-garage-bao", {
+    path: "clusters/equestria/apps/postgres/garage-pgdump",
+    endpoint: celestiaLanEndpoint,
+    bucket: "backrest-pgdump",
+    key: readWriteKey("backrest-pgdump", pgdumpBucket),
+    sourceTitle: "Garage pg_dump Key (equestria)",
+  });
+
+  // Immich: written by celestia's backrest, which reads the library over NFS,
+  // so it gets no key of its own; celestia's is granted it below. TrueNAS never
+  // pulls it back: the library already lives there.
+  const immichBucket = backupBucket("backrest-immich", RESTIC_BUCKET_QUOTA);
+  managedBuckets.set("backrest-immich", immichBucket);
+
+  // One bucket per Docker host, written by that host's backrest with its own
+  // key, delivered as a credentials file (components/backrestGarage.ts).
+  for (const host of BACKREST_HOSTS) {
+    const bucketName = `backrest-${host}`;
+    const bucket = backupBucket(bucketName, RESTIC_BUCKET_QUOTA);
+    managedBuckets.set(bucketName, bucket);
+    const key = readWriteKey(bucketName, bucket);
+
+    if (host === "celestia") {
+      new garage.BucketKeyPermission(
+        `${bucketName}-immich-rw`,
+        {
+          bucketId: immichBucket.id,
+          accessKeyId: key.accessKeyId,
+          permissions: { read: true, write: true },
+        },
+        { provider },
+      );
+    }
+
+    keyRecord(`${bucketName}-garage-bao`, {
+      path: `clusters/${host}/apps/backrest/garage`,
+      // The node on the host's own container network. alpha-site has none and
+      // reaches celestia's, the way its garage-backup loop already does (the
+      // `garage-mesh` grant, tag:dockge to tag:dockge on 3900). The garage-s3
+      // VIP would follow whichever node is up, but no grant lets a dockge
+      // host reach it yet.
+      endpoint: host === "alpha-site" ? pulumi.interpolate`http://dockge-celestia.${globals.tailscaleDomain}:3900` : "http://garage:3900",
+      bucket: bucketName,
+      key,
+      cluster: host,
+      sourceTitle: `Garage Backrest Key (${host})`,
+    });
+
+    dockgeInstances.apply(instances =>
+      deliverCredentialFile(host, BACKREST_CREDENTIALS_FILE, backrestCredentialFile(key), instances, {
+        dir: BACKREST_CREDENTIALS_DIR,
+        owner: "0:0",
+      }),
+    );
+  }
+
   // ── TrueNAS: the independent, versioned copy ───────────────────────────────
   // One key with read on every bucket spike pulls with it
   // (components/garageTruenasCopy.ts, docs/plans/host-owned-backups.md §C3).
@@ -400,7 +555,7 @@ RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
         mount: "secrets",
         path: GARAGE_COPY_KEYS["truenas-copy"],
         data: {
-          endpoint: pulumi.output(globals.searchDomain).apply(garageCopyEndpoint),
+          endpoint: celestiaLanEndpoint,
           region: REGION,
           username: truenasCopyKey.accessKeyId,
           password: truenasCopyKey.secretAccessKey,
@@ -449,6 +604,7 @@ RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY=${key.secretAccessKey}
       cnpgEquestria: cnpgBucket.id,
       garageMirror: mirrorBucket.id,
       postgres: GARAGE_CLUSTERS.map(c => `postgres-${c}`),
+      restic: ["volsync-equestria", "backrest-pgdump", "backrest-immich", ...BACKREST_HOSTS.map(host => `backrest-${host}`)],
     },
     // What this run configured on spike, or why it skipped. Its inputs carry
     // the keys, so Pulumi marks it secret; the result itself holds bucket names

@@ -174,7 +174,7 @@ celestia first.
 | --- | --- | --- | --- |
 | VolSync (62 apps) | `volsync-equestria`, one prefix per app | one rw key for the movers | celestia's node, directly over the LAN (`https://s3.celestia.<root domain>`) ✅ |
 | etcd | `volsync-equestria`, prefix `etcd` | the same key | the same route |
-| Every other plan a Docker host runs (alpha-site in phase 2, the rest in phase 4) | `backrest-<host>`, one per host | one rw key per host, on its own bucket only | the host's own node (`http://garage:3900` on `dockge_default`); alpha-site through the VIP |
+| Every other plan a Docker host runs (alpha-site in phase 2, the rest in phase 4) | `backrest-<host>`, one per host | one rw key per host, on its own bucket only | the host's own node (`http://garage:3900` on `dockge_default`); alpha-site through celestia's node (`dockge-celestia:3900`), since no grant lets a Docker host reach the VIP |
 | Immich ✅ | `backrest-immich` | celestia's key, also granted this bucket | celestia's own node; restic still reads the library over NFS |
 | k8s pg_dump ✅ | `backrest-pgdump` | one rw key for the CronJob | celestia's node over the LAN, like VolSync; `pg_dump` streams into restic (§C4) |
 | Docker hosts' Postgres ✅ | `backrest-<host>`, prefix `postgres` | the host's key | the host's own node; the postgres stack's dump loop streams into restic (§C4) |
@@ -456,6 +456,9 @@ on luna.
    - If Immich does not fit under the 4T-per-node budget with margin, grow Garage first. The
      `data_dir` capacity in `garage.toml`, the layout's `-c` and the quotas move together, as
      `docs/garage-offsite-s3.md` requires.
+   - **Deferred (2026-10-01):** the repos could not be read from where this ran, so David set every
+     new quota to 100 GiB. Measure each repo in the change that first points a writer at its bucket,
+     and raise the quota there. VolSync (phase 3) and Immich (phase 4) are the likely ones.
 2. **`stacks/system/garage.ts`.**
    - Buckets: `volsync-equestria`, `backrest-{celestia,luna,skystar,alpha-site}`,
      `backrest-immich` and `backrest-pgdump`, each with a quota.
@@ -463,9 +466,18 @@ on luna.
      Celestia's also covers `backrest-immich`. The read-only `truenas-copy` key covers every pulled
      bucket.
    - An OpenBao record for each key.
-   - ✅ **In part, first:** the `truenas-copy` key, with read on `cnpg-equestria` and
-     `postgres-{celestia,luna,skystar}`, and its record at `clusters/spike/apps/garage/copy`. The
-     new buckets and their writer keys wait for step 1's numbers.
+   - ✅ **In part, first (#2213):** the `truenas-copy` key, with read on `cnpg-equestria` and
+     `postgres-{celestia,luna,skystar}`, and its record at `clusters/spike/apps/garage/copy`.
+   - ✅ **The rest:**
+     - All seven buckets, at 100 GiB each (step 1).
+     - A writer key for each, with its record: `clusters/equestria/apps/volsync/garage`,
+       `clusters/equestria/apps/postgres/garage-pgdump`, and `clusters/<host>/apps/backrest/garage`.
+       Celestia's key also writes `backrest-immich`.
+     - Each host's key also arrives on the host as `/opt/stacks-data/backrest/aws-credentials`
+       (root, mode 600, profile `backrest`; `components/backrestGarage.ts`). skystar's arrives
+       when it is back.
+     - Nothing writes to these buckets yet, and TrueNAS adds each one to its pulls as it comes
+       into use.
 3. **TrueNAS** (`components/truenas/*` and `components/TruenasVm.ts`, called from `stacks/home`).
    - Add `cloudsync.credentials.*` and `cloudsync.*` types and manager helpers, plus a
      `pool.snapshottask` helper.
@@ -501,8 +513,11 @@ on luna.
    - Add alpha-site to the `source` union.
    - `stacks/home` runs a director for alpha-site that emits no copy jobs, because the host has no
      `/data`. `createPlans` takes `pbs` as optional.
-   - The plans write to `backrest-alpha-site` through the VIP; the `pulumi-state-backup` loop on
-     alpha-site already reads the main cluster, so the path exists.
+   - The plans write to `backrest-alpha-site` through celestia's node at
+     `http://dockge-celestia.<tailnet>:3900`, the path the `pulumi-state-backup` loop on alpha-site
+     already takes (the `garage-mesh` grant). The garage-s3 VIP would follow whichever node is up,
+     but it needs a tag:dockge grant on 443 first. Its key arrives as
+     `/opt/stacks-data/backrest/aws-credentials` (step 2).
    - Once it is green, delete the rest of the SFTP pre-sync path (§C6), including alpha-site's
      `rclone-sftp` override and its staging tree.
 
