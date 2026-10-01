@@ -1,0 +1,220 @@
+---
+# The post-merge half of the Renovate automerge gate (docs/renovate-automerge.md).
+#
+# Flux dispatches every HelmRelease/Kustomization error here
+# (kubernetes/components/alerts/github-dispatch). Most have nothing to do with
+# Renovate and are dropped. When one lands in an app directory that a PR
+# Renovate itself merged (label `renovate/automerge`) touched in the last 24
+# hours, this:
+#
+#   1. reverts that PR's commit on a `renovate-revert/pr-<N>` branch,
+#   2. adds the app directory to the automerge hold list in
+#      .github/renovate.json5 -- otherwise Renovate re-raises the same update
+#      and merges it again,
+#   3. opens a PR for both (or, if Actions may not create PRs here, an issue
+#      linking the pushed branch), and labels the original `renovate/reverted`.
+#
+# It never merges anything. Flux has usually rolled the release back already
+# (upgrade remediation); the revert brings git back in line with the cluster,
+# and a human decides when it lands.
+name: "Renovate Watchdog"
+
+on:
+  repository_dispatch:
+
+concurrency:
+  # One run per failing object: a HelmRelease retrying its upgrade sends an
+  # error per attempt.
+  group: ${{ github.workflow }}-${{ github.event.action }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  revert:
+    name: Revert failed automerge
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.client_payload.severity == 'error' &&
+      (startsWith(github.event.action, 'HelmRelease/') ||
+       startsWith(github.event.action, 'Kustomization/'))
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KIND: ${{ github.event.client_payload.involvedObject.kind }}
+      NAME: ${{ github.event.client_payload.involvedObject.name }}
+      NAMESPACE: ${{ github.event.client_payload.involvedObject.namespace }}
+      REASON: ${{ github.event.client_payload.reason }}
+      MESSAGE: ${{ github.event.client_payload.message }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Find the app directory
+        id: app
+        run: |
+          # Every directory that defines this object. A Kustomization names
+          # its directory outright (spec.path); a HelmRelease is found by
+          # name, falling back to an app directory of the same name for the
+          # ones a ResourceSet or patch renames.
+          dirs=()
+          while IFS= read -r f; do
+            if [[ "$KIND" == Kustomization ]]; then
+              p=$(yq ea 'select(.kind == "Kustomization" and .apiVersion == "kustomize.toolkit.fluxcd.io/*" and .metadata.name == strenv(NAME)) | .spec.path' "$f" 2>/dev/null | head -n1)
+              [[ -n "$p" && "$p" != null ]] && dirs+=("${p#./}")
+            else
+              if yq ea -e 'select(.kind == "HelmRelease" and .metadata.name == strenv(NAME))' "$f" >/dev/null 2>&1; then
+                dirs+=("$(dirname "$f")")
+              fi
+            fi
+          done < <(grep -rlE --include='*.yaml' "^kind: (HelmRelease|Kustomization)$" kubernetes/apps)
+          if [[ "$KIND" == HelmRelease ]]; then
+            while IFS= read -r d; do dirs+=("$d"); done < <(find kubernetes/apps -type d -name "$NAME")
+          fi
+          mapfile -t dirs < <(printf '%s\n' "${dirs[@]}" | sed '/^$/d' | sort -u)
+          # Drop aggregates. cluster-apps points at ./kubernetes/apps and a
+          # namespace Kustomization at its namespace: either would "match"
+          # every automerged PR beneath it. An app directory holds no other
+          # app's ks.yaml below it; an aggregate does.
+          keep=()
+          for d in "${dirs[@]}"; do
+            if [[ -d "$d" ]] && [[ -z "$(find "$d" -mindepth 2 -name ks.yaml -print -quit)" ]]; then
+              keep+=("$d")
+            else
+              echo "skipping aggregate $d"
+            fi
+          done
+          dirs=("${keep[@]}")
+          if [[ ${#dirs[@]} -eq 0 ]]; then
+            echo "::notice::$KIND/$NAMESPACE/$NAME: no directory in kubernetes/apps defines it; nothing to revert"
+            exit 0
+          fi
+          printf '%s\n' "${dirs[@]}"
+          { echo 'dirs<<EOF'; printf '%s\n' "${dirs[@]}"; echo EOF; } >> "$GITHUB_OUTPUT"
+
+      - name: Find the automerged PR behind it
+        id: pr
+        if: ${{ steps.app.outputs.dirs != '' }}
+        env:
+          DIRS: ${{ steps.app.outputs.dirs }}
+        run: |
+          since=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          gh pr list --state merged --limit 50 \
+            --search "label:renovate/automerge -label:renovate/reverted merged:>=$since" \
+            --json number,title,url,mergedAt,mergedBy,mergeCommit,files > prs.json
+          # Only PRs Renovate merged itself: a human who merged one by hand
+          # owns that decision, and gets the Flux alert instead.
+          pr=$(jq -c --arg dirs "$DIRS" '
+            ($dirs | split("\n") | map(select(. != "") | . + "/")) as $d
+            | map(select((.mergedBy.login // "") | test("renovate")))
+            | map(select(any(.files[].path; . as $p | any($d[]; . as $x | $p | startswith($x)))))
+            | sort_by(.mergedAt) | last // empty' prs.json)
+          if [[ -z "$pr" ]]; then
+            echo "::notice::$KIND/$NAMESPACE/$NAME failed ($REASON), but no PR Renovate automerged in the last 24h touched it; nothing to revert"
+            exit 0
+          fi
+          echo "$pr" | jq .
+          {
+            echo "number=$(jq -r .number <<<"$pr")"
+            echo "sha=$(jq -r .mergeCommit.oid <<<"$pr")"
+            echo "url=$(jq -r .url <<<"$pr")"
+            echo "title<<EOF"; jq -r .title <<<"$pr"; echo EOF
+            # The hold entry: the deepest app directory the PR touched.
+            echo "hold=$(jq -r --arg dirs "$DIRS" '
+              ($dirs | split("\n") | map(select(. != ""))) as $d
+              | [ .files[].path as $p | $d[] | . as $x | select($p | startswith($x + "/")) ]
+              | max_by(length)' <<<"$pr")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Revert and hold
+        id: revert
+        if: ${{ steps.pr.outputs.number != '' }}
+        env:
+          NUMBER: ${{ steps.pr.outputs.number }}
+          SHA: ${{ steps.pr.outputs.sha }}
+          HOLD: ${{ steps.pr.outputs.hold }}
+        run: |
+          branch="renovate-revert/pr-${NUMBER}"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "::notice::$branch already exists; this failure was already handled"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git revert --no-edit "$SHA"
+
+          entry="\"${HOLD}/**\","
+          if ! grep -qF "$entry" .github/renovate.json5; then
+            # One glob per line, just above the end marker, indented to match.
+            indent=$(grep -m1 -E '^[[:space:]]*// automerge-hold:end' .github/renovate.json5 | sed -E 's|//.*||')
+            awk -v line="${indent}${entry}" '/\/\/ automerge-hold:end/ { print line } { print }' \
+              .github/renovate.json5 > renovate.json5.tmp
+            mv renovate.json5.tmp .github/renovate.json5
+            git add .github/renovate.json5
+            git commit -m "chore(renovate): hold automerge for ${HOLD}" \
+              -m "Renovate-watchdog: $KIND $NAMESPACE/$NAME failed after #${NUMBER} automerged."
+          fi
+          if ! git push origin "$branch"; then
+            # The HelmRelease and its Kustomization both fail, in separate
+            # runs; the loser of that race finds the branch already there.
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+              echo "::notice::$branch was pushed by a concurrent run"
+              exit 0
+            fi
+            exit 1
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open the revert
+        if: ${{ steps.revert.outputs.branch != '' }}
+        env:
+          BRANCH: ${{ steps.revert.outputs.branch }}
+          NUMBER: ${{ steps.pr.outputs.number }}
+          URL: ${{ steps.pr.outputs.url }}
+          TITLE: ${{ steps.pr.outputs.title }}
+          HOLD: ${{ steps.pr.outputs.hold }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          {
+            echo "Automerged #${NUMBER} was followed by a Flux failure in the same app:"
+            echo
+            echo "- **Object:** \`$KIND $NAMESPACE/$NAME\`"
+            echo "- **Reason:** \`$REASON\`"
+            echo
+            echo '```'
+            printf '%s\n' "$MESSAGE" | head -c 4000
+            echo
+            echo '```'
+            echo
+            echo "This PR reverts it and adds \`${HOLD}/**\` to the automerge hold list in"
+            echo "\`.github/renovate.json5\`, so Renovate raises the update again as an"
+            echo "ordinary PR instead of merging it. Flux has usually rolled the release"
+            echo "back already; check \`flux get hr -n $NAMESPACE $NAME\` before merging."
+            echo
+            echo "Remove the hold entry once the app is fixed or the release is superseded."
+            echo
+            echo "_Opened by \`.github/workflows/renovate-watchdog.yaml\`._"
+          } > body.md
+
+          if pr_url=$(gh pr create --base "$BASE" --head "$BRANCH" \
+                --title "revert: ${TITLE}" --body-file body.md \
+                --label renovate/reverted 2>&1); then
+            link="$pr_url"
+          else
+            # Repos default to "Actions may not create pull requests". The
+            # branch is pushed either way; hand it over as an issue instead.
+            echo "::warning::could not open a PR ($pr_url); opening an issue instead"
+            compare="${{ github.server_url }}/${{ github.repository }}/compare/${BASE}...${BRANCH}?expand=1"
+            { cat body.md; echo; echo "**Open the revert PR:** $compare"; } > issue.md
+            link=$(gh issue create --title "revert needed: ${TITLE}" --body-file issue.md --label renovate/reverted)
+          fi
+
+          gh pr edit "$NUMBER" --add-label renovate/reverted
+          gh pr comment "$NUMBER" --body "Flux reported \`$KIND $NAMESPACE/$NAME\` failing (\`$REASON\`) after this merged. Revert: $link"
+          echo "::warning::reverted #${NUMBER}: $link"

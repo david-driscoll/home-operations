@@ -119,6 +119,28 @@ jobs:
           message: |
             ${{ steps.diff.outputs.diff }}
 
+      # After the comment, so a failing image still gets its diff posted.
+      # The rendered diff is the right input: HelmRelease repository/tag
+      # pairs arrive joined into the Deployment's `image:`, exactly what the
+      # kubelet will pull. See scripts/image-check.
+      - name: Setup crane
+        if: ${{ steps.diff.outputs.diff != '' }}
+        env:
+          # Bump both together: the checksum is go-containerregistry's own
+          # checksums.txt line for go-containerregistry_Linux_x86_64.tar.gz.
+          CRANE_VERSION: "0.22.1"
+          CRANE_SHA256: "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0"
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/crane.tgz" "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+          echo "${CRANE_SHA256}  $RUNNER_TEMP/crane.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/crane.tgz" -C "$RUNNER_TEMP/bin" crane
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Check rendered images exist
+        if: ${{ steps.diff.outputs.diff != '' }}
+        run: scripts/image-check flate diff.patch
+
   flux-local-status:
     name: flate Success
     needs: ["test", "diff", "eso-values-lint"]
