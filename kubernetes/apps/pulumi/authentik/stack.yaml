@@ -29,6 +29,14 @@ spec:
   # refresh: true
   prerequisites: []
   envRefs:
+    # The estate's root domain, for the Pulumi code that used to spell it
+    # out (docs/plans/private-domain-scrub.md, phase 4). Flux substitutes it
+    # from shared-secrets (SOPS); components/domains.ts reads it and fails
+    # closed when it is missing.
+    ROOT_DOMAIN:
+      type: Literal
+      literal:
+        value: "${ROOT_DOMAIN}"
     AWS_ACCESS_KEY_ID:
       type: Secret
       secret:

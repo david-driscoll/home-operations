@@ -257,6 +257,11 @@ BAO_ADDR = "https://bao.equestria.driscoll.tech"
 BAO_AUTH_METHOD = "approle"
 BAO_ROLE_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/role_id"
 BAO_SECRET_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/secret_id"
+# The estate's root domain for local Pulumi runs (and anything else that needs
+# it), from the same SOPS secret Flux substitutes into the Stack CRs. Resolved
+# per command by `mise run vals-run`, like every ref+ value here. Never write
+# the value itself anywhere: docs/plans/private-domain-scrub.md.
+ROOT_DOMAIN = "ref+sops://{{config_root}}/kubernetes/flux/meta/shared-secrets.sops.yaml#/stringData/ROOT_DOMAIN"
 
 # Only a DEFAULT. An agentboard pod already exports SOPS_AGE_KEY_FILE pointing
 # at the mounted estate identity (/var/run/secrets/sops-age/age.agekey, see
