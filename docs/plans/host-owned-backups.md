@@ -661,6 +661,14 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
 4. **Everything else.**
    - Give `volsync-lock-canceller` an S3 variant: locks strand on killed movers whatever the
      backend.
+
+     ✅ As built: `lock-canceller-garage`, a release of its own in
+     `kubernetes/apps/volsync-system/lock-canceller`, so a TrueNAS outage cannot stop it starting.
+     It runs hourly at :35 with the NFS canceller's 6-hour rule.
+     - An rclone init container lists the bucket's repositories and those holding a lock object
+       older than 6 hours.
+     - restic's own `unlock` then removes only the locks it judges stale, the same second guard
+       the NFS canceller relies on.
    - Migrate the remaining apps in batches of about ten.
    - Then etcd: both CronJobs' `RESTIC_REPOSITORY` → `s3:…/volsync-equestria/etcd`.
 5. **The k8s pg_dump CronJob streams into restic** (§C4).

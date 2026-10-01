@@ -167,9 +167,10 @@ becomes the default once it is done. An app opts in from its `ks.yaml`:
 - **The copy tier lets go.** `stacks/system/application-backups.ts` skips an `s3:` repository, so
   the hosts drop that app's copy job and Backrest browse repo on their next director run. The
   copies already on their disks stay where they are.
-- **Stale locks:** `volsync-lock-canceller` only scans the NFS share until phase 3, step 4 gives it
-  an S3 variant. Until then, clear a stranded Garage lock with the `unlock` field
-  (`VOLSYNC_UNLOCK`).
+- **Stale locks:** `volsync-lock-canceller` runs two hourly CronJobs with the same 6-hour rule.
+  `lock-canceller` scans the NFS share. `lock-canceller-garage` lists the Garage bucket with rclone
+  and hands repositories with an old lock to restic's own `unlock`. The `unlock` field
+  (`VOLSYNC_UNLOCK`) stays the manual override for both.
 
 ## Substitutions worth pinning in the app's `ks.yaml`
 
