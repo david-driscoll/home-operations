@@ -33,6 +33,15 @@ spec:
     ui:
       enabled: true
     server:
+      image:
+        # Pinned past chart 0.30.1's appVersion (2.7.0). 2.7.1 fixes, in this
+        # HA + PostgreSQL topology, a pre-seal hang of the active node on
+        # step-down (which a rolling upgrade does to every pod) and the
+        # PostgreSQL storage's applied-index check, plus AppRole and
+        # kubernetes-auth security fixes (GHSA-7m59-mp95-w6ph,
+        # GHSA-gf3j-hm38-jhh5). Renovate tracks the tag from here on.
+        # renovate: datasource=docker depName=quay.io/openbao/openbao
+        tag: "2.7.1"
       # The whole config below is delivered as a ConfigMap, and OpenBao reads it
       # once at process start. A config-only change therefore leaves the
       # StatefulSet's pod template untouched, so nothing rolls and the running
@@ -132,7 +141,7 @@ spec:
             // reached only through the tailscale-operator egress Services in
             // tailscale-system, and the operator's nameserver resolves the
             // MagicDNS name to that egress proxy's ClusterIP: from a pod,
-            // dockge-as.opossum-yo.ts.net and
+            // dockge-as.<tailnet> and
             // dockge-as.tailscale-system.svc.cluster.local both answer
             // 10.196.81.163. The egress proxy forwards only the ports declared
             // in the Service's spec.ports, so 8200 is declared for dockge-as in
