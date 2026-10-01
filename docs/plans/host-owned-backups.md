@@ -324,6 +324,8 @@ to mirror.
 
 - **The SFTP pre-sync path** (phases 1 and 2): the Docker staging tree, `SftpPreSyncArgs` in the
   director, Backrest's `./ssh` mount, and `rclone-sftp`'s view of `/opt/stacks-data`.
+  - ✅ Gone 2026-10-01, all but the staging trees. David decided skystar backs up straight to
+    Garage when it returns, so no host was left to pull (phase 2, step 7).
 - **The copy tier** (phase 4): `rclone-sftp`, the copy service, and the shared `Rclone SFTP Key`.
 - **The VolSync NFS path** (phase 3): the VolSync NFS repos, the celestia-local VolSync copies, the
   `volsync=true` label scan, and the mover NFS mount.
@@ -436,7 +438,8 @@ on luna.
 
    ✅ As built: `docker/{alpha-site,skystar}/rclone-sftp/compose.yaml` are the old `_common` file,
    identical apart from their comments, and `HOST_OWNED_BACKUP_HOSTS` says to delete a host's copy
-   when the host joins it. alpha-site's went after its first green night (phase 2, step 7). The PR only needs `backups` to have written
+   when the host joins it. alpha-site's went after its first green night (phase 2, step 7).
+   skystar's went the same day: it comes back Garage-backed (H11). The PR only needs `backups` to have written
    luna's inventory before it merges. Its own commit then re-runs `home-operations`, which reads
    that inventory and stops pulling luna, whichever Stack runs first.
 6. **After seven green nights**, delete `/opt/stacks/backrest/data/staging/{celestia,luna,skystar}-dockge/`
@@ -559,9 +562,23 @@ on luna.
          file exports the repos and not `/opt/stacks-data`.
        - Its staging tree on celestia waits for seven green nights, as phase 1, step 6 does for
          the other hosts' trees.
-       - The rest of §C6's pre-sync path stays while skystar can still come back in the pulled
-         shape (0.6): `SftpPreSyncArgs`, Backrest's `./ssh` mount, and skystar's own override.
-         It goes when skystar's cutover is decided.
+       - ✅ **The rest of §C6's pre-sync path is gone too.** David decided on 2026-10-01 that
+         skystar backs up straight to Garage when it returns, as alpha-site does. That left no
+         host to pull, so these went:
+         - **The inventory:** skystar joins `HOST_OWNED_BACKUP_HOSTS` and
+           `GARAGE_BACKED_HOSTS`, and `stacks/backups` now fails the run for any Docker host
+           missing from the first list, instead of pulling it.
+         - **The director:** `SftpPreSyncArgs` and its rclone branch. It refuses a plan still
+           carrying the old shape rather than read it as S3.
+         - **Backrest's SSH:** the `./ssh` mount (whose `ssh/config` nothing used), and the client
+           key DockgeLxc delivered to `/opt/stacks-data/backrest/ssh` (the files go with their
+           resources).
+         - **skystar's `rclone-sftp` override.**
+       - **When skystar is back,** its old repos on celestia become another host's ids, so
+         celestia drops their entries. The data stays on disk as a frozen archive, as alpha-site's
+         did. Add `backrest-skystar` to the TrueNAS pull (`restic: true`) after its first green
+         night.
+       - The copy tier's own SFTP stays until phase 4.
 
 **Exit.**
 - Seven green nights.
@@ -866,3 +883,8 @@ new snapshot.
   - in Kubernetes, from the pg_dump CronJob straight to Garage.
 - **H10 — Bucket layout.** ✅ Decided 2026-09-29: one `backrest-<host>` bucket per host, because
   Garage grants are per bucket.
+- **H11 — skystar when it is back.** ✅ Decided 2026-10-01: it backs up straight to Garage, as
+  alpha-site does, rather than coming back in the pulled shape. That removed the last reason to
+  keep the SFTP pre-sync path, so it went the same day (phase 2, step 7).
+- **H12 — Batch pace.** ✅ Decided 2026-10-01: larger batches are fine, and everything left can
+  move at once after the pilot (phase 3, step 4).

@@ -2,11 +2,11 @@ services:
   # Read-only SFTP view of this host's restic repos (/data/backup/), which the
   # other hosts' copy services pull (BackupPlanDirector's copy jobs).
   #
-  # It does not serve /opt/stacks-data. celestia and luna back their own
-  # stacks up in place (docs/plans/host-owned-backups.md, phase 1), so nothing
-  # pulls their stack data, and a server with no reason to read it should not
-  # be able to. A host whose stacks celestia still pulls keeps that export
-  # through its own copy of this file, in docker/<host>/rclone-sftp/.
+  # It does not serve /opt/stacks-data. Every Docker host backs its own stacks
+  # up in place (docs/plans/host-owned-backups.md), so nothing pulls stack data,
+  # and a server with no reason to read it should not be able to. The per-host
+  # copies of this file that kept the export for pulled hosts are gone with the
+  # pull.
   #
   # Runs as uid 0 with CAP_DAC_READ_SEARCH and nothing else. That combination
   # is deliberate and load-bearing. Two uids write the repos here -- 65534

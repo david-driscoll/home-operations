@@ -41,27 +41,26 @@ const dockgeDetails = globals.store.getDockgeInstances();
 
 const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator", globals);
 
-// Dockge hosts whose own backrest snapshots their stacks in place
+// Every Dockge host's own backrest snapshots its stacks in place
 // (docs/plans/host-owned-backups.md, phase 1). The key is the docker/<host>/
 // directory, which is also the cluster key BackupPlanDirector matches `source`
-// against. Every other host is still pulled over SFTP into celestia's staging
-// tree, below.
+// against. A host missing from this list fails the run below. The SFTP pull
+// that used to stage the other hosts' stacks on celestia is gone.
 //
-// Rolled out one host at a time, as the plan says. celestia went first because
-// its repos already lived on celestia: only the snapshot path changed, and the
-// plan ids, repo ids and Gatus tokens stayed as they were. luna's repos live on
-// celestia too, but luna holds a copy-job mirror of each one at the same path,
-// and its backrest takes that over; BackupPlanDirector then copies them the
-// other way, from luna to celestia. skystar joins when it is back online (it
-// has no hosts/dockge record while the ocracoke Stack is disabled, so it emits
-// no plans at all today). alpha-site has no /data for local repos, so it went
-// straight to Garage (phase 2, step 7): see GARAGE_BACKED_HOSTS.
+// Rolled out one host at a time. celestia went first because its repos already
+// lived on celestia: only the snapshot path changed, and the plan ids, repo ids
+// and Gatus tokens stayed as they were. luna's repos live on celestia too, but
+// luna holds a copy-job mirror of each one at the same path, and its backrest
+// takes that over; BackupPlanDirector then copies them the other way, from luna
+// to celestia. alpha-site has no /data for local repos, so it went straight to
+// Garage (phase 2, step 7): see GARAGE_BACKED_HOSTS.
 //
-// Adding a host here also means deleting docker/<host>/rclone-sftp/
-// compose.yaml: that copy exists only to keep the host's stacks exported over
-// SFTP for the pull below. Delete it once the host's first night is green, in
-// a later change than this one (the plan's "How a change reaches the hosts").
-const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia", "luna", "alpha-site"]);
+// skystar is listed although it is offline, so that it comes back the same way
+// (David, 2026-10-01). It has no hosts/dockge record while the ocracoke Stack
+// is disabled, so today it emits no plans at all. Its old repos on celestia,
+// and luna's copies of them, stay on disk as a frozen archive, as alpha-site's
+// did.
+const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia", "luna", "alpha-site", "skystar"]);
 
 function isHostOwned(hostDir: string): hostDir is BackupPlanItem["source"] {
   return (HOST_OWNED_BACKUP_HOSTS as ReadonlySet<string>).has(hostDir);
@@ -70,16 +69,19 @@ function isHostOwned(hostDir: string): hostDir is BackupPlanItem["source"] {
 // Host-owned hosts whose repos live in the geo Garage rather than in
 // /data/backup on the host (docs/plans/host-owned-backups.md §C2), in the
 // host's own `backrest-<host>` bucket. alpha-site first, because it has no
-// /data at all; the rest follow in phase 4. The key reaches the host as a file
-// from stacks/system (components/backrestGarage.ts), so nothing secret is in
-// the plan, and the copy tier leaves these repos alone: Garage replicates them,
-// and TrueNAS pulls the bucket (components/garageTruenasCopy.ts).
+// /data at all. skystar goes the same way when it is back, which is what lets
+// the SFTP pull go now rather than at its cutover. celestia and luna follow in
+// phase 4. The key reaches the host as a file from stacks/system
+// (components/backrestGarage.ts), so nothing secret is in the plan, and the
+// copy tier leaves these repos alone: Garage replicates them, and TrueNAS
+// pulls the bucket (components/garageTruenasCopy.ts; skystar's bucket joins
+// that list when skystar's first night is green).
 //
-// The repos start fresh. alpha-site's old ones stay on celestia (and luna's
-// copies of them) as a frozen archive, the way the host-level plans were
-// retired; nothing prunes them any more, so delete them by hand once the new
-// repos hold a retention window of their own.
-const GARAGE_BACKED_HOSTS: ReadonlySet<string> = new Set(["alpha-site"]);
+// The repos start fresh. A host's old ones stay on celestia (and luna's copies
+// of them) as a frozen archive, the way the host-level plans were retired;
+// nothing prunes them any more, so delete them by hand once the new repos hold
+// a retention window of their own.
+const GARAGE_BACKED_HOSTS: ReadonlySet<string> = new Set(["alpha-site", "skystar"]);
 
 // One backrest plan per STACK, not per host.
 //
@@ -92,8 +94,8 @@ const GARAGE_BACKED_HOSTS: ReadonlySet<string> = new Set(["alpha-site"]);
 // per host, so a stack whose data had silently stopped changing looked exactly
 // like a healthy one.
 //
-// Now each qualifying stack gets its own repo, its own plan, its own pre-sync,
-// and its own Gatus heartbeat. `listStackBackupTargets` decides what qualifies
+// Now each qualifying stack gets its own repo, its own plan and its own Gatus
+// heartbeat, read in place on its own host. `listStackBackupTargets` decides what qualifies
 // from the repo working tree -- see components/dockerStackBackups.ts for the
 // rule and for why three stacks are opted out of it by hand.
 const dockgeInstances = dockgeDetails.apply(details =>
@@ -110,73 +112,47 @@ const dockgeInstances = dockgeDetails.apply(details =>
       );
     }
 
-    if (isHostOwned(hostDir)) {
-      return targets.map(target =>
-        backupPlanOrchestrator.addBackupPlan(
-          pulumi.output({
-            source: hostDir,
-            // Same identity as the pulled shape below, so the host's backrest
-            // keeps appending to the same repo: the history carries over, and
-            // the first snapshot on the new path reads the tree once from local
-            // disk and uploads little. On luna that repo is the copy-job mirror
-            // already at /data/backup/<name>/, which backrest adopts as it is:
-            // its auto-init is a no-op once `restic cat config` succeeds.
-            name: `${detail.name}-${target.stack}`,
-            title: `${detail.title ?? detail.name}: ${target.stack}`,
-            // The stack's own directory, read in place. The backrest container
-            // mounts /opt/stacks-data read-only at the same path and runs with
-            // DAC_READ_SEARCH (docker/_common/backrest/compose.yaml), so the
-            // 0700 app directories that were the reason rclone-sftp runs as
-            // uid 0 are readable here too.
-            path: `${STACKS_DATA_ROOT}/${target.stack}/`,
-            repository: `${detail.name}-${target.stack}`,
-            // Always set, even when empty: BackupPlanDirector merges plans into
-            // config.json key by key, so an omitted `excludes` would leave the
-            // last run's list in place.
-            planConfig: { excludes: resticExcludesFor(target) },
-            garage: GARAGE_BACKED_HOSTS.has(hostDir)
-              ? {
-                  endpoint: pulumi.output(globals.tailscaleDomain).apply(domain => backrestGarageEndpoint(hostDir, domain)),
-                  bucket: backrestGarageBucket(hostDir),
-                }
-              : undefined,
-          }),
-        ),
+    // No fallback any more. A host that is not host-owned used to be pulled
+    // over SFTP into celestia's staging tree. That path is gone, so a new
+    // Docker host has to be added to HOST_OWNED_BACKUP_HOSTS, and to
+    // GARAGE_BACKED_HOSTS if it has no /data for local repos. Failing here
+    // beats a host whose stacks quietly stop being backed up.
+    if (!isHostOwned(hostDir)) {
+      throw new Error(
+        `docker/${hostDir}/ is not in HOST_OWNED_BACKUP_HOSTS (stacks/backups), so nothing would back up its stacks: every Docker host backs up its own now (docs/plans/host-owned-backups.md). Add it there, and to GARAGE_BACKED_HOSTS if it has no /data for local repos.`,
       );
     }
 
     return targets.map(target =>
       backupPlanOrchestrator.addBackupPlan(
         pulumi.output({
-          source: "celestia",
-          // IDENTITY, not a label: this is the restic repo id, the plan id, the
-          // /data/backup/<name>/ directory, the staging directory, and the
-          // Gatus token. It is also deliberately DISTINCT from the retired
-          // host-level ids ("celestia-dockge"), whose repos stay on disk as a
-          // frozen archive -- see RETIRED_BACKREST_PLANS.
+          source: hostDir,
+          // The same identity the old pulled plans had, so a host's backrest
+          // kept appending to the same repo when it took its stacks over: the
+          // history carried over, and the first snapshot on the new path read
+          // the tree once from local disk and uploaded little. On luna that repo
+          // was the copy-job mirror already at /data/backup/<name>/, which
+          // backrest adopted as it was: its auto-init is a no-op once
+          // `restic cat config` succeeds.
           name: `${detail.name}-${target.stack}`,
-          // Display only; nothing derives from it. The `??` is not decorative:
-          // the OpenBao dockge item carries no `title` field even though the
-          // type declares one, so this is undefined on every real read.
           title: `${detail.title ?? detail.name}: ${target.stack}`,
-          // Staging deliberately reuses the host-level tree the old whole-host
-          // sync already populated, one subdirectory per stack. The layout is
-          // identical, so the first per-stack run is a near no-op diff instead
-          // of re-downloading the entire estate over SFTP. Directories left
-          // behind by stacks that no longer qualify are dead weight, not a
-          // correctness problem -- nothing snapshots them any more.
-          path: `/data/staging/${detail.name}/${target.stack}/`,
+          // The stack's own directory, read in place. The backrest container
+          // mounts /opt/stacks-data read-only at the same path and runs with
+          // DAC_READ_SEARCH (docker/_common/backrest/compose.yaml), so the
+          // 0700 app directories that were the reason rclone-sftp runs as
+          // uid 0 are readable here too.
+          path: `${STACKS_DATA_ROOT}/${target.stack}/`,
           repository: `${detail.name}-${target.stack}`,
-          preSync: {
-            sftpHost: detail.hostname,
-            sftpPort: 2022,
-            // rclone-sftp serves /opt/stacks-data/ as /data/stacks/, rooted at
-            // /stacks/ for the client -- but only on a host pulled here, through
-            // its own copy of the stack (docker/<host>/rclone-sftp/compose.yaml).
-            // The _common one exports the repos alone.
-            sourcePath: `/stacks/${target.stack}/`,
-            exclude: target.excludes,
-          },
+          // Always set, even when empty: BackupPlanDirector merges plans into
+          // config.json key by key, so an omitted `excludes` would leave the
+          // last run's list in place.
+          planConfig: { excludes: resticExcludesFor(target) },
+          garage: GARAGE_BACKED_HOSTS.has(hostDir)
+            ? {
+                endpoint: pulumi.output(globals.tailscaleDomain).apply(domain => backrestGarageEndpoint(hostDir, domain)),
+                bucket: backrestGarageBucket(hostDir),
+              }
+            : undefined,
         }),
       ),
     );

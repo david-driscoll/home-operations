@@ -278,16 +278,20 @@ export class DockgeLxc extends ComponentResource {
       );
     });
 
-    // Seed SFTP keys into the rclone-sftp stack path on the remote host
+    // Seed the copy tier's SFTP keys: rclone-sftp's server side and the copy
+    // service's client side. Backrest had a client key here too, for the SFTP
+    // pre-sync that pulled other hosts' stacks. Every host backs up its own
+    // now (docs/plans/host-owned-backups.md), so that key went with the pull,
+    // and its files are removed from /opt/stacks-data/backrest/ssh as the
+    // resources go. The copy tier itself goes in phase 4.
     const sftpKeysDir = "/opt/stacks-data/rclone-sftp/keys";
     const jobsKeysDir = "/opt/stacks-data/backups/keys";
-    const backrestSshDir = "/opt/stacks-data/backrest/ssh";
 
     const ensureKeysDir = new remote.Command(
       `${name}-ensure-sftp-keys-dir`,
       {
         connection: this.remoteConnection,
-        create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir}`,
+        create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
       },
       mergeOptions(cro, { dependsOn: depends }),
     );
@@ -367,17 +371,6 @@ export class DockgeLxc extends ComponentResource {
         triggers: [dailyTrigger],
       }),
     );
-    keyWrites.push(
-      copyFileToRemote(`${name}-backrest-client-key`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${backrestSshDir}/id_ed25519`,
-        content: privateKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-        triggers: [dailyTrigger],
-      }),
-    );
-
     // Write client private key for rclone-jobs client
     keyWrites.push(
       copyFileToRemote(`${name}-jobs-client-pub`, {
@@ -389,17 +382,6 @@ export class DockgeLxc extends ComponentResource {
         triggers: [dailyTrigger],
       }),
     );
-    keyWrites.push(
-      copyFileToRemote(`${name}-backrest-client-pub`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${backrestSshDir}/id_ed25519.pub`,
-        content: publicKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-        triggers: [dailyTrigger],
-      }),
-    );
-
     // Write server public key for known_hosts usage by clients
     keyWrites.push(
       copyFileToRemote(`${name}-jobs-server-pub`, {
@@ -417,18 +399,6 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-jobs-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/known_hosts`,
-        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-        triggers: [dailyTrigger],
-      }),
-    );
-
-    // Also generate a convenience known_hosts entry using tailscale hostname with port
-    keyWrites.push(
-      copyFileToRemote(`${name}-backrest-known-hosts`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${backrestSshDir}/known_hosts`,
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
@@ -454,7 +424,7 @@ export class DockgeLxc extends ComponentResource {
         {
           connection: this.remoteConnection,
           triggers: keyWrites.map(k => k.id),
-          create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${sftpKeysDir}/known_hosts ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts && chown -R 65534:65534 ${sftpKeysDir} || true`,
+          create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${sftpKeysDir}/known_hosts ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub && chown -R 65534:65534 ${sftpKeysDir} || true`,
         },
         mergeOptions(cro, { dependsOn: keyWrites }),
       ),

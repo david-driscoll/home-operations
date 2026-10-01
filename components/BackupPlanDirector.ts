@@ -429,20 +429,20 @@ export class BackupPlanDirector extends ComponentResource {
     // The S3 credentials for every bucket-backed plan, in one file, written
     // ALONGSIDE config.json rather than into it.
     //
-    // Two reasons it is not inlined into the hook command the way the SFTP key
-    // path is. First, config.json is read back and merged on every run and is
-    // shown in full in backrest's own UI; access keys do not belong in a string
-    // that gets echoed around. Second, rotating a key becomes one file write
-    // rather than a rewrite of every plan that uses it.
+    // Two reasons it is not inlined into the hook command. First, config.json
+    // is read back and merged on every run and is shown in full in backrest's
+    // own UI; access keys do not belong in a string that gets echoed around.
+    // Second, rotating a key becomes one file write rather than a rewrite of
+    // every plan that uses it.
     //
     // `garage.conf`, NOT `rclone.conf`: compose.yaml already bind-mounts
     // ./rclone as the container's rclone config directory, and rclone.conf
     // there is rclone's own default name. Writing to that name would silently
     // replace whatever a human had put there. A distinct name cannot.
     //
-    // The path sits under /opt/stacks-data/ for the same reason the SFTP key
-    // does: that tree is bind-mounted read-only into the container, so the
-    // absolute path is identical inside and out. See DockgeLxc.ts.
+    // The path sits under /opt/stacks-data/ because that tree is bind-mounted
+    // read-only into the container, so the absolute path is identical inside
+    // and out.
     const rcloneDeps: Input<Resource>[] = [];
     if (rcloneConfig) {
       const rcloneFile = copyFileToRemote(`${cluster.key}-backrest-rclone-garage.conf`, {
@@ -633,14 +633,27 @@ function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: Backre
  * Where the generated rclone remotes live on a backrest host.
  *
  * Identical inside and outside the container: /opt/stacks-data is bind-mounted
- * read-only at the same path (docker/_common/backrest/compose.yaml), which is
- * why the existing SFTP hook can name an absolute key path and have it resolve.
+ * read-only at the same path (docker/_common/backrest/compose.yaml), so the
+ * hook can name the file by its absolute path and have it resolve.
  */
 const RCLONE_CONFIG_PATH = "/opt/stacks-data/backrest/rclone/garage.conf";
 
-/** Narrowing helper. An absent `type` means sftp -- see SftpPreSyncArgs for why. */
-function isS3PreSync(preSync: NonNullable<BackupPlanItem["preSync"]>): preSync is S3PreSyncArgs {
-  return preSync.type === "s3";
+/**
+ * The plan's pre-sync, which must be the S3 kind. A plan with no `type` is the
+ * old SFTP shape, which pulled a Docker host's stacks into celestia's staging
+ * tree. It went once every Docker host backed up its own stacks
+ * (docs/plans/host-owned-backups.md). Reading it as S3 would render an rclone
+ * command against a bucket that does not exist, so it fails the run instead,
+ * naming the plan.
+ */
+function s3PreSync(plan: BackupPlanItem): S3PreSyncArgs {
+  const preSync = plan.preSync!;
+  if (preSync.type !== "s3") {
+    throw new Error(
+      `Backup plan '${plan.name}' carries an SFTP pre-sync, and that path is gone: every Docker host now backs up its own stacks (HOST_OWNED_BACKUP_HOSTS in stacks/backups). Re-run stacks/backups so the inventory stops emitting it.`,
+    );
+  }
+  return preSync;
 }
 
 /**
@@ -671,43 +684,24 @@ function preSyncCommand(plan: BackupPlanItem): string {
 }
 
 function syncCommand(plan: BackupPlanItem): string {
-  const preSync = plan.preSync!;
+  const preSync = s3PreSync(plan);
 
-  if (isS3PreSync(preSync)) {
-    // No --no-update-*modtime pair here, unlike the SFTP branch. A bucket has
-    // no directory mtimes and rclone cannot carry object timestamps onto a
-    // local filesystem anyway, so suppressing the updates would only defeat the
-    // size+modtime comparison that makes every steady-state run cheap.
-    const remoteSpec = `${rcloneRemoteName(plan.name)}:${preSync.bucket}${preSync.prefix ? `/${preSync.prefix}` : ""}`;
-    return [
-      "rclone sync",
-      remoteSpec,
-      plan.path,
-      `--config ${RCLONE_CONFIG_PATH}`,
-      // Same reason as the SFTP path: a file dropped from the exclude list has
-      // to leave the staging tree too, or restic keeps snapshotting it forever.
-      "--delete-excluded",
-      "--log-level INFO",
-      // Reminder, because this bit every dockge exclude once already: a bare
-      // '/dir' matches FILES only. Directories need '/dir/**'.
-      ...(preSync.exclude?.map(e => `--exclude '${e}'`) ?? []),
-    ].join(" ");
-  }
-
+  // No --no-update-*modtime pair. A bucket has no directory mtimes, and rclone
+  // cannot carry object timestamps onto a local filesystem anyway, so
+  // suppressing the updates would only defeat the size+modtime comparison that
+  // makes every steady-state run cheap.
+  const remoteSpec = `${rcloneRemoteName(plan.name)}:${preSync.bucket}${preSync.prefix ? `/${preSync.prefix}` : ""}`;
   return [
     "rclone sync",
-    `:sftp:${preSync.sourcePath}`,
+    remoteSpec,
     plan.path,
-    `--sftp-host=${preSync.sftpHost}`,
-    `--sftp-port=${preSync.sftpPort ?? 2022}`,
-    "--sftp-user=sftp",
-    "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
-    "--sftp-shell-type=none",
+    `--config ${RCLONE_CONFIG_PATH}`,
+    // A file dropped from the exclude list has to leave the staging tree too,
+    // or restic keeps snapshotting it forever.
     "--delete-excluded",
     "--log-level INFO",
-    "--no-update-dir-modtime",
-    "--no-update-modtime",
-    // "--ignore-errors",
+    // Reminder, because this bit every dockge exclude once already: a bare
+    // '/dir' matches FILES only. Directories need '/dir/**'.
     ...(preSync.exclude?.map(e => `--exclude '${e}'`) ?? []),
   ].join(" ");
 }
@@ -721,7 +715,7 @@ function syncCommand(plan: BackupPlanItem): string {
  * carry.
  */
 function renderRcloneConfig(plans: UnwrappedArray<BackupPlanItem>): string | undefined {
-  const s3Plans = plans.filter(p => p.preSync && isS3PreSync(p.preSync)).map(p => ({ name: p.name, preSync: p.preSync as S3PreSyncArgs }));
+  const s3Plans = plans.filter(p => p.preSync).map(p => ({ name: p.name, preSync: s3PreSync(p) }));
 
   if (s3Plans.length === 0) return undefined;
 
