@@ -4,7 +4,7 @@
 # themselves instead -- nothing installs FROM this name anyway, talhelper builds
 # factory.talos.dev URLs from the `schematic:` blocks in talconfig.yaml.
 # renovate: datasource=github-releases depName=siderolabs/talos
-talosVersion: v1.14.1
+talosVersion: v1.14.2
 # Kept in lockstep with kubernetes/apps/system-upgrade/upgrades/kubernetes.yaml.
 # That CR is what actually rolls Kubernetes; this value only sets the images in
 # the config talhelper renders. They drifted once (renovate moved this to
