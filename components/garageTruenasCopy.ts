@@ -113,11 +113,36 @@ const GARAGE_COPY_SNAPSHOT_HOUR = "18";
  * the packets stay on the LAN. HTTPS matters
  * here: unlike the restic buckets, cnpg-equestria and pulumi-state are not
  * encrypted client-side. The trade-off is that the pulls stop while celestia
- * is down.
+ * is down. Going through traefik is also why every pull carries
+ * GARAGE_COPY_RCLONE_ARGS.
  */
 export function garageCopyEndpoint(searchDomain: string): string {
   return `https://s3.celestia.${searchDomain}`;
 }
+
+/**
+ * The rclone flags every pull runs with: ask for each object as stored, never
+ * gzip-encoded.
+ *
+ * Every Dockge traefik entrypoint runs `compress@file`
+ * (docker/_common/traefik/config.yaml), so a response over 1 KiB is gzipped
+ * whenever the client accepts gzip, and it arrives with the compressed length
+ * as its Content-Length. rclone's S3 backend asks for gzip by default, and it
+ * only unpacks a gzip body that has no Content-Length. Anything else it keeps
+ * as is: it takes the compressed length for the object's size, writes the
+ * gzip stream to disk, then compares that file's MD5 with the ETag. The first
+ * pulls (2026-10-01) failed exactly that way, sizes equal and "corrupted on
+ * transfer: md5 hashes differ": 1394 of pulumi-state's 4272 objects, and
+ * backrest-alpha-site. An object rclone cannot hash-check (a multipart ETag)
+ * fails nothing, and lands gzip-wrapped.
+ *
+ * `--s3-use-accept-encoding-gzip=false` stops rclone sending the header, and
+ * `--no-gzip-encoding` stops Go's HTTP transport from adding it. With no
+ * Accept-Encoding, traefik passes the bytes through untouched. A file an
+ * earlier pull left gzip-wrapped is a different size from its object, so the
+ * next pull replaces it.
+ */
+export const GARAGE_COPY_RCLONE_ARGS = "--s3-use-accept-encoding-gzip=false --no-gzip-encoding";
 
 /** The TrueNAS cloud credential for one of the keys above. */
 export function garageCopyCredential(args: { key: GarageCopyKey; endpoint: string; accessKeyId: string; secretAccessKey: string }): CloudCredentialInput {
@@ -188,6 +213,7 @@ export function garageCopyTask(args: { bucket: string; credentialsId: number; up
     exclude: ["locks/**"],
     pre_script: "",
     post_script: `curl -sf -X POST -H "Authorization: Bearer ${token}" "${args.uptimeUrl}/api/v1/endpoints/${token}/external?success=true" || true`,
+    args: GARAGE_COPY_RCLONE_ARGS,
     enabled: true,
   };
 }

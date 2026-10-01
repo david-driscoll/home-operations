@@ -870,6 +870,11 @@ new snapshot.
   - **As built (2026-10-01):** celestia's node, by its HTTPS name. That name resolves to celestia's
     tailnet address, so the pulls ride WireGuard, peer to peer on the LAN. They were first allowed
     by `default-apps-access`. Now they have their own guarded grant, `garage-truenas-copy` (§C3).
+  - **The HTTPS name goes through traefik, and its `compress` middleware runs on every entrypoint.**
+    The first pulls (2026-10-01) wrote gzip streams instead of objects. pulumi-state and
+    backrest-alpha-site failed rclone's MD5 check with the sizes equal, and any object rclone could
+    not hash-check passed while still stored gzipped. Every pull now sends no `Accept-Encoding`, so
+    traefik passes the bytes through (`GARAGE_COPY_RCLONE_ARGS` in `components/garageTruenasCopy.ts`).
 - **H5 — VolSync's route and its nightly restore-once.** ✅ Decided 2026-09-29: celestia's node,
   directly over the LAN. equestria and celestia are co-located, so the restore-once reads stay local
   (§C2, phase 3). Fixing the cycle itself stays out of scope (§G).

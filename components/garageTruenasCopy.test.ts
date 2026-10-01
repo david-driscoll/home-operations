@@ -10,6 +10,7 @@ import {
   GARAGE_COPY_BUCKETS,
   GARAGE_COPY_DATASET,
   GARAGE_COPY_KEYS,
+  GARAGE_COPY_RCLONE_ARGS,
   GARAGE_COPY_TASK_PREFIX,
   garageCopyCredential,
   garageCopyNfsShare,
@@ -74,6 +75,19 @@ describe("garageCopyTask", () => {
     const token = toGatusKey(TRUENAS_GARAGE_COPY_GROUP, "cnpg-equestria");
     assert.equal(token, "truenas-garage-copy_cnpg-equestria");
     assert.equal(task.post_script, `curl -sf -X POST -H "Authorization: Bearer ${token}" "https://uptime.example.test/api/v1/endpoints/${token}/external?success=true" || true`);
+  });
+
+  it("asks for every object unencoded, so traefik's compress middleware never touches it", () => {
+    for (const { bucket } of GARAGE_COPY_BUCKETS) {
+      assert.equal(garageCopyTask({ bucket, credentialsId: 7, uptimeUrl: "https://uptime.example.test" }).args, GARAGE_COPY_RCLONE_ARGS);
+    }
+    assert.deepEqual(GARAGE_COPY_RCLONE_ARGS.split(" ").sort(), ["--no-gzip-encoding", "--s3-use-accept-encoding-gzip=false"]);
+  });
+
+  it("keeps rclone's size and MD5 checks: the fix is the encoding, not skipping the check", () => {
+    for (const flag of ["--ignore-checksum", "--ignore-size", "--size-only", "--s3-decompress"]) {
+      assert.ok(!GARAGE_COPY_RCLONE_ARGS.includes(flag), `${flag} would hide a pull that wrote the wrong bytes`);
+    }
   });
 });
 
@@ -150,7 +164,6 @@ describe("matchers", () => {
     attributes: { ...desiredTask.attributes, region: "", encryption: null, storage_class: "" } as CloudSyncTask["attributes"],
     schedule: { ...desiredTask.schedule, minute: "0" },
     include: [],
-    args: "",
     transfers: null,
     locked: false,
     job: null,
@@ -160,11 +173,14 @@ describe("matchers", () => {
     assert.equal(cloudSyncTaskMatches(existingTask, desiredTask), true);
   });
 
-  it("sees a changed heartbeat, credential, schedule or exclude as a change", () => {
+  it("sees a changed heartbeat, credential, schedule, exclude or rclone flags as a change", () => {
     assert.equal(cloudSyncTaskMatches({ ...existingTask, post_script: "" }, desiredTask), false);
     assert.equal(cloudSyncTaskMatches({ ...existingTask, credentials: { ...existingCredential, id: 4 } }, desiredTask), false);
     assert.equal(cloudSyncTaskMatches({ ...existingTask, schedule: { ...existingTask.schedule, hour: "14" } }, desiredTask), false);
     assert.equal(cloudSyncTaskMatches({ ...existingTask, exclude: [] }, desiredTask), false);
+    // The tasks created before GARAGE_COPY_RCLONE_ARGS have TrueNAS's empty
+    // default, so the next run rewrites them.
+    assert.equal(cloudSyncTaskMatches({ ...existingTask, args: "" }, desiredTask), false);
   });
 
   it("treats an unchanged snapshot task as unchanged, and a changed retention as a change", () => {
