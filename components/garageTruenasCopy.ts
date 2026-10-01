@@ -107,8 +107,10 @@ const GARAGE_COPY_SNAPSHOT_HOUR = "18";
  * Where spike reaches Garage: celestia's own node, through the per-node route
  * (`s3.${CLUSTER_DOMAIN}` in docker/_common/garage/compose.yaml), the decision
  * behind H4. That name is a CNAME to celestia's tailnet address, so spike
- * (tag:shared-drive) connects over WireGuard under `default-apps-access`. The
- * two peers connect directly, so the packets stay on the LAN. HTTPS matters
+ * (tag:shared-drive) connects over WireGuard under its own `garage-truenas-copy`
+ * grant, which a policy test and assertGrantPath guard
+ * (stacks/unifi-network/acl-manager.ts). The two peers connect directly, so
+ * the packets stay on the LAN. HTTPS matters
  * here: unlike the restic buckets, cnpg-equestria and pulumi-state are not
  * encrypted client-side. The trade-off is that the pulls stop while celestia
  * is down.

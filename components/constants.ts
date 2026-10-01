@@ -149,6 +149,12 @@ export const Tailscale = {
     // Pulumi state rides this path, so its grant is guarded -- see
     // `garage-s3-vip-egress` in stacks/unifi-network/acl-manager.ts.
     garageS3Vip: ["tcp:443"] as TailscaleNetworkCapability[],
+    // The same API through ONE node's own HTTPS name, `s3.<cluster>`: traefik's
+    // websecure entrypoint, then 3900 (docker/_common/garage/compose.yaml).
+    // TrueNAS's copy of the Garage buckets pulls through celestia's. That grant
+    // is guarded too -- see `garage-truenas-copy` in
+    // stacks/unifi-network/acl-manager.ts.
+    garageS3Node: ["tcp:443"] as TailscaleNetworkCapability[],
     garageAdmin: ["tcp:3903"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {

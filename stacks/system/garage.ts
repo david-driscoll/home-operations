@@ -467,9 +467,9 @@ aws_secret_access_key = ${key.secretAccessKey}
   // celestia's own node, by its per-node HTTPS name (`s3.${CLUSTER_DOMAIN}`,
   // docker/_common/garage/compose.yaml). spike pulls through it (H4). DockgeLxc
   // publishes that name as a CNAME to celestia's TAILNET address, so spike
-  // reaches it over WireGuard, as tag:shared-drive under the
-  // `default-apps-access` grant. Those packets still stay on the LAN, since the
-  // two peers connect directly.
+  // reaches it over WireGuard, as tag:shared-drive under its own guarded
+  // `garage-truenas-copy` grant (stacks/unifi-network/acl-manager.ts). Those
+  // packets still stay on the LAN, since the two peers connect directly.
   const celestiaNodeEndpoint = pulumi.output(globals.searchDomain).apply(garageCopyEndpoint);
 
   // celestia's node for the cluster's restic writers: the VolSync movers and

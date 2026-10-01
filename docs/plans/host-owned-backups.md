@@ -232,6 +232,10 @@ step 1).
   - **That grant is meant for people.** Narrowing it would cut the pulls off. `garage-s3-vip-egress`
     guards Pulumi state's path against the same risk, so a dedicated grant like it, with a policy
     test, is the follow-up.
+    - ✅ Done: the `garage-truenas-copy` grant (`stacks/unifi-network/acl-manager.ts`) allows
+      `tag:shared-drive` → `tag:dockge` on 443 alone. Two guards back it, as with
+      `garage-s3-vip-egress`: a policy test Tailscale enforces, and an `assertGrantPath` that
+      fails the run before a policy without the path is written.
   - **Not the movers' route.** VolSync uses celestia's LAN address over plain HTTP (phase 3,
     "Route"). TrueNAS keeps HTTPS, because `cnpg-equestria` and `pulumi-state` are not encrypted
     client-side.
@@ -831,8 +835,8 @@ new snapshot.
 - **H4 — How TrueNAS reaches Garage.** ✅ Decided 2026-09-29: over the LAN to celestia's node, like
   VolSync. No tailnet grant is needed (§C3).
   - **As built (2026-10-01):** celestia's node, by its HTTPS name. That name resolves to celestia's
-    tailnet address, so the pulls ride WireGuard under `default-apps-access`, peer to peer on the
-    LAN. A dedicated grant is the follow-up (§C3).
+    tailnet address, so the pulls ride WireGuard, peer to peer on the LAN. They were first allowed
+    by `default-apps-access`. Now they have their own guarded grant, `garage-truenas-copy` (§C3).
 - **H5 — VolSync's route and its nightly restore-once.** ✅ Decided 2026-09-29: celestia's node,
   directly over the LAN. equestria and celestia are co-located, so the restore-once reads stay local
   (§C2, phase 3). Fixing the cycle itself stays out of scope (§G).
