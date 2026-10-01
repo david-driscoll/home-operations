@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app volsync-garage-history-copy
+  namespace: &namespace volsync-system
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/volsync-system/garage-history-copy
+  prune: true
+  # Waits for the Job to finish, so a failed copy shows as this Kustomization
+  # going unready. Nothing depends on it. The timeout leaves room for the
+  # large repos in the later batches.
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 30m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
