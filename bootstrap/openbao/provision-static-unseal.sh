@@ -53,7 +53,14 @@ readonly OP_REF="op://Eris/OpenBao Alpha Site Static Unseal/current_key"
 # "/var/local/unseal-key MISSING" and "could not read seal status" rather than
 # as a connection failure. A verify that reports the key is gone when it is
 # actually fine is worse than one that errors.
-readonly HOST="${BAO_TRANSIT_HOST:-dockge-as.opossum-yo.ts.net}"
+if [[ -z "${BAO_TRANSIT_HOST:-}" ]]; then
+  # The tailnet is never written in the repo; private_names reads it (from
+  # the environment, or decrypted from SOPS).
+  # shellcheck source-path=SCRIPTDIR source=../../scripts/lib/private-names.sh
+  source "${REPO_ROOT}/scripts/lib/private-names.sh"
+  private_names || exit 1
+fi
+readonly HOST="${BAO_TRANSIT_HOST:-dockge-as.${TAILSCALE_DOMAIN:-}}"
 # An env-file on the host, outside every stack directory: nothing that renders
 # or syncs the compose stack can touch it, and `docker compose` reads it
 # directly via env_file. Estate decision 2026-08-12.

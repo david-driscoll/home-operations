@@ -82,7 +82,7 @@ _config_version: 33
 # does not enforce the name.
 model:
   provider: custom
-  base_url: http://dockge-celestia.driscoll.tech:8081/v1
+  base_url: http://dockge-celestia.${ROOT_DOMAIN}:8081/v1
   default: "ggml-org/gemma-4-E4B-it-GGUF:Q4_0"
 
 # --- terminal ---------------------------------------------------------------
