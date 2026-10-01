@@ -306,18 +306,20 @@
       versioning: "semver",
     },
     {
-      // lakker/pulsarr carries a stray `1.1.6` tag that is NOT the project's
-      // current release line (that is 0.x), so Renovate kept raising "0.19.2 ->
-      // 1.1.6" as a major (#1621) and it had to be closed every time. Exclude
-      // exactly that tag; anything genuinely newer still comes through.
-      description: "Pulsarr: never propose the stray 1.1.6 tag",
+      // lakker/pulsarr carries stray 1.x tags that are NOT the project's
+      // current release line (that is 0.x), so Renovate kept raising them as a
+      // major: "0.19.2 -> 1.1.6" (#1621). Excluding just 1.1.6 only moved it on
+      // to the next stray one, "-> 1.1.5" (#2321). So the whole 1.x line is
+      // off for now; 0.x updates, and anything from 2.x up, still come
+      // through. Drop this once upstream's real line reaches 1.x.
+      description: "Pulsarr: never propose the stray 1.x tags",
       matchDatasources: [
         "docker"
       ],
       matchPackageNames: [
         "lakker/pulsarr"
       ],
-      allowedVersions: "!/^v?1\\.1\\.6$/",
+      allowedVersions: "!/^v?1\\./",
     },
     {
       description: "CoreDNS Group",
