@@ -14,6 +14,7 @@ file through `globalExtends`.
 | Automerges | Never automerges |
 | --- | --- |
 | `docker`/`helm` patch, digest and minor bumps under `kubernetes/apps/{equestria,stargate-command,agents}/**` and `docker/**` | majors; minors of `0.x`; Home Assistant minors (the monthly release) |
+| named dependencies, minor/patch/digest, under "Automerge named dependencies": external-dns (chart + mirror), yq, pulumi, gh, hk, unifi-network-mcp, pulumi-nodejs, renovate-operator | the `Pulumi.yaml` provider pins: a bump there needs an SDK regeneration that automerge would skip |
 | GitHub Actions minor/patch/digest (the older rule, `automergeType: branch`) | databases and anything that migrates on start (postgres, timescale, CNPG, mongo, couchdb, valkey/redis, mariadb/mysql, neo4j, meilisearch, immich, nextcloud, opencloud) |
 | | identity, secrets, ingress, DNS, tailnet, storage, backups, registry (authentik, openbao, garage, traefik, tailscale, technitium, keepalived, zot, docker-socket-proxy, backrest, rclone, arcane, toolport) |
 | | everything else: Talos, Kubernetes, Flux, CRDs, cluster infrastructure, mise tools, npm, Pulumi |
@@ -84,6 +85,13 @@ failures, so for them it is layer 1, autoheal, and Gatus.
   image" rules.
 - **Hold one app:** add `"<app dir>/**",` between the `automerge-hold` markers.
   **Release it:** delete the line. Held PRs carry `renovate/automerge-hold`.
+- **Opt in one dependency:** add its Renovate `packageName` to "Automerge named
+  dependencies". For mise tools that is the upstream repo (`cli/cli` for
+  `gh`), not the tool name.
+- **Group PR titles** carry the versions in the group's `commitMessageTopic`,
+  with `commitMessageExtra: ""`. Renovate drops `commitMessageExtra` from a
+  group whose members' versions differ, even by a `v` prefix, so the versions
+  have to go in the topic. The title shows the first member's versions.
 - **Add an app area:** extend `matchFileNames` in **both** rules. The negated
   `matchPackageNames` lists must also stay identical between the two rules.
 - **Test a rule change:** feed the config through Renovate's package-rule
