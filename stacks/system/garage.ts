@@ -24,7 +24,7 @@
  * order of operations making itself known.
  */
 import * as garage from "@axnic/pulumi-garage";
-import { BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE } from "@components/backrestGarage.ts";
+import { BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE, backrestGarageBucket, backrestGarageEndpoint } from "@components/backrestGarage.ts";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { GARAGE_COPY_BUCKETS, GARAGE_COPY_KEYS, garageCopyEndpoint } from "@components/garageTruenasCopy.ts";
@@ -482,7 +482,7 @@ aws_secret_access_key = ${key.secretAccessKey}
   // One bucket per Docker host, written by that host's backrest with its own
   // key, delivered as a credentials file (components/backrestGarage.ts).
   for (const host of BACKREST_HOSTS) {
-    const bucketName = `backrest-${host}`;
+    const bucketName = backrestGarageBucket(host);
     const bucket = backupBucket(bucketName, RESTIC_BUCKET_QUOTA);
     managedBuckets.set(bucketName, bucket);
     const key = readWriteKey(bucketName, bucket);
@@ -501,12 +501,9 @@ aws_secret_access_key = ${key.secretAccessKey}
 
     keyRecord(`${bucketName}-garage-bao`, {
       path: `clusters/${host}/apps/backrest/garage`,
-      // The node on the host's own container network. alpha-site has none and
-      // reaches celestia's, the way its garage-backup loop already does (the
-      // `garage-mesh` grant, tag:dockge to tag:dockge on 3900). The garage-s3
-      // VIP would follow whichever node is up, but no grant lets a dockge
-      // host reach it yet.
-      endpoint: host === "alpha-site" ? pulumi.interpolate`http://dockge-celestia.${globals.tailscaleDomain}:3900` : "http://garage:3900",
+      // The node on the host's own container network; alpha-site, which has
+      // none, reaches celestia's over the tailnet (backrestGarageEndpoint).
+      endpoint: pulumi.output(globals.tailscaleDomain).apply(domain => backrestGarageEndpoint(host, domain)),
       bucket: bucketName,
       key,
       cluster: host,

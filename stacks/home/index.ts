@@ -334,6 +334,20 @@ await awaitOutput(
   ),
 );
 
+// alpha-site's own backrest (docs/plans/host-owned-backups.md, phase 2 step 7).
+// No backup server and no /data, so no pbs: it takes no copies, and its repos
+// live in Garage (stacks/backups, GARAGE_BACKED_HOSTS). It depends on the
+// dockge host so its first run finds the backrest stack deployed.
+await awaitOutput(
+  backupDirector.createPlans(
+    {
+      dockge: alphaSiteDockgeRuntime,
+      cluster: alphaSiteCluster,
+    },
+    [alphaSiteDockgeRuntime],
+  ),
+);
+
 monitor.exportNodeStateToOnePassword(
   [
     {
