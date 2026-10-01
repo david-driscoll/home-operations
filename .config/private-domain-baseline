@@ -9,11 +9,6 @@
 # --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
 kubernetes/apps/kube-system/openbao/helmrelease.yaml
 
-# --- Phase 5: tooling and hosts outside Flux (mise env, MCP, scripts, Docker, Talos) ---
-talos/patches/controller/cluster.yaml
-talos/patches/global/machine-registries.yaml
-talos/talconfig.yaml
-
 # --- Generated: clears as the sources above do (graphify update .) ---
 graphify-out/GRAPH_REPORT.md
 graphify-out/graph.json

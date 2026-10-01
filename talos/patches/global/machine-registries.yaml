@@ -44,44 +44,44 @@ machine:
       docker.io:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/docker.io
-          - https://registry.driscoll.tech/v2/docker.io
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/docker.io
+          - https://registry.${ROOT_DOMAIN}/v2/docker.io
           - https://index.docker.io/v2
           - https://registry-1.docker.io/v2
       gcr.io:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/gcr.io
-          - https://registry.driscoll.tech/v2/gcr.io
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/gcr.io
+          - https://registry.${ROOT_DOMAIN}/v2/gcr.io
           - https://gcr.io/v2
       quay.io:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/quay.io
-          - https://registry.driscoll.tech/v2/quay.io
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/quay.io
+          - https://registry.${ROOT_DOMAIN}/v2/quay.io
           - https://quay.io/v2
       ghcr.io:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/ghcr.io
-          - https://registry.driscoll.tech/v2/ghcr.io
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/ghcr.io
+          - https://registry.${ROOT_DOMAIN}/v2/ghcr.io
           - https://ghcr.io/v2
       registry.k8s.io:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/registry.k8s.io
-          - https://registry.driscoll.tech/v2/registry.k8s.io
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/registry.k8s.io
+          - https://registry.${ROOT_DOMAIN}/v2/registry.k8s.io
           # 307s to a regional mirror, which containerd follows.
           - https://registry.k8s.io/v2
       public.ecr.aws:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/public.ecr.aws
-          - https://registry.driscoll.tech/v2/public.ecr.aws
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/public.ecr.aws
+          - https://registry.${ROOT_DOMAIN}/v2/public.ecr.aws
           - https://public.ecr.aws/v2
       cgr.dev:
         overridePath: true
         endpoints:
-          - https://registry.equestria.driscoll.tech/v2/cgr.dev
-          - https://registry.driscoll.tech/v2/cgr.dev
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/cgr.dev
+          - https://registry.${ROOT_DOMAIN}/v2/cgr.dev
           - https://cgr.dev/v2
