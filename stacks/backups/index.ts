@@ -45,14 +45,16 @@ const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestra
 // against. Every other host is still pulled over SFTP into celestia's staging
 // tree, below.
 //
-// Rolled out one host at a time, as the plan says. celestia goes first because
-// its repos already live on celestia: only the snapshot path changes, and the
-// plan ids, repo ids and Gatus tokens stay as they are. luna follows in its own
-// change, and skystar joins when it is back online (it has no hosts/dockge
-// record while the ocracoke Stack is disabled, so it emits no plans at all
-// today). alpha-site has no /data for local repos and moves straight to Garage
-// in phase 2.
-const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia"]);
+// Rolled out one host at a time, as the plan says. celestia went first because
+// its repos already lived on celestia: only the snapshot path changed, and the
+// plan ids, repo ids and Gatus tokens stayed as they were. luna's repos live on
+// celestia too, but luna holds a copy-job mirror of each one at the same path,
+// and its backrest takes that over; BackupPlanDirector then copies them the
+// other way, from luna to celestia. skystar joins when it is back online (it
+// has no hosts/dockge record while the ocracoke Stack is disabled, so it emits
+// no plans at all today). alpha-site has no /data for local repos and moves
+// straight to Garage in phase 2.
+const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia", "luna"]);
 
 function isHostOwned(hostDir: string): hostDir is BackupPlanItem["source"] {
   return (HOST_OWNED_BACKUP_HOSTS as ReadonlySet<string>).has(hostDir);
@@ -95,7 +97,9 @@ const dockgeInstances = dockgeDetails.apply(details =>
             // Same identity as the pulled shape below, so the host's backrest
             // keeps appending to the same repo: the history carries over, and
             // the first snapshot on the new path reads the tree once from local
-            // disk and uploads little.
+            // disk and uploads little. On luna that repo is the copy-job mirror
+            // already at /data/backup/<name>/, which backrest adopts as it is:
+            // its auto-init is a no-op once `restic cat config` succeeds.
             name: `${detail.name}-${target.stack}`,
             title: `${detail.title ?? detail.name}: ${target.stack}`,
             // The stack's own directory, read in place. The backrest container

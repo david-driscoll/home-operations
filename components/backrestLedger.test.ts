@@ -183,6 +183,54 @@ describe("planLedgerRemovals", () => {
     );
   });
 
+  it("removes a repo this host receives as a copy, with no ledger to say so", () => {
+    const removals = planLedgerRemovals({
+      previous: undefined,
+      emitted: { plans: ["celestia-dockge-traefik"], repos: ["celestia-dockge-traefik"] },
+      config: config(
+        [
+          ["celestia-dockge-traefik", "celestia-dockge-traefik"],
+          ["luna-dockge-traefik", "luna-dockge-traefik"],
+        ],
+        ["celestia-dockge-traefik", "luna-dockge-traefik"],
+      ),
+      host: "celestia",
+      copied: ["luna-dockge-traefik", "luna-dockge-neo4j"],
+    });
+    assert.deepEqual(removals, { plans: ["luna-dockge-traefik"], repos: ["luna-dockge-traefik"], keptRepos: [] });
+  });
+
+  it("keeps a copied repo a hand-made plan still points at, and reports it", () => {
+    const removals = planLedgerRemovals({
+      previous: ledger(["celestia-dockge-traefik"]),
+      emitted: { plans: ["celestia-dockge-traefik"], repos: ["celestia-dockge-traefik"] },
+      config: config(
+        [
+          ["celestia-dockge-traefik", "celestia-dockge-traefik"],
+          ["ui-plan", "luna-dockge-traefik"],
+        ],
+        ["celestia-dockge-traefik", "luna-dockge-traefik"],
+      ),
+      host: "celestia",
+      copied: ["luna-dockge-traefik"],
+    });
+    assert.deepEqual(removals, { plans: [], repos: [], keptRepos: [{ id: "luna-dockge-traefik", usedBy: ["ui-plan"] }] });
+  });
+
+  it("refuses an id this host both runs and receives as a copy", () => {
+    assert.throws(
+      () =>
+        planLedgerRemovals({
+          previous: undefined,
+          emitted: { plans: ["luna-dockge-traefik"], repos: ["luna-dockge-traefik"] },
+          config: config([], []),
+          host: "luna",
+          copied: ["luna-dockge-traefik"],
+        }),
+      /both runs and receives a copy of luna-dockge-traefik/,
+    );
+  });
+
   it("allows an empty kind that was already empty", () => {
     const removals = planLedgerRemovals({
       previous: ledger([], ["equestria-volsync-app", "equestria-volsync-gone"]),

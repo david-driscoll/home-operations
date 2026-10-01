@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30 with celestia. Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia is merged (#2208) and luna is next. Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -324,6 +324,25 @@ to mirror.
 Each phase is its own PR or small set of PRs. Run `pulumi preview` before every `pulumi up`. Exit
 criteria are measured over consecutive nights.
 
+### How a change reaches the hosts
+
+- **Two paths.** Each host's own Stack applies the compose files under `docker/` straight from the
+  checkout. A plan change takes two hops: `backups` writes the inventory (OpenBao
+  `clusters/_inventory/backup-plan`), and each director reads it when its Stack next runs
+  (`home-operations` for celestia, `gulf-of-mexico` for luna).
+- **The operator does not order those runs.** On a new commit all three Stacks start on their own.
+  `prerequisites: [backups]` only asks that `backups` succeeded at some point before. On four
+  commits in a row (2026-09-29 → 09-30, #2208 among them) `home-operations` ran before `backups`
+  and read the previous inventory.
+- **The resync catches up:** hourly for `gulf-of-mexico`, daily for `home-operations`. So a plan
+  change can take a day to reach celestia's Backrest.
+- **So, for every plan change:**
+  - After merging, check that `home-operations` started after `backups` finished
+    (`kubectl get updates.auto.pulumi.com -n pulumi`). If it did not, re-run it with
+    `kubectl annotate stack -n pulumi home-operations pulumi.com/reconciliation-request=$(date +%s) --overwrite`.
+  - A compose change that is only safe once the directors have read the new inventory goes in a
+    later PR. That is why step 5 is not part of luna's cutover.
+
 ### Phase 0 — prerequisites and quick fixes
 
 | Step | Change | Where |
@@ -365,13 +384,25 @@ on luna.
    - **Celestia first** (in its own PR): its repos are already local, so only the path changes.
      The plan ids, repo ids and Gatus tokens stay the same, and Backrest's `forget` keeps one
      retention series across the path change, because it groups by tag (`--group-by ""`).
-   - **Then luna** (its own PR, with step 5). Luna already holds a mirror of its repos at the same
-     path, and Backrest adopts an existing repo rather than re-initialising it (its `init` is a
-     no-op once `restic cat config` succeeds).
+     ✅ Merged 2026-09-30 (#2208). The container change applied at once. The plan change did not,
+     because `home-operations` ran before `backups` on that commit (see "How a change reaches the
+     hosts" above).
+   - **Then luna**, in its own PR, with step 5 in a later one. Luna already holds a mirror of its
+     four repos (neo4j, postgres, technitium, traefik) at the same path, and Backrest adopts an
+     existing repo rather than re-initialising it (its `init` is a no-op once `restic cat config`
+     succeeds).
      - The director turns those repos into copy jobs on celestia and on the other host, and drops
        the host's own copy job for them. The ledger removes the plans and repos from celestia's
        Backrest, since celestia emitted them before.
-     - Merge after luna's 16:00 UTC copy, so luna's mirror carries celestia's latest snapshot.
+     - ✅ As built, the director also treats every repo a host receives as a copy as owned. Such an
+       id is removed from that host's Backrest whether or not its ledger recorded it, and an id a
+       host both runs and receives fails the run. A copied repo never gets a second writer, even
+       if celestia's ledger is lost.
+     - Merge after luna's 16:00 UTC copy and before about midnight local. Luna's mirror then
+       carries celestia's latest snapshot, and the switch is done before the 01:00 queue.
+     - Either Stack order is safe. If `home-operations` reads the old inventory, celestia goes on
+       snapshotting luna's stacks next to luna's own Backrest until it re-runs, and its copy of
+       each repo is then replaced by luna's. Nothing is lost: luna's repo holds those nights too.
      - Backrest's `forget` also filters by `created-by:<instance>`. So luna never prunes the
        snapshots celestia made in those repos: at most one retention window's worth per repo,
        frozen. Remove them by hand if they matter.
@@ -379,8 +410,12 @@ on luna.
      disabled.
    - The first snapshot on the new path has no parent, so restic reads everything once (from
      local disk) but uploads little.
-5. **`rclone-sftp`** drops `/opt/stacks-data/:/data/stacks/:ro` in `_common`. alpha-site keeps the
-   mount through a host override until it moves in phase 2.
+5. **`rclone-sftp`** drops `/opt/stacks-data/:/data/stacks/:ro` in `_common`. This goes in its own
+   PR, merged once both directors have applied luna's cutover, so celestia's Backrest no longer
+   lists luna's plans. Merged together with the cutover, it could remove the export while celestia
+   still pulls from it. Host overrides keep the mount wherever a host is still pulled:
+   - alpha-site, until it moves in phase 2;
+   - skystar, until its own cutover, so its plans still recover when it is back (0.6).
 6. **After seven green nights**, delete `/opt/stacks/backrest/data/staging/{celestia,luna,skystar}-dockge/`
    on celestia.
 
@@ -392,8 +427,13 @@ on luna.
 - **Rollback.** Revert the `stacks/backups` change. The plans go back to celestia with their
   pre-sync, the repos are untouched (same ids, same paths), and the staging tree is still there
   until step 6.
+  - Keep the container change. From the first root run on, the repos hold root-owned files that a
+    uid-65534 Backrest cannot read.
+  - Rolling luna back needs its `/data/stacks` export, so revert step 5 first if it has landed.
+    Merge after celestia's 16:00 UTC copy: the same window, in reverse.
 - **Gatus.** Endpoint names do not change, but on celestia the entries for moved plans now mean
-  "copied", not "snapshotted".
+  "copied", not "snapshotted". The copy service re-runs every job an hour after its job list
+  changes, so a cutover leaves no gap in the 25 h heartbeat.
 
 ### Phase 2 — Garage and TrueNAS foundation; alpha-site moves
 

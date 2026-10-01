@@ -27,6 +27,14 @@
  * prune from celestia's Backrest would be rewriting a repo another host now
  * writes.
  *
+ * One more kind of id is owned without being recorded: every repo this host
+ * receives as a COPY from another host. The copy job rclone-syncs that repo
+ * over whatever is on disk, so a plan here writing into it would lose its
+ * snapshots at the next copy, and Backrest's own prune or check would race the
+ * sync. When a plan moves from celestia to the host that owns the stack,
+ * celestia's ledger removes it anyway, because celestia emitted it. Owning the
+ * copied ids as well means the move does not depend on that ledger surviving.
+ *
  * Everything here is pure and synchronous so it can be unit-tested without a
  * Pulumi runtime or a host (backrestLedger.test.ts). The SSH read, the file
  * write and the ordering between them live in BackupPlanDirector.
@@ -167,7 +175,8 @@ export interface LedgerRemovals {
 
 /**
  * What to remove from a host's config.json: the ids the previous run emitted,
- * plus the seed's known leftovers, that this run does not.
+ * the seed's known leftovers and the repos this host receives as copies, where
+ * this run does not emit them.
  *
  * Throws, rather than removing, when a host that emitted plans or repos last
  * time emits none of that kind now. An empty set is far more likely a broken
@@ -176,14 +185,20 @@ export interface LedgerRemovals {
  * symptom until a restore, the same reasoning `getBackupPlans` and
  * `dockerHostDirectory` use. Doing it on purpose means deleting the ledger file
  * first. The seed never trips this: it is only a list of known leftovers.
+ *
+ * Also throws when an id is both emitted and copied on this host. That is two
+ * writers on one repo, and only an inventory in which two plans share a name
+ * can produce it.
  */
 export function planLedgerRemovals(args: {
   previous: BackrestLedger | undefined;
   emitted: { plans: readonly string[]; repos: readonly string[] };
   config: { plans: readonly { id?: string; repo?: string }[]; repos: readonly { id?: string }[] };
   host: string;
+  /** Repo ids this host receives as copies from other hosts: BackupPlanDirector's destination copy jobs. */
+  copied?: readonly string[];
 }): LedgerRemovals {
-  const { previous, emitted, config, host } = args;
+  const { previous, emitted, config, host, copied = [] } = args;
 
   if (previous) {
     for (const kind of ["plans", "repos"] as const) {
@@ -197,8 +212,16 @@ export function planLedgerRemovals(args: {
 
   const emittedPlans = new Set(emitted.plans);
   const emittedRepos = new Set(emitted.repos);
-  const ownedPlans = new Set([...(previous?.plans ?? []), ...BACKREST_LEDGER_SEED.plans]);
-  const ownedRepos = new Set([...(previous?.repos ?? []), ...BACKREST_LEDGER_SEED.repos]);
+
+  const runAndCopied = sortedUnique(copied.filter(id => emittedPlans.has(id) || emittedRepos.has(id)));
+  if (runAndCopied.length > 0) {
+    throw new Error(
+      `The backup director for ${host} both runs and receives a copy of ${runAndCopied.join(", ")}, so a copy job would sync another host's repo over the one ${host} writes. Two backup plans share a name in the inventory; give them distinct names.`,
+    );
+  }
+
+  const ownedPlans = new Set([...(previous?.plans ?? []), ...BACKREST_LEDGER_SEED.plans, ...copied]);
+  const ownedRepos = new Set([...(previous?.repos ?? []), ...BACKREST_LEDGER_SEED.repos, ...copied]);
 
   const plans = sortedUnique(config.plans.map(p => p.id ?? "").filter(id => id !== "" && ownedPlans.has(id) && !emittedPlans.has(id)));
   const removedPlans = new Set(plans);

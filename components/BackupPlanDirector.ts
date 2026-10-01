@@ -210,7 +210,14 @@ export class BackupPlanDirector extends ComponentResource {
     // bucket, so shipping it these credentials would be gratuitous spread.
     const rcloneConfig = renderRcloneConfig(sourcePlans);
 
-    return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems, rcloneConfig));
+    // The Backrest repos this host receives from their own hosts. None of them
+    // may be a plan or repo in this host's Backrest as well: the copy job would
+    // sync over whatever it wrote (see planLedgerRemovals). VolSync repos are
+    // not in this list, because the director deliberately registers them here
+    // for browsing.
+    const copied = destinationJobTasks.map(task => task.name);
+
+    return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems, copied, rcloneConfig));
   }
 
   private _createSourceBackrestPlan(_detail: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, plan: BackupPlanItem, uptimeUrl: string, password: string) {
@@ -305,6 +312,7 @@ export class BackupPlanDirector extends ComponentResource {
     cluster: ClusterDefinition,
     depends: Input<Resource[]>,
     items: { repos: BackrestRepository[]; plans: BackrestPlan[] },
+    copied: readonly string[],
     rcloneConfig?: string,
   ) {
     let updatedConfig: BackrestConfig = {
@@ -353,8 +361,8 @@ export class BackupPlanDirector extends ComponentResource {
     updateRepos(updatedConfig, items.repos);
     updatePlans(updatedConfig, items.plans);
     const emitted = { plans: items.plans.map(p => p.id), repos: items.repos.map(r => r.id) };
-    const removals = planLedgerRemovals({ previous: previousLedger, emitted, config: updatedConfig, host: cluster.key });
-    applyLedgerRemovals(updatedConfig, removals, cluster.key);
+    const removals = planLedgerRemovals({ previous: previousLedger, emitted, config: updatedConfig, host: cluster.key, copied });
+    applyLedgerRemovals(updatedConfig, removals, cluster.key, copied);
     removeRetiredPlans(updatedConfig, cluster.key);
 
     const configOutput = jsonStringify(updatedConfig);
@@ -411,8 +419,10 @@ export class BackupPlanDirector extends ComponentResource {
       });
       rcloneDeps.push(rcloneFile);
 
-      // copyFileToRemote leaves the file world-readable. These are live S3
-      // credentials, and 65534 is the uid the backrest container runs as.
+      // copyFileToRemote leaves the file world-readable, and these are live S3
+      // credentials. 65534 is the uid backrest ran as before phase 1; it now
+      // runs as uid 0 and reads the file through DAC_READ_SEARCH
+      // (docker/_common/backrest/compose.yaml).
       rcloneDeps.push(
         new remote.Command(
           `backrest-rclone-garage-perms`,
@@ -496,19 +506,27 @@ async function readBackrestLedger(ssh: NodeSSH, clusterKey: string): Promise<Bac
 }
 
 /** Applies planLedgerRemovals' result to the config, and says what it did in the run log. */
-function applyLedgerRemovals(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, removals: LedgerRemovals, clusterKey: string) {
+function applyLedgerRemovals(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, removals: LedgerRemovals, clusterKey: string, copied: readonly string[]) {
+  const isCopy = new Set(copied);
+  const describe = (ids: string[]) => ids.map(id => (isCopy.has(id) ? `${id} (received as a copy)` : id)).join(", ");
   if (removals.plans.length > 0) {
     const drop = new Set(removals.plans);
     updatedConfig.plans = updatedConfig.plans.filter(p => !drop.has(p.id));
-    log.info(`Removed ${removals.plans.length} backrest plan(s) the director no longer emits from ${clusterKey}: ${removals.plans.join(", ")}`);
+    log.info(`Removed ${removals.plans.length} backrest plan(s) the director does not run on ${clusterKey}: ${describe(removals.plans)}`);
   }
   if (removals.repos.length > 0) {
     const drop = new Set(removals.repos);
     updatedConfig.repos = updatedConfig.repos.filter(r => !drop.has(r.id));
-    log.info(`Removed ${removals.repos.length} backrest repo(s) the director no longer emits from ${clusterKey}; their data stays on disk: ${removals.repos.join(", ")}`);
+    log.info(`Removed ${removals.repos.length} backrest repo(s) the director does not manage on ${clusterKey}; their data stays on disk: ${describe(removals.repos)}`);
   }
   for (const { id, usedBy } of removals.keptRepos) {
-    log.warn(`Kept backrest repo ${id} on ${clusterKey}: the director no longer emits it, but plan(s) ${usedBy.join(", ")} still use it.`);
+    if (isCopy.has(id)) {
+      log.warn(
+        `Kept backrest repo ${id} on ${clusterKey} because plan(s) ${usedBy.join(", ")} still use it, but ${clusterKey} receives this repo as a copy: the copy job syncs over whatever those plans write. Point them at another repo.`,
+      );
+    } else {
+      log.warn(`Kept backrest repo ${id} on ${clusterKey}: the director no longer emits it, but plan(s) ${usedBy.join(", ")} still use it.`);
+    }
   }
 }
 
