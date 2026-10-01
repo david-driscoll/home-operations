@@ -48,3 +48,17 @@ x-dockge:
     - https://${ipAddress}:53443
     - https://${ipAddress}:53443/dns-query
 ```
+
+## Removing a Stack
+
+Deleting `docker/<host>/<stack>/`, or adding an `.ignore` to it, removes the stack from the host on the next run of the site's Pulumi stack:
+
+- **Containers and networks go.** The per-stack `teardown` Command in `components/DockgeLxc.ts` removes them by Compose's project label, which is the stack's directory name. So never set a top-level `name:` in a `compose.yaml`; the teardown would miss its containers.
+- **Data stays.** Named volumes and the bind mounts under `/opt/stacks-data/<stack>/` are kept, so removing a stack's data is a separate decision.
+- **Only on removal.** The teardown acts only once the stack's `compose.yaml` is gone from `/opt/stacks/<stack>/`, so an ordinary config change never stops the stack.
+
+Before this existed (fixed 2026-10-01), a removed stack's containers kept running, orphaned. To find any that predate the fix, look for a Compose project with no matching active stack:
+
+```bash
+docker ps -a --format '{{.Label "com.docker.compose.project"}} {{.Names}} {{.Status}}'
+```
