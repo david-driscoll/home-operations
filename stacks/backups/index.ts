@@ -54,6 +54,10 @@ const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestra
 // has no hosts/dockge record while the ocracoke Stack is disabled, so it emits
 // no plans at all today). alpha-site has no /data for local repos and moves
 // straight to Garage in phase 2.
+//
+// Adding a host here also means deleting docker/<host>/rclone-sftp/
+// compose.yaml: that copy exists only to keep the host's stacks exported over
+// SFTP for the pull below.
 const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia", "luna"]);
 
 function isHostOwned(hostDir: string): hostDir is BackupPlanItem["source"] {
@@ -144,7 +148,9 @@ const dockgeInstances = dockgeDetails.apply(details =>
             sftpHost: detail.hostname,
             sftpPort: 2022,
             // rclone-sftp serves /opt/stacks-data/ as /data/stacks/, rooted at
-            // /stacks/ for the client.
+            // /stacks/ for the client -- but only on a host pulled here, through
+            // its own copy of the stack (docker/<host>/rclone-sftp/compose.yaml).
+            // The _common one exports the repos alone.
             sourcePath: `/stacks/${target.stack}/`,
             exclude: target.excludes,
           },

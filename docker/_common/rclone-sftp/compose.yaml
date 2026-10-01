@@ -1,22 +1,30 @@
 services:
-  # Read-only SFTP view of this host's stack data, consumed by backrest on
-  # celestia as the pre-sync source for every dockge backup plan.
+  # Read-only SFTP view of this host's restic repos (/data/backup/), which the
+  # other hosts' copy services pull (BackupPlanDirector's copy jobs).
+  #
+  # It does not serve /opt/stacks-data. celestia and luna back their own
+  # stacks up in place (docs/plans/host-owned-backups.md, phase 1), so nothing
+  # pulls their stack data, and a server with no reason to read it should not
+  # be able to. A host whose stacks celestia still pulls keeps that export
+  # through its own copy of this file, in docker/<host>/rclone-sftp/.
   #
   # Runs as uid 0 with CAP_DAC_READ_SEARCH and nothing else. That combination
-  # is deliberate and load-bearing: as uid 65534 this server could not read
-  # anything mode-0700 owned by a stack's runtime user, and an EPERM here does
-  # not reach the client as an error — the serve side answers the directory
-  # request with an EMPTY LISTING, so the client copies nothing and exits 0.
-  # Those paths were therefore absent from every snapshot while the backup
-  # went on reporting success. That covered forgejo's git repositories
-  # (data/git, 0700 uid 1000), all 1.2 GB of hermes, pdm's acme/auth/access,
-  # and technitium/tailscale.
+  # is deliberate and load-bearing. Two uids write the repos here -- 65534
+  # (the copy service, and backrest before phase 1) and 0 (backrest since) --
+  # and restic keeps its files and directories owner-only, so no single uid
+  # can read them all without the capability. An EPERM here does not reach the
+  # client as an error: the serve side answers the directory request with an
+  # EMPTY LISTING, so the client copies nothing and exits 0. When this server
+  # exported stack data as uid 65534, that is how forgejo's git repositories
+  # (data/git, 0700 uid 1000), all 1.2 GB of hermes, pdm's acme/auth/access
+  # and technitium/tailscale went missing from every snapshot while the
+  # backup went on reporting success.
   #
   # CAP_DAC_READ_SEARCH is exactly "bypass file read and directory search
   # permission checks" and nothing more. cap_drop ALL removes the rest,
   # including DAC_OVERRIDE (write-permission bypass), and every mount below
-  # is :ro, so this container can read the host's stack data and cannot alter
-  # it. Do NOT relax this to plain root — the dropped caps are the reason
+  # is :ro, so this container can read what it serves and cannot alter it.
+  # Do NOT relax this to plain root — the dropped caps are the reason
   # running as uid 0 is acceptable here.
   #
   # A non-root user cannot hold the capability: docker's cap_add populates the
@@ -42,7 +50,6 @@ services:
       --key /config/ssh/host_key
     volumes:
       - /data/backup/:/data/backup/:ro
-      - /opt/stacks-data/:/data/stacks/:ro
       - /opt/stacks-data/${APP}/keys:/config/ssh:ro
     tmpfs:
       - /.cache:uid=0,gid=0

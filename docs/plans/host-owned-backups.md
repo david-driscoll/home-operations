@@ -1,6 +1,6 @@
 # Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 
-**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia is merged (#2208) and luna is next. Owner: David. Decisions marked ✅ were taken by
+**Status:** plan, 2026-09-29. Phase 0 is live (#2205, #2206, #2207); 0.6 is answered (A3.1). Phase 1 started 2026-09-30: celestia (#2208) and luna (#2210) back up their own stacks, and `rclone-sftp` stops exporting them (step 5). skystar follows when it is back. Owner: David. Decisions marked ✅ were taken by
 David on 2026-09-29, after a read-only review of the backup estate (repo at `origin/main`, three
 nights of Backrest and copy-service logs, upstream source; the evidence is in §A and §B):
 
@@ -386,11 +386,13 @@ on luna.
      retention series across the path change, because it groups by tag (`--group-by ""`).
      ✅ Merged 2026-09-30 (#2208). The container change applied at once. The plan change did not,
      because `home-operations` ran before `backups` on that commit (see "How a change reaches the
-     hosts" above).
+     hosts" above). It reached celestia's Backrest with the next commit, on 2026-10-01 at 00:09 UTC.
    - **Then luna**, in its own PR, with step 5 in a later one. Luna already holds a mirror of its
      four repos (neo4j, postgres, technitium, traefik) at the same path, and Backrest adopts an
      existing repo rather than re-initialising it (its `init` is a no-op once `restic cat config`
-     succeeds).
+     succeeds). ✅ Merged 2026-10-01 (#2210). Both directors ran before `backups` again, which
+     wrote the inventory at 00:12 UTC. Luna takes the cutover on its hourly resync, and celestia
+     with step 5's commit.
      - The director turns those repos into copy jobs on celestia and on the other host, and drops
        the host's own copy job for them. The ledger removes the plans and repos from celestia's
        Backrest, since celestia emitted them before.
@@ -416,6 +418,12 @@ on luna.
    still pulls from it. Host overrides keep the mount wherever a host is still pulled:
    - alpha-site, until it moves in phase 2;
    - skystar, until its own cutover, so its plans still recover when it is back (0.6).
+
+   ✅ As built: `docker/{alpha-site,skystar}/rclone-sftp/compose.yaml` are the old `_common` file,
+   identical apart from their comments, and `HOST_OWNED_BACKUP_HOSTS` says to delete a host's copy
+   when the host joins it. The PR only needs `backups` to have written
+   luna's inventory before it merges. Its own commit then re-runs `home-operations`, which reads
+   that inventory and stops pulling luna, whichever Stack runs first.
 6. **After seven green nights**, delete `/opt/stacks/backrest/data/staging/{celestia,luna,skystar}-dockge/`
    on celestia.
 
