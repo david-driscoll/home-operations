@@ -434,7 +434,7 @@ on luna.
 
    ✅ As built: `docker/{alpha-site,skystar}/rclone-sftp/compose.yaml` are the old `_common` file,
    identical apart from their comments, and `HOST_OWNED_BACKUP_HOSTS` says to delete a host's copy
-   when the host joins it. The PR only needs `backups` to have written
+   when the host joins it. alpha-site's went after its first green night (phase 2, step 7). The PR only needs `backups` to have written
    luna's inventory before it merges. Its own commit then re-runs `home-operations`, which reads
    that inventory and stops pulling luna, whichever Stack runs first.
 6. **After seven green nights**, delete `/opt/stacks/backrest/data/staging/{celestia,luna,skystar}-dockge/`
@@ -551,7 +551,15 @@ on luna.
      - **TrueNAS** pulls `backrest-alpha-site`.
      - **Gatus.** alpha-site's rows move from `Backups: Celestia`, and from luna's copies, to a new
        `Backups: Alpha Site` group.
-     - **Not yet:** the SFTP clean-up above waits for the first green night, in its own change.
+     - **SFTP clean-up, in parts.** alpha-site's first night, 01:00 local on 2026-10-01, was green:
+       all 10 plans went to Garage, with no warning or error in Backrest's log.
+       - ✅ Its `rclone-sftp` override is gone, so the host falls back to the `_common` file. That
+         file exports the repos and not `/opt/stacks-data`.
+       - Its staging tree on celestia waits for seven green nights, as phase 1, step 6 does for
+         the other hosts' trees.
+       - The rest of §C6's pre-sync path stays while skystar can still come back in the pulled
+         shape (0.6): `SftpPreSyncArgs`, Backrest's `./ssh` mount, and skystar's own override.
+         It goes when skystar's cutover is decided.
 
 **Exit.**
 - Seven green nights.
