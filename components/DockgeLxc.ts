@@ -1197,6 +1197,43 @@ export class DockgeLxc extends ComponentResource {
       },
     );
 
+    // Removing a stack used to leave it running. When a stack leaves the
+    // program (deleted from the repo, or given an .ignore), Pulumi deletes its
+    // resources, and the only delete that reached the host was stackParent's
+    // `rm -rf /opt/stacks/<stack>`. The files went, and the containers kept
+    // running under a project Dockge no longer lists. That is how hermes and
+    // llama-agent outlived their .ignore on celestia (removed by hand on
+    // 2026-10-01).
+    //
+    // This Command exists only for its delete, which removes the stack's
+    // containers and networks by Compose's project label. The project is named
+    // after the stack's directory, since no compose.yaml here sets a top-level
+    // `name:`. Volumes, and the bind mounts under /opt/stacks-data, are left
+    // alone: a stack's data is not what is being removed.
+    //
+    // It must fire on a real removal and on nothing else:
+    //   - It acts only once compose.yaml is gone. Every file copy below depends
+    //     on this Command, so a real removal deletes them first and the check
+    //     passes. Replacing this Command alone, as an SSH credential rotation
+    //     changing `connection` would, finds the file still there and does
+    //     nothing.
+    //   - Its other inputs are fixed strings, so nothing else replaces it.
+    //
+    // Deliberately NOT a `docker compose down` on the compose Command. That
+    // Command is deleteBeforeReplace, so its delete runs on every config change,
+    // and a down there would stop the whole stack on each edit.
+    const teardown = Array.from(files.keys()).includes("compose.yaml")
+      ? new remote.Command(
+          `${this.shortName}-${stackName}-teardown`,
+          {
+            connection: this.remoteConnection,
+            create: "true",
+            delete: interpolate`if [ -e /opt/stacks/${stackName}/compose.yaml ]; then echo "${stackName}: compose.yaml is still in place, so this is not a removal; leaving the stack running"; exit 0; fi; ids=$(docker ps -aq --filter label=com.docker.compose.project=${stackName}); if [ -n "$ids" ]; then docker rm -f $ids; fi; nets=$(docker network ls -q --filter label=com.docker.compose.project=${stackName}); if [ -n "$nets" ]; then docker network rm $nets || true; fi`,
+          },
+          { parent: stackParent },
+        )
+      : undefined;
+
     const definitions = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "definition.yaml");
     const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml");
 
@@ -1218,7 +1255,9 @@ export class DockgeLxc extends ComponentResource {
       .apply(z => output(z))
       .apply(z => z.flat().map(z => z));
 
-    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b.map(z => z.app)]);
+    // The teardown goes in here so every file copy depends on it. At removal
+    // they are deleted before it, which is what its compose.yaml check relies on.
+    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b.map(z => z.app), ...(teardown ? [teardown] : [])]);
 
     const _triggers = [];
 
