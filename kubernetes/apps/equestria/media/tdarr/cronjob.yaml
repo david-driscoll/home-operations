@@ -1,0 +1,68 @@
+---
+# Daily "Scan (Find new)" for every Tdarr library, replacing the per-library
+# hourly scan (`scheduledScanFindNew`, which has no interval setting). The
+# hourly walks outgrew the hour: on 2026-09-30 a Find-new on Music took 1h48m
+# and TV's walk passes 120k files on the NFS share, so scans piled up back to
+# back. New downloads now wait up to a day to be queued, which is fine for a
+# multi-week backlog.
+#
+# A plain CronJob rather than an app-template controller: the HelmRelease
+# mounts the media share on every controller (`globalMounts`), and this only
+# needs the API. Tdarr's API is unauthenticated in-cluster (`localAuth: false`).
+#
+# The library IDs are Tdarr's own (LibrarySettingsJSONDB `_id`); a library
+# recreated in the UI gets a new one. Folder watching stays off on purpose
+# (docs/kubernetes/tdarr.md).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tdarr-daily-scan
+  annotations:
+    # 04:00 is inside the nightly 01:00-07:00 shed, which suspends CronJobs
+    # too; Tdarr itself is excluded, so this must be as well.
+    downscaler/exclude: "true"
+spec:
+  schedule: "0 4 * * *"
+  timeZone: ${TIMEZONE}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: scan
+              image: curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  api=http://tdarr.${NAMESPACE}.svc.cluster.local:8265/api/v2/scan-files
+                  for lib in DPiWb4RQZ:/media/tv HuN9UIxZA:/media/movies/ 1RlOUpobY:/media/music; do
+                    id=$${lib%%:*}; dir=$${lib#*:}
+                    echo "scanFindNew $id $dir"
+                    curl -fsS --max-time 60 -X POST "$api" -H 'content-type: application/json' \
+                      -d "{\"data\":{\"scanConfig\":{\"dbID\":\"$id\",\"arrayOrPath\":\"$dir\",\"mode\":\"scanFindNew\"}}}"
+                    echo
+                  done
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 64Mi

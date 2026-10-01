@@ -12,6 +12,7 @@ actually processed a file for nine months at that point (see
 | Tdarr server + UI | [`kubernetes/apps/equestria/media/tdarr/`](../../kubernetes/apps/equestria/media/tdarr/) — `tdarr.<root domain>` | Library scans, the file DB, flows, the job queue. Its config (libraries, flows, node limits) lives in its DB on the `tdarr` PVC, **not in git**. |
 | Tdarr nodes | same HelmRelease, controller `tdarr-node`, 2 replicas | Run the jobs. Pinned to `intel.feature.node.kubernetes.io/gpu` nodes: `fluttershy` and `kerfuffle`, UN1290s with Iris Xe. Each registers as a node named after its host. |
 | The flows | [`assets/tdarr/`](assets/tdarr/) | Video: `flow.template.json` + `stream-policy.cjs` + `size-guard.cjs`. Music: `music-flow.template.json` + `music-policy.cjs`. Rendered by `build-flow.sh [video\|music]`. The copy in Tdarr's DB is the live one; this is the reviewed one. |
+| Daily scan | [`tdarr/cronjob.yaml`](../../kubernetes/apps/equestria/media/tdarr/cronjob.yaml) | "Scan (Find new)" on TV, Movies and Music at 04:00 local. Replaces Tdarr's hourly scan (`scheduledScanFindNew`, off on every library), which has no interval and whose walks outgrew the hour. New downloads are queued within a day. |
 | tdarr MCP | [`kubernetes/apps/agents/agent-tools-servers/tdarr.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tdarr.yaml) | `tdarr` in `toolport-media`. `tdarr_cruddb` is allowed so flows can be managed; it writes any collection. |
 
 Tdarr (server and nodes) is excluded from the nightly 01:00-07:00 shed of
