@@ -6,6 +6,7 @@ import { remote } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, jsonStringify, log, type Output, output, type Resource, type Unwrap, type UnwrappedArray } from "@pulumi/pulumi";
 import { NodeSSH } from "node-ssh";
 import type { BackupPlanItem, S3PreSyncArgs } from "./BackupPlanOrchestrator.ts";
+import { BACKREST_GARAGE_REPO_ENV, BACKREST_GARAGE_REPO_FLAGS, backrestGarageRepoUri } from "./backrestGarage.ts";
 import { BACKREST_LEDGER_PATH, type BackrestLedger, type LedgerRemovals, parseBackrestLedger, planLedgerRemovals, renderBackrestLedger } from "./backrestLedger.ts";
 import type { DockgeLxc } from "./DockgeLxc.ts";
 import type { GlobalResources } from "./globals.ts";
@@ -89,10 +90,17 @@ export class BackupPlanDirector extends ComponentResource {
     this.volsyncPassword = this.globals.store.getSecretByTitle<{ credential: string }>("Volsync Password").apply(z => z.credential);
   }
 
+  /**
+   * Configure one host's backrest and copy jobs from the plan inventory.
+   *
+   * `pbs` is optional: a host without a Proxmox Backup Server has no /data
+   * (alpha-site). It takes no copies and browses no VolSync repos, and every
+   * plan it runs must keep its repo in Garage.
+   */
   public createPlans(
     source: {
       dockge: DockgeLxc;
-      pbs: ProxmoxBackupServerLxc;
+      pbs?: ProxmoxBackupServerLxc;
       cluster: Input<ClusterDefinition>;
     },
     depends: Input<Resource[]>,
@@ -105,7 +113,7 @@ export class BackupPlanDirector extends ComponentResource {
 
   public _createPlans(
     _dockge: DockgeLxc,
-    _pbs: ProxmoxBackupServerLxc,
+    pbs: ProxmoxBackupServerLxc | undefined,
     cluster: ClusterDefinition,
     dockgeConnection: Unwrap<DockgeLxc["remoteConnection"]>,
     backupServers: UnwrappedArray<ProxmoxBackupServerLxcDefinition>,
@@ -118,9 +126,20 @@ export class BackupPlanDirector extends ComponentResource {
     const sourceGroupTitle = `Backups: ${cluster.title}`;
     const destinationGroupTitle = `Backups: ${cluster.title}`;
     const volsyncGroupTitle = `VolSync: ${cluster.title}`;
+    // No backup server, no /data: nowhere to keep a copy or browse a VolSync repo.
+    const hasLocalRepos = pbs !== undefined;
     const sourcePlans = plans.filter(p => p.source === clusterKey && p.source !== "volsync");
-    const destinationPlans = plans.filter(p => p.source !== clusterKey && p.source !== "volsync");
-    const volsyncPlans = plans.filter(p => p.source === "volsync");
+    // A Garage-backed repo is never copied: Garage replicates it, and TrueNAS
+    // pulls the bucket (components/garageTruenasCopy.ts).
+    const destinationPlans = hasLocalRepos ? plans.filter(p => p.source !== clusterKey && p.source !== "volsync" && !p.garage) : [];
+    const volsyncPlans = hasLocalRepos ? plans.filter(p => p.source === "volsync") : [];
+
+    const stranded = sourcePlans.filter(p => !p.garage);
+    if (!hasLocalRepos && stranded.length > 0) {
+      throw new Error(
+        `${clusterKey} has no backup server, so no /data for local repos, but plan(s) ${stranded.map(p => p.name).join(", ")} keep their repo on the host. Give them a Garage repo in stacks/backups (\`garage\` on the plan).`,
+      );
+    }
 
     const destinationJobTasks = destinationPlans.map(plan => {
       const planServer = backupServers.find(s => s.cluster.key === plan.source);
@@ -161,7 +180,8 @@ export class BackupPlanDirector extends ComponentResource {
       };
     });
 
-    const copyJobs = addBackupJobs(`copy-${clusterKey}`, dockgeConnection, [...destinationJobTasks, ...volsyncJobTasks], this, depends);
+    // A host with no local repos runs no copy service, so it gets no job file.
+    const copyJobs = hasLocalRepos ? [addBackupJobs(`copy-${clusterKey}`, dockgeConnection, [...destinationJobTasks, ...volsyncJobTasks], this, depends)] : [];
 
     const backrestItems = [
       ...sourcePlans.map(plan => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword)),
@@ -203,7 +223,7 @@ export class BackupPlanDirector extends ComponentResource {
       this,
     );
 
-    const allDeps = all([depends, uptime, copyJobs]).apply(d => d.flat());
+    const allDeps = all([depends, uptime, ...copyJobs]).apply(d => d.flat());
 
     // Only the plans this host actually RUNS need an rclone remote. A
     // destination host copies finished repos over SFTP and never touches the
@@ -287,7 +307,16 @@ export class BackupPlanDirector extends ComponentResource {
       password,
       ...plan.repositoryConfig,
       id: plan.name,
-      uri: `/data/backup/${plan.name}/`,
+      uri: plan.garage ? backrestGarageRepoUri(plan.garage, plan.name) : `/data/backup/${plan.name}/`,
+      // A Garage repo names the key file and its profile, never the key
+      // (components/backrestGarage.ts), and runs with Garage's region and
+      // path-style lookup.
+      ...(plan.garage
+        ? {
+            env: [...(plan.repositoryConfig?.env ?? []), ...BACKREST_GARAGE_REPO_ENV],
+            flags: [...(plan.repositoryConfig?.flags ?? []), ...BACKREST_GARAGE_REPO_FLAGS],
+          }
+        : {}),
       autoUnlock: true,
     };
 
@@ -423,21 +452,23 @@ export class BackupPlanDirector extends ComponentResource {
       // credentials. 65534 is the uid backrest ran as before phase 1; it now
       // runs as uid 0 and reads the file through DAC_READ_SEARCH
       // (docker/_common/backrest/compose.yaml).
+      const perms = directorResourceName(cluster.key, "backrest-rclone-garage-perms");
       rcloneDeps.push(
         new remote.Command(
-          `backrest-rclone-garage-perms`,
+          perms.name,
           {
             connection: connection,
             triggers: [rcloneConfig],
             create: `chmod 600 ${RCLONE_CONFIG_PATH} && chown 65534:65534 ${RCLONE_CONFIG_PATH}`,
           },
-          { parent: this, dependsOn: [rcloneFile] },
+          { parent: this, dependsOn: [rcloneFile], aliases: perms.aliases },
         ),
       );
     }
 
+    const restart = directorResourceName(cluster.key, "backrest-restart");
     const compose = new remote.Command(
-      `backrest-restart`,
+      restart.name,
       {
         connection: connection,
         triggers: [...items.repos.map(z => z.uri), ...items.plans.map(z => z.repo), ...(rcloneConfig ? [rcloneConfig] : []), managedConfigDigest(items, updatedConfig)],
@@ -446,11 +477,27 @@ export class BackupPlanDirector extends ComponentResource {
       {
         parent: this,
         dependsOn: output(depends).apply(x => [...x, backrestConfig, ...rcloneDeps]),
+        aliases: restart.aliases,
       },
     );
 
     return compose;
   }
+}
+
+/**
+ * Hosts whose director made its fixed-name Commands before the names carried
+ * the host. stacks/home now runs two directors (celestia's and alpha-site's),
+ * and two `backrest-restart`s in one stack would be the same resource, so every
+ * name is scoped by host. These hosts keep their existing Commands through an
+ * alias: a rename without one is a replace, which re-runs `create` and
+ * restarts backrest for no change.
+ */
+const PRE_SCOPED_DIRECTOR_HOSTS: ReadonlySet<string> = new Set(["celestia", "luna", "skystar"]);
+
+/** A director resource's name, scoped by host, and the alias that keeps an older unscoped one. */
+function directorResourceName(clusterKey: string, name: string): { name: string; aliases: { name: string }[] } {
+  return { name: `${clusterKey}-${name}`, aliases: PRE_SCOPED_DIRECTOR_HOSTS.has(clusterKey) ? [{ name }] : [] };
 }
 
 function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: BackrestRepository[]) {

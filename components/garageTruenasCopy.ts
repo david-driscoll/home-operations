@@ -56,7 +56,9 @@ export type GarageCopyKey = keyof typeof GARAGE_COPY_KEYS;
  * These are the buckets already in Garage with no independent copy (§C3): the
  * CNPG archive, the Pulumi state, and each Docker host's Postgres dumps until
  * `garage-sync` retires in phase 4. skystar's is pulled although skystar is
- * offline: it holds that host's last dumps, which is reason enough.
+ * offline: it holds that host's last dumps, which is reason enough. Then the
+ * restic buckets, each as its first writer arrives: alpha-site's in phase 2,
+ * VolSync and pgdump in phase 3, the other hosts' in phase 4.
  *
  * Never add `backrest-immich`: the library already lives on TrueNAS, so a copy
  * there would sit next to the original. Removing a bucket here deletes its
@@ -68,6 +70,7 @@ export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey 
   { bucket: "postgres-luna", key: "truenas-copy" },
   { bucket: "postgres-skystar", key: "truenas-copy" },
   { bucket: "pulumi-state", key: "pulumi-state-reader" },
+  { bucket: "backrest-alpha-site", key: "truenas-copy" },
 ];
 
 /**

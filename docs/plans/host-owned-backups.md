@@ -520,6 +520,26 @@ on luna.
      `/opt/stacks-data/backrest/aws-credentials` (step 2).
    - Once it is green, delete the rest of the SFTP pre-sync path (§C6), including alpha-site's
      `rclone-sftp` override and its staging tree.
+   - ✅ **As built:**
+     - **Inventory.** `GARAGE_BACKED_HOSTS` in `stacks/backups` makes alpha-site host-owned with
+       its repos in Garage. Each plan carries `garage: {endpoint, bucket}` and nothing secret.
+     - **Repos.** The director writes a Garage repo as
+       `s3:<endpoint>/backrest-alpha-site/<repo id>`. Its env names the key file and profile, and it
+       runs with `-o s3.region=garage -o s3.bucket-lookup=path` (`components/backrestGarage.ts`).
+     - **Copies.** No host copies a Garage repo.
+     - **Hosts without a backup server.** A host with none takes no copies, browses no VolSync
+       repos, and fails the run if a plan would keep a local repo there.
+     - **Resource names.** `stacks/home` now runs two directors, so `backrest-restart` and the
+       rclone permissions Command are named per host. celestia, luna and skystar keep theirs
+       through an alias, so nothing is replaced.
+     - **The repos start fresh** (David, 2026-10-01). The old ones stay on celestia, with luna's
+       copies, as a frozen archive that nothing prunes. Delete them once the new repos hold a
+       retention window of their own. To browse one, add it in celestia's Backrest as a local repo
+       at `/data/backup/<id>/` with the Volsync Password.
+     - **TrueNAS** pulls `backrest-alpha-site`.
+     - **Gatus.** alpha-site's rows move from `Backups: Celestia`, and from luna's copies, to a new
+       `Backups: Alpha Site` group.
+     - **Not yet:** the SFTP clean-up above waits for the first green night, in its own change.
 
 **Exit.**
 - Seven green nights.

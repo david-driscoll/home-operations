@@ -1,4 +1,5 @@
 import { type BackupPlanItem, BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { backrestGarageBucket, backrestGarageEndpoint } from "@components/backrestGarage.ts";
 import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets, resticExcludesFor, STACKS_DATA_ROOT } from "@components/dockerStackBackups.ts";
 import { GARAGE_COPY_BUCKETS, TRUENAS_GARAGE_COPY_GROUP } from "@components/garageTruenasCopy.ts";
 import { GlobalResources } from "@components/globals.ts";
@@ -53,17 +54,32 @@ const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestra
 // and its backrest takes that over; BackupPlanDirector then copies them the
 // other way, from luna to celestia. skystar joins when it is back online (it
 // has no hosts/dockge record while the ocracoke Stack is disabled, so it emits
-// no plans at all today). alpha-site has no /data for local repos and moves
-// straight to Garage in phase 2.
+// no plans at all today). alpha-site has no /data for local repos, so it went
+// straight to Garage (phase 2, step 7): see GARAGE_BACKED_HOSTS.
 //
 // Adding a host here also means deleting docker/<host>/rclone-sftp/
 // compose.yaml: that copy exists only to keep the host's stacks exported over
-// SFTP for the pull below.
-const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia", "luna"]);
+// SFTP for the pull below. Delete it once the host's first night is green, in
+// a later change than this one (the plan's "How a change reaches the hosts").
+const HOST_OWNED_BACKUP_HOSTS: ReadonlySet<BackupPlanItem["source"]> = new Set(["celestia", "luna", "alpha-site"]);
 
 function isHostOwned(hostDir: string): hostDir is BackupPlanItem["source"] {
   return (HOST_OWNED_BACKUP_HOSTS as ReadonlySet<string>).has(hostDir);
 }
+
+// Host-owned hosts whose repos live in the geo Garage rather than in
+// /data/backup on the host (docs/plans/host-owned-backups.md §C2), in the
+// host's own `backrest-<host>` bucket. alpha-site first, because it has no
+// /data at all; the rest follow in phase 4. The key reaches the host as a file
+// from stacks/system (components/backrestGarage.ts), so nothing secret is in
+// the plan, and the copy tier leaves these repos alone: Garage replicates them,
+// and TrueNAS pulls the bucket (components/garageTruenasCopy.ts).
+//
+// The repos start fresh. alpha-site's old ones stay on celestia (and luna's
+// copies of them) as a frozen archive, the way the host-level plans were
+// retired; nothing prunes them any more, so delete them by hand once the new
+// repos hold a retention window of their own.
+const GARAGE_BACKED_HOSTS: ReadonlySet<string> = new Set(["alpha-site"]);
 
 // One backrest plan per STACK, not per host.
 //
@@ -118,6 +134,12 @@ const dockgeInstances = dockgeDetails.apply(details =>
             // config.json key by key, so an omitted `excludes` would leave the
             // last run's list in place.
             planConfig: { excludes: resticExcludesFor(target) },
+            garage: GARAGE_BACKED_HOSTS.has(hostDir)
+              ? {
+                  endpoint: pulumi.output(globals.tailscaleDomain).apply(domain => backrestGarageEndpoint(hostDir, domain)),
+                  bucket: backrestGarageBucket(hostDir),
+                }
+              : undefined,
           }),
         ),
       );

@@ -60,8 +60,22 @@ export interface S3PreSyncArgs {
 
 export type PreSyncArgs = SftpPreSyncArgs | S3PreSyncArgs;
 
+/**
+ * A plan whose repo lives in the geo Garage instead of /data/backup on the host
+ * (docs/plans/host-owned-backups.md §C2). There is no key here: the host's
+ * backrest reads it from the file stacks/system delivers
+ * (components/backrestGarage.ts). The copy tier never copies such a repo:
+ * Garage replicates it, and TrueNAS pulls the bucket.
+ */
+export interface GarageRepository {
+  /** S3 endpoint INCLUDING scheme, reachable from the backrest host. */
+  endpoint: string;
+  /** The host's bucket. The repo lives under a prefix named after the repo id. */
+  bucket: string;
+}
+
 export interface BackupPlanItem {
-  source: "celestia" | "skystar" | "luna" | "volsync";
+  source: "celestia" | "skystar" | "luna" | "alpha-site" | "volsync";
   /**
    * Identity: the backrest repo id, plan id, and backup path all derive from
    * this. Must be id-safe and STABLE — renaming it re-roots the plan's restic
@@ -75,6 +89,8 @@ export interface BackupPlanItem {
   path: string;
   repository?: string;
   preSync?: PreSyncArgs;
+  /** Set when the repo lives in Garage; absent means /data/backup/<name>/ on the source host. */
+  garage?: GarageRepository;
 }
 
 export class BackupPlanOrchestrator extends ComponentResource {
