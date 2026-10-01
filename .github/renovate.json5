@@ -315,7 +315,41 @@
         "/coredns/"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // The controller chart and the runner scale-set chart ship from the same
+      // ARC release and are versioned in lockstep; a scale set on a different
+      // release than its controller is not a supported combination.
+      description: "Actions Runner Controller Group",
+      groupName: "Actions Runner Controller",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/actions-runner-controller-charts/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // Server and node are one release: Tdarr expects every node on the
+      // server's version, so they should never be bumped apart.
+      description: "Tdarr Group",
+      groupName: "Tdarr",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/haveagitgat\\/tdarr/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -360,7 +394,8 @@
         "/imran31415/kube-coder/"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -375,7 +410,8 @@
         "/btsouth/toolport/"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -389,7 +425,8 @@
         "docker"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -406,7 +443,8 @@
         "ghcr.io/siderolabs/talosctl",
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -416,7 +454,8 @@
         "ghcr.io/siderolabs/kubelet"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -428,7 +467,8 @@
         "tailscale*"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -440,7 +480,8 @@
         "traefik*"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -450,7 +491,8 @@
         "ghcr.io/immich-app/*"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -470,7 +512,8 @@
         "ghcr.io/pouzor/homelable-*"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -480,7 +523,8 @@
         "ghcr.io/cloudnative-pg/postgresql"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -562,7 +606,8 @@
         "/spegel/"
       ],
       group: {
-        commitMessageTopic: "{{{groupName}}} group",
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
       },
     },
     {
@@ -1051,6 +1096,60 @@
         "sdks/**"
       ],
       enabled: false,
+    },
+    {
+      // Named dependencies outside the app-image scope of the automerge rules
+      // above, each opted in by hand. Same gate -- every check green, 3-day
+      // soak where the registry has timestamps, the overnight window, and the
+      // watchdog revert for kubernetes/** -- but matched by NAME, so it
+      // reaches other managers and paths (mise tools; the coder, network and
+      // pulumi apps) and the 0.x minors the app rule refuses. Placed here,
+      // after the baseline and before the hold list, so the hold list still
+      // wins. Add a name to opt one more dependency in.
+      //
+      // NOT here, deliberately: the Pulumi.yaml provider pins
+      // (ubiquiti-community/unifi and friends). A bump there is half a change
+      // until the SDK is regenerated -- see that customManager below -- and
+      // an automerge would land exactly the half that silently does nothing.
+      description: "Automerge named dependencies (minor/patch/digest) once CI is green",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchUpdateTypes: [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      matchPackageNames: [
+        // kubernetes/apps/network/external-dns: the upstream chart and the
+        // home-operations OCI mirror of it
+        "external-dns",
+        "ghcr.io/home-operations/charts-mirror/external-dns",
+        // mise tools (.config/mise.toml, agentboard's mise.toml)
+        "mikefarah/yq",
+        "pulumi/pulumi",
+        "cli/cli",
+        "jdx/hk",
+        // kubernetes/apps/agents/agent-tools-servers (a 0.x image)
+        "ghcr.io/sirkirby/unifi-network-mcp",
+        // kubernetes/apps/pulumi/*/stack.yaml workspace image
+        "ghcr.io/pulumi/pulumi-nodejs",
+        // kubernetes/apps/coder/renovate-operator
+        "ghcr.io/mogenius/helm-charts/renovate-operator"
+      ],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
+      ignoreTests: false,
+      minimumReleaseAge: "3 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+      automergeSchedule: [
+        "* 1-6 * * *"
+      ],
+      timezone: "America/New_York",
+      addLabels: [
+        "renovate/automerge"
+      ],
     },
     {
       // The automerge hold list. LAST on purpose, so it beats the automerge
