@@ -319,6 +319,37 @@
       },
     },
     {
+      // The controller chart and the runner scale-set chart ship from the same
+      // ARC release and are versioned in lockstep; a scale set on a different
+      // release than its controller is not a supported combination.
+      description: "Actions Runner Controller Group",
+      groupName: "Actions Runner Controller",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/actions-runner-controller-charts/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      // Server and node are one release: Tdarr expects every node on the
+      // server's version, so they should never be bumped apart.
+      description: "Tdarr Group",
+      groupName: "Tdarr",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/haveagitgat\\/tdarr/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       // The GitRepository tag (flux manager, git-tags) and the devlaptop image
       // (helm-values, docker) are one release: the chart ships the entrypoint
       // ConfigMaps the image runs. Split PRs would land a chart on an image
@@ -821,29 +852,6 @@
         "pinDigest"
       ],
       enabled: false,
-    },
-    {
-      // bootstrap/helmfile.yaml mirrors chart versions that are otherwise
-      // owned by the flux manager (kubernetes/apps/**/helmrelease.yaml).
-      // Renovate treats same-named deps found by different managers as one
-      // logical update and tries to combine both files' edits into a single
-      // branch. Force helmfile-manager updates onto their own branch
-      // namespace so they never share a branch with the flux-managed update
-      // for the same chart.
-      //
-      // Correction: the "Error updating branch: update failure" warning that
-      // originally motivated this rule was NOT a rebase race. It was the
-      // helmfile manager being handed pinDigest updates it cannot apply —
-      // helmfile's extractor never sets currentDigest and the manager exports
-      // no updateDependency/autoReplaceStringTemplate, so doAutoReplace always
-      // throws WORKER_FILE_UPDATE_FAILED. Fixed in the shared preset
-      // (david-driscoll/.github#2). This rule is kept because separate branch
-      // namespaces are still the right shape for a mirrored chart version.
-      description: "Keep bootstrap helmfile chart bumps off the flux-managed branch",
-      matchManagers: [
-        "helmfile"
-      ],
-      additionalBranchPrefix: "helmfile-",
     },
     {
       // Talos/Kubernetes upgrade manifests carry a plain `version: vX.Y.Z`

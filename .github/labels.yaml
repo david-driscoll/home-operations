@@ -29,6 +29,11 @@
   color: "027fa0"
 - name: renovate/helm
   color: "027fa0"
+# The shared preset's default Renovate label (david-driscoll/.github
+# renovate-config `labels`), on every PR no type/ rule labels -- digests,
+# mostly. Listed so label-sync's delete-other-labels does not strip it.
+- name: ":package: dependencies"
+  color: "ededed"
 # Renovate automerge gate (.github/renovate.json5, renovate-watchdog.yaml)
 - name: renovate/automerge
   color: "1d76db"
