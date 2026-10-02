@@ -740,15 +740,21 @@
       ignoreTests: false,
       minimumReleaseAge: "3 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 01:00-06:59 estate time (TIMEZONE in
+      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
       // shared-secrets). PRs still open and test at any hour; Renovate just
       // leaves a green one waiting until a run lands in the window.
       // `timezone` is set here, not at the top level, so nothing else in this
       // repo or the Forgejo repos that inherit it changes timezone.
       automergeSchedule: [
-        "* 1-6 * * *"
+        "* 0-6 * * *"
       ],
       timezone: "America/New_York",
+      // Rebase only on conflict. With automerge on, `rebaseWhen: auto` means
+      // behind-base-branch: every merge left the other green PRs behind main,
+      // Renovate rebased them instead of merging, and a run merged ONE PR.
+      // main's ruleset doesn't require up-to-date branches, so a green PR can
+      // merge while behind. Same setting on the other two automerge rules.
+      rebaseWhen: "conflicted",
       addLabels: [
         "renovate/automerge"
       ],
@@ -814,15 +820,16 @@
       ignoreTests: false,
       minimumReleaseAge: "3 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 01:00-06:59 estate time (TIMEZONE in
+      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
       // shared-secrets). PRs still open and test at any hour; Renovate just
       // leaves a green one waiting until a run lands in the window.
       // `timezone` is set here, not at the top level, so nothing else in this
       // repo or the Forgejo repos that inherit it changes timezone.
       automergeSchedule: [
-        "* 1-6 * * *"
+        "* 0-6 * * *"
       ],
       timezone: "America/New_York",
+      rebaseWhen: "conflicted",
       addLabels: [
         "renovate/automerge"
       ],
@@ -1171,9 +1178,10 @@
       minimumReleaseAge: "3 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
       automergeSchedule: [
-        "* 1-6 * * *"
+        "* 0-6 * * *"
       ],
       timezone: "America/New_York",
+      rebaseWhen: "conflicted",
       addLabels: [
         "renovate/automerge"
       ],
