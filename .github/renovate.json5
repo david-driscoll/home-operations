@@ -1153,7 +1153,13 @@
         // kubernetes/apps/coder/renovate-operator
         "ghcr.io/mogenius/helm-charts/renovate-operator",
         // kubernetes/apps/coder/renovate/renovatejob.yaml (the Forgejo bot)
-        "ghcr.io/renovatebot/renovate"
+        "ghcr.io/renovatebot/renovate",
+        // kubernetes/apps/observability/unpoller
+        "ghcr.io/unpoller/unpoller",
+        // agentboard's mise.toml (`npm:` tools keep their npm name)
+        "@anthropic-ai/claude-code",
+        // root package.json dev tooling
+        "@biomejs/biome"
       ],
       automerge: true,
       automergeType: "pr",
