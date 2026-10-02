@@ -68,12 +68,12 @@ spec:
               - --host
               - kubernetes # set a consistent hostname to avoid restic rescans
               - . # use workingDir to get relative paths in backup
+            # The repository, its password and the Garage key all come from
+            # this Secret (externalsecret.yaml): the `etcd` prefix of the
+            # `volsync-equestria` bucket.
             envFrom:
               - secretRef:
                   name: talos-etcd-restic-keys
-            env:
-              - name: RESTIC_REPOSITORY
-                value: /repository/etcd
 
         pod:
           hostNetwork: true
@@ -168,9 +168,6 @@ spec:
             envFrom:
               - secretRef:
                   name: talos-etcd-restic-keys
-            env:
-              - name: RESTIC_REPOSITORY
-                value: /repository/etcd
     defaultPodOptions:
       automountServiceAccountToken: true
     persistence:
@@ -194,7 +191,3 @@ spec:
         type: emptyDir
         globalMounts:
           - path: /data
-      repository:
-        type: nfs
-        server: "10.10.10.10"
-        path: "/mnt/stash/backup/${CLUSTER_CNAME}/volsync"
