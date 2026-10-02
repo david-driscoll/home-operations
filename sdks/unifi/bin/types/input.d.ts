@@ -524,6 +524,18 @@ export interface FirewallPolicyDestination {
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositeIps?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositeNetworks?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositePorts?: pulumi.Input<boolean | undefined>;
+    /**
      * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
      */
     matchingTarget: pulumi.Input<string>;
@@ -607,6 +619,18 @@ export interface FirewallPolicySource {
      * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositeIps?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositeNetworks?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
      * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
      */

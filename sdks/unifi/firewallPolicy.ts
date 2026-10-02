@@ -83,6 +83,10 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly logging: pulumi.Output<boolean>;
     /**
+     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Defaults to `false`.
+     */
+    declare public readonly matchOppositeProtocol: pulumi.Output<boolean>;
+    /**
      * The name of the firewall policy.
      */
     declare public readonly name: pulumi.Output<string>;
@@ -129,6 +133,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["index"] = state?.index;
             resourceInputs["ipVersion"] = state?.ipVersion;
             resourceInputs["logging"] = state?.logging;
+            resourceInputs["matchOppositeProtocol"] = state?.matchOppositeProtocol;
             resourceInputs["name"] = state?.name;
             resourceInputs["protocol"] = state?.protocol;
             resourceInputs["schedule"] = state?.schedule;
@@ -155,6 +160,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["ipVersion"] = args?.ipVersion;
             resourceInputs["logging"] = args?.logging;
+            resourceInputs["matchOppositeProtocol"] = args?.matchOppositeProtocol;
             resourceInputs["name"] = args?.name;
             resourceInputs["protocol"] = args?.protocol;
             resourceInputs["schedule"] = args?.schedule;
@@ -223,6 +229,10 @@ export interface FirewallPolicyState {
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
+     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositeProtocol?: pulumi.Input<boolean | undefined>;
+    /**
      * The name of the firewall policy.
      */
     name?: pulumi.Input<string | undefined>;
@@ -285,6 +295,10 @@ export interface FirewallPolicyArgs {
      * Whether to log packets matching this policy. Defaults to `false`.
      */
     logging?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Defaults to `false`.
+     */
+    matchOppositeProtocol?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the firewall policy.
      */
