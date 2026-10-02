@@ -1159,7 +1159,10 @@
         // agentboard's mise.toml (`npm:` tools keep their npm name)
         "@anthropic-ai/claude-code",
         // root package.json dev tooling
-        "@biomejs/biome"
+        "@biomejs/biome",
+        // kubernetes/apps/pulumi/*/stack.yaml mise image. CalVer: a month
+        // bump is a "minor"; the year rollover is a "major" and stays manual.
+        "jdxcode/mise"
       ],
       automerge: true,
       automergeType: "pr",
