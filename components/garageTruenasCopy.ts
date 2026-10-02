@@ -81,6 +81,9 @@ export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey;
   // Pulled from before its first mover writes (phase 3, step 2), so the
   // pilot can confirm a new app's prefix arrives on TrueNAS.
   { bucket: "volsync-equestria", key: "truenas-copy", restic: true },
+  // The k8s pg_dump CronJob's streamed dumps (phase 3, step 5). Pulled from
+  // before its first night, for the same reason.
+  { bucket: "backrest-pgdump", key: "truenas-copy", restic: true },
 ];
 
 /**

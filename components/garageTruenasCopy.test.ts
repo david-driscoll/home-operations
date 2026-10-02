@@ -42,7 +42,7 @@ describe("GARAGE_COPY_BUCKETS", () => {
 
   it("exports only restic buckets, never one that is not encrypted client-side", () => {
     const exported = GARAGE_COPY_BUCKETS.filter(entry => entry.restic).map(entry => entry.bucket);
-    assert.deepEqual(exported.sort(), ["backrest-alpha-site", "volsync-equestria"]);
+    assert.deepEqual(exported.sort(), ["backrest-alpha-site", "backrest-pgdump", "volsync-equestria"]);
     for (const bucket of ["cnpg-equestria", "pulumi-state", "postgres-celestia", "postgres-luna", "postgres-skystar"]) {
       assert.ok(!exported.includes(bucket), `${bucket} must never get an NFS export`);
     }

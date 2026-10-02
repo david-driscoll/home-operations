@@ -101,6 +101,20 @@ spec:
           automountServiceAccountToken: true
         serviceAccount:
           identifier: *app
+        initContainers:
+          # Puts the pinned restic binary where `main` can run it. Ubuntu's
+          # packaged restic is too old for `backup --stdin-from-command`, and
+          # this keeps one restic version across the estate: the same pin as
+          # the etcd CronJobs and the VolSync lock cancellers.
+          restic:
+            image:
+              repository: docker.io/restic/restic
+              tag: 0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+              pullPolicy: IfNotPresent
+            command:
+              - /bin/sh
+              - -c
+              - cp /usr/bin/restic /tools/restic
         containers:
           main:
             image:
@@ -131,6 +145,19 @@ spec:
               # `driscoll.dev/backup: "false"` on that resource instead, and the
               # job says so if it finds a name in both places.
               DECOMMISSIONED_DATABASES: "keeper,vikunja"
+              # The restic side of each dump (resources/App.cs, WHERE THE DUMPS
+              # GO). The binary is the init container's copy; the cache sits in
+              # the pod's emptyDir and goes with it.
+              RESTIC_BINARY: /tools/restic
+              RESTIC_CACHE_DIR: /tmp/restic-cache
+            # The repository, its password and the Garage key
+            # (externalsecret.yaml). Optional, so a missing Secret cannot stop
+            # the pod starting: App.cs then still writes the dump files, says
+            # the stream is unavailable, and fails the run.
+            envFrom:
+              - secretRef:
+                  name: postgres-backup-restic
+                  optional: true
             command:
               - /bin/sh
               - -c
@@ -149,13 +176,53 @@ spec:
                 && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
                 && apt-get install -y --no-install-recommends postgresql-client-18
                 && dotnet run /scripts/App.cs
+            # 1Gi, up from 512Mi: restic now runs in this container beside
+            # dotnet and pg_dump, and it holds the repository's index in
+            # memory while it chunks a dump.
             resources:
               requests:
                 memory: 256Mi
                 cpu: 20m
               limits:
-                memory: 512Mi
+                memory: 1Gi
                 cpu: 500m
+
+      # Retention for the streamed dumps, the way etcd's prune job owns its
+      # repository's. Grouped by host and tags, so each database (tag
+      # `db:<name>`) keeps its own 7 daily, 4 weekly and 3 monthly snapshots.
+      # `unlock` first removes only locks restic judges stale, left by a
+      # killed backup pod.
+      prune:
+        type: cronjob
+        cronjob:
+          schedule: "0 6 * * 0"  # Sundays at 6 AM, hours after the 2 AM dumps
+          concurrencyPolicy: Forbid
+          successfulJobsHistory: 1
+          failedJobsHistory: 1
+        pod:
+          automountServiceAccountToken: false
+        containers:
+          restic:
+            image:
+              repository: docker.io/restic/restic
+              tag: 0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+              pullPolicy: IfNotPresent
+            command:
+              - /bin/sh
+              - -c
+              - >-
+                restic unlock
+                && restic forget --group-by host,tags
+                --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --prune
+            envFrom:
+              - secretRef:
+                  name: postgres-backup-restic
+            resources:
+              requests:
+                memory: 128Mi
+                cpu: 20m
+              limits:
+                memory: 1Gi
 
     # defaultPodOptions:
     #   securityContext:
@@ -167,22 +234,45 @@ spec:
     #     seccompProfile:
     #       type: RuntimeDefault
 
+    # Every volume is mounted by name into the backup job only
+    # (advancedMounts), so the prune job carries none of them. In particular
+    # it has no NFS mount, and a TrueNAS outage cannot hold it up.
     persistence:
       script:
         type: configMap
         name: postgres-backup-script
         defaultMode: 493
-        globalMounts:
-          - path: /scripts/App.cs
-            subPath: App.cs
+        advancedMounts:
+          *app :
+            main:
+              - path: /scripts/App.cs
+                subPath: App.cs
       tmp:
         type: emptyDir
-        globalMounts:
-          - path: /tmp
-            subPath: tmp
-          - path: /.dotnet
-            subPath: dotnet
+        advancedMounts:
+          *app :
+            main:
+              - path: /tmp
+                subPath: tmp
+              - path: /.dotnet
+                subPath: dotnet
+      # The restic binary, from the init container to `main`.
+      tools:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            restic:
+              - path: /tools
+            main:
+              - path: /tools
+                readOnly: true
+      # The dump files, until phase 3 step 5 retires them after a week of
+      # green streamed runs.
       backups:
         type: nfs
         server: ${SPIKE_IP}
         path: /mnt/stash/data/pgdump
+        advancedMounts:
+          *app :
+            main:
+              - path: /backups
