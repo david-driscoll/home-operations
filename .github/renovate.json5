@@ -1151,7 +1151,9 @@
         // kubernetes/apps/pulumi/*/stack.yaml workspace image
         "ghcr.io/pulumi/pulumi-nodejs",
         // kubernetes/apps/coder/renovate-operator
-        "ghcr.io/mogenius/helm-charts/renovate-operator"
+        "ghcr.io/mogenius/helm-charts/renovate-operator",
+        // kubernetes/apps/coder/renovate/renovatejob.yaml (the Forgejo bot)
+        "ghcr.io/renovatebot/renovate"
       ],
       automerge: true,
       automergeType: "pr",
