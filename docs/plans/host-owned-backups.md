@@ -742,7 +742,22 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
 5. **The k8s pg_dump CronJob streams into restic** (§C4).
    - `resources/App.cs` pipes each database into `backrest-pgdump`, and a prune CronJob owns
      retention.
-   - After a week of green runs, retire celestia's `pgdump` plan and the NFS mount.
+
+     ✅ As built (2026-10-02), as a dual write for the first week.
+     - **Each database is dumped twice a night:** the `.sql.gz` file on NFS as before, then
+       `restic backup --stdin-from-command` into `backrest-pgdump/postgres`, tagged `db:<name>`.
+       The file comes first, and a Garage problem never stops it. Either one failing fails the run.
+     - **restic** is the estate's pinned binary, copied in by an init container. Ubuntu's package
+       is too old for `--stdin-from-command`.
+     - **The Secret** (`postgres-backup-restic`) carries the bucket's own key and the VolSync
+       password, so Backrest can browse the repository later.
+     - **Retention** is `postgres-backup-prune`, Sundays at 06:00 UTC: 7 daily, 4 weekly and
+       3 monthly per database. It mounts no NFS.
+     - **TrueNAS pulls `backrest-pgdump`**, with a read-only export like the other restic buckets.
+     - **Not built:** a `pg_dumpall --globals-only` snapshot. CNPG declares the roles, and the
+       file dumps never carried them either.
+   - After a week of green runs, retire celestia's `pgdump` plan and the NFS mount. The same
+     change deletes the file path from `App.cs`.
    - Keep `/mnt/stash/data/pgdump` read-only until the restic history covers its window, then delete
      it.
 6. **Retire.**

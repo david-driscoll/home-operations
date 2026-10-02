@@ -70,6 +70,26 @@
 // FROZEN item -- invisibly, because a stale credential still authenticates.
 // Reading the Secret directly makes a missing credential an error at the
 // moment it goes missing.
+//
+// ─── WHERE THE DUMPS GO ─────────────────────────────────────────────────────
+//
+// Two places, for now (docs/plans/host-owned-backups.md §C4, phase 3 step 5):
+//
+//   1. `/backups/<db>.sql.gz` on TrueNAS's NFS share, as before. celestia's
+//      Backrest `pgdump` plan snapshots that directory.
+//   2. A restic snapshot per database in Garage. `restic backup
+//      --stdin-from-command` runs pg_dump itself and stores its output as
+//      `/<db>.dump`, tagged `db:<db>`, so no dump file exists anywhere. The
+//      dump is uncompressed (`--compress=0`): restic's chunker then
+//      deduplicates one night against the next, and restic compresses it.
+//
+// The file is written first and the stream second, and neither depends on the
+// other: a Garage outage must not cost a night's dump files while the stream
+// is still proving itself. Either one failing fails the run. After a week of
+// green runs, step 5 deletes the file path here and the NFS mount.
+//
+// Restore from the stream:
+//   restic dump --tag db:<db> latest /<db>.dump | pg_restore -d <db>
 
 using System.Diagnostics;
 using System.IO.Compression;
@@ -140,10 +160,25 @@ var decommissioned = (Environment.GetEnvironmentVariable("DECOMMISSIONED_DATABAS
 
 var backupDir = "/backups";
 
+// The restic side. Everything restic needs is in the pod's environment, from
+// the postgres-backup-restic Secret (externalsecret.yaml): the repository, its
+// password and the Garage key. The binary comes from the init container.
+var resticBinary = Environment.GetEnvironmentVariable("RESTIC_BINARY") is { Length: > 0 } rb ? rb : "restic";
+// A fixed host, so every run's snapshots group together whatever the pod is called.
+const string ResticHost = "equestria";
+
 Console.WriteLine($"Starting PostgreSQL backup at {DateTime.UtcNow}");
 
 // Create backup directory
 Directory.CreateDirectory(backupDir);
+
+// Null when the repository is ready, otherwise why nothing can be streamed
+// tonight. It never stops the file dumps: see WHERE THE DUMPS GO.
+var streamUnavailable = await PrepareResticRepository();
+if (streamUnavailable is not null)
+{
+  Console.Error.WriteLine($"Error preparing the restic repository: {streamUnavailable}. The dump files are still written; no database is streamed tonight, and the run fails.");
+}
 
 // THE REGISTER: what this cluster says should be backed up, and how.
 Console.WriteLine($"Reading Database resources in {secretNamespace}...");
@@ -203,6 +238,10 @@ var skipped = new List<string>();
 // see the CredentialGrace note below -- a brand-new Database CR is allowed to be
 // briefly credential-less without failing the whole run.
 var deferred = new List<string>();
+// The restic side, counted apart from the files so the summary can say which
+// of the two a database missed.
+var streamed = new List<string>();
+var streamFailed = new List<string>();
 foreach (var db in live)
 {
   if (!declared.TryGetValue(db, out var entry))
@@ -274,6 +313,22 @@ foreach (var db in live)
       Console.Error.WriteLine($"Failed to create backup for database: {db}");
       failed.Add(db);
     }
+
+    // The stream, after the file is safely in place. Its own try: a failure
+    // here is reported and fails the run, and the file above stays.
+    if (streamUnavailable is null)
+    {
+      try
+      {
+        Console.WriteLine($"Streamed {db} into restic: {await StreamDatabaseDump(postgres, secretName, db)}");
+        streamed.Add(db);
+      }
+      catch (Exception ex)
+      {
+        Console.Error.WriteLine($"Error streaming database {db} into restic: {ex.Message}");
+        streamFailed.Add(db);
+      }
+    }
   }
   // A Database CR and its credential Secret are created by two different
   // controllers and do not land together. On 2026-08-27 the eight media
@@ -312,11 +367,24 @@ if (failed.Count > 0)
   return 1;
 }
 
+// The files are all written, so last night's dumps exist. The run still fails
+// when the restic side did not keep up, or nothing would ever say so.
+if (streamUnavailable is not null)
+{
+  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: every dump file was written, but nothing was streamed into restic: {streamUnavailable}");
+  return 1;
+}
+if (streamFailed.Count > 0)
+{
+  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: every dump file was written, but {streamFailed.Count} database(s) were not streamed into restic: {string.Join(", ", streamFailed)}");
+  return 1;
+}
+
 // Deferred does not fail the run, but it is never silent: the count and the
 // names go in the success line so a database that is deferred every night --
 // which would mean its Secret never arrived and the grace window is masking a
 // real problem -- is visible without reading the whole log.
-Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({live.Count - skipped.Count - deferred.Count} databases{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")}{(deferred.Count > 0 ? $", {deferred.Count} deferred until their credential Secret syncs: {string.Join(", ", deferred)}" : "")})");
+Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({live.Count - skipped.Count - deferred.Count} databases, {streamed.Count} streamed into restic{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")}{(deferred.Count > 0 ? $", {deferred.Count} deferred until their credential Secret syncs: {string.Join(", ", deferred)}" : "")})");
 return 0;
 
 // Helper methods
@@ -430,6 +498,105 @@ async Task CreateDatabaseDump(IDictionary<string, byte[]> postgres, string secre
   {
     throw new InvalidOperationException($"pg_dump failed: {error}");
   }
+}
+
+// Runs restic and returns its exit code with everything it printed. Both
+// pipes are drained while it runs, for the reason given in CreateDatabaseDump.
+async Task<(int ExitCode, string Output, string Error)> RunRestic(IEnumerable<string> arguments, IDictionary<string, string>? environment = null)
+{
+  var psi = new ProcessStartInfo
+  {
+    FileName = resticBinary,
+    UseShellExecute = false,
+    RedirectStandardOutput = true,
+    RedirectStandardError = true,
+    CreateNoWindow = true,
+  };
+  foreach (var argument in arguments) psi.ArgumentList.Add(argument);
+  foreach (var (key, value) in environment ?? new Dictionary<string, string>()) psi.Environment[key] = value;
+
+  using var process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start restic");
+  var outputTask = process.StandardOutput.ReadToEndAsync();
+  var errorTask = process.StandardError.ReadToEndAsync();
+  await process.WaitForExitAsync();
+  return (process.ExitCode, await outputTask, await errorTask);
+}
+
+// Makes sure the repository exists and carries no stale lock. Returns null
+// when it is ready, otherwise the reason it is not.
+async Task<string?> PrepareResticRepository()
+{
+  if (Environment.GetEnvironmentVariable("RESTIC_REPOSITORY") is not { Length: > 0 })
+  {
+    return "RESTIC_REPOSITORY is not set -- the postgres-backup-restic Secret is missing or empty";
+  }
+
+  try
+  {
+    var config = await RunRestic(["cat", "config"]);
+    // 10 is restic's exit code for "repository does not exist", which is the
+    // first run. Anything else is Garage being unreachable or a wrong key or
+    // password, and `init` must not paper over those.
+    if (config.ExitCode == 10)
+    {
+      Console.WriteLine("The restic repository does not exist yet; initialising it");
+      var init = await RunRestic(["init"]);
+      if (init.ExitCode != 0) return $"restic init failed: {init.Error.Trim()}";
+    }
+    else if (config.ExitCode != 0)
+    {
+      return $"restic cannot open the repository (exit {config.ExitCode}): {config.Error.Trim()}";
+    }
+
+    // A killed pod leaves its lock behind. `unlock` removes only locks restic
+    // itself judges stale, so a prune running right now keeps its own.
+    var unlock = await RunRestic(["unlock"]);
+    if (unlock.ExitCode != 0) return $"restic unlock failed: {unlock.Error.Trim()}";
+    return null;
+  }
+  catch (Exception ex)
+  {
+    return $"restic could not be run: {ex.Message}";
+  }
+}
+
+// One database as one restic snapshot. restic starts pg_dump itself and saves
+// nothing unless pg_dump exits 0, so a failed dump never becomes a snapshot.
+// Returns restic's own summary line.
+async Task<string> StreamDatabaseDump(IDictionary<string, byte[]> postgres, string secretName, string database)
+{
+  var result = await RunRestic(
+    [
+      "backup",
+      "--host", ResticHost,
+      "--tag", $"db:{database}",
+      "--stdin-filename", $"{database}.dump",
+      "--stdin-from-command",
+      "--",
+      "pg_dump",
+      "-h", GetField(postgres, secretName, "hostname"),
+      "-p", GetField(postgres, secretName, "port"),
+      "-U", GetField(postgres, secretName, "username"),
+      "-d", database,
+      "--no-password",
+      "--format=custom",
+      "--compress=0",
+      "--no-privileges",
+      "--no-owner",
+    ],
+    // pg_dump is restic's child, so it inherits this. Never an argument: the
+    // command line is visible to every process on the node.
+    new Dictionary<string, string> { ["PGPASSWORD"] = GetField(postgres, secretName, "password") });
+
+  if (result.ExitCode != 0)
+  {
+    throw new InvalidOperationException($"restic backup exited {result.ExitCode}: {result.Error.Trim()}");
+  }
+
+  var lines = result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+  var added = lines.LastOrDefault(line => line.StartsWith("Added to the repository", StringComparison.Ordinal));
+  var saved = lines.LastOrDefault(line => line.StartsWith("snapshot ", StringComparison.Ordinal));
+  return string.Join("; ", new[] { saved, added }.Where(line => line is { Length: > 0 }));
 }
 
 /// <summary>
