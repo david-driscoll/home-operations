@@ -18,7 +18,7 @@ spec:
     metadata:
       annotations:
         # Which drill this run is. Change it to run the drill again.
-        driscoll.dev/drill: phase-3-pilot-2026-10-01
+        driscoll.dev/drill: phase-3-pilot-2026-10-01-after-first-pull
     spec:
       restartPolicy: Never
       automountServiceAccountToken: false
