@@ -6,33 +6,33 @@
     "semantic_hash": ""
   },
   "bootstrap/openbao/equestria-init.sh": {
-    "mtime": 1787622485.01002,
-    "seen": 1789246470.090664,
-    "ast_hash": "6b6edf291e3ccdc10cc2eaff4e695bfe",
-    "semantic_hash": "6b6edf291e3ccdc10cc2eaff4e695bfe"
+    "mtime": 1790871362.2374582,
+    "seen": 1790908908.176308,
+    "ast_hash": "37a60c30019a09d933da78b92507a95e",
+    "semantic_hash": ""
   },
   "bootstrap/openbao/eso-parity-check.sh": {
-    "mtime": 1787431785.8191564,
-    "seen": 1789246470.0906649,
-    "ast_hash": "a2b23ef26ecec3fbceb9472ec1335e2e",
-    "semantic_hash": "a2b23ef26ecec3fbceb9472ec1335e2e"
+    "mtime": 1790871362.2380536,
+    "seen": 1790908908.176309,
+    "ast_hash": "1a5128649251af7e32283da3b952e0be",
+    "semantic_hash": ""
   },
   "bootstrap/openbao/provision-static-unseal.sh": {
-    "mtime": 1790690064.2251377,
-    "seen": 1790692277.9170182,
-    "ast_hash": "e5ff51a056ac241d50888e320372aeb9",
+    "mtime": 1790871362.2384877,
+    "seen": 1790908908.17631,
+    "ast_hash": "4d86697d2a68081477666f5b2e47665a",
     "semantic_hash": ""
   },
   "bootstrap/openbao/pulumi-env.sh": {
-    "mtime": 1787519122.5631816,
-    "seen": 1789246470.090666,
-    "ast_hash": "21e37306ce4d012c77ce991ba68ac12f",
-    "semantic_hash": "21e37306ce4d012c77ce991ba68ac12f"
+    "mtime": 1790871362.2389362,
+    "seen": 1790908908.17631,
+    "ast_hash": "01b840c6a27c8c267bb4a7ee3342f3c7",
+    "semantic_hash": ""
   },
   "bootstrap/openbao/restore-test.sh": {
-    "mtime": 1790690064.2254107,
-    "seen": 1790692277.917019,
-    "ast_hash": "8161c9012e84bea18ef10cc0b7480bb9",
+    "mtime": 1790820717.3325071,
+    "seen": 1790908908.176311,
+    "ast_hash": "ee4b8b375e68d9bcb69b4724443f00e3",
     "semantic_hash": ""
   },
   "bootstrap/openbao/root-ceremony.sh": {
@@ -48,28 +48,28 @@
     "semantic_hash": "86780424a59e7f0778c701439c23ca63"
   },
   "components/BackupPlanDirector.ts": {
-    "mtime": 1790134183.2954595,
-    "seen": 1790387946.649864,
-    "ast_hash": "4872531aa639588333253dc07cbe7bae",
+    "mtime": 1790877503.426698,
+    "seen": 1790908908.1763358,
+    "ast_hash": "edd512d59de3cbec1db16486228d053d",
     "semantic_hash": ""
   },
   "components/BackupPlanOrchestrator.ts": {
-    "mtime": 1787586527.8187592,
-    "seen": 1789246470.090668,
-    "ast_hash": "76fd9c139048834818f62a02be9ad19c",
-    "semantic_hash": "76fd9c139048834818f62a02be9ad19c"
+    "mtime": 1790877503.4269671,
+    "seen": 1790908908.176337,
+    "ast_hash": "154f42647aa3c844d08e96e07b4f63aa",
+    "semantic_hash": ""
   },
   "components/DockgeLxc.ts": {
-    "mtime": 1789408473.2031884,
-    "seen": 1789660803.4670231,
-    "ast_hash": "2565a4efa8b7fe2c26c18df1eb6ba663",
+    "mtime": 1790877503.4273045,
+    "seen": 1790908908.1763499,
+    "ast_hash": "0d95f0e6528a92d3ac36ea4282cd11da",
     "semantic_hash": ""
   },
   "components/ProxmoxBackupServerLxc.ts": {
-    "mtime": 1787426671.1861036,
-    "seen": 1789246470.0906692,
-    "ast_hash": "ca0ce518bf947fb0d62a73bb44fa238e",
-    "semantic_hash": "ca0ce518bf947fb0d62a73bb44fa238e"
+    "mtime": 1790871362.2411761,
+    "seen": 1790908908.1763499,
+    "ast_hash": "6c7b162a21bbdbd1f3bc2e911a08b7d4",
+    "semantic_hash": ""
   },
   "components/ProxmoxHost.ts": {
     "mtime": 1785791414.5297043,
@@ -78,9 +78,9 @@
     "semantic_hash": "72a47a32f6a76e123337a0dde4b192fc"
   },
   "components/StandardDns.ts": {
-    "mtime": 1790690064.2261045,
-    "seen": 1790692277.917024,
-    "ast_hash": "9fb588aeb4dfcf193a027d5e26387532",
+    "mtime": 1790871362.241393,
+    "seen": 1790908908.176363,
+    "ast_hash": "9c771ee96b6e41a1e3964d7694396612",
     "semantic_hash": ""
   },
   "components/TruenasVm.ts": {
@@ -144,10 +144,10 @@
     "semantic_hash": "d6984ee542cc21318c1ca14b2e9306a5"
   },
   "components/authentik/flows.ts": {
-    "mtime": 1786416660.901638,
-    "seen": 1789246470.0906749,
-    "ast_hash": "0b7918e0ad2f87222d3156b418d98c85",
-    "semantic_hash": "0b7918e0ad2f87222d3156b418d98c85"
+    "mtime": 1790871362.2416177,
+    "seen": 1790908908.176488,
+    "ast_hash": "3aefe52fcdeb7f26595782680d21bf85",
+    "semantic_hash": ""
   },
   "components/authentik/groups.ts": {
     "mtime": 1783241081.7338548,
@@ -198,15 +198,15 @@
     "semantic_hash": "954b915c016a57c78cf4322cd3ac1e82"
   },
   "components/constants.ts": {
-    "mtime": 1790690064.2265687,
-    "seen": 1790692277.917034,
-    "ast_hash": "7cf274c5430233fa1266ea5e9ad22921",
+    "mtime": 1790877503.4278052,
+    "seen": 1790908908.1765828,
+    "ast_hash": "1556862d6ba9a7bfddeae314caf6b2fb",
     "semantic_hash": ""
   },
   "components/dockerStackBackups.ts": {
-    "mtime": 1789922817.9363122,
-    "seen": 1789922829.314188,
-    "ast_hash": "23b2a6ca715a4a4e85bd144a4116baa9",
+    "mtime": 1790820343.654459,
+    "seen": 1790908908.176584,
+    "ast_hash": "2be488b554627f394e0d25a1a8390b5d",
     "semantic_hash": ""
   },
   "components/dockerStackPostgres.test.ts": {
@@ -222,9 +222,9 @@
     "semantic_hash": "0ffd194be9edd9f5d5b6a922e6dce6e2"
   },
   "components/globals.ts": {
-    "mtime": 1790698359.5978644,
-    "seen": 1790820334.5910761,
-    "ast_hash": "47b5c0f3b87d64781a614cd12527883d",
+    "mtime": 1790871362.2429101,
+    "seen": 1790908908.176613,
+    "ast_hash": "7fcc4e078ba45f1ced1273ddb728198e",
     "semantic_hash": ""
   },
   "components/helpers.ts": {
@@ -252,10 +252,10 @@
     "semantic_hash": ""
   },
   "components/openbao/oidc.ts": {
-    "mtime": 1787431785.821163,
-    "seen": 1789246470.090682,
-    "ast_hash": "9f1545362fe1085d978a077cb797f55b",
-    "semantic_hash": "9f1545362fe1085d978a077cb797f55b"
+    "mtime": 1790871362.2433429,
+    "seen": 1790908908.176658,
+    "ast_hash": "8a2c7a9ad734d114b210ac3250054880",
+    "semantic_hash": ""
   },
   "components/package.json": {
     "mtime": 1790690064.2268965,
@@ -282,15 +282,15 @@
     "semantic_hash": ""
   },
   "components/store/clusters.test.ts": {
-    "mtime": 1787416963.7119012,
-    "seen": 1789246470.090685,
-    "ast_hash": "2439c56e6899ac110fe7a81e0715b66f",
-    "semantic_hash": "2439c56e6899ac110fe7a81e0715b66f"
+    "mtime": 1790871362.2440534,
+    "seen": 1790908908.176704,
+    "ast_hash": "77b4e5fa153755d0ae9481a01bad58ce",
+    "semantic_hash": ""
   },
   "components/store/clusters.ts": {
-    "mtime": 1790690064.2271845,
-    "seen": 1790692277.9170408,
-    "ast_hash": "b726398e320a1b2592dfdb515f1d6429",
+    "mtime": 1790871362.2442548,
+    "seen": 1790908908.1767051,
+    "ast_hash": "8b48a79e103c25e66bf66f36e78f8daa",
     "semantic_hash": ""
   },
   "components/store/index.ts": {
@@ -336,10 +336,10 @@
     "semantic_hash": ""
   },
   "components/truenas.ts": {
-    "mtime": 1783241081.738186,
-    "seen": 1789246470.090688,
-    "ast_hash": "73b51b8edeb1ee49642f89cda0ee0c8f",
-    "semantic_hash": "73b51b8edeb1ee49642f89cda0ee0c8f"
+    "mtime": 1790871362.2444754,
+    "seen": 1790908908.176814,
+    "ast_hash": "d22bdab4862b199e548d89c7e8419911",
+    "semantic_hash": ""
   },
   "components/truenas/index.ts": {
     "mtime": 1783241081.7383103,
@@ -354,16 +354,16 @@
     "semantic_hash": ""
   },
   "components/truenas/truenas-manager.ts": {
-    "mtime": 1783241081.7386088,
-    "seen": 1789246470.090689,
-    "ast_hash": "223957cc9854934c24e0c29a7758ac59",
-    "semantic_hash": "223957cc9854934c24e0c29a7758ac59"
+    "mtime": 1790871362.2446918,
+    "seen": 1790908908.176842,
+    "ast_hash": "fb0f67ec2114190f203473bb77b8afd0",
+    "semantic_hash": ""
   },
   "components/truenas/truenas-types.ts": {
-    "mtime": 1783241081.7389345,
-    "seen": 1789246470.0906901,
-    "ast_hash": "32e75c3fda65f6bf39d60be59499cf32",
-    "semantic_hash": "32e75c3fda65f6bf39d60be59499cf32"
+    "mtime": 1790871362.2449515,
+    "seen": 1790908908.176842,
+    "ast_hash": "f51bbca4c41852ab957c198f17b079ea",
+    "semantic_hash": ""
   },
   "components/tsconfig.json": {
     "mtime": 1783241081.7393377,
@@ -372,9 +372,9 @@
     "semantic_hash": "0dad0a10ad7ab573e9a3090997193012"
   },
   "docker/_common/backups/Playground.cs": {
-    "mtime": 1790389910.2332823,
-    "seen": 1790389919.033607,
-    "ast_hash": "3ab5d65554ac56b254a696688b632371",
+    "mtime": 1790820343.65629,
+    "seen": 1790908908.1768808,
+    "ast_hash": "dffb077de0e52a473b92f2a5fd096131",
     "semantic_hash": ""
   },
   "docker/_common/backups/init.sh": {
@@ -414,15 +414,15 @@
     "semantic_hash": ""
   },
   "docker/alpha-site/bao-standby/restore.sh": {
-    "mtime": 1787426671.1938138,
-    "seen": 1789246470.090697,
-    "ast_hash": "91f968f7e2213b4c2b7db11008762e24",
-    "semantic_hash": "91f968f7e2213b4c2b7db11008762e24"
+    "mtime": 1790820717.3327649,
+    "seen": 1790908908.177081,
+    "ast_hash": "323e8cfc13a8a6117c08d6802feeb2d3",
+    "semantic_hash": ""
   },
   "docker/alpha-site/bao-transit/config/config.hcl": {
     "mtime": 1790690064.2319622,
-    "seen": 1790692277.917061,
-    "ast_hash": "",
+    "seen": 1790908908.177082,
+    "ast_hash": "f50b96e852f99071f9016f302a716ad0",
     "semantic_hash": ""
   },
   "docker/alpha-site/pecron-monitor/exporter/pecron_exporter.py": {
@@ -2670,9 +2670,9 @@
     "semantic_hash": "d6d45b3b044f945ceec2d553cc1a910c"
   },
   "stacks/backups/index.ts": {
-    "mtime": 1790690064.2835653,
-    "seen": 1790692277.917428,
-    "ast_hash": "33530fe9df7eee1c3e12c1b74d6b2f32",
+    "mtime": 1790877503.434066,
+    "seen": 1790908908.186455,
+    "ast_hash": "08a5bf62ebf715081a66e37c93422996",
     "semantic_hash": ""
   },
   "stacks/backups/package.json": {
@@ -2706,9 +2706,9 @@
     "semantic_hash": "d6d45b3b044f945ceec2d553cc1a910c"
   },
   "stacks/home/index.ts": {
-    "mtime": 1789408473.2147646,
-    "seen": 1789660803.467264,
-    "ast_hash": "7a93cd3a84305b57abd2f38152ddcb27",
+    "mtime": 1790871362.268394,
+    "seen": 1790908908.1865149,
+    "ast_hash": "4df0a5164eef31a23d2800ed13ce91e1",
     "semantic_hash": ""
   },
   "stacks/home/package.json": {
@@ -2772,9 +2772,9 @@
     "semantic_hash": ""
   },
   "stacks/unifi-network/acl-manager.ts": {
-    "mtime": 1790690064.2867558,
-    "seen": 1790692277.9174411,
-    "ast_hash": "648e6296e4f3b72f4e7d437bb9ce603b",
+    "mtime": 1790877503.434561,
+    "seen": 1790908908.1866822,
+    "ast_hash": "32f53ba68f563655ee3c863956f4cbd1",
     "semantic_hash": ""
   },
   "stacks/unifi-network/index.ts": {
@@ -2784,9 +2784,9 @@
     "semantic_hash": "45059966e0658837789fd0a68a39e6f0"
   },
   "stacks/unifi-network/local-dns.ts": {
-    "mtime": 1790690064.286973,
-    "seen": 1790692277.917442,
-    "ast_hash": "ea2159c69d347cc4e928d99705dfa500",
+    "mtime": 1790871362.2698526,
+    "seen": 1790908908.186694,
+    "ast_hash": "9d04f983ec3618e1ec3260dd9181b1fa",
     "semantic_hash": ""
   },
   "stacks/unifi-network/package.json": {
@@ -2802,9 +2802,9 @@
     "semantic_hash": "56308516ba6fcac6253701e465282614"
   },
   "stacks/unifi-network/technitium-zone.ts": {
-    "mtime": 1790690064.2872787,
-    "seen": 1790692277.9174452,
-    "ast_hash": "36056853ed13ced723414466366e53a5",
+    "mtime": 1790871362.2699707,
+    "seen": 1790908908.186731,
+    "ast_hash": "2580f6b5a62901237a8fc3b315ff0e93",
     "semantic_hash": ""
   },
   "stacks/unifi-network/tsconfig.json": {
@@ -2844,9 +2844,9 @@
     "semantic_hash": ""
   },
   "bootstrap/RUNBOOK.md": {
-    "mtime": 1790690064.2245507,
-    "seen": 1790692277.918109,
-    "ast_hash": "f664993720b680597f7658d826bb920e",
+    "mtime": 1790820717.3321214,
+    "seen": 1790908908.2051961,
+    "ast_hash": "39aa60b0ecd848a7073a4e010855c866",
     "semantic_hash": ""
   },
   "bootstrap/helmfile.yaml": {
@@ -2934,10 +2934,10 @@
     "semantic_hash": "fb29ff80d0d9c361b26a8b0847064350"
   },
   "docker/_common/backrest/compose.yaml": {
-    "mtime": 1783907955.5210614,
-    "seen": 1789246470.0916631,
-    "ast_hash": "7608741b16b87ff2c7e925141e9aa1b9",
-    "semantic_hash": "7608741b16b87ff2c7e925141e9aa1b9"
+    "mtime": 1790877503.428221,
+    "seen": 1790908908.2056372,
+    "ast_hash": "3a2d92ca2c3609ce4b9672cb788f1f14",
+    "semantic_hash": ""
   },
   "docker/_common/backrest/definition.yaml": {
     "mtime": 1790690064.2291012,
@@ -3054,9 +3054,9 @@
     "semantic_hash": "815b17fb040f383c1e2bd4ea8fa66596"
   },
   "docker/_common/rclone-sftp/compose.yaml": {
-    "mtime": 1788575908.2072766,
-    "seen": 1789246470.091674,
-    "ast_hash": "989d28566a16ec09706da76a90a51669",
+    "mtime": 1790877503.42835,
+    "seen": 1790908908.205986,
+    "ast_hash": "2f94f68a7322851af54bee98c939c2e9",
     "semantic_hash": ""
   },
   "docker/_common/technitium/compose.yaml": {
@@ -3150,10 +3150,10 @@
     "semantic_hash": "949f70532d74bc7efd4f7cb18c883ea5"
   },
   "docker/alpha-site/pecron-monitor/config/config.yaml": {
-    "mtime": 1787172388.1016457,
-    "seen": 1789246470.091682,
-    "ast_hash": "9d9ce5d79e7656cf13abbd144d7154e4",
-    "semantic_hash": "9d9ce5d79e7656cf13abbd144d7154e4"
+    "mtime": 1790871362.2474725,
+    "seen": 1790908908.206314,
+    "ast_hash": "a34ea3b99d49eefe6653c977ec0ea238",
+    "semantic_hash": ""
   },
   "docker/alpha-site/prometheus/config/rules/pecron.yml": {
     "mtime": 1787172388.1022842,
@@ -3234,10 +3234,10 @@
     "semantic_hash": ""
   },
   "docker/celestia/hermes/config.seed.yaml": {
-    "mtime": 1785787958.4540837,
-    "seen": 1789246470.091688,
-    "ast_hash": "99fe7e38bc78fbb5cac8a20f26dc5e99",
-    "semantic_hash": "99fe7e38bc78fbb5cac8a20f26dc5e99"
+    "mtime": 1790871362.2481537,
+    "seen": 1790908908.206506,
+    "ast_hash": "9ba7f4554963027f7697d87b555bc5c3",
+    "semantic_hash": ""
   },
   "docker/celestia/hermes/definition.yaml": {
     "mtime": 1789508248.8332992,
@@ -4170,8 +4170,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/coder/forgejo/ks.yaml": {
-    "mtime": 1787757678.3460288,
-    "seen": 1789246470.091789,
+    "mtime": 1790877500.3518229,
+    "seen": 1790908908.2101629,
     "ast_hash": "14537a081fd6238bab93bdab4480eb45",
     "semantic_hash": "14537a081fd6238bab93bdab4480eb45"
   },
@@ -4266,9 +4266,9 @@
     "semantic_hash": "f6bbe096ef738ad92b6589c4b3c89c8c"
   },
   "kubernetes/apps/coder/renovate/renovatejob.yaml": {
-    "mtime": 1790690064.2563531,
-    "seen": 1790692277.9183009,
-    "ast_hash": "982459e725ac992a06ef0620ef659935",
+    "mtime": 1790871362.2495725,
+    "seen": 1790908908.2107048,
+    "ast_hash": "40112a06f3e046350e2dd224eddf5216",
     "semantic_hash": ""
   },
   "kubernetes/apps/database/kustomization.yaml": {
@@ -4362,9 +4362,9 @@
     "semantic_hash": "5718d92417d7951a5a47e462398085b9"
   },
   "kubernetes/apps/database/postgres/app/resources/values.yaml": {
-    "mtime": 1790132833.4417355,
-    "seen": 1790387946.6511412,
-    "ast_hash": "9b3497efca9e3e2021cc7690ac986755",
+    "mtime": 1790820343.6889396,
+    "seen": 1790908908.210948,
+    "ast_hash": "ed5905c9edfc765a0b40e4d9f2c9dc27",
     "semantic_hash": ""
   },
   "kubernetes/apps/database/postgres/app/role-broad-access.yaml": {
@@ -4614,8 +4614,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/dns/technitium/ks.yaml": {
-    "mtime": 1787279751.3852541,
-    "seen": 1789246470.091826,
+    "mtime": 1790877500.3521135,
+    "seen": 1790908908.211754,
     "ast_hash": "061a8f11f8569a6be481928b56e27fe9",
     "semantic_hash": "061a8f11f8569a6be481928b56e27fe9"
   },
@@ -4656,8 +4656,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/autobrr/ks.yaml": {
-    "mtime": 1787801618.2478101,
-    "seen": 1789246470.091829,
+    "mtime": 1790877500.3523169,
+    "seen": 1790908908.2118468,
     "ast_hash": "6a6d4fd57f2d598fa07240533cc64032",
     "semantic_hash": "6a6d4fd57f2d598fa07240533cc64032"
   },
@@ -4692,8 +4692,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/prowlarr/ks.yaml": {
-    "mtime": 1787883485.283124,
-    "seen": 1789246470.0918322,
+    "mtime": 1790877500.3525167,
+    "seen": 1790908908.211922,
     "ast_hash": "28236a1bb2e06cbf73a60ed04a68a35b",
     "semantic_hash": "28236a1bb2e06cbf73a60ed04a68a35b"
   },
@@ -4728,8 +4728,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/qbittorrent/ks.yaml": {
-    "mtime": 1787014080.36712,
-    "seen": 1789246470.0918348,
+    "mtime": 1790877500.3526943,
+    "seen": 1790908908.212019,
     "ast_hash": "6eafc4ce55e66d161b4764afd0b14959",
     "semantic_hash": "6eafc4ce55e66d161b4764afd0b14959"
   },
@@ -4752,8 +4752,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/sabnzbd/ks.yaml": {
-    "mtime": 1787883485.284099,
-    "seen": 1789246470.091837,
+    "mtime": 1790877500.3528216,
+    "seen": 1790908908.21207,
     "ast_hash": "4d7faf0f2d3b08979ac55ac0d8f838c3",
     "semantic_hash": "4d7faf0f2d3b08979ac55ac0d8f838c3"
   },
@@ -4812,8 +4812,8 @@
     "semantic_hash": "ceeff015533a3317d7c7b0d5ac9a58cd"
   },
   "kubernetes/apps/equestria/games/playerr/ks.yaml": {
-    "mtime": 1787883485.2854455,
-    "seen": 1789246470.091841,
+    "mtime": 1790877500.3529778,
+    "seen": 1790908908.212302,
     "ast_hash": "9e9c202f2adfaa49c0107b4511ca0a23",
     "semantic_hash": "9e9c202f2adfaa49c0107b4511ca0a23"
   },
@@ -4842,8 +4842,8 @@
     "semantic_hash": "dfc0bea255e7cdef2752ac6f173495ef"
   },
   "kubernetes/apps/equestria/games/questarr/ks.yaml": {
-    "mtime": 1787883485.2880237,
-    "seen": 1789246470.0918431,
+    "mtime": 1790877503.4294357,
+    "seen": 1790908908.2123678,
     "ast_hash": "e5f22f58d84b04a5e62b9e3126e85d8c",
     "semantic_hash": "e5f22f58d84b04a5e62b9e3126e85d8c"
   },
@@ -4902,8 +4902,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/games/romm/ks.yaml": {
-    "mtime": 1789239913.341094,
-    "seen": 1789246470.091848,
+    "mtime": 1790877500.3531435,
+    "seen": 1790908908.212523,
     "ast_hash": "d07cbe1d2c72298d936627891ce89023",
     "semantic_hash": "d07cbe1d2c72298d936627891ce89023"
   },
@@ -4938,8 +4938,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/degoog/ks.yaml": {
-    "mtime": 1789239936.4907553,
-    "seen": 1789246470.091852,
+    "mtime": 1790877500.3534236,
+    "seen": 1790908908.2126899,
     "ast_hash": "b74e2e5615b7b90036b71868dd2fba88",
     "semantic_hash": "b74e2e5615b7b90036b71868dd2fba88"
   },
@@ -4950,8 +4950,8 @@
     "semantic_hash": "c2a3f0148208d76f4510149294d978d2"
   },
   "kubernetes/apps/equestria/home/dynacat/ks.yaml": {
-    "mtime": 1790690064.2585385,
-    "seen": 1790692277.918367,
+    "mtime": 1790877500.3535635,
+    "seen": 1790908908.2127109,
     "ast_hash": "75ee0a6d5da4dc0cbb040c21baed7acb",
     "semantic_hash": ""
   },
@@ -4974,8 +4974,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/freshrss/ks.yaml": {
-    "mtime": 1787868935.7152843,
-    "seen": 1789246470.091855,
+    "mtime": 1790877500.353688,
+    "seen": 1790908908.2127638,
     "ast_hash": "db03967af8497236d12f69a2bc05a04b",
     "semantic_hash": "db03967af8497236d12f69a2bc05a04b"
   },
@@ -5004,8 +5004,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/immich/ks.yaml": {
-    "mtime": 1787757678.3470078,
-    "seen": 1789246470.09186,
+    "mtime": 1790877500.3539536,
+    "seen": 1790908908.212916,
     "ast_hash": "f500e433f0f12de0b2b2d96d7ece0969",
     "semantic_hash": "f500e433f0f12de0b2b2d96d7ece0969"
   },
@@ -5100,8 +5100,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/n8n/ks.yaml": {
-    "mtime": 1787883485.2896256,
-    "seen": 1789246470.091868,
+    "mtime": 1790877503.4300182,
+    "seen": 1790908908.2132401,
     "ast_hash": "488ca52160a177918cdacb67856375da",
     "semantic_hash": "488ca52160a177918cdacb67856375da"
   },
@@ -5130,8 +5130,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/obsidian-sync/ks.yaml": {
-    "mtime": 1787014080.3687663,
-    "seen": 1789246470.09187,
+    "mtime": 1790877500.354294,
+    "seen": 1790908908.213418,
     "ast_hash": "d5c317c666c62f534768013ffef0a130",
     "semantic_hash": "d5c317c666c62f534768013ffef0a130"
   },
@@ -5190,8 +5190,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/rustdesk/ks.yaml": {
-    "mtime": 1787014080.3689346,
-    "seen": 1789246470.091879,
+    "mtime": 1790877503.4302068,
+    "seen": 1790908908.2138119,
     "ast_hash": "1d9aaa05b289e3c5b1d3eb7f8fe83e2b",
     "semantic_hash": "1d9aaa05b289e3c5b1d3eb7f8fe83e2b"
   },
@@ -5280,8 +5280,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/tandoor/ks.yaml": {
-    "mtime": 1789239097.1504307,
-    "seen": 1789246470.091886,
+    "mtime": 1790877500.3547847,
+    "seen": 1790908908.2141628,
     "ast_hash": "0568cabdb14204fc66ed9ac21c6d2020",
     "semantic_hash": ""
   },
@@ -5310,8 +5310,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/tududi/ks.yaml": {
-    "mtime": 1789239097.1507013,
-    "seen": 1789246470.0918882,
+    "mtime": 1790877503.430339,
+    "seen": 1790908908.2142248,
     "ast_hash": "85c231da40f78279d2edd3091916ca8a",
     "semantic_hash": ""
   },
@@ -5400,8 +5400,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/bazarr/ks.yaml": {
-    "mtime": 1787801618.2517195,
-    "seen": 1789246470.091903,
+    "mtime": 1790877500.355195,
+    "seen": 1790908908.214742,
     "ast_hash": "4942840985b8f32b8084aadba9ca1a1f",
     "semantic_hash": "4942840985b8f32b8084aadba9ca1a1f"
   },
@@ -5448,14 +5448,14 @@
     "semantic_hash": "e19e6751d75452312b91511525cf8c9d"
   },
   "kubernetes/apps/equestria/media/jellyfin/helmrelease.yaml": {
-    "mtime": 1790217868.6504009,
-    "seen": 1790387946.6512709,
-    "ast_hash": "bb0dc0844dc180a2ace93df8e58b6cfc",
+    "mtime": 1790871362.2538884,
+    "seen": 1790908908.21497,
+    "ast_hash": "97624c19a761c71b304d9cf60f2e7fa6",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/jellyfin/ks.yaml": {
-    "mtime": 1789942014.9744549,
-    "seen": 1790387946.6512718,
+    "mtime": 1790877500.3553252,
+    "seen": 1790908908.214972,
     "ast_hash": "6f07713c3c9b2fd0eaf850586b3b91cb",
     "semantic_hash": ""
   },
@@ -5490,8 +5490,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/jellyseerr/ks.yaml": {
-    "mtime": 1789239956.2986922,
-    "seen": 1789246470.09191,
+    "mtime": 1790877503.4307852,
+    "seen": 1790908908.215157,
     "ast_hash": "8e630294d5d900741451205f2d29d2e4",
     "semantic_hash": "8e630294d5d900741451205f2d29d2e4"
   },
@@ -5514,8 +5514,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/kapowarr/ks.yaml": {
-    "mtime": 1789239964.689934,
-    "seen": 1789246470.091912,
+    "mtime": 1790877503.4309077,
+    "seen": 1790908908.215211,
     "ast_hash": "7222078614c16e2af4d2c4d03e7638ad",
     "semantic_hash": "7222078614c16e2af4d2c4d03e7638ad"
   },
@@ -5574,8 +5574,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/kometa/ks.yaml": {
-    "mtime": 1787014080.3703265,
-    "seen": 1789246470.091916,
+    "mtime": 1790877500.355438,
+    "seen": 1790908908.2153852,
     "ast_hash": "c1003d3f868a0cfbcbc4206c267fb65e",
     "semantic_hash": "c1003d3f868a0cfbcbc4206c267fb65e"
   },
@@ -5610,8 +5610,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/lidarr/ks.yaml": {
-    "mtime": 1787883485.2917478,
-    "seen": 1789246470.0919192,
+    "mtime": 1790877500.355561,
+    "seen": 1790908908.2154849,
     "ast_hash": "2fd837ea2d21fd16470928f84b57d796",
     "semantic_hash": "2fd837ea2d21fd16470928f84b57d796"
   },
@@ -5646,8 +5646,8 @@
     "semantic_hash": "10bd2f57ea8e65f6edd5cf2f0c2fecbb"
   },
   "kubernetes/apps/equestria/media/mylar/ks.yaml": {
-    "mtime": 1787883485.2923071,
-    "seen": 1789246470.091924,
+    "mtime": 1790877503.4310405,
+    "seen": 1790908908.21565,
     "ast_hash": "08126c1746b800dea0b1991e1049a2cd",
     "semantic_hash": "08126c1746b800dea0b1991e1049a2cd"
   },
@@ -5682,8 +5682,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/pinepods/ks.yaml": {
-    "mtime": 1787883485.2924159,
-    "seen": 1789246470.091927,
+    "mtime": 1790877500.3559375,
+    "seen": 1790908908.2158551,
     "ast_hash": "3da0bd2f6bae653f0820926c506535f6",
     "semantic_hash": "3da0bd2f6bae653f0820926c506535f6"
   },
@@ -5724,8 +5724,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/plex/ks.yaml": {
-    "mtime": 1787014080.3706667,
-    "seen": 1789246470.0919302,
+    "mtime": 1790877500.3560832,
+    "seen": 1790908908.2159739,
     "ast_hash": "a450bf7fb8ba2d1204cd5f2aadf1b666",
     "semantic_hash": "a450bf7fb8ba2d1204cd5f2aadf1b666"
   },
@@ -5760,8 +5760,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/pulsarr/ks.yaml": {
-    "mtime": 1787757678.3482356,
-    "seen": 1789246470.091934,
+    "mtime": 1790877500.3563755,
+    "seen": 1790908908.216081,
     "ast_hash": "12b12eb89a6963a60f9c87a8d92fe36a",
     "semantic_hash": "12b12eb89a6963a60f9c87a8d92fe36a"
   },
@@ -5790,8 +5790,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/radarr/ks.yaml": {
-    "mtime": 1787883485.2928464,
-    "seen": 1789246470.091936,
+    "mtime": 1790877500.356627,
+    "seen": 1790908908.2161448,
     "ast_hash": "32826f12046845f2e3fbd415b042c4de",
     "semantic_hash": "32826f12046845f2e3fbd415b042c4de"
   },
@@ -5832,8 +5832,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/seerr/ks.yaml": {
-    "mtime": 1789239987.533837,
-    "seen": 1789246470.0919402,
+    "mtime": 1790877500.3567383,
+    "seen": 1790908908.2162402,
     "ast_hash": "0219e604a71c568092fd187ffb855b01",
     "semantic_hash": "0219e604a71c568092fd187ffb855b01"
   },
@@ -5862,8 +5862,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/sonarr/ks.yaml": {
-    "mtime": 1787883485.2932332,
-    "seen": 1789246470.0919418,
+    "mtime": 1790877500.3568444,
+    "seen": 1790908908.2163048,
     "ast_hash": "403688ad0341c0fe800f0e95b39565dd",
     "semantic_hash": "403688ad0341c0fe800f0e95b39565dd"
   },
@@ -5922,8 +5922,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/tautulli/ks.yaml": {
-    "mtime": 1787014080.3711658,
-    "seen": 1789246470.091947,
+    "mtime": 1790877500.357093,
+    "seen": 1790908908.216542,
     "ast_hash": "fdb47a7eed5ed506c1f6d0136029e834",
     "semantic_hash": "fdb47a7eed5ed506c1f6d0136029e834"
   },
@@ -5940,22 +5940,22 @@
     "semantic_hash": "96490c0732330590484267577a0741ef"
   },
   "kubernetes/apps/equestria/media/tdarr/helmrelease.yaml": {
-    "mtime": 1790690064.2685754,
-    "seen": 1790692277.918497,
-    "ast_hash": "261d2c5db6ba72dd82cb2bfce63e8483",
+    "mtime": 1790820343.6892164,
+    "seen": 1790908908.216577,
+    "ast_hash": "61d87d94a9bfa3728a948089a99ebae1",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/tdarr/ks.yaml": {
-    "mtime": 1787014080.3712611,
-    "seen": 1789246470.091949,
+    "mtime": 1790877500.3573544,
+    "seen": 1790908908.216578,
     "ast_hash": "d4556c7705748864911a9191da56eaad",
     "semantic_hash": "d4556c7705748864911a9191da56eaad"
   },
   "kubernetes/apps/equestria/media/tdarr/kustomization.yaml": {
-    "mtime": 1786679853.8657286,
-    "seen": 1789246470.091949,
-    "ast_hash": "e9152ca8e8e1280d90c697b5078b8858",
-    "semantic_hash": "e9152ca8e8e1280d90c697b5078b8858"
+    "mtime": 1790820343.6908474,
+    "seen": 1790908908.216578,
+    "ast_hash": "770b946ae53f722bb5e50b1c8762721d",
+    "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/watchstate/definition.yaml": {
     "mtime": 1787426671.2107406,
@@ -5970,8 +5970,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/watchstate/ks.yaml": {
-    "mtime": 1787014080.3713465,
-    "seen": 1789246470.0919511,
+    "mtime": 1790877500.3576214,
+    "seen": 1790908908.2166789,
     "ast_hash": "3fcc3774d56f8f586a71fee1ff9b23fe",
     "semantic_hash": "3fcc3774d56f8f586a71fee1ff9b23fe"
   },
@@ -5994,8 +5994,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/pvr/dispatcharr/ks.yaml": {
-    "mtime": 1787014080.3714328,
-    "seen": 1789246470.091952,
+    "mtime": 1790877500.3577437,
+    "seen": 1790908908.2167292,
     "ast_hash": "7b270d856015ccf3c03acdf5b8ac7127",
     "semantic_hash": "7b270d856015ccf3c03acdf5b8ac7127"
   },
@@ -6018,8 +6018,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/pvr/ecm/ks.yaml": {
-    "mtime": 1787014080.3716226,
-    "seen": 1789246470.091954,
+    "mtime": 1790877500.3578575,
+    "seen": 1790908908.21678,
     "ast_hash": "2d6eb83f4d689e2a0cd007f854c70683",
     "semantic_hash": "2d6eb83f4d689e2a0cd007f854c70683"
   },
@@ -6060,8 +6060,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/pvr/game-thumbs/ks.yaml": {
-    "mtime": 1789240001.8721335,
-    "seen": 1789246470.091958,
+    "mtime": 1790877500.35801,
+    "seen": 1790908908.216888,
     "ast_hash": "0053cb6d4133f8ed28da2c284daf7cf4",
     "semantic_hash": "0053cb6d4133f8ed28da2c284daf7cf4"
   },
@@ -6084,8 +6084,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/pvr/identifiarr/ks.yaml": {
-    "mtime": 1787014080.3718846,
-    "seen": 1789246470.09196,
+    "mtime": 1790877500.3581166,
+    "seen": 1790908908.216937,
     "ast_hash": "1fb27f1171f68de47bd4766121cd0283",
     "semantic_hash": "1fb27f1171f68de47bd4766121cd0283"
   },
@@ -6156,8 +6156,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/pvr/teamarr/ks.yaml": {
-    "mtime": 1787014080.3723257,
-    "seen": 1789246470.0919669,
+    "mtime": 1790877500.3583398,
+    "seen": 1790908908.217123,
     "ast_hash": "f65f487284a61c5cb0a94e4b22b5cfd6",
     "semantic_hash": "f65f487284a61c5cb0a94e4b22b5cfd6"
   },
@@ -6750,10 +6750,10 @@
     "semantic_hash": "86acf7c0a63d1b6e1d811f27e003981b"
   },
   "kubernetes/apps/kube-system/etcd/externalsecret.yaml": {
-    "mtime": 1787426671.2155979,
-    "seen": 1789246470.0920131,
-    "ast_hash": "1cacd7e45746c40a01ea193b8e033d28",
-    "semantic_hash": "1cacd7e45746c40a01ea193b8e033d28"
+    "mtime": 1790820343.6912417,
+    "seen": 1790908908.218862,
+    "ast_hash": "b8ac2a8ab4aaf2ddd6d2ad3ca23a7be2",
+    "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/etcd/helmrelease.yaml": {
     "mtime": 1789508974.706832,
@@ -7038,9 +7038,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/openbao-replica/helmrelease.yaml": {
-    "mtime": 1790217868.6513264,
-    "seen": 1790387946.651428,
-    "ast_hash": "07dd010f46ebd8203f8af0cfb0c3d710",
+    "mtime": 1790820717.333769,
+    "seen": 1790908908.21969,
+    "ast_hash": "8abe5d2e065365cdc9dfa699950c7151",
     "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/openbao-replica/ks.yaml": {
@@ -7074,10 +7074,10 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/openbao/helmrelease.yaml": {
-    "mtime": 1787622485.0217953,
-    "seen": 1789246470.092044,
-    "ast_hash": "5d2ecdd4c9814b9df676e9a9a9392708",
-    "semantic_hash": "5d2ecdd4c9814b9df676e9a9a9392708"
+    "mtime": 1790877503.4314795,
+    "seen": 1790908908.2197728,
+    "ast_hash": "7e6abde5a99b8d2c65da692aa3009205",
+    "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/openbao/httproute.yaml": {
     "mtime": 1789313423.9151554,
@@ -7098,9 +7098,9 @@
     "semantic_hash": "040ca56f69b6611ebd4657616c24ea76"
   },
   "kubernetes/apps/kube-system/openbao/ocirepository.yaml": {
-    "mtime": 1790354583.0224588,
-    "seen": 1790387946.651432,
-    "ast_hash": "c9fa2ab741ff381728da71c0da3b778a",
+    "mtime": 1790908764.0478394,
+    "seen": 1790908908.21982,
+    "ast_hash": "92426889a9068e19495633ea5a8472d8",
     "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/priority-class/ks.yaml": {
@@ -7158,8 +7158,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/kube-system/registry/ks.yaml": {
-    "mtime": 1787416963.7196972,
-    "seen": 1789246470.092051,
+    "mtime": 1790877500.358495,
+    "seen": 1790908908.219958,
     "ast_hash": "7fa7e3d2779047f4f99ca0e99f06c824",
     "semantic_hash": "7fa7e3d2779047f4f99ca0e99f06c824"
   },
@@ -7410,8 +7410,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/network/crowdsec-ui/ks.yaml": {
-    "mtime": 1787014080.3802054,
-    "seen": 1789246470.092074,
+    "mtime": 1790877500.3586316,
+    "seen": 1790908908.220798,
     "ast_hash": "72f365b532ac7d1ce6aac001ae794eab",
     "semantic_hash": "72f365b532ac7d1ce6aac001ae794eab"
   },
@@ -7458,9 +7458,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/network/crowdsec/volsync.yaml": {
-    "mtime": 1788746174.7661712,
-    "seen": 1789246470.092078,
-    "ast_hash": "76b7d5072e51db8e27b51549d32e6caa",
+    "mtime": 1790877503.4321356,
+    "seen": 1790908908.220932,
+    "ast_hash": "fd8642b4e6c9d725b70f9188010af5f8",
     "semantic_hash": ""
   },
   "kubernetes/apps/network/external-dns/cloudflare/helmrelease.yaml": {
@@ -8136,9 +8136,9 @@
     "semantic_hash": "d885ad1c1f2111b6019a112d931e1751"
   },
   "kubernetes/apps/observability/repositories/kube-prometheus-stack.yaml": {
-    "mtime": 1790690064.27571,
-    "seen": 1790692277.918709,
-    "ast_hash": "a0ce9cfc1442c158438fbec7d6479c11",
+    "mtime": 1790871362.2550852,
+    "seen": 1790908908.222941,
+    "ast_hash": "60af1e50b10116bfdcd3f88145038238",
     "semantic_hash": ""
   },
   "kubernetes/apps/observability/repositories/kustomization.yaml": {
@@ -8352,9 +8352,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/authentik/stack.yaml": {
-    "mtime": 1790698359.6056259,
-    "seen": 1790820334.6404428,
-    "ast_hash": "08390c73cf58fb32f79464394766e498",
+    "mtime": 1790871362.2555063,
+    "seen": 1790908908.223551,
+    "ast_hash": "33ed385daebec4610e464259dda74fce",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/backups/ks.yaml": {
@@ -8370,9 +8370,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/backups/stack.yaml": {
-    "mtime": 1790698359.605925,
-    "seen": 1790820334.6404748,
-    "ast_hash": "a6bb0b3bf3bc7464a694cbe659df8a28",
+    "mtime": 1790871362.2557676,
+    "seen": 1790908908.22358,
+    "ast_hash": "8801a49a454c6003493d154152176e6d",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/gulf-of-mexico/ks.yaml": {
@@ -8388,9 +8388,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/gulf-of-mexico/stack.yaml": {
-    "mtime": 1790698359.6061995,
-    "seen": 1790820334.640507,
-    "ast_hash": "eb889e7e1597815558198d37df56ac32",
+    "mtime": 1790871362.2559402,
+    "seen": 1790908908.223609,
+    "ast_hash": "21e797854125a5e64e83725209203957",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/history-pruner/cronjob.yaml": {
@@ -8424,9 +8424,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/home-operations/stack.yaml": {
-    "mtime": 1790698359.6068,
-    "seen": 1790820334.6405702,
-    "ast_hash": "fdc5498ecff80b90d2f519919e97f844",
+    "mtime": 1790871362.2561111,
+    "seen": 1790908908.2236779,
+    "ast_hash": "ccf204b11bbdcd62b1b5e5a4193bb8bb",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/kubeproxies/ks.yaml": {
@@ -8508,15 +8508,15 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/ocracoke/stack.yaml": {
-    "mtime": 1790698359.6071799,
-    "seen": 1790820334.640779,
-    "ast_hash": "e90362679c9157a8e790d80b16c43f33",
+    "mtime": 1790871362.2562716,
+    "seen": 1790908908.2238631,
+    "ast_hash": "8f21a8c20c5184a93b4936475b02b38b",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/pulumi-operator/helmrelease.yaml": {
-    "mtime": 1790690064.2774374,
-    "seen": 1790692277.91874,
-    "ast_hash": "b7985754f1067909cd5119a9cd3003b0",
+    "mtime": 1790820343.6926327,
+    "seen": 1790908908.223864,
+    "ast_hash": "6805078e61633b1d9e35f7f7117f6d78",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/pulumi-operator/ks.yaml": {
@@ -8556,9 +8556,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/system/stack.yaml": {
-    "mtime": 1790698359.6074712,
-    "seen": 1790820334.6408892,
-    "ast_hash": "c8ec969637f5822fb68a54956e9ddfe1",
+    "mtime": 1790871362.2564483,
+    "seen": 1790908908.223945,
+    "ast_hash": "d91e7ce8f4e5d5b83522bf4c9d6d9569",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/unifi-network/ks.yaml": {
@@ -8574,9 +8574,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/unifi-network/stack.yaml": {
-    "mtime": 1790698359.6077538,
-    "seen": 1790820334.640921,
-    "ast_hash": "fd7ac7335438346f895a777ba1492ac4",
+    "mtime": 1790871362.256597,
+    "seen": 1790908908.223973,
+    "ast_hash": "7246cbc35de16ed209ea0433cda1c6f7",
     "semantic_hash": ""
   },
   "kubernetes/apps/pulumi/update-pruner/cronjob.yaml": {
@@ -8616,9 +8616,9 @@
     "semantic_hash": "10425d57d9a235014bb76c6dc21af43d"
   },
   "kubernetes/apps/pulumi/vault/stack.yaml": {
-    "mtime": 1790698359.6080482,
-    "seen": 1790820334.641014,
-    "ast_hash": "8e027edc5742fd5897b2897ca91347fe",
+    "mtime": 1790871362.2567563,
+    "seen": 1790908908.224054,
+    "ast_hash": "13c8fcce0092ae16f899b73feebe8376",
     "semantic_hash": ""
   },
   "kubernetes/apps/stargate-command/chrony/helmrelease.yaml": {
@@ -8658,8 +8658,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/stargate-command/home-assistant/ks.yaml": {
-    "mtime": 1787279751.398069,
-    "seen": 1789246470.092179,
+    "mtime": 1790877500.3589308,
+    "seen": 1790908908.224371,
     "ast_hash": "8a37348cb9bc5dddefa673dbc25b7697",
     "semantic_hash": "8a37348cb9bc5dddefa673dbc25b7697"
   },
@@ -8682,8 +8682,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/stargate-command/matter/ks.yaml": {
-    "mtime": 1787279751.3983514,
-    "seen": 1789246470.092181,
+    "mtime": 1790877500.3590548,
+    "seen": 1790908908.2244108,
     "ast_hash": "b78c22c1cf5067f3bb5d33c2370a4656",
     "semantic_hash": "b78c22c1cf5067f3bb5d33c2370a4656"
   },
@@ -8784,8 +8784,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/tailscale-system/golink/ks.yaml": {
-    "mtime": 1787014080.38973,
-    "seen": 1789246470.0921888,
+    "mtime": 1790877500.3591704,
+    "seen": 1790908908.2247732,
     "ast_hash": "558438819b119d9922f5e72f380674f6",
     "semantic_hash": "558438819b119d9922f5e72f380674f6"
   },
@@ -8802,8 +8802,8 @@
     "semantic_hash": "420161263e6d4974d718204ee9d3a63d"
   },
   "kubernetes/apps/tailscale-system/iam/ks.yaml": {
-    "mtime": 1787279751.3993375,
-    "seen": 1789246470.092191,
+    "mtime": 1790877500.3593814,
+    "seen": 1790908908.2248042,
     "ast_hash": "82890c0df0310d4b5e7d92653f296a69",
     "semantic_hash": "82890c0df0310d4b5e7d92653f296a69"
   },
@@ -8826,8 +8826,8 @@
     "semantic_hash": "c70144d7b9c91f3def3567d516c0e80b"
   },
   "kubernetes/apps/tailscale-system/idp/ks.yaml": {
-    "mtime": 1787279751.399569,
-    "seen": 1789246470.0921931,
+    "mtime": 1790877500.359533,
+    "seen": 1790908908.2248478,
     "ast_hash": "bb4866b4f8e19d48e9653afb6bb1da4c",
     "semantic_hash": "bb4866b4f8e19d48e9653afb6bb1da4c"
   },
@@ -8976,8 +8976,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/tailscale-system/taildrive/ks.yaml": {
-    "mtime": 1787014080.3906336,
-    "seen": 1789246470.092205,
+    "mtime": 1790877500.3596835,
+    "seen": 1790908908.2252731,
     "ast_hash": "5a5100b2bf136047b2ef0854828b9816",
     "semantic_hash": "5a5100b2bf136047b2ef0854828b9816"
   },
@@ -8988,10 +8988,10 @@
     "semantic_hash": "86acf7c0a63d1b6e1d811f27e003981b"
   },
   "kubernetes/apps/volsync-system/kustomization.yaml": {
-    "mtime": 1787973010.2566729,
-    "seen": 1789246470.092206,
-    "ast_hash": "b3d9f9931f5f2bfc92bf424efafc7673",
-    "semantic_hash": "b3d9f9931f5f2bfc92bf424efafc7673"
+    "mtime": 1790871362.257862,
+    "seen": 1790908908.225295,
+    "ast_hash": "cab85ef2702c024091338eccaa6429d3",
+    "semantic_hash": ""
   },
   "kubernetes/apps/volsync-system/restore-cleanup/helmrelease.yaml": {
     "mtime": 1790357366.192727,
@@ -9024,15 +9024,15 @@
     "semantic_hash": "99a89efa42b435d4251ed7b5c6531067"
   },
   "kubernetes/apps/volsync-system/volsync/kustomization.yaml": {
-    "mtime": 1786648832.9139252,
-    "seen": 1789246470.0922098,
-    "ast_hash": "12c54f4d330737b7961598451d0b4e18",
-    "semantic_hash": "12c54f4d330737b7961598451d0b4e18"
+    "mtime": 1790871362.2585118,
+    "seen": 1790908908.225421,
+    "ast_hash": "90480ab52336f704079e1b4b3fa7e537",
+    "semantic_hash": ""
   },
   "kubernetes/apps/volsync-system/volsync/mutatingadmissionpolicy.yaml": {
-    "mtime": 1790217868.6569016,
-    "seen": 1790387946.651619,
-    "ast_hash": "8438bec2c64df2d5a94725167c9c2bb4",
+    "mtime": 1790871362.2613668,
+    "seen": 1790908908.225421,
+    "ast_hash": "15daec326f34487ede5ffa6cea47c694",
     "semantic_hash": ""
   },
   "kubernetes/apps/volsync-system/volsync/volume.yaml": {
@@ -9084,10 +9084,10 @@
     "semantic_hash": "78d8cb74e8f3cd078991ce7ce5c8c942"
   },
   "kubernetes/components/alerts/kustomization.yaml": {
-    "mtime": 1787431914.5059505,
-    "seen": 1789246470.092215,
-    "ast_hash": "7b0680bf8a344e3679efd01ef2b59858",
-    "semantic_hash": "7b0680bf8a344e3679efd01ef2b59858"
+    "mtime": 1790871362.261946,
+    "seen": 1790908908.225538,
+    "ast_hash": "e3483009338915e876a8a454c266f3da",
+    "semantic_hash": ""
   },
   "kubernetes/components/common/kustomization.yaml": {
     "mtime": 1786754570.5714471,
@@ -9258,15 +9258,15 @@
     "semantic_hash": "31b4b235df8d2de0bfb37627d2802dc0"
   },
   "kubernetes/components/volsync/AGENTS.md": {
-    "mtime": 1787622485.0291584,
-    "seen": 1789246470.092235,
-    "ast_hash": "ae492ddef9a629d5f75f5d4dd4eae6ac",
-    "semantic_hash": "ae492ddef9a629d5f75f5d4dd4eae6ac"
+    "mtime": 1790877503.433122,
+    "seen": 1790908908.226193,
+    "ast_hash": "9f3ec25f5c54587288c295d97d5d1638",
+    "semantic_hash": ""
   },
   "kubernetes/components/volsync/externalsecret.yaml": {
-    "mtime": 1788746174.7731261,
-    "seen": 1789246470.092236,
-    "ast_hash": "c41c6e478bc452b3e39c11d13fecd7cc",
+    "mtime": 1790877503.4335258,
+    "seen": 1790908908.226194,
+    "ast_hash": "7a789e03281318c5e6e78dc710630041",
     "semantic_hash": ""
   },
   "kubernetes/components/volsync/kustomization.yaml": {
@@ -9282,16 +9282,16 @@
     "semantic_hash": "fee475987f1d03316252ede818173ce2"
   },
   "kubernetes/components/volsync/replicationdestination.yaml": {
-    "mtime": 1787279751.4024704,
-    "seen": 1789246470.092237,
-    "ast_hash": "677e9d27da4b62470673f4351d1e0bc7",
-    "semantic_hash": "677e9d27da4b62470673f4351d1e0bc7"
+    "mtime": 1790877503.4336853,
+    "seen": 1790908908.2262242,
+    "ast_hash": "dcf766252dd896a349595ddf03f1947a",
+    "semantic_hash": ""
   },
   "kubernetes/components/volsync/replicationsource.yaml": {
-    "mtime": 1787973010.2581537,
-    "seen": 1789246470.0922382,
-    "ast_hash": "128d0457581ec5adb53b17bfce9eadf5",
-    "semantic_hash": "128d0457581ec5adb53b17bfce9eadf5"
+    "mtime": 1790877503.433875,
+    "seen": 1790908908.2262242,
+    "ast_hash": "157a4a4d8acde49df230b5b78135e89e",
+    "semantic_hash": ""
   },
   "kubernetes/flux/cluster/ks.yaml": {
     "mtime": 1786754570.5717392,
@@ -9576,9 +9576,9 @@
     "semantic_hash": "845e492cd49791eb9c5eadfe101c028e"
   },
   ".config/mise/tasks/talos/genconfig": {
-    "mtime": 1790039541.0505712,
-    "seen": 1790387946.649834,
-    "ast_hash": "b4dec8516c25893e85f855893cef45a5",
+    "mtime": 1790871362.2350109,
+    "seen": 1790908908.175809,
+    "ast_hash": "158400f4dd7bbecdff9bef83310b1ecd",
     "semantic_hash": ""
   },
   ".config/mise/tasks/talos/preflight-upgrade": {
@@ -9648,9 +9648,9 @@
     "semantic_hash": ""
   },
   ".mcp.json": {
-    "mtime": 1790690064.22329,
-    "seen": 1790692277.9170098,
-    "ast_hash": "507dfdb2a80a0ac6d9818cd5b4f83010",
+    "mtime": 1790871362.2363014,
+    "seen": 1790908908.1762218,
+    "ast_hash": "790b0ee0a60d0d8e155b3b9b433a4bff",
     "semantic_hash": ""
   },
   ".vscode/extensions.json": {
@@ -9696,10 +9696,10 @@
     "semantic_hash": ""
   },
   "dashboard/resources/test.sh": {
-    "mtime": 1786993041.4399288,
-    "seen": 1789246470.090691,
-    "ast_hash": "8920078960d1722d85b599d2dd4b731e",
-    "semantic_hash": "8920078960d1722d85b599d2dd4b731e"
+    "mtime": 1790871362.2462902,
+    "seen": 1790908908.1768801,
+    "ast_hash": "9bea93f5d3e1ef408cdd3c505fb02ad1",
+    "semantic_hash": ""
   },
   "docker/_common/garage/init.sh": {
     "mtime": 1787868935.7101085,
@@ -9798,9 +9798,9 @@
     "semantic_hash": "abec5ba4af9c9f7cc5218b8117574334"
   },
   "scripts/bao-reorg/plan.ts": {
-    "mtime": 1788618079.0034902,
-    "seen": 1789246470.090716,
-    "ast_hash": "7cc8aef3b34297da878e7a49acbc835e",
+    "mtime": 1790820717.3341513,
+    "seen": 1790908908.177928,
+    "ast_hash": "e0c6fc659b14d7a022bd1ab5f930617f",
     "semantic_hash": ""
   },
   "scripts/bao-reorg/rewrite.ts": {
@@ -9810,10 +9810,10 @@
     "semantic_hash": "9ea7dcafa30a0f41739f0cdc8d242858"
   },
   "scripts/bao-reorg/run.sh": {
-    "mtime": 1787426671.229137,
-    "seen": 1789246470.0907168,
-    "ast_hash": "e120eb9c9aa7336566acfab2cbd7f65e",
-    "semantic_hash": "e120eb9c9aa7336566acfab2cbd7f65e"
+    "mtime": 1790820717.3342962,
+    "seen": 1790908908.17794,
+    "ast_hash": "a8dea22f83f7004bdbfbdc9b4780c3a3",
+    "semantic_hash": ""
   },
   "scripts/crew-sync-baseline-2026-07-28.json": {
     "mtime": 1785375217.466467,
@@ -9870,9 +9870,9 @@
     "semantic_hash": "2de4da64e1431b6757c75114de878d95"
   },
   "stacks/system/garage.ts": {
-    "mtime": 1790690064.2857254,
-    "seen": 1790692277.9174368,
-    "ast_hash": "168f6d0306187660268c6949bf6a3b2e",
+    "mtime": 1790877503.4343255,
+    "seen": 1790908908.186611,
+    "ast_hash": "fb9e6460e5a2fe3b131c27e45d3d8b39",
     "semantic_hash": ""
   },
   "stacks/system/openbao-mcp.ts": {
@@ -9882,9 +9882,9 @@
     "semantic_hash": ""
   },
   "stacks/unifi-network/tailnet-egress.ts": {
-    "mtime": 1789516202.3557441,
-    "seen": 1789660803.467274,
-    "ast_hash": "097839678804c2babb2a006ab40e43a3",
+    "mtime": 1790820343.694723,
+    "seen": 1790908908.1867058,
+    "ast_hash": "e26d21d70375e2c0321d93f4089d4c4c",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -9942,10 +9942,10 @@
     "semantic_hash": ""
   },
   ".github/labels.yaml": {
-    "mtime": 1787104656.2919936,
-    "seen": 1789246470.0915651,
-    "ast_hash": "c89d55e69b7084283b72708f3c53deb0",
-    "semantic_hash": "c89d55e69b7084283b72708f3c53deb0"
+    "mtime": 1790877503.4260218,
+    "seen": 1790908908.2047281,
+    "ast_hash": "e32b36954e2f3719ee0148dbd19e96bf",
+    "semantic_hash": ""
   },
   ".github/release.yaml": {
     "mtime": 1787104656.292144,
@@ -9954,16 +9954,16 @@
     "semantic_hash": "5b942510a8d9595ced874dff23361a7c"
   },
   ".github/workflows/flux-local.yaml": {
-    "mtime": 1788575908.2062657,
-    "seen": 1789246470.09158,
-    "ast_hash": "7a487d88f2c3109df13371b55fb124ad",
+    "mtime": 1790871362.2357953,
+    "seen": 1790908908.205122,
+    "ast_hash": "d537bb6e2c01cd847f90c48f6c71a474",
     "semantic_hash": ""
   },
   ".github/workflows/label-sync.yaml": {
-    "mtime": 1784680576.1695397,
-    "seen": 1789246470.09158,
-    "ast_hash": "ec7f1ebd3e7665b1857c9d07ea16d269",
-    "semantic_hash": "ec7f1ebd3e7665b1857c9d07ea16d269"
+    "mtime": 1790908764.04655,
+    "seen": 1790908908.2051232,
+    "ast_hash": "2e13af1d5ac960e571c5eac6b857f170",
+    "semantic_hash": ""
   },
   ".sops.yaml": {
     "mtime": 1787519122.560934,
@@ -10002,28 +10002,28 @@
     "semantic_hash": "4450b2fd933757f5034cd634fb84842e"
   },
   "clusters/alpha-site.yaml": {
-    "mtime": 1786416660.900215,
-    "seen": 1789246470.09159,
-    "ast_hash": "851c8a4057c915bd5f02abb8f83f6e6a",
-    "semantic_hash": "851c8a4057c915bd5f02abb8f83f6e6a"
+    "mtime": 1790871362.2392747,
+    "seen": 1790908908.2053308,
+    "ast_hash": "1006d11ce334dd3a5c7a96e0e25cc5c1",
+    "semantic_hash": ""
   },
   "clusters/celestia.yaml": {
-    "mtime": 1786416660.9003656,
-    "seen": 1789246470.091591,
-    "ast_hash": "ada5b6bf2d5fc1e0cd848955acb0502c",
-    "semantic_hash": "ada5b6bf2d5fc1e0cd848955acb0502c"
+    "mtime": 1790871362.2394633,
+    "seen": 1790908908.205332,
+    "ast_hash": "8115485c88c88734289458cb8174ecac",
+    "semantic_hash": ""
   },
   "clusters/equestria.yaml": {
-    "mtime": 1786416660.9004788,
-    "seen": 1789246470.091591,
-    "ast_hash": "5f89528f71d04a6191a4c9d737b3fc5f",
-    "semantic_hash": "5f89528f71d04a6191a4c9d737b3fc5f"
+    "mtime": 1790871362.2395933,
+    "seen": 1790908908.205332,
+    "ast_hash": "40c05f29742b679ac19c962d4cdc017b",
+    "semantic_hash": ""
   },
   "clusters/luna.yaml": {
-    "mtime": 1786416660.900586,
-    "seen": 1789246470.0915918,
-    "ast_hash": "34b5a43473461a458f2b284dd79c8bc0",
-    "semantic_hash": "34b5a43473461a458f2b284dd79c8bc0"
+    "mtime": 1790871362.2396944,
+    "seen": 1790908908.205333,
+    "ast_hash": "9fd24e3d57876affdc64017a2c8b961d",
+    "semantic_hash": ""
   },
   "dashboard/definition.yaml": {
     "mtime": 1787426671.1895554,
@@ -10158,9 +10158,9 @@
     "semantic_hash": ""
   },
   "docs/garage-offsite-s3.md": {
-    "mtime": 1790690064.2412217,
-    "seen": 1790692277.9181912,
-    "ast_hash": "fafaf7b46bfa004bd4f782e89c791b0e",
+    "mtime": 1790820343.6570058,
+    "seen": 1790908908.207395,
+    "ast_hash": "d2ac635782aca56cb67443efd498011c",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/definition.yaml": {
@@ -10296,9 +10296,9 @@
     "semantic_hash": "57347e24ea41487697467b432d75efa2"
   },
   "talos/patches/controller/cluster.yaml": {
-    "mtime": 1790690064.2878115,
-    "seen": 1790692277.918846,
-    "ast_hash": "91159e79c64f36c09301dbb1277dcb66",
+    "mtime": 1790871362.2703295,
+    "seen": 1790908908.226728,
+    "ast_hash": "8b3cfadf6c0765d31efce454af2f99af",
     "semantic_hash": ""
   },
   "talos/patches/controller/machine-rbac.yaml": {
@@ -10326,9 +10326,9 @@
     "semantic_hash": ""
   },
   "talos/patches/global/machine-registries.yaml": {
-    "mtime": 1790690064.2880127,
-    "seen": 1790692277.918849,
-    "ast_hash": "a7b91b99f6e75b4ef1ce9fa54eb4f597",
+    "mtime": 1790871362.2705002,
+    "seen": 1790908908.2267962,
+    "ast_hash": "dcfabc1778bb47726c4947b1d1e38bac",
     "semantic_hash": ""
   },
   "talos/patches/global/machine-sysctls.yaml": {
@@ -10350,9 +10350,9 @@
     "semantic_hash": "d5b23c3559bba9c95c6745f58507afad"
   },
   "talos/talconfig.yaml": {
-    "mtime": 1790039541.0575464,
-    "seen": 1790387946.651676,
-    "ast_hash": "247fa594ab84d98cce5a7afd4eabcaa6",
+    "mtime": 1790871362.271139,
+    "seen": 1790908908.22684,
+    "ast_hash": "b3ad09da6207021f1a14f3b1bf2e0f0f",
     "semantic_hash": ""
   },
   "talos/talenv.yaml": {
@@ -10370,7 +10370,7 @@
   ".vscode/mcp.json": {
     "mtime": 1785123070.3072398,
     "seen": 1789246470.090661,
-    "ast_hash": "a98c3c738436dde88095647c04247232",
+    "ast_hash": "",
     "semantic_hash": ""
   },
   "kubernetes/apps/volsync-system/lock-canceller/unlock-stale-locks.sh": {
@@ -10602,10 +10602,10 @@
     "semantic_hash": "652c27d52b6d9a098c1d55e098be90f9"
   },
   "kubernetes/apps/volsync-system/lock-canceller/kustomization.yaml": {
-    "mtime": 1787973010.257441,
-    "seen": 1789246470.0922072,
-    "ast_hash": "243979fbfc964e6c11b775b707902017",
-    "semantic_hash": "243979fbfc964e6c11b775b707902017"
+    "mtime": 1790871362.2582433,
+    "seen": 1790908908.225343,
+    "ast_hash": "2a91d3cd89c4ec4c959cfea385c73965",
+    "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/maintainerr/definition.yaml": {
     "mtime": 1790690064.2676039,
@@ -10620,8 +10620,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/maintainerr/ks.yaml": {
-    "mtime": 1789239973.3568692,
-    "seen": 1789246470.0919218,
+    "mtime": 1790877500.3556857,
+    "seen": 1790908908.21559,
     "ast_hash": "ad3116e7f45a3e7fe62c5cad98d994f1",
     "semantic_hash": "ad3116e7f45a3e7fe62c5cad98d994f1"
   },
@@ -17490,9 +17490,9 @@
     "semantic_hash": ""
   },
   ".github/instructions/docker-dockge-memory.instructions.md": {
-    "mtime": 1790690064.2227821,
-    "seen": 1790692277.918026,
-    "ast_hash": "b6e48f4316168854261d0e5b39842c64",
+    "mtime": 1790877503.4258163,
+    "seen": 1790908908.2045782,
+    "ast_hash": "64347b1ca7d8d338e131f784f4a895ea",
     "semantic_hash": ""
   },
   ".github/instructions/html-css-style-color-guide.instructions.md": {
@@ -17736,8 +17736,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/homelable/ks.yaml": {
-    "mtime": 1788618078.9994698,
-    "seen": 1789246470.091858,
+    "mtime": 1790877503.429644,
+    "seen": 1790908908.212839,
     "ast_hash": "5e5f3492e4f3b654b0830fb4fb69fd34",
     "semantic_hash": ""
   },
@@ -17790,9 +17790,9 @@
     "semantic_hash": ""
   },
   "docs/kubernetes/agentboard-mcp.md": {
-    "mtime": 1790690064.2414699,
-    "seen": 1790692277.9181921,
-    "ast_hash": "5b3400d25a785e6463b6f766d766e890",
+    "mtime": 1790871362.2487743,
+    "seen": 1790908908.207396,
+    "ast_hash": "83dc0a90ecc317ddbce2d2022b579b54",
     "semantic_hash": ""
   },
   "kubernetes/apps/database/temporal/definition.yaml": {
@@ -17856,8 +17856,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/postiz/ks.yaml": {
-    "mtime": 1790692268.0444744,
-    "seen": 1790692277.918404,
+    "mtime": 1790877500.354631,
+    "seen": 1790908908.213761,
     "ast_hash": "6151ef90b3b8548f2a8824a79fff7b74",
     "semantic_hash": ""
   },
@@ -17886,8 +17886,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/arr-mcp-jellyfin/ks.yaml": {
-    "mtime": 1789180056.8342655,
-    "seen": 1789246470.091897,
+    "mtime": 1790877503.4305077,
+    "seen": 1790908908.214529,
     "ast_hash": "8b33d70be633f3fa7eee75b867df6280",
     "semantic_hash": ""
   },
@@ -17916,8 +17916,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/arr-mcp-plex/ks.yaml": {
-    "mtime": 1789180056.8352814,
-    "seen": 1789246470.0918999,
+    "mtime": 1790877503.4306505,
+    "seen": 1790908908.214601,
     "ast_hash": "c7dca107493fd97abea5c3ad00dc89ca",
     "semantic_hash": ""
   },
@@ -18204,8 +18204,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/tracearr/ks.yaml": {
-    "mtime": 1789313423.9139786,
-    "seen": 1789318709.025494,
+    "mtime": 1790877500.3575084,
+    "seen": 1790908908.216627,
     "ast_hash": "b2756e2541588931c1b7bb632b38bdfb",
     "semantic_hash": ""
   },
@@ -18216,9 +18216,9 @@
     "semantic_hash": ""
   },
   "components/tunnelRules.test.ts": {
-    "mtime": 1789508247.1337373,
-    "seen": 1789660803.467047,
-    "ast_hash": "a7f5e8ae09cce35678fdbd0f701e3258",
+    "mtime": 1790871362.245584,
+    "seen": 1790908908.1768541,
+    "ast_hash": "a611c705dfaf6664cc348479a7a0c253",
     "semantic_hash": ""
   },
   "components/tunnelRules.ts": {
@@ -18342,9 +18342,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/jellyfin-pg/helmrelease.yaml": {
-    "mtime": 1790132833.452576,
-    "seen": 1790387946.651268,
-    "ast_hash": "dcc87dc1924f5f6ff36e6ab8e1d9cded",
+    "mtime": 1790871362.2535846,
+    "seen": 1790908908.214879,
+    "ast_hash": "026775852760ab63a8d77011b27c8da9",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/jellyfin-pg/ks.yaml": {
@@ -20268,8 +20268,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/seedstrem/ks.yaml": {
-    "mtime": 1789699003.876378,
-    "seen": 1789699660.326487,
+    "mtime": 1790877503.4290626,
+    "seen": 1790908908.212134,
     "ast_hash": "3706895ada45aa2075400b2b50d92be5",
     "semantic_hash": ""
   },
@@ -20310,8 +20310,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/aiostreams/ks.yaml": {
-    "mtime": 1789699003.8790896,
-    "seen": 1789699660.3265522,
+    "mtime": 1790877500.3549182,
+    "seen": 1790908908.214454,
     "ast_hash": "7babbec25e484db21388408b32b66c8f",
     "semantic_hash": ""
   },
@@ -20388,15 +20388,15 @@
     "semantic_hash": ""
   },
   "scripts/iptv-audit.py": {
-    "mtime": 1790279841.0129716,
-    "seen": 1790387946.649936,
-    "ast_hash": "20881ba05ccf15f7f1340f7b756a92ba",
+    "mtime": 1790871362.267028,
+    "seen": 1790908908.1780312,
+    "ast_hash": "1a1f1c0b6d4470b3fe1597388572340b",
     "semantic_hash": ""
   },
   ".claude/skills/toolport/SKILL.md": {
-    "mtime": 1790690064.220451,
-    "seen": 1790692277.917938,
-    "ast_hash": "094d45ef8b30bfeb31450d1c3c63781b",
+    "mtime": 1790871362.2342167,
+    "seen": 1790908908.2024179,
+    "ast_hash": "5f1581998f4330b06692fdb0655286c2",
     "semantic_hash": ""
   },
   "docs/kubernetes/iptv.md": {
@@ -20496,14 +20496,14 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/dawarich/helmrelease.yaml": {
-    "mtime": 1790262308.1663191,
-    "seen": 1790387946.651196,
-    "ast_hash": "5774f363121dd1965db36fb649c80ecb",
+    "mtime": 1790871362.2507439,
+    "seen": 1790908908.212597,
+    "ast_hash": "12ed0ef3a499584b9cea74bc4b80cc19",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/dawarich/ks.yaml": {
-    "mtime": 1790039541.0531716,
-    "seen": 1790387946.651197,
+    "mtime": 1790877500.3532865,
+    "seen": 1790908908.212598,
     "ast_hash": "1ef23c7b7fcef17cbc6189d534bf6318",
     "semantic_hash": ""
   },
@@ -20538,8 +20538,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/mealie/ks.yaml": {
-    "mtime": 1790132833.443495,
-    "seen": 1790387946.6512158,
+    "mtime": 1790877503.4298434,
+    "seen": 1790908908.213106,
     "ast_hash": "1e48811b2d66b9efa2fc9501889aafeb",
     "semantic_hash": ""
   },
@@ -20562,9 +20562,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/opencloud/helmrelease.yaml": {
-    "mtime": 1790690064.2614756,
-    "seen": 1790692277.918396,
-    "ast_hash": "22268bc37ba2a0f27c63ae70265889ea",
+    "mtime": 1790871362.2517185,
+    "seen": 1790908908.213503,
+    "ast_hash": "93fd61a8e23da895674af63df776b389",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/opencloud/ks.yaml": {
@@ -20616,8 +20616,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/aurral/ks.yaml": {
-    "mtime": 1790121984.9349408,
-    "seen": 1790387946.6512609,
+    "mtime": 1790877500.3550618,
+    "seen": 1790908908.214669,
     "ast_hash": "6572c4b08572a2b3f296aa380952c40e",
     "semantic_hash": ""
   },
@@ -20664,8 +20664,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/navidrome/ks.yaml": {
-    "mtime": 1790121984.9359136,
-    "seen": 1790387946.651294,
+    "mtime": 1790877500.3558028,
+    "seen": 1790908908.21573,
     "ast_hash": "86e1e4af3041c23f0e0714b2dfa2cb2c",
     "semantic_hash": ""
   },
@@ -20736,9 +20736,9 @@
     "semantic_hash": ""
   },
   ".claude/hooks/private-domain-guard.sh": {
-    "mtime": 1790690064.219834,
-    "seen": 1790692277.916964,
-    "ast_hash": "75c72f04790b66b7d448d61fcf6c9784",
+    "mtime": 1790871362.2338276,
+    "seen": 1790908908.1752908,
+    "ast_hash": "0bbf0a40da1a78cc3a6ec2f48c9ef67a",
     "semantic_hash": ""
   },
   "components/tailscale/nodeAttrs.test.ts": {
@@ -20772,9 +20772,9 @@
     "semantic_hash": ""
   },
   "docs/kubernetes/assets/tdarr/build-flow.sh": {
-    "mtime": 1790690064.2416425,
-    "seen": 1790692277.917065,
-    "ast_hash": "218e2787d79abe222abe636f69457bd2",
+    "mtime": 1790820343.657216,
+    "seen": 1790908908.177176,
+    "ast_hash": "97a787818236c26eb895fc43386b9b76",
     "semantic_hash": ""
   },
   "docs/kubernetes/assets/tdarr/flow.template.json": {
@@ -20838,21 +20838,21 @@
     "semantic_hash": ""
   },
   "scripts/private-domain-guard": {
-    "mtime": 1790690064.2809947,
-    "seen": 1790692277.917103,
-    "ast_hash": "ba11772203d891a4aea963fa468d35f3",
+    "mtime": 1790871362.2673783,
+    "seen": 1790908908.178043,
+    "ast_hash": "782657621f926b3195c4414d81308bd6",
     "semantic_hash": ""
   },
   "stacks/system/application-backups.ts": {
-    "mtime": 1790690064.2851558,
-    "seen": 1790692277.917435,
-    "ast_hash": "d4d027c507689c83f30a6c23b3b079b1",
+    "mtime": 1790871362.2688742,
+    "seen": 1790908908.186574,
+    "ast_hash": "0aa082843f98d8652f3662db6244958a",
     "semantic_hash": ""
   },
   "stacks/system/applications.ts": {
-    "mtime": 1790690064.2852428,
-    "seen": 1790692277.917435,
-    "ast_hash": "287d03a8108de7d5e87bb7bafa877c50",
+    "mtime": 1790871362.2692635,
+    "seen": 1790908908.1865752,
+    "ast_hash": "28a12bcd14f7dc0d277dd62d491c49e3",
     "semantic_hash": ""
   },
   ".github/instructions/private-domains.instructions.md": {
@@ -20886,9 +20886,9 @@
     "semantic_hash": ""
   },
   "docs/kubernetes/tdarr.md": {
-    "mtime": 1790698359.6009517,
-    "seen": 1790820334.6230998,
-    "ast_hash": "31e1e6f514b973ca8d7c22098312e046",
+    "mtime": 1790820343.6574929,
+    "seen": 1790908908.207477,
+    "ast_hash": "3ca2378171188be3f48098f0e4a7b79d",
     "semantic_hash": ""
   },
   "docs/plans/cloudflare-tunnel-to-funnel.md": {
@@ -20904,9 +20904,9 @@
     "semantic_hash": ""
   },
   "docs/plans/private-domain-scrub.md": {
-    "mtime": 1790690064.2445006,
-    "seen": 1790692277.9182,
-    "ast_hash": "5d2f944f6e9248e0d261a4f40a6afd4a",
+    "mtime": 1790871362.249229,
+    "seen": 1790908908.207582,
+    "ast_hash": "ed4a5e0aaec47f9cf29fb51fc049cbf5",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-debug-rbac/stack-reconcile-only.yaml": {
@@ -21030,8 +21030,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/nextcloud/ks.yaml": {
-    "mtime": 1790690064.2600307,
-    "seen": 1790692277.918388,
+    "mtime": 1790877500.3541198,
+    "seen": 1790908908.2133062,
     "ast_hash": "cf947a1e43f7fdd85d2340759580114b",
     "semantic_hash": ""
   },
@@ -21255,6 +21255,252 @@
     "mtime": 1790698359.5953362,
     "seen": 1790820334.589823,
     "ast_hash": "5bdf331d1302158488240404ff778c30",
+    "semantic_hash": ""
+  },
+  ".config/mise/tasks/private-names-sync": {
+    "mtime": 1790871362.2346077,
+    "seen": 1790908908.17571,
+    "ast_hash": "d4ae4b4e8aedf305711847ee0b529b5e",
+    "semantic_hash": ""
+  },
+  "components/backrestGarage.ts": {
+    "mtime": 1790871362.2417798,
+    "seen": 1790908908.1765592,
+    "ast_hash": "020e8a2c1d40b27818003cdef5a92026",
+    "semantic_hash": ""
+  },
+  "components/backrestLedger.test.ts": {
+    "mtime": 1790871362.2419748,
+    "seen": 1790908908.1765602,
+    "ast_hash": "df69af4f901a0fdc3d5089a23de98733",
+    "semantic_hash": ""
+  },
+  "components/backrestLedger.ts": {
+    "mtime": 1790877503.427542,
+    "seen": 1790908908.1765609,
+    "ast_hash": "811cac162bfe8de52a24cc0122f3c934",
+    "semantic_hash": ""
+  },
+  "components/dockerStackBackups.test.ts": {
+    "mtime": 1790820343.6540124,
+    "seen": 1790908908.176584,
+    "ast_hash": "bc65a548e1e838dc0614ce2dbfad9fc6",
+    "semantic_hash": ""
+  },
+  "components/domains.test.ts": {
+    "mtime": 1790871362.2421806,
+    "seen": 1790908908.17661,
+    "ast_hash": "3aa4d28170298773a89583bdbe2f7a44",
+    "semantic_hash": ""
+  },
+  "components/domains.ts": {
+    "mtime": 1790871362.2422385,
+    "seen": 1790908908.1766112,
+    "ast_hash": "2bd619ef50d025b821ddd42d7d879892",
+    "semantic_hash": ""
+  },
+  "components/garageTruenasCopy.test.ts": {
+    "mtime": 1790908764.04695,
+    "seen": 1790908908.1766121,
+    "ast_hash": "06951047e7229bda8fcb54cc41bd9d12",
+    "semantic_hash": ""
+  },
+  "components/garageTruenasCopy.ts": {
+    "mtime": 1790908764.047168,
+    "seen": 1790908908.1766121,
+    "ast_hash": "d3d1997b0b5c66fa54ac57fff3e27150",
+    "semantic_hash": ""
+  },
+  "components/tailscale/policyGuards.test.ts": {
+    "mtime": 1790820343.6547852,
+    "seen": 1790908908.1768131,
+    "ast_hash": "a4990c0b97c64b06b8818be05c6e682a",
+    "semantic_hash": ""
+  },
+  "components/tailscale/policyGuards.ts": {
+    "mtime": 1790820343.6548412,
+    "seen": 1790908908.176814,
+    "ast_hash": "57fdb41ee1ea611576f74d8bbf0d6f5a",
+    "semantic_hash": ""
+  },
+  "docs/kubernetes/assets/tdarr/music-flow.template.json": {
+    "mtime": 1790820343.6572936,
+    "seen": 1790908908.177192,
+    "ast_hash": "66e5d88b5a6342147584b2c4d550d5c9",
+    "semantic_hash": ""
+  },
+  "docs/kubernetes/assets/tdarr/music-policy.cjs": {
+    "mtime": 1790820343.6573665,
+    "seen": 1790908908.177193,
+    "ast_hash": "03b5d1a8bfeb3b0813ccf692cda2ee9b",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-copy-drill/garage-copy-drill.sh": {
+    "mtime": 1790871362.2569153,
+    "seen": 1790908908.177758,
+    "ast_hash": "18feb3f828b1663b8a182bb69c3cf385",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-history-copy/garage-history-copy.sh": {
+    "mtime": 1790871362.2573655,
+    "seen": 1790908908.177758,
+    "ast_hash": "139a9e704a59a5ac7e1c1e46d65cb3f5",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/lock-canceller/find-stale-garage-locks.sh": {
+    "mtime": 1790871362.257993,
+    "seen": 1790908908.177759,
+    "ast_hash": "634b19cf86ccd49d2f0d6654413a7584",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/lock-canceller/unlock-stale-garage-locks.sh": {
+    "mtime": 1790871362.2584045,
+    "seen": 1790908908.177759,
+    "ast_hash": "8625c1605796cffc2629e4f02d507337",
+    "semantic_hash": ""
+  },
+  "scripts/image-check": {
+    "mtime": 1790871362.2665546,
+    "seen": 1790908908.17802,
+    "ast_hash": "0db81e508a2a37c2fecf7ab4bdf83239",
+    "semantic_hash": ""
+  },
+  "scripts/lib/private-names.sh": {
+    "mtime": 1790871362.2671194,
+    "seen": 1790908908.1780322,
+    "ast_hash": "dd6f6ef22fe7079d72287b21e9d17a2a",
+    "semantic_hash": ""
+  },
+  "scripts/sdk-typecheck": {
+    "mtime": 1790908764.0479465,
+    "seen": 1790908908.1780438,
+    "ast_hash": "2d8bdc65fdad7fcdcbc74812a7190f3f",
+    "semantic_hash": ""
+  },
+  ".config/domains.sops.yaml": {
+    "mtime": 1790871362.2342958,
+    "seen": 1790908908.202676,
+    "ast_hash": "fe5333c8b343477720e649313f028144",
+    "semantic_hash": ""
+  },
+  ".github/workflows/image-check.yaml": {
+    "mtime": 1790871362.2359009,
+    "seen": 1790908908.2051232,
+    "ast_hash": "2c2dbd4125669f3d5c66e6a7d4a020f2",
+    "semantic_hash": ""
+  },
+  ".github/workflows/pulumi-sdk-regen.yaml": {
+    "mtime": 1790908764.0466995,
+    "seen": 1790908908.2051241,
+    "ast_hash": "589ad97dab68409bb15e67d6875c754e",
+    "semantic_hash": ""
+  },
+  ".github/workflows/renovate-watchdog.yaml": {
+    "mtime": 1790871362.2360964,
+    "seen": 1790908908.205125,
+    "ast_hash": "ca6fe11719a4b1761f1511160e275374",
+    "semantic_hash": ""
+  },
+  "docs/plans/host-owned-backups.md": {
+    "mtime": 1790908764.0475197,
+    "seen": 1790908908.207569,
+    "ast_hash": "7189d70e1dbdd99caeff533a5f593b17",
+    "semantic_hash": ""
+  },
+  "docs/renovate-automerge.md": {
+    "mtime": 1790877503.4288588,
+    "seen": 1790908908.207621,
+    "ast_hash": "97fdd29c83dbc1b72b3fc961cd7a20ee",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/media/tdarr/cronjob.yaml": {
+    "mtime": 1790820343.6890543,
+    "seen": 1790908908.216557,
+    "ast_hash": "7acb9f5f0f7e168f4c13c7ea62857131",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-copy-drill/externalsecret.yaml": {
+    "mtime": 1790871362.2568552,
+    "seen": 1790908908.225288,
+    "ast_hash": "717b39d061fa30904c84a8314f6ab6dd",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-copy-drill/job.yaml": {
+    "mtime": 1790871362.2569818,
+    "seen": 1790908908.2252889,
+    "ast_hash": "9a2ce4b8c9524acabc3ba152f9f8e980",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-copy-drill/ks.yaml": {
+    "mtime": 1790871362.2570424,
+    "seen": 1790908908.22529,
+    "ast_hash": "efe7471f7af06c25acc2705d3aec72ae",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-copy-drill/kustomization.yaml": {
+    "mtime": 1790871362.257104,
+    "seen": 1790908908.225291,
+    "ast_hash": "9f4c1fced2d66257789e4ee07ec84d07",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-history-copy/externalsecret.yaml": {
+    "mtime": 1790871362.257198,
+    "seen": 1790908908.225291,
+    "ast_hash": "5229204ec9af0de512e3d94de1f33edb",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-history-copy/job.yaml": {
+    "mtime": 1790877503.4325666,
+    "seen": 1790908908.225292,
+    "ast_hash": "1fed9cd4640e14d79e5f9a333bccd079",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-history-copy/ks.yaml": {
+    "mtime": 1790871362.2574732,
+    "seen": 1790908908.225292,
+    "ast_hash": "a96d3efb68e113d098ad0c914314e337",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/garage-history-copy/kustomization.yaml": {
+    "mtime": 1790871362.2575307,
+    "seen": 1790908908.225294,
+    "ast_hash": "1b98b0980a88cd509f47b445986a07e1",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/lock-canceller/externalsecret-garage.yaml": {
+    "mtime": 1790871362.2579312,
+    "seen": 1790908908.225295,
+    "ast_hash": "3a37da14695311c19c931430360f7ca9",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/lock-canceller/helmrelease-garage.yaml": {
+    "mtime": 1790871362.258054,
+    "seen": 1790908908.2253141,
+    "ast_hash": "ac5f802d134a4677c361130b608d5984",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/volsync-system/volsync/prometheusrule.yaml": {
+    "mtime": 1790871362.2615006,
+    "seen": 1790908908.2254221,
+    "ast_hash": "f405e054ffa41540d7340c1c3bb57f34",
+    "semantic_hash": ""
+  },
+  "kubernetes/components/alerts/github-dispatch/alert.yaml": {
+    "mtime": 1790871362.2616508,
+    "seen": 1790908908.2254798,
+    "ast_hash": "54586a8400b6826663aa208b8d148708",
+    "semantic_hash": ""
+  },
+  "kubernetes/components/alerts/github-dispatch/kustomization.yaml": {
+    "mtime": 1790871362.2617352,
+    "seen": 1790908908.2254798,
+    "ast_hash": "aa42ca0b1ce3c00c68b3440c01700d50",
+    "semantic_hash": ""
+  },
+  "kubernetes/components/alerts/github-dispatch/provider.yaml": {
+    "mtime": 1790877503.4329154,
+    "seen": 1790908908.225481,
+    "ast_hash": "0b1a5e70847d126839561a304ef1a3f7",
     "semantic_hash": ""
   }
 }
