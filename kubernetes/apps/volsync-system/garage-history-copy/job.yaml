@@ -53,7 +53,9 @@ spec:
             # four lines: equestria's apps, the other namespaces' apps, and
             # crowdsec's two bespoke repositories (network/crowdsec/volsync.yaml).
             # A rerun copies only what is new, so the earlier batches stay
-            # listed. etcd is not here yet: it moves on its own, later.
+            # listed. The last line is etcd, which is not a VolSync app: its
+            # CronJobs (kubernetes/apps/kube-system/etcd) keep a repository of
+            # the same shape under the same password.
             - name: APPS
               value: >-
                 kapowarr rustdesk
@@ -62,6 +64,7 @@ spec:
                 obsidian-sync pinepods playerr plex postiz prowlarr pulsarr qbittorrent radarr romm sabnzbd seerr sonarr tandoor tautulli tdarr teamarr tracearr watchstate
                 forgejo registry crowdsec-ui technitium home-assistant matter golink taildrive tsiam tsidp
                 crowdsec-config crowdsec-db
+                etcd
             - name: RESTIC_CACHE_DIR
               value: /cache
           envFrom:

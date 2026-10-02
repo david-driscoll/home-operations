@@ -739,6 +739,16 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
          (the `books` tree, opencloud, habitica, retrom, stremio, karakeep, emby, kube-coder,
          neo4j) keep the `nfs` default. They pick up Garage when the default flips.
    - Then etcd: both CronJobs' `RESTIC_REPOSITORY` → `s3:…/volsync-equestria/etcd`.
+
+     ✅ As built (2026-10-02), after all 62 sources had backed up to Garage that day.
+     - `talos-etcd-restic-keys` now carries the repository, the movers' Garage key and the region,
+       in the component's shape. The backup and prune CronJobs take all of it through `envFrom`,
+       and their NFS volume is gone.
+     - `garage-history-copy` lists `etcd`, so its snapshots come across with the same chunker
+       parameters.
+     - `lock-canceller-garage` lists the bucket's repositories, so it covers `etcd` with no change.
+     - **Checks:** the Job's `etcd` line shows equal snapshot counts; the 04:12 UTC backup
+       succeeds; the next pull carries `etcd/` to TrueNAS.
 5. **The k8s pg_dump CronJob streams into restic** (§C4).
    - `resources/App.cs` pipes each database into `backrest-pgdump`, and a prune CronJob owns
      retention.
