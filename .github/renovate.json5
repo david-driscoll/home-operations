@@ -1169,7 +1169,19 @@
         "@biomejs/biome",
         // kubernetes/apps/pulumi/*/stack.yaml mise image. CalVer: a month
         // bump is a "minor"; the year rollover is a "major" and stays manual.
-        "jdxcode/mise"
+        "jdxcode/mise",
+        // .config/mise.toml `1password-cli`. Renovate's packageName for it is
+        // 1password/cli; the depName never matches here.
+        "1password/cli",
+        // kubernetes/components/common/Update.cs (a 0.x NuGet package)
+        "Dumpify",
+        // kubernetes/apps/observability/repositories/kube-prometheus-stack.yaml
+        "ghcr.io/prometheus-community/charts/kube-prometheus-stack",
+        // kubernetes/apps/equestria/home/immich. On the app rules' never-
+        // unattended list for its schema migrations; opted in by hand. Its
+        // database (postgres/vectorchord) stays manual.
+        "ghcr.io/immich-app/immich-server",
+        "ghcr.io/immich-app/immich-machine-learning"
       ],
       automerge: true,
       automergeType: "pr",
