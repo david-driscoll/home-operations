@@ -3,7 +3,7 @@ services:
     container_name: bao-transit
     # Raft storage since #2181, so the 2.7+ line is open again (2.7.0 removed
     # `storage "file"`, which crash-looped this node 2026-09-24..28).
-    image: ghcr.io/openbao/openbao:2.7.0@sha256:71156a1c6623a5fa3f5e61b0c6a8ead0faf0df29a778339188443551995d1315
+    image: ghcr.io/openbao/openbao:2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf
     restart: unless-stopped
     dns:
       - 100.100.100.100
