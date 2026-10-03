@@ -1206,6 +1206,7 @@
       matchFileNames: [
         // automerge-hold:start
         "automerge-hold/placeholder/**",
+        "kubernetes/apps/equestria/downloads/qbittorrent/**",
         // automerge-hold:end
       ],
       automerge: false,
