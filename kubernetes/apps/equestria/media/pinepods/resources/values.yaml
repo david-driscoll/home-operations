@@ -73,6 +73,14 @@ env:
   # needs the row fixed in Settings (or deleted) first. The first six must all
   # be non-empty, or the API refuses to start ("Incomplete OIDC configuration").
   # Standard login stays enabled: it is the admin's way back in.
+  #
+  # The two button colours are NOT cosmetic. init_oidc_from_env inserts the row
+  # only when OIDCConfig::is_configured(), which also demands a non-empty
+  # button_color and button_text_color (rust-api/src/config.rs, 0.9.0). The code
+  # defaults them (#000000 / #FFFFFF) only when the variable is ABSENT, but
+  # startup/startup.sh `export`s every OIDC_* -- unset ones as "" -- so leaving
+  # them out makes the init skip silently (a debug line, in a log file, not
+  # stdout). That left OIDCProviders empty and SSO missing until 2026-10-03.
   OIDC_PROVIDER_NAME: "authentik"
   OIDC_CLIENT_ID: "{{ .oidc_client_id }}"
   OIDC_CLIENT_SECRET: "{{ .oidc_client_secret }}"
@@ -80,6 +88,8 @@ env:
   OIDC_TOKEN_URL: "{{ .oidc_token_url }}"
   OIDC_USER_INFO_URL: "{{ .oidc_userinfo_url }}"
   OIDC_BUTTON_TEXT: "Sign in with authentik"
+  OIDC_BUTTON_COLOR: "#fd4b2d"
+  OIDC_BUTTON_TEXT_COLOR: "#ffffff"
   OIDC_SCOPE: "openid email profile"
   OIDC_NAME_CLAIM: "name"
   OIDC_EMAIL_CLAIM: "email"
