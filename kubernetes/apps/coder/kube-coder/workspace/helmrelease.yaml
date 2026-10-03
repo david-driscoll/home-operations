@@ -47,6 +47,18 @@ spec:
           value: "${KUBE_CODER_GIT_NAME}"
         - name: GIT_USER_EMAIL
           value: "${KUBE_CODER_GIT_EMAIL}"
+        # Claude Code is an npm global under root-owned /usr/local, pinned by
+        # the image (devlaptop/Dockerfile, CLAUDE_CODE_VERSION), and the pod
+        # runs as 1000 with no privilege escalation -- an auto-update can only
+        # fail. Same switch agentboard sets. The version moves with the image.
+        #
+        # Claude auth is the SUBSCRIPTION login, on purpose: `claude.apiKey` is
+        # left unset, so the chart injects no ANTHROPIC_API_KEY (which Claude
+        # Code would prefer over the login). Sign in once -- `claude` in the
+        # terminal, or Settings -> Connect Claude account -- and the token
+        # lands in /home/dev/.claude on the volsync PVC.
+        - name: DISABLE_UPDATES
+          value: "1"
 
     image:
       # The GHCR build is upstream's signed release artifact (release.yml,
