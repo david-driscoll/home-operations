@@ -33,6 +33,15 @@ services:
     container_name: backrest
     hostname: backrest
     tmpfs: /tmp
+    # A ceiling, so one restic run cannot take the whole host down. On
+    # 2026-10-03 the weekly `restic check --read-data-subset=10%` of celestia's
+    # `home-operations` repository (467 GB, 363 MB of index) held 1.8 GiB with
+    # no limit on this container. That filled the 10 GiB Dockge LXC, every
+    # container in it thrashed against the system NVMe (load ~540, 99% I/O
+    # pressure), and Technitium, Garage, Traefik and the host's tailscaled --
+    # an exit node -- were unusable for 30 minutes. With a limit the kernel
+    # kills restic inside this cgroup instead and the check simply fails.
+    mem_limit: 3g
     labels:
       # Enable Traefik
       traefik.enable: true
@@ -59,11 +68,19 @@ services:
       - /spike/backup:/spike/backup:ro
       - /spike/data:/spike/data:ro
       - /opt/stacks-data:/opt/stacks-data:ro
+      # restic's scratch space; see TMPDIR below.
+      - ./tmp:/var/tmp/backrest
     environment:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json
       - XDG_CACHE_HOME=/cache
-      - TMPDIR=/tmp
+      # On disk, NOT /tmp. /tmp is the tmpfs above, so anything written there
+      # is RAM charged to this container -- and `restic check` builds a
+      # temporary cache in TMPDIR, sized by the repository's index and trees.
+      - TMPDIR=/var/tmp/backrest
+      # Inherited by the restic child processes: the Go runtime collects
+      # harder as it nears this, well before mem_limit turns into an OOM kill.
+      - GOMEMLIMIT=2500MiB
       - TZ=${TIMEZONE}
     networks:
       - dockge_default
