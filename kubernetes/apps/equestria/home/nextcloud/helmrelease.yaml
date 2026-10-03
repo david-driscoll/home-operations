@@ -360,9 +360,13 @@ spec:
                 subPath: zz-nextcloud.ini
                 readOnly: true
 
+      # 256Mi, not the 16Mi this started at. /tmp idles at a few KB, but a
+      # background job spooling a temp file went past 16Mi on 2026-10-03 06:09
+      # and the kubelet answered by EVICTING THE WHOLE POD -- nextcloud and
+      # exporter included -- not just restarting cron.
       cron-tmp:
         type: emptyDir
-        sizeLimit: 16Mi
+        sizeLimit: 256Mi
         advancedMounts:
           *app :
             cron:

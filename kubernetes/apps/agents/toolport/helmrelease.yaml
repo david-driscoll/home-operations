@@ -120,8 +120,13 @@ spec:
               requests:
                 cpu: 50m
                 memory: 128Mi
+              # 1Gi: the gateway was OOMKilled at 512Mi on 2026-10-02 03:17 and
+              # twice more on 10-03 (11:12, 13:06). Sampled working set peaks
+              # near 360Mi, so the kills are short spikes (cause not pinned down;
+              # likely large tool results buffered whole). Each one drops all six
+              # profiles' MCP sessions at once.
               limits:
-                memory: 512Mi
+                memory: 1Gi
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
