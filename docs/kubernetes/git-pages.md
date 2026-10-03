@@ -70,6 +70,67 @@ Requirements on the site:
 (`setup-guide`) gives the guide a Gatus check and a family tile in authentik.
 The check fails until `docs/setup` has been published.
 
+### My apps: the guide's API (`setup-status`)
+
+The guide's **My apps** page shows each family member which apps they have
+signed in to, and the Music page makes and keeps their music password. Both
+call `https://setup.<root domain>/setup/api/`, served by
+[`coder/setup-status`](../../kubernetes/apps/coder/setup-status/): one Bun file,
+`resources/server.mjs`, mounted from a ConfigMap into the stock `oven/bun`
+image.
+
+- **Routing.** setup-status's own HTTPRoute claims `PathPrefix /setup/api` on
+  `setup.<root domain>`. Longest-prefix precedence puts it ahead of git-pages'
+  `setup` rules. Only that path signs in: the rest of the guide stays open.
+- **Sign-in.** The route's `setup-status-auth` middleware is
+  `authenticated-user` without error-pages, so the API's JSON errors reach the
+  page. For forward auth to work at all, the `setup-guide` definition has a
+  `forward_single` proxy provider; without it the outpost answers
+  `400 "no app for hostname"`. That provider's `access_policy` limits sign-in
+  to `family`.
+- **Who is asking** comes from the outpost's `X-authentik-*` headers. A
+  CiliumNetworkPolicy admits only Traefik (and kubelet probes), so the
+  headers cannot be forged.
+- **Sources**, each failing on its own:
+  - authentik: `authorize_application` events and `check_access`, using the
+    bootstrap token.
+  - Jellyfin: `GET /Users` with the admin API key. Accounts there are local.
+  - Nextcloud's database: one `SELECT` on `oc_authtoken`, which names each
+    connected device.
+  - Tailscale's API: the visitor's devices, using the rotating
+    `third-party-tokens/tailscale/api-key`, mounted as a file.
+  - Navidrome's native API.
+- **Writes: one.** `POST /setup/api/music/password` generates a password and
+  sets it on the visitor's Navidrome account. It creates the account first if
+  Navidrome has never seen them. It then saves the password in the visitor's
+  authentik attributes (`setup_guide.navidrome_password`), so the Music page
+  can show it again.
+  - It calls Navidrome directly, as the Navidrome admin, through the ExtAuth
+    header Navidrome already trusts from the pod CIDR. Only an admin can set
+    a password without the current one.
+  - Navidrome's CiliumNetworkPolicy admits this pod for that.
+  - The admin is the member of authentik's `admins` group whom Navidrome
+    accepts as admin. Set `NAVIDROME_ADMIN_USERNAME` to pin it instead. The
+    admin's own password cannot be set this way.
+  - Only the guide's origin may POST.
+
+### Make my app password (Nextcloud)
+
+The Files page's **Make my app password** button runs Nextcloud's Login Flow
+v2 from the browser: it starts a flow, opens Nextcloud's grant page, and polls
+for the result. Two Origin-matched rules in
+[`nextcloud/helmrelease.yaml`](../../kubernetes/apps/equestria/home/nextcloud/helmrelease.yaml)
+make that possible:
+
+- **CORS** for `https://setup.<root domain>` on `/login/v2` and
+  `/login/v2/poll` (`nextcloud-setup-cors`).
+- **A fixed User-Agent** on the start request, so the password is called
+  "Calendar & Contacts" on the grant page and under Devices & sessions, instead
+  of a browser string.
+
+The Nextcloud apps, DAVx5 and the desktop client send no Origin, so they still
+take the ordinary `/` rule.
+
 ## Adding a team
 
 No cluster change is needed. The route and certificate already cover

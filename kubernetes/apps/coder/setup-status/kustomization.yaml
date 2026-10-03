@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./ciliumnetworkpolicy.yaml
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml
+  - ./middleware.yaml
+configMapGenerator:
+  # The server itself. Flux substitution is OFF for this ConfigMap: it is
+  # JavaScript, and envsubst would eat its `${...}` template literals -- which
+  # is also why the name is spelled out rather than `${APP}-server`. No hash
+  # suffix: the HelmRelease names it literally, and Reloader rolls the pod.
+  - name: setup-status-server
+    files:
+      - server.mjs=./resources/server.mjs
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Traefik may talk to setup-status.
+#
+# server.mjs believes the X-authentik-* headers about who is asking. That is
+# safe only because every request comes through the route's forward auth,
+# which overwrites them. Any other pod that could reach the Service could name
+# any family member and read their status, so this closes that path: the same
+# shape as ../../equestria/media/navidrome/ciliumnetworkpolicy.yaml.
+#
+# Selecting the pod puts it into default-deny for ingress. Kubelet probes come
+# from the node (`host`), allowed explicitly. Egress is untouched (authentik,
+# Jellyfin, Postgres, api.tailscale.com).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      app.kubernetes.io/controller: ${APP}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

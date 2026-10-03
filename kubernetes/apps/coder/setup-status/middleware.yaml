@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# `authenticated-user` (components/common) minus error-pages. The API answers
+# JSON -- 401/403/502 included -- and the guide's page reads those bodies;
+# error-pages would swap every 401-599 for its HTML page. The outpost still
+# overwrites the X-authentik-* headers server.mjs trusts, and
+# ./ciliumnetworkpolicy.yaml keeps every other path to the pod closed.
+#
+# Requires the `setup-guide` definition's proxy provider
+# (../git-pages/definition.yaml): without one the outpost answers
+# 400 "no app for hostname" for setup.${ROOT_DOMAIN}.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: setup-status-auth
+spec:
+  chain:
+    middlewares:
+      - name: outpost
+        namespace: network
+      - name: internal-network
+        namespace: network

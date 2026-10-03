@@ -16,7 +16,14 @@
 # that path is never trusted for ExtAuth either.
 #
 # Gatus and every client reach Navidrome through Traefik (LAN and tailnet both
-# land on the one `traefik-network` deployment), so nothing else needs a rule.
+# land on the one `traefik-network` deployment).
+#
+# The one other caller is coder/setup-status, the family setup guide's API. It
+# uses the same ExtAuth header on purpose, to read the visitor's music apps and
+# to set the music password it generates for them -- as the Navidrome admin,
+# since only an admin can set a password without the current one. It is held
+# to the same standard as Traefik: its own policy admits only Traefik, behind
+# authentik forward auth, and it only ever acts for the signed-in visitor.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -34,6 +41,14 @@ spec:
             io.kubernetes.pod.namespace: network
             app.kubernetes.io/name: traefik
             app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "4533"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: coder
+            app.kubernetes.io/name: setup-status
       toPorts:
         - ports:
             - port: "4533"

@@ -429,6 +429,73 @@ spec:
                     type: ReplaceFullPath
                     replaceFullPath: /remote.php/dav/
                   statusCode: 301
+          # Login Flow v2 from the family setup guide's "Make my app password"
+          # button (docs/setup, src/components/AppPassword.astro): the page on
+          # setup.${ROOT_DOMAIN} starts the flow and polls for the result with
+          # fetch(), so these two endpoints need CORS for that one origin.
+          # Matched on the Origin header, so the Nextcloud apps, DAVx5 and the
+          # desktop client -- which use the same endpoints and send no Origin --
+          # still take the `/` rule below, untouched.
+          #
+          # The start request also gets a fixed User-Agent. Nextcloud names the
+          # app password after the client's User-Agent, which from a phone's
+          # browser is an unreadable Safari string; this makes it
+          # "Calendar & Contacts" on the Grant access page and under Devices &
+          # sessions (and is how setup-status recognizes it).
+          - matches:
+              - path:
+                  type: Exact
+                  value: /index.php/login/v2
+                headers: &setup-origin
+                  - name: Origin
+                    value: "https://setup.${ROOT_DOMAIN}"
+              - path:
+                  type: Exact
+                  value: /login/v2
+                headers: *setup-origin
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - &local-api
+                type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api
+              - &app-headers
+                type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: ${APP}-headers
+              - &setup-cors
+                type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: ${APP}-setup-cors
+              - type: RequestHeaderModifier
+                requestHeaderModifier:
+                  set:
+                    - name: User-Agent
+                      value: "Calendar & Contacts"
+          - matches:
+              - path:
+                  type: Exact
+                  value: /index.php/login/v2/poll
+                headers: *setup-origin
+              - path:
+                  type: Exact
+                  value: /login/v2/poll
+                headers: *setup-origin
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - *local-api
+              - *app-headers
+              - *setup-cors
           - matches:
               - path:
                   type: PathPrefix
