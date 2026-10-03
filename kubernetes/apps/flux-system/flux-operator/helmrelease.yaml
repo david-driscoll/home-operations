@@ -13,8 +13,24 @@ spec:
     tag: 0.61.0
     digest: sha256:8c039527c4a20599bc49bf69fa944e4ae08a0d7c1d585664261d9e78e51b0bde
   url: oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
+  # Since chart 0.61.0 both Flux charts are signed in cosign v3's sigstore
+  # bundle format: no `sha256-<digest>.sig` tag any more, one referrer of type
+  # application/vnd.dev.sigstore.bundle.v0.3+json with predicateType
+  # https://sigstore.dev/cosign/sign/v1. That IS a signature -- unlike the
+  # SLSA provenance on garage-operator (../../garage-system/operator) -- but
+  # source-controller verifies a bundle only against an identity, and a bare
+  # `provider: cosign` failed with "can't verify identities without providing
+  # at least one identity", wedging flux-operator, flux-instance and every
+  # Kustomization that depends on them from 2026-10-02 03:03 (#2303).
+  #
+  # The identity is read off the bundle's Fulcio certificate: the charts repo's
+  # release workflow at a tag (v0.16.11 for chart 0.61.0) -- the charts repo's
+  # own version, not the chart's, hence the open semver.
   verify:
     provider: cosign
+    matchOIDCIdentity:
+      - issuer: '^https://token\.actions\.githubusercontent\.com$'
+        subject: '^https://github\.com/controlplaneio-fluxcd/charts/\.github/workflows/release\.yml@refs/tags/v\d+\.\d+\.\d+$'
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
