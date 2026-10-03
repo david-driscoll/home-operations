@@ -17,15 +17,21 @@
 #  3. Teardown stays a `kubectl delete` rather than also pruning snapshots out of
 #     a restic repository.
 #
-# 40Gi, not production's 60Gi. Production's volume is ~62GiB allocated, but most
-# of that is regenerable (keyframes, extracted attachments, logs) and the
-# migration only needs the config XMLs plus /config/data/jellyfin.db.
+# Sized below production's 60Gi at first: most of production's allocation is
+# regenerable (keyframes, extracted attachments, logs) and the migration only
+# needs the config XMLs plus /config/data/jellyfin.db.
 #
 # This started at 20Gi and was expanded online to 40Gi on 2026-09-20, when the
 # phase 3 restore turned out to need the room -- exactly the escape hatch the
-# comment here used to describe. THE DECLARED SIZE MUST TRACK THE VOLUME, in the
-# same change. A PVC cannot be shrunk: a `storage` below `status.capacity` is
-# rejected at admission, and because Flux dry-runs every apply, the stale 20Gi
+# comment here used to describe. Then to 80Gi on 2026-10-03: usage doubled from
+# 20 to 40 GB in a week, in overnight jumps, while production's /config sat flat
+# at 3.7 GB, and Jellyfin refuses to start with under 2GiB free on /config/data
+# (it crashlooped from 2026-10-02 11:17). WHAT IS GROWING IS NOT YET KNOWN, so
+# this buys roughly two weeks; it is not a fix.
+#
+# THE DECLARED SIZE MUST TRACK THE VOLUME, in the same change. A PVC cannot be
+# shrunk: a `storage` below `status.capacity` is rejected at admission, and
+# because Flux dry-runs every apply, the stale 20Gi
 # did not merely drift -- it failed the whole Kustomization on
 #
 #   PersistentVolumeClaim "jellyfin-pg" is invalid:
@@ -46,4 +52,4 @@ spec:
   storageClassName: longhorn
   resources:
     requests:
-      storage: 40Gi
+      storage: 80Gi
