@@ -11,6 +11,9 @@
 //                                   navigation so forward auth can run the sign-in
 //   POST /setup/api/music/password  make the visitor a new Navidrome password,
 //                                   see `musicPassword()` below
+//   GET  /setup/api/calendar.mobileconfig
+//                                   an iPhone/iPad profile that adds the visitor's
+//                                   calendar and contacts, see `davProfile()` below
 //   GET  /healthz                   probes (direct to the pod, not through the route)
 //
 // WHO the visitor is comes from authentik forward auth: the route's
@@ -41,6 +44,7 @@
 // Plain Bun, no dependencies: it is mounted from a ConfigMap and run by the
 // stock oven/bun image (./helmrelease.yaml).
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { SQL } from "bun";
 
@@ -257,6 +261,82 @@ async function nextcloudDevices(uid) {
     if (!devices[kind] || devices[kind] < lastUsed) devices[kind] = lastUsed;
   }
   return devices;
+}
+
+// --- the calendar and contacts profile -----------------------------------------
+//
+// An iPhone can add a CalDAV and a CardDAV account from one configuration
+// profile. Nextcloud offers its own ("Download the configuration profile"), but
+// it sits four taps deep in the phone app's settings; this one is a link on the
+// guide, already filled in for whoever is signed in.
+//
+// NO PASSWORD IN IT, on purpose. iOS asks for one while installing, and the
+// person pastes the app password the guide's "Make my app password" button
+// gave them. A profile is a plain file that ends up in Downloads and Files, so
+// a credential inside it would outlive the install; minting one here would
+// also mean this service writing to Nextcloud, which it otherwise never does.
+//
+// Unsigned: iOS shows "Not Signed" on the install sheet. Signing needs a key
+// this pod does not hold.
+
+const xml = value => String(value).replace(/[<>&'"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]);
+
+/** A stable UUID per (visitor, payload), so installing again updates the profile instead of adding a second. */
+function profileUuid(...parts) {
+  const hex = createHash("sha256").update(parts.join("\n")).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`.toUpperCase();
+}
+
+function davProfileXml(username) {
+  const host = AUTHENTIK_APPS.cloud;
+  // Reversed, the way Apple identifiers are written, and from the environment
+  // like every other mention of the domain.
+  const scope = `${ROOT_DOMAIN.split(".").reverse().join(".")}.setup.dav.${username.toLowerCase().replace(/[^a-z0-9.-]/g, "-")}`;
+  const principal = `/remote.php/dav/principals/users/${encodeURIComponent(username)}/`;
+  const account = (kind, type, description) => `    <dict>
+      <key>PayloadType</key><string>${type}</string>
+      <key>PayloadVersion</key><integer>1</integer>
+      <key>PayloadIdentifier</key><string>${xml(scope)}.${kind.toLowerCase()}</string>
+      <key>PayloadUUID</key><string>${profileUuid(username, kind)}</string>
+      <key>PayloadDisplayName</key><string>${xml(description)}</string>
+      <key>${kind}AccountDescription</key><string>${xml(description)}</string>
+      <key>${kind}HostName</key><string>${xml(host)}</string>
+      <key>${kind}Port</key><integer>443</integer>
+      <key>${kind}UseSSL</key><true/>
+      <key>${kind}Username</key><string>${xml(username)}</string>
+      <key>${kind}PrincipalURL</key><string>${xml(principal)}</string>
+    </dict>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadType</key><string>Configuration</string>
+  <key>PayloadVersion</key><integer>1</integer>
+  <key>PayloadIdentifier</key><string>${xml(scope)}</string>
+  <key>PayloadUUID</key><string>${profileUuid(username, "profile")}</string>
+  <key>PayloadDisplayName</key><string>Home calendar and contacts</string>
+  <key>PayloadDescription</key><string>Adds your home calendar and contacts to this device. It will ask for your app password from the setup guide.</string>
+  <key>PayloadOrganization</key><string>Home setup guide</string>
+  <key>PayloadContent</key>
+  <array>
+${account("CalDAV", "com.apple.caldav.account", "Home calendar")}
+${account("CardDAV", "com.apple.carddav.account", "Home contacts")}
+  </array>
+</dict>
+</plist>
+`;
+}
+
+/** The profile, as a download Safari hands to Settings. */
+function davProfile(visitor) {
+  log("calendar profile served", { username: visitor.username });
+  return new Response(davProfileXml(visitor.username), {
+    headers: {
+      "content-type": "application/x-apple-aspen-config",
+      "content-disposition": 'attachment; filename="home-calendar-contacts.mobileconfig"',
+      "cache-control": "no-store",
+    },
+  });
 }
 
 // --- Navidrome -------------------------------------------------------------------
@@ -523,6 +603,11 @@ Bun.serve({
       const next = searchParams.get("next") ?? "";
       const target = /^\/setup\/[\w/-]*$/.test(next) ? next : "/setup/";
       return new Response(null, { status: 302, headers: { location: target, "cache-control": "no-store" } });
+    }
+    if (pathname === "/setup/api/calendar.mobileconfig") {
+      const visitor = visitorFrom(req);
+      if (!visitor) return json({ error: "not signed in" }, 401);
+      return davProfile(visitor);
     }
     if (pathname === "/setup/api/me") {
       const visitor = visitorFrom(req);
