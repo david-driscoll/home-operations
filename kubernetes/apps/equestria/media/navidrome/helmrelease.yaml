@@ -42,13 +42,13 @@ spec:
         strategy: Recreate
         containers:
           app:
-            image:
+            image: &image
               repository: ghcr.io/navidrome/navidrome
               tag: 0.64.2@sha256:38dc2727bfcfd5ede290f8ada114fc90368146f265ae4701ddddbcbe2a44ee52
               pullPolicy: IfNotPresent
             # Every key is Navidrome's config name upper-cased, dots to
             # underscores, prefixed `ND_`. https://www.navidrome.org/docs/usage/configuration-options/
-            env:
+            env: &env
               TZ: ${TIMEZONE}
               ND_PORT: &port 4533
               ND_MUSICFOLDER: /music
@@ -86,6 +86,20 @@ spec:
               # Off until that path gets a carve-out of its own.
               ND_ENABLESHARING: "false"
               ND_ENABLEINSIGHTSCOLLECTOR: "false"
+              # -- Plugins: installed by the `plugins` initContainer below;
+              # enabled, granted and configured in Settings > Plugins (stored in
+              # the DB). This is the default folder, spelled out because the
+              # initContainer reads it. On the PVC on purpose -- see there.
+              # The wasm compile cache goes to <CacheFolder>/plugins, the
+              # emptyDir.
+              ND_PLUGINS_FOLDER: /data/plugins
+              # A plugin agent is referenced by its ID (the .ndp file name).
+              # Order is priority: the plugins first, the built-ins as fallback.
+              # Default "deezer,lastfm,listenbrainz".
+              ND_AGENTS: apple-music,coverartarchive,deezer,lastfm,listenbrainz
+              # The default, with the Musixmatch plugin last: a local .lrc or
+              # embedded lyrics always win over a network lookup.
+              ND_LYRICSPRIORITY: .ttml,.yaml,.yml,.elrc,.lrc,.srt,.txt,embedded,navidrome-musixmatch-plugin
             probes:
               liveness: &probes
                 enabled: true
@@ -119,6 +133,110 @@ spec:
                 memory: 128Mi
               limits:
                 memory: 1Gi
+        initContainers:
+          # -- Plugins. Each .ndp is pinned by its release URL below, and the
+          # annotated-deps manager in .github/renovate.json5 bumps the version
+          # segment. Not automerged: a plugin bump is a PR to read.
+          #
+          # Navidrome's own image (curl and the `navidrome plugin` CLI), so the
+          # CLI always matches the server that will open the same DB next.
+          #
+          # Three behaviours of plugins/manager_sync.go (v0.64.2) shape this:
+          #
+          #  1. A plugin whose file is MISSING at startup has its DB row
+          #     deleted -- config, user and library grants, everything. So the
+          #     folder is /data/plugins on the volsync PVC, not an emptyDir,
+          #     and a failed download keeps the previous file. GitHub being
+          #     down must not wipe the ListenBrainz per-user setup.
+          #  2. A plugin whose file CHANGED (sha256) is force-disabled; its
+          #     config and grants survive. So every Renovate bump would switch
+          #     the plugin off until someone noticed. This records which ones
+          #     were enabled before the download and re-enables exactly those
+          #     after a rescan. EnablePlugin still runs the permission gates,
+          #     so a version that needs a NEW user/library grant stays off.
+          #  3. A .ndp no longer listed here is deleted from the folder, which
+          #     (per 1) deletes its row. Dropping a line uninstalls the plugin.
+          #
+          # Never fatal: whatever happens here, Navidrome starts.
+          #
+          # `$$` is Flux's escape for a literal dollar: this file goes through
+          # postBuild envsubst, which would otherwise eat every shell variable.
+          plugins:
+            image: *image
+            # Same ND_* as the server, so the CLI opens the same DB and folder.
+            env: *env
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -u
+                dir="$${ND_PLUGINS_FOLDER}"
+                mkdir -p "$${dir}"
+                ids=""
+                enabled=""
+                for url in "$$@"; do
+                  name="$$(basename "$${url}")"
+                  id="$$(basename "$${url}" .ndp)"
+                  ids="$${ids} $${id}"
+                  # `info -f json` is model.Plugin; `enabled` is the only key
+                  # at two-space indent (manifest and config are JSON strings).
+                  if /app/navidrome plugin info "$${id}" -f json 2>/dev/null | grep -q '^  "enabled": true'; then
+                    enabled="$${enabled} $${id}"
+                  fi
+                  if curl -fsSL --retry 5 --retry-all-errors --connect-timeout 10 -o "$${dir}/$${name}.part" "$${url}"; then
+                    mv -f "$${dir}/$${name}.part" "$${dir}/$${name}"
+                    echo "fetched $${url}"
+                  else
+                    rm -f "$${dir}/$${name}.part"
+                    echo "WARN: could not fetch $${url}; keeping any existing $${name}"
+                  fi
+                done
+                for f in "$${dir}"/*.ndp; do
+                  [ -e "$${f}" ] || continue
+                  id="$$(basename "$${f}" .ndp)"
+                  case " $${ids} " in
+                    *" $${id} "*) ;;
+                    *) echo "removing $${id}: no longer listed"; rm -f "$${f}" ;;
+                  esac
+                done
+                /app/navidrome plugin rescan || echo "WARN: plugin rescan failed"
+                for id in $${enabled}; do
+                  /app/navidrome plugin enable "$${id}" || echo "WARN: could not re-enable $${id}"
+                done
+                exit 0
+              - sync-plugins
+            args:
+              # Metadata agent: artist bio, images, similar artists, top songs.
+              # renovate: datasource=github-releases depName=navidrome/apple-music-plugin
+              - https://github.com/navidrome/apple-music-plugin/releases/download/v0.2.0/apple-music.ndp
+              # Album art via MusicBrainz -> Cover Art Archive.
+              # renovate: datasource=github-releases depName=sunsetroute1/navidrome-coverartarchive-plugin
+              - https://github.com/sunsetroute1/navidrome-coverartarchive-plugin/releases/download/v1.0.0/coverartarchive.ndp
+              # ListenBrainz daily/weekly playlists, per user. Needs each user's
+              # LB username (and token) in the plugin config, plus user and
+              # library grants, all set in Settings > Plugins.
+              # renovate: datasource=github-releases depName=kgarner7/navidrome-listenbrainz-daily-playlist
+              - https://github.com/kgarner7/navidrome-listenbrainz-daily-playlist/releases/download/v6.0.0/listenbrainz-daily-playlist.ndp
+              # Lyrics. Its "write sidecar file" option cannot work here: the
+              # library is mounted read-only below, on purpose. Its two
+              # analytics toggles default ON and send failed lookups (artist,
+              # title) to the author's server -- switch both off when enabling.
+              # renovate: datasource=github-releases depName=Myzel394/navidrome-musixmatch-plugin
+              - https://github.com/Myzel394/navidrome-musixmatch-plugin/releases/download/v0.4.2/navidrome-musixmatch-plugin.ndp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                # `plugin enable` compiles the wasm in-process.
+                memory: 512Mi
 
     defaultPodOptions:
       securityContext:
