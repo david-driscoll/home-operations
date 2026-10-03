@@ -3,8 +3,15 @@
 # The family setup guide that git-pages serves at setup.${ROOT_DOMAIN} (the
 # `setup` route in ./helmrelease.yaml) -- not git-pages itself, hence a fixed
 # name rather than ${APP}. It exists for the Gatus check, and as a side effect
-# gives the family a tile in the authentik library. No `authentik:` block: the
-# site has no login, only the internal-network gate on the route.
+# gives the family a tile in the authentik library.
+#
+# The guide itself has no login: only the internal-network gate on its route.
+# The proxy provider below is for ONE path, /setup/api (../setup-status), the
+# "My apps" API, whose route alone carries the forward-auth middleware. The
+# provider is what makes the outpost answer for this hostname at all (and
+# create its /outpost.goauthentik.io route here); without it the outpost
+# returns 400 "no app for hostname". access_policy below gates that sign-in to
+# the family group, like every other family app.
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
@@ -18,6 +25,10 @@ spec:
   access_policy:
     groups:
       - family
+  authentik:
+    proxy:
+      mode: forward_single
+      externalHost: *url
   gatus:
     - group: "Applications"
       url: *url

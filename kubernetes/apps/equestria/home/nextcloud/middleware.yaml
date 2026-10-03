@@ -14,3 +14,23 @@ spec:
   headers:
     stsSeconds: 15552000
     stsIncludeSubdomains: true
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# CORS for the family setup guide's "Make my app password" button, on the two
+# Login Flow v2 endpoints only (the Origin-matched rules in ./helmrelease.yaml).
+# The page reads the flow's JSON from setup.${ROOT_DOMAIN}, a different origin.
+# Simple POSTs with no credentials: no cookies cross, and the poll token the
+# page holds is the only secret, as for any Login Flow v2 client.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ${APP}-setup-cors
+spec:
+  headers:
+    accessControlAllowOriginList:
+      - "https://setup.${ROOT_DOMAIN}"
+    accessControlAllowMethods:
+      - POST
+    accessControlMaxAge: 600
+    addVaryHeader: true
