@@ -169,6 +169,124 @@ spec:
               memory: 128Mi
             limits:
               memory: 256Mi
+      # -- Instance settings as code. The operator (`windmill operator`, in the
+      # CE image: features=ce -> ce_core -> operator) reads the ConfigMap the
+      # chart renders from `instanceSpec` and syncs it into the database every
+      # 5 minutes. https://github.com/windmill-labs/windmill-helm-charts#kubernetes-operator
+      #
+      # ⚠️ THIS IS THE SOURCE OF TRUTH NOW, and it is a REPLACE, not a merge
+      # (ApplyMode::Replace in backend/windmill-common/src/instance_config.rs).
+      # Every global setting and every worker-group config that is absent from
+      # instanceSpec is DELETED on the next reconcile, except the protected
+      # few (jwt_secret, uid, rsa_keys, custom_instance_pg_databases,
+      # min_keep_alive_version, ...). And a change made in the superadmin UI is
+      # reverted within 5 minutes. Change instance settings HERE.
+      #
+      # Seeded 2026-10-03 from the live global_settings and config tables, key
+      # for key, so turning this on changes nothing but adding SSO. base_url is
+      # absent on purpose: it was never in the DB (BASE_URL comes from
+      # baseDomain above), so there is nothing for the operator to own.
+      operator:
+        enabled: true
+        # Pod-template annotation; Reloader falls back to it (see app above).
+        # The operator references ${APP}-pguser-secret for DATABASE_URL, so a
+        # rotated DB password restarts it like every other component.
+        annotations:
+          reloader.stakater.com/auto: "true"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 512Mi
+        instanceSpec:
+          global_settings:
+            automate_username_creation: true
+            # The three empty objects are what the DB holds today. Kept rather
+            # than dropped so the first reconcile deletes nothing.
+            critical_alerts_on_db_oversize: {}
+            otel: {}
+            teams: {}
+            custom_tags:
+              - chromium
+            oauths:
+              # The key is the provider name, and so the callback path:
+              # /user/login_callback/authentik, as registered in
+              # ./definition.yaml. Shape mirrors Windmill's own Authentik
+              # preset (frontend AuthentikSetting.svelte). No discovery:
+              # Windmill wants explicit endpoints.
+              authentik:
+                id: windmill # authentik.oauth2.clientId in ./definition.yaml
+                secret:
+                  secretKeyRef:
+                    name: ${APP}-oidc # ./externalsecret.yaml
+                    key: client_secret
+                # Scopes are the provider's property mappings in
+                # ./definition.yaml, not the preset's `offline_access`, which
+                # this provider has no mapping for.
+                login_config:
+                  auth_url: https://authentik.${ROOT_DOMAIN}/application/o/authorize/
+                  token_url: https://authentik.${ROOT_DOMAIN}/application/o/token/
+                  userinfo_url: https://authentik.${ROOT_DOMAIN}/application/o/userinfo/
+                  scopes: [openid, email, profile]
+                connect_config:
+                  auth_url: https://authentik.${ROOT_DOMAIN}/application/o/authorize/
+                  token_url: https://authentik.${ROOT_DOMAIN}/application/o/token/
+                  scopes: [openid, email, profile]
+          # Keyed by group name; the operator stores each as `worker__<name>`.
+          worker_configs:
+            default:
+              worker_tags:
+                - deno
+                - python3
+                - go
+                - bash
+                - powershell
+                - dependency
+                - flow
+                - hub
+                - other
+                - bun
+                - php
+                - rust
+                - ansible
+                - csharp
+                - nu
+                - java
+                - duckdb
+                - ruby
+                - rlang
+                - dbt
+            native:
+              worker_tags:
+                - nativets
+                - postgresql
+                - mysql
+                - graphql
+                - snowflake
+                - bigquery
+                - mssql
+                - oracledb
+            # ORPHANED: no workerGroups entry above runs a `reports` worker, and
+            # worker_ping has never seen one. Carried over unchanged so enabling
+            # the operator deletes nothing; drop it (and `chromium` from
+            # custom_tags) or add the worker group -- a decision, not a cleanup.
+            reports:
+              init_bash: |-
+                apt-get update
+                apt-get install -y chromium
+              worker_tags:
+                - deno
+                - python3
+                - go
+                - bash
+                - powershell
+                - dependency
+                - flow
+                - hub
+                - other
+                - bun
+                - chromium
     ingress:
       enabled: false
     postgresql:
@@ -195,3 +313,35 @@ spec:
                 name: windmill-app
                 annotations:
                   reloader.stakater.com/auto: "true"
+          # The operator runs as ./operator-serviceaccount.yaml, not the chart's
+          # shared account -- see that file. The chart has no per-component
+          # serviceAccountName for the operator, so these two patches are the
+          # only way: the pod moves accounts, and the Role (Secrets included)
+          # is bound to the new one ONLY. Drop either and the shared account,
+          # i.e. every worker running user code, can read equestria's Secrets.
+          - target:
+              version: v1
+              group: apps
+              kind: Deployment
+              name: windmill-operator
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: windmill-operator
+              spec:
+                template:
+                  spec:
+                    serviceAccountName: windmill-operator
+          - target:
+              version: v1
+              group: rbac.authorization.k8s.io
+              kind: RoleBinding
+              name: windmill-operator
+            patch: |
+              - op: replace
+                path: /subjects
+                value:
+                  - kind: ServiceAccount
+                    name: windmill-operator
+                    namespace: ${NAMESPACE}
