@@ -48,7 +48,16 @@ spec:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
         effect: NoSchedule
-    fullnameOverride: *app
+    # NOT `*app`. The release is named technitium-dns, and so is the Technitium
+    # server's own resolver Service (../../../equestria/dns/technitium, service
+    # key `dns` -> `technitium-dns`, pinned to TECHNITIUM_CLUSTER_IP, the address
+    # CoreDNS forwards the whole root domain to). With the same fullname this
+    # chart's metrics Service landed on that object: on 2026-10-03 12:40Z the
+    # 1.23.0 upgrade re-applied it, the ClusterIP stayed, but the selector and
+    # port became this pod's :7979. Port 53 went dark, CoreDNS fell through to
+    # public DNS, and every internal-only name (git, cloud, ...) answered
+    # NXDOMAIN in-cluster -- which is what failed the `system` Pulumi stack.
+    fullnameOverride: external-dns-technitium
     logLevel: debug
     interval: 10m
     triggerLoopOnEvent: true
