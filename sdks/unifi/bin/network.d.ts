@@ -18,7 +18,7 @@ export declare class Network extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is Network;
     /**
-     * Specifies whether auto-scaling is enabled.
+     * Specifies whether auto-scaling is enabled. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved.
      */
     readonly autoScale: pulumi.Output<boolean>;
     /**
@@ -74,7 +74,7 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly ipv6ClientAddressAssignment: pulumi.Output<string>;
     /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`.
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
      */
     readonly ipv6InterfaceType: pulumi.Output<string>;
     /**
@@ -118,7 +118,7 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly ipv6StaticSubnet: pulumi.Output<string | undefined>;
     /**
-     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. Defaults to `true` (network stays available during LTE failover); set to `false` to disable it while on the LTE backup link. The controller may set this automatically, which is why existing networks can show differing values.
+     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
     readonly lteLan: pulumi.Output<boolean>;
     /**
@@ -142,7 +142,7 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly purpose: pulumi.Output<string>;
     /**
-     * Setting preference. Must be one of `auto` or `manual`.
+     * Setting preference. Must be one of `auto` or `manual`. Taken from the controller when not set; an adopted network keeps its own preference, so importing a `manual` network no longer proposes `auto` - which would also reset DHCP guarding (#544).
      */
     readonly settingPreference: pulumi.Output<string>;
     /**
@@ -176,7 +176,7 @@ export declare class Network extends pulumi.CustomResource {
  */
 export interface NetworkState {
     /**
-     * Specifies whether auto-scaling is enabled.
+     * Specifies whether auto-scaling is enabled. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved.
      */
     autoScale?: pulumi.Input<boolean | undefined>;
     /**
@@ -232,7 +232,7 @@ export interface NetworkState {
      */
     ipv6ClientAddressAssignment?: pulumi.Input<string | undefined>;
     /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`.
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
      */
     ipv6InterfaceType?: pulumi.Input<string | undefined>;
     /**
@@ -276,7 +276,7 @@ export interface NetworkState {
      */
     ipv6StaticSubnet?: pulumi.Input<string | undefined>;
     /**
-     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. Defaults to `true` (network stays available during LTE failover); set to `false` to disable it while on the LTE backup link. The controller may set this automatically, which is why existing networks can show differing values.
+     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
     lteLan?: pulumi.Input<boolean | undefined>;
     /**
@@ -300,7 +300,7 @@ export interface NetworkState {
      */
     purpose?: pulumi.Input<string | undefined>;
     /**
-     * Setting preference. Must be one of `auto` or `manual`.
+     * Setting preference. Must be one of `auto` or `manual`. Taken from the controller when not set; an adopted network keeps its own preference, so importing a `manual` network no longer proposes `auto` - which would also reset DHCP guarding (#544).
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -326,7 +326,7 @@ export interface NetworkState {
  */
 export interface NetworkArgs {
     /**
-     * Specifies whether auto-scaling is enabled.
+     * Specifies whether auto-scaling is enabled. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved.
      */
     autoScale?: pulumi.Input<boolean | undefined>;
     /**
@@ -382,7 +382,7 @@ export interface NetworkArgs {
      */
     ipv6ClientAddressAssignment?: pulumi.Input<string | undefined>;
     /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`.
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
      */
     ipv6InterfaceType?: pulumi.Input<string | undefined>;
     /**
@@ -426,7 +426,7 @@ export interface NetworkArgs {
      */
     ipv6StaticSubnet?: pulumi.Input<string | undefined>;
     /**
-     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. Defaults to `true` (network stays available during LTE failover); set to `false` to disable it while on the LTE backup link. The controller may set this automatically, which is why existing networks can show differing values.
+     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
     lteLan?: pulumi.Input<boolean | undefined>;
     /**
@@ -450,7 +450,7 @@ export interface NetworkArgs {
      */
     purpose?: pulumi.Input<string | undefined>;
     /**
-     * Setting preference. Must be one of `auto` or `manual`.
+     * Setting preference. Must be one of `auto` or `manual`. Taken from the controller when not set; an adopted network keeps its own preference, so importing a `manual` network no longer proposes `auto` - which would also reset DHCP guarding (#544).
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**

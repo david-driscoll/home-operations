@@ -39,6 +39,10 @@ export class Setting extends pulumi.CustomResource {
      */
     declare public readonly autoSpeedtest: pulumi.Output<outputs.SettingAutoSpeedtest>;
     /**
+     * Wireless meshing and uplink connectivity (Settings > WiFi > Wireless Meshing). Disabling meshing frees the standby mesh radio and doubles the per-band SSID budget: with meshing on, APs reserve a hidden backhaul SSID and allow 4 SSIDs per band instead of 8. The controller-generated mesh SSID and pre-shared key are not exposed and are preserved across updates, as are any options this block does not model.
+     */
+    declare public readonly connectivity: pulumi.Output<outputs.SettingConnectivity | undefined>;
+    /**
      * Regulatory country settings.
      */
     declare public readonly country: pulumi.Output<outputs.SettingCountry>;
@@ -50,6 +54,10 @@ export class Setting extends pulumi.CustomResource {
      * Deep Packet Inspection (DPI) settings.
      */
     declare public readonly dpi: pulumi.Output<outputs.SettingDpi>;
+    /**
+     * Site-wide switch settings (Settings > Networks > Global Switch Settings). On current controllers jumbo frames are only honored here, not via `unifi_device.jumboframe_enabled`. Options not exposed by this block are preserved across updates.
+     */
+    declare public readonly globalSwitch: pulumi.Output<outputs.SettingGlobalSwitch | undefined>;
     /**
      * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
      */
@@ -106,9 +114,11 @@ export class Setting extends pulumi.CustomResource {
         if (opts.id) {
             const state = argsOrState as SettingState | undefined;
             resourceInputs["autoSpeedtest"] = state?.autoSpeedtest;
+            resourceInputs["connectivity"] = state?.connectivity;
             resourceInputs["country"] = state?.country;
             resourceInputs["doh"] = state?.doh;
             resourceInputs["dpi"] = state?.dpi;
+            resourceInputs["globalSwitch"] = state?.globalSwitch;
             resourceInputs["igmpSnooping"] = state?.igmpSnooping;
             resourceInputs["ips"] = state?.ips;
             resourceInputs["lcm"] = state?.lcm;
@@ -123,9 +133,11 @@ export class Setting extends pulumi.CustomResource {
         } else {
             const args = argsOrState as SettingArgs | undefined;
             resourceInputs["autoSpeedtest"] = args?.autoSpeedtest;
+            resourceInputs["connectivity"] = args?.connectivity;
             resourceInputs["country"] = args?.country;
             resourceInputs["doh"] = args?.doh;
             resourceInputs["dpi"] = args?.dpi;
+            resourceInputs["globalSwitch"] = args?.globalSwitch;
             resourceInputs["igmpSnooping"] = args?.igmpSnooping;
             resourceInputs["ips"] = args?.ips;
             resourceInputs["lcm"] = args?.lcm;
@@ -152,6 +164,10 @@ export interface SettingState {
      */
     autoSpeedtest?: pulumi.Input<inputs.SettingAutoSpeedtest | undefined>;
     /**
+     * Wireless meshing and uplink connectivity (Settings > WiFi > Wireless Meshing). Disabling meshing frees the standby mesh radio and doubles the per-band SSID budget: with meshing on, APs reserve a hidden backhaul SSID and allow 4 SSIDs per band instead of 8. The controller-generated mesh SSID and pre-shared key are not exposed and are preserved across updates, as are any options this block does not model.
+     */
+    connectivity?: pulumi.Input<inputs.SettingConnectivity | undefined>;
+    /**
      * Regulatory country settings.
      */
     country?: pulumi.Input<inputs.SettingCountry | undefined>;
@@ -163,6 +179,10 @@ export interface SettingState {
      * Deep Packet Inspection (DPI) settings.
      */
     dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
+    /**
+     * Site-wide switch settings (Settings > Networks > Global Switch Settings). On current controllers jumbo frames are only honored here, not via `unifi_device.jumboframe_enabled`. Options not exposed by this block are preserved across updates.
+     */
+    globalSwitch?: pulumi.Input<inputs.SettingGlobalSwitch | undefined>;
     /**
      * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
      */
@@ -215,6 +235,10 @@ export interface SettingArgs {
      */
     autoSpeedtest?: pulumi.Input<inputs.SettingAutoSpeedtest | undefined>;
     /**
+     * Wireless meshing and uplink connectivity (Settings > WiFi > Wireless Meshing). Disabling meshing frees the standby mesh radio and doubles the per-band SSID budget: with meshing on, APs reserve a hidden backhaul SSID and allow 4 SSIDs per band instead of 8. The controller-generated mesh SSID and pre-shared key are not exposed and are preserved across updates, as are any options this block does not model.
+     */
+    connectivity?: pulumi.Input<inputs.SettingConnectivity | undefined>;
+    /**
      * Regulatory country settings.
      */
     country?: pulumi.Input<inputs.SettingCountry | undefined>;
@@ -226,6 +250,10 @@ export interface SettingArgs {
      * Deep Packet Inspection (DPI) settings.
      */
     dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
+    /**
+     * Site-wide switch settings (Settings > Networks > Global Switch Settings). On current controllers jumbo frames are only honored here, not via `unifi_device.jumboframe_enabled`. Options not exposed by this block are preserved across updates.
+     */
+    globalSwitch?: pulumi.Input<inputs.SettingGlobalSwitch | undefined>;
     /**
      * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
      */

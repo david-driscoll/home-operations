@@ -51,6 +51,11 @@ export class WireguardPeer extends pulumi.CustomResource {
      */
     declare public readonly networkId: pulumi.Output<string>;
     /**
+     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use `preshared_key_wo` to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
+     */
+    declare public readonly presharedKey: pulumi.Output<string | undefined>;
+    declare public readonly presharedKeyWo: pulumi.Output<string | undefined>;
+    /**
      * The WireGuard public key of the peer.
      */
     declare public readonly publicKey: pulumi.Output<string>;
@@ -77,6 +82,8 @@ export class WireguardPeer extends pulumi.CustomResource {
             resourceInputs["interfaceIp"] = state?.interfaceIp;
             resourceInputs["name"] = state?.name;
             resourceInputs["networkId"] = state?.networkId;
+            resourceInputs["presharedKey"] = state?.presharedKey;
+            resourceInputs["presharedKeyWo"] = state?.presharedKeyWo;
             resourceInputs["publicKey"] = state?.publicKey;
             resourceInputs["site"] = state?.site;
             resourceInputs["timeouts"] = state?.timeouts;
@@ -95,11 +102,15 @@ export class WireguardPeer extends pulumi.CustomResource {
             resourceInputs["interfaceIp"] = args?.interfaceIp;
             resourceInputs["name"] = args?.name;
             resourceInputs["networkId"] = args?.networkId;
+            resourceInputs["presharedKey"] = args?.presharedKey ? pulumi.secret(args.presharedKey) : undefined;
+            resourceInputs["presharedKeyWo"] = args?.presharedKeyWo ? pulumi.secret(args.presharedKeyWo) : undefined;
             resourceInputs["publicKey"] = args?.publicKey;
             resourceInputs["site"] = args?.site;
             resourceInputs["timeouts"] = args?.timeouts;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
+        const secretOpts = { additionalSecretOutputs: ["presharedKey", "presharedKeyWo"] };
+        opts = pulumi.mergeOptions(opts, secretOpts);
         super(WireguardPeer.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
@@ -124,6 +135,11 @@ export interface WireguardPeerState {
      * The ID of the WireGuard server network the peer connects to.
      */
     networkId?: pulumi.Input<string | undefined>;
+    /**
+     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use `preshared_key_wo` to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
+     */
+    presharedKey?: pulumi.Input<string | undefined>;
+    presharedKeyWo?: pulumi.Input<string | undefined>;
     /**
      * The WireGuard public key of the peer.
      */
@@ -155,6 +171,11 @@ export interface WireguardPeerArgs {
      * The ID of the WireGuard server network the peer connects to.
      */
     networkId: pulumi.Input<string>;
+    /**
+     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use `preshared_key_wo` to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
+     */
+    presharedKey?: pulumi.Input<string | undefined>;
+    presharedKeyWo?: pulumi.Input<string | undefined>;
     /**
      * The WireGuard public key of the peer.
      */

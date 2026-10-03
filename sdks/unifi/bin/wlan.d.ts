@@ -26,7 +26,9 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly apGroupMode: pulumi.Output<string>;
     /**
-     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     * Deprecated and no longer applied. UniFi moved band steering off the WLAN object: `bandsteering_mode` is absent from the controller's WLAN field definitions as of Network 10.6, while it is still present on the device, so the setting now lives on `unifi.Device`'s `bandsteering_mode` instead. This attribute is neither read nor written and always reads back null.
+     *
+     * @deprecated Deprecated
      */
     readonly bandsteeringMode: pulumi.Output<string>;
     /**
@@ -66,7 +68,7 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly fastRoamingEnabled: pulumi.Output<boolean>;
     /**
-     * Group rekey interval in seconds (0 to disable).
+     * Group rekey interval in seconds (0 to disable). Computed from the controller when not set.
      */
     readonly groupRekey: pulumi.Output<number>;
     /**
@@ -212,7 +214,7 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly wpa3Transition: pulumi.Output<boolean>;
     /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`.
+     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
      */
     readonly wpaEnc: pulumi.Output<string>;
     /**
@@ -241,7 +243,9 @@ export interface WlanState {
      */
     apGroupMode?: pulumi.Input<string | undefined>;
     /**
-     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     * Deprecated and no longer applied. UniFi moved band steering off the WLAN object: `bandsteering_mode` is absent from the controller's WLAN field definitions as of Network 10.6, while it is still present on the device, so the setting now lives on `unifi.Device`'s `bandsteering_mode` instead. This attribute is neither read nor written and always reads back null.
+     *
+     * @deprecated Deprecated
      */
     bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
@@ -281,7 +285,7 @@ export interface WlanState {
      */
     fastRoamingEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Group rekey interval in seconds (0 to disable).
+     * Group rekey interval in seconds (0 to disable). Computed from the controller when not set.
      */
     groupRekey?: pulumi.Input<number | undefined>;
     /**
@@ -427,7 +431,7 @@ export interface WlanState {
      */
     wpa3Transition?: pulumi.Input<boolean | undefined>;
     /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`.
+     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
      */
     wpaEnc?: pulumi.Input<string | undefined>;
     /**
@@ -448,7 +452,9 @@ export interface WlanArgs {
      */
     apGroupMode?: pulumi.Input<string | undefined>;
     /**
-     * Per-SSID band steering mode. Steers dual-band capable clients toward the less congested / higher-throughput band. Valid values are `off`, `equal` and `prefer_5g`. Requires a controller that exposes per-SSID band steering on the WLAN (Network 9/10.x; on WiFi 6/7 access points this replaces the legacy device-level control). Left unset, the controller default applies.
+     * Deprecated and no longer applied. UniFi moved band steering off the WLAN object: `bandsteering_mode` is absent from the controller's WLAN field definitions as of Network 10.6, while it is still present on the device, so the setting now lives on `unifi.Device`'s `bandsteering_mode` instead. This attribute is neither read nor written and always reads back null.
+     *
+     * @deprecated Deprecated
      */
     bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
@@ -488,7 +494,7 @@ export interface WlanArgs {
      */
     fastRoamingEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Group rekey interval in seconds (0 to disable).
+     * Group rekey interval in seconds (0 to disable). Computed from the controller when not set.
      */
     groupRekey?: pulumi.Input<number | undefined>;
     /**
@@ -634,7 +640,7 @@ export interface WlanArgs {
      */
     wpa3Transition?: pulumi.Input<boolean | undefined>;
     /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`.
+     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
      */
     wpaEnc?: pulumi.Input<string | undefined>;
     /**

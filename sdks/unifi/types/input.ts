@@ -385,11 +385,15 @@ export interface DeviceRadioTable {
      */
     antennaId?: pulumi.Input<number | undefined>;
     /**
-     * Enable assisted roaming.
+     * Deprecated and no longer applied. UniFi removed 802.11k assisted roaming from the radio table; the field is absent from the controller API and from the firmware's own field definitions as of Network 10.6, so the provider can neither read nor write it. Always null.
+     *
+     * @deprecated Deprecated
      */
     assistedRoamingEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Assisted roaming RSSI threshold.
+     * Deprecated and no longer applied. See `assisted_roaming_enabled`. Always null.
+     *
+     * @deprecated Deprecated
      */
     assistedRoamingRssi?: pulumi.Input<number | undefined>;
     /**
@@ -544,6 +548,10 @@ export interface FirewallPolicyDestination {
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * Match the clients in `client_macs` by MAC address rather than by their current IP address. Corresponds to the controller's `match_mac` flag on a `CLIENT` matching target. Defaults to `false`.
+     */
+    matchMac?: pulumi.Input<boolean | undefined>;
+    /**
      * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
      */
     matchOppositeIps?: pulumi.Input<boolean | undefined>;
@@ -556,7 +564,7 @@ export interface FirewallPolicyDestination {
      */
     matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), or `REGION` (country codes, set `regions`). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: pulumi.Input<string>;
     /**
@@ -579,6 +587,10 @@ export interface FirewallPolicyDestination {
      * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
      */
     portMatchingType?: pulumi.Input<string | undefined>;
+    /**
+     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when `matching_target` is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
+     */
+    regions?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
      */
@@ -642,6 +654,10 @@ export interface FirewallPolicySource {
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * Match the clients in `client_macs` by MAC address rather than by their current IP address. Corresponds to the controller's `match_mac` flag on a `CLIENT` matching target. Defaults to `false`.
+     */
+    matchMac?: pulumi.Input<boolean | undefined>;
+    /**
      * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
      */
     matchOppositeIps?: pulumi.Input<boolean | undefined>;
@@ -654,7 +670,7 @@ export interface FirewallPolicySource {
      */
     matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), or `REGION` (country codes, set `regions`). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: pulumi.Input<string>;
     /**
@@ -677,6 +693,10 @@ export interface FirewallPolicySource {
      * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
      */
     portMatchingType?: pulumi.Input<string | undefined>;
+    /**
+     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when `matching_target` is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
+     */
+    regions?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
      */
@@ -1317,6 +1337,25 @@ export interface SettingAutoSpeedtest {
     enabled?: pulumi.Input<boolean | undefined>;
 }
 
+export interface SettingConnectivity {
+    /**
+     * Enable Wireless Meshing for the site.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable Multi-Link Operation (MLO) for the mesh backhaul. Requires WiFi 7 hardware.
+     */
+    mloMeshEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Host the site uses to verify connectivity when `uplink_type` is `internet`.
+     */
+    uplinkHost?: pulumi.Input<string | undefined>;
+    /**
+     * How the site reaches the controller: `gateway` or `internet`.
+     */
+    uplinkType?: pulumi.Input<string | undefined>;
+}
+
 export interface SettingCountry {
     /**
      * Regulatory country code (ISO 3166-1 numeric).
@@ -1363,6 +1402,29 @@ export interface SettingDpi {
      * Whether device fingerprinting is enabled.
      */
     fingerprintingEnabled?: pulumi.Input<boolean | undefined>;
+}
+
+export interface SettingGlobalSwitch {
+    /**
+     * Network IDs with Client Device Isolation enabled (Settings > Networks > "Device Isolation (ACL)"), which blocks all communication between devices in the same network. This is a switch ACL: it covers same-network traffic across access points, which `unifi_wlan.l2_isolation` (one access point) and `unifi_network.network_isolation` (between networks) do not. The controller only offers it for networks routed by a UniFi gateway or L3 switch, and some switch models do not support ACLs at all - it rejects an unsupported network rather than silently ignoring it.
+     */
+    aclDeviceIsolations?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Enable Rogue DHCP Server Detection (DHCP snooping).
+     */
+    dhcpSnoop?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable 802.1X port control.
+     */
+    dot1xPortctrlEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable jumbo frames on all switches.
+     */
+    jumboframeEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Spanning Tree Protocol mode for all switches: `stp`, `rstp`, or `disabled`.
+     */
+    stpVersion?: pulumi.Input<string | undefined>;
 }
 
 export interface SettingIgmpSnooping {

@@ -83,6 +83,14 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly keyExchange: pulumi.Output<string>;
     /**
+     * IKE local identifier used for peer authentication (the UI's "Local Identifier"). Setting it also enables identifier authentication; left unset, the attribute is not written and whatever the controller holds is preserved.
+     */
+    declare public readonly localIdentifier: pulumi.Output<string>;
+    /**
+     * Whether the local identifier is used for authentication. Set automatically when `local_identifier` is configured; declare it explicitly to enable identifier authentication without pinning a value.
+     */
+    declare public readonly localIdentifierEnabled: pulumi.Output<boolean>;
+    /**
      * The local IP used for the tunnel. Defaults to the WAN address when omitted.
      */
     declare public readonly localIp: pulumi.Output<string>;
@@ -91,7 +99,7 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The public IP address of the remote VPN gateway (peer).
+     * The public IP address **or hostname** of the remote VPN gateway (peer). The controller accepts and stores a hostname, which is how a peer behind dynamic DNS is configured.
      */
     declare public readonly peerIp: pulumi.Output<string>;
     /**
@@ -107,6 +115,14 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the IKE/ESP attributes below; the controller may derive the ESP values from the IKE ones.
      */
     declare public readonly profile: pulumi.Output<string>;
+    /**
+     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See `local_identifier`.
+     */
+    declare public readonly remoteIdentifier: pulumi.Output<string>;
+    /**
+     * Whether the remote identifier is used for authentication. See `local_identifier_enabled`.
+     */
+    declare public readonly remoteIdentifierEnabled: pulumi.Output<boolean>;
     /**
      * The remote site's subnets reachable through the tunnel (CIDR). May be empty when dynamic routing is enabled.
      */
@@ -146,6 +162,8 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             resourceInputs["ikeLifetime"] = state?.ikeLifetime;
             resourceInputs["interface"] = state?.interface;
             resourceInputs["keyExchange"] = state?.keyExchange;
+            resourceInputs["localIdentifier"] = state?.localIdentifier;
+            resourceInputs["localIdentifierEnabled"] = state?.localIdentifierEnabled;
             resourceInputs["localIp"] = state?.localIp;
             resourceInputs["name"] = state?.name;
             resourceInputs["peerIp"] = state?.peerIp;
@@ -153,6 +171,8 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             resourceInputs["preSharedKey"] = state?.preSharedKey;
             resourceInputs["preSharedKeyWo"] = state?.preSharedKeyWo;
             resourceInputs["profile"] = state?.profile;
+            resourceInputs["remoteIdentifier"] = state?.remoteIdentifier;
+            resourceInputs["remoteIdentifierEnabled"] = state?.remoteIdentifierEnabled;
             resourceInputs["remoteSubnets"] = state?.remoteSubnets;
             resourceInputs["routeDistance"] = state?.routeDistance;
             resourceInputs["site"] = state?.site;
@@ -177,6 +197,8 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             resourceInputs["ikeLifetime"] = args?.ikeLifetime;
             resourceInputs["interface"] = args?.interface;
             resourceInputs["keyExchange"] = args?.keyExchange;
+            resourceInputs["localIdentifier"] = args?.localIdentifier;
+            resourceInputs["localIdentifierEnabled"] = args?.localIdentifierEnabled;
             resourceInputs["localIp"] = args?.localIp;
             resourceInputs["name"] = args?.name;
             resourceInputs["peerIp"] = args?.peerIp;
@@ -184,6 +206,8 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             resourceInputs["preSharedKey"] = args?.preSharedKey ? pulumi.secret(args.preSharedKey) : undefined;
             resourceInputs["preSharedKeyWo"] = args?.preSharedKeyWo ? pulumi.secret(args.preSharedKeyWo) : undefined;
             resourceInputs["profile"] = args?.profile;
+            resourceInputs["remoteIdentifier"] = args?.remoteIdentifier;
+            resourceInputs["remoteIdentifierEnabled"] = args?.remoteIdentifierEnabled;
             resourceInputs["remoteSubnets"] = args?.remoteSubnets;
             resourceInputs["routeDistance"] = args?.routeDistance;
             resourceInputs["site"] = args?.site;
@@ -249,6 +273,14 @@ export interface SiteToSiteVpnState {
      */
     keyExchange?: pulumi.Input<string | undefined>;
     /**
+     * IKE local identifier used for peer authentication (the UI's "Local Identifier"). Setting it also enables identifier authentication; left unset, the attribute is not written and whatever the controller holds is preserved.
+     */
+    localIdentifier?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the local identifier is used for authentication. Set automatically when `local_identifier` is configured; declare it explicitly to enable identifier authentication without pinning a value.
+     */
+    localIdentifierEnabled?: pulumi.Input<boolean | undefined>;
+    /**
      * The local IP used for the tunnel. Defaults to the WAN address when omitted.
      */
     localIp?: pulumi.Input<string | undefined>;
@@ -257,7 +289,7 @@ export interface SiteToSiteVpnState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The public IP address of the remote VPN gateway (peer).
+     * The public IP address **or hostname** of the remote VPN gateway (peer). The controller accepts and stores a hostname, which is how a peer behind dynamic DNS is configured.
      */
     peerIp?: pulumi.Input<string | undefined>;
     /**
@@ -273,6 +305,14 @@ export interface SiteToSiteVpnState {
      * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the IKE/ESP attributes below; the controller may derive the ESP values from the IKE ones.
      */
     profile?: pulumi.Input<string | undefined>;
+    /**
+     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See `local_identifier`.
+     */
+    remoteIdentifier?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the remote identifier is used for authentication. See `local_identifier_enabled`.
+     */
+    remoteIdentifierEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The remote site's subnets reachable through the tunnel (CIDR). May be empty when dynamic routing is enabled.
      */
@@ -341,6 +381,14 @@ export interface SiteToSiteVpnArgs {
      */
     keyExchange?: pulumi.Input<string | undefined>;
     /**
+     * IKE local identifier used for peer authentication (the UI's "Local Identifier"). Setting it also enables identifier authentication; left unset, the attribute is not written and whatever the controller holds is preserved.
+     */
+    localIdentifier?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the local identifier is used for authentication. Set automatically when `local_identifier` is configured; declare it explicitly to enable identifier authentication without pinning a value.
+     */
+    localIdentifierEnabled?: pulumi.Input<boolean | undefined>;
+    /**
      * The local IP used for the tunnel. Defaults to the WAN address when omitted.
      */
     localIp?: pulumi.Input<string | undefined>;
@@ -349,7 +397,7 @@ export interface SiteToSiteVpnArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The public IP address of the remote VPN gateway (peer).
+     * The public IP address **or hostname** of the remote VPN gateway (peer). The controller accepts and stores a hostname, which is how a peer behind dynamic DNS is configured.
      */
     peerIp: pulumi.Input<string>;
     /**
@@ -365,6 +413,14 @@ export interface SiteToSiteVpnArgs {
      * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the IKE/ESP attributes below; the controller may derive the ESP values from the IKE ones.
      */
     profile?: pulumi.Input<string | undefined>;
+    /**
+     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See `local_identifier`.
+     */
+    remoteIdentifier?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the remote identifier is used for authentication. See `local_identifier_enabled`.
+     */
+    remoteIdentifierEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The remote site's subnets reachable through the tunnel (CIDR). May be empty when dynamic routing is enabled.
      */

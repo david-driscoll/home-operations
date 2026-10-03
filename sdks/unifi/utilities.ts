@@ -101,7 +101,7 @@ export async function getPackage(): Promise<string | undefined> {
 		baseProviderVersion: "0.14.0",
 		baseProviderDownloadUrl: "",
 		packageName: "unifi",
-		packageVersion: "0.57.0",
-		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjU3LjAifX0=",
+		packageVersion: "0.59.0",
+		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjU5LjAifX0=",
 	});
 }

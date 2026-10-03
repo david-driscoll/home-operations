@@ -83,6 +83,11 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly networkgroup: pulumi.Output<string>;
     /**
+     * PPPoE password supplied by the ISP. Stored in state - use `password_wo` to avoid persisting the secret. Only meaningful when `type` is `pppoe`.
+     */
+    declare public readonly password: pulumi.Output<string | undefined>;
+    declare public readonly passwordWo: pulumi.Output<string | undefined>;
+    /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
     declare public readonly providerCapabilities: pulumi.Output<outputs.WanProviderCapabilities>;
@@ -119,6 +124,10 @@ export class Wan extends pulumi.CustomResource {
      * UPnP configuration
      */
     declare public readonly upnp: pulumi.Output<outputs.WanUpnp>;
+    /**
+     * PPPoE username supplied by the ISP. Only meaningful when `type` is `pppoe`. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
+     */
+    declare public readonly username: pulumi.Output<string | undefined>;
     /**
      * VLAN configuration
      */
@@ -157,6 +166,8 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["macOverrideEnabled"] = state?.macOverrideEnabled;
             resourceInputs["name"] = state?.name;
             resourceInputs["networkgroup"] = state?.networkgroup;
+            resourceInputs["password"] = state?.password;
+            resourceInputs["passwordWo"] = state?.passwordWo;
             resourceInputs["providerCapabilities"] = state?.providerCapabilities;
             resourceInputs["reportWanEvent"] = state?.reportWanEvent;
             resourceInputs["settingPreference"] = state?.settingPreference;
@@ -167,6 +178,7 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["type"] = state?.type;
             resourceInputs["typeV6"] = state?.typeV6;
             resourceInputs["upnp"] = state?.upnp;
+            resourceInputs["username"] = state?.username;
             resourceInputs["vlan"] = state?.vlan;
             resourceInputs["wanDsliteRemoteHost"] = state?.wanDsliteRemoteHost;
             resourceInputs["wanDsliteRemoteHostAuto"] = state?.wanDsliteRemoteHostAuto;
@@ -184,6 +196,8 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["macOverrideEnabled"] = args?.macOverrideEnabled;
             resourceInputs["name"] = args?.name;
             resourceInputs["networkgroup"] = args?.networkgroup;
+            resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
+            resourceInputs["passwordWo"] = args?.passwordWo ? pulumi.secret(args.passwordWo) : undefined;
             resourceInputs["providerCapabilities"] = args?.providerCapabilities;
             resourceInputs["reportWanEvent"] = args?.reportWanEvent;
             resourceInputs["settingPreference"] = args?.settingPreference;
@@ -194,11 +208,14 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["type"] = args?.type;
             resourceInputs["typeV6"] = args?.typeV6;
             resourceInputs["upnp"] = args?.upnp;
+            resourceInputs["username"] = args?.username;
             resourceInputs["vlan"] = args?.vlan;
             resourceInputs["wanDsliteRemoteHost"] = args?.wanDsliteRemoteHost;
             resourceInputs["wanDsliteRemoteHostAuto"] = args?.wanDsliteRemoteHostAuto;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
+        const secretOpts = { additionalSecretOutputs: ["password", "passwordWo"] };
+        opts = pulumi.mergeOptions(opts, secretOpts);
         super(Wan.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
@@ -256,6 +273,11 @@ export interface WanState {
      */
     networkgroup?: pulumi.Input<string | undefined>;
     /**
+     * PPPoE password supplied by the ISP. Stored in state - use `password_wo` to avoid persisting the secret. Only meaningful when `type` is `pppoe`.
+     */
+    password?: pulumi.Input<string | undefined>;
+    passwordWo?: pulumi.Input<string | undefined>;
+    /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
     providerCapabilities?: pulumi.Input<inputs.WanProviderCapabilities | undefined>;
@@ -292,6 +314,10 @@ export interface WanState {
      * UPnP configuration
      */
     upnp?: pulumi.Input<inputs.WanUpnp | undefined>;
+    /**
+     * PPPoE username supplied by the ISP. Only meaningful when `type` is `pppoe`. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
+     */
+    username?: pulumi.Input<string | undefined>;
     /**
      * VLAN configuration
      */
@@ -359,6 +385,11 @@ export interface WanArgs {
      */
     networkgroup?: pulumi.Input<string | undefined>;
     /**
+     * PPPoE password supplied by the ISP. Stored in state - use `password_wo` to avoid persisting the secret. Only meaningful when `type` is `pppoe`.
+     */
+    password?: pulumi.Input<string | undefined>;
+    passwordWo?: pulumi.Input<string | undefined>;
+    /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
     providerCapabilities?: pulumi.Input<inputs.WanProviderCapabilities | undefined>;
@@ -395,6 +426,10 @@ export interface WanArgs {
      * UPnP configuration
      */
     upnp?: pulumi.Input<inputs.WanUpnp | undefined>;
+    /**
+     * PPPoE username supplied by the ISP. Only meaningful when `type` is `pppoe`. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
+     */
+    username?: pulumi.Input<string | undefined>;
     /**
      * VLAN configuration
      */
