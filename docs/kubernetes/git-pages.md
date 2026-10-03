@@ -72,8 +72,9 @@ The check fails until `docs/setup` has been published.
 
 ### My apps: the guide's API (`setup-status`)
 
-The guide's **My apps** page shows each family member which apps they have
-signed in to, and the Music page makes and keeps their music password. Both
+The guide's **My apps** page (its landing page, `/setup/`) shows each family
+member which apps they have signed in to, and the Music page makes and keeps
+their music password. Both
 call `https://setup.<root domain>/setup/api/`, served by
 [`coder/setup-status`](../../kubernetes/apps/coder/setup-status/): one Bun file,
 `resources/server.mjs`, mounted from a ConfigMap into the stock `oven/bun`
@@ -93,13 +94,21 @@ image.
   headers cannot be forged.
 - **Sources**, each failing on its own:
   - authentik: `authorize_application` events and `check_access`, using the
-    bootstrap token.
+    bootstrap token. One query per app, filtered by `context_authorized_app`
+    (the dash-less pk): authentik caps a page at 100 events.
   - Jellyfin: `GET /Users` with the admin API key. Accounts there are local.
+  - Seerr (Movie & TV requests, the Jellyfin-side instance): `GET
+    /api/v1/user/jellyfin/<id>` with its API key. It signs people in with their
+    Jellyfin login, not authentik, and makes the Seerr account on first
+    sign-in.
   - Nextcloud's database: one `SELECT` on `oc_authtoken`, which names each
     connected device.
   - Tailscale's API: the visitor's devices, using the rotating
     `third-party-tokens/tailscale/api-key`, mounted as a file.
   - Navidrome's native API.
+  - SuperSync's database (the Tasks page): one `SELECT` joining `users` (the
+    lowercased authentik email) to `sync_devices`, which says whether the
+    visitor has a sync token and which kinds of device have synced.
 - **Writes: one.** `POST /setup/api/music/password` generates a password and
   sets it on the visitor's Navidrome account. It creates the account first if
   Navidrome has never seen them. It then saves the password in the visitor's

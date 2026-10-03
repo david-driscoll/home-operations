@@ -39,9 +39,9 @@ spec:
         annotations:
           # Named, not `auto`: `auto` would also follow ${APP}-tailscale, which
           # is re-minted every 5 minutes and is read from its mounted file.
-          # ${APP} for the API keys, ${APP}-nextcloud-db for the 30-day
-          # password rotation, and the ConfigMap for server.mjs itself.
-          secret.reloader.stakater.com/reload: "setup-status,setup-status-nextcloud-db"
+          # ${APP} for the API keys, the two -db Secrets for their 30-day
+          # password rotations, and the ConfigMap for server.mjs itself.
+          secret.reloader.stakater.com/reload: "setup-status,setup-status-nextcloud-db,setup-status-supersync-db"
           configmap.reloader.stakater.com/reload: "setup-status-server"
         pod:
           securityContext:
@@ -66,6 +66,7 @@ spec:
               # call, and the token works on any authentik host.
               AUTHENTIK_URL: http://authentik-server.stargate-command.svc.cluster.local
               JELLYFIN_URL: http://jellyfin.equestria.svc.cluster.local:8096
+              SEERR_URL: http://seerr.equestria.svc.cluster.local:5055
               # Straight to the pod, not through Traefik: Navidrome logs in
               # whoever X-authentik-username names when the caller is in the
               # pod CIDR. navidrome's ciliumnetworkpolicy.yaml admits this pod.
@@ -78,6 +79,8 @@ spec:
                   name: *app
               - secretRef:
                   name: setup-status-nextcloud-db
+              - secretRef:
+                  name: setup-status-supersync-db
             probes:
               liveness:
                 enabled: true

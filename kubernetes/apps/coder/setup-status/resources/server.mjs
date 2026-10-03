@@ -1,5 +1,6 @@
-// setup-status: the API behind the family setup guide's "My apps" page
-// (https://setup.<root domain>/setup/my-apps/, from Forgejo docs/setup).
+// setup-status: the API behind the family setup guide's "My apps" page, the
+// guide's landing page (https://setup.<root domain>/setup/, from Forgejo
+// docs/setup).
 //
 // It answers one question for whoever is looking: which home apps have you
 // already signed in to (so your account exists), and is the fiddly part of
@@ -21,6 +22,10 @@
 //   - authentik (superuser token): `authorize_application` events, i.e. every
 //     SSO sign-in to an app, plus check_access for "you can't use this yet".
 //   - Jellyfin (admin API key): its accounts are local, not SSO.
+//   - Seerr (its API key): Movie & TV requests sign in with the Jellyfin login,
+//     not authentik, so Seerr itself says whether the visitor has an account.
+//   - SuperSync's database: whether the visitor has a sync token and which of
+//     their devices have synced (the Tasks page's Super Productivity).
 //   - Nextcloud's database: oc_authtoken, which names each connected device
 //     (phone app, calendar app password, DAVx5, desktop client).
 //   - Tailscale's API: the visitor's devices on the tailnet.
@@ -51,6 +56,8 @@ const AUTHENTIK_URL = env("AUTHENTIK_URL").replace(/\/$/, "");
 const AUTHENTIK_TOKEN = env("AUTHENTIK_TOKEN");
 const JELLYFIN_URL = env("JELLYFIN_URL").replace(/\/$/, "");
 const JELLYFIN_TOKEN = env("JELLYFIN_TOKEN");
+const SEERR_URL = env("SEERR_URL").replace(/\/$/, "");
+const SEERR_TOKEN = env("SEERR_TOKEN");
 // A file, not an env var: the token is re-minted every few minutes and the
 // kubelet refreshes the mounted Secret in place, with no restart.
 const TAILSCALE_API_KEY_FILE = env("TAILSCALE_API_KEY_FILE");
@@ -76,6 +83,11 @@ const AUTHENTIK_APPS = {
   games: `romm.${ROOT_DOMAIN}`,
   home: `home.${ROOT_DOMAIN}`,
   location: `dawarich.${ROOT_DOMAIN}`,
+  wiki: `outline.${ROOT_DOMAIN}`,
+  tasks: `super-productivity.${ROOT_DOMAIN}`,
+  // Not a page of its own: the Tasks page's sync password comes from here.
+  supersync: `supersync.${ROOT_DOMAIN}`,
+  "request-music": `aurral.${ROOT_DOMAIN}`,
 };
 
 // --- small helpers -----------------------------------------------------------
@@ -188,7 +200,25 @@ async function jellyfinAccount({ username, email, name }) {
   const candidates = new Set([username, email?.split("@")[0], name?.split(/\s+/)[0]].filter(Boolean).map(s => s.toLowerCase()));
   const account = users.find(u => candidates.has(String(u.Name).toLowerCase()));
   if (!account) return { account: false };
-  return { account: true, lastSignIn: account.LastLoginDate ?? account.LastActivityDate ?? null };
+  return { account: true, id: account.Id, lastSignIn: account.LastLoginDate ?? account.LastActivityDate ?? null };
+}
+
+// --- Seerr ---------------------------------------------------------------------
+//
+// Movie & TV requests. Seerr signs people in with their Jellyfin login and
+// makes their Seerr account the first time they do, so the question is whether
+// a Seerr user exists for their Jellyfin account: an exact lookup by Jellyfin
+// user id. The API key acts as Seerr's admin, so this only ever GETs.
+
+async function seerrAccount(jellyfinId) {
+  const res = await fetch(`${SEERR_URL}/api/v1/user/jellyfin/${encodeURIComponent(jellyfinId)}`, {
+    headers: { "x-api-key": SEERR_TOKEN, accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (res.status === 404) return { account: false };
+  if (!res.ok) throw new Error(`seerr answered ${res.status}`);
+  const user = await res.json();
+  return { account: true, requests: user.requestCount ?? 0 };
 }
 
 // --- Nextcloud -----------------------------------------------------------------
@@ -334,6 +364,48 @@ async function musicPassword(visitor) {
   return json({ username: account.userName, password, saved: Boolean(saved) });
 }
 
+// --- SuperSync ------------------------------------------------------------------
+//
+// Super Productivity's sync server. Its token page (behind authentik) makes a
+// `users` row, keyed by the lowercased authentik email, the first time someone
+// asks for a token; every app install that syncs gets a `sync_devices` row,
+// refreshed as it syncs. Table and column names: the server's Prisma schema
+// (packages/super-sync-server/prisma/schema.prisma upstream).
+
+let superSyncDb;
+const superSync = () =>
+  (superSyncDb ??= new SQL({
+    hostname: env("SUPERSYNC_DB_HOST"),
+    port: Number(process.env.SUPERSYNC_DB_PORT ?? 5432),
+    database: env("SUPERSYNC_DB_NAME"),
+    username: env("SUPERSYNC_DB_USER"),
+    password: env("SUPERSYNC_DB_PASSWORD"),
+    max: 2,
+    idleTimeout: 60,
+    connectionTimeout: 5,
+  }));
+
+// The first letter of a client id says what kind of install it is (the app's
+// own "Connected Devices" list reads it the same way).
+const SYNC_CLIENT_KINDS = { E: "computer", A: "android", I: "iphone", B: "browser" };
+
+/** Whether they have a sync token, and kind -> newest sync for each kind of device. */
+async function superSyncStatus(email) {
+  if (!email) return { token: false, devices: {} };
+  const rows = await superSync()`
+    SELECT d.client_id, d.last_seen_at
+    FROM users u LEFT JOIN sync_devices d ON d.user_id = u.id
+    WHERE u.email = ${email.toLowerCase()}`;
+  const devices = {};
+  for (const row of rows) {
+    if (!row.client_id) continue;
+    const kind = SYNC_CLIENT_KINDS[String(row.client_id)[0]] ?? "other";
+    const lastSeen = new Date(Number(row.last_seen_at)).toISOString();
+    if (!devices[kind] || devices[kind] < lastSeen) devices[kind] = lastSeen;
+  }
+  return { token: rows.length > 0, devices };
+}
+
 // --- Tailscale -----------------------------------------------------------------
 
 const tailnetDevices = cached(60_000, async () => {
@@ -378,13 +450,16 @@ async function me(req, visitor) {
   const { username } = visitor;
   const user = await authentikUser(username, visitor.uid);
   if (!user) return json({ error: "unknown user" }, 403);
-  const [apps, jellyfin, devices, tailnet, music] = await Promise.all([
+  const [apps, jellyfin, devices, tailnet, music, sync] = await Promise.all([
     attempt("authentik apps", () => authentikApps("all")),
     attempt("jellyfin", () => jellyfinAccount(visitor)),
     attempt("nextcloud", () => nextcloudDevices(username)),
     attempt("tailscale", () => tailscaleDevices(visitor.email)),
     attempt("navidrome", () => navidromeStatus(username)),
+    attempt("supersync", () => superSyncStatus(visitor.email)),
   ]);
+  // Seerr is looked up by Jellyfin account, so it waits for that one.
+  const seerr = jellyfin?.id ? await attempt("seerr", () => seerrAccount(jellyfin.id)) : undefined;
 
   const result = {
     user: { name: visitor.name || username, username, family: visitor.groups.includes("family") },
@@ -406,6 +481,11 @@ async function me(req, visitor) {
   );
 
   result.apps["movies-tv"] = jellyfin ? { checked: true, account: jellyfin.account, lastSignIn: jellyfin.lastSignIn ?? null } : { checked: false };
+  // Requests need the Movies & TV login first: say so rather than "not set up".
+  result.apps["request-movies"] = !jellyfin ? { checked: false } : !jellyfin.account ? { checked: true, jellyfin: false, account: false } : seerr ? { checked: true, jellyfin: true, ...seerr } : { checked: false };
+  // Tasks: the app's sync matters, not the web app's sign-in, so SuperSync's
+  // view rides along (null when it couldn't be checked).
+  if (result.apps.tasks) result.apps.tasks.sync = sync ?? null;
   if (result.apps.cloud.checked) result.apps.cloud.devices = devices ?? null;
   // Music: Navidrome's own view beats authentik's (it also sees the apps), and
   // the stored password is shown back to its owner.
@@ -441,7 +521,7 @@ Bun.serve({
     if (pathname === "/setup/api/login") {
       // Only back into the guide: never an open redirect.
       const next = searchParams.get("next") ?? "";
-      const target = /^\/setup\/[\w/-]*$/.test(next) ? next : "/setup/my-apps/";
+      const target = /^\/setup\/[\w/-]*$/.test(next) ? next : "/setup/";
       return new Response(null, { status: 302, headers: { location: target, "cache-control": "no-store" } });
     }
     if (pathname === "/setup/api/me") {
