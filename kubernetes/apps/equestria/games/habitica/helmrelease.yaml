@@ -51,6 +51,19 @@ spec:
             ports:
               - containerPort: 3000
             probes:
+              # The server only answers once mongod's replica set is up and its
+              # own boot is done, which on a cold start is longer than the
+              # liveness probe below allows. Liveness waits for this.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 3000
+                  periodSeconds: 5
+                  timeoutSeconds: 5
+                  failureThreshold: 60
               liveness:
                 enabled: true
                 custom: true
@@ -90,8 +103,47 @@ spec:
             image:
               repository: mongo
               tag: 8.3.11@sha256:d731d77bfd7afd66bd487bdf627b5bf7ce4c3602ec461d635977021db529ebbc
+            # Habitica needs a replica set (it uses transactions), which is why
+            # NODE_DB_URI above says `replicaSet=rs`. Upstream's compose starts
+            # mongod this way and has its healthcheck call rs.initiate(); with
+            # neither here the app could never connect.
+            args: ["--replSet", "rs", "--bind_ip_all", "--port", "27017"]
             ports:
               - containerPort: 27017
+            probes:
+              # Idempotent: reads the set's status, and initiates it the first
+              # time. The member is named 127.0.0.1 ON PURPOSE -- a bare
+              # rs.initiate() records the pod's hostname, which changes on
+              # every restart and would leave the set pointing at a host that
+              # no longer exists. The app shares this pod and connects with
+              # directConnection=true, so loopback is the stable address.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - mongosh
+                      - --quiet
+                      - --port
+                      - "27017"
+                      - --eval
+                      - |
+                        try { rs.status().ok } catch (e) {
+                          rs.initiate({ _id: "rs", members: [{ _id: 0, host: "127.0.0.1:27017" }] }).ok
+                        }
+                  periodSeconds: 5
+                  timeoutSeconds: 10
+                  failureThreshold: 60
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["mongosh", "--quiet", "--port", "27017", "--eval", "db.hello().isWritablePrimary || quit(1)"]
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 6
             resources:
               requests:
                 cpu: 50m
@@ -130,10 +182,10 @@ spec:
             mongo:
               - path: /data/db
                 subPath: mongo
-      tmp:
-        type: emptyDir
-        globalMounts:
-          - path: /etc/environment
+      # (An emptyDir used to be mounted at /etc/environment in every container.
+      # That path is a FILE in the habitica-server and mongo images, so runc
+      # refused to start them: "error mounting ... not a directory". Nothing
+      # here needs it writable.)
 
     route:
       internal:
