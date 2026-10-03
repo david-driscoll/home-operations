@@ -15,10 +15,15 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
-    # Shares setup.${ROOT_DOMAIN} with git-pages' `setup` route, and the
-    # forward auth needs that site's proxy provider (git-pages/definition.yaml).
-    - name: git-pages
-      namespace: coder
+    # The ExternalSecrets need ESO's stores. Deliberately NOT git-pages, even
+    # though the forward auth needs the proxy provider in
+    # git-pages/definition.yaml: that only matters on a first install, where
+    # the API answers 400 until the provider exists and then works with no
+    # redeploy. A dependsOn would instead make every update here wait behind
+    # git-pages -> forgejo, whose health checks can take most of an hour after
+    # a busy run of merges.
+    - name: external-secrets
+      namespace: kube-system
   path: ./kubernetes/apps/coder/setup-status
   prune: true
   force: false
