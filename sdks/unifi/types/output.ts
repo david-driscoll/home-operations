@@ -385,11 +385,15 @@ export interface DeviceRadioTable {
      */
     antennaId: number;
     /**
-     * Enable assisted roaming.
+     * Deprecated and no longer applied. UniFi removed 802.11k assisted roaming from the radio table; the field is absent from the controller API and from the firmware's own field definitions as of Network 10.6, so the provider can neither read nor write it. Always null.
+     *
+     * @deprecated Deprecated
      */
     assistedRoamingEnabled: boolean;
     /**
-     * Assisted roaming RSSI threshold.
+     * Deprecated and no longer applied. See `assisted_roaming_enabled`. Always null.
+     *
+     * @deprecated Deprecated
      */
     assistedRoamingRssi: number;
     /**
@@ -544,6 +548,10 @@ export interface FirewallPolicyDestination {
      */
     ips: string[];
     /**
+     * Match the clients in `client_macs` by MAC address rather than by their current IP address. Corresponds to the controller's `match_mac` flag on a `CLIENT` matching target. Defaults to `false`.
+     */
+    matchMac: boolean;
+    /**
      * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
      */
     matchOppositeIps: boolean;
@@ -556,7 +564,7 @@ export interface FirewallPolicyDestination {
      */
     matchOppositePorts: boolean;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), or `REGION` (country codes, set `regions`). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: string;
     /**
@@ -579,6 +587,10 @@ export interface FirewallPolicyDestination {
      * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
      */
     portMatchingType: string;
+    /**
+     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when `matching_target` is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
+     */
+    regions: string[];
     /**
      * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
      */
@@ -642,6 +654,10 @@ export interface FirewallPolicySource {
      */
     ips: string[];
     /**
+     * Match the clients in `client_macs` by MAC address rather than by their current IP address. Corresponds to the controller's `match_mac` flag on a `CLIENT` matching target. Defaults to `false`.
+     */
+    matchMac: boolean;
+    /**
      * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
      */
     matchOppositeIps: boolean;
@@ -654,7 +670,7 @@ export interface FirewallPolicySource {
      */
     matchOppositePorts: boolean;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), or `REGION` (country codes, set `regions`). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: string;
     /**
@@ -677,6 +693,10 @@ export interface FirewallPolicySource {
      * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
      */
     portMatchingType: string;
+    /**
+     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when `matching_target` is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
+     */
+    regions: string[];
     /**
      * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
      */
@@ -1748,6 +1768,25 @@ export interface SettingAutoSpeedtest {
     enabled: boolean;
 }
 
+export interface SettingConnectivity {
+    /**
+     * Enable Wireless Meshing for the site.
+     */
+    enabled: boolean;
+    /**
+     * Enable Multi-Link Operation (MLO) for the mesh backhaul. Requires WiFi 7 hardware.
+     */
+    mloMeshEnabled: boolean;
+    /**
+     * Host the site uses to verify connectivity when `uplink_type` is `internet`.
+     */
+    uplinkHost: string;
+    /**
+     * How the site reaches the controller: `gateway` or `internet`.
+     */
+    uplinkType: string;
+}
+
 export interface SettingCountry {
     /**
      * Regulatory country code (ISO 3166-1 numeric).
@@ -1794,6 +1833,29 @@ export interface SettingDpi {
      * Whether device fingerprinting is enabled.
      */
     fingerprintingEnabled: boolean;
+}
+
+export interface SettingGlobalSwitch {
+    /**
+     * Network IDs with Client Device Isolation enabled (Settings > Networks > "Device Isolation (ACL)"), which blocks all communication between devices in the same network. This is a switch ACL: it covers same-network traffic across access points, which `unifi_wlan.l2_isolation` (one access point) and `unifi_network.network_isolation` (between networks) do not. The controller only offers it for networks routed by a UniFi gateway or L3 switch, and some switch models do not support ACLs at all - it rejects an unsupported network rather than silently ignoring it.
+     */
+    aclDeviceIsolations: string[];
+    /**
+     * Enable Rogue DHCP Server Detection (DHCP snooping).
+     */
+    dhcpSnoop: boolean;
+    /**
+     * Enable 802.1X port control.
+     */
+    dot1xPortctrlEnabled: boolean;
+    /**
+     * Enable jumbo frames on all switches.
+     */
+    jumboframeEnabled: boolean;
+    /**
+     * Spanning Tree Protocol mode for all switches: `stp`, `rstp`, or `disabled`.
+     */
+    stpVersion: string;
 }
 
 export interface SettingIgmpSnooping {

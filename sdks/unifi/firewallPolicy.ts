@@ -75,7 +75,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly index: pulumi.Output<number>;
     /**
-     * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4`.
+     * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a dual-stack policy does not narrow it to IPv4 (#544). The controller requires this field, so it is always sent.
      */
     declare public readonly ipVersion: pulumi.Output<string>;
     /**
@@ -221,7 +221,7 @@ export interface FirewallPolicyState {
      */
     index?: pulumi.Input<number | undefined>;
     /**
-     * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4`.
+     * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a dual-stack policy does not narrow it to IPv4 (#544). The controller requires this field, so it is always sent.
      */
     ipVersion?: pulumi.Input<string | undefined>;
     /**
@@ -288,7 +288,7 @@ export interface FirewallPolicyArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4`.
+     * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a dual-stack policy does not narrow it to IPv4 (#544). The controller requires this field, so it is always sent.
      */
     ipVersion?: pulumi.Input<string | undefined>;
     /**

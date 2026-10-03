@@ -46,7 +46,7 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     readonly fecMode: pulumi.Output<string | undefined>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. `customize` requires a native network that carries a VLAN id: the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
      */
     readonly forward: pulumi.Output<string>;
     /**
@@ -224,7 +224,7 @@ export interface PortProfileState {
      */
     fecMode?: pulumi.Input<string | undefined>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. `customize` requires a native network that carries a VLAN id: the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
      */
     forward?: pulumi.Input<string | undefined>;
     /**
@@ -394,7 +394,7 @@ export interface PortProfileArgs {
      */
     fecMode?: pulumi.Input<string | undefined>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. `customize` requires a native network that carries a VLAN id: the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
      */
     forward?: pulumi.Input<string | undefined>;
     /**
