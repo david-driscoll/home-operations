@@ -11,8 +11,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 1.4.0
-    digest: sha256:a927a88323d3e9cf802f8cd48186d513f29a3f1ce7521b1dcd8fdbfbce2dca89
+    tag: 1.4.1
+    digest: sha256:d2397747eb0c1c7449ab85f1b720dc62079fe8a60b4f7b8b64bdb7213daaf48f
   url: oci://ghcr.io/caas-team/charts/go-kube-downscaler
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
