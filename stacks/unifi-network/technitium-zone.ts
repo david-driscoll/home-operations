@@ -32,8 +32,21 @@ export function configureTechnitiumZones(globals: GlobalResources) {
       // silent. The requests arrive through each cluster's tailscale egress
       // proxy, so they source from the tailnet CGNAT range rather than a fixed
       // address; the TSIG key below is the actual authentication.
-      allowTransfers: ["100.64.0.0/10"],
-      zoneTransferTsigKeyNames: ["external-dns"],
+      //
+      // NONE OF THIS APPLIES UNTIL THE ZONE OVERRIDES ITS CATALOG. The zone is
+      // a member of the cluster catalog, and a member inherits the catalog's
+      // transfer policy (the cluster nodes' addresses, the catalog's TSIG key)
+      // unless `overrideCatalogZoneTransfer` is set on it. The provider has no
+      // field for that flag, so it is set by hand in Technitium (Zone Options
+      // -> Zone Transfer). Without it these two lists are stored and ignored,
+      // which is what refused external-dns until 2026-10-03 -- silently under
+      // external-dns 0.22, fatally from 0.23.
+      //
+      // With the override ON, this list is the WHOLE policy, so it must also
+      // admit the cluster's own secondaries: they sign with the catalog key,
+      // and equestria's node is on the LAN, outside the tailnet range.
+      allowTransfers: ["100.64.0.0/10", "10.10.206.202"],
+      zoneTransferTsigKeyNames: ["external-dns", `cluster-catalog.dns.${root}`],
     },
     { ...cro, protect: true, retainOnDelete: true },
   );
