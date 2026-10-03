@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app musicgrabber
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # Downloads land in the `music` subPath of truenas-media -- the library
+    # lidarr writes into and navidrome serves.
+    - name: truenas-volumes
+      namespace: equestria
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/downloads/musicgrabber
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: MusicGrabber is SQLite-only (/data on the volsync
+    # PVC below).
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # Browsers take the authentik chain, matching the internal HTTPRoute.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      # Job DB, settings, persistent library index and the .trash bin.
+      VOLSYNC_CAPACITY: 5Gi

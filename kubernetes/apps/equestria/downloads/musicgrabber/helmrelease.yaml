@@ -1,0 +1,154 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app musicgrabber
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # SQLite on a RWO volume: never two pods at once.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # Docker Hub is the only published registry (upstream lives on GitLab).
+              repository: docker.io/g33kphr33k/musicgrabber
+              tag: 4.3.0@sha256:8145082baab0e2a2e3ad0a672bee0ef1ed91d84983b701344ce0a20ba476729f
+              pullPolicy: IfNotPresent
+            # https://gitlab.com/g33kphr33k/musicgrabber/-/blob/main/docker-compose.yml
+            # Everything else is configured in the Settings tab and stored in
+            # the SQLite DB; an env var here would lock that setting in the UI.
+            env:
+              TZ: ${TIMEZONE}
+              LISTEN_PORT: &port 8080
+              MUSIC_DIR: /music
+              DB_PATH: /data/music_grabber.db
+              # No PUID/PGID: the pod already runs as 568, which takes the
+              # entrypoint's "root" branch and execs uvicorn as-is -- no gosu.
+              #
+              # The boot-time `yt-dlp -U` overwrites /usr/local/bin/yt-dlp,
+              # which 568 cannot write. Off rather than failing every start;
+              # yt-dlp moves forward with the image tag (Renovate).
+              YTDLP_AUTO_UPDATE: "false"
+              # Chrome/Playwright (Spotify, Amazon, Monochrome fallbacks) want a
+              # writable home; uid 568 has no passwd entry, so HOME would be /.
+              HOME: /tmp
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 3Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        # Same groups lidarr runs with, so files land with ownership it and
+        # navidrome can read.
+        supplementalGroups: [0, 1, 44, 109, 303, 568, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /data
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+      # Upstream's `shm_size: 2gb`: Kubernetes gives 64Mi of /dev/shm and the
+      # browser fallbacks crash past it. 1Gi, not 2Gi -- `medium: Memory`
+      # counts against the container's 3Gi limit.
+      dev-shm:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Gi
+        globalMounts:
+          - path: /dev/shm
+      truenas-media:
+        existingClaim: truenas-media
+        globalMounts:
+          # Singles/, Albums/ and Playlists/ are created under here.
+          - path: /music
+            subPath: music
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user
