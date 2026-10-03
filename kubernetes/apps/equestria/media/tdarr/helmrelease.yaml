@@ -24,7 +24,7 @@ spec:
           app:
             image:
               repository: ghcr.io/haveagitgat/tdarr
-              tag: 2.91.01@sha256:1b21e7627e51512222988e8e9739ee6a4d2c61593b614a88caab91d314a26a4f
+              tag: 2.93.01@sha256:7a992a0f1e0e6b16a7514b498ee4072d238ede079f4f472d6c0130b438ed63ac
             env:
               TZ: ${TIMEZONE}
               PUID: 568
@@ -76,7 +76,7 @@ spec:
           app:
             image: &nodeImage
               repository: ghcr.io/haveagitgat/tdarr_node
-              tag: 2.91.01@sha256:bd2163c70c2da97e27c60689014d088000d4e3f95bbbd1d23156d1f88991514b
+              tag: 2.93.01@sha256:848a09b3d30a318a60fb1a87feeaa25b41b478dda62ad610595842bf235a96a9
             env:
               TZ: ${TIMEZONE}
               serverURL: http://tdarr-server.${CLUSTER_CNAME}.svc.cluster.local:8266
