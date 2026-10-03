@@ -4194,9 +4194,9 @@
     "semantic_hash": "7df37bd75559e57ee2145cc1ac9236b2"
   },
   "kubernetes/apps/coder/kustomization.yaml": {
-    "mtime": 1790690064.2559822,
-    "seen": 1790692277.9182951,
-    "ast_hash": "399db04b31ca98d575b795dc42748571",
+    "mtime": 1790998894.9016118,
+    "seen": 1791002762.182745,
+    "ast_hash": "2c6905c8e22e63bb73cce26e4cda8d43",
     "semantic_hash": ""
   },
   "kubernetes/apps/coder/renovate-operator/definition.yaml": {
@@ -4266,8 +4266,8 @@
     "semantic_hash": "f6bbe096ef738ad92b6589c4b3c89c8c"
   },
   "kubernetes/apps/coder/renovate/renovatejob.yaml": {
-    "mtime": 1790998861.1100364,
-    "seen": 1790998893.596509,
+    "mtime": 1790998896.4833403,
+    "seen": 1791002762.182751,
     "ast_hash": "d2022dafc1d85fb7885855f444589ebb",
     "semantic_hash": ""
   },
@@ -4668,9 +4668,9 @@
     "semantic_hash": "4808c00b8b2d3a02fc563298859a96c0"
   },
   "kubernetes/apps/equestria/downloads/kustomization.yaml": {
-    "mtime": 1790262308.1660066,
-    "seen": 1790387946.651171,
-    "ast_hash": "2d02af2c7ef2fc1438c26478f7049aaf",
+    "mtime": 1791002570.224781,
+    "seen": 1791002762.182796,
+    "ast_hash": "10cd8ff1395a8b429fced466abd445c0",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/prowlarr/definition.yaml": {
@@ -5052,9 +5052,9 @@
     "semantic_hash": "be5e01e89d64b93acea3c69411dc0cf7"
   },
   "kubernetes/apps/equestria/home/kustomization.yaml": {
-    "mtime": 1790692268.0440605,
-    "seen": 1790692277.918379,
-    "ast_hash": "cb15d3ec75243c9191081261829417b6",
+    "mtime": 1791002559.1901393,
+    "seen": 1791002762.182847,
+    "ast_hash": "56cbc193a06116a79d9a85f8eb85a8e3",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/meilisearch/externalsecret.yaml": {
@@ -5700,9 +5700,9 @@
     "semantic_hash": "0ed430cc3e21a38667d8384fd5d4a9b8"
   },
   "kubernetes/apps/equestria/media/pinepods/resources/values.yaml": {
-    "mtime": 1790690064.268139,
-    "seen": 1790692277.918474,
-    "ast_hash": "37546773350d1d2cf66a74e0e0126275",
+    "mtime": 1790998894.90561,
+    "seen": 1791002762.182945,
+    "ast_hash": "0b72fdb9b502c7b94e88677c0472047a",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/plex/config.sops.yaml": {
@@ -9666,8 +9666,8 @@
     "semantic_hash": "9a8248884c248eec44a2cb0cfdf865f1"
   },
   ".vscode/settings.json": {
-    "mtime": 1790991485.1412542,
-    "seen": 1790998893.595266,
+    "mtime": 1790998896.4815996,
+    "seen": 1791002762.1813052,
     "ast_hash": "98d7de7e69b81819256548dec70f82cc",
     "semantic_hash": ""
   },
@@ -20646,9 +20646,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/navidrome/ciliumnetworkpolicy.yaml": {
-    "mtime": 1790121984.9356143,
-    "seen": 1790387946.651293,
-    "ast_hash": "5b20a689c7732ee14c8d9f8135dc3a15",
+    "mtime": 1790998894.905084,
+    "seen": 1791002762.1829371,
+    "ast_hash": "90d38a3de661d89ef34c72d5ebe1d812",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/navidrome/definition.yaml": {
@@ -20658,9 +20658,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/navidrome/helmrelease.yaml": {
-    "mtime": 1790698359.6047866,
-    "seen": 1790820334.6321568,
-    "ast_hash": "c6731a7ef155daabe95f974f7049cbf3",
+    "mtime": 1790998894.905358,
+    "seen": 1791002762.182938,
+    "ast_hash": "11852a4d1f65b3beec974f0ddabefecc",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/navidrome/ks.yaml": {
@@ -20880,9 +20880,9 @@
     "semantic_hash": ""
   },
   "docs/kubernetes/git-pages.md": {
-    "mtime": 1790690064.2422771,
-    "seen": 1790692277.9181938,
-    "ast_hash": "21124607a375cc462f7b8ea6dac7467f",
+    "mtime": 1790998894.8561497,
+    "seen": 1791002762.1826382,
+    "ast_hash": "2abd7a1c9df0c2d4e5132f49e6057dab",
     "semantic_hash": ""
   },
   "docs/kubernetes/tdarr.md": {
@@ -20970,9 +20970,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/coder/git-pages/definition.yaml": {
-    "mtime": 1790690064.2545633,
-    "seen": 1790692277.918286,
-    "ast_hash": "353463b20b772ef9933a8a7b259868f8",
+    "mtime": 1790998894.901479,
+    "seen": 1791002762.182734,
+    "ast_hash": "4cb9649e78be7157283307085ea8e138",
     "semantic_hash": ""
   },
   "kubernetes/apps/coder/git-pages/helmrelease.yaml": {
@@ -21024,9 +21024,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/nextcloud/helmrelease.yaml": {
-    "mtime": 1790690064.2599251,
-    "seen": 1790692277.918388,
-    "ast_hash": "3c520741a080795032afacdf0e3c463f",
+    "mtime": 1790998894.904576,
+    "seen": 1791002762.1828558,
+    "ast_hash": "e0bf194ba919d768dae494a48910e522",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/nextcloud/ks.yaml": {
@@ -21042,9 +21042,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/nextcloud/middleware.yaml": {
-    "mtime": 1790690064.260219,
-    "seen": 1790692277.918389,
-    "ast_hash": "14411813c3637ee1d96d5b0813559824",
+    "mtime": 1790998894.9048362,
+    "seen": 1791002762.182858,
+    "ast_hash": "d2805fc5a96364042676a866b08c010f",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/nextcloud/prometheusrule.yaml": {
@@ -21507,6 +21507,72 @@
     "mtime": 1790990917.6616683,
     "seen": 1790998893.596519,
     "ast_hash": "be5eee2d828f3677fcf04d1758e41a92",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/resources/server.mjs": {
+    "mtime": 1790998894.9024365,
+    "seen": 1791002762.1813812,
+    "ast_hash": "fc9000d339b1c7ed2db2f81d02f6b5b7",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/ciliumnetworkpolicy.yaml": {
+    "mtime": 1790998894.9018927,
+    "seen": 1791002762.182752,
+    "ast_hash": "08860dc1427b6493ce6a9b7dcb4216fc",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/externalsecret.yaml": {
+    "mtime": 1790998894.9019806,
+    "seen": 1791002762.182753,
+    "ast_hash": "cf639a4635087d9096d185a988596543",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/helmrelease.yaml": {
+    "mtime": 1790998894.9020662,
+    "seen": 1791002762.182754,
+    "ast_hash": "b893560b8d9061e9d440b24fc37e46c0",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/ks.yaml": {
+    "mtime": 1790998894.902141,
+    "seen": 1791002762.182754,
+    "ast_hash": "269653209866c25c4eb4adb2c20ef870",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/kustomization.yaml": {
+    "mtime": 1790998894.9022229,
+    "seen": 1791002762.182755,
+    "ast_hash": "560a583b4b7f85b687f00dcab496ed54",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/coder/setup-status/middleware.yaml": {
+    "mtime": 1790998894.9023037,
+    "seen": 1791002762.182755,
+    "ast_hash": "e42181fe79518f6d376e5269a84971d3",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/musicgrabber/definition.yaml": {
+    "mtime": 1790998894.903799,
+    "seen": 1791002762.182796,
+    "ast_hash": "3d7b8ecd456aff5185d0bff14de55cd8",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/musicgrabber/helmrelease.yaml": {
+    "mtime": 1790998894.9039116,
+    "seen": 1791002762.182797,
+    "ast_hash": "367e34f26f1d3bc48dcb4e498725f221",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/musicgrabber/ks.yaml": {
+    "mtime": 1790998894.9039912,
+    "seen": 1791002762.182797,
+    "ast_hash": "f6146f86aba50b65734dbf78a75908c0",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/musicgrabber/kustomization.yaml": {
+    "mtime": 1790998894.9040701,
+    "seen": 1791002762.1827981,
+    "ast_hash": "e9152ca8e8e1280d90c697b5078b8858",
     "semantic_hash": ""
   }
 }
