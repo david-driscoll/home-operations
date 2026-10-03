@@ -17,6 +17,11 @@ spec:
   authentik:
     oauth2:
       clientType: confidential
+      # Fixed rather than generated: OAuthClient.id in Windmill's instance
+      # config is a plain string (only `secret` takes a secretKeyRef), so the
+      # operator's instanceSpec in ./helmrelease.yaml has to name it literally.
+      # A client id is not a secret -- it travels in every authorize redirect.
+      clientId: windmill
       allowedRedirectUris:
         - url: "https://${APP}.${ROOT_DOMAIN}/user/login_callback/authentik"
         - url: "https://${APP}.${TAILSCALE_DOMAIN}/user/login_callback/authentik"
