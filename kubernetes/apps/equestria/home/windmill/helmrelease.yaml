@@ -201,7 +201,11 @@ spec:
             memory: 512Mi
         instanceSpec:
           global_settings:
-            automate_username_creation: true
+            # NOT automate_username_creation, although the DB holds it: it is in
+            # HIDDEN_SETTINGS (server-managed), so the operator skips it -- with
+            # a WARN on every 5-minute reconcile -- and, for the same reason,
+            # never treats its absence here as a delete.
+            #
             # The three empty objects are what the DB holds today. Kept rather
             # than dropped so the first reconcile deletes nothing.
             critical_alerts_on_db_oversize: {}
