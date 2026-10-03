@@ -92,6 +92,17 @@ spec:
         serviceAccount:
           identifier: *app
         pod:
+          # app-template does not mount a ServiceAccount token unless asked, so
+          # until 2026-10-03 the `agentboard` SA and ./rbac.yaml's `agent-debug`
+          # binding existed but were unreachable from inside the pod: no
+          # /var/run/secrets/kubernetes.io/serviceaccount, and kubectl fell back
+          # to localhost:8080. Agents could only reach the cluster through the
+          # toolport kubernetes MCP -- which is itself a workload that restarts
+          # during the rollouts an agent is asked to watch. With the token
+          # mounted, kubectl's in-cluster config works as `agents:agentboard`,
+          # under the same role and the same two ValidatingAdmissionPolicies
+          # (../agent-debug-rbac) as the MCP server's SA.
+          automountServiceAccountToken: true
           securityContext:
             # mise, tmux and a `git`-driven working checkout all expect to
             # write into $HOME freely; running as root here is the same
