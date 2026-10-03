@@ -157,23 +157,19 @@ async function saveAttributes(user, values) {
   if (!res.ok) throw new Error(`saving attributes answered ${res.status}`);
 }
 
-const EVENT_PAGES = 10;
-
-/** application pk (no dashes) -> newest sign-in, from authorize_application events. */
-async function lastSignIns(username) {
-  const latest = {};
-  const wanted = Object.keys(AUTHENTIK_APPS).length;
-  // Newest first, page by page: every sign-in is an event, so a regular user's
-  // first page can be all one app. Stops once every app has been seen.
-  for (let page = 1; page && page <= EVENT_PAGES && Object.keys(latest).length < wanted; ) {
-    const { results, pagination } = await authentik(`/events/events/?action=authorize_application&username=${encodeURIComponent(username)}&ordering=-created&page_size=500&page=${page}`);
-    for (const event of results) {
-      const pk = String(event.context?.authorized_application?.pk ?? "").replaceAll("-", "");
-      if (pk && !latest[pk]) latest[pk] = event.created;
-    }
-    page = pagination?.next || 0;
-  }
-  return latest;
+/**
+ * The visitor's newest sign-in to `app`, from authorize_application events,
+ * or null. One query per app, filtered to it: walking the visitor's whole
+ * history newest-first does not work, because authentik caps a page at 100
+ * events and someone who uses many apps (David: 2,000+ events across ~25 apps)
+ * can go weeks between sign-ins to any one of them.
+ */
+async function lastSignIn(username, app) {
+  // Events keep the application pk WITHOUT dashes, and context_authorized_app
+  // only matches that form (the dashed one finds nothing).
+  const pk = String(app.pk).replaceAll("-", "");
+  const { results } = await authentik(`/events/events/?action=authorize_application&username=${encodeURIComponent(username)}&context_authorized_app=${pk}&ordering=-created&page_size=1`);
+  return results[0]?.created ?? null;
 }
 
 /** Whether policy lets the user into `app` (e.g. not in the family group yet). */
@@ -382,9 +378,8 @@ async function me(req, visitor) {
   const { username } = visitor;
   const user = await authentikUser(username, visitor.uid);
   if (!user) return json({ error: "unknown user" }, 403);
-  const [apps, signIns, jellyfin, devices, tailnet, music] = await Promise.all([
+  const [apps, jellyfin, devices, tailnet, music] = await Promise.all([
     attempt("authentik apps", () => authentikApps("all")),
-    attempt("authentik events", () => lastSignIns(username)),
     attempt("jellyfin", () => jellyfinAccount(visitor)),
     attempt("nextcloud", () => nextcloudDevices(username)),
     attempt("tailscale", () => tailscaleDevices(visitor.email)),
@@ -399,14 +394,14 @@ async function me(req, visitor) {
   await Promise.all(
     Object.keys(AUTHENTIK_APPS).map(async slug => {
       const app = apps?.[slug];
-      if (!app || !signIns) {
+      const signedIn = app ? await attempt("authentik events", () => lastSignIn(username, app)) : undefined;
+      if (signedIn === undefined) {
         result.apps[slug] = { checked: false };
         return;
       }
-      const lastSignIn = signIns[String(app.pk).replaceAll("-", "")] ?? null;
       // Only worth asking when they haven't got in: it explains why.
-      const access = lastSignIn ? true : await attempt("authentik access", () => canAccess(`${app.slug}:${user.pk}`, app.slug, user.pk));
-      result.apps[slug] = { checked: true, lastSignIn, access: access ?? null };
+      const access = signedIn ? true : await attempt("authentik access", () => canAccess(`${app.slug}:${user.pk}`, app.slug, user.pk));
+      result.apps[slug] = { checked: true, lastSignIn: signedIn, access: access ?? null };
     }),
   );
 
