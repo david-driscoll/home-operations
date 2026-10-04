@@ -61,6 +61,16 @@ spec:
               OIDC_PROVIDER_SLUG: "authentik"
               OIDC_SCOPE: "openid profile email"
               OIDC_AUTO_PROVISION: "true"
+              # tududi only creates (or links) an account when the provider
+              # reports `email_verified: true`, and authentik's built-in `email`
+              # mapping hardcodes it to False -- so on an empty database every
+              # first login failed with "Your identity provider has not verified
+              # this email address". This is upstream's documented opt-out for a
+              # provider whose registrations you control (docs/10-oidc-sso.md),
+              # which authentik here is. RomM has no such flag and gets the
+              # claim from the `groups` mapping instead
+              # (components/authentik/property-mappings.ts).
+              OIDC_TRUST_UNVERIFIED_EMAIL: "true"
               CALDAV_ALLOW_PRIVATE_HOSTS: "true"
               # BASE_URL constructs the OIDC redirect URI: ${BASE_URL}/api/oidc/callback/authentik
               BASE_URL: "https://${APP}.${ROOT_DOMAIN}"
@@ -69,10 +79,20 @@ spec:
               FF_ENABLE_CALDAV: "true"
               # Database: PostgreSQL (components/postgres). DB_DIALECT and the
               # connection parts come from the ExternalSecret. Plaintext to
-              # postgres-rw like every other app here; a single replica with a
-              # handful of users needs nowhere near the default pool of 10.
+              # postgres-rw like every other app here.
               DB_SSL: "false"
-              DB_POOL_MAX: "5"
+              # Sized for the scheduler, not for users. On PostgreSQL every cron
+              # job holds one pooled connection for its advisory lock for as long
+              # as it runs (services/jobLock.js) and takes a SECOND one for its
+              # own queries; the telegram-poller leader holds one more for the
+              # life of the process. Five jobs share every quarter-hour tick and
+              # up to ten share midnight, so a small pool fills with lock holders
+              # that are each waiting for a connection: at 5 the first :00 tick
+              # logged SequelizeConnectionAcquireTimeoutError after the 60s
+              # acquire timeout, with requests queued behind it. 11 held at
+              # worst, plus room for the job bodies and the API. The pool's
+              # minimum is 0, so this is a ceiling, not a standing cost.
+              DB_POOL_MAX: "20"
             resources:
               requests:
                 cpu: 50m
