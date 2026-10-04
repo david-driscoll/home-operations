@@ -314,7 +314,7 @@ function davProfileXml(username) {
   <key>PayloadVersion</key><integer>1</integer>
   <key>PayloadIdentifier</key><string>${xml(scope)}</string>
   <key>PayloadUUID</key><string>${profileUuid(username, "profile")}</string>
-  <key>PayloadDisplayName</key><string>Home calendar and contacts</string>
+  <key>PayloadDisplayName</key><string>Driscoll Cloud</string>
   <key>PayloadDescription</key><string>Adds your home calendar and contacts to this device. It will ask for your app password from the setup guide.</string>
   <key>PayloadOrganization</key><string>Home setup guide</string>
   <key>PayloadContent</key>
