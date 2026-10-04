@@ -67,8 +67,12 @@ spec:
               # CalDAV — clients connect to https://${APP}.${ROOT_DOMAIN}/caldav/
               CALDAV_ENABLED: "true"
               FF_ENABLE_CALDAV: "true"
-              # Database stored at /app/backend/db/production.sqlite3
-              DB_FILE: "db/production.sqlite3"
+              # Database: PostgreSQL (components/postgres). DB_DIALECT and the
+              # connection parts come from the ExternalSecret. Plaintext to
+              # postgres-rw like every other app here; a single replica with a
+              # handful of users needs nowhere near the default pool of 10.
+              DB_SSL: "false"
+              DB_POOL_MAX: "5"
             resources:
               requests:
                 cpu: 50m
@@ -111,10 +115,18 @@ spec:
         advancedMounts:
           *app :
             *app :
-              - path: /app/backend/db
-                subPath: db
-              - path: /app/backend/uploads
+              # The image sets TUDUDI_UPLOAD_PATH=/app/uploads and
+              # TUDUDI_BACKUP_PATH=/app/backups. The mount used to sit at
+              # /app/backend/uploads, which nothing wrote to, so attachments
+              # landed in the container layer and died with the pod.
+              #
+              # The `db` subPath is no longer mounted: the retired SQLite file
+              # (and start.sh's own db-backup-*.sqlite3 copies) stay on the PVC
+              # as the way back, until someone deletes them.
+              - path: /app/uploads
                 subPath: uploads
+              - path: /app/backups
+                subPath: backups
 
     service:
       *app :
