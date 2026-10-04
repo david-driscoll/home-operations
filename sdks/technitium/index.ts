@@ -15,6 +15,11 @@ export type AllowedZones = import("./allowedZones").AllowedZones;
 export const AllowedZones: typeof import("./allowedZones").AllowedZones = null as any;
 utilities.lazyLoad(exports, ["AllowedZones"], () => require("./allowedZones"));
 
+export { ApiTokenArgs, ApiTokenState } from "./apiToken";
+export type ApiToken = import("./apiToken").ApiToken;
+export const ApiToken: typeof import("./apiToken").ApiToken = null as any;
+utilities.lazyLoad(exports, ["ApiToken"], () => require("./apiToken"));
+
 export { BlockedZoneArgs, BlockedZoneState } from "./blockedZone";
 export type BlockedZone = import("./blockedZone").BlockedZone;
 export const BlockedZone: typeof import("./blockedZone").BlockedZone = null as any;
@@ -29,6 +34,26 @@ export { CatalogMembershipArgs, CatalogMembershipState } from "./catalogMembersh
 export type CatalogMembership = import("./catalogMembership").CatalogMembership;
 export const CatalogMembership: typeof import("./catalogMembership").CatalogMembership = null as any;
 utilities.lazyLoad(exports, ["CatalogMembership"], () => require("./catalogMembership"));
+
+export { ClusterArgs, ClusterState } from "./cluster";
+export type Cluster = import("./cluster").Cluster;
+export const Cluster: typeof import("./cluster").Cluster = null as any;
+utilities.lazyLoad(exports, ["Cluster"], () => require("./cluster"));
+
+export { ClusterSecondaryArgs, ClusterSecondaryState } from "./clusterSecondary";
+export type ClusterSecondary = import("./clusterSecondary").ClusterSecondary;
+export const ClusterSecondary: typeof import("./clusterSecondary").ClusterSecondary = null as any;
+utilities.lazyLoad(exports, ["ClusterSecondary"], () => require("./clusterSecondary"));
+
+export { DhcpReservedLeaseArgs, DhcpReservedLeaseState } from "./dhcpReservedLease";
+export type DhcpReservedLease = import("./dhcpReservedLease").DhcpReservedLease;
+export const DhcpReservedLease: typeof import("./dhcpReservedLease").DhcpReservedLease = null as any;
+utilities.lazyLoad(exports, ["DhcpReservedLease"], () => require("./dhcpReservedLease"));
+
+export { DhcpScopeArgs, DhcpScopeState } from "./dhcpScope";
+export type DhcpScope = import("./dhcpScope").DhcpScope;
+export const DhcpScope: typeof import("./dhcpScope").DhcpScope = null as any;
+utilities.lazyLoad(exports, ["DhcpScope"], () => require("./dhcpScope"));
 
 export { GetAllowedZoneArgs, GetAllowedZoneResult, GetAllowedZoneOutputArgs } from "./getAllowedZone";
 export const getAllowedZone: typeof import("./getAllowedZone").getAllowedZone = null as any;
@@ -49,6 +74,21 @@ export { GetBlockedZonesResult } from "./getBlockedZones";
 export const getBlockedZones: typeof import("./getBlockedZones").getBlockedZones = null as any;
 export const getBlockedZonesOutput: typeof import("./getBlockedZones").getBlockedZonesOutput = null as any;
 utilities.lazyLoad(exports, ["getBlockedZones","getBlockedZonesOutput"], () => require("./getBlockedZones"));
+
+export { GetDhcpLeasesArgs, GetDhcpLeasesResult, GetDhcpLeasesOutputArgs } from "./getDhcpLeases";
+export const getDhcpLeases: typeof import("./getDhcpLeases").getDhcpLeases = null as any;
+export const getDhcpLeasesOutput: typeof import("./getDhcpLeases").getDhcpLeasesOutput = null as any;
+utilities.lazyLoad(exports, ["getDhcpLeases","getDhcpLeasesOutput"], () => require("./getDhcpLeases"));
+
+export { GetDhcpScopeArgs, GetDhcpScopeResult, GetDhcpScopeOutputArgs } from "./getDhcpScope";
+export const getDhcpScope: typeof import("./getDhcpScope").getDhcpScope = null as any;
+export const getDhcpScopeOutput: typeof import("./getDhcpScope").getDhcpScopeOutput = null as any;
+utilities.lazyLoad(exports, ["getDhcpScope","getDhcpScopeOutput"], () => require("./getDhcpScope"));
+
+export { GetDhcpScopesResult } from "./getDhcpScopes";
+export const getDhcpScopes: typeof import("./getDhcpScopes").getDhcpScopes = null as any;
+export const getDhcpScopesOutput: typeof import("./getDhcpScopes").getDhcpScopesOutput = null as any;
+utilities.lazyLoad(exports, ["getDhcpScopes","getDhcpScopesOutput"], () => require("./getDhcpScopes"));
 
 export { GetRecordArgs, GetRecordResult, GetRecordOutputArgs } from "./getRecord";
 export const getRecord: typeof import("./getRecord").getRecord = null as any;
@@ -83,10 +123,20 @@ export type ServerSettings = import("./serverSettings").ServerSettings;
 export const ServerSettings: typeof import("./serverSettings").ServerSettings = null as any;
 utilities.lazyLoad(exports, ["ServerSettings"], () => require("./serverSettings"));
 
+export { SsoArgs, SsoState } from "./sso";
+export type Sso = import("./sso").Sso;
+export const Sso: typeof import("./sso").Sso = null as any;
+utilities.lazyLoad(exports, ["Sso"], () => require("./sso"));
+
 export { TsigKeyArgs, TsigKeyState } from "./tsigKey";
 export type TsigKey = import("./tsigKey").TsigKey;
 export const TsigKey: typeof import("./tsigKey").TsigKey = null as any;
 utilities.lazyLoad(exports, ["TsigKey"], () => require("./tsigKey"));
+
+export { UserArgs, UserState } from "./user";
+export type User = import("./user").User;
+export const User: typeof import("./user").User = null as any;
+utilities.lazyLoad(exports, ["User"], () => require("./user"));
 
 export { ZoneArgs, ZoneState } from "./zone";
 export type Zone = import("./zone").Zone;
@@ -111,18 +161,32 @@ const _module = {
                 return new AllowedZone(name, <any>undefined, { urn })
             case "technitium:index/allowedZones:AllowedZones":
                 return new AllowedZones(name, <any>undefined, { urn })
+            case "technitium:index/apiToken:ApiToken":
+                return new ApiToken(name, <any>undefined, { urn })
             case "technitium:index/blockedZone:BlockedZone":
                 return new BlockedZone(name, <any>undefined, { urn })
             case "technitium:index/blockedZones:BlockedZones":
                 return new BlockedZones(name, <any>undefined, { urn })
             case "technitium:index/catalogMembership:CatalogMembership":
                 return new CatalogMembership(name, <any>undefined, { urn })
+            case "technitium:index/cluster:Cluster":
+                return new Cluster(name, <any>undefined, { urn })
+            case "technitium:index/clusterSecondary:ClusterSecondary":
+                return new ClusterSecondary(name, <any>undefined, { urn })
+            case "technitium:index/dhcpReservedLease:DhcpReservedLease":
+                return new DhcpReservedLease(name, <any>undefined, { urn })
+            case "technitium:index/dhcpScope:DhcpScope":
+                return new DhcpScope(name, <any>undefined, { urn })
             case "technitium:index/record:Record":
                 return new Record(name, <any>undefined, { urn })
             case "technitium:index/serverSettings:ServerSettings":
                 return new ServerSettings(name, <any>undefined, { urn })
+            case "technitium:index/sso:Sso":
+                return new Sso(name, <any>undefined, { urn })
             case "technitium:index/tsigKey:TsigKey":
                 return new TsigKey(name, <any>undefined, { urn })
+            case "technitium:index/user:User":
+                return new User(name, <any>undefined, { urn })
             case "technitium:index/zone:Zone":
                 return new Zone(name, <any>undefined, { urn })
             default:
@@ -132,12 +196,19 @@ const _module = {
 };
 pulumi.runtime.registerResourceModule("technitium", "index/allowedZone", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/allowedZones", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/apiToken", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/blockedZone", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/blockedZones", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/catalogMembership", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/cluster", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/clusterSecondary", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/dhcpReservedLease", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/dhcpScope", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/record", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/serverSettings", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/sso", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/tsigKey", _module)
+pulumi.runtime.registerResourceModule("technitium", "index/user", _module)
 pulumi.runtime.registerResourceModule("technitium", "index/zone", _module)
 pulumi.runtime.registerResourcePackage("technitium", {
     version: utilities.getVersion(),

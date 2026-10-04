@@ -85,11 +85,11 @@ export class ServerSettings extends pulumi.CustomResource {
      */
     declare public readonly enableDnsOverTls: pulumi.Output<boolean>;
     /**
-     * Forwarder transport protocol. STIG SC-8. Valid: Udp, Tcp, Tls, Https, Quic.
+     * Forwarder transport protocol. STIG SC-8. Valid: Udp, Tcp, Tls, Https, Quic. Applies only when forwarders is set in the same configuration.
      */
     declare public readonly forwarderProtocol: pulumi.Output<string>;
     /**
-     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20).
+     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with forwarder_protocol Tls, are rejected.
      */
     declare public readonly forwarders: pulumi.Output<string[] | undefined>;
     /**
@@ -141,6 +141,38 @@ export class ServerSettings extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly version: pulumi.Output<string>;
     /**
+     * Enable HTTPS for the web service. Required for cluster node-to-node communication with a valid certificate.
+     */
+    declare public readonly webServiceEnableTls: pulumi.Output<boolean | undefined>;
+    /**
+     * Web service HTTP port.
+     */
+    declare public readonly webServiceHttpPort: pulumi.Output<number | undefined>;
+    /**
+     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` `server_url` stops working: the provider refuses redirects that change scheme. Switch `server_url` to the `https://` address in the same change.
+     */
+    declare public readonly webServiceHttpToTlsRedirect: pulumi.Output<boolean | undefined>;
+    /**
+     * Local addresses the web service listens on.
+     */
+    declare public readonly webServiceLocalAddresses: pulumi.Output<string[] | undefined>;
+    /**
+     * Password for the web service TLS certificate. The server never returns the real password, so drift in this attribute cannot be detected.
+     */
+    declare public readonly webServiceTlsCertificatePassword: pulumi.Output<string | undefined>;
+    /**
+     * Path (on the server) to a PKCS#12 (.pfx) certificate for the web service.
+     */
+    declare public readonly webServiceTlsCertificatePath: pulumi.Output<string | undefined>;
+    /**
+     * Web service HTTPS port.
+     */
+    declare public readonly webServiceTlsPort: pulumi.Output<number | undefined>;
+    /**
+     * Use an automatically generated self-signed certificate for the web service.
+     */
+    declare public readonly webServiceUseSelfSignedTlsCertificate: pulumi.Output<boolean | undefined>;
+    /**
      * Networks allowed to perform zone transfers. STIG BIND-9X-001010 (AC-10).
      */
     declare public readonly zoneTransferAllowedNetworks: pulumi.Output<string[] | undefined>;
@@ -185,6 +217,14 @@ export class ServerSettings extends pulumi.CustomResource {
             resourceInputs["udpPayloadSize"] = state?.udpPayloadSize;
             resourceInputs["uptime"] = state?.uptime;
             resourceInputs["version"] = state?.version;
+            resourceInputs["webServiceEnableTls"] = state?.webServiceEnableTls;
+            resourceInputs["webServiceHttpPort"] = state?.webServiceHttpPort;
+            resourceInputs["webServiceHttpToTlsRedirect"] = state?.webServiceHttpToTlsRedirect;
+            resourceInputs["webServiceLocalAddresses"] = state?.webServiceLocalAddresses;
+            resourceInputs["webServiceTlsCertificatePassword"] = state?.webServiceTlsCertificatePassword;
+            resourceInputs["webServiceTlsCertificatePath"] = state?.webServiceTlsCertificatePath;
+            resourceInputs["webServiceTlsPort"] = state?.webServiceTlsPort;
+            resourceInputs["webServiceUseSelfSignedTlsCertificate"] = state?.webServiceUseSelfSignedTlsCertificate;
             resourceInputs["zoneTransferAllowedNetworks"] = state?.zoneTransferAllowedNetworks;
         } else {
             const args = argsOrState as ServerSettingsArgs | undefined;
@@ -213,11 +253,21 @@ export class ServerSettings extends pulumi.CustomResource {
             resourceInputs["recursionNetworkAcls"] = args?.recursionNetworkAcls;
             resourceInputs["serveStale"] = args?.serveStale;
             resourceInputs["udpPayloadSize"] = args?.udpPayloadSize;
+            resourceInputs["webServiceEnableTls"] = args?.webServiceEnableTls;
+            resourceInputs["webServiceHttpPort"] = args?.webServiceHttpPort;
+            resourceInputs["webServiceHttpToTlsRedirect"] = args?.webServiceHttpToTlsRedirect;
+            resourceInputs["webServiceLocalAddresses"] = args?.webServiceLocalAddresses;
+            resourceInputs["webServiceTlsCertificatePassword"] = args?.webServiceTlsCertificatePassword ? pulumi.secret(args.webServiceTlsCertificatePassword) : undefined;
+            resourceInputs["webServiceTlsCertificatePath"] = args?.webServiceTlsCertificatePath;
+            resourceInputs["webServiceTlsPort"] = args?.webServiceTlsPort;
+            resourceInputs["webServiceUseSelfSignedTlsCertificate"] = args?.webServiceUseSelfSignedTlsCertificate;
             resourceInputs["zoneTransferAllowedNetworks"] = args?.zoneTransferAllowedNetworks;
             resourceInputs["uptime"] = undefined /*out*/;
             resourceInputs["version"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
+        const secretOpts = { additionalSecretOutputs: ["webServiceTlsCertificatePassword"] };
+        opts = pulumi.mergeOptions(opts, secretOpts);
         super(ServerSettings.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
@@ -279,11 +329,11 @@ export interface ServerSettingsState {
      */
     enableDnsOverTls?: pulumi.Input<boolean | undefined>;
     /**
-     * Forwarder transport protocol. STIG SC-8. Valid: Udp, Tcp, Tls, Https, Quic.
+     * Forwarder transport protocol. STIG SC-8. Valid: Udp, Tcp, Tls, Https, Quic. Applies only when forwarders is set in the same configuration.
      */
     forwarderProtocol?: pulumi.Input<string | undefined>;
     /**
-     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20).
+     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with forwarder_protocol Tls, are rejected.
      */
     forwarders?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -334,6 +384,38 @@ export interface ServerSettingsState {
      * Technitium DNS Server version.
      */
     version?: pulumi.Input<string | undefined>;
+    /**
+     * Enable HTTPS for the web service. Required for cluster node-to-node communication with a valid certificate.
+     */
+    webServiceEnableTls?: pulumi.Input<boolean | undefined>;
+    /**
+     * Web service HTTP port.
+     */
+    webServiceHttpPort?: pulumi.Input<number | undefined>;
+    /**
+     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` `server_url` stops working: the provider refuses redirects that change scheme. Switch `server_url` to the `https://` address in the same change.
+     */
+    webServiceHttpToTlsRedirect?: pulumi.Input<boolean | undefined>;
+    /**
+     * Local addresses the web service listens on.
+     */
+    webServiceLocalAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Password for the web service TLS certificate. The server never returns the real password, so drift in this attribute cannot be detected.
+     */
+    webServiceTlsCertificatePassword?: pulumi.Input<string | undefined>;
+    /**
+     * Path (on the server) to a PKCS#12 (.pfx) certificate for the web service.
+     */
+    webServiceTlsCertificatePath?: pulumi.Input<string | undefined>;
+    /**
+     * Web service HTTPS port.
+     */
+    webServiceTlsPort?: pulumi.Input<number | undefined>;
+    /**
+     * Use an automatically generated self-signed certificate for the web service.
+     */
+    webServiceUseSelfSignedTlsCertificate?: pulumi.Input<boolean | undefined>;
     /**
      * Networks allowed to perform zone transfers. STIG BIND-9X-001010 (AC-10).
      */
@@ -397,11 +479,11 @@ export interface ServerSettingsArgs {
      */
     enableDnsOverTls?: pulumi.Input<boolean | undefined>;
     /**
-     * Forwarder transport protocol. STIG SC-8. Valid: Udp, Tcp, Tls, Https, Quic.
+     * Forwarder transport protocol. STIG SC-8. Valid: Udp, Tcp, Tls, Https, Quic. Applies only when forwarders is set in the same configuration.
      */
     forwarderProtocol?: pulumi.Input<string | undefined>;
     /**
-     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20).
+     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with forwarder_protocol Tls, are rejected.
      */
     forwarders?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -444,6 +526,38 @@ export interface ServerSettingsArgs {
      * EDNS UDP payload size in bytes.
      */
     udpPayloadSize?: pulumi.Input<number | undefined>;
+    /**
+     * Enable HTTPS for the web service. Required for cluster node-to-node communication with a valid certificate.
+     */
+    webServiceEnableTls?: pulumi.Input<boolean | undefined>;
+    /**
+     * Web service HTTP port.
+     */
+    webServiceHttpPort?: pulumi.Input<number | undefined>;
+    /**
+     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` `server_url` stops working: the provider refuses redirects that change scheme. Switch `server_url` to the `https://` address in the same change.
+     */
+    webServiceHttpToTlsRedirect?: pulumi.Input<boolean | undefined>;
+    /**
+     * Local addresses the web service listens on.
+     */
+    webServiceLocalAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Password for the web service TLS certificate. The server never returns the real password, so drift in this attribute cannot be detected.
+     */
+    webServiceTlsCertificatePassword?: pulumi.Input<string | undefined>;
+    /**
+     * Path (on the server) to a PKCS#12 (.pfx) certificate for the web service.
+     */
+    webServiceTlsCertificatePath?: pulumi.Input<string | undefined>;
+    /**
+     * Web service HTTPS port.
+     */
+    webServiceTlsPort?: pulumi.Input<number | undefined>;
+    /**
+     * Use an automatically generated self-signed certificate for the web service.
+     */
+    webServiceUseSelfSignedTlsCertificate?: pulumi.Input<boolean | undefined>;
     /**
      * Networks allowed to perform zone transfers. STIG BIND-9X-001010 (AC-10).
      */

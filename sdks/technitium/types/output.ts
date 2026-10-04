@@ -5,6 +5,109 @@ import * as pulumi from "@pulumi/pulumi";
 import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
+export interface DhcpScopeExclusion {
+    /**
+     * Last excluded address.
+     */
+    endingAddress: string;
+    /**
+     * First excluded address.
+     */
+    startingAddress: string;
+}
+
+export interface DhcpScopeGenericOption {
+    /**
+     * DHCP option code.
+     */
+    code: number;
+    /**
+     * Option value as a (colon-separated) hex string.
+     */
+    value: string;
+}
+
+export interface DhcpScopeReservedLease {
+    /**
+     * Reserved IP address.
+     */
+    address: string;
+    /**
+     * Free-form comments.
+     */
+    comments?: string;
+    /**
+     * Client MAC address (e.g. 00-11-22-33-44-55).
+     */
+    hardwareAddress: string;
+    /**
+     * Host name override for the client.
+     */
+    hostName?: string;
+}
+
+export interface DhcpScopeStaticRoute {
+    /**
+     * Destination network address.
+     */
+    destination: string;
+    /**
+     * Gateway address for the route.
+     */
+    router: string;
+    /**
+     * Destination subnet mask.
+     */
+    subnetMask: string;
+}
+
+export interface DhcpScopeVendorInfo {
+    /**
+     * Vendor class identifier (or matching expression).
+     */
+    identifier: string;
+    /**
+     * Vendor-specific information as a (colon-separated) hex string.
+     */
+    information: string;
+}
+
+export interface GetDhcpLeasesLease {
+    address: string;
+    clientIdentifier: string;
+    hardwareAddress: string;
+    hostName: string;
+    leaseExpires: string;
+    leaseObtained: string;
+    scope: string;
+    /**
+     * Dynamic or Reserved.
+     */
+    type: string;
+}
+
+export interface GetDhcpScopeExclusion {
+    endingAddress: string;
+    startingAddress: string;
+}
+
+export interface GetDhcpScopeReservedLease {
+    address: string;
+    comments: string;
+    hardwareAddress: string;
+    hostName: string;
+}
+
+export interface GetDhcpScopesScope {
+    broadcastAddress: string;
+    enabled: boolean;
+    endingAddress: string;
+    name: string;
+    networkAddress: string;
+    startingAddress: string;
+    subnetMask: string;
+}
+
 export interface GetRecordRecord {
     /**
      * Record TTL.
@@ -21,6 +124,10 @@ export interface ZoneDnssec {
      * DNSSEC signing algorithm. Valid values: ECDSA, EDDSA, RSA. Maps to STIG BIND-9X-002050 (SC-13).
      */
     algorithm: string;
+    /**
+     * Operator acknowledgment authorizing a destructive DNSSEC transition on this zone. Set to "<ALGORITHM>/<CURVE>" (e.g. "ECDSA/P384"; bare "RSA" for RSA) to authorize an unsign/re-sign to those parameters, or "unsigned" to authorize unsigning (standing consent - remove after use). Required under stig_compliance enforcement "strict"; always required for in-place algorithm/curve changes. See the STIG compliance guide.
+     */
+    changeAcknowledgment?: string;
     /**
      * Curve for ECDSA (P256, P384) or EDDSA (ED25519, ED448). Default: P256.
      */
@@ -46,7 +153,7 @@ export namespace config {
          */
         enabled?: boolean;
         /**
-         * STIG enforcement policy: strict (errors block apply), warn (warnings only), silent (suppress all). Default: strict.
+         * STIG enforcement policy: strict (errors block apply), warn (warnings only), silent (suppress all STIG findings; action-consequence notices for destructive DNSSEC changes still warn). Default: strict.
          */
         enforcement?: string;
         /**

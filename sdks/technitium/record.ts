@@ -41,6 +41,10 @@ export class Record extends pulumi.CustomResource {
      */
     declare public readonly caaTag: pulumi.Output<string | undefined>;
     /**
+     * Free-text comment stored with the record. When omitted, the provider does not manage the comment and keeps whatever the server holds, including across in-place updates. Set to an empty string to clear it. Do not store secrets or PII here: the value is not marked sensitive and appears in plan output and state in plain text.
+     */
+    declare public readonly comments: pulumi.Output<string>;
+    /**
      * Whether DNSSEC validation must be done for this FWD record. Changing this forces a new record, because the Technitium API cannot update it unambiguously when two FWD records differ only by this field.
      */
     declare public readonly dnssecValidation: pulumi.Output<boolean | undefined>;
@@ -128,6 +132,7 @@ export class Record extends pulumi.CustomResource {
             const state = argsOrState as RecordState | undefined;
             resourceInputs["caaFlags"] = state?.caaFlags;
             resourceInputs["caaTag"] = state?.caaTag;
+            resourceInputs["comments"] = state?.comments;
             resourceInputs["dnssecValidation"] = state?.dnssecValidation;
             resourceInputs["forwarderPriority"] = state?.forwarderPriority;
             resourceInputs["lastModified"] = state?.lastModified;
@@ -159,6 +164,7 @@ export class Record extends pulumi.CustomResource {
             }
             resourceInputs["caaFlags"] = args?.caaFlags;
             resourceInputs["caaTag"] = args?.caaTag;
+            resourceInputs["comments"] = args?.comments;
             resourceInputs["dnssecValidation"] = args?.dnssecValidation;
             resourceInputs["forwarderPriority"] = args?.forwarderPriority;
             resourceInputs["name"] = args?.name;
@@ -197,6 +203,10 @@ export interface RecordState {
      * CAA record tag: issue, issuewild, iodef. Required for CAA records.
      */
     caaTag?: pulumi.Input<string | undefined>;
+    /**
+     * Free-text comment stored with the record. When omitted, the provider does not manage the comment and keeps whatever the server holds, including across in-place updates. Set to an empty string to clear it. Do not store secrets or PII here: the value is not marked sensitive and appears in plan output and state in plain text.
+     */
+    comments?: pulumi.Input<string | undefined>;
     /**
      * Whether DNSSEC validation must be done for this FWD record. Changing this forces a new record, because the Technitium API cannot update it unambiguously when two FWD records differ only by this field.
      */
@@ -283,6 +293,10 @@ export interface RecordArgs {
      * CAA record tag: issue, issuewild, iodef. Required for CAA records.
      */
     caaTag?: pulumi.Input<string | undefined>;
+    /**
+     * Free-text comment stored with the record. When omitted, the provider does not manage the comment and keeps whatever the server holds, including across in-place updates. Set to an empty string to clear it. Do not store secrets or PII here: the value is not marked sensitive and appears in plan output and state in plain text.
+     */
+    comments?: pulumi.Input<string | undefined>;
     /**
      * Whether DNSSEC validation must be done for this FWD record. Changing this forces a new record, because the Technitium API cannot update it unambiguously when two FWD records differ only by this field.
      */

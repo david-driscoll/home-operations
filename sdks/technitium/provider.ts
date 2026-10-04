@@ -28,9 +28,9 @@ export class Provider extends pulumi.ProviderResource {
     }
 
     /**
-     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var.
+     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either api_token or username/password must be configured.
      */
-    declare public readonly apiToken: pulumi.Output<string>;
+    declare public readonly apiToken: pulumi.Output<string | undefined>;
     /**
      * Path to a directory of PEM-encoded CA certificate files to validate the Technitium server's TLS certificate. Files that fail to parse are skipped. May be set via the TECHNITIUM_CAPATH environment variable.
      */
@@ -39,6 +39,10 @@ export class Provider extends pulumi.ProviderResource {
      * Path to a PEM-encoded CA certificate file to validate the Technitium server's TLS certificate. May be set via the TECHNITIUM_CACERT environment variable.
      */
     declare public readonly caCertFile: pulumi.Output<string | undefined>;
+    /**
+     * Technitium password for session-token authentication. Can also be set via TECHNITIUM_PASSWORD env var.
+     */
+    declare public readonly password: pulumi.Output<string | undefined>;
     /**
      * Technitium DNS Server API base URL. Can also be set via TECHNITIUM_SERVER_URL env var.
      */
@@ -51,6 +55,10 @@ export class Provider extends pulumi.ProviderResource {
      * Name to use as the SNI host when connecting to the Technitium server via TLS. May be set via the TECHNITIUM_TLS_SERVER_NAME environment variable.
      */
     declare public readonly tlsServerName: pulumi.Output<string | undefined>;
+    /**
+     * Technitium username for session-token authentication, used when api_token is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
+     */
+    declare public readonly username: pulumi.Output<string | undefined>;
 
     /**
      * Create a Provider resource with the given unique name, arguments, and options.
@@ -63,23 +71,23 @@ export class Provider extends pulumi.ProviderResource {
         let resourceInputs: pulumi.Inputs = {};
         opts = opts || {};
         {
-            if (args?.apiToken === undefined && !opts.urn) {
-                throw new Error("Missing required property 'apiToken'");
-            }
             if (args?.serverUrl === undefined && !opts.urn) {
                 throw new Error("Missing required property 'serverUrl'");
             }
             resourceInputs["apiToken"] = args?.apiToken ? pulumi.secret(args.apiToken) : undefined;
             resourceInputs["caCertDir"] = args?.caCertDir;
             resourceInputs["caCertFile"] = args?.caCertFile;
+            resourceInputs["legacyTokenAuth"] = pulumi.output(args?.legacyTokenAuth).apply(JSON.stringify);
+            resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
             resourceInputs["serverUrl"] = args?.serverUrl;
             resourceInputs["skipTlsVerify"] = pulumi.output(args?.skipTlsVerify).apply(JSON.stringify);
             resourceInputs["stigCompliance"] = pulumi.output(args?.stigCompliance).apply(JSON.stringify);
             resourceInputs["tlsMinVersion"] = args?.tlsMinVersion;
             resourceInputs["tlsServerName"] = args?.tlsServerName;
+            resourceInputs["username"] = args?.username;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["apiToken"] };
+        const secretOpts = { additionalSecretOutputs: ["apiToken", "password"] };
         opts = pulumi.mergeOptions(opts, secretOpts);
         super(Provider.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
@@ -100,9 +108,9 @@ export class Provider extends pulumi.ProviderResource {
  */
 export interface ProviderArgs {
     /**
-     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var.
+     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either api_token or username/password must be configured.
      */
-    apiToken: pulumi.Input<string>;
+    apiToken?: pulumi.Input<string | undefined>;
     /**
      * Path to a directory of PEM-encoded CA certificate files to validate the Technitium server's TLS certificate. Files that fail to parse are skipped. May be set via the TECHNITIUM_CAPATH environment variable.
      */
@@ -111,6 +119,14 @@ export interface ProviderArgs {
      * Path to a PEM-encoded CA certificate file to validate the Technitium server's TLS certificate. May be set via the TECHNITIUM_CACERT environment variable.
      */
     caCertFile?: pulumi.Input<string | undefined>;
+    /**
+     * Send every request as a POST with the API token in a "token" form field instead of an "Authorization: Bearer" header. Only needed for Technitium DNS Server versions before 15.0, which do not support the Bearer header form. Leaving this at its default sends the token via header, keeping it out of URLs and any intermediary's access logs. May be set via the TECHNITIUM_LEGACY_TOKEN_AUTH environment variable.
+     */
+    legacyTokenAuth?: pulumi.Input<boolean | undefined>;
+    /**
+     * Technitium password for session-token authentication. Can also be set via TECHNITIUM_PASSWORD env var.
+     */
+    password?: pulumi.Input<string | undefined>;
     /**
      * Technitium DNS Server API base URL. Can also be set via TECHNITIUM_SERVER_URL env var.
      */
@@ -131,6 +147,10 @@ export interface ProviderArgs {
      * Name to use as the SNI host when connecting to the Technitium server via TLS. May be set via the TECHNITIUM_TLS_SERVER_NAME environment variable.
      */
     tlsServerName?: pulumi.Input<string | undefined>;
+    /**
+     * Technitium username for session-token authentication, used when api_token is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
+     */
+    username?: pulumi.Input<string | undefined>;
 }
 
 export namespace Provider {

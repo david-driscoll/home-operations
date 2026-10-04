@@ -10,7 +10,7 @@ declare var exports: any;
 const __config = new pulumi.Config("technitium");
 
 /**
- * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var.
+ * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either api_token or username/password must be configured.
  */
 export declare const apiToken: string | undefined;
 Object.defineProperty(exports, "apiToken", {
@@ -38,6 +38,28 @@ export declare const caCertFile: string | undefined;
 Object.defineProperty(exports, "caCertFile", {
     get() {
         return __config.get("caCertFile");
+    },
+    enumerable: true,
+});
+
+/**
+ * Send every request as a POST with the API token in a "token" form field instead of an "Authorization: Bearer" header. Only needed for Technitium DNS Server versions before 15.0, which do not support the Bearer header form. Leaving this at its default sends the token via header, keeping it out of URLs and any intermediary's access logs. May be set via the TECHNITIUM_LEGACY_TOKEN_AUTH environment variable.
+ */
+export declare const legacyTokenAuth: boolean | undefined;
+Object.defineProperty(exports, "legacyTokenAuth", {
+    get() {
+        return __config.getObject<boolean>("legacyTokenAuth");
+    },
+    enumerable: true,
+});
+
+/**
+ * Technitium password for session-token authentication. Can also be set via TECHNITIUM_PASSWORD env var.
+ */
+export declare const password: string | undefined;
+Object.defineProperty(exports, "password", {
+    get() {
+        return __config.get("password");
     },
     enumerable: true,
 });
@@ -93,6 +115,17 @@ export declare const tlsServerName: string | undefined;
 Object.defineProperty(exports, "tlsServerName", {
     get() {
         return __config.get("tlsServerName");
+    },
+    enumerable: true,
+});
+
+/**
+ * Technitium username for session-token authentication, used when api_token is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
+ */
+export declare const username: string | undefined;
+Object.defineProperty(exports, "username", {
+    get() {
+        return __config.get("username");
     },
     enumerable: true,
 });
