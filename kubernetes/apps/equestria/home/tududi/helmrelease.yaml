@@ -61,6 +61,7 @@ spec:
               OIDC_PROVIDER_SLUG: "authentik"
               OIDC_SCOPE: "openid profile email"
               OIDC_AUTO_PROVISION: "true"
+              CALDAV_ALLOW_PRIVATE_HOSTS: "true"
               # BASE_URL constructs the OIDC redirect URI: ${BASE_URL}/api/oidc/callback/authentik
               BASE_URL: "https://${APP}.${ROOT_DOMAIN}"
               # CalDAV — clients connect to https://${APP}.${ROOT_DOMAIN}/caldav/
