@@ -24,6 +24,8 @@ spec:
   dependsOn:
     - name: volsync
       namespace: volsync-system
+    - name: postgres
+      namespace: database
     - name: external-secrets
       namespace: kube-system
   sourceRef:
@@ -32,7 +34,18 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
+    # ⚠️ BRAND-NEW DATABASE (tududi ran on SQLite until now), so the new-app
+    # ordering trap in components/postgres/ks.yaml applies: `stacks/system`
+    # creates `database/static-roles/tududi`, which fails with
+    #   ERROR: role "tududi" does not exist (SQLSTATE 42704)
+    # if CNPG has not applied the DatabaseRole yet. Expect the `system` stack
+    # to stall ONCE; recovery is the four commands in that file's ORDER OF
+    # OPERATIONS block.
+    - ../../../../components/postgres
     - ../../../../components/tailscale
+    # Still needed with the database in Postgres: the PVC holds attachments
+    # (/app/uploads) and the per-user exports from Profile > Backup
+    # (/app/backups), neither of which the nightly pg_dump sees.
     - ../../../../components/volsync
     - ../../../../components/sablier
   postBuild:
