@@ -35,6 +35,8 @@ configMapGenerator:
       - resources/zz-db.config.php
       - resources/zz-redis.config.php
       - resources/zz-nextcloud.ini
+      # Run by the `cron` sidecar, not by the start hook.
+      - resources/seed-subscriptions.php
     options:
       # Named literally in ./helmrelease.yaml; Reloader restarts the pod when
       # the content changes.
