@@ -39,10 +39,17 @@ spec:
         strategy: Recreate
         containers:
           app:
-            image:
+            image: &image
               repository: docker.io/awinterstein/habitica-server
               tag: 5.50.6@sha256:964caa1adddda20b7e11116f0892339bd0c740e4c7d9e2253b7991a0a610d5f1
-            env:
+            # The image's own CMD is `printenv >> /etc/environment &&
+            # /etc/init.d/cron start && node ...`, and both of the first two
+            # need root: as uid 1000 it died with "cannot create
+            # /etc/environment: Permission denied". They exist only to feed an
+            # in-container cron, which is the `team-cron` container below, so
+            # run the server by itself and stay non-root.
+            command: ["node", "/var/lib/habitica/website/transpiled-babel/index.js"]
+            env: &env
               BASE_URL: https://${APP}.${ROOT_DOMAIN}
               NODE_ENV: production
               TZ: "${TIMEZONE}"
@@ -86,7 +93,7 @@ spec:
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 3
-            securityContext:
+            securityContext: &securityContext
               runAsNonRoot: true
               runAsUser: 1000
               runAsGroup: 1000
@@ -99,6 +106,29 @@ spec:
                 memory: 256Mi
               limits:
                 memory: 1Gi
+          # Upstream's crontab entry (`2 * * * *`, run-team-cron.js: resets
+          # group dailies), as a loop instead of a root cron daemon. A failed
+          # run is logged and retried the next hour rather than restarting
+          # the container.
+          team-cron:
+            image: *image
+            workingDir: /var/lib/habitica
+            command:
+              - sh
+              - -c
+              - |
+                while true; do
+                  sleep 3600
+                  node ./run-team-cron.js || echo "team-cron run failed"
+                done
+            env: *env
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 512Mi
           mongo:
             image:
               repository: mongo
