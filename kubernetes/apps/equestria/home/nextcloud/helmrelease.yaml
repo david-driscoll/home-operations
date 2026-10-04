@@ -135,6 +135,12 @@ spec:
           # cron.php exits 0; the liveness probe restarts the container when it
           # is older than 15 minutes, and NextcloudCronNotRunning
           # (./prometheusrule.yaml) alerts on the restart.
+          #
+          # The same loop then runs ./resources/seed-subscriptions.php, which
+          # copies the `shared` user's calendar subscriptions to every SSO
+          # account once -- so a new account has them within about five minutes
+          # of its first login. It never touches the heartbeat: a failed copy
+          # is a WARN line here, not a restart of the thing that runs cron.php.
           cron:
             image:
               repository: docker.io/library/nextcloud
@@ -145,6 +151,7 @@ spec:
               - |
                 while true; do
                   if php -f /var/www/html/cron.php; then date +%s > /tmp/heartbeat; fi
+                  php -f /opt/nextcloud/seed-subscriptions.php || echo "WARN: seed-subscriptions failed"
                   sleep 300
                 done
             env:
@@ -358,6 +365,9 @@ spec:
             cron:
               - path: /usr/local/etc/php/conf.d/zz-nextcloud.ini
                 subPath: zz-nextcloud.ini
+                readOnly: true
+              - path: /opt/nextcloud/seed-subscriptions.php
+                subPath: seed-subscriptions.php
                 readOnly: true
 
       # 256Mi, not the 16Mi this started at. /tmp idles at a few KB, but a
