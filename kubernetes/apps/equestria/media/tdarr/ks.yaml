@@ -33,3 +33,6 @@ spec:
     substitute:
       APP: *name
       NAMESPACE: *namespace
+      # Job reports alone are ~3.3 GiB since the flow rollout; the 5Gi default
+      # hit 86%. Only ever raise this (components/volsync/AGENTS.md).
+      VOLSYNC_CAPACITY: 15Gi
