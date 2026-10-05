@@ -101,7 +101,7 @@ export async function getPackage(): Promise<string | undefined> {
 		baseProviderVersion: "0.14.0",
 		baseProviderDownloadUrl: "",
 		packageName: "technitium",
-		packageVersion: "1.2.1",
-		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2Rhcmtob25vci90ZWNobml0aXVtIiwidmVyc2lvbiI6IjEuMi4xIn19",
+		packageVersion: "1.3.0",
+		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2Rhcmtob25vci90ZWNobml0aXVtIiwidmVyc2lvbiI6IjEuMy4wIn19",
 	});
 }

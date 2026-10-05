@@ -39,13 +39,25 @@ export class Zone extends pulumi.CustomResource {
      */
     declare public readonly allowTransfers: pulumi.Output<string[] | undefined>;
     /**
-     * DNSSEC configuration. Maps to STIG BIND-9X-001650 (SC-20/21/22/23/8/24).
+     * Disable the zone (it stops serving queries but keeps its data).
+     */
+    declare public readonly disabled: pulumi.Output<boolean>;
+    /**
+     * DNSSEC configuration. Valid on Primary zones only: Technitium can sign Primary zones and refuses every other type, and a Secondary serves the signed data it receives from its primary rather than signing locally. Maps to STIG BIND-9X-001650 (SC-20/21/22/23/8/24).
      */
     declare public readonly dnssec: pulumi.Output<outputs.ZoneDnssec | undefined>;
     /**
      * DNSSEC signing status.
      */
     declare public /*out*/ readonly dnssecStatus: pulumi.Output<string>;
+    /**
+     * Dynamic updates (RFC 2136) policy for the zone. Valid values: Deny, Allow, AllowOnlyZoneNameServers, UseSpecifiedNetworkACL, AllowZoneNameServersAndUseSpecifiedNetworkACL. When unset, the server default is left unmanaged.
+     */
+    declare public readonly dynamicUpdate: pulumi.Output<string | undefined>;
+    /**
+     * Network ACL used when dynamic_update uses a specified network ACL.
+     */
+    declare public readonly dynamicUpdateNetworkAcls: pulumi.Output<string[] | undefined>;
     /**
      * The domain name for the zone.
      */
@@ -59,11 +71,19 @@ export class Zone extends pulumi.CustomResource {
      */
     declare public readonly primaryZoneTransferTsigKeyName: pulumi.Output<string | undefined>;
     /**
+     * Query access policy for the zone. Valid values: Allow, Deny, AllowOnlyPrivateNetworks, AllowOnlyZoneNameServers, UseSpecifiedNetworkACL, AllowZoneNameServersAndUseSpecifiedNetworkACL. When unset, the server default is left unmanaged.
+     */
+    declare public readonly queryAccess: pulumi.Output<string | undefined>;
+    /**
+     * Network ACL used when query_access uses a specified network ACL.
+     */
+    declare public readonly queryAccessNetworkAcls: pulumi.Output<string[] | undefined>;
+    /**
      * Current SOA serial number.
      */
     declare public /*out*/ readonly soaSerial: pulumi.Output<number>;
     /**
-     * Use date-based SOA serial numbering scheme.
+     * Use the date-based SOA serial scheme (YYYYMMDDnn). Read from the zone's SOA record. Applies to Primary and Forwarder zones; changing it updates the SOA record and increments the serial. No effect on Secondary and Stub zones.
      */
     declare public readonly soaSerialDateScheme: pulumi.Output<boolean>;
     /**
@@ -93,11 +113,16 @@ export class Zone extends pulumi.CustomResource {
         if (opts.id) {
             const state = argsOrState as ZoneState | undefined;
             resourceInputs["allowTransfers"] = state?.allowTransfers;
+            resourceInputs["disabled"] = state?.disabled;
             resourceInputs["dnssec"] = state?.dnssec;
             resourceInputs["dnssecStatus"] = state?.dnssecStatus;
+            resourceInputs["dynamicUpdate"] = state?.dynamicUpdate;
+            resourceInputs["dynamicUpdateNetworkAcls"] = state?.dynamicUpdateNetworkAcls;
             resourceInputs["name"] = state?.name;
             resourceInputs["notifies"] = state?.notifies;
             resourceInputs["primaryZoneTransferTsigKeyName"] = state?.primaryZoneTransferTsigKeyName;
+            resourceInputs["queryAccess"] = state?.queryAccess;
+            resourceInputs["queryAccessNetworkAcls"] = state?.queryAccessNetworkAcls;
             resourceInputs["soaSerial"] = state?.soaSerial;
             resourceInputs["soaSerialDateScheme"] = state?.soaSerialDateScheme;
             resourceInputs["status"] = state?.status;
@@ -109,10 +134,15 @@ export class Zone extends pulumi.CustomResource {
                 throw new Error("Missing required property 'type'");
             }
             resourceInputs["allowTransfers"] = args?.allowTransfers;
+            resourceInputs["disabled"] = args?.disabled;
             resourceInputs["dnssec"] = args?.dnssec;
+            resourceInputs["dynamicUpdate"] = args?.dynamicUpdate;
+            resourceInputs["dynamicUpdateNetworkAcls"] = args?.dynamicUpdateNetworkAcls;
             resourceInputs["name"] = args?.name;
             resourceInputs["notifies"] = args?.notifies;
             resourceInputs["primaryZoneTransferTsigKeyName"] = args?.primaryZoneTransferTsigKeyName;
+            resourceInputs["queryAccess"] = args?.queryAccess;
+            resourceInputs["queryAccessNetworkAcls"] = args?.queryAccessNetworkAcls;
             resourceInputs["soaSerialDateScheme"] = args?.soaSerialDateScheme;
             resourceInputs["type"] = args?.type;
             resourceInputs["zoneTransferTsigKeyNames"] = args?.zoneTransferTsigKeyNames;
@@ -134,13 +164,25 @@ export interface ZoneState {
      */
     allowTransfers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * DNSSEC configuration. Maps to STIG BIND-9X-001650 (SC-20/21/22/23/8/24).
+     * Disable the zone (it stops serving queries but keeps its data).
+     */
+    disabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * DNSSEC configuration. Valid on Primary zones only: Technitium can sign Primary zones and refuses every other type, and a Secondary serves the signed data it receives from its primary rather than signing locally. Maps to STIG BIND-9X-001650 (SC-20/21/22/23/8/24).
      */
     dnssec?: pulumi.Input<inputs.ZoneDnssec | undefined>;
     /**
      * DNSSEC signing status.
      */
     dnssecStatus?: pulumi.Input<string | undefined>;
+    /**
+     * Dynamic updates (RFC 2136) policy for the zone. Valid values: Deny, Allow, AllowOnlyZoneNameServers, UseSpecifiedNetworkACL, AllowZoneNameServersAndUseSpecifiedNetworkACL. When unset, the server default is left unmanaged.
+     */
+    dynamicUpdate?: pulumi.Input<string | undefined>;
+    /**
+     * Network ACL used when dynamic_update uses a specified network ACL.
+     */
+    dynamicUpdateNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The domain name for the zone.
      */
@@ -154,11 +196,19 @@ export interface ZoneState {
      */
     primaryZoneTransferTsigKeyName?: pulumi.Input<string | undefined>;
     /**
+     * Query access policy for the zone. Valid values: Allow, Deny, AllowOnlyPrivateNetworks, AllowOnlyZoneNameServers, UseSpecifiedNetworkACL, AllowZoneNameServersAndUseSpecifiedNetworkACL. When unset, the server default is left unmanaged.
+     */
+    queryAccess?: pulumi.Input<string | undefined>;
+    /**
+     * Network ACL used when query_access uses a specified network ACL.
+     */
+    queryAccessNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
      * Current SOA serial number.
      */
     soaSerial?: pulumi.Input<number | undefined>;
     /**
-     * Use date-based SOA serial numbering scheme.
+     * Use the date-based SOA serial scheme (YYYYMMDDnn). Read from the zone's SOA record. Applies to Primary and Forwarder zones; changing it updates the SOA record and increments the serial. No effect on Secondary and Stub zones.
      */
     soaSerialDateScheme?: pulumi.Input<boolean | undefined>;
     /**
@@ -184,9 +234,21 @@ export interface ZoneArgs {
      */
     allowTransfers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * DNSSEC configuration. Maps to STIG BIND-9X-001650 (SC-20/21/22/23/8/24).
+     * Disable the zone (it stops serving queries but keeps its data).
+     */
+    disabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * DNSSEC configuration. Valid on Primary zones only: Technitium can sign Primary zones and refuses every other type, and a Secondary serves the signed data it receives from its primary rather than signing locally. Maps to STIG BIND-9X-001650 (SC-20/21/22/23/8/24).
      */
     dnssec?: pulumi.Input<inputs.ZoneDnssec | undefined>;
+    /**
+     * Dynamic updates (RFC 2136) policy for the zone. Valid values: Deny, Allow, AllowOnlyZoneNameServers, UseSpecifiedNetworkACL, AllowZoneNameServersAndUseSpecifiedNetworkACL. When unset, the server default is left unmanaged.
+     */
+    dynamicUpdate?: pulumi.Input<string | undefined>;
+    /**
+     * Network ACL used when dynamic_update uses a specified network ACL.
+     */
+    dynamicUpdateNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The domain name for the zone.
      */
@@ -200,7 +262,15 @@ export interface ZoneArgs {
      */
     primaryZoneTransferTsigKeyName?: pulumi.Input<string | undefined>;
     /**
-     * Use date-based SOA serial numbering scheme.
+     * Query access policy for the zone. Valid values: Allow, Deny, AllowOnlyPrivateNetworks, AllowOnlyZoneNameServers, UseSpecifiedNetworkACL, AllowZoneNameServersAndUseSpecifiedNetworkACL. When unset, the server default is left unmanaged.
+     */
+    queryAccess?: pulumi.Input<string | undefined>;
+    /**
+     * Network ACL used when query_access uses a specified network ACL.
+     */
+    queryAccessNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Use the date-based SOA serial scheme (YYYYMMDDnn). Read from the zone's SOA record. Applies to Primary and Forwarder zones; changing it updates the SOA record and increments the serial. No effect on Secondary and Stub zones.
      */
     soaSerialDateScheme?: pulumi.Input<boolean | undefined>;
     /**

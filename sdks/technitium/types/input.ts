@@ -5,6 +5,73 @@ import * as pulumi from "@pulumi/pulumi";
 import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
+export interface DhcpScopeExclusion {
+    /**
+     * Last excluded address.
+     */
+    endingAddress: pulumi.Input<string>;
+    /**
+     * First excluded address.
+     */
+    startingAddress: pulumi.Input<string>;
+}
+
+export interface DhcpScopeGenericOption {
+    /**
+     * DHCP option code.
+     */
+    code: pulumi.Input<number>;
+    /**
+     * Option value as a (colon-separated) hex string.
+     */
+    value: pulumi.Input<string>;
+}
+
+export interface DhcpScopeReservedLease {
+    /**
+     * Reserved IP address.
+     */
+    address: pulumi.Input<string>;
+    /**
+     * Free-form comments.
+     */
+    comments?: pulumi.Input<string | undefined>;
+    /**
+     * Client MAC address (e.g. 00-11-22-33-44-55).
+     */
+    hardwareAddress: pulumi.Input<string>;
+    /**
+     * Host name override for the client.
+     */
+    hostName?: pulumi.Input<string | undefined>;
+}
+
+export interface DhcpScopeStaticRoute {
+    /**
+     * Destination network address.
+     */
+    destination: pulumi.Input<string>;
+    /**
+     * Gateway address for the route.
+     */
+    router: pulumi.Input<string>;
+    /**
+     * Destination subnet mask.
+     */
+    subnetMask: pulumi.Input<string>;
+}
+
+export interface DhcpScopeVendorInfo {
+    /**
+     * Vendor class identifier (or matching expression).
+     */
+    identifier: pulumi.Input<string>;
+    /**
+     * Vendor-specific information as a (colon-separated) hex string.
+     */
+    information: pulumi.Input<string>;
+}
+
 export interface ProviderStigCompliance {
     /**
      * Security categorization for STIG validation.
@@ -15,7 +82,7 @@ export interface ProviderStigCompliance {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * STIG enforcement policy: strict (errors block apply), warn (warnings only), silent (suppress all). Default: strict.
+     * STIG enforcement policy: strict (errors block apply), warn (warnings only), silent (suppress all STIG findings; action-consequence notices for destructive DNSSEC changes still warn). Default: strict.
      */
     enforcement?: pulumi.Input<string | undefined>;
     /**
@@ -52,6 +119,10 @@ export interface ZoneDnssec {
      * DNSSEC signing algorithm. Valid values: ECDSA, EDDSA, RSA. Maps to STIG BIND-9X-002050 (SC-13).
      */
     algorithm?: pulumi.Input<string | undefined>;
+    /**
+     * Operator acknowledgment authorizing a destructive DNSSEC transition on this zone. Set to "<ALGORITHM>/<CURVE>" (e.g. "ECDSA/P384"; bare "RSA" for RSA) to authorize an unsign/re-sign to those parameters, or "unsigned" to authorize unsigning (standing consent - remove after use). Required under stig_compliance enforcement "strict"; always required for in-place algorithm/curve changes. See the STIG compliance guide.
+     */
+    changeAcknowledgment?: pulumi.Input<string | undefined>;
     /**
      * Curve for ECDSA (P256, P384) or EDDSA (ED25519, ED448). Default: P256.
      */
