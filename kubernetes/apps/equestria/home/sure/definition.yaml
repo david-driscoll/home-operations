@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Sure"
+  category: Applications
+  description: "Sure — personal finance: accounts, budgets, investments and net worth"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sure.svg
+  access_policy:
+    groups:
+      - family
+  authentik:
+    # oauth2, NOT proxy: Sure speaks OIDC itself through omniauth_openid_connect.
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # Fixed by config/routes.rb (`/auth/:provider/callback`) and the
+        # provider name `openid_connect` in config/auth.yml. OIDC_REDIRECT_URI
+        # in ./helmrelease.yaml names the root-domain one; the tailnet twin is
+        # registered so authentik does not reject it outright, but a login
+        # STARTED on the tailnet hostname still returns to the root domain.
+        - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid_connect/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/openid_connect/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      # /up, not `*url`: `/` answers 302 to the sign-in page, and /up is Rails'
+      # own health route -- 200 once the app has booted without exceptions.
+      url: https://${APP}.${ROOT_DOMAIN}/up
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
