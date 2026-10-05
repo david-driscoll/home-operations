@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/networkpolicy-networking-k8s-io-v1.json
+#
+# Who may reach ha-mcp: toolport, and its own proxy. Its HTTP endpoint has no
+# auth of its own (./mcpserver.yaml), so this policy is the whole of it -- the
+# same pair ../homelable.yaml has, for the same reason.
+#
+# `toolhive-name` is on BOTH pods the operator runs for an MCPServer -- the
+# proxy (Service `mcp-toolhive-ha-mcp-proxy`) and the server itself (Service
+# `mcp-toolhive-ha-mcp`) -- so one policy covers both doors, and the second
+# `from` is the proxy reaching the server. Both listen on 8086.
+#
+# toolport's watchdog sidecar shares toolport's pod, so its checks pass too.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: toolhive-ha-mcp-allow-toolport
+spec:
+  podSelector:
+    matchLabels:
+      toolhive-name: toolhive-ha-mcp
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: toolport
+              app.kubernetes.io/controller: toolport
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              toolhive-name: toolhive-ha-mcp
+      ports:
+        - protocol: TCP
+          port: 8086

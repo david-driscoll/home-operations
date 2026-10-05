@@ -122,9 +122,11 @@ starts (destructive tools hidden), so the count moves with Teamarr's version.
 intents over the exposed entities and nothing about how Home Assistant is set
 up. `ha-mcp` is the admin surface next to it -- integrations, the device and
 entity registries, automations, helpers, dashboards, history, logs -- with
-writes on and the irreversible tools off (`agent-tools-servers/ha-mcp.yaml`).
-Its endpoint has no auth of its own, so a NetworkPolicy in that file admits
-only toolport. `tdarr` is 66 of
+writes on, including `configuration.yaml` editing and file access under
+`/config` (both need the `ha_mcp_tools` custom component installed in Home
+Assistant), and full backups off (`agent-tools-servers/ha-mcp/`). Its endpoint
+has no auth of its own, so the NetworkPolicy in that directory admits only
+toolport. `tdarr` is 66 of
 tdarr-mcp's 105 tools, cut down by an `MCPToolConfig` allow-list in
 `agent-tools-servers/tdarr.yaml`: nothing that deletes media from disk or
 touches users or plugin code. The one raw DB tool, `tdarr_cruddb`, is allowed
