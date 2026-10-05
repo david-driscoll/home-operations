@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app actual
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/equestria/home/actual
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: the sync server's only stores are SQLite files
+    # under /data (account.sqlite plus one file per budget), which is what
+    # volsync backs up.
+    #
+    # No components/tailscale either. With OpenID active the server refuses a
+    # login whose return URL is not on ACTUAL_OPENID_SERVER_HOSTNAME
+    # (isValidRedirectUrl in accounts/openid.ts), so a tailnet hostname would
+    # serve the page and then fail every sign-in with "Invalid redirect URL".
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # /data holds server-files/account.sqlite and user-files/, one SQLite
+      # blob per budget -- megabytes each. Small on purpose: VOLSYNC_CAPACITY
+      # only ever goes up (components/volsync/AGENTS.md).
+      VOLSYNC_CAPACITY: 2Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce

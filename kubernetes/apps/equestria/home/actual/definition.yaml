@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Actual Budget
+  category: Applications
+  description: Local-first envelope budgeting, synced between devices
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/actual-budget.svg
+  access_policy:
+    groups:
+      - family
+  authentik:
+    # oauth2, NOT proxy. The sync server has native OpenID (openid-client), so
+    # the forward-auth outpost in front of it would authenticate twice -- and
+    # would break the desktop and mobile clients, which talk to the same
+    # endpoints with a session token rather than a browser cookie. The route in
+    # ./helmrelease.yaml therefore uses `local-user`, same as aurral and tududi.
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # ONE hostname only. The server builds the callback from
+        # ACTUAL_OPENID_SERVER_HOSTNAME, never from the request, and rejects a
+        # login started on any other host -- see the note in ./ks.yaml.
+        - url: "https://${APP}.${ROOT_DOMAIN}/openid/callback"
+      propertyMappings:
+        # The server requests exactly `openid email profile` and names the user
+        # from userinfo: preferred_username, then email, then sub.
+        - email
+        - openid
+        - profile
+  gatus:
+    - group: "Applications"
+      # /health is unauthenticated and static, so it checks the server rather
+      # than the single-page app's shell (which is a 200 for any path).
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == UP"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}
