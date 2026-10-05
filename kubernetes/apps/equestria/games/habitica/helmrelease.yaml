@@ -37,6 +37,19 @@ spec:
         annotations:
           reloader.stakater.com/auto: "true"
         strategy: Recreate
+        pod:
+          # MongoDB 5.0+ needs AVX. shining-armor has none, so mongod dies
+          # there with SIGILL (exit 132) the moment it starts. Select on
+          # node-feature-discovery's label rather than a hostname, as
+          # agentboard does.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: feature.node.kubernetes.io/cpu-cpuid.AVX
+                        operator: In
+                        values: ["true"]
         containers:
           app:
             image: &image
