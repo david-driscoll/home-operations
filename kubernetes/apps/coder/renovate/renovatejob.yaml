@@ -140,11 +140,11 @@ spec:
         //     scoped to `kubernetes/**`, so on a repository without that tree
         //     they are inert rather than wrong.
         //
-        // The `.json5` extension is honoured verbatim -- Renovate only appends
-        // `.json` when the preset name has no `.json`/`.json5`/`.jsonc` suffix.
-        globalExtends: [
-          'github>david-driscoll/david-driscoll/.github/renovate-config.json',
-        ],
+        // `owner/repo:preset` -- the repository is `david-driscoll/.github` and
+        // the preset is `renovate-config.json` at its root (Renovate appends
+        // the `.json`). Written as a path instead, the first two segments are
+        // read as the repository and discovery dies on config-validation.
+        globalExtends: ['github>david-driscoll/.github:renovate-config'],
 
         // CLONE FROM THE ENDPOINT, NOT FROM `clone_url`.
         //
