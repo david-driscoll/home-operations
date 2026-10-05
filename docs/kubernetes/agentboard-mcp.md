@@ -111,14 +111,20 @@ profile lists its servers and their tool counts.
 |---|---|
 | `infrastructure` | `kubernetes`, `proxmox-{twilight-sparkle,celestia,luna,alpha-site}`, `docker-{celestia,luna,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao` |
 | `networking` | `unifi-{network,protect,access}`, `tailscale`, `homelable` |
-| `home` | `home-assistant` |
+| `home` | `home-assistant`, `ha-mcp` |
 | `media` | `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr` |
 | `postgres` | `postgres` — every database, tools per database |
 | `research` | `context7`, `microsoft-docs`, `nuget`, `degoog` |
 
 `teamarr`'s tool set is built from Teamarr's live `/openapi.json` when its pod
 starts (destructive tools hidden), so the count moves with Teamarr's version.
-`home-assistant`'s depends on what Home Assistant exposes. `tdarr` is 66 of
+`home-assistant`'s depends on what Home Assistant exposes: it is Assist, so
+intents over the exposed entities and nothing about how Home Assistant is set
+up. `ha-mcp` is the admin surface next to it -- integrations, the device and
+entity registries, automations, helpers, dashboards, history, logs -- with
+writes on and the irreversible tools off (`agent-tools-servers/ha-mcp.yaml`).
+Its endpoint has no auth of its own, so a NetworkPolicy in that file admits
+only toolport. `tdarr` is 66 of
 tdarr-mcp's 105 tools, cut down by an `MCPToolConfig` allow-list in
 `agent-tools-servers/tdarr.yaml`: nothing that deletes media from disk or
 touches users or plugin code. The one raw DB tool, `tdarr_cruddb`, is allowed

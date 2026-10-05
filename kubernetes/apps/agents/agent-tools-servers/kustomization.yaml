@@ -74,6 +74,11 @@ resources:
   # that deletes media, edits the DB raw, or touches users/plugin code. See
   # the file's header.
   - ./tdarr.yaml
+  # Home Assistant's admin surface (integrations, registries, automations),
+  # next to the Assist-only /api/mcp that toolport calls directly. Writes on,
+  # the irreversible tools off, and a NetworkPolicy admitting only toolport
+  # because the endpoint has no auth of its own. See the file's header.
+  - ./ha-mcp.yaml
   # The in-cluster Forgejo, acting as the `claude-code` account that
   # stacks/system creates. Its token only exists after that Pulumi run -- see
   # the file's header for the first-deploy ordering.

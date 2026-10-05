@@ -96,7 +96,8 @@ the only MCP front door: the old `agent-tools` aggregated server is retired. So:
     `docker-{celestia,luna,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao`
   - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`,
     `homelable` (network map, inventory, racks and documentation)
-  - `toolport-home`: `home-assistant`
+  - `toolport-home`: `home-assistant` (Assist: control the exposed entities)
+    and `ha-mcp` (admin: integrations, registries, automations, history, logs)
   - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr`
     (Tdarr's API; 65 of its 105 tools -- nothing that deletes media from
     disk, writes the DB raw, or touches users or plugin code)

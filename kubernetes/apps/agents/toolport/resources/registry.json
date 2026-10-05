@@ -24,6 +24,7 @@
     { "id": "pulumi", "name": "Pulumi", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-pulumi-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "openbao", "name": "OpenBao", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-openbao-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "home-assistant", "name": "Home Assistant", "transport": "http", "source": "manual", "url": "https://home.${ROOT_DOMAIN}/api/mcp", "env": [{ "key": "HOME_ASSISTANT_TOKEN", "secret": true }] },
+    { "id": "ha-mcp", "name": "Home Assistant (ha-mcp)", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-ha-mcp-proxy.agents.svc.cluster.local:8086/mcp" },
 
     { "id": "arr-plex", "name": "arr-mcp (Plex)", "transport": "http", "source": "manual", "url": "http://arr-mcp-plex.equestria.svc.cluster.local:6060/mcp", "env": [{ "key": "ARR_PLEX_TOKEN", "secret": true }] },
     {
@@ -64,7 +65,7 @@
       ]
     },
     { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale", "homelable"] },
-    { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
+    { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant", "ha-mcp"] },
     { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm", "teamarr", "tdarr"] },
     { "id": "research", "name": "Research", "enabledServerIds": ["context7", "microsoft-docs", "nuget", "degoog"] }
   ],

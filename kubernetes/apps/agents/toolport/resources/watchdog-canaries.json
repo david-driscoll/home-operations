@@ -21,6 +21,7 @@
   "tailscale": { "tool": "tailscale__get_tailnet_info", "args": {} },
   "homelable": { "tool": "homelable__list_zones", "args": {} },
   "home-assistant": { "tool": "home_assistant__llm__GetDateTime", "args": {} },
+  "ha-mcp": { "tool": "ha_mcp__ha_get_zone", "args": {} },
   "arr-plex": { "tool": "arr_plex__get_indexers", "args": {} },
   "arr-jellyfin": { "tool": "arr_jellyfin__get_indexers", "args": {} },
   "teamarr": { "tool": "teamarr__get_cache_status", "args": {} },

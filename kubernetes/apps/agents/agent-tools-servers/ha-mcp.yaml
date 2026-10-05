@@ -1,0 +1,197 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# ha-mcp (github.com/homeassistant-ai/ha-mcp, ghcr.io/homeassistant-ai/ha-mcp)
+# -- Home Assistant's ADMIN surface as MCP tools: integrations and config
+# entries, the device/entity/area registries, automations, scripts, scenes,
+# helpers, dashboards, history, logs, system health. Around 90 tools.
+#
+# ALONGSIDE `home-assistant`, NOT INSTEAD OF IT. That toolport server is Home
+# Assistant's own /api/mcp, which is Assist: intents over the entities exposed
+# to Assist and nothing else -- it can turn a lamp on but cannot say which
+# integrations are installed. It stays as the narrow door for controlling
+# things. This one is for looking at, and changing, how Home Assistant is set
+# up. Both sit in toolport's `home` profile
+# (../toolport/resources/registry.json).
+#
+# AN MCPServer RUNNING THE IMAGE, same shape as ./teamarr.yaml: ha-mcp speaks
+# Streamable HTTP natively at /mcp and keeps nothing that has to live next to
+# Home Assistant. Upstream's preferred install is a HACS custom component
+# inside Home Assistant; that would be config in HA's volume rather than in
+# git, so it is not used here.
+#
+# `ha-mcp-web`, NOT THE IMAGE'S DEFAULT. The image's CMD is `ha-mcp`, which is
+# stdio. `ha-mcp-web` is the same server over Streamable HTTP, on 8086 unless
+# MCP_PORT says otherwise -- which is also what the operator's own MCP_PORT
+# injection says, from `mcpPort` below. It runs with `stateless_http`, so
+# there is no session for the proxy to forget (docs/kubernetes/agentboard-mcp.md,
+# "toolport never re-initializes"); it still needs its canary in
+# ../toolport/resources/watchdog-canaries.json like every other server.
+#
+# HOMEASSISTANT_URL is the in-cluster Service, not the public
+# https://home.<root domain>: this traffic never leaves the cluster network,
+# and it should not depend on the gateway being up. Home Assistant is a
+# hostNetwork pod (kubernetes/apps/stargate-command/home-assistant), so the
+# Service's endpoint is a node address -- that is expected.
+#
+# THE TOKEN is the same long-lived access token toolport already presents to
+# /api/mcp (../toolport/externalsecret.yaml, `toolport-backends`), read from
+# the same OpenBao item, so one rotation reaches every consumer. ha-mcp drives
+# Home Assistant's WebSocket admin commands with it, so THE USER THAT OWNS IT
+# MUST BE AN ADMINISTRATOR. If it is not, the read-state tools still work and
+# everything touching config entries or the registries answers "unauthorized":
+# promote that user in Home Assistant, or seed a token from one that is.
+#
+# WRITES ARE ON, by decision -- agents can create and edit automations,
+# helpers, dashboards and integrations, and call services. What stays off is
+# everything that reaches past Home Assistant's own API or cannot be undone,
+# spelled out below rather than left to upstream's defaults so a Renovate bump
+# cannot widen it: no configuration.yaml editing, no filesystem tools, no beta
+# features, no code mode, and full backups are list-only (no create, restore
+# or delete). READ_ONLY_MODE=true would hide every write tool, if this ever
+# needs to be a look-only server instead.
+#
+# THE SETTINGS UI IS OFF. ha-mcp serves a web page under the MCP path for
+# toggling tools and flags; here it would be unauthenticated and would write
+# to an emptyDir. Configuration is the env below.
+#
+# NOTHING PERSISTS. ~/.ha-mcp is the /tmp emptyDir, which is where ha-mcp
+# keeps its pre-edit copies of automations, scripts and scenes (the `edits`
+# auto-backups). They survive until this pod restarts, not longer.
+#
+# THE ENDPOINT HAS NO AUTH OF ITS OWN -- upstream's model is a secret URL
+# path, which is no secret in a manifest. Reaching either Service this file
+# creates is being a Home Assistant administrator, so the NetworkPolicy at the
+# end admits toolport and nothing else, the same pair ./homelable.yaml has.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-ha-mcp
+spec:
+  image: ghcr.io/homeassistant-ai/ha-mcp:8.6.0@sha256:7426fb169440aff789e4ee942012b03317ba0b68e1d463efa19c37088dddd8bc
+  transport: streamable-http
+  proxyPort: 8086
+  mcpPort: 8086
+  groupRef:
+    name: agent-tools
+
+  podTemplateSpec:
+    # On the pod template, not the Secret: see ./pulumi.yaml for why that is
+    # the only place Reloader acts on.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        # `mcp` is the operator's fixed container name -- see ./docs.yaml.
+        - name: mcp
+          command: ["ha-mcp-web"]
+          envFrom:
+            # HOMEASSISTANT_TOKEN.
+            - secretRef:
+                name: toolhive-ha-mcp
+          env:
+            - name: HOMEASSISTANT_URL
+              value: http://home-assistant-app.stargate-command.svc.cluster.local:8123
+            # The operator runs this as uid 1000 on a read-only root, and the
+            # image's home (/home/mcpuser) belongs to uid 999.
+            - name: HOME
+              value: /tmp
+            - name: HA_MCP_DISABLE_SETTINGS_UI
+              value: "true"
+            # A PyPI lookup on every start, to tell a human to upgrade.
+            # Renovate does that here.
+            - name: HA_MCP_DISABLE_UPDATE_CHECK
+              value: "true"
+            - name: BACKUP_READ_ONLY
+              value: "true"
+            # Upstream's defaults as of 8.6.0, pinned.
+            - name: ENABLE_SNAPSHOT_DELETE
+              value: "false"
+            - name: ENABLE_YAML_CONFIG_EDITING
+              value: "false"
+            - name: HAMCP_ENABLE_FILESYSTEM_TOOLS
+              value: "false"
+            - name: ENABLE_BETA_FEATURES
+              value: "false"
+            - name: ENABLE_CODE_MODE
+              value: "false"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 192Mi
+    limits:
+      memory: 512Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The SAME item and property `toolport-backends` reads for /api/mcp
+# (../toolport/externalsecret.yaml) -- deliberately not a second token.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-ha-mcp
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-ha-mcp
+    creationPolicy: Owner
+  data:
+    - secretKey: HOMEASSISTANT_TOKEN
+      remoteRef:
+        key: clusters/equestria/apps/home-assistant/eris-credentials
+        property: apikey
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/networkpolicy-networking-k8s-io-v1.json
+#
+# Who may reach ha-mcp: toolport, and its own proxy. `toolhive-name` is on
+# BOTH pods the operator runs for an MCPServer -- the proxy (Service
+# `mcp-toolhive-ha-mcp-proxy`) and the server itself (Service
+# `mcp-toolhive-ha-mcp`) -- so one policy covers both doors, and the second
+# `from` is the proxy reaching the server. Both listen on 8086.
+#
+# toolport's watchdog sidecar shares toolport's pod, so its checks pass too.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: toolhive-ha-mcp-allow-toolport
+spec:
+  podSelector:
+    matchLabels:
+      toolhive-name: toolhive-ha-mcp
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: toolport
+              app.kubernetes.io/controller: toolport
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              toolhive-name: toolhive-ha-mcp
+      ports:
+        - protocol: TCP
+          port: 8086
