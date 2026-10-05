@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# SHELLCHECK CANNOT FULLY READ THIS FILE, and the three codes below are off
+# SHELLCHECK CANNOT FULLY READ THIS FILE, and the four codes below are off
 # for one specific, provable reason -- not as a severity floor. Every other
 # rule, including the rest of the error and warning tiers, stays on, matching
 # ../../../../.shellcheckrc's stance of justifying each disable at its site.
@@ -10,7 +10,7 @@
 # every shell variable is written `$$VAR` and only becomes `$VAR` at apply
 # time. shellcheck analyses the pre-substitution text, where `$$VAR` parses as
 # `$$` (the PID) followed by the literal string `VAR`. That single
-# misreading produces all three:
+# misreading produces all four:
 #
 #   SC2034  "appears unused" -- the assignment is seen, the `$$VAR` uses are
 #           not, so every variable here looks write-only.
@@ -18,8 +18,10 @@
 #           "$$X" ]` looks like a non-empty literal rather than a variable.
 #   SC2170  "invalid number for -gt" -- `[ "$$N" -gt 0 ]` looks like a
 #           comparison against text.
+#   SC2193  "the arguments to this comparison can never be equal" -- `[
+#           "$$X" = all ]` looks like two different literals.
 #
-# Rewriting the tests as `case` would silence two of them but not SC2034, and
+# Rewriting the tests as `case` would silence three of them but not SC2034, and
 # would trade readable code for appeasing a parser that is reading the wrong
 # document. What actually validates this file is running shellcheck (and
 # `bash -n`) against the SUBSTITUTED form:
@@ -29,7 +31,7 @@
 # Do that after editing. The other `$$` templates in this repo
 # (kubernetes/apps/kube-system/openbao-replica/resources/) need no directive
 # only because none of them puts `$$VAR` inside a `[ ... ]` test.
-# shellcheck disable=SC2034,SC2157,SC2170
+# shellcheck disable=SC2034,SC2157,SC2170,SC2193
 # Bootstrap + entrypoint for the agentboard pod, run as `command` against a
 # STOCK debian:13-slim image (see ../helmrelease.yaml) -- there is no
 # agentboard-specific Dockerfile or CI build in this repo. That is a
@@ -375,7 +377,7 @@ fi
 # puts the mise shims back on PATH for the login shells tmux hands out. See
 # that file for what /etc/profile was doing to them.
 
-# RESUME THE MOST RECENT SESSIONS, IN AGENTBOARD'S OWN TMUX SESSION.
+# RESUME EVERY SESSION THAT WAS OPEN, IN AGENTBOARD'S OWN TMUX SESSION.
 #
 # Not a reversal of the "nothing is started on purpose" block above -- read
 # both. That block warns against starting a BRAND-NEW session every boot,
@@ -415,7 +417,15 @@ fi
 #
 # `$$` throughout is Flux's escape for a literal `$`; `$(...)` needs none.
 # See the mise block above for the warning this follows.
-AGENTBOARD_RESUME_SESSIONS="$${AGENTBOARD_RESUME_SESSIONS:-3}"
+#
+# `all` resumes every session that was open when the pod went down (the rule
+# for "open" is in the block below). It was the 3 most recent until 2026-10-05,
+# which meant a restart with five panes going brought back three and left two
+# to be found and woken by hand. A positive number is still accepted as a cap,
+# newest first, and 0 switches resuming off. The count stays small in practice
+# because hibernated and finished sessions are never candidates: 3 were open
+# out of 65 rows when this changed.
+AGENTBOARD_RESUME_SESSIONS="$${AGENTBOARD_RESUME_SESSIONS:-all}"
 # `-` not `:-`: unset gets the default, explicitly EMPTY means resume in
 # silence. That is the off switch and it needs no rebuild. No single quotes in
 # it -- it is interpolated into a single-quoted `bash -lc` string below.
@@ -482,7 +492,9 @@ AGENTBOARD_RESUME_PROMPT="$${AGENTBOARD_RESUME_PROMPT-continue from where you le
 # either way. NON-FATAL, like everything after the base `mise install`: a
 # failure leaves agentboard exactly as it was before this block existed.
 resume_n=0
-if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
+if [ "$$AGENTBOARD_RESUME_SESSIONS" = all ]; then
+  resume_n=all
+elif [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
   resume_n="$$AGENTBOARD_RESUME_SESSIONS"
 fi
 resume_rows=""
@@ -493,7 +505,7 @@ if [ ! -f "$$db" ]; then
 elif resume_rows=$(DB="$$db" N="$$resume_n" bun -e '
   import { Database } from "bun:sqlite";
   import { existsSync } from "node:fs";
-  const n = parseInt(process.env.N, 10) || 0;
+  const n = process.env.N === "all" ? Infinity : parseInt(process.env.N, 10) || 0;
   const picked = [];
   try {
     const db = new Database(process.env.DB);
@@ -571,7 +583,7 @@ if [ -n "$$resume_rows" ]; then
         "exec bash -lc '$$cmd'"
     done
 ) &
-elif [ "$$settled" -eq 1 ] && [ "$$resume_n" -gt 0 ]; then
+elif [ "$$settled" -eq 1 ] && [ "$$resume_n" != 0 ]; then
   echo "==> no in-progress sessions to resume"
 fi
 
