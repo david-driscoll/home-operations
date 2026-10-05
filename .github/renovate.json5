@@ -1172,7 +1172,15 @@
         // unattended list for its schema migrations; opted in by hand. Its
         // database (postgres/vectorchord) stays manual.
         "ghcr.io/immich-app/immich-server",
-        "ghcr.io/immich-app/immich-machine-learning"
+        "ghcr.io/immich-app/immich-machine-learning",
+        // kubernetes/apps/coder/forgejo: the Helm chart only. The Forgejo
+        // server image (data.forgejo.org/forgejo/forgejo) stays manual.
+        "data.forgejo.org/forgejo-helm/forgejo",
+        // kubernetes/apps/network/cloudflare-tunnel. CalVer: a month bump is
+        // a "minor"; the year rollover is a "major" and stays manual.
+        "cloudflare/cloudflared",
+        // dashboard/resources/compose.yaml, outside the app rules' docker/**
+        "ghcr.io/panonim/dynacat"
       ],
       automerge: true,
       automergeType: "pr",
