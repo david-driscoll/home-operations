@@ -1,6 +1,6 @@
 services:
   dynacat:
-    image: ghcr.io/panonim/dynacat:3.0.0@sha256:974563ad02c190f6a3e1240a096b8927136145956f2c202c17ffbb47d5a9c367
+    image: ghcr.io/panonim/dynacat:3.0.1@sha256:6727166eab25c06c3b06d02d454e689785355241bda356551ea5c080d17a637d
     environment:
       - ROOT_DOMAIN
       - AUTHENTIK_API_TOKEN
