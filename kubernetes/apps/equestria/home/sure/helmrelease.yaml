@@ -113,11 +113,23 @@ spec:
 
       settings:
         SELF_HOSTED: "true"
-        # `open` so the first account can be created at all. Reachable from
-        # the LAN and the tailnet only (`local-user` on the route). Close it
-        # from Settings -> Self-Hosting, or set `invite_only` here, once the
-        # household is in.
-        ONBOARDING_STATE: "open"
+        # `invite_only` closes LOCAL email/password registration: the sign-up
+        # form demands an invite code. It does not touch SSO. The OIDC path
+        # (oidc_accounts_controller.rb) never reads this setting -- it creates
+        # an account whenever AUTH_JIT_MODE is `create_and_link` (the default)
+        # and ALLOWED_OIDC_DOMAINS admits the email (empty = all) -- so anyone
+        # authentik lets through gets an account, and the first one in is the
+        # instance's super admin. Until <app>-oidc exists nobody can register
+        # at all, which is the intended order.
+        #
+        # ⚠ An SSO user with no pending invitation gets a NEW family of their
+        # own. To share one household, invite the second person by email from
+        # inside Sure BEFORE their first sign-in; the OIDC path matches the
+        # pending invitation and joins them to it.
+        #
+        # This is only the DEFAULT: once the value is changed under Settings ->
+        # Self-Hosting it is stored in the database and this stops applying.
+        ONBOARDING_STATE: "invite_only"
         AI_DEBUG_MODE: "false"
 
       extraEnv:
