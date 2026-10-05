@@ -32,3 +32,4 @@ resources:
   # restic repo (/repository/opencloud), which pruning does not touch.
   # - ./opencloud/ks.yaml
   - ./nextcloud/ks.yaml
+  - ./actual-budget/ks.yaml

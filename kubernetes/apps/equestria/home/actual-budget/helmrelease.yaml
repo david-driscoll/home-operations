@@ -1,0 +1,194 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template: Actual publishes no Helm chart, only a compose file -- one
+# container, port 5006, one volume at /data.
+#
+# Every setting is an ACTUAL_* environment variable
+# (https://actualbudget.org/docs/config/); there is no config.json on the
+# volume, so nothing here can drift from what is in git.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app actual-budget
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          # For rotations of ${APP}-oidc. The first start does not depend on
+          # it: the Secret is required, so the kubelet holds the pod until it
+          # exists (see ./externalsecret.yaml).
+          reloader.stakater.com/auto: "true"
+        # Recreate: SQLite on a ReadWriteOnce volume.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/actualbudget/actual
+              # Upstream tags releases without the `v` (26.10.0, not v26.10.0).
+              # The plain tag is the Debian image; `-alpine` is the other one.
+              tag: 26.10.0@sha256:24645e971da6bb1a1f953d6859e307a0b29be1e8b4130a35b3220c209b5b860c
+              pullPolicy: IfNotPresent
+            envFrom:
+              # ACTUAL_OPENID_DISCOVERY_URL, ACTUAL_OPENID_CLIENT_ID,
+              # ACTUAL_OPENID_CLIENT_SECRET. Deliberately NOT optional.
+              - secretRef:
+                  name: ${APP}-oidc
+            env:
+              TZ: ${TIMEZONE}
+              ACTUAL_PORT: &port 5006
+              # Stated rather than left to the image's "/data if it exists"
+              # default. server-files/ and user-files/ are created beneath it.
+              ACTUAL_DATA_DIR: /data
+
+              # ---- OpenID (the rest lives in ${APP}-oidc) -------------------
+              # On every start the server sees these variables, runs discovery
+              # against authentik and rewrites its `openid` auth row from them
+              # (bootstrap(..., forced) in app.ts), so git stays the source of
+              # truth. Sessions are untouched by that, which matters because
+              # the nightly shed restarts this pod every morning.
+              #
+              # The FIRST person to sign in becomes the server owner and its
+              # only ADMIN, and ownership cannot be moved in the UI afterwards.
+              #
+              # The public URL: the callback is built from it
+              # (<this>/openid/callback, the one redirect URI in
+              # ./definition.yaml) and logins from any other host are refused.
+              ACTUAL_OPENID_SERVER_HOSTNAME: https://${APP}.${ROOT_DOMAIN}
+              # OpenID only. ENFORCE hides the password method from the login
+              # page, and the two below it stop a client asking for another
+              # method by name (getLoginMethod in account-db.js).
+              #
+              # What none of them cover: if discovery FAILS on the very first
+              # start, the database stays empty and the server offers its
+              # password bootstrap page to whoever is on the LAN, until a
+              # restart succeeds. The log line to look for is "OpenID
+              # configured!"; "configuration-error" means it did not happen.
+              ACTUAL_OPENID_ENFORCE: "true"
+              ACTUAL_LOGIN_METHOD: openid
+              ACTUAL_ALLOWED_LOGIN_METHODS: openid
+              # `login` creates a BASIC user the first time someone signs in.
+              # The default, `manual`, turns away everyone the owner has not
+              # typed into Server > User Directory first -- and authentik's
+              # access_policy already decides who gets this far. A new user sees
+              # no budgets until the owner shares one under User Access.
+              ACTUAL_USER_CREATION_MODE: login
+              # 30 days, in seconds. The default is `never`, which leaves a
+              # session valid after its user is removed from authentik;
+              # `openid-provider` would instead copy the access token's
+              # lifetime, which is far shorter than a budgeting session.
+              ACTUAL_TOKEN_EXPIRATION: "2592000"
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec: &spec
+                  httpGet:
+                    # Unauthenticated, static {"status":"UP"}.
+                    path: /health
+                    port: *port
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *probes
+              # Discovery against authentik runs before the port opens and has
+              # a 20s timeout of its own.
+              startup:
+                <<: *probes
+                spec:
+                  <<: *spec
+                  periodSeconds: 5
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              # Not read-only: the image is built to run as root and nothing
+              # upstream documents every path it writes outside /data.
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 1Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # The image declares no USER and would run as root. 568 matches
+        # VOLSYNC_PUID/PGID, so the restic mover agrees on /data; fsGroup is
+        # what makes the volume writable.
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /data
+      tmp:
+        type: emptyDir
+        sizeLimit: 256Mi
+        globalMounts:
+          - path: /tmp
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: Actual does its own
+              # OpenID, so forward-auth in front would authenticate twice. This
+              # is the LAN gate only. Same as aurral, reitti, tududi.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
