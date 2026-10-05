@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app sure
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: postgres
+      namespace: database
+    - name: valkey
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+    # Ordering only, NOT readiness -- garage-system/cluster/ks.yaml sets
+    # `wait: false`. The GarageBucket in ./bucket.yaml reconciles
+    # asynchronously either way. Same note as ../outline/ks.yaml.
+    - name: garage
+      namespace: garage-system
+  path: ./kubernetes/apps/equestria/home/sure
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # ⚠️ BRAND-NEW DATABASE. Sure has never had a role, a database or an
+    # OpenBao static role, so the new-app ordering trap in
+    # components/postgres/ks.yaml applies in full: expect the `system` stack to
+    # go Stalled/UpdateFailed ONCE on new-app day. Recovery is the ORDER OF
+    # OPERATIONS block in components/postgres/ks.yaml -- read it before merge.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    # No components/volsync, deliberately, and for ../outline's reason. The only
+    # local state Sure has is Active Storage (/rails/storage: statement and
+    # import uploads, avatars), and the chart runs web and Sidekiq as two
+    # Deployments that both need it -- one ReadWriteOnce volume would pin both
+    # pods to a node. ACTIVE_STORAGE_SERVICE=generic_s3 puts it in Garage
+    # (./bucket.yaml, backed up by annotation) instead; everything else is in
+    # Postgres.
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

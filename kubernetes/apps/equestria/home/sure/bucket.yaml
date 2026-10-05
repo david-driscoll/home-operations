@@ -1,0 +1,63 @@
+---
+# Sure's Active Storage bucket: imported statements and CSVs, account
+# documents, avatars and family exports.
+#
+# Declared here rather than in garage-system for the reason
+# ../outline/bucket.yaml spells out at length: the operator writes a
+# GarageKey's credential Secret into the GarageKey's OWN namespace, so the key
+# has to live where the app can read it. The cross-namespace clusterRef is
+# authorised by the GarageReferenceGrant in
+# kubernetes/apps/garage-system/cluster/referencegrant.yaml.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageBucket
+metadata:
+  name: ${APP}
+  annotations:
+    # Opts this bucket into the estate's backup system
+    # (stacks/system/application-backups.ts). NOT optional bookkeeping:
+    # ACTIVE_STORAGE_SERVICE=generic_s3 means every upload lives ONLY here, and
+    # this app carries no components/volsync precisely because of that. Bucket
+    # backups are opt-IN; forgetting the annotation loses data.
+    driscoll.dev/backup: "true"
+spec:
+  clusterRef:
+    name: garage
+    namespace: garage-system
+  globalAlias: ${APP}
+  # Retain, not Delete: a Flux prune that removes this object must not take the
+  # objects with it. Orphan the bucket and let a human remove it.
+  deletionPolicy: Retain
+  keyPermissions:
+    - keyRef:
+        name: ${APP}
+      read: true
+      write: true
+      # Sure puts, gets and deletes objects; it needs neither delete-bucket nor
+      # website configuration.
+      owner: false
+---
+# Sure's S3 identity.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: ${APP}
+spec:
+  clusterRef:
+    name: garage
+    namespace: garage-system
+  name: Sure
+  neverExpires: true
+  permissions:
+    # The bucket above is created by the operator, so Sure never needs to.
+    createBucket: false
+  secretTemplate:
+    # Read directly by ./helmrelease.yaml through `secretKeyRef` -- no
+    # ExternalSecret in between. The data keys (`access-key-id`,
+    # `secret-access-key`, `endpoint`, `region`) are the operator's defaults.
+    #
+    # NO `includeBucketName`: it writes nothing when the grant is declared from
+    # the bucket side, as it is above (see ../outline/bucket.yaml). The bucket
+    # name is not a secret and is a literal in ./helmrelease.yaml.
+    name: ${APP}-garage-credentials
+    includeEndpoint: true
+    includeRegion: true

@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# The upstream chart renders an Ingress and nothing else, so the route is a
+# separate object -- the same arrangement as ../windmill/httproute.yaml.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "${APP}.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        # `fullnameOverride: sure` in ./helmrelease.yaml names the web Service
+        # after the app; the chart's `service.port` is 80 -> container 3000.
+        - name: ${APP}
+          port: 80
+      filters:
+        # `local-user`, not `authenticated-user`: Sure speaks OIDC itself, so
+        # the authentik outpost in front would authenticate twice and break the
+        # /auth/openid_connect/callback hop. Same reasoning as ../outline.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: local-user

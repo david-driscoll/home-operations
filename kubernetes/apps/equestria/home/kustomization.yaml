@@ -23,6 +23,7 @@ resources:
   - ./outline/ks.yaml
   - ./mealie/ks.yaml
   - ./dawarich/ks.yaml
+  - ./sure/ks.yaml
   # OpenCloud is replaced by ./nextcloud at the same hostname
   # (docs/plans/nextcloud-migration.md). Unlisting it makes Flux prune the whole
   # app -- pods, routes, the tailnet device and the PVC; the next

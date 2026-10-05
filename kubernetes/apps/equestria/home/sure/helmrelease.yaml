@@ -1,0 +1,255 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
+#
+# Upstream publishes the chart to GitHub Pages only -- there is no OCI
+# artifact, hence a HelmRepository (as ../meilisearch and media/pinepods).
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: sure
+spec:
+  interval: 1h
+  url: https://we-promise.github.io/sure
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+#
+# Sure (https://docs.sure.am/self-hosting-helm) from its official chart, with
+# every bundled dependency switched off: this estate already has Postgres
+# (components/postgres), Valkey (database/valkey) and an object store (Garage).
+# What is left of the chart is two Deployments -- `sure-web` (Rails) and
+# `sure-worker` (Sidekiq) -- a Service, and a post-install/upgrade migrate Job.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app sure
+spec:
+  chart:
+    spec:
+      chart: sure
+      # ⚠ VERSION ORDER IS NOT SEMVER ORDER HERE. Upstream ships fixes as
+      # `X.Y.Z-hotfix.N`, which semver reads as a PRE-release of X.Y.Z -- so a
+      # version-sorting tool sees plain `0.7.5` as newer than this, when it is
+      # three days OLDER. Do not accept a "bump" from a hotfix back to its base.
+      #
+      # hotfix.1, not hotfix.2: the hotfix.2 chart was published on 2026-10-05
+      # hours before its image, and ghcr.io/we-promise/sure:0.7.5-hotfix.2 did
+      # not exist when this was written. hotfix.1 is what `stable` pointed at.
+      version: 0.7.5-hotfix.1
+      sourceRef:
+        kind: HelmRepository
+        name: sure
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    # Names the Service `sure` (what ./httproute.yaml and components/tailscale
+    # both expect) and the Deployments `sure-web` / `sure-worker`.
+    fullnameOverride: *app
+
+    image:
+      repository: ghcr.io/we-promise/sure
+      # Stated rather than inherited from the chart's appVersion, and pinned by
+      # digest. The chart builds the reference as `repository:tag`, so the
+      # `tag@sha256` spelling passes straight through.
+      tag: 0.7.5-hotfix.1@sha256:3692b3bcf0eae2c7f3154348c6131060bda8127038fc78b0543f15b5166e6074
+      pullPolicy: IfNotPresent
+
+    # ---- Bundled dependencies: all off ------------------------------------
+    # `cnpg.enabled` gates the operator SUBCHART and `cnpg.cluster.enabled`
+    # the Cluster CR plus the chart's computed DATABASE_URL; they are
+    # independent switches and both default to true. Leaving the first on
+    # would install a second CloudNativePG operator into this namespace.
+    cnpg:
+      enabled: false
+      cluster:
+        enabled: false
+    # Likewise two switches: the redis-operator subchart, and the
+    # RedisReplication CR the chart would hand it.
+    redisOperator:
+      enabled: false
+      managed:
+        enabled: false
+    redisSimple:
+      enabled: false
+
+    rails:
+      # ./externalsecret.yaml. The chart reads SECRET_KEY_BASE and the three
+      # ACTIVE_RECORD_ENCRYPTION_* keys out of this Secret by `secretKeyRef`
+      # (`encryptionEnv.enabled` is what wires the latter three in).
+      existingSecret: ${APP}-env
+      encryptionEnv:
+        enabled: true
+      # Everything else in the same Secret -- DB_HOST, DB_PORT and the three
+      # POSTGRES_* -- arrives by envFrom, on both Deployments and the Job.
+      extraEnvFrom:
+        - secretRef:
+            name: ${APP}-env
+        # `optional`: this Secret does not exist until `stacks/system` has
+        # created the authentik provider. Without it Sure logs "Skipping OIDC
+        # provider" and serves local login only; Reloader restarts both pods
+        # once it appears.
+        - secretRef:
+            name: ${APP}-oidc
+            optional: true
+
+      settings:
+        SELF_HOSTED: "true"
+        # `invite_only` closes LOCAL email/password registration: the sign-up
+        # form demands an invite code. It does not touch SSO. The OIDC path
+        # (oidc_accounts_controller.rb) never reads this setting -- it creates
+        # an account whenever AUTH_JIT_MODE is `create_and_link` (the default)
+        # and ALLOWED_OIDC_DOMAINS admits the email (empty = all) -- so anyone
+        # authentik lets through gets an account, and the first one in is the
+        # instance's super admin. Until <app>-oidc exists nobody can register
+        # at all, which is the intended order.
+        #
+        # ⚠ An SSO user with no pending invitation gets a NEW family of their
+        # own. To share one household, invite the second person by email from
+        # inside Sure BEFORE their first sign-in; the OIDC path matches the
+        # pending invitation and joins them to it.
+        #
+        # This is only the DEFAULT: once the value is changed under Settings ->
+        # Self-Hosting it is stored in the database and this stops applying.
+        ONBOARDING_STATE: "invite_only"
+        AI_DEBUG_MODE: "false"
+
+      extraEnv:
+        TZ: "${TIMEZONE}"
+        # Used for links in outgoing mail (config/environments/production.rb).
+        APP_DOMAIN: "${APP}.${ROOT_DOMAIN}"
+        # RAILS_ASSUME_SSL and RAILS_FORCE_SSL are left at their defaults
+        # (true): TLS terminates at the gateway and with assume_ssl every
+        # request is treated as https, so nothing redirects and cookies stay
+        # `secure`. /up is exempt either way.
+
+        # ---- Redis / Valkey -----------------------------------------------
+        # The shared, passwordless Valkey in `database`. Index 13: 6, 8, 9,
+        # 10, 11 and 12 are taken, and 0 is where every host-only consumer
+        # lands. Sidekiq's queues and the Rails cache both live here. Setting
+        # the key in `extraEnv` is also what tells the chart not to compute a
+        # REDIS_URL -- or demand a `redis-password` key -- of its own.
+        REDIS_URL: "redis://valkey.database.svc.cluster.local:6379/13"
+
+        # ---- Active Storage -> Garage -------------------------------------
+        # `generic_s3` in config/storage.yml. Credentials, endpoint and region
+        # come from the GarageKey's Secret in `extraEnvVars` below.
+        ACTIVE_STORAGE_SERVICE: generic_s3
+        # ./bucket.yaml's `globalAlias`. A literal because the operator writes
+        # no `bucket` key for this key's shape -- see ../outline/bucket.yaml.
+        GENERIC_S3_BUCKET: "${APP}"
+        # Garage serves path-style addressing only.
+        GENERIC_S3_FORCE_PATH_STYLE: "true"
+        # Recent aws-sdk-s3 adds a CRC checksum to every request and validates
+        # one on every response by default. Upstream's own `cloudflare` storage
+        # entry turns that off for R2; `generic_s3` has no such knob, so it is
+        # set through the SDK's environment variables instead.
+        AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+        AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+
+        # ---- OIDC (authentik) ---------------------------------------------
+        # Issuer, client id and secret arrive via the optional Secret above.
+        # Must match a redirect URI registered in ./definition.yaml.
+        OIDC_REDIRECT_URI: "https://${APP}.${ROOT_DOMAIN}/auth/openid_connect/callback"
+        OIDC_BUTTON_LABEL: "Sign in with ${CLUSTER_TITLE}"
+
+      extraEnvVars:
+        - name: GENERIC_S3_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-garage-credentials
+              key: access-key-id
+        - name: GENERIC_S3_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-garage-credentials
+              key: secret-access-key
+        - name: GENERIC_S3_REGION
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-garage-credentials
+              key: region
+        # Already carries its http:// scheme, which is the form the SDK wants.
+        - name: GENERIC_S3_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-garage-credentials
+              key: endpoint
+
+    migrations:
+      strategy: job
+      job:
+        # The stock script derives DB_HOST by parsing DATABASE_URL with sed,
+        # CLOBBERING the DB_HOST this estate passes discretely with an empty
+        # string -- `pg_isready -h ""` then waits on a local socket forever.
+        # This is the same script with that line removed. The variables are
+        # written without braces on purpose: Flux's postBuild substitution
+        # only touches the braced form.
+        #
+        # The web container's own entrypoint also runs `db:prepare` before
+        # starting the server, so on a first install the schema is loaded by
+        # the web pod and this Job (a POST-install hook) finds nothing to do.
+        # It earns its keep on upgrades.
+        args: |
+          until pg_isready -h "$DB_HOST" -p "$DB_PORT"; do echo "Waiting for DB..."; sleep 5; done
+          echo "Preparing database (db:prepare)" && \
+          DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rake db:prepare
+
+    web:
+      replicas: 1
+      # The chart exposes no Deployment-level annotations. Reloader falls back
+      # to the pod template's when the workload carries none of its own, so
+      # this is where the annotation goes -- it must restart the pod when the
+      # Postgres password rotates, and when <app>-oidc first appears.
+      podAnnotations:
+        reloader.stakater.com/auto: "true"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          memory: 2Gi
+      # Liveness and readiness stay at the chart's defaults (/up). Startup is
+      # widened from 150s to 600s: the entrypoint runs `db:prepare` before
+      # Puma listens, and against an empty database that loads the whole
+      # schema.
+      startupProbe:
+        httpGet:
+          path: /up
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 60
+
+    worker:
+      replicas: 1
+      podAnnotations:
+        reloader.stakater.com/auto: "true"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 384Mi
+        limits:
+          memory: 2Gi
+
+    # The chart's own Ingress stays off; see ./httproute.yaml.
+    ingress:
+      enabled: false

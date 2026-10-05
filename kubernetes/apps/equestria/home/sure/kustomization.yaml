@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./httproute.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+  - ./bucket.yaml
+patches:
+  # PGCRYPTO, declared on the CNPG `Database` rather than left to the app's
+  # own `db:prepare`. Sure's db/schema.rb has exactly two:
+  #
+  #   enable_extension "pg_catalog.plpgsql"
+  #   enable_extension "pgcrypto"
+  #
+  # pgcrypto is trusted on PostgreSQL 13+ and the app could create it unaided;
+  # it is declared anyway so the database's extension set is written down in
+  # one place, as ../dawarich and ../reitti do. Rails emits
+  # `CREATE EXTENSION IF NOT EXISTS`, so pre-creating it makes the app's own
+  # statement a no-op.
+  #
+  # Mechanism: the two-level JSON6902 patch ../dawarich uses. It appends to the
+  # nested `<app>-postgres` Kustomization's `spec.patches`; that child then
+  # patches the `Database` it renders into `database`. Never a strategic merge
+  # on `spec.patches` -- a merge REPLACES the list.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: Database
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata:
+              name: not-used
+            spec:
+              extensions:
+                - name: pgcrypto
+                  ensure: present
