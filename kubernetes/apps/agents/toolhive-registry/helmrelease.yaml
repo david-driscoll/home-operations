@@ -157,6 +157,12 @@ spec:
         cpu: 25m
         memory: 128Mi
       limits:
+        # Explicit, because leaving it out does not mean "no limit": Helm merges
+        # the chart's default 500m in underneath. At 500m the server averaged
+        # 0.06 cores yet was throttled in ~80% of its CFS periods -- short
+        # multi-threaded bursts, not sustained load -- and CPUThrottlingHigh
+        # fired for most of a week (2026-10-06).
+        cpu: "2"
         memory: 512Mi
 
     # Sheds with the rest of the namespace during Low Power, same as every other
