@@ -39,9 +39,9 @@ spec:
         annotations:
           # Named, not `auto`: `auto` would also follow ${APP}-tailscale, which
           # is re-minted every 5 minutes and is read from its mounted file.
-          # ${APP} for the API keys, the two -db Secrets for their 30-day
-          # password rotations, and the ConfigMap for server.mjs itself.
-          secret.reloader.stakater.com/reload: "setup-status,setup-status-nextcloud-db,setup-status-supersync-db"
+          # ${APP} for the API keys, the -db Secret for its 30-day
+          # password rotation, and the ConfigMap for server.mjs itself.
+          secret.reloader.stakater.com/reload: "setup-status,setup-status-nextcloud-db"
           configmap.reloader.stakater.com/reload: "setup-status-server"
         pod:
           securityContext:
@@ -79,8 +79,6 @@ spec:
                   name: *app
               - secretRef:
                   name: setup-status-nextcloud-db
-              - secretRef:
-                  name: setup-status-supersync-db
             probes:
               liveness:
                 enabled: true

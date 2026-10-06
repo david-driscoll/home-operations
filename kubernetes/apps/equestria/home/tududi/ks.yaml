@@ -47,7 +47,6 @@ spec:
     # (/app/uploads) and the per-user exports from Profile > Backup
     # (/app/backups), neither of which the nightly pg_dump sees.
     - ../../../../components/volsync
-    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app

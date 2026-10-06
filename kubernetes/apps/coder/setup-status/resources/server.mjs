@@ -27,8 +27,6 @@
 //   - Jellyfin (admin API key): its accounts are local, not SSO.
 //   - Seerr (its API key): Movie & TV requests sign in with the Jellyfin login,
 //     not authentik, so Seerr itself says whether the visitor has an account.
-//   - SuperSync's database: whether the visitor has a sync token and which of
-//     their devices have synced (the Tasks page's Super Productivity).
 //   - Nextcloud's database: oc_authtoken, which names each connected device
 //     (phone app, calendar app password, DAVx5, desktop client).
 //   - Tailscale's API: the visitor's devices on the tailnet.
@@ -88,9 +86,7 @@ const AUTHENTIK_APPS = {
   home: `home.${ROOT_DOMAIN}`,
   location: `dawarich.${ROOT_DOMAIN}`,
   wiki: `outline.${ROOT_DOMAIN}`,
-  tasks: `super-productivity.${ROOT_DOMAIN}`,
-  // Not a page of its own: the Tasks page's sync password comes from here.
-  supersync: `supersync.${ROOT_DOMAIN}`,
+  tasks: `tududi.${ROOT_DOMAIN}`,
   "request-music": `aurral.${ROOT_DOMAIN}`,
 };
 
@@ -444,48 +440,6 @@ async function musicPassword(visitor) {
   return json({ username: account.userName, password, saved: Boolean(saved) });
 }
 
-// --- SuperSync ------------------------------------------------------------------
-//
-// Super Productivity's sync server. Its token page (behind authentik) makes a
-// `users` row, keyed by the lowercased authentik email, the first time someone
-// asks for a token; every app install that syncs gets a `sync_devices` row,
-// refreshed as it syncs. Table and column names: the server's Prisma schema
-// (packages/super-sync-server/prisma/schema.prisma upstream).
-
-let superSyncDb;
-const superSync = () =>
-  (superSyncDb ??= new SQL({
-    hostname: env("SUPERSYNC_DB_HOST"),
-    port: Number(process.env.SUPERSYNC_DB_PORT ?? 5432),
-    database: env("SUPERSYNC_DB_NAME"),
-    username: env("SUPERSYNC_DB_USER"),
-    password: env("SUPERSYNC_DB_PASSWORD"),
-    max: 2,
-    idleTimeout: 60,
-    connectionTimeout: 5,
-  }));
-
-// The first letter of a client id says what kind of install it is (the app's
-// own "Connected Devices" list reads it the same way).
-const SYNC_CLIENT_KINDS = { E: "computer", A: "android", I: "iphone", B: "browser" };
-
-/** Whether they have a sync token, and kind -> newest sync for each kind of device. */
-async function superSyncStatus(email) {
-  if (!email) return { token: false, devices: {} };
-  const rows = await superSync()`
-    SELECT d.client_id, d.last_seen_at
-    FROM users u LEFT JOIN sync_devices d ON d.user_id = u.id
-    WHERE u.email = ${email.toLowerCase()}`;
-  const devices = {};
-  for (const row of rows) {
-    if (!row.client_id) continue;
-    const kind = SYNC_CLIENT_KINDS[String(row.client_id)[0]] ?? "other";
-    const lastSeen = new Date(Number(row.last_seen_at)).toISOString();
-    if (!devices[kind] || devices[kind] < lastSeen) devices[kind] = lastSeen;
-  }
-  return { token: rows.length > 0, devices };
-}
-
 // --- Tailscale -----------------------------------------------------------------
 
 const tailnetDevices = cached(60_000, async () => {
@@ -530,13 +484,12 @@ async function me(req, visitor) {
   const { username } = visitor;
   const user = await authentikUser(username, visitor.uid);
   if (!user) return json({ error: "unknown user" }, 403);
-  const [apps, jellyfin, devices, tailnet, music, sync] = await Promise.all([
+  const [apps, jellyfin, devices, tailnet, music] = await Promise.all([
     attempt("authentik apps", () => authentikApps("all")),
     attempt("jellyfin", () => jellyfinAccount(visitor)),
     attempt("nextcloud", () => nextcloudDevices(username)),
     attempt("tailscale", () => tailscaleDevices(visitor.email)),
     attempt("navidrome", () => navidromeStatus(username)),
-    attempt("supersync", () => superSyncStatus(visitor.email)),
   ]);
   // Seerr is looked up by Jellyfin account, so it waits for that one.
   const seerr = jellyfin?.id ? await attempt("seerr", () => seerrAccount(jellyfin.id)) : undefined;
@@ -563,9 +516,6 @@ async function me(req, visitor) {
   result.apps["movies-tv"] = jellyfin ? { checked: true, account: jellyfin.account, lastSignIn: jellyfin.lastSignIn ?? null } : { checked: false };
   // Requests need the Movies & TV login first: say so rather than "not set up".
   result.apps["request-movies"] = !jellyfin ? { checked: false } : !jellyfin.account ? { checked: true, jellyfin: false, account: false } : seerr ? { checked: true, jellyfin: true, ...seerr } : { checked: false };
-  // Tasks: the app's sync matters, not the web app's sign-in, so SuperSync's
-  // view rides along (null when it couldn't be checked).
-  if (result.apps.tasks) result.apps.tasks.sync = sync ?? null;
   if (result.apps.cloud.checked) result.apps.cloud.devices = devices ?? null;
   // Music: Navidrome's own view beats authentik's (it also sees the apps), and
   // the stored password is shown back to its owner.

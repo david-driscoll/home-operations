@@ -106,9 +106,6 @@ image.
   - Tailscale's API: the visitor's devices, using the rotating
     `third-party-tokens/tailscale/api-key`, mounted as a file.
   - Navidrome's native API.
-  - SuperSync's database (the Tasks page): one `SELECT` joining `users` (the
-    lowercased authentik email) to `sync_devices`, which says whether the
-    visitor has a sync token and which kinds of device have synced.
 - **Writes: one.** `POST /setup/api/music/password` generates a password and
   sets it on the visitor's Navidrome account. It creates the account first if
   Navidrome has never seen them. It then saves the password in the visitor's

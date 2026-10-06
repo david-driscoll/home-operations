@@ -7,7 +7,12 @@ resources:
   - ./n8n/ks.yaml
   - ./dynacat/ks.yaml
   - ./obsidian-sync/ks.yaml
-  - ./super-productivity/ks.yaml
+  # Super Productivity's web app is retired: the family's to-do list is ./tududi
+  # now, and the setup guide's Tasks page points there. Unlisting it makes Flux
+  # prune the app (it kept no data server-side; tasks lived in each browser) and
+  # the next `stacks/system` run removes its authentik app. ./supersync stays
+  # for the installed apps that still sync through it.
+  # - ./super-productivity/ks.yaml
   - ./supersync/ks.yaml
   - ./windmill/ks.yaml
   - ./rustdesk/ks.yaml

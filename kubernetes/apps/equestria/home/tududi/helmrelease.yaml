@@ -36,6 +36,11 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+          # Always up: neither the nightly Low Power shed nor Sablier touches
+          # it. This is the family's to-do list (it replaced Super Productivity
+          # in the setup guide), and its scheduler -- recurring tasks, CalDAV
+          # sync, the Telegram poller -- only runs while the pod does.
+          downscaler/exclude: "true"
         replicas: 1
         strategy: Recreate
         containers:
@@ -179,8 +184,3 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: local-user
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: sablier-${APP}
