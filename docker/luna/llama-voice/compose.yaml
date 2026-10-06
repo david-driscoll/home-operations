@@ -8,7 +8,7 @@ services:
   #
   # Pairs with the wyoming stack (whisper STT + piper TTS) on this host.
   llama-voice:
-    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:431561ee79ee67b3980a02ff47ed9dc19496127643b75671d9789ef693ca57f9
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:251a422e814aebadcb0be861c82469f6e6a76af8ef14f1a0e8aba02730aedaa4
     container_name: llama-voice
     restart: unless-stopped
     ports:
