@@ -97,16 +97,23 @@ ways, because Forgejo has two kinds of owner:
 | organization | a `renovate` team with `includesAllRepositories`, bot as its only member | **yes** — no commit, no run needed |
 | user | one `forgejo_collaborator` grant per repository | no — picked up by the next `stacks/system` run, which the Stack CR does daily |
 
-**Today every repository is in the second row.** The forge has no
-organizations, so the team half reconciles nothing; it is there for when one
-appears, at which point its repositories move to the first row automatically
-and stop needing a run per repository.
+Both rows are live. The forge started with user-owned repositories only; the
+`home-operations` and `docs` organizations came later, and their repositories
+are covered by the first row with no run per repository.
 
-The grant is `write` on code, issues and pull requests and nothing else:
-branch, open a PR, keep the Dependency Dashboard issue current. No wiki, no
-releases, no actions, no repository settings. That is separate from the token's
-`write:repository` **scope**, which is what additionally lets the operator sync
-its own webhook onto each repository.
+The grant is repository **admin** in both rows — an `admin` team, an `admin`
+collaborator. Branching, opening a PR and keeping the Dependency Dashboard
+current only need `write`; admin is there for webhook sync. Forgejo lets only
+a repository owner or admin manage hooks, and the operator manages them with
+the bot's token, so a `write` grant gets a 403 (`user should be an owner or a
+collaborator with admin write of a repository`) on every sync and the
+repository never gets a hook. The token's `write:repository` **scope** is
+necessary for that call but not sufficient — the scope bounds what the token
+may ask for, the grant decides whether this account may have it.
+
+It is repo-admin, not org-owner and not instance-admin: the bot cannot manage
+teams, members or organization settings, and `is_admin` on the account stays
+false.
 
 Three kinds of repository are deliberately skipped, and none of them is a gap:
 
@@ -119,8 +126,8 @@ Three kinds of repository are deliberately skipped, and none of them is a gap:
 Two properties of the discovery worth knowing before they surprise you:
 
 - **Empty is a legitimate answer for both lists, and neither is guarded on
-  length.** There are no organizations on the forge today, so every repository
-  is user-owned and the team half does nothing. What protects the lists is that
+  length.** A forge with no organizations, or with no user-owned repositories,
+  is a real state and not an error. What protects the lists is that
   a failed lookup *raises* rather than resolving short: a forge that is down, a
   rotated admin password, a 403 all fail the stack. An empty array means the
   API said "none". The gap that leaves — a 200 carrying fewer entries than
@@ -302,6 +309,23 @@ usually because `stacks/system` has not run since this landed. A token missing
 `read:user` presents identically: an empty project list, no error. Check the
 grant before the token, in the forge itself: the bot should appear under the
 repository's `Settings → Collaborators`, or in the org's `renovate` team.
+
+**A Dependency Dashboard checkbox does nothing until 03:00.** The repository
+has no hook, or the operator is refusing its deliveries. For the first, look
+for the sync error in the operator's log — it does not fail discovery or the
+run, so nothing else reports it:
+
+```bash
+kubectl -n coder logs deploy/renovate-operator --since=26h | grep webhook-sync
+```
+
+A `403 … user should be an owner or a collaborator with admin write of a
+repository` means the bot is not repo-admin there: check the org's `renovate`
+team is `admin`, or the repository's collaborator grant is. For the second,
+`RenovateWebhookRejecting` fires on
+`renovate_operator_webhook_auth_failures_total`, and
+`renovate_operator_webhook_requests_total` shows whether deliveries are
+arriving at all.
 
 **A new user-owned repository is not being picked up.** Expected until the next
 `stacks/system` run — collaborator grants are per repository and cannot cover

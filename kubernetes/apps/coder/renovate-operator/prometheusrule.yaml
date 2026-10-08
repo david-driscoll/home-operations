@@ -101,3 +101,81 @@ spec:
           for: 1h
           labels:
             severity: warning
+
+        # THE WEBHOOK HOP. Forgejo authenticates a delivery with the bearer
+        # token the operator wrote onto the hook, so the failure that matters
+        # here is `auth_failures` rather than the HMAC counter the upstream
+        # example alerts on -- that one only moves for GitHub and Bitbucket.
+        # `auth_failed` is a token mismatch (rotated in OpenBao, hook not yet
+        # re-synced); `no_matching_job` is a hook left behind for a RenovateJob
+        # that no longer exists; `secret_error` is the `renovate-webhook`
+        # Secret being unreadable.
+        #
+        # The symptom is otherwise invisible: a Dependency Dashboard checkbox
+        # that silently waits for 03:00 instead of acting.
+        #
+        # This does NOT catch a hook that was never created -- a sync 403 has
+        # no metric, only an operator log line. See the runbook.
+        - alert: RenovateWebhookRejecting
+          annotations:
+            description: >-
+              The renovate-operator refused {{ $value | humanize }} webhook
+              deliveries from {{ $labels.provider }} in the last hour
+              ({{ $labels.error_type }}). Dependency Dashboard checkboxes and
+              PR rebase boxes will not act until the nightly run.
+            summary: Renovate webhook deliveries are being rejected.
+          expr: |
+            sum by (provider, error_type) (increase(renovate_operator_webhook_auth_failures_total[1h])) > 0
+          for: 30m
+          labels:
+            severity: warning
+
+        # A Secret the operator was told to read is missing, or missing the
+        # key -- `renovate-secret` or `renovate-webhook`. Both are
+        # ExternalSecrets over a path stacks/system writes, so this is what a
+        # failed Pulumi write or a renamed OpenBao field looks like from here.
+        - alert: RenovateSecretResolutionFailing
+          annotations:
+            description: >-
+              The renovate-operator failed to resolve a Secret
+              {{ $value | humanize }} times in the last hour
+              ({{ $labels.error_type }}). Check the ExternalSecrets in
+              kubernetes/apps/coder/renovate.
+            summary: Renovate operator cannot read one of its Secrets.
+          expr: |
+            sum by (error_type) (increase(renovate_operator_secret_resolution_errors_total[1h])) > 0
+          for: 30m
+          labels:
+            severity: warning
+
+        # The policy engine is ON in this estate (it ships off), and a refused
+        # RenovateJob runs nothing at all. `destination` is a host missing from
+        # policy.allowedHosts; `secret_ref` is a Secret without the
+        # `allow-ref` label.
+        - alert: RenovatePolicyDenying
+          annotations:
+            description: >-
+              The renovate-operator policy refused a RenovateJob action
+              ({{ $labels.check }}). `kubectl -n coder get renovatejob -o wide`
+              and read the Accepted condition for the value to allowlist.
+            summary: Renovate operator is refusing a RenovateJob.
+          expr: |
+            sum by (check) (increase(renovate_operator_policy_denials_total[1h])) > 0
+          for: 30m
+          labels:
+            severity: warning
+
+        # The inverse: the engine itself switched off, which a chart default
+        # reasserting itself would do with no other symptom.
+        - alert: RenovatePolicyNotEnforcing
+          annotations:
+            description: >-
+              renovate_operator_policy_enabled is 0. Anything that can write a
+              RenovateJob in `coder` can now point the operator's credentials
+              at a host of its choosing. Restore `policy.enabled: true`.
+            summary: Renovate operator policy engine is off.
+          expr: |
+            max(renovate_operator_policy_enabled) == 0
+          for: 30m
+          labels:
+            severity: warning
