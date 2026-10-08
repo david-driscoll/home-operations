@@ -78,9 +78,17 @@ spec:
         key: token
     sync:
       # The operator creates and maintains the hook on every discovered
-      # repository itself, using the platform token above -- which is why that
-      # token needs write access to repository settings and not just to code.
-      # The alternative is adding a webhook by hand to every repo, forever.
+      # repository itself, using the platform token above. The alternative is
+      # adding a webhook by hand to every repo, forever.
+      #
+      # No `sync.secretRef`, so that token is the bot's -- and Forgejo only
+      # lets a repository owner or ADMIN manage hooks. That is why the bot is
+      # repo-admin everywhere it works (an `admin` team per organization, an
+      # `admin` collaborator grant per user repository; both in
+      # stacks/system/forgejo-renovate.ts) rather than merely able to push. A
+      # repository where it is anything less gets a 403 here every night and
+      # no hook; discovery and the run itself are unaffected, so the only
+      # symptom is a checkbox that does nothing until 03:00.
       enabled: true
 
   extraEnv:

@@ -94,8 +94,10 @@ type TOKEN_SCOPES =
  * job: branch a repository, open a PR, and keep the Dependency Dashboard issue
  * up to date. Nothing else is granted — no wiki, no releases, no actions.
  *
- * The `renovate` team's units. `claude-code` starts from these and adds more;
- * see {@link CLAUDE_CODE_TEAM_UNITS}.
+ * These WERE the `renovate` team's units, and are no longer: that team is
+ * `admin` now, for webhook sync -- see {@link RENOVATE_TEAM_UNITS}. What is
+ * left is the base `claude-code` starts from and adds to; see
+ * {@link CLAUDE_CODE_TEAM_UNITS}.
  */
 export const TEAM_UNITS = {
   "repo.code": "write",
@@ -124,6 +126,28 @@ export const CLAUDE_CODE_TEAM_UNITS = {
   "repo.releases": "write",
   "repo.wiki": "write",
   "repo.packages": "read",
+};
+
+/**
+ * The unit map of the Renovate team, which is an `admin` team.
+ *
+ * Forgejo does not let an admin team hold a narrower unit map: it forces every
+ * unit to the team's own level and reports all ten back. The provider says the
+ * same ("if the permission is admin or owner all units must be set to admin as
+ * well"), so anything shorter than this list is a diff that never converges.
+ * The ten keys are the ones the API returns for the built-in Owners team.
+ */
+export const RENOVATE_TEAM_UNITS = {
+  "repo.actions": "admin",
+  "repo.code": "admin",
+  "repo.ext_issues": "admin",
+  "repo.ext_wiki": "admin",
+  "repo.issues": "admin",
+  "repo.packages": "admin",
+  "repo.projects": "admin",
+  "repo.pulls": "admin",
+  "repo.releases": "admin",
+  "repo.wiki": "admin",
 };
 
 /** The bot's login. Shared by the user resource and every grant that filters it out. */
@@ -452,13 +476,24 @@ export class ForgejoConfigurationComponent extends ComponentResource {
           organization: org,
           name: "renovate",
           description: "Dependency updates. Managed by stacks/system.",
-          // `permission: read` with per-unit `write` is not a contradiction:
-          // `permission` is the org-level baseline and `unitsMap` is what
-          // actually governs each unit. `admin` here would force every unit to
-          // `admin` too, which is far more than opening a pull request needs.
-          permission: "read",
+          // `admin`, not `read` with three units at `write`. Opening a pull
+          // request only needs the latter, and that is what this was -- but
+          // `spec.webhook.sync` has the operator manage a hook on every
+          // discovered repository with this bot's token, and Forgejo's hook
+          // routes require the caller be the repository owner or a repository
+          // ADMIN. Unit-level `write` is not that: every organization
+          // repository answered the nightly sync with a 403 (`user should be
+          // an owner or a collaborator with admin write of a repository`) and
+          // never got a hook, so its Dependency Dashboard checkboxes waited
+          // for 03:00. The same reason the collaborator grant below is
+          // `admin`; the two were simply never brought in step when the first
+          // organizations appeared.
+          //
+          // Repo-admin on this organization's repositories, not org-owner and
+          // not instance-admin: it cannot manage teams, members or the org.
+          permission: "admin",
           includesAllRepositories: true,
-          unitsMap: TEAM_UNITS,
+          unitsMap: RENOVATE_TEAM_UNITS,
         },
         { provider: this.forgejoProvider, parent: this },
       );
