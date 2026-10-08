@@ -1,0 +1,82 @@
+---
+# Deletes what jellyfin-pg wrote onto its config PVC before its metadata,
+# subtitles and trickplay directories became NFS mounts shared with production
+# (2026-10-08). Those copies are still on the volume, hidden underneath the
+# mounts, and they are most of what is on it.
+#
+# APPLY IT BY HAND, ONCE -- and only after the RUNNING jellyfin-pg pod shows the
+# NFS mounts. Before that these directories are the live ones, and the server
+# would simply start filling them again:
+#
+#   kubectl -n equestria get pod -l app.kubernetes.io/name=jellyfin-pg \
+#     -o jsonpath='{range .items[*].spec.volumes[*]}{.name}{"\t"}{.nfs.path}{"\n"}{end}'
+#   kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/reclaim-pvc.yaml
+#   kubectl -n equestria logs -f job/jellyfin-pg-reclaim
+#
+# ⚠️ WHY THIS IS A SEPARATE POD. Inside jellyfin-pg those three paths ARE
+# production's NFS directories, so the same `rm` run there would empty
+# production. This pod mounts the PVC and nothing else, at /pvc, so nothing
+# under /pvc can be NFS. Do not "simplify" this into a kubectl exec.
+#
+# jellyfin-pg STAYS UP. The PVC is ReadWriteOnce, which means one NODE, not one
+# pod; the podAffinity below lands this on whichever node holds the volume. At
+# zero replicas the affinity has nothing to match and the pod stays Pending --
+# scale the app up first, or drop the affinity block.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jellyfin-pg-reclaim
+  namespace: equestria
+  labels:
+    driscoll.dev/oneshot: jellyfin-pg-reclaim
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        driscoll.dev/oneshot: jellyfin-pg-reclaim
+    spec:
+      restartPolicy: Never
+      securityContext:
+        # 568/568 owns everything on the volume. No fsGroup: nothing here needs
+        # re-owning, and it would only add a chown pass over the whole volume.
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: jellyfin-pg
+      containers:
+        - name: reclaim
+          image: docker.io/library/busybox:1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              df -h /pvc
+              # The directories themselves stay: they are the mount points.
+              for d in metadata data/subtitles data/trickplay; do
+                if [ ! -d "/pvc/$d" ]; then echo "skip   $d (absent)"; continue; fi
+                echo "delete $d ($(du -sh "/pvc/$d" | cut -f1))"
+                find "/pvc/$d" -xdev -mindepth 1 -delete
+              done
+              df -h /pvc
+          volumeMounts:
+            - { name: config, mountPath: /pvc }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: jellyfin-pg

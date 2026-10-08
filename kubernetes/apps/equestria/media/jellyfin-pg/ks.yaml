@@ -10,12 +10,14 @@
 # so nothing here should be promoted to production on the strength of it looking
 # healthy. See docs/runbooks/jellyfin-postgres-migration.md.
 #
-# NOTHING IN HERE TOUCHES PRODUCTION JELLYFIN. The two share exactly one thing:
-# the `truenas-media` claim, mounted READ-ONLY here (helmrelease.yaml). Separate
-# database, separate role, separate config volume, separate hostname. In
-# particular this does NOT mount `/mnt/stash/data/jellyfin` -- production's
-# metadata, subtitles and trickplay NFS paths -- because a scan here would
-# otherwise write into them.
+# Separate database, separate role, separate config volume, separate hostname --
+# BUT NOT SEPARATE STORAGE. It shares two things with production jellyfin, both
+# writable (helmrelease.yaml has the reasoning for each):
+#
+#   - the `truenas-media` claim, i.e. the library itself;
+#   - `/mnt/stash/data/jellyfin` -- production's metadata, subtitles and
+#     trickplay NFS paths. Keeping its own copy of those is what filled the
+#     config volume, so since 2026-10-08 it uses production's.
 #
 # The migration itself (pgloader + the fork's code-migration export) is a manual,
 # one-off procedure run against this instance AFTER it is up and verified empty.
@@ -37,7 +39,7 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
-    # truenas-volumes owns the `truenas-media` PV/PVC this mounts read-only.
+    # truenas-volumes owns the `truenas-media` PV/PVC this mounts.
     - name: truenas-volumes
       namespace: equestria
     - name: external-secrets

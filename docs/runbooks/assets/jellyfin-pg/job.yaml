@@ -246,9 +246,11 @@ spec:
       # volume, and there is no reason to touch that until the database load has
       # been verified.
       #
-      # --metadata-path is required and must be somewhere this pod can write:
-      # jellyfin-pg mounts nothing at production's /metadata, and a MetadataPath
-      # it cannot reach kills the server on startup rather than degrading it.
+      # --metadata-path is required and must be somewhere jellyfin-pg can write:
+      # a MetadataPath it cannot reach kills the server on startup rather than
+      # degrading it. /config/metadata was its own volume when this was written;
+      # since 2026-10-08 it is production's NFS metadata export, mounted there
+      # and at /metadata, so either value works.
       containers:
         - name: config-sync
           image: *python

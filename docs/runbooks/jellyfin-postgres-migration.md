@@ -12,6 +12,11 @@ Production `jellyfin` was not modified at any point. Everything below reads the
 volsync restic repository (mounted **read-only**, `--no-lock`) and writes only to
 `jellyfin-pg`'s own database and volume.
 
+That describes the migration. The **running instance** is a different matter
+since 2026-10-08: it shares production's NFS metadata, subtitles and trickplay
+directories, writably — read "Metadata, subtitles and trickplay are
+production's" below before deleting anything from inside the pod.
+
 > **Be skeptical of a green result.** This is an unofficial fork
 > ([`Nichols-HomeLab/Jellyfin.Pgsql`](https://git.nicholstech.org/Nichols-HomeLab/Jellyfin.Pgsql))
 > of an unofficial provider, and Jellyfin's plugin database-provider API is
@@ -337,7 +342,10 @@ DROP ROLE "jellyfin-pg";
 the one-off ConfigMaps (`jellyfin-pg-migrate`, `jellyfin-pg-preclean`,
 `jellyfin-pg-load`) and any `driscoll.dev/oneshot=jellyfin-pg-migration` pods.
 
-Production `jellyfin` needs no teardown step, because nothing here changed it.
+Production `jellyfin` needs no teardown step — and **leave
+`/mnt/stash/data/jellyfin` on the NAS alone**. Since 2026-10-08 this instance
+mounts it, but it is production's: removing the app unmounts it and nothing more
+is wanted.
 
 ## What a real cutover would need beyond this
 
@@ -426,9 +434,12 @@ A setting pointing at a path the pod cannot write is not a degraded feature; it
 is a server that dies before it serves anything (§3.6 has the stack trace).
 
 - **`MetadataPath`** — production mounts NFS at `/metadata`; `jellyfin-pg`
-  mounts nothing there. `--metadata-path` is **required** for that reason, and
-  `/config/metadata` is the value for this instance. Image paths are stored
-  absolute in the database, so **artwork 404s until a metadata refresh**.
+  mounted nothing there when this was written, which is why `--metadata-path`
+  is **required** and `/config/metadata` is the value for this instance. Since
+  2026-10-08 the same export is mounted at **both** paths, so that value still
+  works and now lands on production's directory. Image paths are stored
+  absolute in the database, so on a pod WITHOUT those mounts **artwork 404s
+  until a metadata refresh**.
 - **`network.xml` → `LocalNetworkAddresses`** — production's pod carries an
   ipvlan interface on the Home LAN (`jellyfin-lan-net`, 10.10.206.20).
   `jellyfin-pg` has no such interface and cannot bind that address. The script
@@ -463,6 +474,49 @@ alone, `jellyfin-pg`'s plugins would talk to production and send clients there.
   schema. Read the `warn:` lines and decide.
 - Short forms such as `jellyfin.equestria.svc`, `jellyfin:8096` or a bare IP do
   not match. Add another `--rewrite-host=OLD=NEW` for any the run turns up.
+
+## ⚠️ Metadata, subtitles and trickplay are production's
+
+Since 2026-10-08 `jellyfin-pg` mounts the three NFS exports production does:
+
+| Export on the NAS | In `jellyfin` | In `jellyfin-pg` |
+| --- | --- | --- |
+| `/mnt/stash/data/jellyfin` | `/metadata` | `/metadata` **and** `/config/metadata` |
+| `/mnt/stash/data/jellyfin/subtitles` | `/config/data/subtitles` | same |
+| `/mnt/stash/data/jellyfin/trickplay` | `/config/data/trickplay` | same |
+
+**Why.** Keeping its own copy of these is what filled the config volume — 40Gi
+by 2026-10-02, then 68 GB of 80Gi by 2026-10-07, while production's `/config`
+sat near 3 GB. It was not a fault in the fork: both servers log the same
+`File changed, pruning extracted data` and each re-extracts about 1,600 subtitle
+streams a day as the library is rewritten underneath them. Production writes
+the result to NFS; this instance wrote it to Longhorn, where growth tracked
+subtitle extraction hour for hour.
+
+**Why two paths for metadata.** `config-sync.py` set this instance's
+`MetadataPath` to `/config/metadata`. Mounting the export there as well as at
+`/metadata` makes the setting right whichever value it holds, with no hand edit
+of `system.xml` — and image rows carried over from production resolve too.
+
+**What it costs.** The instance is no longer isolated. Two servers on different
+Jellyfin versions write, replace and prune the same files. All of it is
+regenerable, but a metadata refresh or a removed item here changes what
+production serves.
+
+⚠️ **Never clear those paths from inside the `jellyfin-pg` pod.** `rm -rf
+/config/metadata/*` there deletes production's artwork.
+
+**Reclaiming the volume.** What the instance wrote before the mounts existed is
+still on the PVC, hidden underneath them, so the volume stays as full as it was
+until that is deleted — from a pod that mounts the PVC alone:
+
+```bash
+kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/reclaim-pvc.yaml
+kubectl -n equestria logs -f job/jellyfin-pg-reclaim
+```
+
+Read the header of [`reclaim-pvc.yaml`](assets/jellyfin-pg/reclaim-pvc.yaml)
+first: it must run **after** the rollout, and it is a separate pod on purpose.
 
 ## ⚠️ `truenas-media` is no longer read-only
 

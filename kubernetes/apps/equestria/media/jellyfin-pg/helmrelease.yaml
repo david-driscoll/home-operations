@@ -333,22 +333,79 @@ spec:
         globalMounts:
           - path: /logs
 
-      # ⚠️ READ-ONLY, AND THE ONLY THING SHARED WITH PRODUCTION JELLYFIN.
+      # ⚠️ SHARED WITH PRODUCTION JELLYFIN, AND WRITABLE -- this claim and the
+      # three NFS mounts below it.
       #
-      # `truenas-media` is ReadWriteMany, so a second mount is safe, and
-      # readOnly: true means a scan here can never write to the library --
-      # no .nfo, no artwork, no trickplay, nothing.
+      # `truenas-media` is ReadWriteMany, so a second mount is safe. It is NOT
+      # read-only: that went in 6b8d281c, so whether a scan here writes .nfo
+      # files or artwork into the library is decided by the library options,
+      # not by the mount.
       #
       # The FULL claim rather than a small subset, and that is a consequence of
       # migrating rather than starting empty: the library rows that pgloader
       # copies carry production's absolute paths, so the same paths have to
       # resolve here or every item lands "missing". Mount path must stay /media,
       # matching production, for the same reason.
-      #
-      # This does NOT mount production's /mnt/stash/data/jellyfin metadata,
-      # subtitles or trickplay NFS paths. Those are writable, shared, and a scan
-      # here would corrupt what production reads.
       media:
         existingClaim: truenas-media
         globalMounts:
           - path: /media
+
+      # Production's metadata, subtitle and trickplay directories -- the same
+      # three NFS exports media/jellyfin/helmrelease.yaml mounts.
+      #
+      # This instance used to keep all three on its own config volume, and that
+      # is what filled it twice. Production's /config sits near 3 GB because
+      # these directories are NOT on it; this one reached 68 GB of 80 doing the
+      # same work. Both servers log the same "File changed, pruning extracted
+      # data" and each re-extracts roughly 1,600 subtitle streams a day as the
+      # library is rewritten underneath them -- production onto NFS, this one
+      # onto Longhorn.
+      #
+      # ⚠️ THE PRICE IS ISOLATION. The two servers now write, replace and prune
+      # the same files, from different Jellyfin versions. All of it is
+      # regenerable, but a refresh or a removed item HERE changes what
+      # production serves.
+      #
+      # ⚠️ NEVER CLEAR THESE PATHS FROM INSIDE THIS POD. An `rm` under
+      # /config/metadata, /config/data/subtitles or /config/data/trickplay now
+      # deletes production's copy. What this instance wrote before the mounts
+      # existed is still on the PVC, hidden underneath them; reclaiming it needs
+      # a pod that mounts the PVC alone -- the runbook has one.
+      #
+      # advancedMounts, so Jellyfin gets these and the Meilisearch sidecar does
+      # not. And `fsGroup` above does not reach them: the kubelet re-owns only
+      # volumes whose plugin manages ownership, and in-tree NFS does not, so
+      # there is no recursive chown of production's tree on pod start.
+      metadata:
+        type: nfs
+        server: ${SPIKE_IP}
+        path: /mnt/stash/data/jellyfin
+        advancedMounts:
+          app:
+            app:
+              # Where production mounts it.
+              - path: /metadata
+              # Where THIS instance's MetadataPath points: config-sync.py
+              # rewrote it to /config/metadata back when nothing was mounted at
+              # /metadata. Mounting both means the setting is right whichever
+              # value it holds, with no hand edit of system.xml.
+              - path: /config/metadata
+
+      subtitles:
+        type: nfs
+        server: ${SPIKE_IP}
+        path: /mnt/stash/data/jellyfin/subtitles
+        advancedMounts:
+          app:
+            app:
+              - path: /config/data/subtitles
+
+      trickplay:
+        type: nfs
+        server: ${SPIKE_IP}
+        path: /mnt/stash/data/jellyfin/trickplay
+        advancedMounts:
+          app:
+            app:
+              - path: /config/data/trickplay
