@@ -26,8 +26,15 @@
 # comment here used to describe. Then to 80Gi on 2026-10-03: usage doubled from
 # 20 to 40 GB in a week, in overnight jumps, while production's /config sat flat
 # at 3.7 GB, and Jellyfin refuses to start with under 2GiB free on /config/data
-# (it crashlooped from 2026-10-02 11:17). WHAT IS GROWING IS NOT YET KNOWN, so
-# this buys roughly two weeks; it is not a fix.
+# (it crashlooped from 2026-10-02 11:17). It bought four days, not two weeks:
+# 68 GB by 2026-10-07.
+#
+# WHAT WAS GROWING: the directories production keeps on NFS and this instance
+# kept here -- artwork, extracted subtitles, trickplay. Growth tracked subtitle
+# extraction hour for hour; how the total splits between the three was never
+# measured. They are NFS mounts now (helmrelease.yaml), so this volume is back
+# to holding what production's does. The old copies are still on it, hidden
+# under those mounts, until someone reclaims them; see the runbook.
 #
 # THE DECLARED SIZE MUST TRACK THE VOLUME, in the same change. A PVC cannot be
 # shrunk: a `storage` below `status.capacity` is rejected at admission, and

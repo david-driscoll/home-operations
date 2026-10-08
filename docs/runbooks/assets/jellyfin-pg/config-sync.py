@@ -54,8 +54,10 @@ before it serves anything:
       Access to the path '/metadata' is denied.
         at ServerConfigurationManager.UpdateMetadataPath()
 
-  MetadataPath    production mounts NFS at /metadata; jellyfin-pg mounts nothing
-                  there. --metadata-path is REQUIRED for that reason: there is no
+  MetadataPath    production mounts NFS at /metadata; jellyfin-pg mounted nothing
+                  there until 2026-10-08 (it now mounts the same export at
+                  /metadata and /config/metadata). --metadata-path is REQUIRED
+                  regardless, because a pod without those mounts has no
                   safe default, and guessing one is how the above happens.
                   ⚠️ Image paths are stored ABSOLUTE in the database, so moving
                   this orphans existing artwork -- posters 404 until a refresh.
