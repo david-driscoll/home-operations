@@ -1180,7 +1180,18 @@
         // a "minor"; the year rollover is a "major" and stays manual.
         "cloudflare/cloudflared",
         // dashboard/resources/compose.yaml, outside the app rules' docker/**
-        "ghcr.io/panonim/dynacat"
+        "ghcr.io/panonim/dynacat",
+        // docker/_common/prometheus/compose.yaml (a 0.x image, so the app
+        // rule's minor half refuses it)
+        "prom/blackbox-exporter",
+        // kubernetes/apps/observability/blackbox-exporter
+        "ghcr.io/prometheus-community/charts/prometheus-blackbox-exporter",
+        // kubernetes/apps/observability/loki (the rules sidecar)
+        "ghcr.io/kiwigrid/k8s-sidecar",
+        // kubernetes/apps/openebs-system/openebs: the Helm chart
+        "openebs",
+        // kubernetes/apps/equestria/pvr/dispatcharr (a 0.x image)
+        "ghcr.io/dispatcharr/dispatcharr"
       ],
       automerge: true,
       automergeType: "pr",
