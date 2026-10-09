@@ -103,6 +103,12 @@
 #       Stack the operator has marked Stalled. Everything else about a Stack
 #       stays exactly as Flux rendered it.
 #
+#     - RenovateJobs/RenovateProjects (renovate-operator.mogenius.com):
+#       patch/update, narrowed by ./renovate-trigger-only.yaml to the
+#       operator's three trigger annotations (`discovery`, `schedule-all`,
+#       `schedule`) -- running Renovate now instead of at 03:00. The job's
+#       spec stays exactly as Flux rendered it.
+#
 #     - PersistentVolumeClaims: delete, plus the `/resize` subresource --
 #       the actual fix for a "volume full" diagnosis, and occasionally
 #       outright deletion. Granted with eyes open: this is exactly the class
@@ -276,6 +282,33 @@ rules:
   # for the same reason it rules out authoring a Kustomization.
   - apiGroups: ["pulumi.com"]
     resources: ["stacks"]
+    verbs: ["patch", "update"]
+
+  # Renovate operator objects: patch/update -- for the operator's own
+  # one-shot trigger annotations and NOTHING else, which
+  # ./renovate-trigger-only.yaml enforces; grant and limit ship together,
+  # like `stacks` above.
+  #
+  # WHY IT IS NEEDED. The operator runs on a nightly cron, and the only way to
+  # run it sooner without the UI is an annotation it consumes and removes:
+  #
+  #   kubectl -n coder annotate renovatejob renovate \
+  #     renovate-operator.mogenius.com/discovery=true
+  #
+  # 2026-10-08, #2496: the bot's Forgejo grant was fixed so webhook sync could
+  # work, the fix was verified live, and the agent was then refused the
+  # annotation that would have run the sync -- "cannot patch resource
+  # renovatejobs" -- leaving the result unconfirmed until 03:00.
+  #
+  # WHY `update` AS WELL AS `patch`: mkp's apply_resource is a GET then a full
+  # PUT. See `stacks` above.
+  #
+  # WHY THE POLICY IS NOT OPTIONAL. Unnarrowed, `update` on a RenovateJob is
+  # "choose where the operator sends the bot's token": its provider endpoint,
+  # its image, its secretRef, its inline config. The operator's own policy
+  # engine bounds some of that; this SA should not be leaning on it.
+  - apiGroups: ["renovate-operator.mogenius.com"]
+    resources: ["renovatejobs", "renovateprojects"]
     verbs: ["patch", "update"]
 
   - apiGroups: [""]

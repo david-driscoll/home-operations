@@ -6,3 +6,4 @@ resources:
   - ./clusterrole.yaml
   - ./node-cordon-only.yaml
   - ./stack-reconcile-only.yaml
+  - ./renovate-trigger-only.yaml
