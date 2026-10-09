@@ -8,8 +8,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/pulumi/helm-charts/pulumi-kubernetes-operator
   ref:
-    tag: 2.9.2
-    digest: sha256:48bc2faac371200e101e597da04548cc65eb1db338919553982dd8ed4302bd9d
+    tag: 2.9.3
+    digest: sha256:ad98a69295656d50e23d9ee334915f15b142bfe5528200b090485de3ba9ac19e
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
