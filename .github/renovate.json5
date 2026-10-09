@@ -1191,7 +1191,24 @@
         // kubernetes/apps/openebs-system/openebs: the Helm chart
         "openebs",
         // kubernetes/apps/equestria/pvr/dispatcharr (a 0.x image)
-        "ghcr.io/dispatcharr/dispatcharr"
+        "ghcr.io/dispatcharr/dispatcharr",
+        // kubernetes/apps/observability/alloy: the home-operations OCI mirror
+        // of the chart
+        "ghcr.io/home-operations/charts-mirror/alloy",
+        // kubernetes/apps/coder/coder: the Helm chart
+        "coder",
+        // mise tools (.config/mise.toml). `typos` goes by its upstream repo
+        // name; `pipx:graphifyy` by its PyPI name -- the prefixed spelling is
+        // listed too in case Renovate reports that one instead.
+        "crate-ci/typos",
+        "graphifyy",
+        "pipx:graphifyy",
+        // npm Pulumi providers (components/, stacks/system). Unlike the
+        // Pulumi.yaml pins these ship their own SDK, so there is nothing to
+        // regenerate -- but a bump IS applied to live infrastructure by the
+        // next Stack run, with no watchdog revert outside kubernetes/**.
+        "@axnic/pulumi-garage",
+        "@pulumi/cloudflare"
       ],
       automerge: true,
       automergeType: "pr",
