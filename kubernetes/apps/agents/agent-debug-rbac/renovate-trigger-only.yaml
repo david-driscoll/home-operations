@@ -1,0 +1,126 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# NARROWS ./clusterrole.yaml's `renovatejobs, renovateprojects
+# (renovate-operator.mogenius.com): patch, update` GRANT TO THE ONE THING IT
+# IS FOR: setting the operator's one-shot trigger annotations, which start a
+# discovery run or schedule projects now instead of at the nightly cron. Added
+# 2026-10-09. Same shape as ./stack-reconcile-only.yaml, for the same reason:
+# RBAC authorises a verb on a resource, never a field, and `update` on a
+# RenovateJob is "rewrite the RenovateJob" -- its provider endpoint, image,
+# secretRef and inline config, which together decide where the bot's token
+# goes.
+#
+# THE THREE ANNOTATIONS, all under `renovate-operator.mogenius.com/`:
+#
+#   discovery      RenovateJob only. Starts a discovery run -- which is also
+#                  what syncs repository webhooks.
+#   schedule-all   RenovateJob only. Marks every non-running project
+#                  Scheduled.
+#   schedule       RenovateJob (a comma-separated project list) and
+#                  RenovateProject (`true`, for that one project).
+#
+# The operator removes each one once it has acted on it. One policy covers
+# both kinds rather than one policy each: allowing `discovery` on a
+# RenovateProject permits nothing, because the operator does not read it
+# there.
+#
+# WHAT THIS POLICY DOES, field by field, is the list in
+# ./stack-reconcile-only.yaml and is not repeated here -- spec compared whole,
+# labels/ownerReferences/finalizers compared whole, annotations compared key
+# by key in both directions skipping only the three above. `status` is a
+# subresource on both CRDs, so a write to the main resource cannot move it
+# and `*/status` is not granted. The `has()` guards and the absence of
+# ternaries over maps are explained there too, and matter just as much here:
+# `failurePolicy: Fail` turns an absent-field error into a denial.
+#
+# `finalizers` is worth a second look on this kind: a RenovateJob carries
+# `renovate-operator.mogenius.com/webhook-cleanup`, and a full-PUT client
+# that drops it would leave hooks behind on every repository when the job is
+# deleted. That is refused here.
+#
+# IF THIS SEEMS TO BLOCK A LEGITIMATE TRIGGER, read the denial: it names the
+# part that differed.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agent-debug-renovate-trigger-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      # No subresources: ./clusterrole.yaml grants none, so RBAC already
+      # refuses those.
+      - apiGroups: ["renovate-operator.mogenius.com"]
+        apiVersions: ["*"]
+        operations: ["UPDATE"]
+        resources: ["renovatejobs", "renovateprojects"]
+  # Keep in step with every ClusterRoleBinding to `agent-debug`, exactly as in
+  # ./node-cordon-only.yaml:
+  #   ../agent-tools-servers/kubernetes.yaml  -> agents/toolhive-kubernetes
+  #   ../agentboard/rbac.yaml                 -> agents/agentboard
+  # A new binding of the role that is not added here gets the unnarrowed
+  # `update` on every RenovateJob.
+  matchConditions:
+    - name: is-agent-debug-identity
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:agents:toolhive-kubernetes",
+          "system:serviceaccount:agents:agentboard"
+        ]
+  validations:
+    - expression: >
+        has(object.spec) == has(oldObject.spec)
+        && (!has(object.spec) || object.spec == oldObject.spec)
+      message: >-
+        agent-debug may only set a renovate-operator.mogenius.com trigger
+        annotation on a RenovateJob or RenovateProject: spec must not change
+    - expression: >
+        has(object.metadata.labels) == has(oldObject.metadata.labels)
+        && (!has(object.metadata.labels)
+            || object.metadata.labels == oldObject.metadata.labels)
+      message: >-
+        agent-debug may only set a renovate-operator.mogenius.com trigger
+        annotation on a RenovateJob or RenovateProject: metadata.labels must
+        not change
+    - expression: >
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)
+        && (!has(object.metadata.ownerReferences)
+            || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)
+        && has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)
+        && (!has(object.metadata.finalizers)
+            || object.metadata.finalizers == oldObject.metadata.finalizers)
+      message: >-
+        agent-debug may only set a renovate-operator.mogenius.com trigger
+        annotation on a RenovateJob or RenovateProject:
+        metadata.ownerReferences and metadata.finalizers must not change
+    - expression: >
+        (!has(object.metadata.annotations)
+          || object.metadata.annotations.all(k,
+               k in ['renovate-operator.mogenius.com/discovery',
+                     'renovate-operator.mogenius.com/schedule-all',
+                     'renovate-operator.mogenius.com/schedule']
+               || (has(oldObject.metadata.annotations)
+                   && k in oldObject.metadata.annotations
+                   && oldObject.metadata.annotations[k] == object.metadata.annotations[k])))
+        && (!has(oldObject.metadata.annotations)
+          || oldObject.metadata.annotations.all(k,
+               k in ['renovate-operator.mogenius.com/discovery',
+                     'renovate-operator.mogenius.com/schedule-all',
+                     'renovate-operator.mogenius.com/schedule']
+               || (has(object.metadata.annotations)
+                   && k in object.metadata.annotations
+                   && object.metadata.annotations[k] == oldObject.metadata.annotations[k])))
+      message: >-
+        agent-debug may only set a renovate-operator.mogenius.com trigger
+        annotation on a RenovateJob or RenovateProject: no other annotation
+        may be added, changed or removed
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agent-debug-renovate-trigger-only
+spec:
+  policyName: agent-debug-renovate-trigger-only
+  validationActions: ["Deny"]
