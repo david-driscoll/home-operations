@@ -53,7 +53,7 @@ spec:
             nameOverride: *app
             image:
               repository: ghcr.io/italypaleale/tsiam
-              tag: v0.3.2@sha256:74a25af2761138ec1036d3461e40bff1815e23c1e62ee46522adcb83257ab8a5
+              tag: v0.3.3@sha256:55c9a02f8ca3a83e13fd42f11fbf3128bdd6d3050995c669646a6500ab8d038a
             env:
               # tsiam has no env-var config surface of its own; everything lives in
               # /etc/tsiam/config.yaml. TS_AUTHKEY is read by the embedded tsnet
