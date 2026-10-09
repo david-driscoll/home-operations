@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# yarr is on trial next to ./freshrss and ./ttrss -- three readers side by side
+# so they can be compared on the same feeds.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app yarr
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: postgres
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/home/yarr
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No volsync: with a PostgreSQL connection string yarr keeps nothing on
+    # disk, so there is no PVC to back up.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # yarr has no OIDC and no trusted-header login, so authentik's outpost is
+      # its only gate. The tailnet route has to pass through it too.
+      TAILSCALE_MIDDLEWARE: tailscale-user

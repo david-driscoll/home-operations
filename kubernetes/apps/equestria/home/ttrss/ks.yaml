@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Tiny Tiny RSS is on trial next to ./freshrss and ./yarr -- three readers side
+# by side so they can be compared on the same feeds.
+#
+# The app is `ttrss`, not `tt-rss`: components/postgres names the database AND
+# the login role after ${APP}, and no app on this cluster has put a hyphenated
+# role name through the CNPG + OpenBao static-role path yet. A trial is the
+# wrong place to find out whether every hop quotes it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app ttrss
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/ttrss
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    # The PVC holds tt-rss's working copy, which the image rsyncs onto it at
+    # every start, plus the parts that are not in the image: plugins.local
+    # (the OIDC plugin), themes.local and the feed-icon / image cache. Feeds,
+    # articles and users are all in PostgreSQL.
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      VOLSYNC_CAPACITY: 2Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce

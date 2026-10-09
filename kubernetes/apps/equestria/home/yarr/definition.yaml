@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: yarr
+  category: Applications
+  description: Yet another RSS reader -- a single-binary feed aggregator
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/yarr.svg
+  # yarr is single-user: everyone the outpost lets in shares one set of feeds
+  # and one read state. Kept to `family` for the trial rather than FreshRSS's
+  # `friends` + `family`.
+  access_policy:
+    groups:
+      - family
+  authentik:
+    # yarr's only built-in login is one username:password pair (-auth). It has
+    # no OIDC and reads no Remote-User style header, so the outpost handles
+    # authentication entirely and -auth is left unset to avoid a second login.
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

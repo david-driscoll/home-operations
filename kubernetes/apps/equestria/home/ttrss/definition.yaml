@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Tiny Tiny RSS
+  category: Applications
+  description: Web-based news feed (RSS/Atom) reader and aggregator
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/tinytinyrss.png
+  access_policy:
+    groups:
+      - family
+  authentik:
+    oauth2:
+      clientType: confidential
+      # The auth_oidc plugin sends tt-rss's own detected base URL as the
+      # redirect URI: scheme and Host header of the request, no port and no
+      # trailing slash (Config::get_self_url() ends in rtrim '/'). Both
+      # spellings are registered so a slash appearing upstream does not turn
+      # into a redirect_uri mismatch.
+      allowedRedirectUris:
+        - url: https://${APP}.${ROOT_DOMAIN}
+        - url: https://${APP}.${ROOT_DOMAIN}/
+        - url: https://${APP}.${TAILSCALE_DOMAIN}
+        - url: https://${APP}.${TAILSCALE_DOMAIN}/
+      propertyMappings:
+        - email
+        - openid
+        - profile
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        # Same edge behaviour as ./freshrss, which sits behind the same
+        # `local-user` chain.
+        - "[STATUS] == 401"
