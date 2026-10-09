@@ -1,0 +1,246 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ttrss
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    # Upstream's compose file is three services sharing one volume: `app`
+    # (php-fpm, and the only one that writes the working copy), `updater` (the
+    # feed update daemon) and `web-nginx`. They are one pod here so the volume
+    # can stay ReadWriteOnce and nginx reaches php-fpm on loopback.
+    #
+    # tt-rss publishes no version tags -- `main` is the release branch and each
+    # build is tagged with its timestamp and commit. Both images come from the
+    # same build and must be bumped together.
+    controllers:
+      *app :
+        annotations:
+          # php-fpm inherits the database password from its environment at
+          # start, so the 30-day rotation only reaches it through this restart.
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        strategy: Recreate
+
+        # tt-rss has no built-in OIDC; it is a plugin that lives outside the
+        # image, in plugins.local on the PVC. This fetches it at a pinned
+        # commit and skips the network entirely when that commit is already in
+        # place, so a restart does not depend on GitHub being reachable.
+        #
+        # To move the pin, change the commit in ALL THREE places below. The
+        # script uses no shell variables on purpose: Flux's postBuild
+        # substitution runs over this file and would expand them to nothing.
+        initContainers:
+          install-oidc-plugin:
+            image: &image
+              repository: ghcr.io/tt-rss/tt-rss
+              tag: 20261002-173724@sha256:9eef524fc11d783434e1df9acde1ae3734d59902b8ebfbb9e928e2ef3df03b11
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                set -eu
+                if grep -qx 9ef6658d3d613268b1de3e383c4b487aee4b78ac /var/www/html/tt-rss/plugins.local/auth_oidc/.pinned-commit 2>/dev/null; then
+                  echo "install-oidc-plugin: auth_oidc already at the pinned commit"
+                  exit 0
+                fi
+                rm -rf /var/www/html/.auth_oidc.new
+                git init -q /var/www/html/.auth_oidc.new
+                cd /var/www/html/.auth_oidc.new
+                git fetch -q --depth 1 https://github.com/tt-rss/tt-rss-plugin-auth-oidc.git 9ef6658d3d613268b1de3e383c4b487aee4b78ac
+                git checkout -q FETCH_HEAD
+                # Dropping .git is what keeps the image's startup script from
+                # treating this as a checkout it should `git pull`.
+                rm -rf .git
+                echo 9ef6658d3d613268b1de3e383c4b487aee4b78ac > .pinned-commit
+                mkdir -p /var/www/html/tt-rss/plugins.local
+                rm -rf /var/www/html/tt-rss/plugins.local/auth_oidc
+                mv /var/www/html/.auth_oidc.new /var/www/html/tt-rss/plugins.local/auth_oidc
+                echo "install-oidc-plugin: auth_oidc installed"
+
+        containers:
+          *app :
+            image: *image
+            env: &env
+              TZ: "${TIMEZONE}"
+              OWNER_UID: "568"
+              OWNER_GID: "568"
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+              # Only this container needs it: startup.sh sets the built-in
+              # admin's password from ADMIN_USER_PASS on every start.
+              - secretRef:
+                  name: ${APP}-admin
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                memory: 1536Mi
+            probes:
+              # php-fpm only starts listening once startup.sh has rsynced the
+              # working copy onto the PVC and migrated the schema, which on a
+              # first start is the slow part.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: &fpm 9000
+                  periodSeconds: 5
+                  failureThreshold: 120
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *fpm
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 3
+              readiness:
+                enabled: false
+
+          updater:
+            image: *image
+            # Waits for the app container to finish preparing the working copy,
+            # then runs update_daemon2.php.
+            command: ["/opt/tt-rss/updater.sh"]
+            env: *env
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 1024Mi
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+
+          nginx:
+            image:
+              repository: ghcr.io/tt-rss/tt-rss-web-nginx
+              tag: 20261002-173724@sha256:eed549ac6dda7eef5e12d78a706d14900fe3ceb4a7250ce17cee7c5ff5eb21ba
+            env:
+              TZ: "${TIMEZONE}"
+              # A literal address, so nginx never consults the `resolver` its
+              # template sets (the image defaults that to Docker's embedded DNS).
+              APP_UPSTREAM: "127.0.0.1"
+              # Serve tt-rss at / rather than /tt-rss -- upstream's documented
+              # pair of settings for that, including the empty APP_BASE.
+              APP_WEB_ROOT: /var/www/html/tt-rss
+              APP_BASE: ""
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 256Mi
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: &port 80
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 3
+              # /healthz is rewritten to public.php?op=healthcheck, so this goes
+              # through nginx AND php-fpm and is on readiness only: a php-fpm
+              # that is still starting should make the pod unready, not get
+              # nginx restarted. It prints "OK" without opening a database
+              # connection, so it cannot see a PostgreSQL outage.
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 3
+                  failureThreshold: 3
+
+    # Root, with the runtime's default capabilities and no
+    # allowPrivilegeEscalation: false, unlike most apps here. The tt-rss image
+    # is built around it: startup.sh creates the `app` user, chowns the working
+    # copy and then uses sudo to drop to that user for rsync, the schema
+    # migration and the update daemon, while php-fpm and nginx start as root to
+    # switch to their worker users. Dropping capabilities here means finding out
+    # at runtime which of chown/setuid/setgid/dac_override each step needed.
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /var/www/html
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

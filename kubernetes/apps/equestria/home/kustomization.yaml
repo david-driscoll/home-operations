@@ -18,6 +18,9 @@ resources:
   - ./rustdesk/ks.yaml
   # - ./tandoor/ks.yaml
   - ./freshrss/ks.yaml
+  # On trial, to compare against FreshRSS.
+  - ./yarr/ks.yaml
+  - ./ttrss/ks.yaml
   - ./searxng/ks.yaml
   - ./degoog/ks.yaml
   # - ./karakeep/ks.yaml
