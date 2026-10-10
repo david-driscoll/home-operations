@@ -46,6 +46,11 @@ services:
       # into — in-repo rather than Pulumi-written because the consumers are
       # GitOps jobs, not Pulumi-managed backup plans.
       - ./config/openbao-break-glass.yaml:/config/openbao-break-glass.yaml:ro
+      # The endpoint the Forgejo runner canary reports into. The file had been
+      # in the repo since the canary was added, but without a mount here Gatus
+      # never read it, so every hourly push got a 404 and the canary's job was
+      # red from its first run.
+      - ./config/forgejo-actions.yaml:/config/forgejo-actions.yaml:ro
     networks:
       - dockge_default
 x-dockge:
