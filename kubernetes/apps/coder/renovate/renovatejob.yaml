@@ -211,27 +211,6 @@ spec:
             matchHost: 'http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000',
             allowInternal: true,
           },
-          // DOCKER HUB, AUTHENTICATED. Anonymous lookups share one budget per
-          // egress address; once it is spent Docker Hub answers 429 and
-          // Renovate abandons the whole repository for that run ("External
-          // host error causing abort"), which on 2026-10-10 took out both a
-          // hand-triggered run and one a Dependency Dashboard checkbox had
-          // asked for.
-          //
-          // The credential is NOT in this ConfigMap: this file is JavaScript,
-          // and it reads the two variables that ./externalsecret.yaml puts in
-          // the pod's environment. Left out entirely when they are absent, so
-          // a missing Secret key costs the rate limit and nothing else.
-          ...(process.env.DOCKER_HUB_USERNAME && process.env.DOCKER_HUB_PASSWORD
-            ? [
-                {
-                  hostType: 'docker',
-                  matchHost: 'docker.io',
-                  username: process.env.DOCKER_HUB_USERNAME,
-                  password: process.env.DOCKER_HUB_PASSWORD,
-                },
-              ]
-            : []),
         ],
 
         // Not set here and deliberately so: `endpoint` and `token` come from
