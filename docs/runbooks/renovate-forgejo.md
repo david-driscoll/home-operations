@@ -21,9 +21,11 @@ repositories, and writes the result to OpenBao — so the ExternalSecrets above
 have something to read. It uses the `svalabs/forgejo` Terraform provider,
 bridged into `sdks/forgejo` and pinned in the root `Pulumi.yaml`.
 
-**This does not touch the GitHub side.** `.github/renovate.json5` and the
+**This does not replace the GitHub side.** `.github/renovate.json5` and the
 Mend-hosted app that reads it keep managing `david-driscoll/home-operations`
-exactly as before. The only thing the two share is a habit.
+exactly as before. The forge's bot now works on a copy of that repository as
+well, and what merges there is pushed to GitHub's `main` — a separate piece,
+with its own runbook: [forgejo-github-mirror.md](./forgejo-github-mirror.md).
 
 ## What the manifests already do
 
@@ -451,5 +453,6 @@ python3 -c "import base64,json,sys; print(base64.b64decode(json.load(open('sdks/
 ## See also
 
 - [`docs/runbooks/forgejo-equestria-cutover.md`](./forgejo-equestria-cutover.md) — how the forge itself got here
+- [`docs/runbooks/forgejo-github-mirror.md`](./forgejo-github-mirror.md) — the forge's copy of this repository, and how its `main` stays in step with GitHub's
 - [Renovate's Forgejo platform docs](https://docs.renovatebot.com/modules/platform/forgejo/)
 - [renovate-operator docs](https://github.com/mogenius/renovate-operator/tree/main/docs)

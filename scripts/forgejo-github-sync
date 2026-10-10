@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+# forgejo-github-sync -- keep ONE branch identical on Forgejo and on GitHub.
+#
+# Run by .forgejo/workflows/github-sync.yml from inside a clone of the Forgejo
+# repository: `origin` is Forgejo and can already push. GitHub is the other
+# side, added here as the remote `github`. docs/runbooks/forgejo-github-mirror.md
+# has the whole picture.
+#
+# One pass, with F = Forgejo's branch and G = GitHub's:
+#
+#   F == G             nothing to do
+#   F behind G         fast-forward Forgejo to G
+#   F ahead of G       check Forgejo's new commits, fast-forward GitHub to F
+#   F and G diverged   check Forgejo's new commits, replay them onto G,
+#                      fast-forward GitHub, then move Forgejo to the result
+#
+# GITHUB WINS, AND IS ONLY EVER FAST-FORWARDED. There is no `--force` and no
+# `+` refspec pointed at GitHub anywhere in this file, so the worst a bad run
+# can do there is fail. Forgejo's branch is rewritten in exactly two places:
+# the replay above, and SYNC_DISCARD_LOCAL. Both are leased to the commit this
+# pass started from, so neither can drop a commit it never saw.
+#
+# NOTHING REACHES GITHUB UNCHECKED. That repository is public and Forgejo is
+# not, and a commit made on Forgejo skipped every check a GitHub pull request
+# gets. scripts/private-domain-guard reads each one -- author, committer,
+# message and patch -- before it is pushed, and one hit stops the whole pass.
+#
+# Environment:
+#   SYNC_UPSTREAM_FETCH_URL   GitHub, to fetch from (required)
+#   SYNC_UPSTREAM_PUSH_URL    GitHub, to push to (default: the fetch URL)
+#   SYNC_BRANCH               the branch (default: main)
+#   SYNC_DISCARD_LOCAL        `true` drops Forgejo-only commits instead of
+#                             publishing them: the way out of a blocked pass
+#   SYNC_MAX_LOCAL_COMMITS    refuse to publish more than this many (default 50)
+#   SYNC_PRUNE_BRANCHES       `true` first deletes every Forgejo branch but this
+#                             one: the cleanup after the one-time import, which
+#                             brings every branch GitHub had along with it
+#   SYNC_DEPLOY_KEY_FILE      the SSH key GitHub is pushed with; only used to
+#                             print its public half when GitHub turns it away
+#   PRIVATE_DOMAIN_ROOT, PRIVATE_DOMAIN_TAILNET
+#                             the two names the guard looks for (required to
+#                             publish; never printed)
+set -euo pipefail
+
+branch="${SYNC_BRANCH:-main}"
+fetch_url="${SYNC_UPSTREAM_FETCH_URL:?SYNC_UPSTREAM_FETCH_URL is not set}"
+push_url="${SYNC_UPSTREAM_PUSH_URL:-$fetch_url}"
+discard="${SYNC_DISCARD_LOCAL:-false}"
+max_local="${SYNC_MAX_LOCAL_COMMITS:-50}"
+prune="${SYNC_PRUNE_BRANCHES:-false}"
+attempts="${SYNC_ATTEMPTS:-3}"
+
+# What one pass returns when it lost a race for a branch and should be run
+# again from the top. Anything else non-zero is a real failure.
+readonly RETRY=75
+
+say() { printf 'forgejo-github-sync: %s\n' "$*"; }
+die() {
+  printf 'forgejo-github-sync: %s\n' "$*" >&2
+  exit 1
+}
+short() { git rev-parse --short=12 "$1"; }
+
+# Succeeds only if no commit in $1..$2 carries a private name.
+#
+# Reports commit ids and nothing else: a subject line or an address is exactly
+# where the name would be, and this output lands in a job log.
+guard() {
+  local base="$1" tip="$2" script commit
+  local -a bad=()
+
+  # The guard itself skips, successfully, when it has no names to compare
+  # against -- right for a laptop without the age key, wrong here.
+  [[ -n "${PRIVATE_DOMAIN_ROOT:-}" && -n "${PRIVATE_DOMAIN_TAILNET:-}" ]] ||
+    die "PRIVATE_DOMAIN_ROOT or PRIVATE_DOMAIN_TAILNET is not set, so nothing can be checked -- refusing to publish"
+
+  # GitHub's copy, not the one in the commits being checked: a commit cannot
+  # then loosen the rule it is held to.
+  script="$(mktemp)"
+  git show "refs/remotes/github/$branch:scripts/private-domain-guard" >"$script" ||
+    die "scripts/private-domain-guard is not on GitHub's $branch -- refusing to publish"
+
+  while read -r commit; do
+    # What this commit would newly make public, and no more:
+    #   - its header. `fuller` prints the committer as well as the author, and
+    #     Forgejo writes its own identity there whenever it rebases or merges
+    #     a pull request;
+    #   - the lines it adds, and the `+++` paths it adds them to.
+    # Context and removed lines are left out on purpose. They are already on
+    # GitHub or belong to another commit in this range, and reading them would
+    # hold back any update that lands next to a line still waiting on the scrub.
+    {
+      git show --no-patch --format=fuller "$commit"
+      git show --format= --unified=0 --no-color --no-ext-diff "$commit" | grep '^+' || true
+    } | bash "$script" stdin || bad+=("$commit")
+  done < <(git rev-list --reverse "$base..$tip")
+  rm -f "$script"
+
+  ((${#bad[@]} == 0)) && return 0
+
+  {
+    echo "forgejo-github-sync: these commits carry the root domain or the tailnet name"
+    echo "(in the author, the committer, the message or the patch) and were NOT published:"
+    printf '  %s\n' "${bad[@]}"
+    echo "Nothing after them can be published either. Run this workflow by hand with"
+    echo "discard_local ticked to drop them, then redo the change without the name."
+  } >&2
+  return 1
+}
+
+# Fast-forwards GitHub to $1. Never forced.
+publish() {
+  local tip="$1" log
+  log="$(mktemp)"
+  if git push --quiet github "$tip:refs/heads/$branch" 2>"$log"; then
+    rm -f "$log"
+    return 0
+  fi
+  cat "$log" >&2
+
+  if grep -q -i -E 'permission denied|authentication failed|could not read from remote' "$log"; then
+    {
+      echo "forgejo-github-sync: GitHub did not accept the deploy key. Add it to the GitHub"
+      echo "repository under Settings > Deploy keys, with write access:"
+      [[ -r "${SYNC_DEPLOY_KEY_FILE:-}" ]] && ssh-keygen -y -f "$SYNC_DEPLOY_KEY_FILE" || true
+    } >&2
+    exit 1
+  fi
+  if grep -q -i -E 'GH013|rule violations|protected branch' "$log"; then
+    {
+      echo "forgejo-github-sync: a GitHub ruleset turned the push away. The mirror pushes"
+      echo "straight to $branch, so 'Deploy keys' has to be on the bypass list of the"
+      echo "ruleset that requires a pull request and status checks."
+    } >&2
+    exit 1
+  fi
+
+  # What is left is a rejected fast-forward: GitHub moved after the fetch.
+  rm -f "$log"
+  return "$RETRY"
+}
+
+reconcile() {
+  local here there next count stopped
+
+  git fetch --quiet --no-tags origin "+refs/heads/$branch:refs/remotes/origin/$branch"
+  git fetch --quiet --no-tags github "+refs/heads/$branch:refs/remotes/github/$branch"
+  here="$(git rev-parse "refs/remotes/origin/$branch")"
+  there="$(git rev-parse "refs/remotes/github/$branch")"
+
+  if [[ "$here" == "$there" ]]; then
+    say "in sync at $(short "$here")"
+    return 0
+  fi
+
+  if git merge-base --is-ancestor "$here" "$there"; then
+    say "Forgejo is behind GitHub: $(short "$here") -> $(short "$there")"
+    # Not forced: if a pull request merged on Forgejo since the fetch, this is
+    # rejected and the next pass sees a divergence instead.
+    git push --quiet origin "$there:refs/heads/$branch" || return "$RETRY"
+    return 0
+  fi
+
+  # From here on Forgejo holds commits GitHub does not.
+  count="$(git rev-list --count "$there..$here")"
+
+  if [[ "$discard" == "true" ]]; then
+    say "discarding $count commit(s) that exist only on Forgejo; $branch becomes $(short "$there")"
+    git push --quiet --force-with-lease="refs/heads/$branch:$here" origin "$there:refs/heads/$branch" || return "$RETRY"
+    return 0
+  fi
+
+  # A history rewrite on GitHub leaves the two sides with nothing in common,
+  # or with thousands of commits "only on Forgejo". Neither is a handful of
+  # dependency updates waiting to be published, so neither is replayed.
+  git merge-base "$here" "$there" >/dev/null ||
+    die "Forgejo's $branch and GitHub's share no history -- run with discard_local to start over from GitHub's"
+  ((count <= max_local)) ||
+    die "$count commits exist only on Forgejo (limit $max_local) -- that is not a pending update; run with discard_local if GitHub's $branch is the one to keep"
+
+  # Before the replay, so the ids reported are the ones Forgejo shows.
+  guard "$there" "$here" || exit 1
+
+  next="$here"
+  if ! git merge-base --is-ancestor "$there" "$here"; then
+    say "diverged: replaying $count Forgejo commit(s) onto GitHub's $(short "$there")"
+    git checkout --quiet --detach "$here"
+    if ! git rebase --quiet "$there" >/dev/null 2>&1; then
+      stopped="$(git rev-parse --quiet --verify REBASE_HEAD || true)"
+      git rebase --abort >/dev/null 2>&1 || true
+      die "commit ${stopped:-?} does not apply on top of GitHub's $branch -- redo it there, then run with discard_local"
+    fi
+    next="$(git rev-parse HEAD)"
+  fi
+
+  if [[ "$next" == "$there" ]]; then
+    # The replay dropped everything: GitHub already has each change.
+    say "every Forgejo commit is already on GitHub"
+  else
+    say "publishing $(git rev-list --count "$there..$next") commit(s) to GitHub: $(short "$there") -> $(short "$next")"
+    publish "$next" || return $?
+  fi
+
+  if [[ "$next" != "$here" ]]; then
+    # Leased to the commit this pass read. If another pull request merged
+    # meanwhile the push is refused, and the next pass replays that one too --
+    # the commits just published are recognised as already applied.
+    git push --quiet --force-with-lease="refs/heads/$branch:$here" origin "$next:refs/heads/$branch" || return "$RETRY"
+    say "Forgejo's $branch moved to the replayed history at $(short "$next")"
+  fi
+}
+
+# Deletes every branch on Forgejo except the one being synced.
+#
+# Only ever asked for by hand. The import that creates the repository copies
+# all of GitHub's branches, and nothing keeps them current afterwards; this
+# removes them. Run later it also deletes Renovate's open branches -- Forgejo
+# closes their pull requests and Renovate opens them again on its next run.
+prune_branches() {
+  local -a doomed=()
+  local start
+  mapfile -t doomed < <(git ls-remote --heads origin | awk -v keep="refs/heads/$branch" '$2 != keep { print $2 }')
+  if ((${#doomed[@]} == 0)); then
+    say "no branch other than $branch on Forgejo"
+    return 0
+  fi
+  say "deleting ${#doomed[@]} Forgejo branch(es) other than $branch"
+  # In batches: one push naming several hundred refs is a very long command.
+  for ((start = 0; start < ${#doomed[@]}; start += 50)); do
+    git push --quiet origin --delete "${doomed[@]:start:50}"
+  done
+}
+
+git remote remove github 2>/dev/null || true
+git remote add github "$fetch_url"
+git remote set-url --push github "$push_url"
+
+if [[ "$prune" == "true" ]]; then prune_branches; fi
+
+for ((try = 1; try <= attempts; try++)); do
+  # In a subshell, and not as `if reconcile`: bash switches `set -e` off inside
+  # a function whose status is being tested, and a failed fetch would then
+  # carry on as if it had worked.
+  set +e
+  (
+    set -e
+    reconcile
+  )
+  status=$?
+  set -e
+  ((status == RETRY)) || exit "$status"
+  say "a branch moved underneath this pass (attempt $try of $attempts)"
+  sleep "$try"
+done
+
+die "gave up after $attempts attempts -- both sides keep moving; the next run will try again"

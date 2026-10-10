@@ -86,6 +86,26 @@ close and reopen the PR if you want the checks.
 Layer 3 covers `kubernetes/**` only. The Docker hosts have no Flux to report
 failures, so for them it is layer 1, autoheal, and Gatus.
 
+## The copy on the forge
+
+The in-cluster Renovate works on a copy of this repository on the forge,
+`github-mirror/home-operations`, under the same rules, and what merges there is
+pushed to `main` here ([runbook](./runbooks/forgejo-github-mirror.md)). For an
+update that bot merges:
+
+- **Layer 1 is the forge's copy of the checks**, `.forgejo/workflows/flate.yml`
+  and `image-check.yml`: the same commands on the estate's own runner. A check
+  changed in `.github/workflows` has to be changed there too.
+- **Layer 2 is the same.** `platformAutomerge: false`, every status green, the
+  overnight window. The forge's bot runs hourly.
+- **Layer 3 does not exist.** The watchdog looks for a GitHub pull request, and
+  a forge merge has none: a failed HelmRelease raises the Flux alert and
+  nothing reverts it. The hold list still applies to both copies.
+
+Every rule above that is scoped to this repository names both copies in
+`matchRepositories`. Keep it that way: a rule naming only the GitHub one does
+not exist on the forge.
+
 ## Operating it
 
 - **Stop all automerge:** set `automerge: false` on the two "Automerge app

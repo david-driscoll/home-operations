@@ -88,6 +88,7 @@ import { CLUSTERS } from "@components/store/clusters.ts";
 import { configureApplications } from "./applications.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
+import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureGarage } from "./garage.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
@@ -170,7 +171,14 @@ new OpenBaoMcpComponent({ globals });
 // `pulumi preview`. discoverForgejoTargets explains what that cost this estate
 // last time.
 const forgejoTargets = await discoverForgejoTargets(globals);
-new ForgejoConfigurationComponent({ globals, targets: forgejoTargets });
+const forgejoConfiguration = new ForgejoConfigurationComponent({ globals, targets: forgejoTargets });
+
+// The Forgejo copy of THIS repository, so the forge's Renovate can work on it,
+// plus the credentials that keep its main in step with GitHub's -- one of which
+// is a deploy key registered on GitHub. That makes GitHub, through the App
+// provider in components/globals.ts, a third thing this stack talks to. See
+// forgejo-github-mirror.ts and docs/runbooks/forgejo-github-mirror.md.
+new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration });
 
 // Authentik applications, the proxy outpost and backrest plans for equestria,
 // discovered from the cluster. Last, because it is the part most likely to

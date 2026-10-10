@@ -15,6 +15,9 @@ resources:
   - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml
+  # Starts the Forgejo workflow that keeps the GitHub mirror's main in step,
+  # whenever Flux reports a new commit on GitHub.
+  - ./forgejo-github-sync/ks.yaml
   - ./git-pages/ks.yaml
   # The API behind the setup guide's My apps page, on git-pages' setup host.
   - ./setup-status/ks.yaml

@@ -69,7 +69,7 @@ import * as vault from "@pulumi/vault";
  * renovate-operator needs, because `spec.webhook.sync` has it create and
  * maintain the hook on every discovered repository using this same token.
  */
-type TOKEN_SCOPES =
+export type TOKEN_SCOPES =
   | "read:activitypub"
   | "write:activitypub"
   | "read:admin"
@@ -756,7 +756,13 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     });
   }
 
-  private createUser(
+  /**
+   * An account, its generated password and its personal access token.
+   *
+   * Public because ./forgejo-github-mirror.ts makes its account the same way.
+   * The resources are parented to THIS component whoever calls it.
+   */
+  createUser(
     details: Omit<forgejo.UserArgs, "password" | "email">,
     scopes: TOKEN_SCOPES[],
     globals: GlobalResources,

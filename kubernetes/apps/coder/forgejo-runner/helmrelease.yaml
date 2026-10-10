@@ -98,7 +98,18 @@ spec:
                 # floor it reserves, not the ceiling it may use.
                 ephemeral-storage: 4Gi
               limits:
-                memory: 4Gi
+                # Every job container lives inside this one, so this is the
+                # ceiling for all of them together. It was 4Gi, which nothing
+                # here came near until .forgejo/workflows/flate.yml: one cold
+                # `flate test` of this repository peaks at about 3.7 GB (2.2 GB
+                # for the diff once the charts are cached), and
+                # `runner.capacity` lets four pull requests render at once. At
+                # 4Gi a second render would take the daemon, and every running
+                # job, down with it. Four cold renders fit under this.
+                #
+                # A limit, not a request: the floor above is unchanged and the
+                # scheduler reserves nothing more.
+                memory: 16Gi
                 # Slightly ABOVE the docker-storage sizeLimit below, so the
                 # volume's own limit is what trips first and the eviction
                 # message names the volume rather than the container. This is
