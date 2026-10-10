@@ -90,3 +90,18 @@ configMapGenerator:
       disableNameSuffixHash: true
       annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled
+  # Helper commands for the pod, mounted as a directory at /opt/agentboard/bin
+  # by ./helmrelease.yaml's `bin` persistence and put on PATH there and in
+  # ./resources/bashrc.
+  #
+  # Substitution OFF, which is why these are not in the mise-config ConfigMap
+  # beside entrypoint.sh: a script here is plain shell, with no doubled dollar
+  # signs, and shellcheck reads what actually runs. The name is literal for the
+  # same reason agentboard-skills' is.
+  - name: agentboard-bin
+    files:
+      - agentboard-spawn=./resources/agentboard-spawn.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

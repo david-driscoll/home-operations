@@ -48,6 +48,14 @@ if [ -x /usr/local/bin/mise ]; then
   esac
 fi
 
+# The pod's own helper commands (../helmrelease.yaml's `persistence.bin`),
+# lost to the same /etc/profile reset as the shims above. Appended, so nothing
+# in there can shadow a real tool.
+case ":$PATH:" in
+  *":/opt/agentboard/bin:"*) ;;
+  *) PATH="$PATH:/opt/agentboard/bin" ;;
+esac
+
 # No GITHUB_TOKEN re-read here any more. An earlier version of this file
 # exported it from the mounted Secret on every shell start, to work around
 # ../helmrelease.yaml's `secretKeyRef` going stale ~60m in. That is obsolete
