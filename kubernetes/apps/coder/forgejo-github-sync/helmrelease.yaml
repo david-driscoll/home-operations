@@ -1,0 +1,125 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# The relay between Flux and Forgejo: one file of Bun, ./resources/server.mjs,
+# mounted from a ConfigMap into the stock image (../setup-status's pattern), so
+# there is no image to build.
+#
+# It has one job. When GitHub's main moves, Flux raises an event
+# (./notification.yaml) and this starts .forgejo/workflows/github-sync.yml on
+# the Forgejo copy of the repository, which pulls the new commits in. The
+# other direction -- Forgejo to GitHub -- needs nothing from here: a merge on
+# Forgejo starts the same workflow by itself.
+#
+# No route and no Gatus check: nothing outside the cluster talks to it, and if
+# it is down the workflow's hourly schedule still syncs.
+# See docs/runbooks/forgejo-github-mirror.md.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app forgejo-github-sync
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      *app :
+        annotations:
+          # The token is re-minted only when its scopes change, and the script
+          # only when this directory does; either way the pod has to restart to
+          # see it.
+          secret.reloader.stakater.com/reload: "forgejo-github-sync"
+          configmap.reloader.stakater.com/reload: "forgejo-github-sync-server"
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 568
+            runAsGroup: 568
+            seccompProfile:
+              type: RuntimeDefault
+        containers:
+          app:
+            image:
+              # The same pin as ../setup-status and agents/toolport's watchdog.
+              repository: oven/bun
+              tag: 1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f
+            command: ["bun", "/app/server.mjs"]
+            env:
+              HOME: /tmp
+              TZ: "${TIMEZONE}"
+              PORT: "8080"
+              # The in-cluster Service, as the runner and Renovate use: no
+              # gateway hop, and it keeps the forge's hostname out of here.
+              FORGEJO_URL: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
+              FORGEJO_WORKFLOW: github-sync.yml
+              FORGEJO_REF: main
+            envFrom:
+              # FORGEJO_TOKEN and FORGEJO_REPOSITORY (./externalsecret.yaml).
+              - secretRef:
+                  name: *app
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &port 8080
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  periodSeconds: 10
+              startup:
+                enabled: false
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      server:
+        type: configMap
+        name: forgejo-github-sync-server
+        globalMounts:
+          - path: /app
+            readOnly: true
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp

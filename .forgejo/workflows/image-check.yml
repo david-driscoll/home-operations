@@ -1,0 +1,55 @@
+---
+# The forge's copy of .github/workflows/image-check.yaml, for a pull request
+# opened on the Forgejo copy of this repository. Same script, same arguments;
+# keep the two files in step by hand (see ./flate.yml for why there are two).
+#
+# The Docker hosts' half of the pre-merge gate in front of Renovate's
+# automerge (docs/renovate-automerge.md). Nothing renders docker/** the way
+# flate renders kubernetes/**, so this is the only check those bumps get:
+# every changed compose file must still be valid Compose, and every image it
+# adds must exist and ship linux/amd64. See scripts/image-check.
+#
+# No merge of the base branch here, unlike ./flate.yml: the script compares
+# against the merge base (`origin/main...HEAD`), so a branch that is behind
+# main is already read correctly.
+name: "Image Check"
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths: ["docker/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose:
+    name: Compose Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup crane
+        env:
+          # Bump both together: the checksum is go-containerregistry's own
+          # checksums.txt line for go-containerregistry_Linux_x86_64.tar.gz.
+          CRANE_VERSION: "0.22.1"
+          CRANE_SHA256: "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0"
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/crane.tgz" "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+          echo "${CRANE_SHA256}  $RUNNER_TEMP/crane.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/crane.tgz" -C "$RUNNER_TEMP/bin" crane
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # `docker compose config` only parses: it needs the compose plugin the
+      # runner image ships, not a Docker daemon, which a job here does not get.
+      - name: Check compose files and images
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: scripts/image-check compose "origin/${BASE_REF}"

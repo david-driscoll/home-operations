@@ -1,0 +1,126 @@
+---
+# Keeps `main` the same on Forgejo and on GitHub. Runs on FORGEJO, in the copy
+# of this repository that stacks/system/forgejo-github-mirror.ts creates;
+# GitHub ignores this directory. docs/runbooks/forgejo-github-mirror.md is the
+# long version.
+#
+# The work is scripts/forgejo-github-sync; this file only decides when it runs
+# and hands it credentials. Three triggers, one job:
+#
+#   push               something merged here (a Renovate pull request). The
+#                      new commits are checked and GitHub is fast-forwarded.
+#   workflow_dispatch  GitHub's main moved. Flux already hears about that from
+#                      GitHub's webhook; kubernetes/apps/coder/forgejo-github-sync
+#                      turns its "new commit" event into this dispatch.
+#   schedule           the backstop for a dispatch that never arrived.
+#
+# THIS DIRECTORY EXISTING IS LOAD-BEARING. Forgejo reads `.forgejo/workflows`
+# and falls back to `.github/workflows` only when it is absent -- without it,
+# every GitHub workflow in this repository would run on the Forgejo runner on
+# each push.
+name: github-sync
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      discard_local:
+        description: Drop commits that exist only on Forgejo and reset main to GitHub's
+        type: boolean
+        default: false
+      prune_branches:
+        description: Delete every branch here except main (cleanup after the first import)
+        type: boolean
+        default: false
+  schedule:
+    # Hourly, off the top of the hour. Forgejo schedules from the default
+    # branch only.
+    - cron: "23 * * * *"
+
+# One at a time. A second run would do no harm -- every push the script makes
+# is a fast-forward or leased, so the loser of a race just fails -- but queued
+# runs finish green instead.
+concurrency:
+  group: github-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # A clone and at most two pushes. Anything longer is hung.
+    timeout-minutes: 15
+    steps:
+      - name: Sync main with GitHub
+        env:
+          # `github.*` is Forgejo's own context under its compatibility name:
+          # this is the FORGE's token, repository and URL, nothing of GitHub's.
+          # Spelled this way, and not `forgejo.*`, only so actionlint can read
+          # the file.
+          #
+          # The job's own token. It can push to this repository, and a push
+          # made with it starts no workflow -- which is what keeps the `push`
+          # trigger above from answering the script's own writes.
+          TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          # The in-cluster Service when stacks/system has set it, so the clone
+          # does not leave the cluster and come back through the gateway.
+          SERVER: ${{ vars.MIRROR_FORGEJO_URL || github.server_url }}
+          # owner/name on GitHub.
+          UPSTREAM: ${{ vars.MIRROR_UPSTREAM }}
+          # A GitHub deploy key with write access, and the only credential here
+          # that reaches outside the forge.
+          DEPLOY_KEY: ${{ secrets.MIRROR_DEPLOY_KEY }}
+          # What scripts/private-domain-guard looks for. Secrets so that the
+          # two names stay out of this file and out of the log.
+          PRIVATE_DOMAIN_ROOT: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
+          PRIVATE_DOMAIN_TAILNET: ${{ secrets.PRIVATE_DOMAIN_TAILNET }}
+          # Both empty on every trigger but a hand-run dispatch.
+          SYNC_DISCARD_LOCAL: ${{ github.event.inputs.discard_local }}
+          SYNC_PRUNE_BRANCHES: ${{ github.event.inputs.prune_branches }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          # Only where the mirror has been set up. This file is in a public
+          # repository, and any other Forgejo that receives the tree would
+          # otherwise fail here hourly. Checked in the step rather than as a
+          # job-level `if`, which would skip silently if `vars` did not resolve.
+          if [ -z "$UPSTREAM" ]; then
+            echo "MIRROR_UPSTREAM is not set on this repository: not a mirror, nothing to do."
+            exit 0
+          fi
+
+          install -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" >"$HOME/.ssh/github-mirror"
+          # GitHub's published host key (https://api.github.com/meta, also
+          # docs.github.com "GitHub's SSH key fingerprints"). Pinned rather
+          # than scanned: a key learned at run time proves nothing.
+          printf '%s\n' \
+            'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+            >"$HOME/.ssh/github-known-hosts"
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/github-mirror -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/github-known-hosts"
+
+          # Only stamped on commits the script has to replay after the two
+          # sides diverge. The address is this account's under Forgejo's
+          # NO_REPLY_ADDRESS (kubernetes/apps/coder/forgejo/helmrelease.yaml).
+          git config --global user.name "github-mirror"
+          git config --global user.email "github-mirror@noreply.forgejo.invalid"
+          git config --global advice.detachedHead false
+
+          # Scoped to the forge's URL, so the header is never offered to GitHub.
+          server="${SERVER%/}"
+          git config --global "http.${server}/.extraheader" \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+
+          # The whole of main, not a shallow clone: telling "behind" from
+          # "diverged" needs the history back to where the two sides last agreed.
+          git clone --quiet --no-tags --single-branch --branch main "${server}/${REPOSITORY}.git" repo
+          cd repo
+
+          # Fetched anonymously over HTTPS and pushed over SSH, so GitHub's
+          # commits still arrive here while the deploy key is missing or wrong.
+          export SYNC_UPSTREAM_FETCH_URL="https://github.com/${UPSTREAM}.git"
+          export SYNC_UPSTREAM_PUSH_URL="git@github.com:${UPSTREAM}.git"
+          export SYNC_DEPLOY_KEY_FILE="$HOME/.ssh/github-mirror"
+          exec bash scripts/forgejo-github-sync

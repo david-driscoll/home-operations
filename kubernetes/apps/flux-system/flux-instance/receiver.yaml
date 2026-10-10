@@ -26,3 +26,10 @@ spec:
       kind: GitRepository
       name: home-operations
       namespace: flux-system
+    # Not something the cluster deploys from: its new-artifact event is what
+    # tells the forge's copy of this repository to pull
+    # (../../coder/forgejo-github-sync/gitrepository.yaml).
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      name: forgejo-github-sync
+      namespace: coder

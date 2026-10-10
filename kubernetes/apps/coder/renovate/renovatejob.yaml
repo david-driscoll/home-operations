@@ -10,10 +10,20 @@ metadata:
   # run, so a rotated token is picked up by the next run with nothing to
   # restart.
 spec:
-  # 03:00 nightly. This is when the bot RUNS; when PRs may OPEN is the
-  # inherited `schedule` in .github/renovate.json5, now "at any time", so a
-  # nightly run files its PRs that night.
-  schedule: "0 3 * * *"
+  # Hourly, on the hour. This is when the bot RUNS; when PRs may OPEN is the
+  # inherited `schedule` in .github/renovate.json5, now "at any time", and when
+  # they may MERGE is the `automergeSchedule` on the rules there (overnight).
+  #
+  # It was once a night, which automerge cannot work with: Renovate never waits
+  # for a check. The run that opens a pull request sees its checks pending and
+  # moves on, and it is the NEXT run that finds them green and merges -- so the
+  # overnight window needs more than one run inside it.
+  #
+  # The operator reads a schedule in its own TZ, which
+  # ../renovate-operator/helmrelease.yaml sets from TIMEZONE. For "every hour"
+  # that changes nothing; it is there so a wall-clock time written here later
+  # means what it says.
+  schedule: "0 * * * *"
 
   # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
   image: ghcr.io/renovatebot/renovate:44.139.0
@@ -209,11 +219,37 @@ spec:
         // because it is cheap to read and impossible to get wrong twice.
         platform: 'forgejo',
 
-        // Must be an address on the bot's Forgejo account, or the forge
-        // attributes the commits to nobody and the PR author does not match
-        // the account the token belongs to. stacks/system builds the bot's
-        // email as `<login>@git.<domain>`; keep the two in step.
-        gitAuthor: 'Renovate Bot <renovate@git.${ROOT_DOMAIN}>',
+        // THE IDENTITY GITHUB'S RENOVATE COMMITS WITH, name and address both --
+        // not an address on this forge.
+        //
+        // One of the repositories this bot works on is the Forgejo copy of the
+        // estate's GitHub repository, and what merges there is pushed to
+        // GitHub (docs/runbooks/forgejo-github-mirror.md). With this, an
+        // update reads the same in GitHub's history whichever bot raised it:
+        // authored by renovate[bot], avatar and all.
+        //
+        // It used to be `renovate@git.<root domain>`, the bot's account
+        // address, and could not stay that: the repository on GitHub is
+        // public, and the sync refuses to publish a commit that names the
+        // domain -- so not one update would ever have got out.
+        //
+        // What it costs is on the forge only. The address belongs to no
+        // account here, so Forgejo shows these commits with no avatar and no
+        // link to the bot. The pull request is still the bot's, and Renovate
+        // tells its own branches from edited ones by this address, not by the
+        // account. The same branches imported from GitHub are, for the same
+        // reason, already its own.
+        //
+        // The `[bot]` in the address is not valid RFC 5322 and Renovate's
+        // parser has a special case for exactly this spelling.
+        gitAuthor: 'renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>',
+
+        // Addresses whose commits count as Renovate's own, besides the one
+        // above. Without this a branch whose last commit has any other author
+        // is "edited by someone else": Renovate stops updating it and waits
+        // for a checkbox. This is `gitAuthor` as it was until now -- every
+        // branch already open on the forge was committed with it.
+        gitIgnoredAuthors: ['renovate@git.${ROOT_DOMAIN}'],
 
         // Every repository gets a dashboard issue rather than silent PRs.
         // This is what the webhook above makes interactive.

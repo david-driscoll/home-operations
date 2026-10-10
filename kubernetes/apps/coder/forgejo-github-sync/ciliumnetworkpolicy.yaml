@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Flux's notification-controller may talk to the relay.
+#
+# server.mjs authenticates nobody: whatever reaches POST /flux with a
+# `NewArtifact` event starts the sync workflow on Forgejo, using a token no
+# caller ever sees. That is a small thing to be able to do -- the workflow is
+# safe to run at any time -- but there is exactly one legitimate caller, so
+# this names it. The same shape as ../setup-status/ciliumnetworkpolicy.yaml.
+#
+# Selecting the pod puts it into default-deny for ingress. Kubelet probes come
+# from the node (`host`), allowed explicitly. Egress is untouched: the one call
+# out is to Forgejo's Service in this namespace.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      app.kubernetes.io/controller: ${APP}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: flux-system
+            app: notification-controller
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

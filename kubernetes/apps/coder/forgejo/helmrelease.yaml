@@ -431,6 +431,33 @@ spec:
           # any automation authenticate with tokens, so this costs nothing.
           REQUIRE_SIGNIN_VIEW: true
           DEFAULT_KEEP_EMAIL_PRIVATE: true
+          # The domain of the address Forgejo writes into a commit it makes for
+          # an account whose email is private -- which, with the line above, is
+          # every account: `<login>@<this>`. That is the COMMITTER on each
+          # commit of a rebased or merged pull request.
+          #
+          # The default is `noreply.<DOMAIN>`, so every such commit carried the
+          # forge's hostname. That was invisible while nothing left the forge.
+          # It is not now: the github-mirror repository pushes its main to the
+          # estate's public GitHub repository, and the sync there refuses any
+          # commit that names the domain
+          # (docs/runbooks/forgejo-github-mirror.md) -- with the default, every
+          # pull request merged on the forge would be one.
+          #
+          # `.invalid` is reserved (RFC 2606): it can never resolve, so nothing
+          # is ever mailed to it and nobody else can own it. Forgejo maps the
+          # address back to the account by this suffix, which is why the
+          # committer the sync and the pull request check set for themselves
+          # (.forgejo/workflows/) is spelled with it. Change it there too or
+          # attribution on the forge quietly stops.
+          #
+          # So a Renovate commit that Forgejo rebased reaches GitHub authored
+          # by renovate[bot] (`gitAuthor` in ../renovate/renovatejob.yaml) and
+          # committed by `renovate@` this.
+          #
+          # Commits made through the web UI before this changed keep the old
+          # address and lose their link to an account. Cosmetic.
+          NO_REPLY_ADDRESS: noreply.forgejo.invalid
 
         oauth2_client:
           ENABLE_AUTO_REGISTRATION: true

@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/gitrepository_v1.json
+#
+# A view of GitHub's main that notices EVERY commit. Nothing consumes its
+# artifact; ./notification.yaml watches it for the `NewArtifact` event, which
+# is what starts the sync on Forgejo.
+#
+# The cluster's own GitRepositories cannot do this job. source-controller
+# raises `NewArtifact` when the artifact's DIGEST changes, not when the commit
+# does, and by default it leaves `.github/`, images and archives out of the
+# artifact -- so a commit touching only those produces the same bytes and no
+# event. About one commit in sixty here is like that (a Renovate config change,
+# a workflow edit), and each would have waited for the workflow's hourly run.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: ${APP}
+spec:
+  # The Receiver in flux-system pokes this on every push to GitHub
+  # (../../flux-system/flux-instance/receiver.yaml), so the interval only
+  # matters when a webhook delivery is lost.
+  interval: 10m
+  url: https://github.com/david-driscoll/home-operations.git
+  ref:
+    branch: main
+  # ANY pattern here replaces Flux's default exclusion list, which is the whole
+  # point of setting it; this one matches no file. `.git/` is still left out --
+  # source-controller adds that itself whatever is written here. The artifact
+  # is then the full tree, about 8 MB.
+  ignore: |
+    /.nothing-is-ignored

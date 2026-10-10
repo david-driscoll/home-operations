@@ -636,9 +636,17 @@
       //
       // Scoped to this repository: the Forgejo bot inherits this file through
       // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
+      //
+      // "This repository" is TWO names, here and in every rule below that is
+      // scoped the same way. The second is its copy on the forge
+      // (docs/runbooks/forgejo-github-mirror.md), which the in-cluster Renovate
+      // works on under the same rules; what merges there is pushed to main
+      // here. A rule naming only the first would simply not exist over there
+      // -- for this one, that would mean every patch automerging again.
       description: "No automerge in this repo unless a rule below opts in",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       automerge: false,
     },
@@ -687,7 +695,8 @@
       // IN SYNC with the minor rule below.
       description: "Automerge app image patch/digest bumps once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchFileNames: [
         "kubernetes/apps/equestria/**",
@@ -757,7 +766,8 @@
       // and a breaking-changes list to everyone else.
       description: "Automerge app image minor bumps (not 0.x) once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchFileNames: [
         "kubernetes/apps/equestria/**",
@@ -1086,7 +1096,8 @@
       // and this is a workaround for this repo's layout, not house policy.
       description: "Bump npm ranges: lockfile-only updates never reach hoisted workspace deps",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchManagers: [
         "npm"
@@ -1101,7 +1112,8 @@
       // regeneration. Bump them by regenerating the SDK instead.
       description: "Skip npm deps of generated Pulumi SDKs",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchManagers: [
         "npm"
@@ -1127,7 +1139,8 @@
       // an automerge would land exactly the half that silently does nothing.
       description: "Automerge named dependencies (minor/patch/digest) once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchUpdateTypes: [
         "minor",
@@ -1226,8 +1239,8 @@
       ],
     },
     {
-      // The automerge hold list. LAST on purpose, so it beats the automerge
-      // rules above. `.github/workflows/renovate-watchdog.yaml` appends an
+      // The automerge hold list. After every automerge rule on purpose, so it
+      // beats them. `.github/workflows/renovate-watchdog.yaml` appends an
       // app's directory here (between the markers, one glob per line) in the
       // same PR that reverts a failed automerge. Without it, the reverted
       // update comes straight back as a new PR and merges itself again.
@@ -1237,7 +1250,8 @@
       // nothing.
       description: "Automerge hold list (maintained by renovate-watchdog)",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchFileNames: [
         // automerge-hold:start
@@ -1248,6 +1262,33 @@
       addLabels: [
         "renovate/automerge-hold"
       ],
+    },
+    {
+      // The ONE thing the forge's copy of this repository does not get
+      // (`github-mirror/home-operations`, the second name in every
+      // `matchRepositories` above; docs/runbooks/forgejo-github-mirror.md).
+      // Everything else here applies to both copies alike, automerge included:
+      // the forge runs the same pre-merge checks from .forgejo/workflows, and
+      // what merges there is pushed to main here.
+      //
+      // A bump to a provider pin in the root Pulumi.yaml is half a change until
+      // .github/workflows/pulumi-sdk-regen.yaml regenerates the SDK onto the
+      // pull request (see the customManager below). That workflow has no copy
+      // on the forge, so a pull request raised there would stay the half that
+      // silently does nothing -- and merging it would publish exactly that.
+      // The pull request Mend raises on GitHub for the same bump is completed
+      // as before.
+      //
+      // After the hold list without competing with it: the two never match the
+      // same update.
+      description: "Provider pins in Pulumi.yaml are raised on GitHub only",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      matchFileNames: [
+        "Pulumi.yaml"
+      ],
+      enabled: false,
     },
   ],
   customManagers: [

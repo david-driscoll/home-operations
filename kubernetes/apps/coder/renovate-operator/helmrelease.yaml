@@ -82,6 +82,18 @@ spec:
         # config; a refresh has to restart the pod for it to be read.
         reloader.stakater.com/auto: "true"
 
+    # The zone every RenovateJob `schedule` is read in. The operator's cron
+    # runs on the process's local time (netresearch/go-cron, no explicit
+    # location), which without this is UTC: the nightly `0 3 * * *` this
+    # estate ran until the schedule went hourly fired at 03:00Z, late evening
+    # here, and nobody had meant that.
+    #
+    # The image is `FROM scratch` with no zoneinfo on disk; that is fine, the
+    # binary is built with `-tags timetzdata` and carries its own.
+    extraEnv:
+      - name: TZ
+        value: "${TIMEZONE}"
+
     rbac:
       # The operator only ever watches this namespace: the single RenovateJob
       # lives beside it in `coder`. A ClusterRole would let anyone who can

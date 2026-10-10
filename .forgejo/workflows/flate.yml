@@ -1,0 +1,195 @@
+---
+# The forge's copy of .github/workflows/flux-local.yaml: the same checks, for a
+# pull request opened on the Forgejo copy of this repository
+# (docs/runbooks/forgejo-github-mirror.md). GitHub never reads this directory
+# and Forgejo never reads that one, so the two files have to be kept in step by
+# hand -- a check that exists on one side only is a check half the pull
+# requests skip.
+#
+# It matters more here than there. What merges on the forge is pushed straight
+# to GitHub's main, past the pull request and the required check GitHub would
+# have put in front of it. This IS that check for those commits, and Renovate
+# on the forge automerges on nothing else.
+#
+# Where it differs from the GitHub file, and why:
+#
+#   * ONE job for test and diff instead of three. A render peaks near 4 GB,
+#     and this runs on the estate's own runner, four jobs at a time: side by
+#     side the two would double the memory for no gain.
+#   * No `flate Success` job. On GitHub that exists to give the ruleset one
+#     name to require; Renovate here reads every status on the commit.
+#   * The base branch is merged in first. GitHub hands a workflow the pull
+#     request already merged into main; Forgejo hands it the branch as pushed,
+#     which Renovate leaves behind main until it conflicts.
+#   * flate's version comes from .config/mise.toml rather than from the action's
+#     ref. Resolving a ref costs an anonymous GitHub API call, and the cluster's
+#     sixty an hour would not survive Renovate opening a batch.
+#   * The cache key is the week, not the run. The action's own `cache: true`
+#     saves ~190 MB under a new key every run, into a 10 Gi emptyDir.
+#   * The diff is posted with the forge's API; the GitHub action that does it
+#     there speaks only GitHub's.
+name: flate
+
+on:
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flate:
+    name: Test and Diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Merge the base branch
+        id: merged
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "flate"
+          git config user.email "flate@noreply.forgejo.invalid"
+          # A conflict fails the job here, which is the right answer: there is
+          # no merged tree to render. Renovate rebases a conflicted branch.
+          git merge --quiet --no-edit "origin/${BASE_REF}"
+          # flate is told the base by name; make sure the name resolves.
+          git branch --force "${BASE_REF}" "origin/${BASE_REF}"
+          if git diff --quiet "origin/${BASE_REF}" HEAD -- kubernetes/; then
+            echo "Nothing under kubernetes/ changed: nothing to render."
+            echo "kubernetes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "kubernetes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read pinned versions
+        id: pins
+        if: ${{ steps.merged.outputs.kubernetes == 'true' }}
+        run: |
+          set -euo pipefail
+          flate="$(yq -p toml -oy '.tools["github:home-operations/flate"]' .config/mise.toml)"
+          {
+            echo "flate=${flate#v}"
+            # ISO year and week: one cache entry a week.
+            echo "week=$(date -u +%G-%V)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup flate
+        if: ${{ steps.merged.outputs.kubernetes == 'true' }}
+        uses: home-operations/flate/action@631b76b69c4e58c6f4d1cb01e23616fa61aebafa # v0.6.5
+        with:
+          version: ${{ steps.pins.outputs.flate }}
+          base: ${{ github.event.repository.default_branch }}
+
+      - name: Restore the flate cache
+        if: ${{ steps.merged.outputs.kubernetes == 'true' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.FLATE_CACHE_DIR }}
+          key: flate-${{ runner.os }}-${{ runner.arch }}-${{ steps.pins.outputs.week }}
+          restore-keys: |
+            flate-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Run flate test
+        if: ${{ steps.merged.outputs.kubernetes == 'true' }}
+        run: flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10
+
+      # After a failed test as well: the diff is what a person reads to see why.
+      - name: Run flate diff
+        id: diff
+        if: ${{ !cancelled() && steps.merged.outputs.kubernetes == 'true' }}
+        run: |
+          set -euo pipefail
+          flate diff all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 -o github > diff.patch
+          cat diff.patch
+          if [ -s diff.patch ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Add Comment
+        if: ${{ !cancelled() && steps.diff.outputs.changed == 'true' }}
+        continue-on-error: true
+        env:
+          # `github.*` is Forgejo's own context under its compatibility name,
+          # as in ./github-sync.yml: the forge's token and URL.
+          TOKEN: ${{ github.token }}
+          SERVER: ${{ vars.MIRROR_FORGEJO_URL || github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # One comment per pull request, rewritten on every push, found again
+          # by this marker.
+          marker='<!-- flate-diff -->'
+          api="${SERVER%/}/api/v1/repos/${REPOSITORY}"
+          auth=(-H "Authorization: token ${TOKEN}" -H "Content-Type: application/json")
+
+          # 60 000 bytes, the size GitHub's comment limit holds the other copy
+          # of this workflow to. The whole diff is in the step above.
+          body="${marker}"$'\n\n'"$(head -c 60000 diff.patch)"
+          if [ "$(wc -c < diff.patch)" -gt 60000 ]; then
+            body+=$'\n\n'"_Truncated. The full diff is in this job's log._"
+          fi
+
+          existing="$(curl -fsS "${auth[@]}" "${api}/issues/${NUMBER}/comments" |
+            jq -r --arg marker "$marker" '[.[] | select(.body | startswith($marker))][0].id // empty')"
+          payload="$(jq -n --arg body "$body" '{body: $body}')"
+          if [ -n "$existing" ]; then
+            curl -fsS -o /dev/null -X PATCH "${auth[@]}" --data "$payload" "${api}/issues/comments/${existing}"
+          else
+            curl -fsS -o /dev/null -X POST "${auth[@]}" --data "$payload" "${api}/issues/${NUMBER}/comments"
+          fi
+
+      # After the comment, so a failing image still gets its diff posted.
+      # The rendered diff is the right input: HelmRelease repository/tag
+      # pairs arrive joined into the Deployment's `image:`, exactly what the
+      # kubelet will pull. See scripts/image-check.
+      - name: Setup crane
+        if: ${{ !cancelled() && steps.diff.outputs.changed == 'true' }}
+        env:
+          # Bump both together: the checksum is go-containerregistry's own
+          # checksums.txt line for go-containerregistry_Linux_x86_64.tar.gz.
+          CRANE_VERSION: "0.22.1"
+          CRANE_SHA256: "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0"
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/crane.tgz" "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+          echo "${CRANE_SHA256}  $RUNNER_TEMP/crane.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/crane.tgz" -C "$RUNNER_TEMP/bin" crane
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Check rendered images exist
+        if: ${{ !cancelled() && steps.diff.outputs.changed == 'true' }}
+        run: scripts/image-check flate diff.patch
+
+  # `flate test` renders Helm charts. It does NOT run Flux postBuild envsubst
+  # and it does NOT run the external-secrets template engine, so it passes
+  # cleanly on a values file that will take an app to zero pods. This job runs
+  # those two renderers. Always, not only when kubernetes/ changed: it also has
+  # to run when only the linter itself changes.
+  eso-values-lint:
+    name: ESO Values Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: scripts/eso-values-lint/go.mod
+          cache-dependency-path: scripts/eso-values-lint/go.sum
+
+      # The linter's own regression tests, including the negative case that
+      # `$${...}` must not be flagged. A checker nobody trusts gets disabled.
+      - name: Test eso-values-lint
+        run: go -C scripts/eso-values-lint test ./...
+
+      - name: Run eso-values-lint
+        run: go -C scripts/eso-values-lint run . "${GITHUB_WORKSPACE}/kubernetes"
