@@ -124,3 +124,24 @@ jobs:
           export SYNC_UPSTREAM_PUSH_URL="git@github.com:${UPSTREAM}.git"
           export SYNC_DEPLOY_KEY_FILE="$HOME/.ssh/github-mirror"
           exec bash scripts/forgejo-github-sync
+
+      # Renovate here only attaches labels that already exist in this
+      # repository, so GitHub's set is copied over (never deleted from).
+      # After the branch sync and whatever its result, so a failed publish
+      # does not also leave new pull requests unlabelled; a failure here
+      # still turns the run red.
+      - name: Copy GitHub's labels
+        if: ${{ !cancelled() && vars.MIRROR_UPSTREAM != '' }}
+        env:
+          LABELS_TOKEN: ${{ github.token }}
+          LABELS_REPOSITORY: ${{ github.repository }}
+          LABELS_FORGEJO_URL: ${{ vars.MIRROR_FORGEJO_URL || github.server_url }}
+          LABELS_UPSTREAM: ${{ vars.MIRROR_UPSTREAM }}
+        run: |
+          set -euo pipefail
+          # The first step's clone, when it got that far.
+          if [ ! -f repo/scripts/forgejo-github-labels ]; then
+            echo "No checkout from the sync step; labels are left for the next run."
+            exit 0
+          fi
+          bash repo/scripts/forgejo-github-labels
