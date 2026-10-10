@@ -104,10 +104,10 @@ spec:
           # Daily at 09:03 local time: 13:03 UTC in summer, 14:03 in winter.
           #
           # Longhorn's snapshot-cleanup RecurringJob cannot carry a timezone
-          # (the CRD has no field for one) and is fixed at 14:00 UTC. In
-          # summer this runs 57 minutes ahead of it. IN WINTER IT STARTS THREE
-          # MINUTES AFTER IT. Moving the Longhorn and VolSync times one more
-          # hour (15:00 UTC for that job) would keep this ahead all year.
+          # (the CRD has no field for one) and is fixed at 15:00 UTC, chosen
+          # so that this stays ahead of it all year: by 1h57 in summer and by
+          # 57 minutes in winter. At 14:00 UTC this would start three minutes
+          # after it every winter.
           schedule: "3 9 * * *"
           timeZone: ${TIMEZONE}
           parallelism: 1

@@ -60,23 +60,23 @@ const BACKREST_PLAN_SCHEDULE: BackrestPlan["schedule"] = { cron: "0 1 * * *", cl
  * sets no TZ. Each one runs after what it copies, so a copy carries that day's
  * snapshot:
  *
- *   18:00  VolSync movers run (ReplicationSource `0 18 * * *`), done by ~18:20
- *   19:00  celestia copies the VolSync repos from TrueNAS into /data/backup
- *   20:00  luna and skystar copy celestia's repos, VolSync and Backrest alike
+ *   19:00  VolSync movers run (ReplicationSource `0 19 * * *`), done by ~19:20
+ *   20:00  celestia copies the VolSync repos from TrueNAS into /data/backup
+ *   21:00  luna and skystar copy celestia's repos, VolSync and Backrest alike
  *
- * All three were four hours earlier until 2026-10: VolSync cannot carry a
+ * All three were five hours earlier until 2026-10: VolSync cannot carry a
  * timezone, so when the cluster's schedules moved to local time its UTC hour
  * moved with them, and these follow it. Move them together or a copy carries
  * yesterday's snapshot.
  *
  * Backrest's queue starts at 01:00 local, 05:00 or 06:00 UTC. The longest night
  * in the 2026-09-27 → 09-29 logs ran about six and a half hours, so it is done
- * well before 20:00. Before this the copies ran at 10:00 and 04:00 UTC, and a
+ * well before 21:00. Before this the copies ran at 10:00 and 04:00 UTC, and a
  * VolSync snapshot waited about 38 hours to reach luna and skystar; now it is
  * about two.
  */
-const VOLSYNC_LOCAL_COPY_SCHEDULE = "0 19 * * *";
-const REMOTE_COPY_SCHEDULE = "0 20 * * *";
+const VOLSYNC_LOCAL_COPY_SCHEDULE = "0 20 * * *";
+const REMOTE_COPY_SCHEDULE = "0 21 * * *";
 
 export class BackupPlanDirector extends ComponentResource {
   private readonly globals: GlobalResources;

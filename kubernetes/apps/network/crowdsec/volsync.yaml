@@ -100,7 +100,7 @@ metadata:
 spec:
   sourcePVC: crowdsec-config-pvc
   trigger:
-    schedule: "0 18 * * *"
+    schedule: "0 19 * * *"
   restic:
     copyMethod: Snapshot
     pruneIntervalDays: 14
@@ -140,7 +140,7 @@ metadata:
 spec:
   sourcePVC: crowdsec-db-pvc
   trigger:
-    schedule: "0 18 * * *"
+    schedule: "0 19 * * *"
   restic:
     copyMethod: Snapshot
     pruneIntervalDays: 14
