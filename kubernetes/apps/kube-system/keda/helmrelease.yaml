@@ -1,0 +1,80 @@
+---
+# KEDA: scales a workload from an external signal. Installed for one consumer,
+# kubernetes/apps/coder/forgejo-runner-scaled, which starts a runner pod for
+# each Forgejo Actions job that is waiting.
+#
+# The chart is not published as an OCI artifact, hence a HelmRepository here
+# where most of this namespace uses an OCIRepository.
+#
+# Two things this adds to the cluster beyond its own pods:
+#
+# - the `external.metrics.k8s.io` APIService, served by its metrics apiserver.
+#   Nothing else here serves that API (metrics-server is `metrics.k8s.io`).
+# - CRDs in `keda.sh`. go-kube-downscaler's `scaledobjects` include was left
+#   out because those CRDs were absent; it is still not needed, and nothing
+#   here creates a ScaledObject.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: keda
+spec:
+  interval: 1h
+  url: https://kedacore.github.io/charts
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: keda
+spec:
+  chart:
+    spec:
+      chart: keda
+      # The Forgejo scaler arrived in 2.18.
+      version: 2.21.0
+      sourceRef:
+        kind: HelmRepository
+        name: keda
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    # One consumer and a CI queue: a restart delays a scale-up by seconds, so
+    # single replicas are enough.
+    resources:
+      operator:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      metricServer:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      webhooks:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          memory: 256Mi

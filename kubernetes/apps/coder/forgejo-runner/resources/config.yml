@@ -27,6 +27,10 @@ runner:
   # claim the same jobs and reporting status over each other. Scaling out needs
   # a second registration, which means a second OpenBao path, a second Secret
   # and a second StatefulSet -- not a bigger number here.
+  #
+  # ../forgejo-runner-scaled is the exception and mounts this same file: its
+  # pods run one-job, not a daemon, so each asks for a single task and exits.
+  # That file's header has the reasoning.
   capacity: 4
   timeout: 3h
   # How long a job gets to finish after SIGTERM. Must stay below the pod's
