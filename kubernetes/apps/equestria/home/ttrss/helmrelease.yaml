@@ -49,16 +49,25 @@ spec:
         replicas: 1
         strategy: Recreate
 
-        # tt-rss has no built-in OIDC; it is a plugin that lives outside the
-        # image, in plugins.local on the PVC. This fetches it at a pinned
-        # commit and skips the network entirely when that commit is already in
-        # place, so a restart does not depend on GitHub being reachable.
+        # Plugins that are not in the image live in plugins.local on the PVC.
+        # This fetches each one at a pinned commit and skips the network
+        # entirely when that commit is already in place, so a restart does not
+        # depend on GitHub being reachable.
         #
-        # To move the pin, change the commit in ALL THREE places below. The
-        # script uses no shell variables on purpose: Flux's postBuild
-        # substitution runs over this file and would expand them to nothing.
+        #   auth_oidc  tt-rss has no built-in OIDC
+        #   freshapi   FreshRSS / Google Reader API, for the clients that speak
+        #              it: /plugins.local/freshapi/api/greader.php
+        #   fever      Fever API, likewise: /plugins.local/fever/
+        #
+        # The directory name is the plugin's name, and TTRSS_PLUGINS in
+        # ./externalsecret.yaml is what loads it. To move a pin, change the
+        # commit on that plugin's `install` line.
+        #
+        # The script writes its variables without braces on purpose: Flux's
+        # postBuild substitution runs over this file and would expand the
+        # braced form to nothing.
         initContainers:
-          install-oidc-plugin:
+          install-plugins:
             image: &image
               repository: ghcr.io/tt-rss/tt-rss
               tag: 20261002-173724@sha256:9eef524fc11d783434e1df9acde1ae3734d59902b8ebfbb9e928e2ef3df03b11
@@ -66,23 +75,30 @@ spec:
             args:
               - |
                 set -eu
-                if grep -qx 9ef6658d3d613268b1de3e383c4b487aee4b78ac /var/www/html/tt-rss/plugins.local/auth_oidc/.pinned-commit 2>/dev/null; then
-                  echo "install-oidc-plugin: auth_oidc already at the pinned commit"
-                  exit 0
-                fi
-                rm -rf /var/www/html/.auth_oidc.new
-                git init -q /var/www/html/.auth_oidc.new
-                cd /var/www/html/.auth_oidc.new
-                git fetch -q --depth 1 https://github.com/tt-rss/tt-rss-plugin-auth-oidc.git 9ef6658d3d613268b1de3e383c4b487aee4b78ac
-                git checkout -q FETCH_HEAD
-                # Dropping .git is what keeps the image's startup script from
-                # treating this as a checkout it should `git pull`.
-                rm -rf .git
-                echo 9ef6658d3d613268b1de3e383c4b487aee4b78ac > .pinned-commit
-                mkdir -p /var/www/html/tt-rss/plugins.local
-                rm -rf /var/www/html/tt-rss/plugins.local/auth_oidc
-                mv /var/www/html/.auth_oidc.new /var/www/html/tt-rss/plugins.local/auth_oidc
-                echo "install-oidc-plugin: auth_oidc installed"
+                # install <directory in plugins.local> <repository> <commit>
+                install() {
+                  dest=/var/www/html/tt-rss/plugins.local/$1
+                  if grep -qx "$3" "$dest/.pinned-commit" 2>/dev/null; then
+                    echo "install-plugins: $1 already at the pinned commit"
+                    return 0
+                  fi
+                  tmp=/var/www/html/.$1.new
+                  rm -rf "$tmp"
+                  git init -q "$tmp"
+                  git -C "$tmp" fetch -q --depth 1 "$2" "$3"
+                  git -C "$tmp" checkout -q FETCH_HEAD
+                  # Dropping .git is what keeps the image's startup script from
+                  # treating this as a checkout it should `git pull`.
+                  rm -rf "$tmp/.git"
+                  echo "$3" > "$tmp/.pinned-commit"
+                  mkdir -p /var/www/html/tt-rss/plugins.local
+                  rm -rf "$dest"
+                  mv "$tmp" "$dest"
+                  echo "install-plugins: $1 installed"
+                }
+                install auth_oidc https://github.com/tt-rss/tt-rss-plugin-auth-oidc.git 9ef6658d3d613268b1de3e383c4b487aee4b78ac
+                install freshapi https://github.com/eric-pierce/freshapi.git 036aa8c9d510e3710874893029c672d92ff6b97f
+                install fever https://github.com/DigitalDJ/tinytinyrss-fever-plugin.git cc297d8939f91e53bf873f8d982a7869916483df
 
         containers:
           *app :

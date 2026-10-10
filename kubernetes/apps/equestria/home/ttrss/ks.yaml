@@ -46,7 +46,7 @@ spec:
     - ../../../../components/tailscale
     # The PVC holds tt-rss's working copy, which the image rsyncs onto it at
     # every start, plus the parts that are not in the image: plugins.local
-    # (the OIDC plugin), themes.local and the feed-icon / image cache. Feeds,
+    # (the OIDC and API plugins), themes.local and the feed-icon / image cache. Feeds,
     # articles and users are all in PostgreSQL.
     - ../../../../components/volsync
   postBuild:
