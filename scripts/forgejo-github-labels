@@ -10,6 +10,10 @@
 # colour or description differs is updated, and nothing is ever deleted. A
 # label that exists only on Forgejo is left alone.
 #
+# It then labels open pull requests here that have no labels at all, from the
+# GitHub pull request with the same head branch; the second half of the file
+# says why.
+#
 # Run by .forgejo/workflows/github-sync.yml after the branch sync. By hand:
 #
 #   LABELS_UPSTREAM=owner/name LABELS_FORGEJO_URL=https://forge.example \
@@ -98,10 +102,7 @@ jq --compact-output --slurpfile have "$work/forge.json" '
 
 total="$(jq 'length' "$work/github.json")"
 changes="$(wc -l <"$work/plan.jsonl" | tr -d ' ')"
-if [ "$changes" -eq 0 ]; then
-  echo "labels: all ${total} of GitHub's labels are already here."
-  exit 0
-fi
+[ "$changes" -gt 0 ] || echo "labels: all ${total} of GitHub's labels are already here."
 
 failed=0
 while IFS= read -r line; do
@@ -133,4 +134,95 @@ if [ "$failed" -gt 0 ]; then
   echo "labels: ${failed} of ${changes} changes failed." >&2
   exit 1
 fi
-echo "labels: ${changes} of ${total} labels created or updated."
+[ "$changes" -eq 0 ] || echo "labels: ${changes} of ${total} labels created or updated."
+
+# ---------------------------------------------------------------------------
+# Pull requests that have no labels at all.
+#
+# Renovate labels a pull request when it OPENS it, from the labels that exist
+# at that moment, and does not come back to one it opened earlier. So anything
+# opened before a label existed here stays bare. GitHub's Renovate works on the
+# same branches under the same rules, so the pull request with the same head
+# branch over there carries exactly the labels this one should have.
+#
+# Only a pull request with NO labels is touched, and labels are only added: one
+# that Renovate or a person has labelled is theirs.
+# ---------------------------------------------------------------------------
+
+status="$(pages "${github}/repos/${LABELS_UPSTREAM}/pulls?state=open&per_page=100" \
+  --header 'Accept: application/vnd.github+json')"
+case "$status" in
+  200) ;;
+  403 | 429)
+    echo "labels: GitHub answered ${status} (rate limit) listing pull requests; skipping them this run."
+    exit 0
+    ;;
+  *)
+    echo "labels: GitHub answered ${status} listing ${LABELS_UPSTREAM}'s pull requests." >&2
+    exit 1
+    ;;
+esac
+mv "$work/all.json" "$work/github-pulls.json"
+
+status="$(pages "${forge}/pulls?state=open&limit=50" --header "Authorization: token ${LABELS_TOKEN}")"
+if [ "$status" != 200 ]; then
+  echo "labels: the forge answered ${status} listing ${LABELS_REPOSITORY}'s pull requests." >&2
+  exit 1
+fi
+mv "$work/all.json" "$work/forge-pulls.json"
+
+# The label ids as they are now, after the creates above.
+if [ -z "$dry" ] && [ "$changes" -gt 0 ]; then
+  status="$(pages "${forge}/labels?limit=50" --header "Authorization: token ${LABELS_TOKEN}")"
+  if [ "$status" != 200 ]; then
+    echo "labels: the forge answered ${status} re-reading its labels." >&2
+    exit 1
+  fi
+  mv "$work/all.json" "$work/forge.json"
+fi
+
+# One line per bare pull request with a labelled twin on GitHub: its number,
+# and the ids of the twin's labels that exist here.
+jq --compact-output --slurpfile theirs "$work/github-pulls.json" --slurpfile have "$work/forge.json" '
+  ($have[0] | map({key: .name, value: .id}) | from_entries) as $id
+  | ($theirs[0] | map({key: .head.ref, value: [.labels[].name]}) | from_entries) as $by
+  | .[]
+  | select((.labels // []) | length == 0)
+  | {number, head: .head.ref, names: (($by[.head.ref] // []) | map(select($id[.] != null)))}
+  | select(.names | length > 0)
+  | . + {labels: (.names | map($id[.]))}
+' "$work/forge-pulls.json" >"$work/pulls.jsonl"
+
+bare="$(jq '[.[] | select((.labels // []) | length == 0)] | length' "$work/forge-pulls.json")"
+todo="$(wc -l <"$work/pulls.jsonl" | tr -d ' ')"
+if [ "$todo" -eq 0 ]; then
+  echo "labels: ${bare} open pull request(s) without labels, none with a labelled twin on GitHub."
+  exit 0
+fi
+
+failed=0
+while IFS= read -r line; do
+  number="$(jq -r '.number' <<<"$line")"
+  names="$(jq -r '.names | join(", ")' <<<"$line")"
+  if [ -n "$dry" ]; then
+    echo "labels: would label #${number} (${names})"
+    continue
+  fi
+  status="$(jq --compact-output '{labels}' <<<"$line" | curl --silent --show-error --max-time 30 \
+    --output "$work/reply.json" --write-out '%{http_code}' --request POST \
+    --header "Authorization: token ${LABELS_TOKEN}" --header 'Content-Type: application/json' \
+    --data-binary @- "${forge}/issues/${number}/labels")"
+  case "$status" in
+    200 | 201) echo "labels: labelled #${number} (${names})" ;;
+    *)
+      echo "labels: could not label #${number}: the forge answered ${status}: $(head -c 200 "$work/reply.json")" >&2
+      failed=$((failed + 1))
+      ;;
+  esac
+done <"$work/pulls.jsonl"
+
+if [ "$failed" -gt 0 ]; then
+  echo "labels: ${failed} of ${todo} pull requests could not be labelled." >&2
+  exit 1
+fi
+echo "labels: ${todo} of ${bare} unlabelled pull request(s) labelled from GitHub."
