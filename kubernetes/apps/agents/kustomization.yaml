@@ -65,3 +65,7 @@ resources:
   # only ever an MCP CLIENT of over plain HTTP+OAuth at runtime, never a
   # build-time dependent.
   - ./agentboard/ks.yaml
+  # Paperclip: a board UI over teams of agents, which it runs as child
+  # processes in its own pod. Independent of everything above -- it is not
+  # admitted to the toolport doors (../toolport-mcp/networkpolicy.yaml).
+  - ./paperclip/ks.yaml

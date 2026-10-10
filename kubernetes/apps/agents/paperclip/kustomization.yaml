@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./externalsecret.yaml
+  - ./definition.yaml
+patches:
+  # Paperclip's migrations create two extensions (0051 pg_trgm, 0080
+  # fuzzystrmatch) with CREATE EXTENSION IF NOT EXISTS. Both are trusted on
+  # PostgreSQL 13+ and the database owner could create them unaided; they are
+  # declared anyway so the database's extension set is written down in one
+  # place, as equestria/home/sure does. Pre-creating them makes the
+  # migrations' own statements no-ops.
+  #
+  # Mechanism: the two-level JSON6902 patch. It appends to the nested
+  # `<app>-postgres` Kustomization's `spec.patches`; that child then patches
+  # the `Database` it renders into `database`. Never a strategic merge on
+  # `spec.patches` -- a merge REPLACES the list.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: Database
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata:
+              name: not-used
+            spec:
+              extensions:
+                - name: pg_trgm
+                  ensure: present
+                - name: fuzzystrmatch
+                  ensure: present

@@ -1,0 +1,177 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app paperclip
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  # The image is ~1.8 GB compressed (it carries the agent CLIs), so a cold pull
+  # alone can use most of a default timeout.
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # DATABASE_URL is read once at start, so the 30-day password rotation
+          # only reaches the server through this restart.
+          reloader.stakater.com/auto: "true"
+        # One replica, never two: the heartbeat scheduler runs in-process and
+        # the volume is ReadWriteOnce.
+        replicas: 1
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/paperclipai/paperclip
+              tag: 2026.1005.0@sha256:de762433b50d56ed9180fef96a13fa236b37856c5c7a7718e8f19afe3d1e8670
+            env:
+              TZ: "${TIMEZONE}"
+              HOST: "0.0.0.0"
+              PORT: &port 3100
+              # `authenticated` is the only mode that will bind off loopback;
+              # `local_trusted` (no login at all) refuses to start in a pod.
+              PAPERCLIP_DEPLOYMENT_MODE: authenticated
+              # `private` keeps the hostname allowlist on and lets the first
+              # admin be claimed from the browser. `public` would require the
+              # bootstrap CLI, which needs an onboarded config file.
+              PAPERCLIP_DEPLOYMENT_EXPOSURE: private
+              # Becomes the auth base URL and the one allowed hostname. https
+              # here is also what marks the session cookie Secure, with TLS
+              # ending at the gateway.
+              PAPERCLIP_PUBLIC_URL: "https://${APP}.${ROOT_DOMAIN}"
+              # Without this the server hands every agent PAPERCLIP_PUBLIC_URL
+              # as its API address. Agents run inside this container and call
+              # back with a bearer token, and the authentik outpost on the
+              # public name answers a bearer-only request with a 302 -- runs
+              # exit 0 and their issues quietly end up `blocked`
+              # (paperclipai/paperclip#8474). localhost skips the gateway and
+              # is always on the hostname allowlist.
+              PAPERCLIP_API_URL: "http://localhost:3100"
+              # Already the behaviour with no TTY; stated so a schema bump in
+              # a new image never stops at a prompt nobody can answer.
+              PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
+              # The server's own hourly pg_dump onto the PVC. The database is
+              # backed up with every other one on the shared cluster.
+              PAPERCLIP_DB_BACKUP_ENABLED: "false"
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            resources:
+              requests:
+                cpu: 100m
+                memory: 1Gi
+              limits:
+                # Upstream's only published sizing is 2 vCPU / 4 GiB, and the
+                # agent CLIs it spawns live inside this limit too.
+                memory: 4Gi
+            probes:
+              # The Host header is not decoration. In `private` exposure the
+              # hostname guard is mounted ahead of every route, /api/health
+              # included, and a kubelet probe's default Host is the pod IP --
+              # which is not on the allowlist and gets a 403.
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &health
+                    path: /api/health
+                    port: *port
+                    httpHeaders:
+                      - name: Host
+                        value: localhost
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 6
+              readiness: *probes
+              # First boot applies ~290 migrations before it listens.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 5
+                  timeoutSeconds: 5
+                  failureThreshold: 120
+            securityContext:
+              allowPrivilegeEscalation: false
+              # The root filesystem stays writable: agents install tools and
+              # the CLIs write outside HOME, and upstream does not support a
+              # read-only root.
+              capabilities:
+                drop:
+                  - ALL
+
+    defaultPodOptions:
+      # The image's `node` user. Its entrypoint starts as root only to chown
+      # /paperclip and drop to this user; started as this user it skips both,
+      # and fsGroup does the chown instead.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /paperclip
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  # The authentik outpost, for every path including the UI's
+                  # live-events WebSocket (it carries the same cookies). See
+                  # ./definition.yaml for why this is proxy auth and not OIDC.
+                  name: authenticated-user

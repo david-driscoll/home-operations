@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Paperclip
+  category: AI
+  description: Board and control plane for running teams of AI agents
+  # <app>.<root domain>, not the <app>.agents.<root domain> form the rest of
+  # this namespace uses. The one time the outpost was put in front of a host
+  # of that form (../agentboard/httproute.yaml, 2026-08-31) it rejected its own
+  # session cookie on every request and was reverted without a root cause.
+  # Every working proxy app is on the single-label form, so this one is too.
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/favicon.svg
+  access_policy:
+    # Whoever gets in can start agents that run shell commands in this pod.
+    groups:
+      - admins
+  authentik:
+    # Proxy, not oauth2: as of 2026.1005.0 Paperclip's Better Auth is wired
+    # for email + password only. Generic OIDC is an open upstream PR
+    # (paperclipai/paperclip#3040) and a trusted-proxy header login is only a
+    # request (#14551), so neither can be configured. The outpost is therefore
+    # the SSO gate and Paperclip's own login sits behind it -- two sign-ins,
+    # by necessity. Switch to `oauth2` when #3040 lands.
+    #
+    # No skipPathRegex: nothing outside the pod calls this hostname. Agents
+    # reach the API on localhost (PAPERCLIP_API_URL in ./helmrelease.yaml).
+    # An outside caller -- the CLI, a chat or routine webhook, a remote
+    # runner -- would need its path exempted here first.
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

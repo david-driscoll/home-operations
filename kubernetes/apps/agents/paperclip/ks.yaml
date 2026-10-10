@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Paperclip -- a board UI and control plane for running teams of AI agents
+# (github.com/paperclipai/paperclip). One Node server that also spawns the
+# agent CLIs (claude, codex, opencode, gemini) as child processes in its own
+# container, so this pod is an agent runner as much as it is a web app.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app paperclip
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/agents/paperclip
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+    - ../../../components/postgres
+    # /paperclip is the server's HOME as well as its data directory: agent
+    # workspaces and project checkouts, uploads, plugins, and the CLI logins
+    # (.claude, .codex) a subscription sign-in writes. Everything else is in
+    # PostgreSQL.
+    - ../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      VOLSYNC_CAPACITY: 20Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # The image's `node` user. The mover has to write as the same user the
+      # pod runs as, or a restore leaves files the server cannot open.
+      VOLSYNC_PUID: "1000"
+      VOLSYNC_PGID: "1000"
