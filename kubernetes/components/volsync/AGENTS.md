@@ -44,7 +44,7 @@ ever goes up** below.
 ### The destinations are rebuilt every night
 
 `spec.trigger.manual: restore-once` fires once per destination. The `volsync-restore-cleanup`
-CronJob (`30 3 * * *`, `apps/volsync-system/restore-cleanup`) then deletes every destination
+CronJob (`30 23 * * *` local time, `apps/volsync-system/restore-cleanup`) then deletes every destination
 whose `status.lastManualSync` has caught up with that trigger, cascading to the
 `${APP}-dst-dest`/`${APP}-dst-cache` pair it provisioned. Because the destination is declared
 *here*, Flux recreates it on the next reconcile and the restore runs again. So at 04:0x every

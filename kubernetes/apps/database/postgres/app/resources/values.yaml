@@ -210,7 +210,10 @@ backups:
     jobs: 2
   scheduledBackups:
   - name: daily-backup
-    schedule: "${POSTGRES_BACKUP_SCHEDULE:=0 0 16 * * *}"
+    # Six fields, seconds first: 12:00:00 every day, in the OPERATOR's local
+    # time, which is the TZ set in apps/cloudnative-pg/operator. It was
+    # "0 0 16 * * *" while the operator ran in UTC, the same moment in summer.
+    schedule: "${POSTGRES_BACKUP_SCHEDULE:=0 0 12 * * *}"
     backupOwnerReference: self
     method: plugin
     pluginConfiguration:

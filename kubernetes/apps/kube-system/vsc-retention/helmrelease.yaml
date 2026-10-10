@@ -62,7 +62,13 @@ spec:
           # (11:00) RecurringJobs -- this operates on a different object class
           # (CSI VolumeSnapshotContent, not Longhorn's native snapshots.longhorn.io)
           # but there's no reason to race them.
-          schedule: "30 2 * * *"
+          #
+          # Those two times are UTC and fixed (a RecurringJob has no timezone
+          # field). This one is local: 22:30, which was "30 2 * * *" in UTC.
+          # That is 02:30 UTC in summer and 03:30 in winter, hours ahead of
+          # them either way.
+          schedule: "30 22 * * *"
+          timeZone: ${TIMEZONE}
           concurrencyPolicy: Forbid
           backoffLimit: 2
           activeDeadlineSeconds: 600

@@ -50,6 +50,7 @@ spec:
               limits:
                 memory: 512Mi
             env:
+              TZ: ${TIMEZONE}
               ALLOW_EVENT_OVERLAYS: "true"
               IMAGE_CACHE_HOURS: "24"
               RATE_LIMIT_PER_MINUTE: "0"

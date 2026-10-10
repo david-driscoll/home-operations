@@ -21,9 +21,12 @@ external-endpoints:
   - name: nightly-dump
     group: "OpenBao Break Glass"
     token: openbao-break-glass_nightly-dump
-    # Nightly at 03:00 — 26h of silence means a dump was missed.
+    # Nightly at 23:00 local — 27h of silence means a dump was missed. It is
+    # 27h and not 26h because the job follows local time: the night the clocks
+    # go back, two runs are 25 hours apart, and this keeps two hours of
+    # headroom on that day as on every other.
     heartbeat:
-      interval: 26h
+      interval: 27h
     alerts:
       - type: pushover
         enabled: true
@@ -33,11 +36,11 @@ external-endpoints:
   - name: canary-check
     group: "OpenBao Break Glass"
     token: openbao-break-glass_canary-check
-    # Daily at 04:00. This is the fast half of Scenario D: it tests ONLY that
+    # Daily at midnight local. This is the fast half of Scenario D: it tests ONLY that
     # the restore-test AppRole can still read the canary on the live server --
     # the single link in the break-glass chain that can rot without anyone
     # touching the repo, and the one that did on 2026-09-05 and went unnoticed
-    # for a month. 26h of silence means a check was missed, same headroom as
+    # for a month. 27h of silence means a check was missed, same headroom as
     # the nightly dump.
     #
     # A red here does NOT mean the backup is bad: the dumps can be perfect
@@ -46,7 +49,7 @@ external-endpoints:
     # text distinguishes 403 (policy drift, the expected failure) from 404
     # (canary moved or deleted) from everything else (the checker itself).
     heartbeat:
-      interval: 26h
+      interval: 27h
     alerts:
       - type: pushover
         enabled: true
@@ -56,7 +59,7 @@ external-endpoints:
   - name: restore-test
     group: "OpenBao Break Glass"
     token: openbao-break-glass_restore-test
-    # Monthly on the 1st at 05:00. 33 days of headroom covers a 31-day month
+    # Monthly on the 1st at 01:00 local. 33 days of headroom covers a 31-day month
     # plus one retry window; past that the backup is formally untrusted
     # (RUNBOOK Scenario D) and someone should hear about it every day.
     heartbeat:

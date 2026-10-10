@@ -44,6 +44,11 @@ services:
       - 100.100.100.100
     env_file:
       - path: .env
+    environment:
+      # Log timestamps only: this is a server, nothing here runs on a
+      # schedule. Same as the other rclone services (garage-sync,
+      # garage-mirror, pulumi-state-backup).
+      TZ: ${TIMEZONE}
     command: >-
       serve sftp /data/ --addr :2022
       --authorized-keys /config/ssh/authorized_keys

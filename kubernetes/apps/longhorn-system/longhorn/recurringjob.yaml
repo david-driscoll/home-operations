@@ -1,4 +1,9 @@
 ---
+# Every `cron` in this file is UTC and cannot be anything else: a RecurringJob
+# has no timezone field (checked on 1.13.0), and Longhorn creates the CronJob
+# itself, so there is nowhere to set one. Most other schedules in the cluster
+# are local time, which puts them an hour later against these in winter.
+# kube-system/etcd's defrag stays in UTC for that reason.
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/longhorn.io/recurringjob_v1beta2.json
 apiVersion: longhorn.io/v1beta2
 kind: RecurringJob

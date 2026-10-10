@@ -7,6 +7,13 @@ metadata:
 spec:
   sourcePVC: "${APP}"
   trigger:
+    # 14:00 UTC, and it has to stay UTC: VolSync as shipped cannot express a
+    # timezone. The operator reads this in its own local time, but its image
+    # has no timezone database (no /usr/share/zoneinfo, and none embedded in
+    # the binary; checked on 0.16.0). So TZ on the operator is silently
+    # ignored, and a "CRON_TZ=<zone> " prefix here would fail to parse, which
+    # stops the sync. Longhorn's RecurringJobs are UTC too, and their comments
+    # place themselves around this hour.
     schedule: "0 14 * * *"
   restic:
     copyMethod: "${VOLSYNC_COPYMETHOD:=Snapshot}"

@@ -58,7 +58,10 @@ spec:
         serviceAccount:
           identifier: *app
         cronjob:
-          schedule: "30 3 * * *"
+          # Local time; this was "30 3 * * *" in UTC, the same moment in
+          # summer.
+          schedule: "30 23 * * *"
+          timeZone: ${TIMEZONE}
           concurrencyPolicy: Forbid
           backoffLimit: 2
           activeDeadlineSeconds: 300

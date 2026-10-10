@@ -59,6 +59,10 @@ spec:
         # lands in /home/dev/.claude on the volsync PVC.
         - name: DISABLE_UPDATES
           value: "1"
+        # The terminal's clock follows the estate's timezone. Cluster times in
+        # docs and kubectl output are still UTC.
+        - name: TZ
+          value: "${TIMEZONE}"
 
     image:
       # The GHCR build is upstream's signed release artifact (release.yml,

@@ -108,3 +108,7 @@ env:
   # -- Debug mode
   # Set to true for additional logging
   DEBUG_MODE: "false"
+  # -- Container timezone
+  # startup.sh points /etc/localtime at it; the image default is UTC. The
+  # background scheduler is UTC regardless, so no job moves.
+  TZ: "${TIMEZONE}"
