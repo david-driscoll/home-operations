@@ -127,6 +127,73 @@ spec:
                 drop:
                   - ALL
 
+          # Feed refresh: app/actualize_script.php every 30 minutes.
+          #
+          # The image's own scheduler cannot work in this pod. With CRON_MIN set,
+          # its entrypoint installs a crontab whose one job is `su www-data -c
+          # 'php app/actualize_script.php'`. `su` needs CAP_SETUID and CAP_SETGID
+          # to become www-data, and `capabilities: drop: ALL` above removes both
+          # -- Apache logs the same refusal for itself when it forks workers
+          # (AH02156 "setgid: unable to set group id to Group 33", Operation not
+          # permitted). The job said nothing when it failed: cron reports to a
+          # syslog this container does not run.
+          #
+          # Found on 2026-10-10 with every feed's lastUpdate still at 2026-04-03,
+          # the day the OPML was imported, and not one actualize line in the pod
+          # log. Nothing flags that on its own: a reader showing old articles is
+          # Ready, passes both probes and answers Gatus exactly as a working one
+          # does.
+          #
+          # So this runs the same script directly, as the uid the container
+          # already has, which takes no capability at all. `command` replaces the
+          # image entrypoint, so none of its install or permission logic runs a
+          # second time. A sidecar rather than a CronJob because the volume is
+          # ReadWriteOnce -- the same reasoning as nextcloud's `cron` container.
+          #
+          # The heartbeat is written at start and after every run that exits 0.
+          # The liveness probe restarts the container once it is older than 90
+          # minutes, so one failed run is tolerated and two in a row are not, and
+          # FreshRSSRefreshNotRunning (./prometheusrule.yaml) alerts on the
+          # restart. That proves the script completes. It does not prove any one
+          # feed could be fetched: a feed that fails is still FreshRSS's to flag,
+          # per feed, in its own UI.
+          refresh:
+            image: *image
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                date +%s > /tmp/heartbeat
+                while true; do
+                  if php -f /var/www/FreshRSS/app/actualize_script.php; then date +%s > /tmp/heartbeat; fi
+                  sleep 1800
+                done
+            env:
+              TZ: "${TIMEZONE}"
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - test $(( $(date +%s) - $(cat /tmp/heartbeat 2>/dev/null || echo 0) )) -lt 5400
+                  periodSeconds: 60
+                  failureThreshold: 3
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 512Mi
+
         # Copy the ESO-rendered system config onto the PVC before Apache starts.
         #
         # It is a COPY rather than a subPath mount on purpose. FreshRSS's

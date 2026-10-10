@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+#
+# Already covered elsewhere, so not repeated here: sustained 5xx at the gateway
+# (traefik/rules/silent-failure-rules.yaml), a database credential that stopped
+# working (loki/rules/credential-drift-rules.yaml), PVC fill
+# (longhorn/rules/pvc-usage-rules.yaml) and external uptime (Gatus, from
+# ./definition.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: freshrss.rules
+      rules:
+        # FreshRSS exports no metrics, so this watches the sidecar instead: its
+        # liveness probe fails when actualize_script.php has not completed for
+        # 90 minutes, and the kubelet restarts it. Any restart means no feed
+        # was refreshed for at least that long.
+        #
+        # None of the rules listed above can see this. When it was noticed on
+        # 2026-10-10 no feed had been refreshed since 2026-04-03 -- a reader
+        # that shows old articles is not an error to anything that watches
+        # readiness or HTTP status.
+        #
+        # The window is 2h because a container that stays broken restarts about
+        # every 93 minutes (90 of stale heartbeat, then three failed probes); a
+        # 1h window would let the alert clear and re-fire between restarts.
+        - alert: FreshRSSRefreshNotRunning
+          annotations:
+            description: >-
+              The freshrss `refresh` container restarted {{ $value }} times in
+              the last two hours. Its liveness probe only fails when
+              actualize_script.php has not finished for 90 minutes, so no feed
+              has been refreshed in at least that long; see `kubectl -n
+              equestria logs deploy/freshrss -c refresh --previous`.
+            summary: FreshRSS is not refreshing its feeds.
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="equestria", container="refresh", pod=~"freshrss-[a-z0-9]+-[a-z0-9]+"}[2h]) > 0
+          labels:
+            severity: warning
