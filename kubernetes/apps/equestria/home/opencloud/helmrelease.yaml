@@ -568,6 +568,7 @@ spec:
               # told not to. TLS terminates at Traefik, so it would be a
               # certificate nothing ever presents.
               DONT_GEN_SSL_CERT: "YES"
+              TZ: "${TIMEZONE}"
               extra_params: >-
                 --o:ssl.enable=false
                 --o:ssl.ssl_verification=false

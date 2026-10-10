@@ -80,6 +80,8 @@ services:
 
       traefik.http.services.librespeed.loadbalancer.server.port: 8080
     environment:
+      # Web-server log timestamps only; telemetry is off, so nothing is stored.
+      - TZ=${TIMEZONE}
       - USE_NEW_DESIGN=true
       - TELEMETRY=false
       - ENABLE_ID_OBFUSCATION=false

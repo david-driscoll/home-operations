@@ -44,6 +44,15 @@ services:
 
     env_file:
       - path: .env
+    environment:
+      # Traefik's own log lines only. Access-log lines stay in UTC: they are
+      # stamped from StartUTC unless config.yaml drops that field, which is
+      # left alone here.
+      #
+      # Any change to this service recreates the container. On celestia that
+      # cuts the route to Garage, the Pulumi state backend, for a few seconds
+      # during the very run that applies the change.
+      TZ: ${TIMEZONE}
     ports:
       - 80:80
       - 443:443

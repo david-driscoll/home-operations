@@ -38,3 +38,17 @@ spec:
       podMonitorEnabled: true
     grafanaDashboard:
       create: true
+    # THIS VARIABLE DECIDES WHEN EVERY ScheduledBackup RUNS. The operator reads
+    # a schedule in its own local time and there is no per-schedule zone (it
+    # pins robfig/cron v1, which has no TZ= prefix), so the hours in
+    # database/postgres/app/resources/values.yaml and
+    # stargate-command/authentik/resources/postgres-values.yaml are local
+    # times ONLY because of this line. Take it away and both base backups move
+    # to those hours in UTC, four or five hours early.
+    #
+    # The image carries the zone files this needs (distroless static, checked
+    # on 1.30.1). If a later image dropped them Go would fall back to UTC
+    # without a word, with the same effect.
+    additionalEnv:
+      - name: TZ
+        value: "${TIMEZONE}"

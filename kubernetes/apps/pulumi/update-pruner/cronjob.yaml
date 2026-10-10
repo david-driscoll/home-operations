@@ -10,7 +10,14 @@ metadata:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   # Daily, offset from history-pruner's "17 3 * * *" so the two never overlap.
+  # Local time, like that one.
+  #
+  # The zone is spelled out because substitution is off for this object (the
+  # annotation above), so the TIMEZONE variable every other schedule uses would
+  # arrive unexpanded and the API server would reject it. Keep it equal to
+  # TIMEZONE in kubernetes/flux/meta/shared-secrets.sops.yaml.
   schedule: "47 3 * * *"
+  timeZone: America/New_York
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

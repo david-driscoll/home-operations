@@ -14,7 +14,9 @@ spec:
       backup:
         type: cronjob
         cronjob:
+          # 04:12 local time.
           schedule: "12 4 * * *"
+          timeZone: ${TIMEZONE}
           parallelism: 1
           successfulJobsHistory: 1
           failedJobsHistory: 1
@@ -99,7 +101,15 @@ spec:
       defrag:
         type: cronjob
         cronjob:
-          schedule: "3 9 * * *" # daily at 09:03
+          # Daily at 09:03 local time: 13:03 UTC in summer, 14:03 in winter.
+          #
+          # Longhorn's snapshot-cleanup RecurringJob cannot carry a timezone
+          # (the CRD has no field for one) and is fixed at 15:00 UTC, chosen
+          # so that this stays ahead of it all year: by 1h57 in summer and by
+          # 57 minutes in winter. At 14:00 UTC this would start three minutes
+          # after it every winter.
+          schedule: "3 9 * * *"
+          timeZone: ${TIMEZONE}
           parallelism: 1
           successfulJobsHistory: 1
           failedJobsHistory: 1
@@ -150,7 +160,9 @@ spec:
       prune:
         type: cronjob
         cronjob:
+          # The 1st at 05:32 local time.
           schedule: "32 5 1 * *"
+          timeZone: ${TIMEZONE}
           successfulJobsHistory: 1
           failedJobsHistory: 1
 

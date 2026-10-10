@@ -7,6 +7,11 @@ services:
       - 100.100.100.100
     environment:
       GATUS_CONFIG_PATH: /config
+      # Log timestamps only. The image has no /usr/share/zoneinfo, but the
+      # binary embeds the tz database, so the name resolves. Maintenance
+      # windows do not move: Gatus evaluates them in UTC unless a window names
+      # its own timezone.
+      TZ: ${TIMEZONE}
     labels:
       # Enable Traefik
       traefik.enable: true

@@ -59,6 +59,8 @@ spec:
               - /config
               - --port
               - "8181"
+            env:
+              TZ: ${TIMEZONE}
             probes:
               liveness: &probes
                 enabled: true

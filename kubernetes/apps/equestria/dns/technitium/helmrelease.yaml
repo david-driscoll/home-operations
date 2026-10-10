@@ -64,6 +64,10 @@ spec:
               DNS_SERVER_SSO_ALLOW_SIGNUP_ONLY_FOR_MAPPED_USERS: "true"
               DNS_SERVER_SSO_GROUP_MAP: "admins:Administrators"
               DNS_SERVER_SSO_SCOPES: "openid,profile,email"
+              # Not one of the first-start settings above: the runtime reads it
+              # on every start. It is what gives LOG_USING_LOCAL_TIME a local
+              # time other than UTC to log in.
+              TZ: ${TIMEZONE}
             envFrom:
               - secretRef:
                   name: ${APP}-env

@@ -92,7 +92,13 @@ spec:
           backoffLimit: 6
           concurrencyPolicy: Forbid
           failedJobsHistory: 3
-          schedule: "0 2 * * *"  # Daily at 2 AM
+          # 02:00 local time. It read as 02:00 UTC until the schedule was given
+          # a timezone (the times in the incident above are UTC), so it now
+          # runs four or five hours later than it did then. 02:00 does not
+          # exist on the night the clocks go forward: that one night's run is
+          # skipped.
+          schedule: "0 2 * * *"
+          timeZone: ${TIMEZONE}
           startingDeadlineSeconds: 30
           successfulJobsHistory: 3
           suspend: false
@@ -195,7 +201,9 @@ spec:
       prune:
         type: cronjob
         cronjob:
-          schedule: "0 6 * * 0"  # Sundays at 6 AM, hours after the 2 AM dumps
+          # Sundays at 06:00 local, four hours after the 02:00 dumps.
+          schedule: "0 6 * * 0"
+          timeZone: ${TIMEZONE}
           concurrencyPolicy: Forbid
           successfulJobsHistory: 1
           failedJobsHistory: 1

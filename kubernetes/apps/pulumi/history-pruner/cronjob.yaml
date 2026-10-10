@@ -21,7 +21,10 @@ spec:
   # Age is rclone's view of the object's mtime. Pulumi makes backups/ entries
   # with a server-side copy, which can carry the source's older mtime -- fine
   # for a tree whose contents are disposable anyway.
+  #
+  # 03:17 local time.
   schedule: "17 3 * * *"
+  timeZone: ${TIMEZONE}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

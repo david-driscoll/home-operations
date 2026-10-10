@@ -285,6 +285,7 @@ spec:
               # WOPISrc is Nextcloud.
               aliasgroup1: "https://cloud.${ROOT_DOMAIN}"
               DONT_GEN_SSL_CERT: "YES"
+              TZ: ${TIMEZONE}
               extra_params: >-
                 --o:ssl.enable=false
                 --o:ssl.ssl_verification=false

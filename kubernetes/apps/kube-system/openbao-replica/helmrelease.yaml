@@ -65,8 +65,10 @@ spec:
         type: cronjob
         cronjob:
           # PLAN §E: nightly at 03:00, an hour after the general postgres
-          # backup at 02:00 so the two never contend for the database.
+          # backup at 02:00 so the two never contend for the database. Both
+          # are local time.
           schedule: "0 3 * * *"
+          timeZone: ${TIMEZONE}
           backoffLimit: 3
           concurrencyPolicy: Forbid
           startingDeadlineSeconds: 300
@@ -140,8 +142,10 @@ spec:
           reloader.stakater.com/auto: "true"
         type: cronjob
         cronjob:
-          # Monthly, two hours after that night's dump.
+          # Monthly, two hours after that night's dump: 05:00 local time on
+          # the 1st.
           schedule: "0 5 1 * *"
+          timeZone: ${TIMEZONE}
           backoffLimit: 2
           concurrencyPolicy: Forbid
           startingDeadlineSeconds: 3600
@@ -317,11 +321,12 @@ spec:
           reloader.stakater.com/auto: "true"
         type: cronjob
         cronjob:
-          # 04:00 daily: after the 03:00 dump, well clear of the 05:00 monthly
-          # restore test on the 1st. It reads live server state and shares no
-          # resource with either, so the spacing is for legible logs rather
-          # than contention.
+          # 04:00 daily, local time: after the 03:00 dump, well clear of the
+          # 05:00 monthly restore test on the 1st. It reads live server state
+          # and shares no resource with either, so the spacing is for legible
+          # logs rather than contention.
           schedule: "0 4 * * *"
+          timeZone: ${TIMEZONE}
           backoffLimit: 2
           concurrencyPolicy: Forbid
           startingDeadlineSeconds: 300

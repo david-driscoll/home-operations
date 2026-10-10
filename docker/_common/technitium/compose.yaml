@@ -78,6 +78,16 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      # Not one of the first-start DNS_SERVER_* settings in .env: the runtime
+      # reads it on every start. It is what gives
+      # DNS_SERVER_LOG_USING_LOCAL_TIME a local time other than UTC to log in,
+      # which also moves the daily log file's rollover to local midnight.
+      #
+      # On this service only. The tailscale image carries no tz database, so
+      # the variable would do nothing there, and recreating that container
+      # takes this one's network namespace (and DNS on this host) with it.
+      TZ: ${TIMEZONE}
     # DNS_SERVER_DOMAIN must be set in .env to the MagicDNS hostname (e.g. technitium-celestia.tail-abc123.ts.net)
     # so the self-signed cert CN matches what cluster nodes use to reach each other over Tailscale
     volumes:

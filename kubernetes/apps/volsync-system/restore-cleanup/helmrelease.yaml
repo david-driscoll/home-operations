@@ -58,7 +58,9 @@ spec:
         serviceAccount:
           identifier: *app
         cronjob:
+          # 03:30 local time.
           schedule: "30 3 * * *"
+          timeZone: ${TIMEZONE}
           concurrencyPolicy: Forbid
           backoffLimit: 2
           activeDeadlineSeconds: 300
