@@ -98,13 +98,18 @@ const GARAGE_REGION = "garage";
 
 /**
  * When spike pulls, in TrueNAS's local time (the estate's TIMEZONE): after the
- * Backrest queue (01:00 local, done by mid-morning) and the copy tier (15:00
- * and 16:00 UTC), so the Garage hosts are otherwise quiet.
+ * Backrest queue (01:00 local, done by mid-morning), the VolSync movers (18:00
+ * UTC) and the copy tier (19:00 and 20:00 UTC), so the Garage hosts are
+ * otherwise quiet. 17:00 local is 21:00 UTC in summer and 22:00 in winter.
+ *
+ * It was 13:00 while VolSync ran at 14:00 UTC, and moved four hours with it.
+ * At 13:00 it would now pull before the movers in summer and during them in
+ * winter.
  */
-export const GARAGE_COPY_PULL_SCHEDULE: CronSchedule = { minute: "00", hour: "13", dom: "*", month: "*", dow: "*" };
+export const GARAGE_COPY_PULL_SCHEDULE: CronSchedule = { minute: "00", hour: "17", dom: "*", month: "*", dow: "*" };
 
-/** When the snapshots are taken: well after the pulls, so each one captures a finished pull. */
-const GARAGE_COPY_SNAPSHOT_HOUR = "18";
+/** When the snapshots are taken: well after the pulls (five hours), so each one captures a finished pull. */
+const GARAGE_COPY_SNAPSHOT_HOUR = "22";
 
 /**
  * Where spike reaches Garage: celestia's own node, through the per-node route

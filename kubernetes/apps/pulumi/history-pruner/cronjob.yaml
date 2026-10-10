@@ -22,8 +22,8 @@ spec:
   # with a server-side copy, which can carry the source's older mtime -- fine
   # for a tree whose contents are disposable anyway.
   #
-  # Local time; this was "17 3 * * *" in UTC, the same moment in summer.
-  schedule: "17 23 * * *"
+  # 03:17 local time.
+  schedule: "17 3 * * *"
   timeZone: ${TIMEZONE}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

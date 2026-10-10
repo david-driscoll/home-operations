@@ -6,9 +6,8 @@ metadata:
   name: pulumi-npm-cache-prune
   namespace: pulumi
 spec:
-  # Saturday 23:00 local. This was "0 3 * * 0" in UTC, which is the same moment
-  # in summer: Sunday 03:00 UTC is still Saturday evening here.
-  schedule: "0 23 * * 6"
+  # Sundays at 03:00 local time.
+  schedule: "0 3 * * 0"
   timeZone: ${TIMEZONE}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

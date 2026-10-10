@@ -1,9 +1,13 @@
 ---
 # Every `cron` in this file is UTC and cannot be anything else: a RecurringJob
 # has no timezone field (checked on 1.13.0), and Longhorn creates the CronJob
-# itself, so there is nowhere to set one. Most other schedules in the cluster
-# are local time, which puts them an hour later against these in winter.
-# kube-system/etcd's defrag stays in UTC for that reason.
+# itself, so there is nowhere to set one.
+#
+# The cluster's other schedules are local time. When they moved there, these
+# and VolSync's (also UTC-only) moved four hours later with them, which keeps
+# the summer spacing exactly as it was. In winter the local ones run one hour
+# later against these: kube-system/etcd's defrag then starts three minutes
+# AFTER snapshot-cleanup instead of 57 minutes before it.
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/longhorn.io/recurringjob_v1beta2.json
 apiVersion: longhorn.io/v1beta2
 kind: RecurringJob
@@ -15,7 +19,7 @@ spec:
   groups:
     - default
   task: snapshot-cleanup
-  cron: "0 10 * * *"
+  cron: "0 14 * * *"
   retain: 0
   concurrency: 2
   labels: {}
@@ -35,8 +39,8 @@ spec:
   # accumulated at ~1 per volume per day. snapshot-delete trims user-created
   # snapshots beyond `retain` and purges, keeping the chain bounded.
   task: snapshot-delete
-  cron: "0 11 * * *"
-  # VolSync syncs daily at 14:00 and clones the snapshot before reading it, so
+  cron: "0 15 * * *"
+  # VolSync syncs daily at 18:00 and clones the snapshot before reading it, so
   # 3 days is well clear of any in-flight sync while staying under the
   # snapshot-max-count setting of 5.
   retain: 3
@@ -61,16 +65,16 @@ spec:
   # With `removeSnapshotsDuringFilesystemTrim: true` (values.yaml) a trim also
   # marks the volume's snapshot chain removed, so the space held by snapshots
   # comes back too. That is why this must not run near a VolSync sync, which
-  # snapshots and clones every volume at 14:00 and is done inside the hour.
+  # snapshots and clones every volume at 18:00 and is done inside the hour.
   task: filesystem-trim
-  # Fridays 18:00 UTC. Weekly, as fstrim.timer is. The hour is chosen for what
-  # it avoids: VolSync at 14:00, snapshot-cleanup and snapshot-delete at 10:00
-  # and 11:00, and above all the downscaler's 01:00-07:00 local window -- a
+  # Fridays 22:00 UTC. Weekly, as fstrim.timer is. The hour is chosen for what
+  # it avoids: VolSync at 18:00, snapshot-cleanup and snapshot-delete at 14:00
+  # and 15:00, and above all the downscaler's 01:00-07:00 local window -- a
   # trim needs the filesystem MOUNTED, and with
   # `allow-recurring-job-while-volume-detached` off a detached volume is
   # skipped, so a slot inside that window would silently trim nothing that
   # sleeps at night.
-  cron: "0 18 * * 5"
+  cron: "0 22 * * 5"
   retain: 0
   concurrency: 2
   labels: {}

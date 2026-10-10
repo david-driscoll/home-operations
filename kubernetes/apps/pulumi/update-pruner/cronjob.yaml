@@ -9,14 +9,14 @@ metadata:
     # envsubst claims them at build time and the job ships with them blanked.
     kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
-  # Daily, offset from history-pruner's "17 23 * * *" so the two never overlap.
-  # Local time, like that one; this was "47 3 * * *" in UTC.
+  # Daily, offset from history-pruner's "17 3 * * *" so the two never overlap.
+  # Local time, like that one.
   #
   # The zone is spelled out because substitution is off for this object (the
   # annotation above), so the TIMEZONE variable every other schedule uses would
   # arrive unexpanded and the API server would reject it. Keep it equal to
   # TIMEZONE in kubernetes/flux/meta/shared-secrets.sops.yaml.
-  schedule: "47 23 * * *"
+  schedule: "47 3 * * *"
   timeZone: America/New_York
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

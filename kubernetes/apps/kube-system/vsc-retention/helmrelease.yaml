@@ -63,11 +63,12 @@ spec:
           # (CSI VolumeSnapshotContent, not Longhorn's native snapshots.longhorn.io)
           # but there's no reason to race them.
           #
-          # Those two times are UTC and fixed (a RecurringJob has no timezone
-          # field). This one is local: 22:30, which was "30 2 * * *" in UTC.
-          # That is 02:30 UTC in summer and 03:30 in winter, hours ahead of
-          # them either way.
-          schedule: "30 22 * * *"
+          # Those two are fixed in UTC (a RecurringJob has no timezone field)
+          # and now run at 14:00 and 15:00. This one is 02:30 local time,
+          # which is 06:30 UTC in summer and 07:30 in winter: hours ahead of
+          # them either way. 02:30 does not exist on the night the clocks go
+          # forward, so that one night is skipped.
+          schedule: "30 2 * * *"
           timeZone: ${TIMEZONE}
           concurrencyPolicy: Forbid
           backoffLimit: 2

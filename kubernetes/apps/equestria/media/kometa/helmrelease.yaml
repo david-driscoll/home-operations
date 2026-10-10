@@ -34,9 +34,8 @@ spec:
         annotations:
           reloader.stakater.com/auto: "true"
         cronjob:
-          # Every eight hours, local time. "0 */8 * * *" in UTC was these
-          # same three runs in summer.
-          schedule: "0 4,12,20 * * *"
+          # Every eight hours from midnight, local time.
+          schedule: "0 */8 * * *"
           timeZone: ${TIMEZONE}
           backoffLimit: 0
           concurrencyPolicy: Forbid
@@ -79,7 +78,7 @@ spec:
           reloader.stakater.com/auto: "true"
         cronjob:
           # Forty minutes after each kometa run above.
-          schedule: "40 4,12,20 * * *"
+          schedule: "40 */8 * * *"
           timeZone: ${TIMEZONE}
           backoffLimit: 0
           concurrencyPolicy: Forbid

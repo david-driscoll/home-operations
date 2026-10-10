@@ -87,16 +87,17 @@ spec:
         # rather than merely wasteful).
         #
         # Trade-off, stated plainly: a change to App.cs now waits for the next
-        # nightly run rather than taking effect immediately.
+        # 02:00 run rather than taking effect immediately.
         cronjob:
           backoffLimit: 6
           concurrencyPolicy: Forbid
           failedJobsHistory: 3
-          # Local time. 22:00 is the slot this has always run in: it was
-          # "0 2 * * *" in UTC (the times in the incident above are UTC) until
-          # the schedule was given a timezone, and 02:00 UTC is 22:00 in
-          # summer. It now stays at 22:00 through the clock changes.
-          schedule: "0 22 * * *"
+          # 02:00 local time. It read as 02:00 UTC until the schedule was given
+          # a timezone (the times in the incident above are UTC), so it now
+          # runs four or five hours later than it did then. 02:00 does not
+          # exist on the night the clocks go forward: that one night's run is
+          # skipped.
+          schedule: "0 2 * * *"
           timeZone: ${TIMEZONE}
           startingDeadlineSeconds: 30
           successfulJobsHistory: 3
@@ -200,11 +201,8 @@ spec:
       prune:
         type: cronjob
         cronjob:
-          # Sundays at 02:00 local, four hours after Saturday's 22:00 dump (it
-          # was "0 6 * * 0" in UTC). 02:00 does not exist on the Sunday the
-          # clocks go forward, so that one week's prune is skipped and the
-          # next one catches up.
-          schedule: "0 2 * * 0"
+          # Sundays at 06:00 local, four hours after the 02:00 dumps.
+          schedule: "0 6 * * 0"
           timeZone: ${TIMEZONE}
           concurrencyPolicy: Forbid
           successfulJobsHistory: 1

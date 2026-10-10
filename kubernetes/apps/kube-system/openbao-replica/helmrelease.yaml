@@ -64,11 +64,10 @@ spec:
           reloader.stakater.com/auto: "true"
         type: cronjob
         cronjob:
-          # PLAN §E: nightly, an hour after the general postgres backup so the
-          # two never contend for the database. Local time: that backup is at
-          # 22:00 and this at 23:00. They were 02:00 and 03:00 in UTC, the
-          # same moments in summer.
-          schedule: "0 23 * * *"
+          # PLAN §E: nightly at 03:00, an hour after the general postgres
+          # backup at 02:00 so the two never contend for the database. Both
+          # are local time.
+          schedule: "0 3 * * *"
           timeZone: ${TIMEZONE}
           backoffLimit: 3
           concurrencyPolicy: Forbid
@@ -143,13 +142,9 @@ spec:
           reloader.stakater.com/auto: "true"
         type: cronjob
         cronjob:
-          # Monthly, two hours after that night's dump: 01:00 local on the 1st
-          # (it was "0 5 1 * *" in UTC). 01:00 happens twice on the night the
-          # clocks go back, so in a year when that night is the 1st of
-          # November (2026 is one) this runs twice, an hour apart. Each run
-          # restores into its own scratch database, so the second is only a
-          # repeat.
-          schedule: "0 1 1 * *"
+          # Monthly, two hours after that night's dump: 05:00 local time on
+          # the 1st.
+          schedule: "0 5 1 * *"
           timeZone: ${TIMEZONE}
           backoffLimit: 2
           concurrencyPolicy: Forbid
@@ -326,11 +321,11 @@ spec:
           reloader.stakater.com/auto: "true"
         type: cronjob
         cronjob:
-          # Midnight local, daily: after the 23:00 dump, well clear of the 01:00
-          # monthly restore test on the 1st. It reads live server state and
-          # shares no resource with either, so the spacing is for legible logs
-          # rather than contention. (It was "0 4 * * *" in UTC.)
-          schedule: "0 0 * * *"
+          # 04:00 daily, local time: after the 03:00 dump, well clear of the
+          # 05:00 monthly restore test on the 1st. It reads live server state
+          # and shares no resource with either, so the spacing is for legible
+          # logs rather than contention.
+          schedule: "0 4 * * *"
           timeZone: ${TIMEZONE}
           backoffLimit: 2
           concurrencyPolicy: Forbid

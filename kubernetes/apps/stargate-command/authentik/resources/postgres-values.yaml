@@ -39,11 +39,10 @@ backups:
     jobs: 1
   scheduledBackups:
   - name: daily-backup
-    # Six fields, seconds first: 12:30:00 every day, in the OPERATOR's local
-    # time, which is the TZ set in apps/cloudnative-pg/operator. It was
-    # "0 30 16 * * *" while the operator ran in UTC, the same moment in
-    # summer, and half an hour after the main cluster's backup either way.
-    schedule: "0 30 12 * * *"
+    # Six fields, seconds first: 16:30:00 every day, in the OPERATOR's local
+    # time, which is the TZ set in apps/cloudnative-pg/operator. Half an hour
+    # after the main cluster's backup.
+    schedule: "0 30 16 * * *"
     backupOwnerReference: self
     method: plugin
     pluginConfiguration:

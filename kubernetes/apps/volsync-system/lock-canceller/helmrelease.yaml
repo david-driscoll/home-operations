@@ -59,7 +59,7 @@ spec:
         cronjob:
           # Hourly, against a 6h threshold -- so a stranded lock is cleared
           # within 7h of the mover dying rather than sitting until someone
-          # notices. Offset off the hour to stay clear of the 14:00 backup
+          # notices. Offset off the hour to stay clear of the 18:00 UTC backup
           # window's own start.
           schedule: "25 * * * *"
           concurrencyPolicy: Forbid
