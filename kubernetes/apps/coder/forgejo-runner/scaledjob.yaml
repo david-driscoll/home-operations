@@ -1,0 +1,219 @@
+---
+# The Forgejo Actions runners. There is no standing runner: KEDA starts a pod
+# for each job the forge has in hand, up to ten at once, and there are none
+# while it has none.
+#
+# This replaced a single always-on runner pod (four jobs at a time in one
+# Docker daemon). Renovate's first pass over github-mirror/home-operations
+# opened about sixty pull requests at once, each with a `flate` check, and the
+# job that publishes merges to GitHub sat in the same queue behind them.
+#
+# How it works (https://keda.sh/docs/2.21/scalers/forgejo/): KEDA asks Forgejo
+# every 30 seconds how many jobs it has in hand, on every repository, and
+# creates one Kubernetes Job for each, up to maxReplicaCount. Each Job is one
+# pod running `forgejo-runner one-job`: it takes a single job, runs it and
+# exits. A pod that finds nothing left to take exits at once.
+#
+# WHAT THIS COSTS, compared with the runner it replaced:
+#
+# - A job waits for the next poll (up to 30s), a pod to schedule and its
+#   Docker daemon to start before it begins. Nothing is ever already running.
+# - No caches. The actions cache and the image cache live in the pod and die
+#   with it, so every job pulls its job image again and every `flate` render
+#   is cold.
+#
+# EVERY POD IS THE SAME RUNNER AS FAR AS FORGEJO IS CONCERNED. They all mount
+# the one registration in `forgejo-runner-config` (./externalsecret.yaml),
+# which is how KEDA's own documentation sets it up: each process asks for one
+# task and reports only on that task. If Forgejo ever starts refusing that,
+# the answer is a registration per pod (its ephemeral runners), not a
+# different shape here.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/triggerauthentication_v1alpha1.json
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: ${APP}
+spec:
+  secretTargetRef:
+    # ./externalsecret.yaml: an administrator's token that can only read.
+    - parameter: token
+      name: ${APP}-queue
+      key: token
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/scaledjob_v1alpha1.json
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: ${APP}
+spec:
+  pollingInterval: 30
+  minReplicaCount: 0
+  # Ten jobs at once across the whole forge. Each pod may use up to 6Gi
+  # (below), so this is 60Gi of worker memory at the very worst and 20Gi
+  # requested; raise it with that in mind, not by itself.
+  maxReplicaCount: 10
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 5
+  scalingStrategy:
+    # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS
+    # (routers/api/v1/shared/runners.go asks for both statuses, and KEDA
+    # counts every row). `default` is the strategy for a count like that: it
+    # starts (reported - pods already running), and every running job is in
+    # one of these pods. `accurate` would assume the count is the backlog
+    # alone and start a second pod for each job already running.
+    strategy: default
+  triggers:
+    - type: forgejo-runner
+      metadata:
+        # Informational; the scaler does not read it.
+        name: equestria
+        address: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
+        # Every waiting job on the forge, whichever user, organisation or
+        # repository it belongs to. This is the admin endpoint
+        # (/api/v1/admin/runners/jobs), hence the administrator's token.
+        global: "true"
+        # Every label ./resources/config.yml declares, since these pods run
+        # from that file. Add a label there and it has to
+        # be added here, or jobs that ask for it never start a pod.
+        labels: ubuntu-latest,ubuntu-24.04,ubuntu-22.04,docker
+      authenticationRef:
+        name: ${APP}
+  jobTargetRef:
+    # A runner pod that fails did not necessarily fail its job: Forgejo has
+    # the job's own result. Never re-run the pod.
+    backoffLimit: 0
+    # `runner.timeout` in the shared config is 3h; a pod older than that plus
+    # start-up is stuck.
+    activeDeadlineSeconds: 11700
+    ttlSecondsAfterFinished: 600
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: ${APP}
+      spec:
+        restartPolicy: Never
+        automountServiceAccountToken: false
+        enableServiceLinks: false
+        # `runner.shutdown_timeout` in the config gives a job 30m to finish
+        # after SIGTERM, so the kubelet has to wait about that long before
+        # it sends SIGKILL.
+        terminationGracePeriodSeconds: 1860
+        securityContext:
+          fsGroup: 1000
+          fsGroupChangePolicy: OnRootMismatch
+        initContainers:
+          # A native sidecar (`restartPolicy: Always` on an initContainer): the
+          # kubelet starts it BEFORE the runner, waits for its startup probe,
+          # and in a Job stops it once the runner container has exited. A
+          # plain second container gives no ordering, and would keep the Job
+          # from ever completing.
+          #
+          # privileged is unavoidable for Docker-in-Docker: dockerd manages
+          # cgroups, mounts and iptables in its own namespace. The JOB
+          # containers are not privileged and get no Docker socket
+          # (./resources/config.yml).
+          #
+          # TLS ON, with client verification, and that is not belt-and-braces.
+          # dockerd-entrypoint.sh always adds its own `--host` on 0.0.0.0, so
+          # there is no loopback-only listener to be had; with a certdir it
+          # generates a CA and client certs and starts with --tlsverify, so
+          # the listener is useless without the client key only the runner
+          # container has.
+          - name: dind
+            restartPolicy: Always
+            image: data.forgejo.org/oci/docker:29-dind@sha256:1e08cdb63405ca788aea94ef35b792d1e299607c667d33d7bcbcae1fd2611ced
+            env:
+              - name: DOCKER_TLS_CERTDIR
+                value: /certs
+            securityContext:
+              privileged: true
+              runAsUser: 0
+              runAsNonRoot: false
+            resources:
+              requests:
+                cpu: 100m
+                # What one cold render of this repository is known to reach is
+                # about 3.7 GB; the request is what the scheduler should plan
+                # around, so six of these do not all land on one node.
+                memory: 2Gi
+                ephemeral-storage: 4Gi
+              limits:
+                # One job per pod, so this is the ceiling for one job.
+                memory: 6Gi
+                ephemeral-storage: 24Gi
+            startupProbe:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - >-
+                    docker --tlsverify
+                    --tlscacert=/certs/client/ca.pem
+                    --tlscert=/certs/client/cert.pem
+                    --tlskey=/certs/client/key.pem
+                    -H tcp://127.0.0.1:2376 info
+              initialDelaySeconds: 5
+              periodSeconds: 2
+              failureThreshold: 30
+            volumeMounts:
+              - name: docker-storage
+                mountPath: /var/lib/docker
+              - name: docker-certs
+                mountPath: /certs
+        containers:
+          - name: app
+            image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
+            command: ["forgejo-runner"]
+            # No --wait: a pod that finds its job already taken (cancelled, or
+            # picked up by another pod) exits instead of sitting there.
+            args: ["one-job", "--config", "/config/config.yml"]
+            env:
+              - name: TZ
+                value: "${TIMEZONE}"
+              - name: DOCKER_HOST
+                value: tcp://127.0.0.1:2376
+              - name: DOCKER_TLS_VERIFY
+                value: "1"
+              - name: DOCKER_CERT_PATH
+                value: /certs/client
+              - name: HOME
+                value: /data
+              - name: XDG_CACHE_HOME
+                value: /data/.cache
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+                ephemeral-storage: 1Gi
+              limits:
+                memory: 1Gi
+                ephemeral-storage: 8Gi
+            volumeMounts:
+              - name: data
+                mountPath: /data
+              - name: docker-certs
+                mountPath: /certs
+                readOnly: true
+              - name: config
+                mountPath: /config
+                readOnly: true
+        volumes:
+          - name: data
+            emptyDir:
+              sizeLimit: 6Gi
+          - name: docker-storage
+            emptyDir:
+              sizeLimit: 20Gi
+          - name: docker-certs
+            emptyDir: {}
+          - name: config
+            secret:
+              secretName: forgejo-runner-config

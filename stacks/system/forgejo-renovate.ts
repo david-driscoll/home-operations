@@ -389,6 +389,39 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       { provider: args.globals.baoProvider, parent: this },
     );
 
+    // What KEDA reads the Actions queue with, to decide how many overflow
+    // runners to start (kubernetes/apps/coder/forgejo-runner).
+    //
+    // Its own token and not the one above: the scaler only ever calls
+    // GET /api/v1/admin/runners/jobs, and that needs an administrator's token
+    // with `read:admin` and nothing else. The token above can rewrite every
+    // repository and organisation on the forge, which is not something to
+    // mount into a pod that polls a queue.
+    const runnerQueueToken = new forgejo.PersonalAccessToken(
+      "forgejo-runner-queue-token",
+      {
+        user: adminCredentials.data.apply(d => d.username),
+        name: "KEDA runner queue (read only)",
+        scopes: ["read:admin"] as TOKEN_SCOPES[],
+      },
+      { provider: this.forgejoProvider, parent: this },
+    );
+
+    baoKvSecret(
+      "forgejo-runner-queue-token",
+      {
+        mount: "secrets",
+        path: "clusters/equestria/apps/forgejo-runner/queue-token",
+        data: { token: runnerQueueToken.token },
+        concealedFields: ["token"],
+        customMetadata: baoProvenance({
+          source_title: "Forgejo runner queue token for KEDA",
+          source_tags: "forgejo",
+        }),
+      },
+      { provider: args.globals.baoProvider, parent: this },
+    );
+
     // The Forgejo -> operator webhook shared secret. Generated here for the same
     // reason as the password: it has no meaning outside this pairing, so having
     // a human invent it only creates a step that can be skipped.
