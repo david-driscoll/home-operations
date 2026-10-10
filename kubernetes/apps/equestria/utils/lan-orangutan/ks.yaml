@@ -1,0 +1,64 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app lan-orangutan
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The NetworkAttachmentDefinition CRD, and the CNI that honours the pod's
+    # k8s.v1.cni.cncf.io/networks annotation.
+    - name: multus
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/utils/lan-orangutan
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # The BROWSER door on the tailnet (Traefik's tailscale entrypoint). Separate
+    # from the tailscale SIDECAR in ./helmrelease.yaml, which exists so the app
+    # itself can read the tailnet's peer list.
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # Browsers take the authentik chain, matching the internal HTTPRoute. The
+      # app's own password is switched off, so this is the only gate.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      # The pod's address on the Home LAN, consumed by ./lan-nad.yaml. Next to
+      # JELLYFIN_LAN_IP (.20) and PLEX_LAN_IP (.21): absent from the UniFi
+      # client list (2026-10-10), below the Cilium pool (.100 and up) and clear
+      # of the node band (.10-.17).
+      #
+      # Here rather than in cluster-secrets beside those two only because the
+      # agent session that added it could not write SOPS. Move it there if the
+      # convention matters more than the diff; the value is not secret.
+      LAN_ORANGUTAN_LAN_IP: 10.10.206.22
+      # Device list, labels, notes -- JSON files -- plus tailscaled's node key.
+      VOLSYNC_CAPACITY: 1Gi
+      # The pod runs as root (nmap needs it; see ./helmrelease.yaml), so every
+      # file on the volume is root-owned and the mover has to match.
+      VOLSYNC_PUID: "0"
+      VOLSYNC_PGID: "0"
