@@ -103,19 +103,46 @@ spec:
               # on the HTTPRoute below, `tailscale-user` on the tailnet one
               # (TAILSCALE_MIDDLEWARE in ./ks.yaml).
               ORANGUTAN_ALLOW_INSECURE: "true"
-              # Networks with no local interface are never offered, so the IoT
-              # VLAN is declared. It is routed, not attached: devices there are
-              # found by ping from eth0 and have NO MAC address or manufacturer
-              # (ARP stops at the gateway). The Home LAN needs no entry -- net1
-              # is on it and detection finds it.
-              ORANGUTAN_NETWORKS: 192.168.100.0/24
-              # eth0 is a /32 out of the pod network. Detected like any other
-              # interface; scanning it finds this pod and nothing else.
+              # Three groups, each there for a reason found on the running pod.
+              #
+              # 1. The Home LAN as eight /19s, NOT as the one /16 detection
+              #    offers. Upstream gives every network a hard 5-minute limit
+              #    (internal/api/api.go scanNetwork) and keeps nothing from a
+              #    scan that overruns it. `nmap -sn` over the /16 measured
+              #    1174s from this pod, so the detected network failed on every
+              #    pass and no Home device was ever recorded. One /19 measured
+              #    30s.
+              #    Smaller pieces cannot be picked by hand: hosts were spread
+              #    over 26 different /24s, from 10.10.0 to 10.10.255.
+              #    Declared networks still get MAC addresses and vendors --
+              #    nmap ARPs anything on-link, and net1 is on this segment.
+              #
+              # 2. The IoT VLAN, which has no local interface and so is never
+              #    detected. Routed, not attached: found by ping from eth0,
+              #    with NO MAC address or manufacturer (ARP stops at the
+              #    gateway).
+              #
+              # 3. The Tailscale range. The app only asks tailscaled for peers
+              #    when it "scans" a network inside 100.64.0.0/10
+              #    (internal/scanner/scanner.go), and expects to find one on a
+              #    tailscale0 interface. The sidecar is userspace and has none,
+              #    so without this entry the Tailscale card says Connected and
+              #    no peer ever reaches the device list. Nothing is swept: the
+              #    entry is only a trigger for `tailscale status --json`.
+              ORANGUTAN_NETWORKS: >-
+                10.10.0.0/19,10.10.32.0/19,10.10.64.0/19,10.10.96.0/19,
+                10.10.128.0/19,10.10.160.0/19,10.10.192.0/19,10.10.224.0/19,
+                192.168.100.0/24,
+                100.64.0.0/10
+              # Detected networks to drop. net1's /16, replaced by the /19s
+              # above (a declared network is kept even when it falls inside an
+              # excluded range), and eth0's /32 out of the pod network, which
+              # only ever finds this pod.
               # Quoted so an offline render (CI cannot decrypt cluster-secrets)
-              # yields "" rather than null, which the chart schema rejects.
-              ORANGUTAN_EXCLUDE_NETWORKS: "${CLUSTER_NETWORK}"
-              # Upstream's default is every 5 minutes, sized for a /24. The
-              # Home LAN is a /16: each pass ARPs 65,536 addresses.
+              # yields a string rather than null, which the chart schema rejects.
+              ORANGUTAN_EXCLUDE_NETWORKS: "10.10.0.0/16,${CLUSTER_NETWORK}"
+              # Upstream's default is every 5 minutes, sized for a /24. One
+              # pass here ARPs 65,536 addresses.
               ORANGUTAN_SCAN_INTERVAL: 900
             probes:
               # exec, and NOT tunable back to httpGet while this pod carries
@@ -187,10 +214,11 @@ spec:
               TS_KUBE_SECRET: ""
               # Userspace: no TUN device, no NET_ADMIN, not privileged. The app
               # only ever asks tailscaled what it knows -- peers come from
-              # `tailscale status --json`, never from scanning 100.64.0.0/10 --
-              # so nothing needs a tailscale0 interface in the pod. The cost is
-              # that the dashboard's network list shows no "Tailscale VPN"
-              # entry; the Tailscale card and the peer devices are unaffected.
+              # `tailscale status --json`, never from sweeping addresses -- so
+              # nothing needs a tailscale0 interface in the pod. The cost is
+              # that the app detects no Tailscale network by itself, which is
+              # what the 100.64.0.0/10 entry in ORANGUTAN_NETWORKS stands in
+              # for.
               TS_USERSPACE: "true"
               TS_AUTH_ONCE: "true"
               TS_ACCEPT_DNS: "false"
