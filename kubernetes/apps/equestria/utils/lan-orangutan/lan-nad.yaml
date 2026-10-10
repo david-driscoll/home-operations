@@ -27,7 +27,12 @@ metadata:
     #   * present its own MAC -- it shares the parent's, so the scanner's own
     #     address does not appear in UniFi as a separate client.
     #
-    # The address comes from ./ks.yaml.
+    # Address is LAN_ORANGUTAN_LAN_IP (10.10.206.22) in cluster-secrets, next
+    # to JELLYFIN_LAN_IP (.20) and PLEX_LAN_IP (.21): absent from the UniFi
+    # client list (2026-10-10), below the Cilium pool (.100 and up) and clear
+    # of the node band (.10-.17). It must be set BEFORE this reconciles -- Flux
+    # renders a missing variable as empty, which ships "/16" as the address
+    # and leaves the pod in ContainerCreating.
 spec:
   config: |
     {

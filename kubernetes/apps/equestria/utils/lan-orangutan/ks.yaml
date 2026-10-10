@@ -47,15 +47,6 @@ spec:
       # Browsers take the authentik chain, matching the internal HTTPRoute. The
       # app's own password is switched off, so this is the only gate.
       TAILSCALE_MIDDLEWARE: tailscale-user
-      # The pod's address on the Home LAN, consumed by ./lan-nad.yaml. Next to
-      # JELLYFIN_LAN_IP (.20) and PLEX_LAN_IP (.21): absent from the UniFi
-      # client list (2026-10-10), below the Cilium pool (.100 and up) and clear
-      # of the node band (.10-.17).
-      #
-      # Here rather than in cluster-secrets beside those two only because the
-      # agent session that added it could not write SOPS. Move it there if the
-      # convention matters more than the diff; the value is not secret.
-      LAN_ORANGUTAN_LAN_IP: 10.10.206.22
       # Device list, labels, notes -- JSON files -- plus tailscaled's node key.
       VOLSYNC_CAPACITY: 1Gi
       # The pod runs as root (nmap needs it; see ./helmrelease.yaml), so every
