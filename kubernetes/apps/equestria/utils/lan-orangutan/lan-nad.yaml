@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/k8s.cni.cncf.io/networkattachmentdefinition_v1.json
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: lan-orangutan-lan-net
+  namespace: equestria
+  annotations:
+    # Purpose: gives the scanner a real interface (net1) on the flat Home LAN.
+    #
+    # LAN Orangutan finds networks by reading its own interfaces and identifies
+    # devices by ARP -- that is where MAC addresses and manufacturer names come
+    # from, and ARP does not cross a router. On the Cilium pod network alone it
+    # would see a /32 and nothing else. Upstream's answer is host networking;
+    # this is the same reach without it: no host port, no root process in the
+    # node's network namespace, and the pod keeps its own namespace for the
+    # tailscale sidecar to live in.
+    #
+    # Same shape as media/plex/lan-nad.yaml, which carries the full reasoning
+    # for ipvlan over macvlan and for omitting `master` (it defaults to the
+    # default-route interface, which is the LAN NIC on every node). Constraints
+    # that apply to every attachment like this one: docs/lan-attach/README.md.
+    #
+    # Two things an ipvlan child cannot do, both visible in scan results:
+    #   * reach its own parent -- the node hosting the pod never answers, so it
+    #     shows as offline or missing while every other node is found;
+    #   * present its own MAC -- it shares the parent's, so the scanner's own
+    #     address does not appear in UniFi as a separate client.
+    #
+    # Address is LAN_ORANGUTAN_LAN_IP (10.10.206.22) in cluster-secrets, next
+    # to JELLYFIN_LAN_IP (.20) and PLEX_LAN_IP (.21): absent from the UniFi
+    # client list (2026-10-10), below the Cilium pool (.100 and up) and clear
+    # of the node band (.10-.17). It must be set BEFORE this reconciles -- Flux
+    # renders a missing variable as empty, which ships "/16" as the address
+    # and leaves the pod in ContainerCreating.
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "lan-orangutan-lan-net",
+      "type": "ipvlan",
+      "mode": "l2",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "${LAN_ORANGUTAN_LAN_IP}/16"
+          }
+        ]
+      }
+    }
