@@ -51,7 +51,7 @@ spec:
           *app :
             image:
               repository: ghcr.io/btsouth/toolport-gateway
-              tag: v1.23.5@sha256:f5cc8219d9b1e4b508da492b97bbbc9cbf8195245d94e61acdc5e54c3b0b9dd0
+              tag: v1.24.0@sha256:ddec58d2c7664ff9cddc7eab84948c1fa828a2ce39bece3762290328f80b5a1b
             # No command/args: the image's ENTRYPOINT is already
             # `toolport-gateway --http 8765`. Use the flag, not TOOLPORT_HTTP --
             # the env form is ignored whenever stdin is a pipe.
