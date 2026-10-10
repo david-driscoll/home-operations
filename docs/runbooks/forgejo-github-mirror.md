@@ -37,6 +37,7 @@ Flux already had (`stacks/vault/KubernetesFluxWebhooks.ts`).
 | the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` account that owns it, the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
 | the sync workflow | `.forgejo/workflows/github-sync.yml` | decides when to run and hands over credentials |
 | the sync | `scripts/forgejo-github-sync` | compares the two branches and moves whichever is behind |
+| the labels | `scripts/forgejo-github-labels` | copies GitHub's labels to the forge after each sync; Renovate there only attaches labels that already exist. It creates and updates, and never deletes |
 | the pull request checks | `.forgejo/workflows/flate.yml`, `image-check.yml` | the forge's copies of GitHub's two checks; see [Checks](#checks-on-a-forge-pull-request) |
 | the source | `kubernetes/apps/coder/forgejo-github-sync/gitrepository.yaml` | a view of GitHub's `main` that changes on every commit |
 | the relay | `kubernetes/apps/coder/forgejo-github-sync` | turns that source's "new artifact" event into a workflow dispatch |

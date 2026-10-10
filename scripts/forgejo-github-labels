@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Copies the GitHub repository's labels to its copy on Forgejo.
+#
+# Renovate on Forgejo attaches a label to a pull request only when a label of
+# that name already exists in the repository; one that does not exist is
+# dropped without an error. The rules in .github/renovate.json5 key on labels
+# (`renovate/automerge`, `type/patch`, ...), so the copy needs the same set.
+#
+# One direction, and additive: a label missing here is created, one whose
+# colour or description differs is updated, and nothing is ever deleted. A
+# label that exists only on Forgejo is left alone.
+#
+# Run by .forgejo/workflows/github-sync.yml after the branch sync. By hand:
+#
+#   LABELS_UPSTREAM=owner/name LABELS_FORGEJO_URL=https://forge.example \
+#   LABELS_REPOSITORY=owner/name LABELS_TOKEN=... scripts/forgejo-github-labels
+#
+# Environment:
+#   LABELS_UPSTREAM      owner/name on GitHub (read anonymously; the repository
+#                        is public)
+#   LABELS_FORGEJO_URL   base URL of the forge
+#   LABELS_REPOSITORY    owner/name on the forge
+#   LABELS_TOKEN         a forge token that may write issues on that repository
+#   LABELS_GITHUB_API    default https://api.github.com
+#   LABELS_DRY_RUN       non-empty: print what would change and change nothing
+set -euo pipefail
+
+: "${LABELS_UPSTREAM:?owner/name on GitHub}"
+: "${LABELS_FORGEJO_URL:?base URL of the forge}"
+: "${LABELS_REPOSITORY:?owner/name on the forge}"
+: "${LABELS_TOKEN:?forge token}"
+github="${LABELS_GITHUB_API:-https://api.github.com}"
+forge="${LABELS_FORGEJO_URL%/}/api/v1/repos/${LABELS_REPOSITORY}"
+dry="${LABELS_DRY_RUN:-}"
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+# Every page of a JSON-array endpoint, as one array. $1 is the URL up to and
+# including the page-size parameter; the rest are curl arguments.
+pages() {
+  local url="$1" page=1 status
+  shift
+  echo '[]' >"$work/all.json"
+  while :; do
+    status="$(curl --silent --show-error --max-time 30 --output "$work/page.json" \
+      --write-out '%{http_code}' "$@" "${url}&page=${page}")"
+    if [ "$status" != 200 ]; then
+      echo "$status"
+      return 0
+    fi
+    [ "$(jq 'length' "$work/page.json")" -gt 0 ] || break
+    jq --slurp 'add' "$work/all.json" "$work/page.json" >"$work/next.json"
+    mv "$work/next.json" "$work/all.json"
+    page=$((page + 1))
+  done
+  echo 200
+}
+
+status="$(pages "${github}/repos/${LABELS_UPSTREAM}/labels?per_page=100" \
+  --header 'Accept: application/vnd.github+json')"
+case "$status" in
+  200) ;;
+  403 | 429)
+    # The anonymous API allows 60 requests an hour from one address. The next
+    # run will do; labels change rarely.
+    echo "labels: GitHub answered ${status} (rate limit); skipping this run."
+    exit 0
+    ;;
+  *)
+    echo "labels: GitHub answered ${status} for ${LABELS_UPSTREAM}'s labels." >&2
+    exit 1
+    ;;
+esac
+mv "$work/all.json" "$work/github.json"
+
+status="$(pages "${forge}/labels?limit=50" --header "Authorization: token ${LABELS_TOKEN}")"
+if [ "$status" != 200 ]; then
+  echo "labels: the forge answered ${status} listing ${LABELS_REPOSITORY}'s labels." >&2
+  exit 1
+fi
+mv "$work/all.json" "$work/forge.json"
+
+# One line per label to act on: "create" or "update <id>", then the body the
+# forge expects. Colours are compared without the leading "#" and in lower
+# case; a missing description is the empty string on both sides.
+jq --compact-output --slurpfile have "$work/forge.json" '
+  def norm: ascii_downcase | ltrimstr("#");
+  ($have[0] | map({key: .name, value: .}) | from_entries) as $by
+  | .[]
+  | {name, color: ("#" + (.color | norm)), description: (.description // "")} as $want
+  | $by[$want.name] as $cur
+  | if $cur == null then {op: "create", body: $want}
+    elif ($cur.color | norm) != ($want.color | norm) or ($cur.description // "") != $want.description
+    then {op: "update", id: $cur.id, body: $want}
+    else empty end
+' "$work/github.json" >"$work/plan.jsonl"
+
+total="$(jq 'length' "$work/github.json")"
+changes="$(wc -l <"$work/plan.jsonl" | tr -d ' ')"
+if [ "$changes" -eq 0 ]; then
+  echo "labels: all ${total} of GitHub's labels are already here."
+  exit 0
+fi
+
+failed=0
+while IFS= read -r line; do
+  op="$(jq -r '.op' <<<"$line")"
+  name="$(jq -r '.body.name' <<<"$line")"
+  if [ -n "$dry" ]; then
+    echo "labels: would ${op} '${name}'"
+    continue
+  fi
+  if [ "$op" = create ]; then
+    method=POST url="${forge}/labels"
+  else
+    method=PATCH url="${forge}/labels/$(jq -r '.id' <<<"$line")"
+  fi
+  status="$(jq --compact-output '.body' <<<"$line" | curl --silent --show-error --max-time 30 \
+    --output "$work/reply.json" --write-out '%{http_code}' --request "$method" \
+    --header "Authorization: token ${LABELS_TOKEN}" --header 'Content-Type: application/json' \
+    --data-binary @- "$url")"
+  case "$status" in
+    200 | 201) echo "labels: ${op}d '${name}'" ;;
+    *)
+      echo "labels: could not ${op} '${name}': the forge answered ${status}: $(head -c 200 "$work/reply.json")" >&2
+      failed=$((failed + 1))
+      ;;
+  esac
+done <"$work/plan.jsonl"
+
+if [ "$failed" -gt 0 ]; then
+  echo "labels: ${failed} of ${changes} changes failed." >&2
+  exit 1
+fi
+echo "labels: ${changes} of ${total} labels created or updated."
