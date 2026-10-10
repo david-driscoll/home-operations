@@ -160,7 +160,11 @@ spec:
               # prepended -- env: REPLACES the image's PATH rather than
               # extending it, so the standard entries have to be spelled out
               # here too or nothing on the base image resolves any more.
-              PATH: /root/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              #
+              # /opt/agentboard/bin is `persistence.bin` below. Last, so
+              # nothing in it can shadow a real tool. This copy of PATH is the
+              # one `kubectl exec` gets; panes get ./resources/bashrc's.
+              PATH: /root/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/agentboard/bin
               # The claude-code version ./resources/mise.toml pins is the one
               # that runs, so Claude Code must not update itself. Its updater
               # counts mise's per-tool install as an "npm-global" one and
@@ -413,6 +417,26 @@ spec:
             *app :
               - path: /root/.claude/skills/toolport/SKILL.md
                 subPath: toolport-SKILL.md
+                readOnly: true
+      # Helper commands -- today just `agentboard-spawn`, which opens a new
+      # Claude Code session in its own agentboard window with a first prompt
+      # (./resources/agentboard-spawn.sh).
+      #
+      # The whole ConfigMap as a DIRECTORY, not a subPath per file: a subPath
+      # mount never receives updates, and restarting this pod to pick up a
+      # helper edit would end every running session. Mounted this way a change
+      # lands in place about a minute after Flux applies it, which is also why
+      # `agentboard-bin` is absent from the Reloader annotation above.
+      #
+      # 365 is 0555 in decimal: the scripts are run by name, off PATH.
+      bin:
+        type: configMap
+        name: agentboard-bin
+        defaultMode: 365
+        advancedMounts:
+          *app :
+            *app :
+              - path: /opt/agentboard/bin
                 readOnly: true
       github-token:
         type: secret
