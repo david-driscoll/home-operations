@@ -1,31 +1,33 @@
 ---
-# Extra Forgejo Actions runners, started when jobs are waiting and gone when
-# they are not. ../forgejo-runner is the standing runner: four jobs at a time,
-# always there. This is the overflow.
+# The Forgejo Actions runners. There is no standing runner: KEDA starts a pod
+# for each job the forge has in hand, up to ten at once, and there are none
+# while it has none.
 #
-# Why it exists: Renovate's first pass over github-mirror/home-operations
+# This replaced a single always-on runner pod (four jobs at a time in one
+# Docker daemon). Renovate's first pass over github-mirror/home-operations
 # opened about sixty pull requests at once, each with a `flate` check, and the
 # job that publishes merges to GitHub sat in the same queue behind them.
 #
 # How it works (https://keda.sh/docs/2.21/scalers/forgejo/): KEDA asks Forgejo
-# every 30 seconds how many jobs the whole forge has in hand, on every
-# repository, and creates one Kubernetes Job for each one beyond what the
-# standing runner is carrying, up to maxReplicaCount. Each Job is one
+# every 30 seconds how many jobs it has in hand, on every repository, and
+# creates one Kubernetes Job for each, up to maxReplicaCount. Each Job is one
 # pod running `forgejo-runner one-job`: it takes a single job, runs it and
-# exits. A pod that finds the queue already empty exits at once.
+# exits. A pod that finds nothing left to take exits at once.
 #
-# THE PODS SHARE THE STANDING RUNNER'S IDENTITY. They mount the same
-# `forgejo-runner-config` Secret, so Forgejo sees one runner asking for more
-# work, exactly as it does when the standing runner's `capacity` is raised.
-# That is how KEDA's own documentation sets it up. ../forgejo-runner's
-# config.yml says not to run two DAEMONS on one identity; these are not
-# daemons, and each asks for one task and reports only on that task. If
-# Forgejo ever starts refusing it, this pool needs a registration of its own
-# (a second OpenBao path), not a different shape.
+# WHAT THIS COSTS, compared with the runner it replaced:
 #
-# What a job loses here compared with the standing runner: the actions cache
-# and the image cache. Both live in the pod and die with it, so every job is
-# a cold pull of the job image and a cold `flate` render.
+# - A job waits for the next poll (up to 30s), a pod to schedule and its
+#   Docker daemon to start before it begins. Nothing is ever already running.
+# - No caches. The actions cache and the image cache live in the pod and die
+#   with it, so every job pulls its job image again and every `flate` render
+#   is cold.
+#
+# EVERY POD IS THE SAME RUNNER AS FAR AS FORGEJO IS CONCERNED. They all mount
+# the one registration in `forgejo-runner-config` (./externalsecret.yaml),
+# which is how KEDA's own documentation sets it up: each process asks for one
+# task and reports only on that task. If Forgejo ever starts refusing that,
+# the answer is a registration per pod (its ephemeral runners), not a
+# different shape here.
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/triggerauthentication_v1alpha1.json
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
@@ -35,7 +37,7 @@ spec:
   secretTargetRef:
     # ./externalsecret.yaml: an administrator's token that can only read.
     - parameter: token
-      name: ${APP}
+      name: ${APP}-queue
       key: token
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/scaledjob_v1alpha1.json
@@ -46,29 +48,20 @@ metadata:
 spec:
   pollingInterval: 30
   minReplicaCount: 0
-  # TEN HERE MEANS SIX PODS. KEDA caps the reported job count at this number
-  # BEFORE the strategy below takes the standing runner's four off it, so the
-  # most this pool ever runs is maxReplicaCount - 4. Each pod may use up to
-  # 6Gi (below), so six is 36Gi of worker memory at the very worst; raise it
-  # with that in mind, not by itself.
+  # Ten jobs at once across the whole forge. Each pod may use up to 6Gi
+  # (below), so this is 60Gi of worker memory at the very worst and 20Gi
+  # requested; raise it with that in mind, not by itself.
   maxReplicaCount: 10
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
   scalingStrategy:
-    # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS, not the backlog
+    # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS
     # (routers/api/v1/shared/runners.go asks for both statuses, and KEDA
-    # counts every row). So the pods to start are
-    #
-    #   reported - 4 - pods of this pool already running
-    #
-    # where 4 is the standing runner's `capacity`: with any backlog at all it
-    # is holding four of the reported jobs itself. Without that deduction
-    # every poll would start a pod for each job the standing runner is
-    # running, which would find nothing to take and exit. Change `capacity`
-    # in ../forgejo-runner/resources/config.yml and this has to follow.
-    strategy: custom
-    customScalingQueueLengthDeduction: 4
-    customScalingRunningJobPercentage: "1.0"
+    # counts every row). `default` is the strategy for a count like that: it
+    # starts (reported - pods already running), and every running job is in
+    # one of these pods. `accurate` would assume the count is the backlog
+    # alone and start a second pod for each job already running.
+    strategy: default
   triggers:
     - type: forgejo-runner
       metadata:
@@ -79,8 +72,8 @@ spec:
         # repository it belongs to. This is the admin endpoint
         # (/api/v1/admin/runners/jobs), hence the administrator's token.
         global: "true"
-        # Every label ../forgejo-runner/resources/config.yml declares, since
-        # these pods run from that same file. Add a label there and it has to
+        # Every label ./resources/config.yml declares, since these pods run
+        # from that file. Add a label there and it has to
         # be added here, or jobs that ask for it never start a pod.
         labels: ubuntu-latest,ubuntu-24.04,ubuntu-22.04,docker
       authenticationRef:
@@ -101,17 +94,31 @@ spec:
         restartPolicy: Never
         automountServiceAccountToken: false
         enableServiceLinks: false
-        # `runner.shutdown_timeout` gives a job 30m to finish after SIGTERM,
-        # as on the standing runner.
+        # `runner.shutdown_timeout` in the config gives a job 30m to finish
+        # after SIGTERM, so the kubelet has to wait about that long before
+        # it sends SIGKILL.
         terminationGracePeriodSeconds: 1860
         securityContext:
           fsGroup: 1000
           fsGroupChangePolicy: OnRootMismatch
         initContainers:
-          # A native sidecar, as on the standing runner and for the same
-          # reasons (see ../forgejo-runner/helmrelease.yaml): the kubelet
-          # starts it first, waits for its startup probe, and in a Job stops
-          # it once the runner container has exited.
+          # A native sidecar (`restartPolicy: Always` on an initContainer): the
+          # kubelet starts it BEFORE the runner, waits for its startup probe,
+          # and in a Job stops it once the runner container has exited. A
+          # plain second container gives no ordering, and would keep the Job
+          # from ever completing.
+          #
+          # privileged is unavoidable for Docker-in-Docker: dockerd manages
+          # cgroups, mounts and iptables in its own namespace. The JOB
+          # containers are not privileged and get no Docker socket
+          # (./resources/config.yml).
+          #
+          # TLS ON, with client verification, and that is not belt-and-braces.
+          # dockerd-entrypoint.sh always adds its own `--host` on 0.0.0.0, so
+          # there is no loopback-only listener to be had; with a certdir it
+          # generates a CA and client certs and starts with --tlsverify, so
+          # the listener is useless without the client key only the runner
+          # container has.
           - name: dind
             restartPolicy: Always
             image: data.forgejo.org/oci/docker:29-dind@sha256:1e08cdb63405ca788aea94ef35b792d1e299607c667d33d7bcbcae1fd2611ced
@@ -157,8 +164,8 @@ spec:
           - name: app
             image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
             command: ["forgejo-runner"]
-            # No --wait: a pod that arrives after the standing runner has
-            # already taken the job exits instead of sitting there.
+            # No --wait: a pod that finds its job already taken (cancelled, or
+            # picked up by another pod) exits instead of sitting there.
             args: ["one-job", "--config", "/config/config.yml"]
             env:
               - name: TZ

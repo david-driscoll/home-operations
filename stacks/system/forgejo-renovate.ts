@@ -390,7 +390,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     );
 
     // What KEDA reads the Actions queue with, to decide how many overflow
-    // runners to start (kubernetes/apps/coder/forgejo-runner-scaled).
+    // runners to start (kubernetes/apps/coder/forgejo-runner).
     //
     // Its own token and not the one above: the scaler only ever calls
     // GET /api/v1/admin/runners/jobs, and that needs an administrator's token
@@ -411,7 +411,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       "forgejo-runner-queue-token",
       {
         mount: "secrets",
-        path: "clusters/equestria/apps/forgejo-runner-scaled/credentials",
+        path: "clusters/equestria/apps/forgejo-runner/queue-token",
         data: { token: runnerQueueToken.token },
         concealedFields: ["token"],
         customMetadata: baoProvenance({

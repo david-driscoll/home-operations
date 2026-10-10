@@ -6,8 +6,8 @@ namespace: coder
 components:
   - ../../components/alerts
   - ../../components/common
-  # The app-template OCIRepository. It is namespace-scoped and forgejo-runner's
-  # HelmRelease refers to it by bare name, so every namespace that uses the
+  # The app-template OCIRepository. It is namespace-scoped and the HelmReleases
+  # here refer to it by bare name, so every namespace that uses the
   # chart has to bring its own copy -- `equestria` does the same thing.
   - ../../components/repos/app-template
 resources:
@@ -15,8 +15,6 @@ resources:
   - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml
-  # Overflow runners, started by KEDA (kube-system/keda) while jobs wait.
-  - ./forgejo-runner-scaled/ks.yaml
   # Starts the Forgejo workflow that keeps the GitHub mirror's main in step,
   # whenever Flux reports a new commit on GitHub.
   - ./forgejo-github-sync/ks.yaml

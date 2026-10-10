@@ -1,4 +1,4 @@
-# forgejo-runner daemon configuration, rendered by this app's `-config`
+# forgejo-runner configuration, rendered by this app's `-config`
 # ExternalSecret and mounted at /config/config.yml.
 #
 # The whole file lives in a Secret rather than a ConfigMap because the
@@ -17,25 +17,15 @@ log:
 
 runner:
   file: /data/.runner
-  # Four concurrent jobs in one daemon. This is the ONLY scaling knob here --
-  # `replicas` must stay 1.
-  #
-  # Not a storage limitation (the volumes are emptyDirs now) but an identity
-  # one: every replica mounts the same config Secret, so every replica would
-  # present the SAME runner uuid and token. Forgejo keys a runner on that pair,
-  # so two daemons would be one runner as far as it is concerned, racing to
-  # claim the same jobs and reporting status over each other. Scaling out needs
-  # a second registration, which means a second OpenBao path, a second Secret
-  # and a second StatefulSet -- not a bigger number here.
-  #
-  # ../forgejo-runner-scaled is the exception and mounts this same file: its
-  # pods run one-job, not a daemon, so each asks for a single task and exits.
-  # That file's header has the reasoning.
-  capacity: 4
+  # Unused: every runner here is a `one-job` process (../scaledjob.yaml) that
+  # takes a single task and exits. How many run at once is that file's
+  # maxReplicaCount. All of them present the one identity at the bottom of
+  # this file; see that file's header for why that is all right.
+  capacity: 1
   timeout: 3h
   # How long a job gets to finish after SIGTERM. Must stay below the pod's
-  # terminationGracePeriodSeconds in helmrelease.yaml or the kubelet SIGKILLs
-  # the daemon mid-job.
+  # terminationGracePeriodSeconds in scaledjob.yaml or the kubelet SIGKILLs
+  # the runner mid-job.
   shutdown_timeout: 30m
   insecure: false
   fetch_timeout: 30s
@@ -55,15 +45,15 @@ runner:
 
 cache:
   # Serves ACTIONS_CACHE_URL to workflow containers, which is what
-  # actions/cache and setup-* actions use. The proxy binds inside the pod's
+  # actions/cache and setup-* actions use. It lasts as long as the pod, which
+  # is one job: a cache saved by one job is never there for the next. The proxy binds inside the pod's
   # network namespace and the job containers share it, so the auto-detected
   # host is correct and does not need pinning.
   enabled: true
   dir: /data/.cache/actcache
-  # Pinned rather than left at the default 0 (random). forgejo-runner has no
-  # health endpoint and no metrics, so this listener is the only thing in the
-  # process a probe can reach at all -- helmrelease.yaml points a livenessProbe
-  # at it. Keep the two in step.
+  # Pinned rather than left at the default 0 (random), from when a liveness
+  # probe pointed at it. Each pod has its own network namespace, so a fixed
+  # port cannot collide.
   port: 8088
   proxy_port: 8089
 

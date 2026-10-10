@@ -12,7 +12,7 @@ spec:
       driscoll.dev/name: *app
   path: ./kubernetes/apps/kube-system/keda
   prune: true
-  # true, unlike most of this namespace: coder/forgejo-runner-scaled applies
+  # true, unlike most of this namespace: coder/forgejo-runner applies
   # ScaledJob and TriggerAuthentication objects and depends on this to know
   # the CRDs and the admission webhook are there.
   wait: true

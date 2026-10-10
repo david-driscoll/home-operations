@@ -1,6 +1,6 @@
 ---
 # KEDA: scales a workload from an external signal. Installed for one consumer,
-# kubernetes/apps/coder/forgejo-runner-scaled, which starts a runner pod for
+# kubernetes/apps/coder/forgejo-runner, which starts a runner pod for
 # each Forgejo Actions job that is waiting.
 #
 # The chart is not published as an OCI artifact, hence a HelmRepository here
