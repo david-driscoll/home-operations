@@ -770,6 +770,13 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
      change deletes the file path from `App.cs`.
    - Keep `/mnt/stash/data/pgdump` read-only until the restic history covers its window, then delete
      it.
+
+     **Retirement PR opened 2026-10-10 (draft, merges once the 7 nights since 2026-10-03 are
+     confirmed green):** deletes the `.sql.gz` file path, `CreateDatabaseDump` and the `/backups`
+     NFS mount from `resources/App.cs` and `cronjob.yaml` -- a database is backed up when its
+     stream succeeds and nothing else -- makes `postgres-backup-restic`'s `envFrom` non-optional,
+     and drops celestia's `pgdump` Backrest plan (`stacks/backups/index.ts`). `/mnt/stash/data/
+     pgdump` on TrueNAS is left alone, read-only, as above; this PR does not touch it.
 6. **Retire.**
    - The director's `volsyncJobTasks` on all three hosts.
    - The `volsync=true` scan in `stacks/system/application-backups.ts`.

@@ -151,13 +151,13 @@ spec:
               RESTIC_BINARY: /tools/restic
               RESTIC_CACHE_DIR: /tmp/restic-cache
             # The repository, its password and the Garage key
-            # (externalsecret.yaml). Optional, so a missing Secret cannot stop
-            # the pod starting: App.cs then still writes the dump files, says
-            # the stream is unavailable, and fails the run.
+            # (externalsecret.yaml). No longer optional: the stream is the
+            # only path a database is backed up through now, so a missing
+            # Secret must stop the pod rather than run a job that can back up
+            # nothing.
             envFrom:
               - secretRef:
                   name: postgres-backup-restic
-                  optional: true
             command:
               - /bin/sh
               - -c
@@ -266,13 +266,3 @@ spec:
             main:
               - path: /tools
                 readOnly: true
-      # The dump files, until phase 3 step 5 retires them after a week of
-      # green streamed runs.
-      backups:
-        type: nfs
-        server: ${SPIKE_IP}
-        path: /mnt/stash/data/pgdump
-        advancedMounts:
-          *app :
-            main:
-              - path: /backups
