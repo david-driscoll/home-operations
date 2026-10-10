@@ -1,10 +1,7 @@
 import type { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import type { GlobalResources } from "@components/globals.ts";
-import { awaitOutput } from "@components/helpers.ts";
 import * as kubernetes from "@kubernetes/client-node";
-import type { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 import * as pulumi from "@pulumi/pulumi";
-import { concatMap, filter, from, lastValueFrom, map, mergeMap, toArray } from "rxjs";
 import type { KubernetesCluster } from "./applications.ts";
 
 export async function kubernetesBackups(_globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesCluster) {
@@ -20,92 +17,13 @@ export async function kubernetesBackups(_globals: GlobalResources, planManager: 
 
   pulumi.log.info(`Found namespaces: ${namespaceNames.join(", ")}`, planManager);
 
-  const volsyncBackupJobs = pulumi
-    .output(
-      lastValueFrom(
-        from(namespaceNames).pipe(
-          concatMap(ns =>
-            from(
-              coreApi.listNamespacedSecret({
-                namespace: ns,
-                labelSelector: "volsync=true",
-              }),
-            ),
-          ),
-          map(result => result.items.map(s => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
-          mergeMap(lists => from(lists)),
-          map(item => Buffer.from(item, "base64").toString("utf-8")),
-          // A repository in Garage (`VOLSYNC_BACKEND: garage`, docs/plans/
-          // host-owned-backups.md phase 3) leaves the copy tier. Garage
-          // replicates it to three sites and TrueNAS pulls the bucket, so the
-          // hosts have nothing to copy. Its old NFS repo is frozen from the
-          // switch on, and copying it again every night would only repeat
-          // the last copy. Dropping the plan lets each host's ledger remove
-          // that app's copy job and browse repo. The copied data stays on
-          // disk, as every ledger removal leaves it.
-          filter(repository => !repository.startsWith("s3:")),
-          map(repository => repository.split("/").pop()!),
-          toArray(),
-        ),
-      ),
-    )
-    .apply(jobs => Array.from(new Set(jobs)))
-    .apply(jobs => {
-      pulumi.log.info(`Found VolSync backup jobs: ${jobs.join(", ")}`, planManager);
-      return jobs;
-    });
-
-  const applications = await lastValueFrom(
-    from(namespaceNames).pipe(
-      concatMap(ns =>
-        from(
-          customObjectApi.listNamespacedCustomObject({
-            group: "driscoll.dev",
-            version: "v1",
-            namespace: ns,
-            plural: "applicationdefinitions",
-          }),
-        ),
-      ),
-      map(res => res as { items: ApplicationDefinitionSchema[] }),
-      concatMap(res => from(res.items)),
-      toArray(),
-    ),
-  );
-
-  // Registers its plans on `planManager` as a side effect, exactly like the
-  // VolSync branch below; the returned array is only for the log line. Awaited
-  // BEFORE the return so every plan is on the orchestrator by the time
-  // applications.ts calls savePlan().
+  // Registers its plans on `planManager` as a side effect; the returned array
+  // is only for the log line. Awaited BEFORE the function returns so every
+  // plan is on the orchestrator by the time applications.ts calls savePlan().
   const garagePlans = await garageBucketBackups(coreApi, customObjectApi, planManager, clusterDefinition, namespaceNames);
   pulumi.log.info(`Registered ${garagePlans.length} Garage bucket backup plan(s) on ${clusterDefinition.key}`, planManager);
 
-  return await awaitOutput(
-    volsyncBackupJobs.apply(jobs =>
-      pulumi.all(
-        jobs.map(job => {
-          const relatedApp = applications.find(app => app.metadata?.namespace === clusterDefinition.key && app.spec.name === job);
-          return planManager.addBackupPlan(
-            pulumi.output({
-              source: "volsync",
-              // `name` is an IDENTITY, not a label: BackupPlanDirector uses it
-              // as the backrest repo id, plan id, and the /data/backup/<name>/
-              // path — so it must stay the id-safe slug production backrest
-              // already carries, or every volsync backup re-roots into a new
-              // restic history. The display-cased form ("Equestria autobrr")
-              // lives in `title`. It shipped as `name` in ced3c316 but never
-              // took effect: the OnePasswordItem diff bug (fixed alongside
-              // this) meant the directors kept reading the pre-rename plans.
-              name: `${clusterDefinition.key}-volsync-${job}`,
-              title: pulumi.interpolate`${clusterDefinition.title} ${relatedApp?.spec.name ?? job}`,
-              repository: `${clusterDefinition.key}-volsync-${job}`,
-              path: `/spike/backup/${clusterDefinition.key}/volsync/${job}`,
-            }),
-          );
-        }),
-      ),
-    ),
-  );
+  return garagePlans;
 }
 
 /**

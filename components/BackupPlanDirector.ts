@@ -56,21 +56,12 @@ export const RETIRED_BACKREST_PLANS: readonly string[] = ["celestia-dockge", "al
 const BACKREST_PLAN_SCHEDULE: BackrestPlan["schedule"] = { cron: "0 1 * * *", clock: "CLOCK_LOCAL" };
 
 /**
- * Copy-job schedules, in UTC: NCronJob's default, and the backups container
- * sets no TZ. Each one runs after what it copies, so a copy carries that day's
- * snapshot:
- *
- *   14:00  VolSync movers run (ReplicationSource `0 14 * * *`), done by ~14:20
- *   15:00  celestia copies the VolSync repos from TrueNAS into /data/backup
- *   16:00  luna and skystar copy celestia's repos, VolSync and Backrest alike
- *
- * Backrest's queue starts at 01:00 local, 05:00 or 06:00 UTC. The longest night
- * in the 2026-09-27 → 09-29 logs ran about six and a half hours, so it is done
- * well before 16:00. Before this the copies ran at 10:00 and 04:00 UTC, and a
- * VolSync snapshot waited about 38 hours to reach luna and skystar; now it is
- * about two.
+ * Copy-job schedule, in UTC: NCronJob's default, and the backups container
+ * sets no TZ. A host's Backrest queue starts at 01:00 local, 05:00 or 06:00
+ * UTC, and the longest night in the 2026-09-27 → 09-29 logs ran about six and
+ * a half hours, so every plan is done well before 16:00, when the other PBS
+ * hosts pull it over SFTP.
  */
-const VOLSYNC_LOCAL_COPY_SCHEDULE = "0 15 * * *";
 const REMOTE_COPY_SCHEDULE = "0 16 * * *";
 
 export class BackupPlanDirector extends ComponentResource {
@@ -94,8 +85,8 @@ export class BackupPlanDirector extends ComponentResource {
    * Configure one host's backrest and copy jobs from the plan inventory.
    *
    * `pbs` is optional: a host without a Proxmox Backup Server has no /data
-   * (alpha-site). It takes no copies and browses no VolSync repos, and every
-   * plan it runs must keep its repo in Garage.
+   * (alpha-site). It takes no copies, and every plan it runs must keep its
+   * repo in Garage.
    */
   public createPlans(
     source: {
@@ -125,14 +116,12 @@ export class BackupPlanDirector extends ComponentResource {
     const clusterKey = cluster.key;
     const sourceGroupTitle = `Backups: ${cluster.title}`;
     const destinationGroupTitle = `Backups: ${cluster.title}`;
-    const volsyncGroupTitle = `VolSync: ${cluster.title}`;
-    // No backup server, no /data: nowhere to keep a copy or browse a VolSync repo.
+    // No backup server, no /data: nowhere to keep a copy.
     const hasLocalRepos = pbs !== undefined;
-    const sourcePlans = plans.filter(p => p.source === clusterKey && p.source !== "volsync");
+    const sourcePlans = plans.filter(p => p.source === clusterKey);
     // A Garage-backed repo is never copied: Garage replicates it, and TrueNAS
     // pulls the bucket (components/garageTruenasCopy.ts).
-    const destinationPlans = hasLocalRepos ? plans.filter(p => p.source !== clusterKey && p.source !== "volsync" && !p.garage) : [];
-    const volsyncPlans = hasLocalRepos ? plans.filter(p => p.source === "volsync") : [];
+    const destinationPlans = hasLocalRepos ? plans.filter(p => p.source !== clusterKey && !p.garage) : [];
 
     const stranded = sourcePlans.filter(p => !p.garage);
     if (!hasLocalRepos && stranded.length > 0) {
@@ -155,70 +144,26 @@ export class BackupPlanDirector extends ComponentResource {
       };
     });
 
-    const celestiaServer = backupServers.find(s => s.cluster.key === "celestia");
-    const volsyncJobTasks = volsyncPlans.map(plan => {
-      const copyToken = toGatusKey(volsyncGroupTitle, plan.name);
-      if (clusterKey === "celestia") {
-        return {
-          name: plan.name,
-          schedule: VOLSYNC_LOCAL_COPY_SCHEDULE,
-          sourceType: "local" as const,
-          source: plan.path,
-          destinationType: "local" as const,
-          destination: `/data/backup/${plan.name}/`,
-          token: copyToken,
-        };
-      }
-      return {
-        name: plan.name,
-        schedule: REMOTE_COPY_SCHEDULE,
-        sourceType: "sftp" as const,
-        source: `${celestiaServer?.dockge.ssh.hostname}/backup/${plan.name}/`,
-        destinationType: "local" as const,
-        destination: `/data/backup/${plan.name}/`,
-        token: copyToken,
-      };
-    });
-
     // A host with no local repos runs no copy service, so it gets no job file.
-    const copyJobs = hasLocalRepos ? [addBackupJobs(`copy-${clusterKey}`, dockgeConnection, [...destinationJobTasks, ...volsyncJobTasks], this, depends)] : [];
+    const copyJobs = hasLocalRepos ? [addBackupJobs(`copy-${clusterKey}`, dockgeConnection, destinationJobTasks, this, depends)] : [];
 
-    const backrestItems = [
-      ...sourcePlans.map(plan => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword)),
-      // setup for celestia?
-      // ...volsyncPlans.map((plan) => this._createRepository(plan, volsyncPassword)),
-      ...volsyncPlans.map(plan => ({
-        repo: {
-          id: plan.name,
-          uri: `/data/backup/${plan.name}/`,
-          password: volsyncPassword,
-          checkPolicy: {
-            schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" },
-            readDataSubsetPercent: 10,
-          },
-          commandPrefix: { ioNice: "IO_BEST_EFFORT_LOW", cpuNice: "CPU_LOW" },
-        } as BackrestRepository,
-        plan: null as unknown as BackrestPlan,
-      })),
-    ].reduce(
-      (acc, { plan, repo }) => {
-        if (plan) acc.plans.push(plan);
-        if (repo) acc.repos.push(repo);
-        return acc;
-      },
-      { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
-    );
+    const backrestItems = sourcePlans
+      .map(plan => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword))
+      .reduce(
+        (acc, { plan, repo }) => {
+          if (plan) acc.plans.push(plan);
+          if (repo) acc.repos.push(repo);
+          return acc;
+        },
+        { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
+      );
 
     const uptime = addUptimeGatus(
       `backups-${cluster.key}`,
       this.globals,
       {
         endpoints: [],
-        "external-endpoints": [
-          ...sourcePlans.map(plan => makeEndpoint(sourceGroupTitle, plan.name)),
-          ...destinationPlans.map(plan => makeEndpoint(destinationGroupTitle, plan.name)),
-          ...volsyncPlans.map(plan => makeEndpoint(volsyncGroupTitle, plan.name)),
-        ],
+        "external-endpoints": [...sourcePlans.map(plan => makeEndpoint(sourceGroupTitle, plan.name)), ...destinationPlans.map(plan => makeEndpoint(destinationGroupTitle, plan.name))],
       },
       this,
     );
@@ -235,9 +180,7 @@ export class BackupPlanDirector extends ComponentResource {
     // synced over whatever this host wrote, and a Garage repo of another host's
     // cannot even be opened with this host's key -- on 2026-10-01 celestia was
     // handed alpha-site's config and its Backrest crash-looped on exactly that.
-    // VolSync repos are not in this list, because the director deliberately
-    // registers them here for browsing.
-    const foreign = plans.filter(p => p.source !== clusterKey && p.source !== "volsync").map(p => p.name);
+    const foreign = plans.filter(p => p.source !== clusterKey).map(p => p.name);
 
     return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems, foreign, rcloneConfig));
   }
