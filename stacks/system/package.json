@@ -20,7 +20,7 @@
     "refresh": "mise run vals-run pulumi refresh --yes"
   },
   "dependencies": {
-    "@axnic/pulumi-garage": "^1.0.1",
+    "@axnic/pulumi-garage": "^1.1.2",
     "@kubernetes/client-node": "^2.0.0",
     "@llamaduck/forgejo-ts": "^15.0.9",
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
