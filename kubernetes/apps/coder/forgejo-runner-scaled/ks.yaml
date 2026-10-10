@@ -22,9 +22,9 @@ spec:
     # The `forgejo-runner-config` Secret every runner pod mounts.
     - name: forgejo-runner
       namespace: coder
-    # The `forgejo-github-sync` Secret the scaler reads the queue with.
-    - name: forgejo-github-sync
-      namespace: coder
+    # ./externalsecret.yaml, the token the scaler reads the queue with.
+    - name: external-secrets
+      namespace: kube-system
   path: ./kubernetes/apps/coder/forgejo-runner-scaled
   prune: true
   force: false

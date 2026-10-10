@@ -8,8 +8,9 @@
 # job that publishes merges to GitHub sat in the same queue behind them.
 #
 # How it works (https://keda.sh/docs/2.21/scalers/forgejo/): KEDA asks Forgejo
-# every 30 seconds how many jobs are waiting on that repository, and creates
-# one Kubernetes Job per waiting job, up to maxReplicaCount. Each Job is one
+# every 30 seconds how many jobs the whole forge has in hand, on every
+# repository, and creates one Kubernetes Job for each one beyond what the
+# standing runner is carrying, up to maxReplicaCount. Each Job is one
 # pod running `forgejo-runner one-job`: it takes a single job, runs it and
 # exits. A pod that finds the queue already empty exits at once.
 #
@@ -32,13 +33,10 @@ metadata:
   name: ${APP}
 spec:
   secretTargetRef:
-    # The mirror bot's own token (stacks/system/forgejo-github-mirror.ts),
-    # already in this namespace for the sync relay. It owns the repository the
-    # trigger below watches, which is all listing that repository's waiting
-    # jobs needs.
+    # ./externalsecret.yaml: an administrator's token that can only read.
     - parameter: token
-      name: forgejo-github-sync
-      key: FORGEJO_TOKEN
+      name: ${APP}
+      key: token
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/scaledjob_v1alpha1.json
 apiVersion: keda.sh/v1alpha1
@@ -48,31 +46,43 @@ metadata:
 spec:
   pollingInterval: 30
   minReplicaCount: 0
-  # On top of the standing runner's four. Each pod may use up to 6Gi (below),
-  # so this is 36Gi of worker memory at the very worst; raise it with that in
-  # mind, not by itself.
-  maxReplicaCount: 6
+  # TEN HERE MEANS SIX PODS. KEDA caps the reported job count at this number
+  # BEFORE the strategy below takes the standing runner's four off it, so the
+  # most this pool ever runs is maxReplicaCount - 4. Each pod may use up to
+  # 6Gi (below), so six is 36Gi of worker memory at the very worst; raise it
+  # with that in mind, not by itself.
+  maxReplicaCount: 10
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
   scalingStrategy:
-    # The queue Forgejo reports holds WAITING jobs only; one that a runner has
-    # taken leaves it. `accurate` is KEDA's strategy for that kind of queue:
-    # it subtracts the pods it has already started that have not taken a job
-    # yet, where the default would start a second pod for the same job.
-    strategy: accurate
+    # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS, not the backlog
+    # (routers/api/v1/shared/runners.go asks for both statuses, and KEDA
+    # counts every row). So the pods to start are
+    #
+    #   reported - 4 - pods of this pool already running
+    #
+    # where 4 is the standing runner's `capacity`: with any backlog at all it
+    # is holding four of the reported jobs itself. Without that deduction
+    # every poll would start a pod for each job the standing runner is
+    # running, which would find nothing to take and exit. Change `capacity`
+    # in ../forgejo-runner/resources/config.yml and this has to follow.
+    strategy: custom
+    customScalingQueueLengthDeduction: 4
+    customScalingRunningJobPercentage: "1.0"
   triggers:
     - type: forgejo-runner
       metadata:
         # Informational; the scaler does not read it.
         name: equestria
         address: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
-        # Repository scope: the only endpoint the bot's token can read, and
-        # the repository whose bursts this is for. A pod started for it still
-        # takes whatever job Forgejo hands the runner, from any repository.
-        owner: github-mirror
-        repo: home-operations
-        # Every label the workflows in that repository run on.
-        labels: ubuntu-latest
+        # Every waiting job on the forge, whichever user, organisation or
+        # repository it belongs to. This is the admin endpoint
+        # (/api/v1/admin/runners/jobs), hence the administrator's token.
+        global: "true"
+        # Every label ../forgejo-runner/resources/config.yml declares, since
+        # these pods run from that same file. Add a label there and it has to
+        # be added here, or jobs that ask for it never start a pod.
+        labels: ubuntu-latest,ubuntu-24.04,ubuntu-22.04,docker
       authenticationRef:
         name: ${APP}
   jobTargetRef:
