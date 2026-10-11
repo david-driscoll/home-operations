@@ -17,10 +17,9 @@ log:
 
 runner:
   file: /data/.runner
-  # One job at a time per process, and it is the two always-on daemons in
-  # ../deployment.yaml that read this. An on-demand pod (../scaledjob.yaml)
-  # runs `one-job`, takes a single task and exits; how many of those run at
-  # once is that file's maxReplicaCount. Every one of them presents the one
+  # Unused: every runner here is a `one-job` process (../scaledjob.yaml) that
+  # takes a single task and exits. How many run at once is that file's
+  # maxReplicaCount plus its minReplicaCount. All of them present the one
   # identity at the bottom of this file; see that file's header for why that
   # is all right.
   capacity: 1
@@ -47,16 +46,15 @@ runner:
 
 cache:
   # Serves ACTIONS_CACHE_URL to workflow containers, which is what
-  # actions/cache and setup-* actions use. It lasts as long as the pod: across
-  # jobs on an always-on runner, and for the one job of an on-demand pod. The
+  # actions/cache and setup-* actions use. It lasts as long as the pod, which
+  # is one job: a cache saved by one job is never there for the next. The
   # proxy binds inside the pod's network namespace and the job containers
   # share it, so the auto-detected host is correct and does not need pinning.
   enabled: true
   dir: /data/.cache/actcache
-  # Pinned rather than left at the default 0 (random): the daemon has no
-  # health endpoint, so ../deployment.yaml points its liveness probe at this
-  # listener. Each pod has its own network namespace, so a fixed port cannot
-  # collide.
+  # Pinned rather than left at the default 0 (random), from when a liveness
+  # probe pointed at it. Each pod has its own network namespace, so a fixed
+  # port cannot collide.
   port: 8088
   proxy_port: 8089
 
