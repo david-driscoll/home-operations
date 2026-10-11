@@ -1406,6 +1406,41 @@
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
     },
     {
+      // Every app-template HelmRelease pins its editor schema to the chart
+      // release it is validated against:
+      //
+      //   # yaml-language-server: $schema=https://raw.githubusercontent.com/
+      //     bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/...
+      //
+      // The chart version itself lives in ONE place
+      // (kubernetes/components/repos/app-template/ocirepository.yaml, flux
+      // manager, docker datasource). This manager reports each schema URL as
+      // the SAME dependency -- same depName, same datasource -- so branchify
+      // puts them on the branch the flux manager's bump already uses and the
+      // chart and its ~115 schema references move in one PR.
+      //
+      // No annotation comment per file, on purpose: the URL names the package
+      // unambiguously, and an annotation would be 115 more lines to keep right.
+      //
+      // The references used to float on `main`, which needed no upkeep but
+      // validated a 5.x release against whatever upstream had merged that day,
+      // and three files were still pinned to 3.7.3 / 4.1.1 by hand.
+      //
+      // pinDigest updates for these are already dropped by the
+      // "Don't pin digests on annotated deps" rule (matchManagers custom.regex).
+      description: "app-template schema references follow the chart version",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)kubernetes/.+\\.ya?ml$/",
+        "/(^|/)dashboard/helmrelease\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "raw\\.githubusercontent\\.com/bjw-s-labs/helm-charts/app-template-(?<currentValue>\\d+\\.\\d+\\.\\d+)/charts/other/app-template/",
+      ],
+      depNameTemplate: "ghcr.io/bjw-s-labs/helm/app-template",
+      datasourceTemplate: "docker",
+    },
+    {
       description: "Process annotated dependencies",
       customType: "regex",
       managerFilePatterns: [
