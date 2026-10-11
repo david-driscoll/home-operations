@@ -30,7 +30,11 @@ runner:
   shutdown_timeout: 30m
   insecure: false
   fetch_timeout: 30s
-  fetch_interval: 10s
+  # How often a waiting pod asks for a job. Short, because these pods exist to
+  # pick one up quickly and two of them asking is a trivial load. Set here and
+  # not with `--fetch-interval`: the runner treats that flag as a connection
+  # given on the command line and refuses to start beside server.connections.
+  fetch_interval: 2s
   # <label-name>:<backend>://<default image>. These images are pinned by hand:
   # they sit inside a config file rather than a Kubernetes image field, so none
   # of the Renovate managers configured in .github/renovate.json5 can see them.

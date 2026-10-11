@@ -23,9 +23,9 @@ log=/data/one-job.log
 : >"$log"
 took_job() { grep -q 'successfully fetched one task' "$log"; }
 
-# 2s, not the 10s in the config: these pods exist to pick a job up quickly,
-# and two of them asking is a trivial load.
-forgejo-runner one-job --wait --fetch-interval 2s --config /config/config.yml > >(tee "$log") 2>&1 &
+# No connection flags here (`--url`, `--label`, `--fetch-interval`, ...): any
+# one of them makes the runner refuse the server.connections in the config.
+forgejo-runner one-job --wait --config /config/config.yml > >(tee "$log") 2>&1 &
 runner=$!
 trap 'kill -TERM "$runner" 2>/dev/null' TERM INT
 
