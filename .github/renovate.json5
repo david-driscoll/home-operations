@@ -1256,6 +1256,7 @@
       matchFileNames: [
         // automerge-hold:start
         "automerge-hold/placeholder/**",
+        "kubernetes/apps/equestria/home/tududi/**",
         // automerge-hold:end
       ],
       automerge: false,
