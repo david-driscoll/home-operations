@@ -11,13 +11,13 @@ configMapGenerator:
       - config.yml=./resources/config.yml
     options:
       disableNameSuffixHash: true
-  # The two shell scripts the runner pods run. Flux substitution is OFF for
+  # The shell scripts the runner pods run. Flux substitution is OFF for
   # this ConfigMap, because envsubst would blank every shell variable in them
   # -- which is also why the name is spelled out. No hash suffix: the
   # ScaledJob names it literally, and each pod is new anyway.
   - name: forgejo-runner-scripts
     files:
-      - queue-check.sh=./resources/queue-check.sh
+      - prepull.sh=./resources/prepull.sh
       - run-job.sh=./resources/run-job.sh
     options:
       disableNameSuffixHash: true

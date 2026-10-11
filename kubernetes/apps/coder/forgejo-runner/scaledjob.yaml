@@ -1,26 +1,23 @@
 ---
-# The Forgejo Actions runners. There is no standing runner: KEDA starts a pod
-# for each job the forge has in hand, up to ten at once, and there are none
-# while it has none.
+# The Forgejo Actions runners. One pool, run by KEDA: two pods are always up
+# and waiting, and more are started while the forge has more jobs than that.
 #
 # This replaced a single always-on runner pod (four jobs at a time in one
 # Docker daemon). Renovate's first pass over github-mirror/home-operations
 # opened about sixty pull requests at once, each with a `flate` check, and the
 # job that publishes merges to GitHub sat in the same queue behind them.
 #
-# How it works (https://keda.sh/docs/2.21/scalers/forgejo/): KEDA asks Forgejo
-# every 30 seconds how many jobs it has in hand, on every repository, and
-# creates one Kubernetes Job for each, up to maxReplicaCount. Each Job is one
-# pod running `forgejo-runner one-job`: it takes a single job, runs it and
-# exits. A pod that finds nothing left to take exits at once.
+# How it works (https://keda.sh/docs/2.21/scalers/forgejo/): every pod runs
+# `forgejo-runner one-job --wait`. It waits for a job, runs that one job and
+# exits. KEDA asks Forgejo every 30 seconds how many jobs it has in hand and
+# keeps (that many + 2) pods alive, so two are always idle and ready. A job
+# therefore starts within a couple of seconds, and the pod that took it is
+# replaced at the next poll.
 #
-# WHAT THIS COSTS, compared with the runner it replaced:
-#
-# - A job waits for the next poll (up to 30s), a pod to schedule and its
-#   Docker daemon to start before it begins. Nothing is ever already running.
-# - No caches. The actions cache and the image cache live in the pod and die
-#   with it, so every job pulls its job image again and every `flate` render
-#   is cold.
+# WHAT A WAITING POD HAS READY: it is scheduled, its Docker daemon is up, and
+# the `prepull` container has already pulled the job image. What it does NOT
+# have is anything from an earlier job: each pod serves one job, so the
+# actions cache starts empty every time and every `flate` render is cold.
 #
 # EVERY POD IS THE SAME RUNNER AS FAR AS FORGEJO IS CONCERNED. They all mount
 # the one registration in `forgejo-runner-config` (./externalsecret.yaml),
@@ -47,20 +44,31 @@ metadata:
   name: ${APP}
 spec:
   pollingInterval: 30
-  minReplicaCount: 0
-  # Ten jobs at once across the whole forge. Each pod may use up to 6Gi
-  # (below), so this is 60Gi of worker memory at the very worst and 20Gi
-  # requested; raise it with that in mind, not by itself.
-  maxReplicaCount: 10
+  # TWO PODS ALWAYS WAITING. KEDA counts these as spares on top of demand:
+  # with N jobs in hand it wants N + 2 pods, so when a waiting pod takes a
+  # job, the next poll starts another to wait in its place.
+  minReplicaCount: 2
+  # EIGHT HERE MEANS TEN PODS. KEDA caps the reported job count at this
+  # number and then adds the two spares above, so the most that ever run is
+  # maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
+  # raise this with that in mind, not by itself.
+  maxReplicaCount: 8
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
+  # A change to this file must not kill jobs that are running. `gradual`
+  # leaves existing pods alone and uses the new template for the next ones;
+  # KEDA's default deletes every pod of the old template at once. A waiting
+  # pod on the old template is replaced when it takes a job or reaches its
+  # idle limit (./resources/run-job.sh).
+  rollout:
+    strategy: gradual
   scalingStrategy:
     # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS
     # (routers/api/v1/shared/runners.go asks for both statuses, and KEDA
     # counts every row). `default` is the strategy for a count like that: it
-    # starts (reported - pods already running), and every running job is in
-    # one of these pods. `accurate` would assume the count is the backlog
-    # alone and start a second pod for each job already running.
+    # starts (reported - pods beyond the two spares), and every running job
+    # is in one of these pods. `accurate` would assume the count is the
+    # backlog alone and start a second pod for each job already running.
     strategy: default
   triggers:
     - type: forgejo-runner
@@ -82,9 +90,12 @@ spec:
     # A runner pod that fails did not necessarily fail its job: Forgejo has
     # the job's own result. Never re-run the pod.
     backoffLimit: 0
-    # `runner.timeout` in the shared config is 3h; a pod older than that plus
-    # start-up is stuck.
-    activeDeadlineSeconds: 11700
+    # A backstop for a pod that is stuck, not the idle limit: a pod may
+    # wait up to 6h (./resources/run-job.sh) and then run a job for up to 3h
+    # (`runner.timeout` in the config), with 30m to shut down. Anything older
+    # than that is not doing either. It has to stay ABOVE that sum, because
+    # it is counted from pod start and would kill a job that began late.
+    activeDeadlineSeconds: 36000
     ttlSecondsAfterFinished: 600
     template:
       metadata:
@@ -102,49 +113,6 @@ spec:
           fsGroup: 1000
           fsGroupChangePolicy: OnRootMismatch
         initContainers:
-          # Runs first and to completion (./resources/queue-check.sh): is any
-          # job still waiting? KEDA starts a pod per job the forge reports,
-          # and now and then another pod has taken the job by the time this
-          # one is up. When nothing is waiting it leaves /data/skip, and the
-          # two containers below finish in a second or two without starting
-          # Docker. It never fails the pod.
-          #
-          # The only container that holds the queue token (an administrator's,
-          # read-only), and it has exited before any workflow runs.
-          - name: queue-check
-            image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
-            command: ["sh", "/scripts/queue-check.sh"]
-            env:
-              - name: FORGEJO_URL
-                value: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
-              # The same list as the trigger above.
-              - name: RUNNER_LABELS
-                value: ubuntu-latest,ubuntu-24.04,ubuntu-22.04,docker
-              - name: QUEUE_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: ${APP}-queue
-                    key: token
-            securityContext:
-              runAsNonRoot: true
-              runAsUser: 1000
-              runAsGroup: 1000
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop: ["ALL"]
-            resources:
-              requests:
-                cpu: 10m
-                memory: 16Mi
-              limits:
-                memory: 64Mi
-            volumeMounts:
-              - name: data
-                mountPath: /data
-              - name: scripts
-                mountPath: /scripts
-                readOnly: true
           # A native sidecar (`restartPolicy: Always` on an initContainer): the
           # kubelet starts it BEFORE the runner, waits for its startup probe,
           # and in a Job stops it once the runner container has exited. A
@@ -162,19 +130,9 @@ spec:
           # generates a CA and client certs and starts with --tlsverify, so
           # the listener is useless without the client key only the runner
           # container has.
-          #
-          # It only starts dockerd when there is something to run: with
-          # /data/skip left by queue-check above it idles instead, and its
-          # probe passes at once so the runner container can start and exit.
           - name: dind
             restartPolicy: Always
             image: data.forgejo.org/oci/docker:29-dind@sha256:1e08cdb63405ca788aea94ef35b792d1e299607c667d33d7bcbcae1fd2611ced
-            command:
-              - sh
-              - -c
-              # The trap matters: as PID 1 a bare `sleep` ignores SIGTERM, and
-              # the pod would then sit out its 31-minute grace period.
-              - if [ -f /data/skip ]; then echo "nothing to do, not starting dockerd"; trap "exit 0" TERM INT; while true; do sleep 1; done; fi; exec dockerd-entrypoint.sh
             env:
               - name: DOCKER_TLS_CERTDIR
                 value: /certs
@@ -200,16 +158,12 @@ spec:
                   - sh
                   - -c
                   - >-
-                    test -f /data/skip ||
                     docker --tlsverify
                     --tlscacert=/certs/client/ca.pem
                     --tlscert=/certs/client/cert.pem
                     --tlskey=/certs/client/key.pem
                     -H tcp://127.0.0.1:2376 info
-              # 1s, down from 5s: a pod with nothing to do passes on the first
-              # try, and one with a job to run just fails a couple more probes
-              # while dockerd comes up.
-              initialDelaySeconds: 1
+              initialDelaySeconds: 2
               periodSeconds: 2
               failureThreshold: 32
             volumeMounts:
@@ -217,21 +171,22 @@ spec:
                 mountPath: /var/lib/docker
               - name: docker-certs
                 mountPath: /certs
-              - name: data
-                mountPath: /data
-                readOnly: true
         containers:
           - name: app
             image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
-            # ./resources/run-job.sh: `forgejo-runner one-job`, without --wait,
-            # so a pod that finds its job already taken exits instead of
-            # sitting there -- and exits 0, since that is not a failure.
+            # ./resources/run-job.sh: `forgejo-runner one-job --wait`, with a
+            # limit on how long a pod waits before making way for a fresh one.
             # Under dumb-init, as the image's own entrypoint is, so SIGTERM
             # reaches the runner and its 30-minute shutdown grace applies.
             command: ["/usr/bin/dumb-init", "--", "bash", "/scripts/run-job.sh"]
             env:
               - name: TZ
                 value: "${TIMEZONE}"
+              # How long a pod may wait for a job before it exits and KEDA
+              # starts a new one in its place. This is what moves a waiting
+              # pod onto a changed image, config or registration.
+              - name: IDLE_MAX_SECONDS
+                value: "21600"
               - name: DOCKER_HOST
                 value: tcp://127.0.0.1:2376
               - name: DOCKER_TLS_VERIFY
@@ -266,6 +221,48 @@ spec:
                 readOnly: true
               - name: config
                 mountPath: /config
+                readOnly: true
+              - name: scripts
+                mountPath: /scripts
+                readOnly: true
+          # Pulls the job image into this pod's Docker daemon while the runner
+          # waits (./resources/prepull.sh), then exits. Without it the first
+          # thing a job did was download about 1.5 GB. The dind image, for
+          # its docker CLI. It always exits 0: a failed pull only means the
+          # runner pulls the image itself, as it always did.
+          - name: prepull
+            image: data.forgejo.org/oci/docker:29-dind@sha256:1e08cdb63405ca788aea94ef35b792d1e299607c667d33d7bcbcae1fd2611ced
+            command: ["sh", "/scripts/prepull.sh"]
+            env:
+              # What `ubuntu-latest`, `ubuntu-24.04` and `docker` resolve to
+              # in ./resources/config.yml. Keep the two in step, or this
+              # warms an image no job uses.
+              - name: PREPULL_IMAGES
+                value: ghcr.io/catthehacker/ubuntu:act-24.04
+              - name: DOCKER_HOST
+                value: tcp://127.0.0.1:2376
+              - name: DOCKER_TLS_VERIFY
+                value: "1"
+              - name: DOCKER_CERT_PATH
+                value: /certs/client
+              - name: HOME
+                value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+            volumeMounts:
+              - name: docker-certs
+                mountPath: /certs
                 readOnly: true
               - name: scripts
                 mountPath: /scripts
