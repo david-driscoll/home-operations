@@ -129,6 +129,35 @@ spec:
           name: github-token
           key: token
 
+    # Why `data.forgejo.org`, `codeberg.org` and `docker.gitea.com` kept
+    # failing with "Error obtaining docker token" and then "Failed to look up
+    # docker package ...: no-result" -- 32 times in two days, always those
+    # three hosts and never ghcr.io.
+    #
+    # It is not a token problem and not the registries. Every one of those
+    # errors is `ETIMEDOUT` roughly 250 ms after the DNS lookup, thrown out of
+    # `internalConnectMultipleTimeout`. That is Node's Happy Eyeballs: when a
+    # name resolves to more than one address it gives each connection attempt
+    # 250 ms before moving to the next. These three hosts publish both an A and
+    # an AAAA record, pods here have no IPv6 route, and the IPv4 handshake to
+    # Europe takes 80-120 ms. So the IPv4 attempt has about 130 ms to spare,
+    # and the deadline is a timer on Renovate's own event loop -- one busy
+    # stretch of parsing longer than that and Node drops a connection that was
+    # about to succeed, tries IPv6, gets ENETUNREACH and reports a timeout.
+    # ghcr.io publishes no AAAA record, so it gets a single attempt with no
+    # deadline at all.
+    #
+    # Reproduced outside Renovate on Node 24: blocking the loop for 300 ms
+    # after the lookup fails 10 connects of 10 to data.forgejo.org and none to
+    # ghcr.io; with this flag, none to either.
+    #
+    # The flag lengthens the per-attempt deadline rather than turning address
+    # selection off, so a host that is IPv6-first still falls through to IPv4.
+    # It needs Node 20.13 / 22.1 or newer, which the pinned image has; tools
+    # Renovate spawns inherit it.
+    - name: NODE_OPTIONS
+      value: --network-family-autoselection-attempt-timeout=5000
+
   renovateConfig:
     # Mounted read-only at /etc/renovate/config.js with RENOVATE_CONFIG_FILE
     # pointed at it. The operator writes it into a ConfigMap it owns -- so
