@@ -160,3 +160,34 @@ jobs:
             exit 0
           fi
           bash repo/scripts/forgejo-github-labels
+
+      # Renovate never waits for a check: the run that opens a pull request
+      # moves on, and it is the NEXT run that finds the checks green and
+      # merges. On the hourly schedule alone that is one step an hour. A sync
+      # finishing is the moment something has just changed -- a merge here was
+      # published, or GitHub's main arrived -- so a run is asked for now, and
+      # inside the automerge window one merge leads straight to the next.
+      #
+      # It stops by itself: a run that merges nothing pushes nothing, so no
+      # sync follows it. The operator only marks the project as scheduled, so
+      # asking while a run is under way starts nothing extra.
+      #
+      # After the labels, so the run finds them. Never fails the job: this is
+      # a shortcut, and the hourly run is still there when it does not work.
+      - name: Ask for a Renovate run
+        if: ${{ !cancelled() && vars.MIRROR_RENOVATE_URL != '' }}
+        env:
+          RENOVATE_URL: ${{ vars.MIRROR_RENOVATE_URL }}
+          RENOVATE_TOKEN: ${{ secrets.MIRROR_RENOVATE_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          project="$(printf '%s' "$REPOSITORY" | sed 's#/#%2F#g')"
+          status="$(curl --silent --show-error --max-time 20 --output /dev/null \
+            --write-out '%{http_code}' --request POST \
+            --header "Authorization: Bearer ${RENOVATE_TOKEN}" \
+            "${RENOVATE_URL}&project=${project}")" || status="none ($status)"
+          case "$status" in
+            2*) echo "Renovate run asked for (HTTP $status)." ;;
+            *) echo "::warning::Could not ask for a Renovate run (HTTP $status); the hourly run will do it." ;;
+          esac
