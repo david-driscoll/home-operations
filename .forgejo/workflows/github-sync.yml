@@ -47,12 +47,18 @@ on:
 # fast-forward or leased, so a run stopped between its two pushes leaves the
 # sides one step apart, which is what the run that replaced it starts from.
 #
-# The one thing lost: a hand-run dispatch with `discard_local` or
-# `prune_branches` set that is cancelled by a later run. That later run does
-# not carry the inputs, so dispatch it again.
+# A hand-run dispatch with `discard_local` or `prune_branches` set is the
+# exception, because no later run carries its inputs. It cancels nothing, and
+# it goes in a group of its own: it is the NEW run that decides whether older
+# ones in its group are cancelled, so only a different group keeps the next
+# push or hourly run from cancelling it. It may then overlap an ordinary run,
+# which does no harm -- the loser of a leased push just fails.
+#
+# `github.event.inputs`, where the values are strings and are simply absent
+# on push and schedule.
 concurrency:
-  group: github-sync
-  cancel-in-progress: true
+  group: ${{ (github.event.inputs.discard_local == 'true' || github.event.inputs.prune_branches == 'true') && 'github-sync-by-hand' || 'github-sync' }}
+  cancel-in-progress: ${{ !(github.event.inputs.discard_local == 'true' || github.event.inputs.prune_branches == 'true') }}
 
 jobs:
   sync:
