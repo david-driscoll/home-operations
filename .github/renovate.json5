@@ -1290,6 +1290,29 @@
       ],
       enabled: false,
     },
+    {
+      // The shared preset sets `automergeStrategy: "rebase"`. On GitHub that
+      // is a rebase merge. On Forgejo, Renovate turns the same word into the
+      // `rebase-merge` style (rebase, then a merge commit), which the copy
+      // does not allow -- stacks/system/forgejo-github-mirror.ts permits
+      // `rebase` and `fast-forward-only` only, to keep main linear for the
+      // fast-forward push to GitHub. Every automerge on the first night
+      // (2026-10-11) came back
+      //
+      //   405 rebase-merge is not an allowed merge style for this repository
+      //
+      // `auto` makes Renovate use the repository's own default instead, and
+      // that default is `rebase`: rebase onto main, then fast-forward. Same
+      // result as GitHub's, and it still works when the branch is behind.
+      //
+      // No other matcher, so it covers every update in that repository, and
+      // last in the list so nothing below can put the preset's value back.
+      description: "On the Forgejo copy, automerge with the repository's own merge style",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      automergeStrategy: "auto",
+    },
   ],
   customManagers: [
     {
