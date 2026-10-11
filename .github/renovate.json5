@@ -23,6 +23,17 @@
   ],
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
+  // The rules below that set `minimumReleaseAgeBehaviour: timestamp-optional`
+  // make Renovate warn, on every run and on the Dependency Dashboard, that
+  // some release had no timestamp and was let through anyway. That is the
+  // behaviour asked for, so the warning becomes an info line. The pattern is
+  // the one from Renovate's "minimum release age" page.
+  logLevelRemap: [
+    {
+      matchMessage: "/Some .+ did not have a releaseTimestamp, but as we're running with minimumReleaseAgeBehaviour=timestamp-optional, proceeding/",
+      newLogLevel: "info",
+    },
+  ],
   suppressNotifications: [
     "prEditedNotification",
     "prIgnoreNotification",
