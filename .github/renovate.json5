@@ -1306,12 +1306,32 @@
       // result as GitHub's, and it still works when the branch is behind.
       //
       // No other matcher, so it covers every update in that repository, and
-      // last in the list so nothing below can put the preset's value back.
+      // at the end of the list so nothing below can put the preset's value
+      // back (the one rule after it sets only the schedule).
       description: "On the Forgejo copy, automerge with the repository's own merge style",
       matchRepositories: [
         "github-mirror/home-operations"
       ],
       automergeStrategy: "auto",
+    },
+    {
+      // FOR NOW. The rules above let an update merge only between 00:00 and
+      // 06:59 local; on the forge's copy this lifts that, so what is allowed
+      // to automerge does so on whichever run finds its checks green, day or
+      // night. GitHub's copy keeps the overnight window.
+      //
+      // It changes WHEN, not WHAT: `automerge` itself still comes from the
+      // rules above, and so do the holds and the minimum release age.
+      //
+      // To go back to the overnight window, delete this rule. Last in the
+      // list so that it wins over every `automergeSchedule` above.
+      description: "On the Forgejo copy, automerge at any time (temporary)",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      automergeSchedule: [
+        "at any time"
+      ],
     },
   ],
   customManagers: [
