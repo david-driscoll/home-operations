@@ -1,6 +1,7 @@
 ---
-# The Forgejo Actions runners. There is no standing runner: KEDA starts a pod
-# for each job the forge has in hand, up to ten at once, and there are none
+# The on-demand Forgejo Actions runners: KEDA starts a pod for each job the
+# forge has in hand beyond what the two always-on runners in
+# ./deployment.yaml are carrying, up to eight at once, and there are none
 # while it has none.
 #
 # This replaced a single always-on runner pod (four jobs at a time in one
@@ -48,20 +49,29 @@ metadata:
 spec:
   pollingInterval: 30
   minReplicaCount: 0
-  # Ten jobs at once across the whole forge. Each pod may use up to 6Gi
-  # (below), so this is 60Gi of worker memory at the very worst and 20Gi
-  # requested; raise it with that in mind, not by itself.
+  # Ten jobs at once across the whole forge: the two always-on runners in
+  # ./deployment.yaml plus up to EIGHT pods from here. KEDA caps the reported
+  # count at this number BEFORE the strategy below takes those two off it, so
+  # the most this pool runs is maxReplicaCount - 2. Each pod may use up to
+  # 6Gi (below); raise this with that in mind, not by itself.
   maxReplicaCount: 10
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
   scalingStrategy:
     # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS
     # (routers/api/v1/shared/runners.go asks for both statuses, and KEDA
-    # counts every row). `default` is the strategy for a count like that: it
-    # starts (reported - pods already running), and every running job is in
-    # one of these pods. `accurate` would assume the count is the backlog
-    # alone and start a second pod for each job already running.
-    strategy: default
+    # counts every row). So the pods to start are
+    #
+    #   reported - 2 - pods of this pool already running
+    #
+    # where 2 is the two always-on runners in ./deployment.yaml: they take
+    # the first two jobs themselves, and without the deduction every poll
+    # would start a pod for each job they are running. Change `replicas`
+    # there and this has to follow. `accurate` would assume the count is the
+    # backlog alone and start a second pod for each job already running.
+    strategy: custom
+    customScalingQueueLengthDeduction: 2
+    customScalingRunningJobPercentage: "1.0"
   triggers:
     - type: forgejo-runner
       metadata:
