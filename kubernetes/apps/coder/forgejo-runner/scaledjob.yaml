@@ -102,6 +102,49 @@ spec:
           fsGroup: 1000
           fsGroupChangePolicy: OnRootMismatch
         initContainers:
+          # Runs first and to completion (./resources/queue-check.sh): is any
+          # job still waiting? KEDA starts a pod per job the forge reports,
+          # and now and then another pod has taken the job by the time this
+          # one is up. When nothing is waiting it leaves /data/skip, and the
+          # two containers below finish in a second or two without starting
+          # Docker. It never fails the pod.
+          #
+          # The only container that holds the queue token (an administrator's,
+          # read-only), and it has exited before any workflow runs.
+          - name: queue-check
+            image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
+            command: ["sh", "/scripts/queue-check.sh"]
+            env:
+              - name: FORGEJO_URL
+                value: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
+              # The same list as the trigger above.
+              - name: RUNNER_LABELS
+                value: ubuntu-latest,ubuntu-24.04,ubuntu-22.04,docker
+              - name: QUEUE_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}-queue
+                    key: token
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+            volumeMounts:
+              - name: data
+                mountPath: /data
+              - name: scripts
+                mountPath: /scripts
+                readOnly: true
           # A native sidecar (`restartPolicy: Always` on an initContainer): the
           # kubelet starts it BEFORE the runner, waits for its startup probe,
           # and in a Job stops it once the runner container has exited. A
@@ -119,9 +162,19 @@ spec:
           # generates a CA and client certs and starts with --tlsverify, so
           # the listener is useless without the client key only the runner
           # container has.
+          #
+          # It only starts dockerd when there is something to run: with
+          # /data/skip left by queue-check above it idles instead, and its
+          # probe passes at once so the runner container can start and exit.
           - name: dind
             restartPolicy: Always
             image: data.forgejo.org/oci/docker:29-dind@sha256:1e08cdb63405ca788aea94ef35b792d1e299607c667d33d7bcbcae1fd2611ced
+            command:
+              - sh
+              - -c
+              # The trap matters: as PID 1 a bare `sleep` ignores SIGTERM, and
+              # the pod would then sit out its 31-minute grace period.
+              - if [ -f /data/skip ]; then echo "nothing to do, not starting dockerd"; trap "exit 0" TERM INT; while true; do sleep 1; done; fi; exec dockerd-entrypoint.sh
             env:
               - name: DOCKER_TLS_CERTDIR
                 value: /certs
@@ -147,26 +200,35 @@ spec:
                   - sh
                   - -c
                   - >-
+                    test -f /data/skip ||
                     docker --tlsverify
                     --tlscacert=/certs/client/ca.pem
                     --tlscert=/certs/client/cert.pem
                     --tlskey=/certs/client/key.pem
                     -H tcp://127.0.0.1:2376 info
-              initialDelaySeconds: 5
+              # 1s, down from 5s: a pod with nothing to do passes on the first
+              # try, and one with a job to run just fails a couple more probes
+              # while dockerd comes up.
+              initialDelaySeconds: 1
               periodSeconds: 2
-              failureThreshold: 30
+              failureThreshold: 32
             volumeMounts:
               - name: docker-storage
                 mountPath: /var/lib/docker
               - name: docker-certs
                 mountPath: /certs
+              - name: data
+                mountPath: /data
+                readOnly: true
         containers:
           - name: app
             image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
-            command: ["forgejo-runner"]
-            # No --wait: a pod that finds its job already taken (cancelled, or
-            # picked up by another pod) exits instead of sitting there.
-            args: ["one-job", "--config", "/config/config.yml"]
+            # ./resources/run-job.sh: `forgejo-runner one-job`, without --wait,
+            # so a pod that finds its job already taken exits instead of
+            # sitting there -- and exits 0, since that is not a failure.
+            # Under dumb-init, as the image's own entrypoint is, so SIGTERM
+            # reaches the runner and its 30-minute shutdown grace applies.
+            command: ["/usr/bin/dumb-init", "--", "bash", "/scripts/run-job.sh"]
             env:
               - name: TZ
                 value: "${TIMEZONE}"
@@ -205,7 +267,13 @@ spec:
               - name: config
                 mountPath: /config
                 readOnly: true
+              - name: scripts
+                mountPath: /scripts
+                readOnly: true
         volumes:
+          - name: scripts
+            configMap:
+              name: forgejo-runner-scripts
           - name: data
             emptyDir:
               sizeLimit: 6Gi
