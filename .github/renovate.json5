@@ -317,6 +317,36 @@
       versioning: "semver",
     },
     {
+      // Sure ships fixes to a release as `X.Y.Z-hotfix.N`, published AFTER
+      // `X.Y.Z`. Both default versionings get that backwards. For the chart,
+      // `semver` reads `-hotfix.N` as a prerelease of X.Y.Z, so with the pin
+      // on `0.7.5-hotfix.1` Renovate offered plain `0.7.5` as an update -- a
+      // downgrade to a chart three days older (pull request 88 on the forge).
+      // For the image, `docker` reads it as a variant, never offers
+      // `hotfix.2`, and offers `0.7.5` too.
+      //
+      // The hotfix number goes in `build`, which is compared after the patch
+      // and counts as a stable release: `0.7.5` < `0.7.5-hotfix.1` <
+      // `0.7.5-hotfix.2` < `0.7.6`. Measured with renovate 44.139.0's
+      // versioning code against the real chart index and image tags: from
+      // `0.7.5-hotfix.1` the one update offered is `0.7.5-hotfix.2`, for both.
+      //
+      // Everything else upstream publishes does not match and is ignored:
+      // `-alpha.N`, `-rc.N`, `sha-*`, `stable`, `latest`. That is wanted --
+      // none of them is a release to run -- but it also means this pin can
+      // only ever be on a plain or hotfix version.
+      description: "Sure hotfix versions: X.Y.Z-hotfix.N is newer than X.Y.Z",
+      matchDatasources: [
+        "helm",
+        "docker"
+      ],
+      matchPackageNames: [
+        "sure",
+        "ghcr.io/we-promise/sure"
+      ],
+      versioning: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(-hotfix\\.(?<build>\\d+))?$",
+    },
+    {
       // lakker/pulsarr carries stray 1.x tags that are NOT the project's
       // current release line (that is 0.x), so Renovate kept raising them as a
       // major: "0.19.2 -> 1.1.6" (#1621). Excluding just 1.1.6 only moved it on

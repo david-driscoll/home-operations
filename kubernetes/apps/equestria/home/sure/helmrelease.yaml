@@ -30,6 +30,9 @@ spec:
       # `X.Y.Z-hotfix.N`, which semver reads as a PRE-release of X.Y.Z -- so a
       # version-sorting tool sees plain `0.7.5` as newer than this, when it is
       # three days OLDER. Do not accept a "bump" from a hotfix back to its base.
+      # Renovate no longer offers one: the "Sure hotfix versions" rule in
+      # .github/renovate.json5 gives this chart and the image below a
+      # versioning in which a hotfix is newer than its base.
       #
       # hotfix.1, not hotfix.2: the hotfix.2 chart was published on 2026-10-05
       # hours before its image, and ghcr.io/we-promise/sure:0.7.5-hotfix.2 did
