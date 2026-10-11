@@ -123,3 +123,7 @@ graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 # branches each from origin/main and symlinks node_modules, so nothing in one is
 # worth keeping that is not already on a branch.
 .claude/worktrees/
+.agents/skills/.mise-skills.json
+.agents/skills/fnox
+.agents/skills/hk-configure
+.agents/skills/hk-debug
