@@ -73,7 +73,7 @@ spec:
       # Stated rather than inherited from the chart's appVersion, and pinned by
       # digest. The chart builds the reference as `repository:tag`, so the
       # `tag@sha256` spelling passes straight through.
-      tag: 0.7.5-hotfix.1@sha256:3692b3bcf0eae2c7f3154348c6131060bda8127038fc78b0543f15b5166e6074
+      tag: 0.7.5-hotfix.2@sha256:aa46be2d8e3f8b2182261dc05933a64b4a12543dd5f44ad12f08868caac1f997
       pullPolicy: IfNotPresent
 
     # ---- Bundled dependencies: all off ------------------------------------
