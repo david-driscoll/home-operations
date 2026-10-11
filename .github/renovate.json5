@@ -1267,6 +1267,7 @@
       matchFileNames: [
         // automerge-hold:start
         "automerge-hold/placeholder/**",
+        "kubernetes/apps/equestria/home/postiz/**",
         // automerge-hold:end
       ],
       automerge: false,
