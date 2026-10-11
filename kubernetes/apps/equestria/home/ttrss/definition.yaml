@@ -35,6 +35,15 @@ spec:
       url: *url
       method: GET
       conditions:
-        # Same edge behaviour as ./freshrss, which sits behind the same
-        # `local-user` chain.
-        - "[STATUS] == 401"
+        # tt-rss answers an anonymous request with its own login form and a
+        # 200, so the status cannot tell the form from the reader. The title
+        # can: include/login_form.php hardcodes this one, while index.php
+        # serves a bare "Tiny Tiny RSS" once login_sequence() lets a request
+        # through -- which SINGLE_USER_MODE would do for everybody.
+        #
+        # Not the 401 that ./freshrss expects, although both sit behind
+        # `local-user`. That chain is an IP allow-list with no forward-auth in
+        # it; FreshRSS's 401 is its own mod_auth_openidc refusing a client
+        # that sends no Accept header, and nothing in this pod does that.
+        - "[STATUS] == 200"
+        - "[BODY] == pat(*<title>Tiny Tiny RSS : Login</title>*)"
