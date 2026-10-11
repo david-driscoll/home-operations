@@ -45,24 +45,46 @@
 # image maintenance.
 set -euo pipefail
 
-echo "==> installing OS packages"
-# `tini` and `procps` are for the process hygiene at the bottom of this file:
-# tini becomes PID 1 so exited children are reaped, and procps supplies the
-# pgrep/pkill the orphaned-provider sweep runs on (the slim image has no ps).
+# THIS SCRIPT RUNS TWICE, and only this block runs the first time. The
+# container starts it as PID 1, and it must not stay there: tini has to be
+# PID 1 (the bottom of this file says why) and the stock image does not ship
+# tini. So the first pass installs the OS packages, tini among them, and
+# replaces itself with tini running this same script. The second pass is
+# tini's child: it is not PID 1, skips this block and does everything else.
 #
-# `ripgrep` is agentboard's, and its README does not list it. agentboard shells
-# out to a bare `rg` to tie each tmux window to the Claude transcript running
-# in it; without one on PATH every match attempt failed with `Executable not
-# found` -- 722 times in ~/.agentboard/agentboard.log by 2026-09-25 -- and a
-# window could only be matched to its session by NAME. That fallback is the
-# only reason the resume block below ever worked: it names each window after
-# the session's display_name.
-apt-get update -qq
-apt-get install -y --no-install-recommends \
-    tmux git openssh-client ca-certificates curl build-essential \
-    tini procps ripgrep \
-    >/dev/null
-rm -rf /var/lib/apt/lists/*
+# Until 2026-10-11 tini arrived only on the last line, as `exec tini -g --
+# agentboard`, and agentboard was its one child. tini exits the moment its
+# child does, so nothing outlived agentboard to see a shutdown through. The
+# shell that knows what else is running in this pod sits in that seat now,
+# and the last block of this file is what it does with it.
+#
+# ONE SIDE EFFECT, and it is wanted. A SIGTERM during the bootstrap below used
+# to be dropped: the kernel does not deliver a signal to a PID 1 that has no
+# handler for it, and a bash script has none, so a pod deleted mid-`mise
+# install` sat out its whole grace period and was then SIGKILLed. tini does
+# take the signal, and `-g` passes it to this shell and whatever it is running.
+if [ "$$BASHPID" -eq 1 ]; then
+  echo "==> installing OS packages"
+  # `tini` and `procps` are for the process hygiene at the bottom of this file:
+  # tini is PID 1 so exited children are reaped, and procps supplies the
+  # pgrep/pkill the orphaned-provider sweep runs on (the slim image has no ps).
+  #
+  # `ripgrep` is agentboard's, and its README does not list it. agentboard
+  # shells out to a bare `rg` to tie each tmux window to the Claude transcript
+  # running in it; without one on PATH every match attempt failed with
+  # `Executable not found` -- 722 times in ~/.agentboard/agentboard.log by
+  # 2026-09-25 -- and a window could only be matched to its session by NAME.
+  # That fallback is the only reason the resume block below ever worked: it
+  # names each window after the session's display_name.
+  apt-get update -qq
+  apt-get install -y --no-install-recommends \
+      tmux git openssh-client ca-certificates curl build-essential \
+      tini procps ripgrep \
+      >/dev/null
+  rm -rf /var/lib/apt/lists/*
+
+  exec tini -g -- /bin/bash "$$0"
+fi
 
 echo "==> installing mise"
 if ! command -v mise >/dev/null 2>&1; then
@@ -402,8 +424,8 @@ fi
 # have to be launched BY agentboard to be killable.
 #
 # Hence the wait: agentboard creates that session itself, a few seconds after
-# this script execs it, so there is nothing to attach to until it does. The
-# subshell backgrounds so `exec` below still replaces this process as PID 1.
+# this script starts it, so there is nothing to attach to until it does. The
+# subshell backgrounds so the script can go on to start agentboard at all.
 #
 # NAMES, PATHS AND ORDERING COME FROM agentboard's OWN DATABASE, not from the
 # transcript directory. ~/.claude/projects/<slashes-as-dashes>/ is a lossy
@@ -614,11 +636,179 @@ fi
   done
 ) &
 
-# TINI AS PID 1, not agentboard. `exec agentboard` made node PID 1, and node
-# does not reap children it did not spawn -- every process orphaned into this
-# pod (the providers above, finished tmux panes, dead shells) became a zombie
-# that lived until the pod restarted: ~150 of them after two days, 298 once
-# the sweep above had run. `-g` forwards SIGTERM to agentboard's whole process
-# group so a pod shutdown still reaches it.
+# TINI IS PID 1, not agentboard -- since the re-exec at the top of this file.
+# `exec agentboard` made node PID 1, and node does not reap children it did
+# not spawn -- every process orphaned into this pod (the providers above,
+# finished tmux panes, dead shells) became a zombie that lived until the pod
+# restarted: ~150 of them after two days, 298 once the sweep above had run.
+#
+# AND agentboard IS NOT TINI'S CHILD EITHER. This shell is, with agentboard in
+# the background under it. `-g` forwards SIGTERM to this shell's whole process
+# group, so a pod shutdown still reaches agentboard directly. The trap is what
+# lets the shell outlive that same signal: `wait` returns, and the script
+# carries on into the shutdown below. It gets there the same way if agentboard
+# dies by itself.
 echo "==> starting agentboard on :4040"
-exec tini -g -- agentboard --port 4040 --hostname 0.0.0.0
+term=""
+trap 'term=1' TERM
+agentboard --port 4040 --hostname 0.0.0.0 &
+agentboard_pid=$$!
+rc=0
+wait "$$agentboard_pid" || rc="$$?"
+
+# SHUT DOWN IN ORDER, WITH PID 1 STILL ALIVE.
+#
+# WHAT THIS REPLACES. On 2026-10-11 the pod took nine minutes to go from
+# SIGTERM to gone, and the Deployment is `Recreate` on a ReadWriteOnce volume,
+# so for nine minutes there was no agentboard. tini exited as soon as
+# agentboard did, and on its way out the kernel SIGKILLed everything else in
+# the PID namespace: the tmux server, every pane, every Claude Code session
+# and the MCP servers under them. `-g` never reached those, because it signals
+# one process group and tmux and each pane are sessions of their own. All of
+# that took 74 ms. containerd then could not delete the container's task
+# inside its 10 s limit, and retried on a backoff that doubles from 1 s to
+# 256 s. The shim was busy for about three of the nine minutes. The rest was
+# that ladder.
+#
+# WHAT THE SHIM WAS BUSY WITH IS INFERRED, NOT MEASURED, but there is one
+# candidate. It was not waiting on processes: the kernel reports a container's
+# PID 1 as exited only once every other process in its PID namespace is dead
+# and reaped, so by those 74 ms they all were. The last thing a task delete
+# does (read off containerd 2.3.6, `Init.delete` in the runc shim) is unmount
+# the container's root filesystem, holding the lock every status call needs.
+# And unmounting an overlayfs flushes the whole filesystem its upper layer
+# sits on. Checked on a 6.12 kernel: 600 MB of dirty data, half of it written
+# beside the overlay rather than through it, was all written out inside the
+# one umount call. Here that filesystem is the node's /var, which was
+# saturated (I/O `full` pressure 17-29%), and over the next twenty minutes 75
+# other containers on the node missed the same 10 s limit. So this block does
+# two separate things:
+#
+#   1. Stops everything while PID 1 is still here to wait for it, so a
+#      session gets a signal it can act on instead of a SIGKILL mid-write.
+#      Tested: the old and new scripts as PID 1 in this image, with stand-in
+#      sessions that need a second to clean up. None got one before.
+#   2. Flushes / and /root itself, inside the grace period, so the unmount
+#      that follows has almost nothing left to write. This is the half that
+#      answers the nine minutes, and the half that rests on the inference
+#      above. It cannot make a saturated disk fast: the flush then takes as
+#      long here as it did in the shim, only without the backoff after it.
+#
+# Every step logs how long it took. If a shutdown is slow again, those lines
+# say which half was. The bounds add up to 105s, and ../helmrelease.yaml's
+# `terminationGracePeriodSeconds` has to stay above that: change them together.
+#
+# Nothing below may abort the script. `set -e` is right for a bootstrap, where
+# a failure should stop the pod coming up, and wrong here, where a failing
+# `kill` or `tmux` only means there was nothing left to stop. A second SIGTERM
+# is ignored for the same reason, by this shell and by everything it starts.
+set +e
+trap '' TERM
+self="$$BASHPID"
+shutdown_start="$$SECONDS"
+if [ -n "$$term" ]; then
+  echo "==> shutdown: SIGTERM"
+else
+  echo "==> shutdown: agentboard exited with status $$rc"
+fi
+
+# Sets `left` to every process in the container except tini and this shell.
+# Read from /proc, not pgrep, so that taking the roll starts no process of
+# its own to be counted.
+survivors() {
+  local dir
+  left=""
+  for dir in /proc/[0-9]*; do
+    dir="$${dir#/proc/}"
+    [ "$$dir" = 1 ] || [ "$$dir" = "$$self" ] || left="$$left $$dir"
+  done
+}
+
+# Waits for `left` to empty, for at most as many seconds as its argument. A
+# poll, because `wait` only works on this shell's own children and almost
+# none of these are.
+drained() {
+  local deadline=$((SECONDS + $$1))
+  while survivors; [ -n "$$left" ]; do
+    [ "$$SECONDS" -lt "$$deadline" ] || return 1
+    sleep 0.2
+  done
+}
+
+# Waits for one child of this shell (first argument) to exit, for at most as
+# many seconds as the second.
+exited() {
+  local deadline=$((SECONDS + $$2))
+  while kill -0 "$$1" 2>/dev/null; do
+    [ "$$SECONDS" -lt "$$deadline" ] || return 1
+    sleep 0.2
+  done
+}
+
+# AGENTBOARD FIRST, AND GONE BEFORE ANYTHING ELSE IS TOUCHED. It watches tmux.
+# Left alive to see its windows close, it would do what the settle block above
+# says it does for any window that has vanished: `current_window = NULL,
+# is_hibernating = 1`. Those are the rows the resume block picks, by
+# `current_window IS NOT NULL`, so every session would come back from a
+# restart hibernated instead of resumed. `-g` has normally delivered SIGTERM
+# to it already. The one here covers a SIGTERM sent to this shell alone, from
+# inside the pod.
+kill -TERM "$$agentboard_pid" 2>/dev/null
+if ! exited "$$agentboard_pid" 5; then
+  echo "==> shutdown: agentboard still running 5s after SIGTERM; killing it"
+  kill -KILL "$$agentboard_pid" 2>/dev/null
+  exited "$$agentboard_pid" 5
+fi
+
+# THEN THE PANES, AND EVERYTHING ELSE. Two signals, because neither reaches
+# it all:
+#
+#   tmux kill-server   closes every pane's terminal. The kernel hangs up the
+#                      shell that owns it, and the shell passes SIGHUP on to
+#                      its jobs: what happens when a terminal window is
+#                      closed. It has to be this for the panes, which are
+#                      interactive shells, and an interactive bash ignores
+#                      SIGTERM.
+#   kill -TERM -1      every process except PID 1 and this shell, which is
+#                      how the kernel defines a kill to -1. That is whatever
+#                      is not under tmux at all: detached tool-call children,
+#                      orphaned providers the sweep above has not reached
+#                      yet, a `kubectl exec`.
+#
+# Claude Code treats both as a request to shut down (read off the 2.1.269
+# build: its SIGTERM and SIGHUP handlers each call `shutdown`, with 143 and
+# 129), so a session that gets both is no worse off than one that gets either.
+tmux kill-server 2>/dev/null
+kill -TERM -1 2>/dev/null
+if ! drained 30; then
+  stragglers=""
+  for pid in $$left; do
+    name="?"
+    { read -r name <"/proc/$$pid/comm"; } 2>/dev/null
+    stragglers="$$stragglers $$name($$pid)"
+  done
+  echo "==> shutdown: still running after 30s, sending SIGKILL:$$stragglers"
+  kill -KILL -1 2>/dev/null
+  drained 10 \
+    || echo "==> shutdown: WARNING: still not dead 10s after SIGKILL (blocked on I/O?):$$left" >&2
+fi
+echo "==> shutdown: processes gone after $((SECONDS - shutdown_start))s"
+
+# AND FLUSH, the half aimed at containerd's 10 s (see the top of this block).
+# `-f` names the two filesystems this pod writes to, the container's own and
+# the home volume. A bare `sync` would flush every filesystem on the node. In
+# the background with a bounded wait because a flush cannot be interrupted: if
+# it is still going at the bound, say so and exit. The kernel will not report
+# PID 1 gone until it has finished anyway.
+flush_start="$$SECONDS"
+sync -f / /root &
+sync_pid=$$!
+if exited "$$sync_pid" 60; then
+  echo "==> shutdown: flushed / and /root in $((SECONDS - flush_start))s"
+else
+  echo "==> shutdown: WARNING: / and /root still flushing after 60s; exiting anyway" >&2
+fi
+# The template form once more (see the header): before substitution this reads
+# as the PID followed by the text `rc`, which is not a valid exit status.
+# shellcheck disable=SC2242
+exit "$$rc"

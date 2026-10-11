@@ -103,6 +103,21 @@ spec:
           # under the same role and the same two ValidatingAdmissionPolicies
           # (../agent-debug-rbac) as the MCP server's SA.
           automountServiceAccountToken: true
+          # 120s, up from the 30s default, to cover the ordered shutdown at the
+          # end of ./resources/entrypoint.sh: 5s for agentboard to stop, 30s
+          # for every session and tool to exit on a signal, 10s more after
+          # SIGKILL for whatever did not, and 60s to flush / and /root. That is
+          # 105s if every step runs to its bound, and none normally does. This
+          # is a ceiling, not a delay: a clean shutdown takes a few seconds.
+          #
+          # The 30s default never cut anything short, because nothing was
+          # waiting: PID 1 exited 74 ms after SIGTERM and everything else in
+          # the pod was SIGKILLed. With `strategy: Recreate` above, the
+          # replacement pod cannot start until this one is gone, so a slow
+          # shutdown is downtime. If one is slow, the `==> shutdown:` lines in
+          # the pod log say which step it was. The bounds live in that script;
+          # change them and this number together.
+          terminationGracePeriodSeconds: 120
           securityContext:
             # mise, tmux and a `git`-driven working checkout all expect to
             # write into $HOME freely; running as root here is the same
