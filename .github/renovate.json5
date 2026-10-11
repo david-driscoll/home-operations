@@ -1338,20 +1338,6 @@
       automergeSchedule: [
         "at any time"
       ],
-
-      // HOW MANY. Renovate has no "merge at most N" setting, so this is the
-      // throttle: with four pull requests open at most, no more than four can
-      // merge in one batch, and each batch is four sets of checks, not ten.
-      // The forge's other repositories keep the bot's own limit (10, in
-      // kubernetes/apps/coder/renovate/renovatejob.yaml); GitHub's copy keeps
-      // Renovate's default.
-      //
-      // Branches follow it too: `branchConcurrentLimit` is unset and inherits
-      // this value.
-      //
-      // It only stops NEW pull requests. Ones already open stay open and can
-      // still merge, so the cap bites once fewer than four are left.
-      prConcurrentLimit: 4,
     },
   ],
   customManagers: [
