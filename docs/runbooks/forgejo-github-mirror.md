@@ -29,6 +29,13 @@ Both columns end in the same workflow, `.forgejo/workflows/github-sync.yml`,
 which runs `scripts/forgejo-github-sync`. It also runs hourly, so a dispatch
 that never arrived costs at most an hour.
 
+Its last step asks the renovate-operator for a Renovate run of this repository
+(`MIRROR_RENOVATE_URL` and `MIRROR_RENOVATE_TOKEN`, both set by
+`stacks/system/forgejo-github-mirror.ts`). Renovate merges a pull request only
+on the run after the one that saw its checks start, so without this the
+overnight window moves one step an hour. A failed request is a warning in the
+job log, never a failed run.
+
 Nothing new is reachable from outside. GitHub's side of this is the webhook
 Flux already had (`stacks/vault/KubernetesFluxWebhooks.ts`).
 

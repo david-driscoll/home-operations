@@ -220,6 +220,11 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // before it is published. Secrets so they stay out of the job log.
       PRIVATE_DOMAIN_ROOT: args.globals.searchDomain,
       PRIVATE_DOMAIN_TAILNET: args.globals.tailscaleDomain,
+      // The renovate-operator's webhook bearer, so the workflow can ask for a
+      // Renovate run of this repository when a sync finishes. It is the same
+      // token the operator already writes onto every repository's webhook,
+      // and all it can do is start a run.
+      MIRROR_RENOVATE_TOKEN: args.forgejo.webhookToken,
     };
     for (const [name, data] of Object.entries(secrets)) {
       new forgejo.RepositoryActionSecret(`forgejo-github-mirror-secret-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });
@@ -232,6 +237,10 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // The in-cluster Service, as forgejo-runner uses, so the job's clone
       // does not go out through the gateway and back.
       MIRROR_FORGEJO_URL: "http://forgejo-http.coder.svc.cluster.local:3000",
+      // The operator's "schedule one project" endpoint, scoped to the
+      // RenovateJob in kubernetes/apps/coder/renovate. The workflow appends
+      // `&project=<this repository>`. Without it the step does nothing.
+      MIRROR_RENOVATE_URL: "http://renovate-operator.coder.svc.cluster.local:8082/webhook/v1/schedule?job=renovate&namespace=coder",
     };
     for (const [name, data] of Object.entries(variables)) {
       new forgejo.RepositoryActionVariable(`forgejo-github-mirror-variable-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });

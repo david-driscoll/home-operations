@@ -330,6 +330,8 @@ export class ForgejoConfigurationComponent extends ComponentResource {
   public forgejoToken;
   public renovateBot;
   public claudeCode;
+  /** The operator's webhook bearer. ./forgejo-github-mirror.ts hands it to the sync workflow. */
+  public webhookToken: pulumi.Output<string>;
 
   constructor(args: ForgejoConfigurationArgs, opts?: ComponentResourceOptions) {
     super("custom:forgejo:configuration", "forgejo-configuration", args, opts);
@@ -433,6 +435,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       },
       { parent: this },
     );
+    this.webhookToken = webhookToken.result;
 
     // The bot's own password, which nothing ever uses to log in: the provider
     // authenticates as the admin, and Renovate authenticates with the token.
