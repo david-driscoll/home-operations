@@ -336,6 +336,41 @@ spec:
         // `persistRepoData` stays off. That one caches the git working copy,
         // which lands on the scratch emptyDir below and dies with the Job no
         // matter what this says -- the S3 cache holds metadata, not clones.
+
+        // THE PACKAGE CACHE, which is a third thing and the one that was
+        // missing. The repository cache above remembers what was EXTRACTED
+        // from a repository; this one remembers what registries ANSWERED --
+        // tag lists, manifests, image labels, release notes. Its default home
+        // is a directory under RENOVATE_BASE_DIR, i.e. the scratch emptyDir,
+        // so every Job started with none and asked every registry everything
+        // again.
+        //
+        // That is what Docker Hub's limit could not afford. The account gets
+        // 200 manifest pulls an hour. One run on the estate's repository fits;
+        // but a run that automerges stops there and the webhook starts the
+        // next one minutes later, and on 2026-10-11 the fourth run inside an
+        // hour got a 429 -- which Renovate treats as a reason to abandon the
+        // whole repository, so the three runs after it did nothing at all.
+        // Authenticating (the host rule above) raised the budget; it did not
+        // stop each run spending it from zero.
+        //
+        // The shared, passwordless Valkey in `database`. Index 14: 6, 8, 9,
+        // 10, 11, 12 and 13 are taken, and 0 is where every host-only consumer
+        // lands. Every key Renovate writes carries a TTL, so this needs no
+        // eviction policy to stay bounded.
+        //
+        // In this file rather than as RENOVATE_REDIS_URL in `extraEnv`, since
+        // it holds no credential and the rest of the bot's behaviour is here.
+        //
+        // Measured on 44.139.0 with a sample of this repository, same lookups
+        // twice: 82 registry requests cold, 16 warm, and Docker Hub 10 -> 0.
+        //
+        // The cost: Renovate does not fall back when it cannot connect. Pointed
+        // at a dead address it logs "Redis cache connection error" and keeps
+        // retrying -- still at it four minutes later -- rather than running
+        // uncached. So with Valkey down, runs stall instead of working; hence
+        // the `dependsOn` in ./ks.yaml.
+        redisUrl: 'redis://valkey.database.svc.cluster.local:6379/14',
       };
 
   scratchVolume:
