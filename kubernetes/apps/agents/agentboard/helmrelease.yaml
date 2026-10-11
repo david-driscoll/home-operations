@@ -345,7 +345,7 @@ spec:
       # install this pod provisions at start, and the working checkout the
       # agent operates against.
       #
-      # 40Gi, raised from 20Gi on 2026-09-12 when the volume hit 100% and the
+      # 80Gi, raised from 40Gi on 2026-10-10 when the volume hit 100% and the
       # pod crash-looped on `git config` failing to write ~/.gitconfig.lock.
       # Growing this is an online Longhorn expansion (allowVolumeExpansion);
       # shrinking it is not possible at all. ./resources/entrypoint.sh now
@@ -354,7 +354,7 @@ spec:
       home:
         type: persistentVolumeClaim
         accessMode: ReadWriteOnce
-        size: 40Gi
+        size: 80Gi
         storageClass: longhorn
         globalMounts:
           - path: /root
