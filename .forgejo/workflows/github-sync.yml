@@ -38,12 +38,21 @@ on:
     # branch only.
     - cron: "23 * * * *"
 
-# One at a time. A second run would do no harm -- every push the script makes
-# is a fast-forward or leased, so the loser of a race just fails -- but queued
-# runs finish green instead.
+# Only the latest run goes: a new one cancels whichever is waiting or running.
+# Every run compares the two `main`s as they are when it starts, so the newest
+# does everything an older one would have, and a backlog (runners down, a burst
+# of merges) collapses into one run instead of being worked through in turn.
+#
+# Cancelling mid-run is safe. Each push the script makes is atomic and is a
+# fast-forward or leased, so a run stopped between its two pushes leaves the
+# sides one step apart, which is what the run that replaced it starts from.
+#
+# The one thing lost: a hand-run dispatch with `discard_local` or
+# `prune_branches` set that is cancelled by a later run. That later run does
+# not carry the inputs, so dispatch it again.
 concurrency:
   group: github-sync
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   sync:
