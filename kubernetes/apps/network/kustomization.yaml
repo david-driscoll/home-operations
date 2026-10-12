@@ -10,7 +10,6 @@ components:
 resources:
   - ./authentik-vip/ks.yaml
   - ./certificates/ks.yaml
-  - ./cloudflare-tunnel/ks.yaml
   - ./crowdsec/ks.yaml
   - ./crowdsec-ui/ks.yaml
   - ./external-dns
