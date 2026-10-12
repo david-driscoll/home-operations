@@ -1280,6 +1280,36 @@
       ],
     },
     {
+      // The Sure chart's index (https://we-promise.github.io/sure/index.yaml)
+      // is rebuilt on every upstream publish, and the rebuild stamps EVERY
+      // version with the time of that publish: on 2026-10-12 all 0.7.5
+      // versions, the week-old `0.7.5-hotfix.2` included, read
+      // `created: 2026-10-10T19:05:03Z`. So to Renovate no Sure chart is ever
+      // more than a few days old, and the three-day wait in the automerge
+      // rules above starts again each time upstream ships anything -- an alpha
+      // counts.
+      //
+      // That is what kept forge pull request 88 showing `0.7.5` for a day
+      // after the versioning rule near the top of this list made
+      // `0.7.5-hotfix.2` the update: while an update is inside the wait,
+      // Renovate does not touch its branch ("Branch updating is skipped
+      // because internalChecksFilter was not met"), so the branch kept the
+      // old commit.
+      //
+      // A date that means nothing cannot gate anything, so the wait is off
+      // for this chart. The image keeps it: its dates come from the registry
+      // and are real. After the automerge rules so that it wins over the
+      // three days they set.
+      description: "Sure chart: no release-age wait, its index dates are not release dates",
+      matchDatasources: [
+        "helm"
+      ],
+      matchPackageNames: [
+        "sure"
+      ],
+      minimumReleaseAge: null,
+    },
+    {
       // The automerge hold list. After every automerge rule on purpose, so it
       // beats them. `.github/workflows/renovate-watchdog.yaml` appends an
       // app's directory here (between the markers, one glob per line) in the
