@@ -1,9 +1,8 @@
 ---
+name: build-agent
 description: Build an AI agent on Cloudflare using the Agents SDK
-argument-hint: [agent-description]
-allowed-tools: [Read, Glob, Grep, Bash, Write, Edit, WebFetch]
+disable-model-invocation: true
 ---
-
 # Build AI Agent on Cloudflare
 
 ## Arguments

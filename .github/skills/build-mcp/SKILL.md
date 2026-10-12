@@ -1,9 +1,8 @@
 ---
+name: build-mcp
 description: Build a remote MCP server on Cloudflare using McpAgent
-argument-hint: [mcp-description]
-allowed-tools: [Read, Glob, Grep, Bash, Write, Edit, WebFetch]
+disable-model-invocation: true
 ---
-
 # Build MCP Server on Cloudflare
 
 ## Arguments

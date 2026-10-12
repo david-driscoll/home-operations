@@ -9636,9 +9636,9 @@
     "semantic_hash": ""
   },
   ".mcp.json": {
-    "mtime": 1790871362.2363014,
-    "seen": 1790908908.1762218,
-    "ast_hash": "790b0ee0a60d0d8e155b3b9b433a4bff",
+    "mtime": 1791780827.931996,
+    "seen": 1791780843.3034081,
+    "ast_hash": "57a9bb1e9d81f0d73cb1f035c39495ec",
     "semantic_hash": ""
   },
   ".vscode/extensions.json": {
@@ -9654,9 +9654,9 @@
     "semantic_hash": "9a8248884c248eec44a2cb0cfdf865f1"
   },
   ".vscode/settings.json": {
-    "mtime": 1790998896.4815996,
-    "seen": 1791002762.1813052,
-    "ast_hash": "98d7de7e69b81819256548dec70f82cc",
+    "mtime": 1791779543.7886767,
+    "seen": 1791780843.303436,
+    "ast_hash": "6609d6a00a62b999caeb984c7123f2c4",
     "semantic_hash": ""
   },
   ".vscode/tasks.json": {
@@ -10356,9 +10356,9 @@
     "semantic_hash": "58c8e3cafc4f96ba12ac14972f734f8b"
   },
   ".vscode/mcp.json": {
-    "mtime": 1790871362.237093,
-    "seen": 1790998893.595265,
-    "ast_hash": "963c3be709f5549ee1ca5f822283facb",
+    "mtime": 1791779360.6798632,
+    "seen": 1791780857.6633458,
+    "ast_hash": "2e972eba37caeda14b396b5cac0245e3",
     "semantic_hash": ""
   },
   "kubernetes/apps/volsync-system/lock-canceller/unlock-stale-locks.sh": {
@@ -17453,54 +17453,6 @@
     "ast_hash": "77094b1568af5b0bf532305b0f7c3f1f",
     "semantic_hash": ""
   },
-  ".github/prompts/breakdown-feature-implementation.prompt.md": {
-    "mtime": 1771652790.7569017,
-    "seen": 1789246470.0915651,
-    "ast_hash": "daad63e7c4db8e8b37bd9b9382483029",
-    "semantic_hash": ""
-  },
-  ".github/prompts/build-agent.prompt.md": {
-    "mtime": 1779638718.9748363,
-    "seen": 1789246470.091566,
-    "ast_hash": "79168bc9dd6cb99fb0e6e5412a422f02",
-    "semantic_hash": ""
-  },
-  ".github/prompts/build-mcp.prompt.md": {
-    "mtime": 1779638718.9751627,
-    "seen": 1789246470.091566,
-    "ast_hash": "8a5d217ffabaf29a031444894b05e3cf",
-    "semantic_hash": ""
-  },
-  ".github/prompts/remember.prompt.md": {
-    "mtime": 1771652828.8906193,
-    "seen": 1789246470.091567,
-    "ast_hash": "73e38f96df89a55a70e0f133ef577e23",
-    "semantic_hash": ""
-  },
-  ".github/prompts/suggest-awesome-github-copilot-agents.prompt.md": {
-    "mtime": 1771652811.4645352,
-    "seen": 1789246470.091567,
-    "ast_hash": "b4c1ae2b4c1f964f64b43752d487b321",
-    "semantic_hash": ""
-  },
-  ".github/prompts/suggest-awesome-github-copilot-instructions.prompt.md": {
-    "mtime": 1771652812.8703985,
-    "seen": 1789246470.0915682,
-    "ast_hash": "e4f5aa6ca2803df7be9093ddc792435e",
-    "semantic_hash": ""
-  },
-  ".github/prompts/suggest-awesome-github-copilot-prompts.prompt.md": {
-    "mtime": 1771652813.8920116,
-    "seen": 1789246470.0915682,
-    "ast_hash": "19cac6aa7b99e4ed54742fcb2a2f137b",
-    "semantic_hash": ""
-  },
-  ".github/prompts/suggest-awesome-github-copilot-skills.prompt.md": {
-    "mtime": 1771652815.3279023,
-    "seen": 1789246470.091569,
-    "ast_hash": "334baefa97bbd3e51a12ad5ed977ac15",
-    "semantic_hash": ""
-  },
   ".github/skills/agent-collaboration/SKILL.md": {
     "mtime": 1785123070.3039436,
     "seen": 1789246470.09157,
@@ -21915,6 +21867,54 @@
     "mtime": 1791668426.9660628,
     "seen": 1791740881.7308118,
     "ast_hash": "c96a7d9d591907dc88ad223909709669",
+    "semantic_hash": ""
+  },
+  ".github/skills/breakdown-feature-implementation/SKILL.md": {
+    "mtime": 1791779383.4000337,
+    "seen": 1791780843.336311,
+    "ast_hash": "96d22d0acddd257c087cabfe6c71ce6d",
+    "semantic_hash": ""
+  },
+  ".github/skills/build-agent/SKILL.md": {
+    "mtime": 1791779383.4214358,
+    "seen": 1791780843.336311,
+    "ast_hash": "753fee36e7c566c6b1cdfc8b91161148",
+    "semantic_hash": ""
+  },
+  ".github/skills/build-mcp/SKILL.md": {
+    "mtime": 1791779383.4592338,
+    "seen": 1791780843.336312,
+    "ast_hash": "0da5d49bd2caa9e619d332410a2dd1a6",
+    "semantic_hash": ""
+  },
+  ".github/skills/remember/SKILL.md": {
+    "mtime": 1791779383.47891,
+    "seen": 1791780843.336513,
+    "ast_hash": "f0bfde226b87385c3a159f6e64542c13",
+    "semantic_hash": ""
+  },
+  ".github/skills/suggest-awesome-github-copilot-agents/SKILL.md": {
+    "mtime": 1791779383.506325,
+    "seen": 1791780843.33656,
+    "ast_hash": "eb61707fa40246d2bf327f7140a53832",
+    "semantic_hash": ""
+  },
+  ".github/skills/suggest-awesome-github-copilot-instructions/SKILL.md": {
+    "mtime": 1791779383.5238526,
+    "seen": 1791780843.33656,
+    "ast_hash": "79e4366ebaf8ded0f8f70122ed7789e8",
+    "semantic_hash": ""
+  },
+  ".github/skills/suggest-awesome-github-copilot-prompts/SKILL.md": {
+    "mtime": 1791779383.53922,
+    "seen": 1791780843.336561,
+    "ast_hash": "759eedc28b094aa6864297ccb0562e30",
+    "semantic_hash": ""
+  },
+  ".github/skills/suggest-awesome-github-copilot-skills/SKILL.md": {
+    "mtime": 1791779383.568142,
+    "seen": 1791780843.336562,
+    "ast_hash": "df50ed811d66e7f3ae0110ec4e8d4623",
     "semantic_hash": ""
   }
 }

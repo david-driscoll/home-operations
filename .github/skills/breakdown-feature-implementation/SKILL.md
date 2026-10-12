@@ -1,8 +1,8 @@
 ---
-agent: 'agent'
+name: breakdown-feature-implementation
 description: 'Prompt for creating detailed feature implementation plans, following Epoch monorepo structure.'
+disable-model-invocation: true
 ---
-
 # Feature Implementation Plan Prompt
 
 ## Goal

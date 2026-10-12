@@ -1,7 +1,7 @@
 ---
-agent: 'agent'
+name: suggest-awesome-github-copilot-skills
 description: 'Suggest relevant GitHub Copilot skills from the awesome-copilot repository based on current repository context and chat history, avoiding duplicates with existing skills in this repository, and identifying outdated skills that need updates.'
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'think', 'changes', 'testFailure', 'openSimpleBrowser', 'web/fetch', 'githubRepo', 'todos', 'search']
+disable-model-invocation: true
 ---
 # Suggest Awesome GitHub Copilot Skills
 
