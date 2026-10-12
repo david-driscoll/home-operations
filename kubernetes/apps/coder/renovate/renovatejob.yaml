@@ -102,6 +102,17 @@ spec:
       enabled: true
 
   extraEnv:
+    # TEMPORARY, 2026-10-12: remove once the two questions below are answered.
+    # At the default `info` level Renovate does not say WHY it leaves a pull
+    # request alone -- "off schedule", "branch not green", "branch modified"
+    # and "limit reached" are all debug lines. Needed to explain forge pull
+    # requests 8 and 73 (every check green for a day, never merged) and
+    # `prConcurrentLimit: 4` letting a fifth pull request through.
+    #
+    # Applies to every Job the operator creates, discovery included, so each
+    # run logs far more than usual while this is here.
+    - name: LOG_LEVEL
+      value: debug
     # The github.com credential, and NOT the platform token -- the platform is
     # Forgejo. Renovate still talks to api.github.com on every run: release
     # notes, and every `github-releases` / `github-tags` datasource lookup.
