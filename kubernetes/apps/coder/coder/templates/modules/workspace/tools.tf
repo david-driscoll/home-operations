@@ -58,6 +58,16 @@ module "dotfiles" {
 
   agent_id = coder_agent.main.id
 
+  # Pre-fills the parameter; the person can change or clear it. The ssh form,
+  # so a private dotfiles repository works with the Coder SSH key.
+  #
+  # The name is the CODER username -- Coder does not know anyone's GitHub
+  # handle -- so this is right for whoever uses the same name in both places
+  # and a starting point to edit for everyone else. A default that points at a
+  # repository that does not exist only fails the dotfiles script; the
+  # workspace still starts.
+  default_dotfiles_uri = "git@github.com:${data.coder_workspace_owner.me.name}/dotfiles.git"
+
   coder_parameter_order = 170
 }
 
