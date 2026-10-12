@@ -99,7 +99,7 @@ data "coder_parameter" "home_disk_size" {
   # shrink is impossible. Fixed at creation, as in the stock template.
   mutable = false
   order   = 130
-  default = "20"
+  default = "30"
 
   validation {
     min = 5
