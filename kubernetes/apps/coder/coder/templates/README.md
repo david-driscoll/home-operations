@@ -36,7 +36,7 @@ the editors open. Everything it adds attaches to `module.workspace.agent_id`.
 | | Module | Notes |
 | --- | --- | --- |
 | VS Code in the browser | `coder/code-server` | Installs the repository's recommended extensions. |
-| VS Code Desktop | `coder/vscode-desktop` | |
+| VS Code Desktop and Insiders | built in (`display_apps`) | Open the home directory; the clones are under `~/src`. |
 | JetBrains IDEs | `coder/jetbrains` | Through Toolbox 2.7+ with the Coder plugin. Choose the IDEs when creating the workspace. |
 | JetBrains plugins | `harsh9485/jetbrains-plugins` | Only when the `jetbrains_plugins` template variable is set. Installed on the start after the IDE was first opened. |
 | Claude Code | `coder/claude-code` | Sign in once; the login lives in the home volume. |

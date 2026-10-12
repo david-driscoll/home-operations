@@ -1,5 +1,8 @@
 # Editors. Every one of them opens `var.folder`.
 #
+# VS Code Desktop is not here: it is one of the agent's built-in display apps,
+# switched on in main.tf.
+#
 # All of these carry `count = start_count`: a stopped workspace has no agent to
 # attach an app or a script to.
 
@@ -22,16 +25,6 @@ module "code_server" {
   # reach Coder's own cookies. The wildcard hostname is already routed --
   # see ../../../httproute.yaml.
   subdomain = true
-}
-
-# VS Code on your own machine, over the Coder extension.
-module "vscode_desktop" {
-  count   = data.coder_workspace.me.start_count
-  source  = "registry.coder.com/coder/vscode-desktop/coder"
-  version = "1.3.0"
-
-  agent_id = coder_agent.main.id
-  folder   = var.folder
 }
 
 # JetBrains IDEs through Toolbox (2.7 or newer, with the Coder plugin). With no

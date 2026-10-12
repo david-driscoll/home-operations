@@ -17,12 +17,13 @@ resource "coder_agent" "main" {
   # the editors below are each told `var.folder` themselves, and dev container
   # discovery finds the clones under it from there.
 
-  # The VS Code Desktop button comes from the vscode-desktop module in ides.tf,
-  # which opens `var.folder`; the built-in one would be a second button that
-  # opens the home directory.
+  # VS Code Desktop and Insiders are Coder's built-in buttons rather than the
+  # vscode-desktop registry module. They open the home directory, not
+  # `var.folder`: the built-in buttons follow the agent's `dir`, which is
+  # deliberately unset above.
   display_apps {
-    vscode                 = false
-    vscode_insiders        = false
+    vscode                 = true
+    vscode_insiders        = true
     web_terminal           = true
     ssh_helper             = true
     port_forwarding_helper = true

@@ -456,12 +456,12 @@
       },
     },
     {
-      // Everything a Coder template pins -- fourteen registry modules, two
+      // Everything a Coder template pins -- thirteen registry modules, two
       // Terraform providers and the Docker sidecar image -- in ONE pull
       // request. Each merge that touches the templates directory is a new
       // template version in Coder (stacks/system/coder-templates.ts), and
-      // every workspace is then offered an update; fourteen separate bumps
-      // would be fourteen of those prompts for what is one refresh.
+      // every workspace is then offered an update; thirteen separate bumps
+      // would be thirteen of those prompts for what is one refresh.
       //
       // Matched by path, not by package name, so a module added to a template
       // later is in the group without anyone remembering to list it here.
