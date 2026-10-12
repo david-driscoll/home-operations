@@ -1357,17 +1357,20 @@
       // result as GitHub's, and it still works when the branch is behind.
       automergeStrategy: "auto",
 
-      // WHEN, FOR NOW. The rules above let an update merge only between 00:00
-      // and 06:59 local; here that is lifted, so what is allowed to automerge
-      // does so on whichever run finds its checks green, day or night.
-      // GitHub's copy keeps the overnight window.
+      // WHEN. Between 00:00 and 07:59 Eastern, an hour longer than the
+      // 00:00-06:59 the rules above give GitHub's copy. From 2026-10-11 to
+      // 2026-10-12 this was "at any time", which had updates landing on main
+      // and deploying through the day.
+      //
+      // `timezone` is repeated here because a cron schedule is read in UTC
+      // without it; the rules above set the same value.
       //
       // It changes WHEN, not WHAT: `automerge` itself still comes from the
-      // rules above, and so do the holds and the minimum release age. To go
-      // back to the overnight window, delete this one setting.
+      // rules above, and so do the holds and the minimum release age.
       automergeSchedule: [
-        "at any time"
+        "* 0-7 * * *"
       ],
+      timezone: "America/New_York",
     },
   ],
   customManagers: [
