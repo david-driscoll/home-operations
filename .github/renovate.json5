@@ -1297,6 +1297,7 @@
       matchFileNames: [
         // automerge-hold:start
         "automerge-hold/placeholder/**",
+        "kubernetes/apps/equestria/games/habitica/**",
         // automerge-hold:end
       ],
       automerge: false,
