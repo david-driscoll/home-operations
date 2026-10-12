@@ -331,10 +331,15 @@
       // versioning code against the real chart index and image tags: from
       // `0.7.5-hotfix.1` the one update offered is `0.7.5-hotfix.2`, for both.
       //
-      // Everything else upstream publishes does not match and is ignored:
-      // `-alpha.N`, `-rc.N`, `sha-*`, `stable`, `latest`. That is wanted --
-      // none of them is a release to run -- but it also means this pin can
-      // only ever be on a plain or hotfix version.
+      // Everything else upstream publishes does not match and is never
+      // offered as a version: `-alpha.N`, `-rc.N`, `sha-*`, `stable`,
+      // `latest`.
+      //
+      // The IMAGE is now pinned to the `stable` tag, not a version
+      // (kubernetes/apps/equestria/home/sure/helmrelease.yaml), so for it this
+      // rule is idle: a tag that is not a version gets digest updates only,
+      // whatever the versioning. It stays listed so that a pin put back on a
+      // numbered tag sorts correctly from the first run.
       description: "Sure hotfix versions: X.Y.Z-hotfix.N is newer than X.Y.Z",
       matchDatasources: [
         "helm",
