@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@pulumi/authentik": "file:sdks/authentik",
+    "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/forgejo": "file:sdks/forgejo",
     "@pulumi/github": "^6.15.0",
     "@pulumi/http": "^0.3.3",
@@ -54,6 +55,7 @@
   },
   "allowScripts": {
     "file:sdks/authentik": true,
+    "file:sdks/coderd": true,
     "file:sdks/forgejo": true,
     "file:sdks/pbs": true,
     "file:sdks/tailscale": true,

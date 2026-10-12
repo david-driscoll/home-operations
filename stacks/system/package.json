@@ -24,6 +24,7 @@
     "@kubernetes/client-node": "^2.0.0",
     "@llamaduck/forgejo-ts": "^15.0.9",
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
+    "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/command": "^1.2.1",
     "@pulumi/forgejo": "file:sdks/forgejo",
     "@pulumi/kubernetes": "^4.34.2",
