@@ -37,7 +37,7 @@ spec:
       # hotfix.1, not hotfix.2: the hotfix.2 chart was published on 2026-10-05
       # hours before its image, and ghcr.io/we-promise/sure:0.7.5-hotfix.2 did
       # not exist when this was written. hotfix.1 is what `stable` pointed at.
-      version: 0.7.5-hotfix.1
+      version: 0.7.5-hotfix.2
       sourceRef:
         kind: HelmRepository
         name: sure
