@@ -26,17 +26,20 @@ spec:
   chart:
     spec:
       chart: sure
-      # VERSION ORDER IS NOT SEMVER ORDER HERE, AND IT DOES NOT MATTER. Upstream
-      # ships fixes as `X.Y.Z-hotfix.N`, which semver reads as a PRE-release of
-      # X.Y.Z -- so Renovate offers plain `0.7.5` as an update to this, though
-      # it is the older release.
+      # NO `version`, ON PURPOSE (2026-10-12). Flux then takes the newest
+      # release in the repository each time it polls it (hourly, above) -- the
+      # newest that is not a prerelease, so not an alpha, an rc or a
+      # `-hotfix.N`, which semver also reads as one. On the day that is 0.7.5.
       #
-      # That is harmless for the CHART, and Renovate is left to do it. The
-      # 0.7.5, 0.7.5-hotfix.1 and 0.7.5-hotfix.2 charts were diffed on
-      # 2026-10-12 and differ in two lines of Chart.yaml, `version` and
-      # `appVersion`; a hotfix is a new image, not new templates. And the
-      # image is not taken from `appVersion`: it is pinned below, to `stable`.
-      version: 0.7.5-hotfix.1
+      # It means a new chart (0.7.6, 0.8.0) is applied with NO pull request, no
+      # check and no commit to revert, and that Renovate does not see this
+      # chart at all. What it has to go wrong with is small: the 0.7.5,
+      # 0.7.5-hotfix.1 and 0.7.5-hotfix.2 charts were diffed on 2026-10-12 and
+      # differ in two lines of Chart.yaml, `version` and `appVersion`. A
+      # release here is a new image, and the image does NOT follow the chart:
+      # it is pinned below, to `stable`, and moves by pull request.
+      #
+      # To stop the chart moving, put a `version:` line back.
       sourceRef:
         kind: HelmRepository
         name: sure
