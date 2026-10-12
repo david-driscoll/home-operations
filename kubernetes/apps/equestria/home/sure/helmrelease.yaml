@@ -26,17 +26,16 @@ spec:
   chart:
     spec:
       chart: sure
-      # ⚠ VERSION ORDER IS NOT SEMVER ORDER HERE. Upstream ships fixes as
-      # `X.Y.Z-hotfix.N`, which semver reads as a PRE-release of X.Y.Z -- so a
-      # version-sorting tool sees plain `0.7.5` as newer than this, when it is
-      # three days OLDER. Do not accept a "bump" from a hotfix back to its base.
-      # Renovate no longer offers one: the "Sure hotfix versions" rule in
-      # .github/renovate.json5 gives this chart and the image below a
-      # versioning in which a hotfix is newer than its base.
+      # VERSION ORDER IS NOT SEMVER ORDER HERE, AND IT DOES NOT MATTER. Upstream
+      # ships fixes as `X.Y.Z-hotfix.N`, which semver reads as a PRE-release of
+      # X.Y.Z -- so Renovate offers plain `0.7.5` as an update to this, though
+      # it is the older release.
       #
-      # hotfix.1, not hotfix.2: the hotfix.2 chart was published on 2026-10-05
-      # hours before its image, and ghcr.io/we-promise/sure:0.7.5-hotfix.2 did
-      # not exist when this was written. hotfix.1 is what `stable` pointed at.
+      # That is harmless for the CHART, and Renovate is left to do it. The
+      # 0.7.5, 0.7.5-hotfix.1 and 0.7.5-hotfix.2 charts were diffed on
+      # 2026-10-12 and differ in two lines of Chart.yaml, `version` and
+      # `appVersion`; a hotfix is a new image, not new templates. And the
+      # image is not taken from `appVersion`: it is pinned below, to `stable`.
       version: 0.7.5-hotfix.1
       sourceRef:
         kind: HelmRepository
@@ -73,7 +72,19 @@ spec:
       # Stated rather than inherited from the chart's appVersion, and pinned by
       # digest. The chart builds the reference as `repository:tag`, so the
       # `tag@sha256` spelling passes straight through.
-      tag: 0.7.5-hotfix.2@sha256:aa46be2d8e3f8b2182261dc05933a64b4a12543dd5f44ad12f08868caac1f997
+      #
+      # `stable`, not a version. It is the one tag upstream moves onto each
+      # hotfix: the numbered `X.Y.Z` tag stays on the original build, and on
+      # 2026-10-12 `stable` was the same image as `0.7.5-hotfix.2`. Renovate
+      # follows it by digest, so an update here is a new digest with no
+      # version number in it -- and it will carry the pin across to the next
+      # release (0.7.6, 0.8.0) the same way, migrations included. The chart
+      # above stays on a numbered version and moves separately.
+      #
+      # THIS LINE IS WHAT DECIDES WHICH SURE RUNS. Leave it out and the chart
+      # falls back to its `appVersion`, which for a chart "updated" from a
+      # hotfix to its base is the older build.
+      tag: stable@sha256:aa46be2d8e3f8b2182261dc05933a64b4a12543dd5f44ad12f08868caac1f997
       pullPolicy: IfNotPresent
 
     # ---- Bundled dependencies: all off ------------------------------------
