@@ -42,7 +42,8 @@
  * `<account_id>/<tunnel_id>`, state id the bare tunnel id — so they would fail
  * the same way. Adopting through the CLI writes state once and arms nothing.
  *
- * `protect` and `retainOnDelete` are the belt to that braces. Deleting this
+ * `retainOnDelete` is the belt to that braces (`protect` was too, until the
+ * Funnel migration turned it off ahead of removing this component). Deleting this
  * tunnel does not just break a hostname: the connector authenticates with a
  * token derived from it, and `TUNNEL_DOMAIN` in
  * `kubernetes/flux/meta/cluster-secrets.sops.yaml` hardcodes its UUID, so a
@@ -113,7 +114,13 @@ export class CloudflareTunnelComponent extends ComponentResource {
       // Not a convenience. See the "Adoption" section in the file header: a
       // destroyed tunnel takes the connector token AND the hardcoded
       // TUNNEL_DOMAIN with it, and neither comes back from a `pulumi up`.
-      protect: true,
+      //
+      // `protect` is off since 2026-10-12, as step 6 of
+      // docs/plans/cloudflare-tunnel-to-funnel.md: the next change removes this
+      // component, and a removal that meets `protect: true` in state stalls the
+      // Stack. `retainOnDelete` stays, so that removal only drops the two
+      // resources from state and leaves the live tunnel routing in Cloudflare.
+      protect: false,
       retainOnDelete: true,
     };
 
