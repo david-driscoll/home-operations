@@ -1200,9 +1200,6 @@
         // kubernetes/apps/coder/forgejo: the Helm chart only. The Forgejo
         // server image (data.forgejo.org/forgejo/forgejo) stays manual.
         "data.forgejo.org/forgejo-helm/forgejo",
-        // kubernetes/apps/network/cloudflare-tunnel. CalVer: a month bump is
-        // a "minor"; the year rollover is a "major" and stays manual.
-        "cloudflare/cloudflared",
         // dashboard/resources/compose.yaml, outside the app rules' docker/**
         "ghcr.io/panonim/dynacat",
         // docker/_common/prometheus/compose.yaml (a 0.x image, so the app
