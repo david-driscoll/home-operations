@@ -8,17 +8,17 @@ resources:
   # two together -- a CRD schema older than the controller is how you get
   # silently-dropped fields.
   # renovate: datasource=github-releases depName=kubernetes-csi/external-snapshotter
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.6.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.7.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
   # renovate: datasource=github-releases depName=kubernetes-csi/external-snapshotter
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.6.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.7.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
   # renovate: datasource=github-releases depName=kubernetes-csi/external-snapshotter
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.6.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.7.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
   # renovate: datasource=github-releases depName=kubernetes-csi/external-snapshotter
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.6.0/client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshotclasses.yaml
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.7.0/client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshotclasses.yaml
   # renovate: datasource=github-releases depName=kubernetes-csi/external-snapshotter
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.6.0/client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshotcontents.yaml
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.7.0/client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshotcontents.yaml
   # renovate: datasource=github-releases depName=kubernetes-csi/external-snapshotter
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.6.0/client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshots.yaml
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.7.0/client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshots.yaml
 patches:
   # Belt and braces on top of this Kustomization's deletionPolicy: Orphan.
   # deletionPolicy protects these when the KUSTOMIZATION is deleted; this
