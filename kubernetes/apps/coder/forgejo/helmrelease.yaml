@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 17.2.0
-    digest: sha256:391648fe566fac5eabf4bbde9faa7af7949aee6169060d34c03e0fdbd49d6fe8
+    tag: 17.3.0
+    digest: sha256:a823a9b81ab4d05710ea19e06aa663dd04d1df9f4c99e7730cbc57c1a183b345
   # data.forgejo.org, not code.forgejo.org (the chart's own default), for the
   # same reason docker/celestia/forgejo used it: code.forgejo.org is itself a
   # Forgejo instance and answers /v2/ with a Bearer challenge that Renovate
