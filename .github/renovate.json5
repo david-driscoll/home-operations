@@ -224,6 +224,21 @@
     pinDigests: true,
   },
   customDatasources: {
+    // ghcr.io images with the day each tag was PUSHED and its digest. The
+    // `docker` datasource has no release date for anything but Docker Hub, so
+    // `minimumReleaseAge` cannot count for a ghcr image. This asks the relay
+    // in kubernetes/apps/coder/forgejo-github-sync (resources/ghcr.mjs), which
+    // reads GitHub's Packages API and answers in the shape Renovate wants --
+    // hence no transform. Its `digest` is what keeps a `tag@sha256:` pin
+    // pinned through a datasource that is not `docker`.
+    //
+    // An in-cluster address: only the Renovate that runs in the cluster can
+    // use this, which is why the two rules that route to it name the Forgejo
+    // copy of the repository only.
+    ghcr: {
+      defaultRegistryUrlTemplate: "http://forgejo-github-sync.coder.svc.cluster.local:8080/ghcr/{{{replace '^ghcr\\.io/' '' packageName}}}",
+      format: "json",
+    },
     "1password-cli": {
       defaultRegistryUrlTemplate: "https://app-updates.agilebits.com/product_history/CLI2",
       format: "html",
@@ -717,7 +732,12 @@
       ],
       matchDatasources: [
         "docker",
-        "helm"
+        "helm",
+        // What a ghcr image is looked up through on the Forgejo copy (the
+        // last rule in this list). Renovate reads `minimumReleaseAge` DURING
+        // that lookup, when the datasource is no longer `docker`; without
+        // this name here the wait below would not be applied there.
+        "custom.ghcr"
       ],
       matchUpdateTypes: [
         "patch",
@@ -788,7 +808,9 @@
       ],
       matchDatasources: [
         "docker",
-        "helm"
+        "helm",
+        // As in the patch/digest rule above: a ghcr image on the Forgejo copy.
+        "custom.ghcr"
       ],
       matchUpdateTypes: [
         "minor"
@@ -1338,6 +1360,46 @@
         "* 0-7 * * *"
       ],
       timezone: "America/New_York",
+    },
+    {
+      // RELEASE DATES FOR GHCR IMAGES: look these up through
+      // `customDatasources.ghcr` above, which knows when each tag was pushed.
+      // With a date, the three-day `minimumReleaseAge` in the automerge rules
+      // actually counts for a ghcr image; without one, `timestamp-optional`
+      // lets the update through the moment it appears. The digest comes back
+      // with it, so a `tag@sha256:` pin stays pinned.
+      //
+      // LAST IN THE LIST, AND IT HAS TO BE. Rules are applied in order and
+      // this one changes the dependency's datasource, so any rule after it
+      // that says `matchDatasources: ["docker"]` would stop matching. Here,
+      // every rule above has already had its say.
+      //
+      // One place still sees the new datasource: Renovate re-applies the
+      // rules per update type INSIDE the lookup, to decide which releases are
+      // old enough. A rule that sets `minimumReleaseAge` and matches on
+      // `docker` has to name `custom.ghcr` too -- the two app-image automerge
+      // rules above do. Versioning is unaffected: it is fixed, as `docker` or
+      // whatever a rule above chose, before any datasource changes.
+      //
+      // Only full `X.Y.Z` pins. A moving tag (`stable`, `latest`, `5`, `5.4`)
+      // is followed by its digest alone, and a custom datasource cannot answer
+      // "what is the digest of this tag now"; those stay on `docker`, without
+      // a date, as before.
+      //
+      // Only the Forgejo copy: the lookup is an in-cluster address that
+      // GitHub's hosted Renovate cannot reach.
+      description: "ghcr images on the Forgejo copy: release dates from GitHub's Packages API",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/^ghcr\\.io\\//"
+      ],
+      matchCurrentValue: "/^v?\\d+\\.\\d+\\.\\d+/",
+      overrideDatasource: "custom.ghcr",
     },
   ],
   customManagers: [

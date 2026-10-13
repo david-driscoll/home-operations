@@ -295,6 +295,42 @@ estate.
 This value and the operator's `webhook.baseUrl` are two spellings of the same
 destination. Change them together.
 
+## Release dates for ghcr images
+
+Renovate's `docker` datasource knows when a tag was published on Docker Hub
+only. For `ghcr.io` it has no date, so the three-day `minimumReleaseAge` in the
+automerge rules had nothing to count and the update went straight through.
+
+On the Forgejo copy of `home-operations`, a ghcr image pinned to a full
+`X.Y.Z` tag is now looked up through `customDatasources.ghcr`
+(`.github/renovate.json5`) instead. That asks the `forgejo-github-sync` relay,
+`GET /ghcr/<owner>/<image>` (`kubernetes/apps/coder/forgejo-github-sync/resources/ghcr.mjs`),
+which reads GitHub's Packages API with the hourly `github-token` and answers
+with each tag, the day it was pushed and its digest.
+
+- Moving tags (`stable`, `latest`, `5`, `5.4`) and every other registry stay on
+  the `docker` datasource, undated as before.
+- GitHub's hosted Renovate cannot reach the relay and is not routed to it.
+- The relay reads back 90 days or 50 pages of pushes, whichever comes first, and
+  keeps an answer for an hour. One uncached pass over the 84 images pinned on
+  2026-10-13 cost 1,351 GitHub API calls, of the 12,500 an hour the token has
+  and shares with Renovate.
+
+To see what Renovate is given for one image. The relay's network policy admits
+Renovate's Jobs, Flux and the node only, so go through a port-forward:
+
+```bash
+kubectl -n coder port-forward deploy/forgejo-github-sync 8080:8080 &
+curl -s http://127.0.0.1:8080/ghcr/rommapp/romm | jq '.releases[:3]'
+```
+
+**A ghcr image stops getting updates.** Look for `ghcr lookup refused` or
+`ghcr lookup failed` in the relay's log. `404` means GitHub has no such package
+for that owner, or it is private; anything else is the token or GitHub itself.
+Renovate reports it as a failed lookup for that one dependency. To take one
+image off this path, exclude it from the last package rule's
+`matchPackageNames`.
+
 ## Troubleshooting
 
 **`Accepted: False` on the RenovateJob, nothing runs.** The policy engine

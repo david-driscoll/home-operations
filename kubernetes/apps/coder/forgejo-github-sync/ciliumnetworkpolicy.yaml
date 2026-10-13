@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
 #
-# Only Flux's notification-controller may talk to the relay.
+# Only Flux's notification-controller and Renovate's Jobs may talk to the relay.
 #
 # server.mjs authenticates nobody: whatever reaches POST /flux with a
 # `NewArtifact` event starts the sync workflow on Forgejo, using a token no
@@ -26,6 +26,18 @@ spec:
         - matchLabels:
             io.kubernetes.pod.namespace: flux-system
             app: notification-controller
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Renovate's Jobs, for GET /ghcr (resources/ghcr.mjs). The label is the
+    # one renovate-operator puts on every Job it creates for the `renovate`
+    # RenovateJob. The policy is by port, not by path, so these pods can reach
+    # POST /flux as well -- which, as above, can only start a sync early.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ${NAMESPACE}
+            renovate-operator.mogenius.com/renovatejob: renovate
       toPorts:
         - ports:
             - port: "8080"

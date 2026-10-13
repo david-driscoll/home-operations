@@ -240,6 +240,14 @@ spec:
             matchHost: 'http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000',
             allowInternal: true,
           },
+          // The same grant for the relay that answers `customDatasources.ghcr`
+          // (.github/renovate.json5; ../forgejo-github-sync/resources/ghcr.mjs),
+          // the other in-cluster address this bot calls. No credential: the
+          // relay holds the GitHub token, not Renovate.
+          {
+            matchHost: 'http://forgejo-github-sync.${NAMESPACE}.svc.cluster.local:8080',
+            allowInternal: true,
+          },
           // DOCKER HUB, AUTHENTICATED. Anonymous lookups share one budget per
           // egress address; once it is spent Docker Hub answers 429 and
           // Renovate abandons the whole repository for that run ("External
