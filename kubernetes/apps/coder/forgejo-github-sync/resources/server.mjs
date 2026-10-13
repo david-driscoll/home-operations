@@ -12,6 +12,11 @@
 //   POST /flux     a Flux Event; a GitRepository `NewArtifact` dispatches
 //                  .forgejo/workflows/github-sync.yml, anything else is ignored
 //   GET  /healthz  probes
+//   GET  /ghcr/<owner>/<image>
+//                  a second, unrelated job that lives here because it is the
+//                  same shape of thing -- a small in-cluster translator for
+//                  GitHub: an image's tags with the day each was pushed and
+//                  its digest, for Renovate. All of it is in ./ghcr.mjs.
 //
 // The workflow does the actual syncing and is safe to run at any time, so this
 // carries no state and deduplicates nothing. A missed event is caught by the
@@ -21,8 +26,11 @@
 // notification-controller the only pod that can reach the port, and the worst
 // a forged request could do is start a sync early.
 //
-// Plain Bun, no dependencies: mounted from a ConfigMap and run by the stock
-// oven/bun image (./helmrelease.yaml), the same shape as ../setup-status.
+// Plain Bun, mounted from a ConfigMap and run by the stock oven/bun image
+// (./helmrelease.yaml), the same shape as ../setup-status. This file has no
+// dependencies; ./ghcr.mjs has one, Octokit, which Bun downloads on first use.
+
+import { ghcr } from "./ghcr.mjs";
 
 const env = name => {
   const value = process.env[name];
@@ -90,12 +98,30 @@ async function flux(request) {
   return new Response("dispatched\n", { status: 202 });
 }
 
+// The GitHub token for /ghcr: a GitHub App installation token that is
+// re-minted every hour, mounted as a file so that each lookup reads the
+// current one. If it cannot be read, lookups go out anonymously and GitHub
+// refuses them; the relay's own job is unaffected.
+const GITHUB_TOKEN_FILE = process.env.GITHUB_TOKEN_FILE;
+async function githubToken() {
+  if (!GITHUB_TOKEN_FILE) return undefined;
+  try {
+    return (await Bun.file(GITHUB_TOKEN_FILE).text()).trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 Bun.serve({
   port: PORT,
+  // Bun's default drops a request after ten seconds, and a cold /ghcr lookup
+  // of a busy image is fifty GitHub pages: eleven seconds, measured.
+  idleTimeout: 120,
   fetch(request) {
     const { pathname } = new URL(request.url);
     if (request.method === "GET" && pathname === "/healthz") return new Response("ok\n");
     if (request.method === "POST" && pathname === "/flux") return flux(request);
+    if (request.method === "GET" && pathname.startsWith("/ghcr/")) return ghcr(decodeURIComponent(pathname.slice("/ghcr/".length)), githubToken, log);
     return new Response("not found\n", { status: 404 });
   },
 });

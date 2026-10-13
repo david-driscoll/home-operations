@@ -5,7 +5,12 @@
 # mounted from a ConfigMap into the stock image (../setup-status's pattern), so
 # there is no image to build.
 #
-# It has one job. When GitHub's main moves, Flux raises an event
+# It has two jobs, unrelated except that both translate GitHub for something
+# in this namespace. The second is small: GET /ghcr/<owner>/<image> gives
+# Renovate an image's tags with the day each was pushed and its digest
+# (resources/ghcr.mjs; `customDatasources.ghcr` in .github/renovate.json5).
+#
+# The first is the one it is named for. When GitHub's main moves, Flux raises an event
 # (./notification.yaml) and this starts .forgejo/workflows/github-sync.yml on
 # the Forgejo copy of the repository, which pulls the new commits in. The
 # other direction -- Forgejo to GitHub -- needs nothing from here: a merge on
@@ -69,6 +74,20 @@ spec:
               FORGEJO_URL: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
               FORGEJO_WORKFLOW: github-sync.yml
               FORGEJO_REF: main
+              # For GET /ghcr (resources/ghcr.mjs). A file and not an env var:
+              # the token below lasts an hour, and the kubelet rewrites the
+              # file when the Secret changes while an env var is read once.
+              GITHUB_TOKEN_FILE: /github/token
+              # /ghcr calls GitHub through Octokit, which Bun downloads from
+              # npm on the first lookup -- there is no image build and no
+              # node_modules (resources/ghcr.mjs has the detail). This is the
+              # version it asks for, here and not in the script so that
+              # Renovate's annotated-dependency manager can raise it.
+              # renovate: datasource=npm depName=@octokit/rest
+              OCTOKIT_VERSION: "22.0.1"
+              # Where Bun keeps what it downloads: the root filesystem is
+              # read-only and /tmp is the emptyDir below.
+              BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
             envFrom:
               # FORGEJO_TOKEN and FORGEJO_REPOSITORY (./externalsecret.yaml).
               - secretRef:
@@ -103,7 +122,10 @@ spec:
                 cpu: 5m
                 memory: 32Mi
               limits:
-                memory: 128Mi
+                # 128Mi until /ghcr: Octokit and fifty pages of package
+                # versions held at once are more than the relay alone needed.
+                # Not measured in the pod; doubled as headroom.
+                memory: 256Mi
 
     service:
       app:
@@ -118,6 +140,20 @@ spec:
         name: forgejo-github-sync-server
         globalMounts:
           - path: /app
+            readOnly: true
+      # The GitHub App installation token that stacks/vault mints hourly and
+      # emberstack reflects into every namespace -- the same Secret Renovate
+      # reads as GITHUB_COM_TOKEN (../renovate/renovatejob.yaml). Only its
+      # `token` key is mounted. /ghcr uses it to read GitHub's Packages API,
+      # which answers nothing anonymously.
+      github-token:
+        type: secret
+        name: github-token
+        items:
+          - key: token
+            path: token
+        globalMounts:
+          - path: /github
             readOnly: true
       tmp:
         type: emptyDir
