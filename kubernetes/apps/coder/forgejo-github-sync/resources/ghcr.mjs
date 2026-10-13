@@ -157,10 +157,10 @@ export async function ghcr(path, readToken, log = () => {}) {
     // that for this one dependency rather than "no updates". No status at
     // all is GitHub, or npm on the first lookup, being unreachable.
     const status = typeof error?.status === "number" ? error.status : undefined;
-    log(status ? "ghcr lookup refused" : "ghcr lookup failed", { image: key, ...(status ? { status } : { error: String(error).slice(0, 200) }) });
+    log(status ? "ghcr lookup refused" : "ghcr lookup failed", { package: key, ...(status ? { status } : { error: String(error).slice(0, 200) }) });
     return json({ error: status ? `github answered ${status}` : "lookup failed" }, status === 404 ? 404 : 502);
   }
   cache.set(key, { at: Date.now(), result: found.result });
-  log("ghcr lookup", { image: key, pages: found.pages, releases: found.result.releases.length });
+  log("ghcr lookup", { package: key, pages: found.pages, releases: found.result.releases.length });
   return json(found.result);
 }
