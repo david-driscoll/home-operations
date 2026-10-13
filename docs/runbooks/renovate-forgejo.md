@@ -324,9 +324,16 @@ kubectl -n coder port-forward deploy/forgejo-github-sync 8080:8080 &
 curl -s http://127.0.0.1:8080/ghcr/rommapp/romm | jq '.releases[:3]'
 ```
 
+The relay calls GitHub through Octokit (`@octokit/rest`). There is no image
+build: Bun downloads it from npm on the first lookup after a pod start, at the
+version in `OCTOKIT_VERSION` (`helmrelease.yaml`, raised by Renovate). So the
+first lookup needs `registry.npmjs.org`; the relay's sync job does not.
+
 **A ghcr image stops getting updates.** Look for `ghcr lookup refused` or
 `ghcr lookup failed` in the relay's log. `404` means GitHub has no such package
-for that owner, or it is private; anything else is the token or GitHub itself.
+for that owner, or it is private; another status is the token or GitHub itself.
+`Cannot find package '@octokit/rest@…'` means npm was unreachable when the pod
+tried to download it; the next lookup tries again.
 Renovate reports it as a failed lookup for that one dependency. To take one
 image off this path, exclude it from the last package rule's
 `matchPackageNames`.

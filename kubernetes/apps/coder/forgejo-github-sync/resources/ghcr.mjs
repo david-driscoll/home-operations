@@ -21,10 +21,19 @@
 // repository that pushes a tag per commit (`sha-...`, `cache-...`) buries a
 // week-old release several pages down. This pages, and throws the noise away.
 //
-// No dependencies, and nothing Bun-specific: only `fetch` and `Response`, so
-// the same file runs under Node in a test.
+// ONE DEPENDENCY, AND NO BUILD: GitHub is called through Octokit
+// (`@octokit/rest`), which Bun fetches from npm the first time the import is
+// reached -- there is no node_modules beside this file, and with none Bun
+// installs on demand into its cache (BUN_INSTALL_CACHE_DIR, under the pod's
+// writable /tmp). The version is pinned by OCTOKIT_VERSION in
+// ../helmrelease.yaml, where Renovate can see it. Its own dependencies are
+// NOT pinned: there is no lockfile, so they are whatever is current when the
+// pod starts.
+//
+// Loaded on the first lookup, not at start, and tried again after a failure:
+// the relay's own job (POST /flux in server.mjs) must not depend on npm
+// being reachable.
 
-const API = "https://api.github.com";
 const PER_PAGE = 100;
 // How far back to read. Renovate needs the versions NEWER than the pin, with
 // their dates; it does not need the pin itself to be in the list. So this
@@ -60,33 +69,44 @@ const cache = new Map();
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-async function github(path, token) {
-  const response = await fetch(`${API}${path}`, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "forgejo-github-sync",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+let loading;
+function loadOctokit() {
+  loading ??= import(`@octokit/rest@${process.env.OCTOKIT_VERSION ?? "22.0.1"}`).then(
+    module => module.Octokit,
+    error => {
+      loading = undefined;
+      throw error;
     },
-    signal: AbortSignal.timeout(20_000),
-  });
-  return { status: response.status, body: response.ok ? await response.json() : null };
+  );
+  return loading;
 }
 
 async function lookup(owner, image, token) {
-  // `/users/` answers for organizations too.
-  const base = `/users/${owner}/packages/container/${encodeURIComponent(image)}`;
+  const Octokit = await loadOctokit();
+  // A client per lookup: the token is an hourly one.
+  // Its logger is silenced: Octokit prints a line of its own for every
+  // refused request, ten at a time here, and the one JSON line this file
+  // logs per lookup says the same thing.
+  const quiet = () => {};
+  const octokit = new Octokit({ auth: token, userAgent: "forgejo-github-sync", log: { debug: quiet, info: quiet, warn: quiet, error: quiet } });
+  // The `...ForUser` routes answer for organizations too. Octokit encodes the
+  // `/` in an image name such as `owner/app/server`.
+  const pkg = { package_type: "container", package_name: image, username: owner };
+  const request = () => ({ signal: AbortSignal.timeout(20_000) });
+
   const releases = [];
   const seen = new Set();
   let pages = 0;
   const cutoff = Date.now() - MAX_AGE_MS;
-  // In waves, not one page at a time: twenty pages in a row took twelve
-  // seconds, and the caller is waiting.
+  // Octokit's own paginator reads one page after another, and twenty pages in
+  // a row took twelve seconds with the caller waiting. So the pages are asked
+  // for by number, a wave at a time.
   waves: for (let first = 1; first <= MAX_PAGES; first += WAVE) {
     const numbers = Array.from({ length: Math.min(WAVE, MAX_PAGES - first + 1) }, (_, i) => first + i);
-    const answers = await Promise.all(numbers.map(page => github(`${base}/versions?per_page=${PER_PAGE}&page=${page}`, token)));
-    for (const { status, body } of answers) {
-      if (status !== 200) return { status, pages };
+    const answers = await Promise.all(
+      numbers.map(page => octokit.rest.packages.getAllPackageVersionsForPackageOwnedByUser({ ...pkg, per_page: PER_PAGE, page, request: request() })),
+    );
+    for (const { data: body } of answers) {
       pages++;
       for (const version of body) {
         for (const tag of version.metadata?.container?.tags ?? []) {
@@ -103,9 +123,12 @@ async function lookup(owner, image, token) {
   }
   // The repository the image is built from, for the changelog in the pull
   // request -- what the `docker` datasource would have read from a label.
-  const pkg = await github(base, token);
-  const sourceUrl = pkg.status === 200 ? pkg.body?.repository?.html_url : undefined;
-  return { status: 200, pages, result: { releases, ...(sourceUrl ? { sourceUrl } : {}) } };
+  // Not worth failing the lookup over.
+  const sourceUrl = await octokit.rest.packages.getPackageForUser({ ...pkg, request: request() }).then(
+    ({ data }) => data.repository?.html_url,
+    () => undefined,
+  );
+  return { pages, result: { releases, ...(sourceUrl ? { sourceUrl } : {}) } };
 }
 
 // `path` is what follows `/ghcr/`. `readToken` is called per lookup: the
@@ -124,15 +147,14 @@ export async function ghcr(path, readToken, log = () => {}) {
   try {
     found = await lookup(owner, image, await readToken());
   } catch (error) {
-    log("ghcr lookup failed", { image: key, error: String(error) });
-    return json({ error: "github unreachable" }, 502);
-  }
-  if (found.status !== 200) {
+    // Octokit throws on anything but 2xx, with the HTTP status on the error.
     // 404: no such image, or it is private to someone else. 401/403: the
-    // token. Passed on as it is, so Renovate reports a failed lookup for this
-    // one dependency rather than "no updates".
-    log("ghcr lookup refused", { image: key, status: found.status });
-    return json({ error: `github answered ${found.status}` }, found.status === 404 ? 404 : 502);
+    // token. Either way Renovate is told the lookup failed, so it reports
+    // that for this one dependency rather than "no updates". No status at
+    // all is GitHub, or npm on the first lookup, being unreachable.
+    const status = typeof error?.status === "number" ? error.status : undefined;
+    log(status ? "ghcr lookup refused" : "ghcr lookup failed", { image: key, ...(status ? { status } : { error: String(error).slice(0, 200) }) });
+    return json({ error: status ? `github answered ${status}` : "lookup failed" }, status === 404 ? 404 : 502);
   }
   cache.set(key, { at: Date.now(), result: found.result });
   log("ghcr lookup", { image: key, pages: found.pages, releases: found.result.releases.length });

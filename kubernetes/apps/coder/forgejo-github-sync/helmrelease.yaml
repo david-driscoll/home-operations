@@ -78,6 +78,16 @@ spec:
               # the token below lasts an hour, and the kubelet rewrites the
               # file when the Secret changes while an env var is read once.
               GITHUB_TOKEN_FILE: /github/token
+              # /ghcr calls GitHub through Octokit, which Bun downloads from
+              # npm on the first lookup -- there is no image build and no
+              # node_modules (resources/ghcr.mjs has the detail). This is the
+              # version it asks for, here and not in the script so that
+              # Renovate's annotated-dependency manager can raise it.
+              # renovate: datasource=npm depName=@octokit/rest
+              OCTOKIT_VERSION: "22.0.1"
+              # Where Bun keeps what it downloads: the root filesystem is
+              # read-only and /tmp is the emptyDir below.
+              BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
             envFrom:
               # FORGEJO_TOKEN and FORGEJO_REPOSITORY (./externalsecret.yaml).
               - secretRef:
@@ -112,7 +122,10 @@ spec:
                 cpu: 5m
                 memory: 32Mi
               limits:
-                memory: 128Mi
+                # 128Mi until /ghcr: Octokit and fifty pages of package
+                # versions held at once are more than the relay alone needed.
+                # Not measured in the pod; doubled as headroom.
+                memory: 256Mi
 
     service:
       app:

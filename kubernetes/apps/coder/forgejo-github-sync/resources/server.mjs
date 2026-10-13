@@ -26,8 +26,9 @@
 // notification-controller the only pod that can reach the port, and the worst
 // a forged request could do is start a sync early.
 //
-// Plain Bun, no dependencies: mounted from a ConfigMap and run by the stock
-// oven/bun image (./helmrelease.yaml), the same shape as ../setup-status.
+// Plain Bun, mounted from a ConfigMap and run by the stock oven/bun image
+// (./helmrelease.yaml), the same shape as ../setup-status. This file has no
+// dependencies; ./ghcr.mjs has one, Octokit, which Bun downloads on first use.
 
 import { ghcr } from "./ghcr.mjs";
 
