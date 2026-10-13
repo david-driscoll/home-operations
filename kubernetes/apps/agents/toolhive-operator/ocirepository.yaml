@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.51.4
-    digest: sha256:0088a0dc7cbc86a7eeae85e73216760083f5ef7619f801e6fff732eea68dc0a3
+    tag: 0.53.0
+    digest: sha256:7dbf09ffe0d10764fec713430c3cd43cd564dab97a702974dcfa116c865a5ffe
   url: oci://ghcr.io/stacklok/toolhive/toolhive-operator
   # Same two facts as ../toolhive-operator-crds/ocirepository.yaml: no cosign
   # signature exists for any chart digest, so there is no `verify:` block, and
