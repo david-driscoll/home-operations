@@ -35,19 +35,23 @@
 // being reachable.
 
 const PER_PAGE = 100;
-// How far back to read. Renovate needs the versions NEWER than the pin, with
-// their dates; it does not need the pin itself to be in the list. So this
-// stops at whichever comes first: pushes older than MAX_AGE_DAYS, or MAX_PAGES
-// pages. A quiet image is one or two pages. A busy one is deep: on 2026-10-13
-// immich-server's newest 2000 pushes reached back eleven days, five version
-// tags among them.
-const MAX_AGE_MS = Number(process.env.GHCR_MAX_AGE_DAYS ?? 90) * 86_400_000;
+// How far back to read: until pushes older than MAX_AGE_DAYS, or MAX_PAGES
+// pages, whichever comes first. A quiet image is one or two pages. A busy one
+// is deep: on 2026-10-13 immich-server's newest 2000 pushes reached back
+// eleven days, five version tags among them.
+//
+// Renovate gets every version NEWER than the pin either way. What the pin
+// itself being in the list buys is quiet: without it Renovate still offers
+// the update but warns "Could not determine new digest", because it also
+// asks what the PINNED tag's digest is now. A year, because at 90 days one of
+// the 84 pins was outside (netbootxyz) and at 365 none was.
+const MAX_AGE_MS = Number(process.env.GHCR_MAX_AGE_DAYS ?? 365) * 86_400_000;
 const MAX_PAGES = Number(process.env.GHCR_MAX_PAGES ?? 50);
 const WAVE = 10;
 // Renovate asks once per dependency per run, the same image is often pinned
 // in several files, and runs come more than once an hour. An hour, because the
 // token's budget is shared with Renovate itself: measured on 2026-10-13, one
-// uncached pass over the 84 images this estate pins cost 1,351 API calls of
+// uncached pass over the 84 images this estate pins cost 1,874 API calls of
 // the 12,500 an hour the token has. A date that is an hour late does not
 // matter to a wait counted in days.
 const CACHE_MS = Number(process.env.GHCR_CACHE_SECONDS ?? 3600) * 1000;

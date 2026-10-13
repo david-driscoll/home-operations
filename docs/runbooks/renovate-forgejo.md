@@ -311,9 +311,9 @@ with each tag, the day it was pushed and its digest.
 - Moving tags (`stable`, `latest`, `5`, `5.4`) and every other registry stay on
   the `docker` datasource, undated as before.
 - GitHub's hosted Renovate cannot reach the relay and is not routed to it.
-- The relay reads back 90 days or 50 pages of pushes, whichever comes first, and
+- The relay reads back a year or 50 pages of pushes, whichever comes first, and
   keeps an answer for an hour. One uncached pass over the 84 images pinned on
-  2026-10-13 cost 1,351 GitHub API calls, of the 12,500 an hour the token has
+  2026-10-13 cost 1,874 GitHub API calls, of the 12,500 an hour the token has
   and shares with Renovate.
 
 To see what Renovate is given for one image. The relay's network policy admits
@@ -323,6 +323,16 @@ Renovate's Jobs, Flux and the node only, so go through a port-forward:
 kubectl -n coder port-forward deploy/forgejo-github-sync 8080:8080 &
 curl -s http://127.0.0.1:8080/ghcr/rommapp/romm | jq '.releases[:3]'
 ```
+
+None of this uses GitHub Releases: the date is when the image was pushed, so an
+image whose repository publishes no releases is dated like any other. What
+Renovate does at the edges, measured with its own lookup code:
+
+| Case | What Renovate does |
+|---|---|
+| GitHub has no package for the image (or it is private) | Warns `Failed to look up custom.ghcr package …`, offers nothing for it |
+| The pinned tag is older than the relay reads back | Still offers the newer version with its digest; also warns `Could not determine new digest` |
+| The package is not linked to a repository | Works; the pull request has no changelog link |
 
 The relay calls GitHub through Octokit (`@octokit/rest`). There is no image
 build: Bun downloads it from npm on the first lookup after a pod start, at the
