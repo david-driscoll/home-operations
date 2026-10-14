@@ -88,6 +88,7 @@ import { CLUSTERS } from "@components/store/clusters.ts";
 import { configureApplications } from "./applications.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
+import { CoderTemplatesComponent } from "./coder-templates.ts";
 import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureGarage } from "./garage.ts";
@@ -158,6 +159,12 @@ new PostgresRotationComponent({ globals });
 // (kubernetes/apps/agents/agent-tools-servers/openbao.yaml). ENABLED --
 // the `pulumi` policy grant it needs is live -- see openbao-mcp.ts's header.
 new OpenBaoMcpComponent({ globals });
+
+// Coder's workspace templates (kubernetes/apps/coder/coder/templates) and the
+// OpenBao auth mount their workspaces log in through. Both halves are no-ops
+// until their switch is flipped in coder-templates.ts: one waits for a
+// hand-made Coder API token, the other for a widened `pulumi` policy.
+new CoderTemplatesComponent({ globals });
 
 // The Forgejo identity Renovate runs as -- the bot account, its token, and the
 // repository grants that decide what Renovate manages. Unlike everything else

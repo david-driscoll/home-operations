@@ -441,6 +441,28 @@
       },
     },
     {
+      // Everything a Coder template pins -- thirteen registry modules, two
+      // Terraform providers and the Docker sidecar image -- in ONE pull
+      // request. Each merge that touches the templates directory is a new
+      // template version in Coder (stacks/system/coder-templates.ts), and
+      // every workspace is then offered an update; thirteen separate bumps
+      // would be thirteen of those prompts for what is one refresh.
+      //
+      // Matched by path, not by package name, so a module added to a template
+      // later is in the group without anyone remembering to list it here.
+      // The `coder/coderd` provider in the root Pulumi.yaml is NOT part of
+      // this: that is the provider Pulumi uses to upload the templates, it
+      // lives in a different file, and it needs the SDK regenerated.
+      description: "Coder templates Group",
+      groupName: "coder-templates",
+      matchFileNames: [
+        "kubernetes/apps/coder/coder/templates/**"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       // The gateway image (docker, kubernetes/apps/agents/toolport) and the
       // vendored skill (github-releases, .claude/skills/toolport/SKILL.md)
       // are one upstream release: the skill documents the meta-tools that
@@ -1518,6 +1540,33 @@
       ],
       depNameTemplate: "ghcr.io/bjw-s-labs/helm/app-template",
       datasourceTemplate: "docker",
+    },
+    {
+      // The Coder templates (kubernetes/apps/coder/coder/templates) are
+      // Terraform, and the stock `terraform` manager already covers most of
+      // them with no help: every `module` block's `version` -- they resolve
+      // from registry.coder.com, which serves the module protocol at the
+      // /.well-known/terraform.json it advertises -- and the two
+      // `required_providers` pins in shared/providers.tf.
+      //
+      // What it cannot see is a version held in a `local`. It only reads
+      // container images out of a literal `container { image = "..." }`, and
+      // the Docker sidecar's image sits inside a `dynamic "init_container"`
+      // block, so it is a local with an annotation instead. Same annotation
+      // as the manager below; a separate manager because HCL quotes its
+      // values and puts no `:` or `=` straight before the version.
+      //
+      // The optional `name:` prefix is what lets one pattern hold both an
+      // image reference ("docker:29-dind" -> 29-dind) and a bare version
+      // ("1.2.3"). No lookahead: Renovate compiles these with RE2.
+      description: "Annotated Terraform pins (Coder templates)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)kubernetes/apps/coder/.+\\.tf$/",
+      ],
+      matchStrings: [
+        "renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[^\\n\"]*\"(?:[^\"\\n]*:)?(?<currentValue>[^\"\\n:]+)\"",
+      ],
     },
     {
       description: "Process annotated dependencies",

@@ -256,6 +256,34 @@ path "auth/kubernetes-sgc/config" {
 path "auth/kubernetes-sgc/role/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
+
+# Coder workspaces: a `jwt` auth mount that trusts the OIDC access tokens
+# authentik issues to Coder, and the policy a workspace logs in with. Both are
+# managed by stacks/system/coder-templates.ts, behind VAULT_JWT_ENABLED there.
+# Same shape and same reasoning as the oidc grants above: named paths, never
+# sys/auth/* or sys/policies/acl/*, so Pulumi can manage THIS mount and THIS
+# policy and cannot enable or rewrite arbitrary others.
+#
+# It needs a mount of its own because the `oidc` mount is bound to OpenBao's
+# authentik application, and authentik gives each application its own issuer.
+path "sys/auth/coder" {
+  capabilities = ["create", "read", "update", "delete", "sudo"]
+}
+path "sys/mounts/auth/coder" {
+  capabilities = ["read", "update", "sudo"]
+}
+path "sys/mounts/auth/coder/tune" {
+  capabilities = ["read", "update", "sudo"]
+}
+path "auth/coder/config" {
+  capabilities = ["create", "read", "update"]
+}
+path "auth/coder/role/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "sys/policies/acl/coder-workspace" {
+  capabilities = ["create", "read", "update", "delete"]
+}
 EOF
   ok "wrote policy pulumi"
 
