@@ -6,6 +6,7 @@ resources:
   - ./alertmanager-secret.yaml
   - ./helmrelease.yaml
   - ./definition.yaml
+  - ./tailnet-service.yaml
   - ./config.yaml
 configMapGenerator:
   - name: alertmanager-values
