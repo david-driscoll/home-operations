@@ -49,14 +49,10 @@ const MAX_AGE_MS = Number(process.env.GHCR_MAX_AGE_DAYS ?? 365) * 86_400_000;
 const MAX_PAGES = Number(process.env.GHCR_MAX_PAGES ?? 50);
 const WAVE = 10;
 // GitHub calls in flight at once, across ALL lookups. Renovate asks about many
-// images at the same moment at the start of a run, each lookup asks for ten
-// pages, and GitHub answers a burst like that with 403s (its limit on
-// concurrent requests, separate from the hourly budget). In the first day of
-// running, 75 lookups were refused that way, every one at the start of a run
-// and every one for an image that looked up fine on other runs.
+// images at the same moment at the start of a run, and each lookup asks for
+// ten pages, so without a cap one run start is hundreds of calls at once.
 //
-// Sixteen: thirty lookups at once -- every image refused in the cluster
-// among them -- took 56 seconds at eight in flight and drew no refusal. Each
+// Sixteen: thirty lookups at once took 56 seconds at eight in flight. Each
 // waits its turn, and Renovate gives up on a request after 60 seconds by
 // default (raised for this host in ../renovate/renovatejob.yaml).
 const MAX_IN_FLIGHT = Number(process.env.GHCR_MAX_IN_FLIGHT ?? 16);
@@ -73,17 +69,23 @@ async function limited(call) {
   }
 }
 
-// A refusal that is about rate, not access: 429, or a 403 whose message or
-// headers say so. Worth one more try after GitHub's own `retry-after`, or a
-// short wait.
-const RATE_LIMITED = /rate limit|abuse/i;
+// GitHub refuses SOME of these calls, now and then, with
+//
+//   403 Resource not accessible by integration
+//
+// -- a permission answer, for packages it serves to the same token the rest
+// of the time. Seen in the cluster on 2026-10-14: thirteen refusals for
+// eleven images inside 25 seconds of one Renovate run start, while the other
+// lookups in that burst succeeded with the same token; an hour later, sixty
+// calls in a row for three of those images all answered 200. The cause is
+// GitHub's and unknown here. So a 403 or 429 is tried once more after
+// GitHub's own `retry-after`, or twenty seconds; a 404 is final.
 async function withRetry(call) {
   try {
     return await limited(call);
   } catch (error) {
-    const rated = error?.status === 429 || (error?.status === 403 && (RATE_LIMITED.test(String(error?.message)) || error?.response?.headers?.["retry-after"] !== undefined));
-    if (!rated) throw error;
-    const seconds = Math.min(Number(error?.response?.headers?.["retry-after"]) || 10, 60);
+    if (error?.status !== 403 && error?.status !== 429) throw error;
+    const seconds = Math.min(Number(error?.response?.headers?.["retry-after"]) || 20, 60);
     await new Promise(resolve => setTimeout(resolve, seconds * 1000));
     return await limited(call);
   }
@@ -132,7 +134,13 @@ async function lookup(owner, image, token) {
   // refused request, ten at a time here, and the one JSON line this file
   // logs per lookup says the same thing.
   const quiet = () => {};
-  const octokit = new Octokit({ auth: token, userAgent: "forgejo-github-sync", log: { debug: quiet, info: quiet, warn: quiet, error: quiet } });
+  // GITHUB_API_URL is for tests against a fake GitHub; unset, it is GitHub.
+  const octokit = new Octokit({
+    auth: token,
+    userAgent: "forgejo-github-sync",
+    log: { debug: quiet, info: quiet, warn: quiet, error: quiet },
+    ...(process.env.GITHUB_API_URL ? { baseUrl: process.env.GITHUB_API_URL } : {}),
+  });
   // The `...ForUser` routes answer for organizations too. Octokit encodes the
   // `/` in an image name such as `owner/app/server`.
   const pkg = { package_type: "container", package_name: image, username: owner };
@@ -200,6 +208,13 @@ export async function ghcr(path, readToken, log = () => {}) {
     // GitHub's own message is kept: a 403 can be access or rate, and only the
     // message says which.
     log(status ? "ghcr lookup refused" : "ghcr lookup failed", { package: key, ...(status ? { status } : {}), error: String(error?.message ?? error).slice(0, 200) });
+    // The last good answer for this image, however old, beats a failed
+    // lookup: what it lists is still true, it only lacks anything pushed
+    // since. Not for a 404 -- the package is gone. Lost when the pod restarts.
+    if (hit && status !== 404) {
+      log("ghcr served stale", { package: key, age_seconds: Math.round((Date.now() - hit.at) / 1000) });
+      return json(hit.result);
+    }
     return json({ error: status ? `github answered ${status}` : "lookup failed" }, status === 404 ? 404 : 502);
   }
   cache.set(key, { at: Date.now(), result: found.result });
