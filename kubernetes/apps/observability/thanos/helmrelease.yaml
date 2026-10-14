@@ -188,12 +188,8 @@ spec:
         enabled: true
         storageClass: longhorn
         size: 80Gi
-      service:
-        annotations:
-          tailscale.com/expose: "true"
-          tailscale.com/hostname: thanos-receive
-          tailscale.com/tags: tag:observability
-          tailscale.com/proxy-group: tailnet-outbound
+      # The tailnet name `thanos-receive` is served by ./tailnet-service.yaml,
+      # not by this chart Service; see that file for why.
       resources:
         requests:
           cpu: 200m

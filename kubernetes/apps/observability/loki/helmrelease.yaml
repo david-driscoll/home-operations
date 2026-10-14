@@ -102,12 +102,8 @@ spec:
         enabled: true
         storageClass: longhorn
         size: 60Gi
-      service:
-        annotations:
-          tailscale.com/expose: "true"
-          tailscale.com/hostname: loki
-          tailscale.com/tags: tag:observability
-          tailscale.com/proxy-group: tailnet-outbound
+      # The tailnet name `loki` is served by ./tailnet-service.yaml, not by
+      # this chart Service; see that file for why.
     gateway:
       enabled: false
       replicas: 0

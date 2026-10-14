@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/v1/service.json
+#
+# THE TAILNET NAME `tdarr-server`, on the tailnet-outbound ProxyGroup.
+#
+# A separate LoadBalancer Service, not annotations on the chart's ClusterIP
+# one, for the reason in kubernetes/apps/observability/loki/tailnet-service.yaml:
+# the operator writes load-balancer status that a ClusterIP Service may not
+# carry. No node ports, so the Tdarr server is not opened on the LAN.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tdarr-server-tailnet
+  annotations:
+    tailscale.com/hostname: tdarr-server
+    tailscale.com/tags: tag:observability
+    tailscale.com/proxy-group: tailnet-outbound
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  allocateLoadBalancerNodePorts: false
+  selector:
+    app.kubernetes.io/controller: tdarr
+    app.kubernetes.io/instance: tdarr
+    app.kubernetes.io/name: tdarr
+  ports:
+    - name: http
+      port: 8266
+      targetPort: 8266
+      protocol: TCP

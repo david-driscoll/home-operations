@@ -180,11 +180,8 @@ spec:
         ports:
           http:
             port: &server-port 8266
-        annotations:
-          tailscale.com/expose: "true"
-          tailscale.com/hostname: tdarr-server
-          tailscale.com/tags: tag:observability
-          tailscale.com/proxy-group: tailnet-outbound
+        # The tailnet name `tdarr-server` is served by ./tailnet-service.yaml,
+        # not by this Service; see that file for why.
       *app :
         controller: *app
         ports:
