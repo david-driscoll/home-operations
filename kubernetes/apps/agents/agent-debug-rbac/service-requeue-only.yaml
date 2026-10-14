@@ -1,0 +1,113 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# NARROWS ./clusterrole.yaml's `services: patch, update` GRANT TO THE ONE
+# THING IT IS FOR: setting `agents.home-operations/requeue`, which makes any
+# controller watching the Service (the tailscale operator above all) run
+# again. Added 2026-10-14. Same shape as ./stack-reconcile-only.yaml, for the
+# same reason: RBAC authorises a verb on a resource, never a field, and
+# `update` on a Service is "rewrite the Service" -- which pods it selects,
+# whether it is a LoadBalancer, and through its annotations whether it is on
+# the tailnet (`tailscale.com/*`) or in public DNS (external-dns).
+#
+# WHAT THIS POLICY DOES. For requests from the two identities that hold
+# `agent-debug` (see matchConditions), an UPDATE on a Service -- which is what
+# a PATCH is too, by the time admission sees it -- is denied unless everything
+# the request could change is what it was in `oldObject`, apart from that one
+# annotation:
+#
+#   spec          compared whole. A full-PUT client (mkp) resends the spec it
+#                 just read, and the apiserver has defaulted both sides, so an
+#                 untouched spec compares equal.
+#   status        not compared: it is a subresource, reset to the stored value
+#                 on a main-resource write, and `services/status` is not
+#                 granted.
+#   metadata      labels, ownerReferences and finalizers compared whole.
+#                 Annotations compared key by key in BOTH directions, skipping
+#                 only `agents.home-operations/requeue`, so it can be added,
+#                 changed or removed and nothing else can.
+#
+# EVERY FIELD READ IS `has()`-GUARDED and there are no ternaries over maps,
+# for the reasons in ./stack-reconcile-only.yaml: with `failurePolicy: Fail`
+# an absent-field or type-check surprise denies every request.
+#
+# USE:
+#   kubectl -n <ns> annotate svc <name> \
+#     agents.home-operations/requeue=$(date +%s) --overwrite
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agent-debug-service-requeue-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      # `services` only, not `services/*`: ./clusterrole.yaml grants no
+      # Service subresource, so RBAC already refuses those.
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["services"]
+  # Keep in step with every ClusterRoleBinding to `agent-debug`, exactly as in
+  # ./stack-reconcile-only.yaml:
+  #   ../agent-tools-servers/kubernetes.yaml  -> agents/toolhive-kubernetes
+  #   ../agentboard/rbac.yaml                 -> agents/agentboard
+  # A new binding of the role that is not added here gets the unnarrowed
+  # `update` on every Service.
+  matchConditions:
+    - name: is-agent-debug-identity
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:agents:toolhive-kubernetes",
+          "system:serviceaccount:agents:agentboard"
+        ]
+  validations:
+    - expression: >
+        has(object.spec) == has(oldObject.spec)
+        && (!has(object.spec) || object.spec == oldObject.spec)
+      message: >-
+        agent-debug may only set agents.home-operations/requeue on a
+        Service: spec must not change
+    - expression: >
+        has(object.metadata.labels) == has(oldObject.metadata.labels)
+        && (!has(object.metadata.labels)
+            || object.metadata.labels == oldObject.metadata.labels)
+      message: >-
+        agent-debug may only set agents.home-operations/requeue on a
+        Service: metadata.labels must not change
+    - expression: >
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)
+        && (!has(object.metadata.ownerReferences)
+            || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)
+        && has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)
+        && (!has(object.metadata.finalizers)
+            || object.metadata.finalizers == oldObject.metadata.finalizers)
+      message: >-
+        agent-debug may only set agents.home-operations/requeue on a
+        Service: metadata.ownerReferences and metadata.finalizers must not
+        change
+    - expression: >
+        (!has(object.metadata.annotations)
+          || object.metadata.annotations.all(k,
+               k == 'agents.home-operations/requeue'
+               || (has(oldObject.metadata.annotations)
+                   && k in oldObject.metadata.annotations
+                   && oldObject.metadata.annotations[k] == object.metadata.annotations[k])))
+        && (!has(oldObject.metadata.annotations)
+          || oldObject.metadata.annotations.all(k,
+               k == 'agents.home-operations/requeue'
+               || (has(object.metadata.annotations)
+                   && k in object.metadata.annotations
+                   && object.metadata.annotations[k] == oldObject.metadata.annotations[k])))
+      message: >-
+        agent-debug may only set agents.home-operations/requeue on a
+        Service: no other annotation may be added, changed or removed
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agent-debug-service-requeue-only
+spec:
+  policyName: agent-debug-service-requeue-only
+  validationActions: ["Deny"]
