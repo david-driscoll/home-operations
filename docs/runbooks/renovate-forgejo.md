@@ -344,7 +344,16 @@ first lookup needs `registry.npmjs.org`; the relay's sync job does not.
 for that owner, or it is private; another status is the token or GitHub itself.
 `Cannot find package '@octokit/rest@…'` means npm was unreachable when the pod
 tried to download it; the next lookup tries again.
-Renovate reports it as a failed lookup for that one dependency. To take one
+Renovate reports it as a failed lookup for that one dependency -- unless the
+relay has an earlier answer for the image, which it then serves instead and
+logs as `ghcr served stale`.
+
+GitHub refuses some lookups now and then with `403 Resource not accessible by
+integration`, for images it serves the same token the rest of the time; the
+cause is not known. The relay retries a 403 once after twenty seconds, then
+falls back to its last answer. A handful of these in the log is expected; the
+same image refused run after run is not. To take one
+image off this path, exclude it from the last package rule's
 image off this path, exclude it from the last package rule's
 `matchPackageNames`.
 
