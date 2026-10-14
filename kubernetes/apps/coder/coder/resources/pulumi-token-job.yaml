@@ -1,0 +1,166 @@
+---
+# NOT applied by Flux: this file is not in ../kustomization.yaml. It is the
+# Job stacks/system/coder-templates.ts creates to give itself a Coder API
+# token, kept here as YAML so Renovate keeps its images current. That file
+# fills in what only it knows -- the name, the Coder image tag (the same
+# version as the HelmRelease, read from it) and the Secret holding the key.
+#
+# What it does, in order:
+#
+#   1. `coder server create-admin-user` makes a `pulumi` user with the Owner
+#      role, straight in Coder's database. It is the CLI Coder ships for
+#      exactly this -- an admin when nobody can log in to make one. The
+#      password it is given is random and thrown away: password login is off
+#      (CODER_DISABLE_PASSWORD_AUTH), so the account can only ever be used
+#      through the token below.
+#   2. psql inserts that user's API token. Pulumi generated the token and
+#      kept the secret half; this Job only ever sees its SHA-256, which is
+#      all Coder stores.
+#
+# Step 2 writes Coder's `api_keys` table directly, which Coder does not
+# document as an interface. It is the same row `coder tokens create` writes
+# (coderd/apikey/apikey.go: a 10-character id, a 22-character secret, the
+# secret's SHA-256), but a Coder release that changes that table breaks this
+# Job -- loudly, as an SQL error, and only when the token is next minted.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder-pulumi-token
+    app.kubernetes.io/part-of: coder
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: coder-pulumi-token
+        app.kubernetes.io/part-of: coder
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: create-user
+          # Tag set by coder-templates.ts from the HelmRelease's chart
+          # version: the CLI must match the server whose schema it writes.
+          image: ghcr.io/coder/coder
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -u
+              password="$(head -c 32 /dev/urandom | base64)"
+              if out="$(/opt/coder server create-admin-user \
+                  --username "$CODER_USERNAME" --email "$CODER_EMAIL" \
+                  --password "$password" 2>&1)"; then
+                echo "$out"
+                exit 0
+              fi
+              echo "$out"
+              # Every run after the first lands here, and that is success:
+              # the user is the one this Job made last time.
+              case "$out" in
+                *"duplicate key value"*) echo "user $CODER_USERNAME already exists"; exit 0 ;;
+              esac
+              exit 1
+          env:
+            - name: CODER_PG_CONNECTION_URL
+              valueFrom:
+                secretKeyRef:
+                  name: coder-pguser-secret
+                  key: uri
+            - name: CODER_USERNAME
+              value: pulumi
+            # Never mailed. `.invalid` is reserved (RFC 2606) so it can never
+            # be somebody's real address.
+            - name: CODER_EMAIL
+              value: pulumi@coder.invalid
+            - name: HOME
+              value: /tmp
+          securityContext:
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      containers:
+        - name: insert-token
+          image: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm@sha256:94aa172fc7ce295d482f5fe8bcf8d1e3423f30c15ba40c7d34114b68dc152b0a
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              psql "$CODER_PG_CONNECTION_URL" -v ON_ERROR_STOP=1 \
+                -v username="$CODER_USERNAME" -v token_name="$TOKEN_NAME" \
+                -v key_id="$KEY_ID" -v key_hash="$KEY_HASH" \
+                -v lifetime_days="$LIFETIME_DAYS" <<'SQL'
+              BEGIN;
+              -- One token per (user, name) -- idx_api_key_name -- so the
+              -- previous one goes first. A rotation therefore revokes the old
+              -- token in the same transaction that adds the new one.
+              DELETE FROM api_keys k USING users u
+               WHERE k.user_id = u.id AND u.username = :'username'
+                 AND k.login_type = 'token' AND k.token_name = :'token_name'
+                 AND k.id <> :'key_id';
+              INSERT INTO api_keys (id, hashed_secret, user_id, last_used,
+                                    expires_at, created_at, updated_at, login_type,
+                                    lifetime_seconds, token_name, scopes, allow_list)
+              SELECT :'key_id', decode(:'key_hash', 'hex'), u.id, 'epoch',
+                     now() + make_interval(days => :lifetime_days), now(), now(), 'token',
+                     :lifetime_days * 86400, :'token_name',
+                     ARRAY['coder:all']::api_key_scope[], ARRAY['*:*']
+                FROM users u
+               WHERE u.username = :'username' AND NOT u.deleted
+              ON CONFLICT (id) DO NOTHING;
+              -- Fails the Job (division by zero) unless the key is there now:
+              -- the INSERT above inserts nothing, silently, if the user is
+              -- missing.
+              SELECT 1 / count(*) AS token_present FROM api_keys WHERE id = :'key_id';
+              COMMIT;
+              SQL
+          env:
+            - name: CODER_PG_CONNECTION_URL
+              valueFrom:
+                secretKeyRef:
+                  name: coder-pguser-secret
+                  key: uri
+            - name: CODER_USERNAME
+              value: pulumi
+            - name: TOKEN_NAME
+              value: pulumi
+            - name: HOME
+              value: /tmp
+          # KEY_ID, KEY_HASH and LIFETIME_DAYS come from the Secret
+          # coder-templates.ts creates next to this Job.
+          envFrom: []
+          securityContext:
+            runAsUser: 26
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
