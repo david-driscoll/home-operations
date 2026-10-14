@@ -247,6 +247,11 @@ spec:
           {
             matchHost: 'http://forgejo-github-sync.${NAMESPACE}.svc.cluster.local:8080',
             allowInternal: true,
+            // Three minutes, not Renovate's 60 seconds: at the start of a run
+            // the relay queues GitHub calls for every image at once (sixteen
+            // in flight), so a lookup can wait its turn. Measured: thirty at
+            // once took 56 seconds at eight in flight.
+            timeout: 180000,
           },
           // DOCKER HUB, AUTHENTICATED. Anonymous lookups share one budget per
           // egress address; once it is spent Docker Hub answers 429 and
