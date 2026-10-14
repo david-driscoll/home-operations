@@ -48,6 +48,46 @@ const PER_PAGE = 100;
 const MAX_AGE_MS = Number(process.env.GHCR_MAX_AGE_DAYS ?? 365) * 86_400_000;
 const MAX_PAGES = Number(process.env.GHCR_MAX_PAGES ?? 50);
 const WAVE = 10;
+// GitHub calls in flight at once, across ALL lookups. Renovate asks about many
+// images at the same moment at the start of a run, each lookup asks for ten
+// pages, and GitHub answers a burst like that with 403s (its limit on
+// concurrent requests, separate from the hourly budget). In the first day of
+// running, 75 lookups were refused that way, every one at the start of a run
+// and every one for an image that looked up fine on other runs.
+//
+// Sixteen: thirty lookups at once -- every image refused in the cluster
+// among them -- took 56 seconds at eight in flight and drew no refusal. Each
+// waits its turn, and Renovate gives up on a request after 60 seconds by
+// default (raised for this host in ../renovate/renovatejob.yaml).
+const MAX_IN_FLIGHT = Number(process.env.GHCR_MAX_IN_FLIGHT ?? 16);
+let inFlight = 0;
+const waiting = [];
+async function limited(call) {
+  if (inFlight >= MAX_IN_FLIGHT) await new Promise(resolve => waiting.push(resolve));
+  inFlight++;
+  try {
+    return await call();
+  } finally {
+    inFlight--;
+    waiting.shift()?.();
+  }
+}
+
+// A refusal that is about rate, not access: 429, or a 403 whose message or
+// headers say so. Worth one more try after GitHub's own `retry-after`, or a
+// short wait.
+const RATE_LIMITED = /rate limit|abuse/i;
+async function withRetry(call) {
+  try {
+    return await limited(call);
+  } catch (error) {
+    const rated = error?.status === 429 || (error?.status === 403 && (RATE_LIMITED.test(String(error?.message)) || error?.response?.headers?.["retry-after"] !== undefined));
+    if (!rated) throw error;
+    const seconds = Math.min(Number(error?.response?.headers?.["retry-after"]) || 10, 60);
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+    return await limited(call);
+  }
+}
 // Renovate asks once per dependency per run, the same image is often pinned
 // in several files, and runs come more than once an hour. An hour, because the
 // token's budget is shared with Renovate itself: measured on 2026-10-13, one
@@ -108,7 +148,7 @@ async function lookup(owner, image, token) {
   waves: for (let first = 1; first <= MAX_PAGES; first += WAVE) {
     const numbers = Array.from({ length: Math.min(WAVE, MAX_PAGES - first + 1) }, (_, i) => first + i);
     const answers = await Promise.all(
-      numbers.map(page => octokit.rest.packages.getAllPackageVersionsForPackageOwnedByUser({ ...pkg, per_page: PER_PAGE, page, request: request() })),
+      numbers.map(page => withRetry(() => octokit.rest.packages.getAllPackageVersionsForPackageOwnedByUser({ ...pkg, per_page: PER_PAGE, page, request: request() }))),
     );
     for (const { data: body } of answers) {
       pages++;
@@ -128,7 +168,7 @@ async function lookup(owner, image, token) {
   // The repository the image is built from, for the changelog in the pull
   // request -- what the `docker` datasource would have read from a label.
   // Not worth failing the lookup over.
-  const sourceUrl = await octokit.rest.packages.getPackageForUser({ ...pkg, request: request() }).then(
+  const sourceUrl = await withRetry(() => octokit.rest.packages.getPackageForUser({ ...pkg, request: request() })).then(
     ({ data }) => data.repository?.html_url,
     () => undefined,
   );
@@ -157,7 +197,9 @@ export async function ghcr(path, readToken, log = () => {}) {
     // that for this one dependency rather than "no updates". No status at
     // all is GitHub, or npm on the first lookup, being unreachable.
     const status = typeof error?.status === "number" ? error.status : undefined;
-    log(status ? "ghcr lookup refused" : "ghcr lookup failed", { package: key, ...(status ? { status } : { error: String(error).slice(0, 200) }) });
+    // GitHub's own message is kept: a 403 can be access or rate, and only the
+    // message says which.
+    log(status ? "ghcr lookup refused" : "ghcr lookup failed", { package: key, ...(status ? { status } : {}), error: String(error?.message ?? error).slice(0, 200) });
     return json({ error: status ? `github answered ${status}` : "lookup failed" }, status === 404 ? 404 : 502);
   }
   cache.set(key, { at: Date.now(), result: found.result });
