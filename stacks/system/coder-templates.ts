@@ -137,7 +137,7 @@ const TEMPLATES: CoderTemplateDefinition[] = [
     icon: "/icon/git.svg",
     directory: "repository",
     variables: {
-      default_repository_url: "https://github.com/david-driscoll/home-operations",
+      default_repository_url: "",
     },
   },
   {
@@ -147,7 +147,7 @@ const TEMPLATES: CoderTemplateDefinition[] = [
     icon: "/icon/folder.svg",
     directory: "repositories",
     variables: {
-      default_repository_urls: ["https://github.com/david-driscoll/home-operations"],
+      default_repository_urls: [],
     },
   },
 ];
