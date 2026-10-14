@@ -12,6 +12,8 @@ set -euo pipefail
 
 ssd_root=/opt/stacks-data/garage
 zfs_data=/data/garage
+# metadata_snapshots_dir (garage.toml) — full LMDB copies, too big for the SSD.
+zfs_snapshots=/data/garage-meta-snapshots
 
 # uid 3900 is the garage service account (compose.yaml `user:`). It exists
 # nowhere in /etc/passwd and does not need to.
@@ -30,8 +32,8 @@ if [ ! -d /data ]; then
   echo "ERROR: /data is not mounted in this LXC — the garage stack requires the ZFS array host mount." >&2
   exit 1
 fi
-mkdir -p "$zfs_data"
-chown 3900:3900 "$zfs_data"
-chmod 700 "$zfs_data"
+mkdir -p "$zfs_data" "$zfs_snapshots"
+chown 3900:3900 "$zfs_data" "$zfs_snapshots"
+chmod 700 "$zfs_data" "$zfs_snapshots"
 
 echo "Garage data directories ready."
