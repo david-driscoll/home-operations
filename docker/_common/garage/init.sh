@@ -13,7 +13,8 @@ set -euo pipefail
 ssd_root=/opt/stacks-data/garage
 zfs_data=/data/garage
 # metadata_snapshots_dir (garage.toml) — full LMDB copies, too big for the SSD.
-zfs_snapshots=/data/garage-meta-snapshots
+# Inside $zfs_data on purpose; see garage.toml for why not a sibling.
+zfs_snapshots=$zfs_data/meta-snapshots
 
 # uid 3900 is the garage service account (compose.yaml `user:`). It exists
 # nowhere in /etc/passwd and does not need to.

@@ -70,9 +70,6 @@ services:
       # stacks/{home,gulf-of-mexico,ocracoke}); /opt/stacks-data is the SSD.
       - /opt/stacks-data/garage/meta:/var/lib/garage/meta
       - /data/garage:/var/lib/garage/data
-      # metadata_snapshots_dir (garage.toml): full LMDB copies, on ZFS rather
-      # than the SSD. A sibling of the data dir, never inside it.
-      - /data/garage-meta-snapshots:/var/lib/garage/snapshots
     # Docker's json-file default has no size limit, and the default log level
     # writes an INFO line for every block resync attempt. With skystar's zone
     # never seen (offline since 2026-08-31) the resync queue cannot drain:

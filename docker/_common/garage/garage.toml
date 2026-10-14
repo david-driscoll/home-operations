@@ -28,7 +28,14 @@ metadata_auto_snapshot_interval = "6h"
 # written before the oldest is pruned, so the default <metadata_dir>/snapshots
 # held ~10 GB of the LXC's 148 GB root disk and helped fill it. Off the SSD
 # they also survive the failure they exist to recover from.
-metadata_snapshots_dir = "/var/lib/garage/snapshots"
+#
+# INSIDE the data dir's mount, not a sibling of it, because on luna /data is
+# owned by the Proxmox host's unmapped nobody (65534, mode 755) and the LXC
+# cannot create anything new at that level -- /data/garage itself was made by
+# hand on the host. Safe for Garage: its block walker only descends into
+# directories whose name is valid hex (src/block/repair.rs, BlockStoreIterator),
+# and "meta-snapshots" is not.
+metadata_snapshots_dir = "/var/lib/garage/data/meta-snapshots"
 
 # Three nodes, three zones, one copy per machine. Changing this on a live
 # cluster is a layout rebuild, not an edit — treat it as immutable, the same
