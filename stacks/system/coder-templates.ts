@@ -17,34 +17,34 @@
  * way to get "a template for THIS repository": add an entry for `repository`
  * with its own `default_repository_url` rather than copying Terraform.
  *
- * ## Two kill switches, both off until a person has done their half
+ * ## Two kill switches
  *
- * Every other stack reads `clusters/<key>/details` from this one, so a new way
- * for it to go red has to be opt-in. Both of these read a credential or write
- * to a path that does not exist until somebody with more authority than this
- * stack has put it there, and a missing one fails the PREVIEW, not just the
- * resource.
+ * Every other stack reads `clusters/<key>/details` from this one, so each new
+ * way for it to go red has a switch that turns it off again.
  *
- * `TEMPLATES_ENABLED` needs a Coder API token at
- * `secrets/clusters/equestria/apps/coder/pulumi`, field `token`. Coder has no
- * way to mint one without a logged-in session, and password login is disabled
- * (CODER_DISABLE_PASSWORD_AUTH), so it is made by hand, once:
+ * `TEMPLATES_ENABLED`: the token Pulumi publishes with, and the templates.
+ * Nobody makes the token by hand. Coder can only mint one for a logged-in
+ * session, and password login is off (CODER_DISABLE_PASSWORD_AUTH), so this
+ * file does what `coder tokens create` would have done:
  *
- *     coder login https://code.<root domain>          # as an Owner
- *     coder tokens create --name pulumi --lifetime 8760h
- *     bao kv put secrets/clusters/equestria/apps/coder/pulumi token=<the token>
+ *   1. generates the token itself -- a 10-character id and a 22-character
+ *      secret, the shape coderd/apikey/apikey.go makes -- and keeps it in
+ *      OpenBao at `secrets/clusters/equestria/apps/coder/pulumi`;
+ *   2. runs a Job in the `coder` namespace that creates a `pulumi` Owner and
+ *      inserts the token's SHA-256 for it, straight into Coder's database
+ *      (kubernetes/apps/coder/coder/resources/pulumi-token-job.yaml explains
+ *      both steps, and why the second is the fragile one);
+ *   3. waits for that Job, then publishes the templates with the token.
  *
- * The token carries its creator's permissions, and creating a template needs
- * Template Admin or Owner. It expires; `--lifetime` is capped by
- * CODER_MAX_TOKEN_LIFETIME, and when it lapses this module fails with a 401
- * and nothing else is affected until someone flips the switch off or renews it.
+ * To rotate it, `pulumi up --replace` the `coder-pulumi-token-secret`
+ * resource: the Job re-runs, and revokes the old token as it adds the new one.
+ * It also expires after `TOKEN_LIFETIME_DAYS`.
  *
- * `VAULT_JWT_ENABLED` needs the `pulumi` OpenBao policy widened to cover one
- * new auth mount and one new policy. The grants are in
- * bootstrap/openbao/equestria-init.sh write_policies(), under "Coder
- * workspaces"; applying them to the live policy is an `admin`-group action
- * through the OIDC login, the same way openbao-mcp.ts's grants were added.
- * Until then the templates install the Vault CLI and nothing logs in.
+ * `VAULT_JWT_ENABLED`: the OpenBao auth mount workspaces log in through. It
+ * needs the `pulumi` OpenBao policy grants in bootstrap/openbao/equestria-init.sh
+ * write_policies(), under "Coder workspaces" -- applied to the live policy on
+ * 2026-10-14. With it off the templates install the Vault CLI and nothing
+ * logs in.
  *
  * ## Why a mount of its own
  *
@@ -61,23 +61,41 @@
  * the OpenBao token it buys lasts `VAULT_TOKEN_TTL_SECONDS`.
  */
 
-import { oidcBaoPath } from "@components/bao.ts";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { baoKvSecret, baoProvenance, oidcBaoPath } from "@components/bao.ts";
 import { stageCoderTemplate } from "@components/coderTemplates.ts";
 import { rootDomain } from "@components/domains.ts";
 import type { GlobalResources } from "@components/globals.ts";
+import { generateTailscaleKubeConfig } from "@components/store/index.ts";
 import * as coderd from "@pulumi/coderd";
+import * as pk8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
 import * as vault from "@pulumi/vault";
+import * as yaml from "yaml";
 
-/** Publish the templates. Needs the Coder API token -- see the header. */
-const TEMPLATES_ENABLED = false;
+/** Mint the token and publish the templates -- see the header. */
+const TEMPLATES_ENABLED = true;
 
-/** Create the OpenBao auth mount and have workspaces log in. Needs the widened `pulumi` policy -- see the header. */
-const VAULT_JWT_ENABLED = false;
+/** Create the OpenBao auth mount and have workspaces log in -- see the header. */
+const VAULT_JWT_ENABLED = true;
 
-/** Within the `secrets` mount. One field: `token`. */
+/** Within the `secrets` mount. Pulumi writes it; nothing else needs to read it. */
 const CODER_TOKEN_PATH = "clusters/equestria/apps/coder/pulumi";
+
+/**
+ * How long the token lives. It is checked only when it is used, so a token
+ * that lapses fails the next run with a 401; replacing the secret (see the
+ * header) mints a fresh one.
+ */
+const TOKEN_LIFETIME_DAYS = 365;
+
+/** Where Coder's own deployment lives in the repository. */
+const CODER_APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../kubernetes/apps/coder/coder");
 
 /**
  * OpenBao as a workspace pod reaches it: the same in-cluster address the
@@ -152,6 +170,29 @@ const TEMPLATES: CoderTemplateDefinition[] = [
   },
 ];
 
+/**
+ * The token Job, from its YAML, with the Coder image tag filled in from the
+ * HelmRelease. `coder server create-admin-user` writes Coder's database, so it
+ * must be the same release as the server -- reading the version from the one
+ * place Renovate bumps it keeps the two from drifting apart.
+ */
+// `any` because it is a parsed manifest; it is spread into a typed Job below.
+function loadTokenJob(): any {
+  const chartVersion = yaml
+    .parseAllDocuments(readFileSync(path.join(CODER_APP_DIR, "helmrelease.yaml"), "utf8"))
+    .map(doc => doc.toJS())
+    .find(doc => doc?.kind === "HelmRelease")?.spec?.chart?.spec?.version;
+  if (typeof chartVersion !== "string") {
+    throw new Error(`No HelmRelease chart version in ${CODER_APP_DIR}/helmrelease.yaml; the token Job's Coder image cannot be pinned.`);
+  }
+
+  const job = yaml.parse(readFileSync(path.join(CODER_APP_DIR, "resources/pulumi-token-job.yaml"), "utf8"));
+  for (const container of job.spec.template.spec.initContainers) {
+    if (container.image === "ghcr.io/coder/coder") container.image = `ghcr.io/coder/coder:v${chartVersion}`;
+  }
+  return job;
+}
+
 export interface CoderTemplatesArgs {
   globals: GlobalResources;
 }
@@ -166,7 +207,7 @@ export class CoderTemplatesComponent extends ComponentResource {
 
     if (!TEMPLATES_ENABLED) return;
 
-    const token = vault.kv.getSecretV2Output({ mount: "secrets", name: CODER_TOKEN_PATH }, { provider: args.globals.baoProvider });
+    const { token, registered } = this.mintToken(args.globals);
 
     const provider = new coderd.Provider(
       "coder",
@@ -174,9 +215,12 @@ export class CoderTemplatesComponent extends ComponentResource {
         // The one URL Coder answers on -- see kubernetes/apps/coder/coder/ks.yaml
         // for why there is no second hostname.
         url: `https://code.${rootDomain()}`,
-        token: token.data.apply(d => pulumi.secret(d.token)),
+        token,
       },
-      { parent: this },
+      // The provider calls Coder as soon as it is configured, so it has to
+      // wait for the Job that makes the token valid -- not just the
+      // templates.
+      { parent: this, dependsOn: [registered] },
     );
 
     // What every template is told, whatever it clones. Empty `vault_jwt_role`
@@ -223,6 +267,89 @@ export class CoderTemplatesComponent extends ComponentResource {
         { parent: this, provider, dependsOn: vaultLogin ? [vaultLogin] : [] },
       );
     }
+  }
+
+  /**
+   * The Coder API token Pulumi publishes with: generated here, registered
+   * with Coder by a Job -- see the header and
+   * kubernetes/apps/coder/coder/resources/pulumi-token-job.yaml.
+   *
+   * `registered` is the Job. Anything that uses the token must depend on it:
+   * until it has finished, Coder answers the token with a 401.
+   */
+  private mintToken(globals: GlobalResources): { token: pulumi.Output<string>; registered: pulumi.Resource } {
+    // Coder's own alphabet (cryptorand.Default: A-Z, a-z, 0-9) and lengths.
+    const keyId = new random.RandomString("coder-pulumi-token-id", { length: 10, special: false }, { parent: this });
+    const keySecret = new random.RandomPassword("coder-pulumi-token-secret", { length: 22, special: false }, { parent: this });
+
+    const token = pulumi.secret(pulumi.interpolate`${keyId.result}-${keySecret.result}`);
+
+    // For a person, or another tool, that wants to call Coder as `pulumi`.
+    // Nothing in this stack reads it back: the token above is used directly.
+    baoKvSecret(
+      "coder-pulumi-token",
+      {
+        mount: "secrets",
+        path: CODER_TOKEN_PATH,
+        data: { token, username: "pulumi" },
+        concealedFields: ["token"],
+        customMetadata: baoProvenance({ source_title: "Coder API token (pulumi)" }),
+      },
+      { parent: this, provider: globals.baoProvider },
+    );
+
+    const kubernetes = new pk8s.Provider("coder-equestria", { kubeconfig: generateTailscaleKubeConfig("equestria", globals.tailscaleDomain) }, { parent: this });
+
+    // The Job only ever sees what Coder stores: the id, and the secret's
+    // SHA-256. A copy of this Secret is not a working token.
+    const keySecretRef = new pk8s.core.v1.Secret(
+      "coder-pulumi-token",
+      {
+        metadata: { namespace: "coder", labels: { "app.kubernetes.io/name": "coder-pulumi-token", "app.kubernetes.io/part-of": "coder" } },
+        stringData: {
+          KEY_ID: keyId.result,
+          KEY_HASH: keySecret.result.apply(s => createHash("sha256").update(s).digest("hex")),
+          LIFETIME_DAYS: String(TOKEN_LIFETIME_DAYS),
+        },
+      },
+      { parent: this, provider: kubernetes },
+    );
+
+    const job = loadTokenJob();
+    const registered = new pk8s.batch.v1.Job(
+      "coder-pulumi-token",
+      {
+        ...job,
+        spec: {
+          ...job.spec,
+          template: {
+            ...job.spec.template,
+            metadata: {
+              ...job.spec.template.metadata,
+              // A Job cannot be changed in place, and the Secret it reads is
+              // not part of its spec. The key id is, here: a new token is a new
+              // pod template, which makes Pulumi replace the Job, which runs
+              // it again.
+              annotations: { "driscoll.dev/coder-token-id": keyId.result },
+            },
+            spec: {
+              ...job.spec.template.spec,
+              containers: job.spec.template.spec.containers.map((container: pk8s.types.input.core.v1.Container) => ({
+                ...container,
+                envFrom: [{ secretRef: { name: keySecretRef.metadata.name } }],
+              })),
+            },
+          },
+        },
+      },
+      // Waits for the Job to SUCCEED, which is the point: the provider that
+      // depends on this must not be configured with a token Coder does not
+      // know yet. deleteBeforeReplace because the old Job holds nothing worth
+      // keeping and two would race.
+      { parent: this, provider: kubernetes, deleteBeforeReplace: true },
+    );
+
+    return { token, registered };
   }
 
   /**

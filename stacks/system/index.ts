@@ -161,9 +161,10 @@ new PostgresRotationComponent({ globals });
 new OpenBaoMcpComponent({ globals });
 
 // Coder's workspace templates (kubernetes/apps/coder/coder/templates) and the
-// OpenBao auth mount their workspaces log in through. Both halves are no-ops
-// until their switch is flipped in coder-templates.ts: one waits for a
-// hand-made Coder API token, the other for a widened `pulumi` policy.
+// OpenBao auth mount their workspaces log in through. It mints its own Coder
+// API token with a Job in the `coder` namespace, which makes Coder's API and
+// database two more things this stack depends on; each half has a switch in
+// coder-templates.ts.
 new CoderTemplatesComponent({ globals });
 
 // The Forgejo identity Renovate runs as -- the bot account, its token, and the

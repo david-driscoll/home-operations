@@ -62,14 +62,22 @@ start it with the workspace.
 
 ### OpenBao
 
-Workspaces are told OpenBao's in-cluster address and get the `vault` CLI. Whether they are
-also logged in depends on a switch in
-[`stacks/system/coder-templates.ts`](../../../../../stacks/system/coder-templates.ts):
+Workspaces are told OpenBao's in-cluster address and get the `vault` CLI. Every start also
+logs in as the workspace owner, using the OIDC access token Coder already holds for them,
+through the `auth/coder` mount. The token it gets can read and write
+`secrets/coder/<owner's email>/*` and nothing else.
 
-- **`VAULT_JWT_ENABLED = false`** (the default until the `pulumi` policy is widened): CLI only.
-- **`VAULT_JWT_ENABLED = true`**: every start logs in as the workspace owner, using the OIDC
-  access token Coder already holds for them, through the `auth/coder` mount. The token it gets
-  can read and write `secrets/coder/<owner's email>/*` and nothing else.
+`VAULT_JWT_ENABLED` in
+[`stacks/system/coder-templates.ts`](../../../../../stacks/system/coder-templates.ts) turns
+the login off again: the templates then install the CLI only.
+
+## How Pulumi gets into Coder
+
+Pulumi publishes as a `pulumi` user with the Owner role, using a token it generates itself.
+Coder cannot mint a token without a logged-in session and password login is off, so a Job
+([`../resources/pulumi-token-job.yaml`](../resources/pulumi-token-job.yaml)) creates the user
+and registers the token straight in Coder's database. Nobody makes a token by hand. The token
+is also kept in OpenBao at `secrets/clusters/equestria/apps/coder/pulumi`.
 
 ## Adding a template
 
