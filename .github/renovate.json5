@@ -1401,6 +1401,28 @@
       matchCurrentValue: "/^v?\\d+\\.\\d+\\.\\d+/",
       overrideDatasource: "custom.ghcr",
     },
+    {
+      // Only the forge's Renovate handles the updates that automerge. On
+      // GitHub, Mend's bot skips them entirely -- no pull request, no
+      // `renovate/automerge` label, no branch automerge for Actions -- because
+      // the forge merges the same update under the rules above and the sync
+      // pushes it to main here (docs/runbooks/forgejo-github-mirror.md).
+      // Everything that waits for a human still gets a pull request on both.
+      //
+      // `matchJsonata` sees the config as built by every EARLIER rule
+      // (applyPackageRules matches each rule against the running merge), so
+      // `automerge = true` here means "some rule above opted this update in".
+      // That is why this must stay the LAST rule: one added after it that sets
+      // automerge would be invisible to it. Names only the GitHub copy.
+      description: "GitHub bot skips updates the forge automerges",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchJsonata: [
+        "automerge = true"
+      ],
+      enabled: false,
+    },
   ],
   customManagers: [
     {

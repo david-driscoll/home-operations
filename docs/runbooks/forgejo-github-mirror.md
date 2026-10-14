@@ -184,11 +184,14 @@ and `github-mirror/home-operations`. A rule added with only the first would not
 exist on the forge — and for the "no automerge unless a rule opts in" rule,
 that would mean every patch merging itself there.
 
-So **both bots open pull requests for the same updates**, one set on each side,
-and whichever sees its own checks green inside the overnight window merges
-first. The other side's pull request is closed by its bot on its next run. If
-both merge the same update before the sync has run, the forge's copy of the
-commit is recognised as already applied and dropped.
+**Only the forge handles updates that automerge.** The last package rule
+disables, for `david-driscoll/home-operations` alone, every update an earlier
+rule set to automerge, so Mend opens no `renovate/automerge` pull requests on
+GitHub. The forge merges them under the automerge rules and the sync pushes the
+result to GitHub. Updates that wait for a human still get a pull request from
+**both** bots, one on each side. Merge either one: when the other side's copy of
+the commit syncs, it is recognised as already applied and dropped, and the
+other bot closes its now-redundant pull request on its next run.
 
 An update the forge merges is pushed to GitHub by the sync within a minute or
 so. Renovate merges with **Rebase then fast-forward**, the repository's default
