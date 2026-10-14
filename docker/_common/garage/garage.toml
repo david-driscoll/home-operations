@@ -23,6 +23,12 @@ db_engine = "lmdb"
 # periodic snapshot (it keeps the two most recent) is the recovery path for
 # that, and it is also why this stack needs no backrest plan for its metadata.
 metadata_auto_snapshot_interval = "6h"
+# Snapshots go to the ZFS array, NOT next to the LMDB on the SSD. Each one is a
+# full copy of db.lmdb (6.2 GB on celestia by 2026-10-14) and a new one is
+# written before the oldest is pruned, so the default <metadata_dir>/snapshots
+# held ~10 GB of the LXC's 148 GB root disk and helped fill it. Off the SSD
+# they also survive the failure they exist to recover from.
+metadata_snapshots_dir = "/var/lib/garage/snapshots"
 
 # Three nodes, three zones, one copy per machine. Changing this on a live
 # cluster is a layout rebuild, not an edit — treat it as immutable, the same
