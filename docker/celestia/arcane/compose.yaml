@@ -1,6 +1,6 @@
 services:
   arcane:
-    image: ghcr.io/getarcaneapp/manager:latest@sha256:55c408366127a1f104834557124e06c96ca746fd02de86ce6b6c143001b4d182
+    image: ghcr.io/getarcaneapp/manager:latest@sha256:e211067a6808c1598175141cd19c48eab874a24b5b649be3ddcb3894db7e73cd
     container_name: arcane
     volumes:
       - arcane-data:/app/data
