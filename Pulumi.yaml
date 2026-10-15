@@ -38,7 +38,7 @@ packages:
   forgejo:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/svalabs/forgejo, 1.6.1]
+    parameters: [registry.terraform.io/svalabs/forgejo, 1.7.0]
   coderd:
     source: terraform-provider
     version: 0.14.0
