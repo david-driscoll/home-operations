@@ -252,6 +252,32 @@
   },
   packageRules: [
     {
+      // EVERY update on the Forgejo copy waits three days and carries the
+      // `renovate/stability-days` status, not only the ones the automerge
+      // rules below pick out. FIRST in the list on purpose: it is the default
+      // for that repository, and any rule below that sets its own wait still
+      // wins.
+      //
+      // What that means in practice, with Renovate's default
+      // `internalChecksFilter: strict`: an update younger than three days gets
+      // no branch and no pull request yet -- it waits under "Pending Status
+      // Checks" on the Dependency Dashboard -- including the majors and the
+      // others that are merged by hand. The dashboard's checkbox for it
+      // creates it at once.
+      //
+      // `timestamp-optional`, as in the automerge rules: a release with no
+      // date (digest-only updates, registries that keep none) is not held.
+      // The default, `timestamp-required`, would hold those for ever.
+      //
+      // GitHub's copy is unchanged.
+      description: "Forgejo copy: a three-day wait and a stability-days check on every update",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      minimumReleaseAge: "3 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+    },
+    {
       // Jellyfin's 12.0 release candidates are tagged `12.0-rcN`, and the
       // DEFAULT `docker` versioning reads everything after the first `-` as an
       // image VARIANT -- the same slot that holds `alpine` or `rootless` --
