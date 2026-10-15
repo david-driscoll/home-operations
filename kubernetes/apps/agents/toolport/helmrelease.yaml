@@ -51,9 +51,11 @@ spec:
           *app :
             image:
               repository: ghcr.io/btsouth/toolport-gateway
-              tag: v1.24.0@sha256:ddec58d2c7664ff9cddc7eab84948c1fa828a2ce39bece3762290328f80b5a1b
+              tag: v2.0.0@sha256:aac682d03d23a3a7e12f5150db7c43b062fc907032b5c9b9005728434d4d6fb9
             # No command/args: the image's ENTRYPOINT is already
-            # `toolport-gateway --http 8765`. Use the flag, not TOOLPORT_HTTP --
+            # `docker-entrypoint.sh toolport-gateway --http 8765` (the script
+            # only warns when /data is not writable, then execs). Use the
+            # flag, not TOOLPORT_HTTP --
             # the env form is ignored whenever stdin is a pipe.
             env:
               TOOLPORT_HTTP_HOST: 0.0.0.0
@@ -83,8 +85,9 @@ spec:
               # LIVENESS ASKS THE WATCHDOG SIDECAR, not toolport. toolport never
               # re-initializes a backend session the backend has forgotten
               # (see the watchdog container below), and nothing it serves
-              # anonymously can show that -- every route sits behind the bearer
-              # check, and toolport_status reads only its own cache. The
+              # anonymously can show that -- its own /healthz reports only
+              # whether the registry loaded, and toolport_status reads only its
+              # own cache. The
               # watchdog calls a canary on every backend through toolport and
               # answers 503 here only for what a restart fixes: a stale
               # session, a backend that failed at startup and is up now, or
@@ -105,13 +108,18 @@ spec:
                   periodSeconds: 60
                   timeoutSeconds: 5
                   failureThreshold: 3
-              # tcpSocket, not HTTP: every route, `/` included, sits behind the
-              # bearer check and answers 401 to an anonymous probe.
+              # /healthz (2.x) is the one route outside the bearer check. It
+              # answers 200 only once the registry loaded, and 503 while
+              # toolport serves its cached catalog -- e.g. a registry it could
+              # not load (see ./kustomization.yaml on the v3 schema). Not
+              # Ready means a bad registry fails the upgrade instead of
+              # rolling out a gateway with no tools.
               readiness:
                 enabled: true
                 custom: true
                 spec:
-                  tcpSocket:
+                  httpGet:
+                    path: /healthz
                     port: 8765
                   initialDelaySeconds: 5
                   periodSeconds: 30
