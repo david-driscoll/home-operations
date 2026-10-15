@@ -43,7 +43,7 @@
     "@pulumi/technitium": "file:sdks/technitium",
     "@pulumi/terrifi": "file:sdks/terrifi",
     "@pulumi/unifi": "file:sdks/unifi",
-    "@pulumi/vault": "^7.13.1",
+    "@pulumi/vault": "^7.14.0",
     "@pulumiverse/purrl": "^0.6.2",
     "confbox": "^0.3.1",
     "diff": "^9.0.0",
