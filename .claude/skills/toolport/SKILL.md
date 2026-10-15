@@ -69,13 +69,9 @@ returns the plan without executing. If a script fails partway,
   result was cut for context, not lost. Page the rest with
   `toolport_fetch_result` using the marker's `cursor`/`offset`, or pass
   `projection` (a dot path like `data.items.0.name`) to pull one field.
-- **Destructive calls:** Toolport may intercept a destructive call and return a
-  preview with a `token`. Confirm with `toolport_confirm` within 60 seconds to
-  execute it unchanged, or a human approves it in the Toolport app. A denied
-  call is a decision, not an error, so don't retry it verbatim.
-- **Server management:** when the user has allowed agent control,
-  `toolport_enable_server` / `toolport_disable_server` turn servers on or off
-  by id or name (see `toolport_status` for the list).
+- **Destructive calls:** at the Ask or Strict safety level, Toolport holds a
+  destructive call until a human approves it in the Toolport app. A denied call
+  is a decision, not an error, so don't retry it verbatim.
 - **Gateway not found:** if the Toolport server itself fails to start, the
   desktop app isn't installed. The user can get it at https://toolport.app.
 <!-- END upstream -->
@@ -112,14 +108,13 @@ the only MCP front door: the old `agent-tools` aggregated server is retired. So:
 
   Tool names are `<server id>__<tool>`, e.g. `kubernetes__list_resources`.
 
-- **There is no human approval step.** `humanApproval` is off, so ignore the
-  "a human approves it in the Toolport app" and "the desktop app isn't
-  installed" lines above. Destructive calls go straight through: be as careful
-  as you would calling the backend directly.
-- **Do not call `toolport_enable_server` / `toolport_disable_server`.** Agent
-  control is off, and the registry is rendered from git by External Secrets
-  anyway -- servers and profiles are changed in
-  `kubernetes/apps/agents/toolport/resources/registry.json`.
+- **There is no human approval step.** The safety level is Off
+  (`"safetyLevel": "off"`), so ignore the "a human approves it in the Toolport
+  app" and "the desktop app isn't installed" lines above. Destructive calls go
+  straight through: be as careful as you would calling the backend directly.
+- **Servers and profiles are changed in git**, in
+  `kubernetes/apps/agents/toolport/resources/registry.json` (schema v3, rendered
+  by External Secrets). Toolport 2.x has no tool for turning servers on or off.
 - **Where it is reachable.** Every profile has its own URL, and no client
   holds a token. The `toolport-<profile>` entries in `.mcp.json` read
   `TOOLPORT_<PROFILE>_URL` and have no default, because a default would name
