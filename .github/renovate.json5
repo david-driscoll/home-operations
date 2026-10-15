@@ -479,6 +479,63 @@
       },
     },
     {
+      // The server (docker/alpha-site/authentik, stargate-command/authentik)
+      // and the proxy outpost (docker/_common/authentik-outpost) are tagged
+      // from one upstream release, and an outpost is expected to run its
+      // server's version. Split PRs left them a release apart until both were
+      // merged by hand. The @goauthentik/api npm client (components/) is
+      // generated from the same release's API schema, so it rides along.
+      //
+      // NOT here: the Helm chart, version-locked to the image by hand
+      // (docs/authentik-active-active/PLAN.md), and the Pulumi.yaml provider,
+      // which needs its SDK regenerated. No datasource filter, so the npm
+      // client matches too, and so the images still match on the Forgejo copy
+      // after they move to `custom.ghcr`.
+      description: "authentik Group",
+      groupName: "authentik",
+      matchPackageNames: [
+        "/^ghcr\\.io\\/goauthentik\\//",
+        "@goauthentik/api"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // Everything Stacklok ships for ToolHive, in one PR: the operator chart
+      // and its CRDs chart (kubernetes/apps/agents/toolhive-operator{,-crds}),
+      // which must move together -- an operator on CRDs from another release
+      // is unsupported -- plus the registry server
+      // (agents/toolhive-registry) and the `thv` CLI in .config/mise.toml.
+      // The registry server is on its own 1.x line, so the title carries no
+      // version: a group with two version lines would print only one of them.
+      description: "ToolHive Group",
+      groupName: "ToolHive",
+      matchPackageNames: [
+        "/stacklok\\/toolhive/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      // unifi-network-mcp, unifi-protect-mcp and unifi-access-mcp are three
+      // apps in one upstream monorepo (github.com/sirkirby/unifi-mcp) and
+      // release together (kubernetes/apps/agents/agent-tools-servers). Each
+      // is on its own version line, so the title carries no version. No
+      // datasource filter, so the images still match on the Forgejo copy
+      // after they move to `custom.ghcr`.
+      description: "UniFi MCP Group",
+      groupName: "UniFi MCP",
+      matchPackageNames: [
+        "/^ghcr\\.io\\/sirkirby\\/unifi-.+-mcp$/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "Flux Operator Group",
       groupName: "Flux Operator",
       matchPackageNames: [
@@ -1212,8 +1269,12 @@
         "pulumi/pulumi",
         "cli/cli",
         "jdx/hk",
-        // kubernetes/apps/agents/agent-tools-servers (a 0.x image)
+        // kubernetes/apps/agents/agent-tools-servers (0.x images). All three:
+        // they share the "UniFi MCP" group, and a group branch automerges
+        // only when every update in it would.
         "ghcr.io/sirkirby/unifi-network-mcp",
+        "ghcr.io/sirkirby/unifi-protect-mcp",
+        "ghcr.io/sirkirby/unifi-access-mcp",
         // kubernetes/apps/pulumi/*/stack.yaml workspace image
         "ghcr.io/pulumi/pulumi-nodejs",
         // kubernetes/apps/coder/renovate-operator
