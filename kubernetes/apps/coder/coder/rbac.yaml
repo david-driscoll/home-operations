@@ -1,0 +1,41 @@
+---
+# What stacks/system needs in this namespace to mint its Coder API token: the
+# Job in ./resources/pulumi-token-job.yaml, created and awaited by
+# stacks/system/coder-templates.ts.
+#
+# The stack reaches the cluster through the tailnet kube-proxy as a member of
+# the `tailnet-cluster-ops` group. Its ClusterRole
+# (kubernetes/apps/tailscale-system/resources/tailnet-cluster-ops.yaml) covers
+# Secrets everywhere but no workloads at all, so the first run that got this
+# far failed with `jobs.batch is forbidden ... in the namespace "coder"`.
+#
+# A Role here rather than a widening of that ClusterRole: the stack needs Jobs
+# in this one namespace, not the power to run a pod anywhere.
+#
+#   jobs   create + delete: a new token is a new Job (deleteBeforeReplace).
+#          get/list/watch: Pulumi waits for the Job to succeed.
+#   pods   read-only: Pulumi's Job await reports the failing pod's state.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pulumi-coder-token
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pulumi-coder-token
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pulumi-coder-token
+subjects:
+  - kind: Group
+    name: tailnet-cluster-ops
+    apiGroup: rbac.authorization.k8s.io
