@@ -187,6 +187,28 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       },
     );
 
+    // `claude-code` READS this repository, and that is all. It is a restricted
+    // account (./forgejo-renovate.ts), so without a grant of its own the Forgejo
+    // MCP server answers every call here -- the pull request, its diff, a file
+    // on main -- with "The target couldn't be found", and an agent asked to
+    // review one of the forge's Renovate PRs cannot even open it.
+    //
+    // `read`, never more. Write here is write to main, and main is what the
+    // sync publishes to GitHub: the reason this repository is user-owned rather
+    // than in an organization, where the `claude-code` team would get write on
+    // it automatically (see the header). Read is enough to view, diff, comment
+    // on and review a pull request; it cannot push, merge or change settings.
+    new forgejo.Collaborator(
+      "forgejo-github-mirror-collaborator-claude-code",
+      {
+        // The numeric id, as for Renovate's grants: it survives a rename.
+        repositoryId: repository.repositoryId,
+        user: args.forgejo.claudeCode.user.login,
+        permission: "read",
+      },
+      { provider, parent: repository },
+    );
+
     // What the workflow pushes to GitHub with. ed25519, as for claude-code's
     // key. To rotate: `pulumi up --replace` this resource. The Actions secret
     // and the deploy key below both follow it in the same run.
