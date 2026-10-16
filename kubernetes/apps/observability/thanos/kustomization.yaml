@@ -7,6 +7,18 @@ resources:
   - ./externalsecret.yaml
   - ./definition.yaml
   - ./tailnet-service.yaml
+# The components this app's ks.yaml adds use `commonLabels`, which also writes
+# `driscoll.dev/name` into every Service SELECTOR. The chart's pods do not
+# carry that label, so ./tailnet-service.yaml selected nothing and the
+# operator stopped advertising svc:thanos-receive (2026-10-15). Patches run
+# after the components' labels, so this takes the key back out.
+patches:
+  - target:
+      kind: Service
+      name: thanos-receive-tailnet
+    patch: |-
+      - op: remove
+        path: /spec/selector/driscoll.dev~1name
 configMapGenerator:
 - name: thanos-ruler
   files:
