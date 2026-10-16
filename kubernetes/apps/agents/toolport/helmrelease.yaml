@@ -51,7 +51,7 @@ spec:
           *app :
             image:
               repository: ghcr.io/btsouth/toolport-gateway
-              tag: v2.0.0@sha256:aac682d03d23a3a7e12f5150db7c43b062fc907032b5c9b9005728434d4d6fb9
+              tag: v2.1.0@sha256:5fd45d7e270e433961fbba37e94ae7e4cec3cac4017d3708def77b4a8341bd5c
             # No command/args: the image's ENTRYPOINT is already
             # `docker-entrypoint.sh toolport-gateway --http 8765` (the script
             # only warns when /data is not writable, then execs). Use the
