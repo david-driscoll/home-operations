@@ -31,8 +31,14 @@ data "coder_parameter" "repository_url" {
   # workspace would start with nothing cloned.
   default = var.default_repository_url != "" ? var.default_repository_url : null
 
+  # `^$|` is not an escape hatch for the person creating a workspace: with no
+  # default the parameter is required, and Coder refuses an empty value
+  # before validation runs. It is for Coder's TEMPLATE IMPORT, which plans
+  # the template with every required parameter left empty -- and without
+  # it that plan fails this regex and the template version cannot be
+  # created at all.
   validation {
-    regex = "^(https://|ssh://|git@)\\S+$"
+    regex = "^$|^(https://|ssh://|git@)\\S+$"
     error = "Enter an https:// or ssh clone URL."
   }
 }
