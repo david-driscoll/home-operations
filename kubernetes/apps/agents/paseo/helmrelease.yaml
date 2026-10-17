@@ -146,6 +146,27 @@ spec:
               GIT_CONFIG_VALUE_1: David Driscoll
               GIT_CONFIG_KEY_2: user.email
               GIT_CONFIG_VALUE_2: david.driscoll@gmail.com
+              # The estate's age identity, mounted below -- the same `sops-age`
+              # Secret agentboard mounts, with the same weight (see the
+              # SOPS_AGE_KEY_FILE comment in ../agentboard/helmrelease.yaml).
+              # The repo's .config/mise.toml decrypts .config/domains.sops.yaml
+              # with it, which is the only thing that gives ROOT_DOMAIN and
+              # TAILSCALE_DOMAIN a value here; without it both are empty.
+              SOPS_AGE_KEY_FILE: /var/run/secrets/sops-age/age.agekey
+              # Each toolport profile's in-cluster remote proxy, which holds the
+              # profile's bearer itself. The repo-root .mcp.json reads these;
+              # unset, Claude Code gets the template literally and every
+              # toolport-* server fails with ENOTFOUND. mise's [env] does not
+              # cover it: the daemon starts agents without a mise-activated
+              # shell. Admission is ../toolport-mcp/networkpolicy.yaml, which
+              # names this pod. Why env vars and not a mounted .mcp.json:
+              # ../agentboard/helmrelease.yaml, beside the same six.
+              TOOLPORT_POSTGRES_URL: http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_INFRASTRUCTURE_URL: http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_NETWORKING_URL: http://mcp-toolport-networking-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_HOME_URL: http://mcp-toolport-home-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_MEDIA_URL: http://mcp-toolport-media-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_RESEARCH_URL: http://mcp-toolport-research-remote-proxy.agents.svc.cluster.local:8080/mcp
             envFrom:
               - secretRef:
                   name: ${APP}
@@ -208,6 +229,16 @@ spec:
           *app :
             app:
               - path: /var/run/secrets/github-token
+                readOnly: true
+      sops-age:
+        type: secret
+        # The estate-wide reflected Secret, not `${APP}` -- see the
+        # SOPS_AGE_KEY_FILE comment in the `env` block for what it grants.
+        name: sops-age
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/sops-age
                 readOnly: true
       # git over SSH to Forgejo as `claude-code` -- ./externalsecret.yaml
       # (`${APP}-forgejo-ssh`) and ./resources/ssh_config. `custom` because
