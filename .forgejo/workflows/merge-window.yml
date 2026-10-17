@@ -1,0 +1,115 @@
+---
+# A time window for merges on the forge. Forgejo's "Merge when checks
+# succeed" merges the moment a pull request is mergeable and has no notion of
+# when; this gives it one. The job posts a `merge-window` commit status on the
+# head of each open pull request: `success` inside the window, `pending`
+# outside it. Branch protection on `main` requires that status
+# (stacks/system/forgejo-github-mirror.ts), and Forgejo re-checks a scheduled
+# merge whenever a status lands, so the merge happens as the window opens.
+# docs/runbooks/forgejo-merge-window.md is the long version.
+#
+# The work is .forgejo/scripts/merge-window.py; this file decides when it
+# runs and what it is told. It runs when the answer can change, and not in
+# between:
+#
+#   schedule      just after the window opens and just after it closes, for
+#                 every open pull request.
+#   pull_request  a new head commit, which has no status of its own yet, for
+#                 that one pull request. Without this a commit pushed inside
+#                 the window would wait for the next night's opening.
+#
+# THE WINDOW IS WRITTEN TWICE: in `env` below, which decides, and in the cron
+# hours, which decide only when to look. Move one, move the other. The
+# window is the forge copy's own Renovate `automergeSchedule`, 00:00-07:59 New
+# York every night (the last rule in .github/renovate.json5; GitHub's copy
+# stops an hour earlier). Renovate here merges only when every
+# status on a pull request is green, so this status gates its merges too:
+# narrow this window and Renovate's narrows with it.
+name: merge-window
+
+on:
+  schedule:
+    # 00:01 and 08:01 New York. Forgejo reads cron in UTC, and New York is
+    # UTC-4 in summer and UTC-5 in winter, so each edge is listed at both of
+    # its UTC hours: 04/05 for the opening and 12/13 for the close. The run
+    # an hour off finds the state already right and posts nothing. In summer
+    # the 13:01 run is also a second chance at the close.
+    #
+    # Forgejo schedules from the default branch only: a change here, or a copy
+    # on another branch, does nothing until it is on main.
+    - cron: "1 4,5,12,13 * * *"
+  pull_request:
+    branches: [main]
+    # `edited` is how a draft becomes ready here: Forgejo's drafts are a
+    # `WIP:` title prefix, and dropping it is an edit.
+    types: [opened, reopened, synchronize, edited]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report what would change without posting any status
+        type: boolean
+        default: false
+
+# A scheduled or dispatched run reads every pull request afresh, so the newest
+# does everything an older one would have. A pull_request run is about its
+# own pull request, so it has a group of its own: a burst of pushes there
+# collapses into the last one, and never cancels a scheduled run.
+concurrency:
+  group: merge-window-${{ github.event.pull_request.number || 'all' }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Post merge-window statuses
+    runs-on: ubuntu-latest
+    # A few API calls per pull request. Anything longer is hung.
+    timeout-minutes: 5
+    steps:
+      # Only the script: the whole tree is over 100 MiB, fetched for one file.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .forgejo/scripts
+          persist-credentials: false
+
+      - name: Post statuses
+        env:
+          # The window. See the header before changing it.
+          MERGE_WINDOW_DAYS: Mon-Sun
+          MERGE_WINDOW_START: "00:00"
+          MERGE_WINDOW_END: "08:00"
+          MERGE_WINDOW_TZ: America/New_York
+
+          # `github.*` is Forgejo's own context under its compatibility name,
+          # as in ./github-sync.yml: the forge's token, repository and URL.
+          #
+          # The job's own token can write statuses on this repository, for a
+          # pull request from a branch here as well (from a fork it is
+          # read-only, and the run fails saying so). MERGE_WINDOW_TOKEN, when
+          # set, replaces it.
+          MERGE_WINDOW_TOKEN: ${{ secrets.MERGE_WINDOW_TOKEN || github.token }}
+          # The in-cluster Service when stacks/system has set it.
+          MERGE_WINDOW_SERVER: ${{ vars.MIRROR_FORGEJO_URL || github.server_url }}
+          MERGE_WINDOW_REPOS: ${{ github.repository }}
+          # Empty except on pull_request: then only that pull request.
+          MERGE_WINDOW_PULL: ${{ github.event.pull_request.number }}
+          # Fixed here, not a variable: it has to match the name branch
+          # protection requires, letter for letter.
+          MERGE_WINDOW_CONTEXT: merge-window
+          # The public URL, not the in-cluster one: a person clicks this.
+          # Forgejo addresses a run by its number within the repository.
+          MERGE_WINDOW_TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_number }}
+          # Empty except on a hand-run dispatch.
+          MERGE_WINDOW_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          UPSTREAM: ${{ vars.MIRROR_UPSTREAM }}
+        run: |
+          set -euo pipefail
+          # Only on the forge's copy of this repository, the way
+          # ./github-sync.yml decides it. The file is public, and any other
+          # Forgejo that receives the tree would otherwise post statuses on
+          # its pull requests.
+          if [ -z "$UPSTREAM" ]; then
+            echo "MIRROR_UPSTREAM is not set on this repository: nothing to gate."
+            exit 0
+          fi
+          python3 .forgejo/scripts/merge-window.py

@@ -97,7 +97,10 @@ update that bot merges:
   and `image-check.yml`: the same commands on the estate's own runner. A check
   changed in `.github/workflows` has to be changed there too.
 - **Layer 2 is the same.** `platformAutomerge: false`, every status green, the
-  overnight window. The forge's bot runs hourly.
+  overnight window. The forge's bot runs hourly. Those statuses include
+  `merge-window`, which is green only inside the forge's merge window
+  ([runbook](./runbooks/forgejo-merge-window.md)). Keep that window and
+  `automergeSchedule` the same, or Renovate merges only where they overlap.
 - **Layer 3 does not exist.** The watchdog looks for a GitHub pull request, and
   a forge merge has none: a failed HelmRelease raises the Flux alert and
   nothing reverts it. The hold list still applies to both copies.

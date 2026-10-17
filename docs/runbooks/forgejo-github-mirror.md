@@ -46,6 +46,7 @@ Flux already had (`stacks/vault/KubernetesFluxWebhooks.ts`).
 | the sync | `scripts/forgejo-github-sync` | compares the two branches and moves whichever is behind |
 | the labels | `scripts/forgejo-github-labels` | copies GitHub's labels to the forge after each sync; Renovate there only attaches labels that already exist. It creates and updates, and never deletes |
 | the pull request checks | `.forgejo/workflows/flate.yml`, `image-check.yml` | the forge's copies of GitHub's two checks; see [Checks](#checks-on-a-forge-pull-request) |
+| the merge window | `.forgejo/workflows/merge-window.yml` | a `merge-window` status that is green only inside a time window, so a merge waits for it; forge-only, no GitHub copy. See [forgejo-merge-window.md](./forgejo-merge-window.md) |
 | the source | `kubernetes/apps/coder/forgejo-github-sync/gitrepository.yaml` | a view of GitHub's `main` that changes on every commit |
 | the relay | `kubernetes/apps/coder/forgejo-github-sync` | turns that source's "new artifact" event into a workflow dispatch |
 
