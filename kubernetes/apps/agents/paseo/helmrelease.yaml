@@ -12,7 +12,7 @@ spec:
   interval: 15m
   driftDetection:
     mode: enabled
-  timeout: 10m
+  timeout: 20m
   install:
     createNamespace: true
     replace: true
@@ -54,41 +54,52 @@ spec:
         strategy: Recreate
         initContainers:
           # The base image ships no agent CLIs; upstream's answer is a child
-          # image (docker/Dockerfile.agents.example). Installing them into the
-          # persistent home instead needs no image build and no registry, and
-          # NPM_CONFIG_PREFIX below makes the daemon find them -- and makes an
-          # agent's own `npm install -g` land on the volume too. Re-run every
-          # start, so a version bump here is applied on the next rollout.
-          agent-clis:
+          # image (docker/Dockerfile.agents.example). Instead this installs
+          # mise and agentboard's tool set (./resources/mise.toml -- gh,
+          # kubectl, pulumi, sops, Claude Code, Codex, ...) onto the home
+          # volume, with no image build and no registry. Re-run every start
+          # (./resources/install-tools.sh), so a Renovate bump to the pins
+          # lands on the next rollout. The first start downloads everything
+          # and takes a few minutes; later ones are no-ops.
+          tools:
             image: &image
               repository: ghcr.io/getpaseo/paseo
               tag: 0.11.4@sha256:0e64b56fa1f99808623f4de70321cdd292e85b6db151636c13b0e6786b0e1ba5
               pullPolicy: IfNotPresent
-            command:
-              - sh
-              - -c
-              - >-
-                npm install --global --no-fund --no-audit
-                "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
-                "@openai/codex@$CODEX_VERSION"
+            command: ["/bin/bash", "/opt/paseo/install-tools.sh"]
             env: &env
               TZ: "${TIMEZONE}"
+              MISE_DATA_DIR: /home/paseo/.local/share/mise
+              MISE_CONFIG_DIR: /home/paseo/.config/mise
+              MISE_CACHE_DIR: /home/paseo/.cache/mise
+              MISE_INSTALL_PATH: /home/paseo/.local/bin/mise
+              # The mise binary itself, read by ./resources/install-tools.sh.
+              # renovate: datasource=github-releases depName=jdx/mise
+              MISE_VERSION: "v2026.10.12"
+              # The system dirs FIRST: the daemon must keep running on the
+              # image's node (its native modules are built for it), not on
+              # the newer node mise installs for the `npm:` tools. Everything
+              # the image lacks -- gh, kubectl, claude, codex, ... -- falls
+              # through to the shims. The npm prefix is last, for anything an
+              # agent `npm install -g`s itself.
+              PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/paseo/.local/share/mise/shims:/home/paseo/.local/bin:/home/paseo/.local/npm/bin
               NPM_CONFIG_PREFIX: /home/paseo/.local/npm
-              PATH: /home/paseo/.local/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-              # renovate: datasource=npm depName=@anthropic-ai/claude-code
-              CLAUDE_CODE_VERSION: "2.1.302"
-              # renovate: datasource=npm depName=@openai/codex
-              CODEX_VERSION: "0.163.0"
+              # The Claude Code version ./resources/mise.toml pins is the one
+              # that runs. Its updater would `npm install -g` a newer copy
+              # beside mise's -- see ../agentboard/helmrelease.yaml, where
+              # that happened. DISABLE_UPDATES also makes `claude update`
+              # refuse.
+              DISABLE_UPDATES: "1"
             securityContext: &securityContext
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
               capabilities: { drop: ["ALL"] }
             resources:
               requests:
-                cpu: 50m
+                cpu: 100m
                 memory: 256Mi
               limits:
-                memory: 1Gi
+                memory: 2Gi
         containers:
           app:
             image: *image
@@ -214,6 +225,23 @@ spec:
                 readOnly: true
               - path: /etc/paseo/ssh/known_hosts
                 subPath: known_hosts
+                readOnly: true
+      tools:
+        type: configMap
+        name: paseo-tools
+        advancedMounts:
+          *app :
+            tools:
+              - path: /opt/paseo/install-tools.sh
+                subPath: install-tools.sh
+                readOnly: true
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+            # The daemon and every agent read the same global config.
+            app:
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
                 readOnly: true
       tmp:
         type: emptyDir

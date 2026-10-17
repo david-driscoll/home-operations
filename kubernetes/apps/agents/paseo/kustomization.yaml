@@ -15,3 +15,14 @@ configMapGenerator:
       - known_hosts=./resources/known_hosts
     options:
       disableNameSuffixHash: true
+  # Substitution off: install-tools.sh is shell, and Flux would read its
+  # brace-form variables as its own and fail the build on the unset ones.
+  # That also covers the name, hence a literal `paseo-` rather than APP.
+  - name: paseo-tools
+    files:
+      - mise.toml=./resources/mise.toml
+      - install-tools.sh=./resources/install-tools.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
