@@ -97,6 +97,29 @@ spec:
               # Host-header allowlist. IPs and localhost are always allowed,
               # which is what keeps the kubelet's probes working.
               PASEO_HOSTNAMES: ${APP}.agents.${ROOT_DOMAIN}
+              # GitHub as the estate's App installation token -- the same
+              # `github-token` Secret agentboard uses, mounted below as a
+              # directory so each rotation (30m, against a 60m life) lands in
+              # place. Nothing here reads it once: `gh` reads hosts.yml from
+              # GH_CONFIG_DIR on every invocation, and git's credential helper
+              # cats the token on every request.
+              GH_CONFIG_DIR: /var/run/secrets/github-token
+              # Git config through the environment rather than a ~/.gitconfig,
+              # because there is no entrypoint of ours to write one, and so
+              # that it applies to the daemon, every agent it spawns and any
+              # `kubectl exec` shell alike. The helper stays a literal
+              # `$(cat ...)`: git's own shell runs it per request, and the
+              # kubelet leaves `$(...)` alone when it names no env var.
+              # Identity matches agentboard (entrypoint.sh): commits are
+              # David's, Claude is credited by a Co-Authored-By trailer.
+              GIT_CONFIG_COUNT: "3"
+              GIT_CONFIG_KEY_0: credential.https://github.com.helper
+              GIT_CONFIG_VALUE_0: >-
+                !f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f
+              GIT_CONFIG_KEY_1: user.name
+              GIT_CONFIG_VALUE_1: David Driscoll
+              GIT_CONFIG_KEY_2: user.email
+              GIT_CONFIG_VALUE_2: david.driscoll@gmail.com
             envFrom:
               - secretRef:
                   name: ${APP}
@@ -148,6 +171,18 @@ spec:
         existingClaim: ${APP}-workspace
         globalMounts:
           - path: /workspace
+      github-token:
+        type: secret
+        # NOT `${APP}` -- the estate-wide Secret
+        # (apps/kube-system/secrets/github-app-token), reflected into every
+        # namespace. A directory mount, never a subPath: subPath mounts do not
+        # receive updates, and this token expires hourly.
+        name: github-token
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/github-token
+                readOnly: true
       tmp:
         type: emptyDir
         globalMounts:
