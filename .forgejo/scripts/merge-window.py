@@ -22,6 +22,8 @@ also a flag, see --help):
   MERGE_WINDOW_TZ          an IANA zone, e.g. America/New_York
   MERGE_WINDOW_CONTEXT     the status context (default merge-window)
   MERGE_WINDOW_TARGET_URL  the link on the status, normally this workflow run
+  MERGE_WINDOW_PULL        one pull request number: bring only that one up to
+                           date (needs exactly one repository). Unset: all open
   MERGE_WINDOW_DRY_RUN     true: report what would change and post nothing
 
 Tests: python3 -m unittest discover -s .forgejo/scripts
@@ -180,6 +182,8 @@ class ApiError(RuntimeError):
 class Forge(Protocol):
     def open_pulls(self, repo: str) -> Iterable[dict[str, Any]]: ...
 
+    def pull(self, repo: str, number: int) -> dict[str, Any]: ...
+
     def statuses(self, repo: str, sha: str) -> Iterable[dict[str, Any]]: ...
 
     def post_status(self, repo: str, sha: str, body: dict[str, str]) -> None: ...
@@ -236,6 +240,10 @@ class ForgejoApi:
     def open_pulls(self, repo: str) -> Iterator[dict[str, Any]]:
         return self._paginate(f"{self._repo_path(repo)}/pulls", {"state": "open"})
 
+    def pull(self, repo: str, number: int) -> dict[str, Any]:
+        pull, _ = self._request("GET", f"{self._repo_path(repo)}/pulls/{number}")
+        return pull
+
     def statuses(self, repo: str, sha: str) -> Iterator[dict[str, Any]]:
         return self._paginate(f"{self._repo_path(repo)}/commits/{sha}/statuses", {})
 
@@ -262,14 +270,23 @@ def reconcile_repo(
     target_url: str,
     dry_run: bool,
     log: Any = print,
+    only: int | None = None,
 ) -> int:
-    """Bring every open, non-draft pull request to `verdict`. Returns failures."""
+    """Bring every open, non-draft pull request to `verdict`. Returns failures.
+
+    `only` narrows that to one pull request, as a `pull_request` run does: it
+    has one new head commit to label, not the whole list to re-read.
+    """
     failures = 0
     desired = verdict.state
-    for pull in forge.open_pulls(repo):
+    pulls = [forge.pull(repo, only)] if only is not None else forge.open_pulls(repo)
+    for pull in pulls:
         number = pull.get("number")
         sha = (pull.get("head") or {}).get("sha", "")
         prefix = f"{repo}#{number} {sha[:7]}"
+        if pull.get("state", "open") != "open":
+            log(f"{prefix} {pull.get('state')}, skipped")
+            continue
         if pull.get("draft"):
             log(f"{prefix} draft, skipped")
             continue
@@ -307,6 +324,14 @@ def parse_repos(spec: str) -> list[str]:
     return repos
 
 
+def parse_pull(spec: str) -> int | None:
+    if not spec.strip():
+        return None
+    if not spec.strip().isdigit():
+        raise ValueError(f"pull request {spec!r} is not a number")
+    return int(spec)
+
+
 def main(argv: list[str] | None = None) -> int:
     env = os.environ.get
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
@@ -323,12 +348,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         default=env("MERGE_WINDOW_DRY_RUN", "").lower() == "true",
     )
+    parser.add_argument("--pull", default=env("MERGE_WINDOW_PULL", ""), help="one pull request number")
     parser.add_argument("--now", help="ISO 8601 instant to evaluate instead of the clock")
     args = parser.parse_args(argv)
 
     try:
         window = parse_window(args.days, args.start, args.end, args.tz)
         repos = parse_repos(args.repos)
+        only = parse_pull(args.pull)
+        if only is not None and len(repos) != 1:
+            raise ValueError("a single pull request needs exactly one repository")
         now = dt.datetime.fromisoformat(args.now) if args.now else dt.datetime.now(dt.timezone.utc)
         if now.tzinfo is None:
             raise ValueError("--now needs an offset, e.g. 2026-10-17T02:00:00-04:00")
@@ -350,10 +379,10 @@ def main(argv: list[str] | None = None) -> int:
     for repo in repos:
         try:
             failures += reconcile_repo(
-                forge, repo, verdict, args.context, args.target_url, args.dry_run
+                forge, repo, verdict, args.context, args.target_url, args.dry_run, only=only
             )
         except ApiError as error:
-            # Listing the pull requests failed: nothing in this repository was touched.
+            # Reading the pull requests failed: nothing in this repository was touched.
             failures += 1
             print(f"{repo} FAILED: {error}")
     return 1 if failures else 0

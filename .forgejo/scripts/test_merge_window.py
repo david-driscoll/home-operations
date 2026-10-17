@@ -171,7 +171,10 @@ class FakeForge:
         self.posted = []
 
     def open_pulls(self, repo):
-        return self.pulls
+        return [pull for pull in self.pulls if pull.get("state", "open") == "open"]
+
+    def pull(self, repo, number):
+        return next(pull for pull in self.pulls if pull["number"] == number)
 
     def statuses(self, repo, sha):
         return self._statuses.get(sha, [])
@@ -183,10 +186,10 @@ class FakeForge:
 class Reconcile(unittest.TestCase):
     open_verdict = mw.Verdict(True, "Merge window open until Fri 07:00 America/New_York")
 
-    def run_once(self, forge, dry_run=False):
+    def run_once(self, forge, dry_run=False, only=None):
         lines = []
         failures = mw.reconcile_repo(
-            forge, "o/r", self.open_verdict, "merge-window", "https://forge/run/1", dry_run, lines.append
+            forge, "o/r", self.open_verdict, "merge-window", "https://forge/run/1", dry_run, lines.append, only=only
         )
         return failures, lines
 
@@ -235,6 +238,31 @@ class Reconcile(unittest.TestCase):
         _, lines = self.run_once(forge, dry_run=True)
         self.assertEqual(forge.posted, [])
         self.assertEqual(lines, ["o/r#1 aaaaaaa none -> success (dry run)"])
+
+    def test_one_pull_request_only(self):
+        forge = FakeForge(
+            pulls=[{"number": 1, "head": {"sha": "a" * 40}}, {"number": 2, "head": {"sha": "b" * 40}}],
+            statuses={},
+        )
+        _, lines = self.run_once(forge, only=2)
+        self.assertEqual([sha for sha, _ in forge.posted], ["b" * 40])
+        self.assertEqual(lines, ["o/r#2 bbbbbbb none -> success"])
+
+    def test_one_pull_request_that_has_closed(self):
+        # A run queued behind a merge can find its pull request already closed.
+        forge = FakeForge(pulls=[{"number": 1, "state": "closed", "head": {"sha": "a" * 40}}], statuses={})
+        _, lines = self.run_once(forge, only=1)
+        self.assertEqual(forge.posted, [])
+        self.assertEqual(lines, ["o/r#1 aaaaaaa closed, skipped"])
+
+    def test_parse_pull(self):
+        self.assertIsNone(mw.parse_pull(""))
+        self.assertEqual(mw.parse_pull("42"), 42)
+        with self.assertRaises(ValueError):
+            mw.parse_pull("#42")
+
+    def test_one_pull_request_needs_one_repository(self):
+        self.assertEqual(mw.main(["--repos", "a/b c/d", "--pull", "1"]), 2)
 
     def test_a_failure_does_not_stop_the_rest(self):
         class Refusing(FakeForge):
