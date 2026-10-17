@@ -1,7 +1,7 @@
 # Graph Report - home-operations  (2026-10-17)
 
 ## Corpus Check
-- 2189 files · ~2,221,084 words
+- 2189 files · ~2,221,293 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 245 file(s) not represented in the graph (top: .map 146, (none) 50, .toml 21)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cceb7b97`
+- Built from commit: `07e352c7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -2293,19 +2293,19 @@
 7. `Team Mode` - 32 edges
 8. `resourceOptsDefaults()` - 28 edges
 9. `getPackage()` - 27 edges
-10. `assignTailscaleAcls()` - 27 edges
+10. `baoProvenance()` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `5. Run the Pulumi home stack to release the DNS name` --references--> `StandardDns`  [INFERRED]
   docs/runbooks/homelable-celestia-to-equestria.md → components/StandardDns.ts
 - `Layout` --references--> `stageCoderTemplate()`  [INFERRED]
   kubernetes/apps/coder/coder/templates/README.md → components/coderTemplates.ts
-- `In this estate` --references--> `authentik()`  [INFERRED]
-  .claude/skills/toolport/SKILL.md → kubernetes/apps/coder/setup-status/resources/server.mjs
 - `What I Own` --references--> `ProxmoxHost`  [INFERRED]
   .crew/agents/trinity/charter.md → components/ProxmoxHost.ts
 - `2. Copy the OpenBao item — DONE 2026-09-05` --references--> `BaoStore`  [INFERRED]
   docs/runbooks/homelable-celestia-to-equestria.md → components/store/bao.ts
+- `B. Facts this plan relies on (verified 2026-09-29)` --references--> `BackupPlanDirector`  [INFERRED]
+  docs/plans/host-owned-backups.md → components/BackupPlanDirector.ts
 
 ## Import Cycles
 - None detected.
@@ -10641,7 +10641,7 @@ Nodes (3): repository, type, url
   kubernetes/apps/equestria/media/plex/config.sops.yaml · relation: shares_data_with
 
 ## Knowledge Gaps
-- **867 isolated node(s):** `@axnic/pulumi-garage`, `@octokit/auth-app`, `@pulumi/random`, `@pulumi/technitium`, `@pulumi/tls` (+862 more)
+- **867 isolated node(s):** `../tsconfig.json`, `Count`, `Current`, `EndIndex`, `Next` (+862 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 18289 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **380 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -10649,13 +10649,13 @@ Nodes (3): repository, type, url
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `@pulumi/pulumi` connect `@pulumi/pulumi` to `stacks/authentik/index.ts`, `coder-templates.ts`, `technitium/types/output.ts`, `flows.ts`, `UniFi SDK Data Sources`, `components/bao.ts`, `coderd/types/output.ts`, `system/index.ts`, `acl-manager.ts`, `garage.ts`, `BackupPlanDirector.ts`, `oauth2ProviderSettings.ts`, `agentsDefaultModel.ts`, `agentsMcpServer.ts`, `clusterSecondary.ts`, `agentsModel.ts`, `agentsSystemPrompt.ts`, `coderd/index.ts`, `garageTruenasCopy.ts`, `aiProvider.ts`, `coderd/group.ts`, `license.ts`, `coderd/organization.ts`, `ocracoke/index.ts`, `organizationGroupSync.ts`, `organizationSyncSettings.ts`, `coderd/provider.ts`, `dhcpScope.ts`, `sso.ts`, `technitium/user.ts`, `DockgeLxc.ts`, `provisionerKey.ts`, `coderd/package.json`, `template.ts`, `coderd/user.ts`, `authentik/utilities.ts`, `workspaceProxy.ts`, `forgejo/utilities.ts`, `forgejo/package.json`, `technitium/index.ts`, `technitium/utilities.ts`, `coderd/utilities.ts`, `applications.ts`, `apiToken.ts`, `cluster.ts`, `resourceOptsDefaults`, `Authentik`, `coderd/types/input.ts`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
-- **What connects `@axnic/pulumi-garage`, `@octokit/auth-app`, `@pulumi/random` to the rest of the system?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **What connects `../tsconfig.json`, `Count`, `Current` to the rest of the system?**
   _867 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `truenas-types.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.008547008547008548 - nodes in this community are weakly interconnected._
-- **Why does `DockgeLxc` connect `DockgeLxc` to `ocracoke/index.ts`, `DockgeLxc.ts`, `BackupPlanDirector.ts`, `Authentik active-active: equestria + alpha-site behind one VIP`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Why does `BaoClient` connect `components/bao.ts` to `bao-move.ts`, `coder-templates.ts`, `bao-reorg/index.ts`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Should `resourceOptsDefaults` be split into smaller, more focused modules?**
   _Cohesion score 0.022219728425541464 - nodes in this community are weakly interconnected._
 
