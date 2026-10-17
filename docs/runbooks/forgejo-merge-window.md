@@ -26,7 +26,7 @@ The script:
    `pull_request` run is about;
 3. reads the newest `merge-window` status on each pull request's head commit,
    and posts a new one **only if the state has to change**: `success` with
-   "Merge window open until Sun 07:00 America/New_York", or `pending` with
+   "Merge window open until Sun 08:00 America/New_York", or `pending` with
    "Merge window opens Sat 00:00 America/New_York". Each status links to the
    run that posted it.
 
@@ -39,15 +39,15 @@ The workflow runs it only when the answer can change:
 | `workflow_dispatch` | by hand, optionally a dry run | every open pull request |
 
 Forgejo reads cron in UTC, and New York is UTC−4 in summer and UTC−5 in winter.
-So each edge is listed at both of its UTC hours (`1 4,5,11,12 * * *`). The run
+So each edge is listed at both of its UTC hours (`1 4,5,12,13 * * *`). The run
 an hour off finds the state already right and posts nothing. In summer the
-12:01 UTC run is also a second chance at the close.
+13:01 UTC run is also a second chance at the close.
 
 So a pull request gets two statuses a day, one at each edge, plus one each
 time a new commit is pushed to it. Each run logs one line per pull request:
 
 ```text
-success: Merge window open until Sat 07:00 America/New_York
+success: Merge window open until Sat 08:00 America/New_York
 github-mirror/home-operations#412 3f9c2ab pending -> success
 github-mirror/home-operations#415 81d07e4 success unchanged
 github-mirror/home-operations#416 c04e1d9 draft, skipped
@@ -79,7 +79,7 @@ cron hours decide only when to look. Change both in the same commit.
 | --- | --- | --- |
 | `MERGE_WINDOW_DAYS` | the days a window **opens** on: `Sat,Sun`, `Mon-Fri`, `Fri-Mon`, `*` | `Mon-Sun` |
 | `MERGE_WINDOW_START` | `HH:MM`, local, inclusive | `00:00` |
-| `MERGE_WINDOW_END` | `HH:MM`, local, exclusive. At or before the start, the window ends the next day; equal to the start, it lasts 24 hours | `07:00` |
+| `MERGE_WINDOW_END` | `HH:MM`, local, exclusive. At or before the start, the window ends the next day; equal to the start, it lasts 24 hours | `08:00` |
 | `MERGE_WINDOW_TZ` | an IANA zone | `America/New_York` |
 
 For the cron, take a minute just after each edge in local time. Write down its
@@ -89,8 +89,10 @@ nothing). A missing edge leaves the last state in place: a missed opening
 skips a night, and a missed close leaves green pull requests mergeable until
 the next run.
 
-The current values match Renovate's `automergeSchedule` (00:00–06:59 New York,
-every night; [renovate-automerge.md](../renovate-automerge.md)).
+The current values match the forge copy's own Renovate `automergeSchedule`,
+00:00–07:59 New York every night: the last rule in `.github/renovate.json5`,
+an hour longer than GitHub's copy gets
+([renovate-automerge.md](../renovate-automerge.md)).
 
 To check a window before you commit it, run the script against a given moment
 with `--dry-run`. It reads and reports, and posts nothing:
@@ -187,7 +189,7 @@ run's. The first line of the log says what the script decided and why
 request up to date.
 
 **Green pull requests merged during the day.** The close run did not happen,
-or failed. Look for the 11:01 and 12:01 UTC runs. The next edge, or a run by
+or failed. Look for the 12:01 and 13:01 UTC runs. The next edge, or a run by
 hand, posts `pending` again.
 
 **No runs at all.** The schedule runs only from `main`, and only where

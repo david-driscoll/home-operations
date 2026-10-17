@@ -20,23 +20,24 @@
 #
 # THE WINDOW IS WRITTEN TWICE: in `env` below, which decides, and in the cron
 # hours, which decide only when to look. Move one, move the other. The
-# defaults are Renovate's `automergeSchedule` (docs/renovate-automerge.md),
-# 00:00-06:59 New York every night. Renovate here merges only when every
+# window is the forge copy's own Renovate `automergeSchedule`, 00:00-07:59 New
+# York every night (the last rule in .github/renovate.json5; GitHub's copy
+# stops an hour earlier). Renovate here merges only when every
 # status on a pull request is green, so this status gates its merges too:
 # narrow this window and Renovate's narrows with it.
 name: merge-window
 
 on:
   schedule:
-    # 00:01 and 07:01 New York. Forgejo reads cron in UTC, and New York is
+    # 00:01 and 08:01 New York. Forgejo reads cron in UTC, and New York is
     # UTC-4 in summer and UTC-5 in winter, so each edge is listed at both of
-    # its UTC hours: 04/05 for the opening and 11/12 for the close. The run
+    # its UTC hours: 04/05 for the opening and 12/13 for the close. The run
     # an hour off finds the state already right and posts nothing. In summer
-    # the 12:01 run is also a second chance at the close.
+    # the 13:01 run is also a second chance at the close.
     #
     # Forgejo schedules from the default branch only: a change here, or a copy
     # on another branch, does nothing until it is on main.
-    - cron: "1 4,5,11,12 * * *"
+    - cron: "1 4,5,12,13 * * *"
   pull_request:
     branches: [main]
     # `edited` is how a draft becomes ready here: Forgejo's drafts are a
@@ -76,7 +77,7 @@ jobs:
           # The window. See the header before changing it.
           MERGE_WINDOW_DAYS: Mon-Sun
           MERGE_WINDOW_START: "00:00"
-          MERGE_WINDOW_END: "07:00"
+          MERGE_WINDOW_END: "08:00"
           MERGE_WINDOW_TZ: America/New_York
 
           # `github.*` is Forgejo's own context under its compatibility name,
