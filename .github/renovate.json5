@@ -274,7 +274,7 @@
       matchRepositories: [
         "github-mirror/home-operations"
       ],
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
     },
     {
@@ -793,7 +793,7 @@
         "patch",
         "digest"
       ],
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       ignoreTests: true,
     },
     {
@@ -874,7 +874,7 @@
       automergeType: "pr",
       platformAutomerge: false,
       ignoreTests: false,
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
       // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
       // shared-secrets). PRs still open and test at any hour; Renovate just
@@ -957,7 +957,7 @@
       automergeType: "pr",
       platformAutomerge: false,
       ignoreTests: false,
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
       // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
       // shared-secrets). PRs still open and test at any hour; Renovate just
@@ -1366,7 +1366,7 @@
       automergeType: "pr",
       platformAutomerge: false,
       ignoreTests: false,
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
       automergeSchedule: [
         "* 0-6 * * *"
