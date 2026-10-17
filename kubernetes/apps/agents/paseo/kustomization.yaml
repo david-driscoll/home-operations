@@ -8,3 +8,10 @@ resources:
   - ./helmrelease.yaml
   - ./httproute.yaml
   - ./definition.yaml
+configMapGenerator:
+  - name: ${APP}-ssh
+    files:
+      - forgejo.conf=./resources/ssh_config
+      - known_hosts=./resources/known_hosts
+    options:
+      disableNameSuffixHash: true

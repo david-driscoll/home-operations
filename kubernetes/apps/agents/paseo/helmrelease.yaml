@@ -183,6 +183,38 @@ spec:
             app:
               - path: /var/run/secrets/github-token
                 readOnly: true
+      # git over SSH to Forgejo as `claude-code` -- ./externalsecret.yaml
+      # (`${APP}-forgejo-ssh`) and ./resources/ssh_config. `custom` because
+      # app-template's secret type passes neither field through:
+      #   optional: true   a pod that rolls before the key reaches OpenBao
+      #                    still starts, just keyless.
+      #   defaultMode 256  0400. With fsGroup the kubelet makes it 0440
+      #                    root:1000, readable by `paseo` through the group;
+      #                    ssh only rejects group bits on a key the user owns.
+      forgejo-ssh:
+        type: custom
+        volumeSpec:
+          secret:
+            secretName: ${APP}-forgejo-ssh
+            optional: true
+            defaultMode: 256
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/forgejo-ssh
+                readOnly: true
+      ssh-config:
+        type: configMap
+        name: ${APP}-ssh
+        advancedMounts:
+          *app :
+            app:
+              - path: /etc/ssh/ssh_config.d/forgejo.conf
+                subPath: forgejo.conf
+                readOnly: true
+              - path: /etc/paseo/ssh/known_hosts
+                subPath: known_hosts
+                readOnly: true
       tmp:
         type: emptyDir
         globalMounts:
