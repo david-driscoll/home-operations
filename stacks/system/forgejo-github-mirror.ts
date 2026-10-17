@@ -113,6 +113,13 @@ const CLAUDE_CODE_MIRROR_UNITS = {
   "repo.actions": "read",
 };
 
+/**
+ * The status `main` requires before a pull request can merge, posted by
+ * .forgejo/workflows/merge-window.yml. It has to match that workflow's
+ * MERGE_WINDOW_CONTEXT letter for letter.
+ */
+const MERGE_WINDOW_CONTEXT = "merge-window";
+
 export interface ForgejoGithubMirrorArgs {
   globals: GlobalResources;
   /** For its provider and its `createUser`; nothing here authenticates on its own. */
@@ -292,6 +299,59 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         user: args.forgejo.claudeCode.user.login,
       },
       { provider, parent: claudeCodeTeam },
+    );
+
+    // `main` merges only inside the merge window: a pull request needs the
+    // `merge-window` status green, which .forgejo/workflows/merge-window.yml
+    // posts only while the window is open. "Merge when checks succeed" then
+    // waits for it. docs/runbooks/forgejo-merge-window.md is the long version.
+    //
+    // PUSH STAYS OPEN to anyone with write. The sync fast-forwards this main to
+    // GitHub's with the job token, and Renovate's branch automerge (GitHub
+    // Actions updates) pushes to it directly. Forgejo's default for a
+    // protected branch is no push at all, which would stop both. A required
+    // status gates merging a pull request, not a push. Write here is already
+    // only Renovate, github-mirror-sync and the forge's admins (see the
+    // header); claude-code's team is read-only.
+    //
+    // Every field is set, defaults included. A field left out keeps whatever
+    // the forge has, so a box ticked in the UI would never show up as drift.
+    new forgejo.BranchProtection(
+      "forgejo-github-mirror-branch-protection-main",
+      {
+        repositoryId: repository.repositoryId,
+        branchName: "main",
+
+        enablePush: true,
+        enablePushWhitelist: false,
+        pushWhitelistUsernames: [],
+        pushWhitelistTeams: [],
+        pushWhitelistDeployKeys: false,
+
+        enableStatusCheck: true,
+        statusCheckContexts: [MERGE_WINDOW_CONTEXT],
+
+        // Renovate's pull requests merge unreviewed, and rebase only when they
+        // conflict (`rebaseWhen: conflicted`), so neither reviews nor an
+        // up-to-date branch can be required here.
+        requiredApprovals: 0,
+        enableApprovalsWhitelist: false,
+        approvalsWhitelistUsernames: [],
+        approvalsWhitelistTeams: [],
+        dismissStaleApprovals: false,
+        blockOnRejectedReviews: false,
+        blockOnOfficialReviewRequests: false,
+        blockOnOutdatedBranch: false,
+
+        enableMergeWhitelist: false,
+        mergeWhitelistUsernames: [],
+        mergeWhitelistTeams: [],
+
+        requireSignedCommits: false,
+        protectedFilePatterns: "",
+        unprotectedFilePatterns: "",
+      },
+      { provider, parent: repository },
     );
 
     // What the workflow pushes to GitHub with. ed25519, as for claude-code's
