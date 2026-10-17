@@ -48,7 +48,22 @@ spec:
     controllers:
       *app :
         annotations:
-          reloader.stakater.com/auto: "true"
+          # NOT `reloader.stakater.com/auto: "true"`, which this was and which
+          # restarted the pod EVERY 30 MINUTES: `auto` watches every Secret
+          # the pod references, including `github-token`, whose ExternalSecret
+          # re-mints on `refreshInterval: 30m`. Reloader's log, 2026-10-17:
+          # "Changes detected in 'github-token' ... updated 'paseo'" at :07
+          # and :37 past every hour. Each roll kills running agents, and with
+          # Recreate plus RWO volumes it takes minutes to come back. Same trap
+          # as ../agentboard/helmrelease.yaml, fixed the same way.
+          #
+          # Only what a restart actually helps: the two ConfigMaps, which are
+          # mounted by subPath and so never update in place, and the
+          # PASEO_PASSWORD Secret, which is read once through envFrom.
+          # `github-token` and `${APP}-forgejo-ssh` are directory mounts that
+          # update live, which is the whole reason they are mounted that way.
+          configmap.reloader.stakater.com/reload: ${APP}-ssh,paseo-tools
+          secret.reloader.stakater.com/reload: ${APP}
           # Agents run for hours; a nightly scale-down would kill them mid-task.
           downscaler/exclude: "true"
         strategy: Recreate
