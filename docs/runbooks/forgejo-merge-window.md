@@ -159,19 +159,44 @@ What it holds, and why:
   it only runs for `docker/**`. `renovate/stability-days` is on every Renovate
   update here and on nothing else, so on this copy only Renovate's pull
   requests can merge.
-- **Push stays enabled** for anyone with write access, with no allow-list.
-  `.forgejo/workflows/github-sync.yml` pushes GitHub's commits straight to the
-  forge's `main` with the job token, and so does Renovate's branch automerge
-  for GitHub Actions updates. Forgejo's default for a protected branch is no
-  push at all, which would stop both. A required status gates merging a pull
-  request, not a push (`routers/private/hook_pre_receive.go`: a user who may
-  push is never checked against statuses).
+- **Push is allowed to two accounts only:** `github-mirror-sync`, which
+  `.forgejo/workflows/github-sync.yml` uses (as `MIRROR_SYNC_TOKEN`) to
+  fast-forward the forge's `main` to GitHub's, and `renovate`, for its branch
+  automerge of GitHub Actions updates. A required status gates merging a pull
+  request, not a push, so neither waits for the window.
+- **Not the job token.** With any rule on a branch, Forgejo's pre-receive hook
+  looks the pusher up by id, and the job token pushes as the Actions user
+  (`-2`), which isn't in the user table. Every push fails with a 500, logged as
+  `Unable to GetUserByID ... user does not exist [uid: -2]`, whatever the rule
+  allows. That froze the sync from 2026-10-17 18:47, when the rule first
+  landed, until the sync moved to the account's token.
 - **No reviews, no up-to-date requirement.** Renovate's pull requests merge
   unreviewed and rebase only on conflict.
 
+### The sync can never force-push here
+
+Forgejo refuses every non-fast-forward update of a protected branch before it
+looks at any allow-list, admins included ("branch main is protected from force
+push"). Two of the sync's pushes to the forge's `main` are leased force pushes:
+
+- the **replay** after the two `main`s diverge (a forge merge and a GitHub
+  commit landed between two syncs), and
+- a **`discard_local`** dispatch.
+
+Both fail while the rule exists. The run fails, and the forge's `main` stays
+where it was. Fast-forwards in either direction keep working. To get past one:
+
+1. On the forge, *Settings → Branches*, delete the rule for `main`.
+2. *Actions → github-sync → Run workflow*, with **discard_local** ticked if
+   that is the case, and wait for it to report what it did.
+3. Nothing more. The Pulumi operator re-syncs the `system` stack every 5
+   minutes and recreates the rule. If the sync has not finished by then,
+   delete the rule again.
+
 After an apply, check two things:
 
-- the next `github-sync` run still publishes, or reports `in sync`;
+- the next `github-sync` run still publishes, or reports `in sync`, and the
+  forge's `main` is GitHub's;
 - a pull request outside the window shows the merge as blocked on
   `merge-window`.
 

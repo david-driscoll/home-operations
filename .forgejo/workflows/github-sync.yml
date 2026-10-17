@@ -73,10 +73,22 @@ jobs:
           # Spelled this way, and not `forgejo.*`, only so actionlint can read
           # the file.
           #
-          # The job's own token. It can push to this repository, and a push
-          # made with it starts no workflow -- which is what keeps the `push`
-          # trigger above from answering the script's own writes.
-          TOKEN: ${{ github.token }}
+          # The github-mirror-sync account's token, NOT the job's own. `main`
+          # here is a protected branch (stacks/system/forgejo-github-mirror.ts),
+          # and Forgejo refuses every push to one made with the job token: its
+          # pre-receive hook looks the pusher up by id, and the Actions user
+          # (-2) is not in the user table. This account is on the rule's push
+          # allow-list.
+          #
+          # A push made with a real account's token DOES start workflows, so
+          # the script's own fast-forward of this main answers the `push`
+          # trigger above with one more run. That run finds the sides in sync
+          # and pushes nothing, so it ends there; under `concurrency` it also
+          # replaces this run's last two steps, which it repeats.
+          #
+          # The job token is the fallback until stacks/system has created the
+          # secret: it can still clone, and only the push to main fails.
+          TOKEN: ${{ secrets.MIRROR_SYNC_TOKEN || github.token }}
           REPOSITORY: ${{ github.repository }}
           # The in-cluster Service when stacks/system has set it, so the clone
           # does not leave the cluster and come back through the gateway.
