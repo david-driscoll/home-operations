@@ -279,6 +279,12 @@ It gives up, loudly, instead of guessing when:
 
 All of these are cleared the same way as a blocked run: **discard_local**.
 
+**The forge's `main` is a protected branch**, which takes the merge-window
+status. Forgejo never lets anyone force-push one, so the replay and
+**discard_local** both fail while the rule exists. Delete the rule, run the
+sync, and let the Pulumi operator recreate it:
+[forgejo-merge-window.md](./forgejo-merge-window.md#the-sync-can-never-force-push-here).
+
 ## Verify
 
 ```bash
@@ -345,6 +351,13 @@ status on the branch green and at least one status to exist. A job that failed
 stays red until the branch is pushed again. Otherwise check the rule that
 should match names `github-mirror/home-operations`, and that a run happened
 inside its `automergeSchedule`.
+
+**The sync fails and the forge's `main` stops moving.** If Forgejo's log has
+`Unable to GetUserByID ... [uid: -2]` from `preReceiveBranch`, something pushed
+to the protected `main` with the job token: the sync has to use
+`MIRROR_SYNC_TOKEN`. If the job says `protected from force push`, it was a
+replay or a **discard_local**; see
+[the force-push note](./forgejo-merge-window.md#the-sync-can-never-force-push-here).
 
 **Every GitHub workflow starts running on the forge.** `.forgejo/workflows` has
 gone missing from `main`. Forgejo falls back to `.github/workflows` only when

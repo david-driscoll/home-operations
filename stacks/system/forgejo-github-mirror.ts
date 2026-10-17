@@ -44,7 +44,8 @@
  *   renovate             admin, from the per-org team in ./forgejo-renovate.ts,
  *                        on the run after this one creates the organization
  *   github-mirror-sync   write, from a collaborator grant below; its token is
- *                        what the relay dispatches the sync workflow with
+ *                        what the relay dispatches the sync workflow with,
+ *                        and what that workflow pushes main with
  *   claude-code          read, from a team below: view, diff, comment, review
  *   the forge's admins   as owners of the organization
  *
@@ -171,9 +172,10 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         maxRepoCreation: 0,
         restricted: true,
       },
-      // The token's one use is dispatching the sync workflow, which Forgejo
-      // files under repository write. The workflow itself pushes with its job
-      // token, not with this.
+      // Two uses: the relay dispatches the sync workflow with it, which
+      // Forgejo files under repository write, and the workflow clones and
+      // pushes this repository with it (MIRROR_SYNC_TOKEN), because the job
+      // token cannot push to the protected main.
       ["write:repository"] as TOKEN_SCOPES[],
       args.globals,
       provider,
@@ -264,7 +266,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // whoever owns the repository -- it is what kept the relay working across
     // the hand-run transfer into the organization. The user that owned the
     // repository before had owner rights here; this is less.
-    new forgejo.Collaborator(
+    const syncCollaborator = new forgejo.Collaborator(
       "forgejo-github-mirror-collaborator-sync",
       {
         // The numeric id, as for Renovate's grants: it survives a rename.
@@ -314,13 +316,30 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // posts only while the window is open. "Merge when checks succeed" then
     // waits for it. docs/runbooks/forgejo-merge-window.md is the long version.
     //
-    // PUSH STAYS OPEN to anyone with write. The sync fast-forwards this main to
-    // GitHub's with the job token, and Renovate's branch automerge (GitHub
-    // Actions updates) pushes to it directly. Forgejo's default for a
-    // protected branch is no push at all, which would stop both. A required
-    // status gates merging a pull request, not a push. Write here is already
-    // only Renovate, github-mirror-sync and the forge's admins (see the
-    // header); claude-code's team is read-only.
+    // PUSH IS ALLOWED TO TWO ACCOUNTS, and they are the only things that push
+    // to this main without a pull request:
+    //
+    //   github-mirror-sync  .forgejo/workflows/github-sync.yml fast-forwards
+    //                       this main to GitHub's, with this account's token
+    //                       (MIRROR_SYNC_TOKEN below)
+    //   renovate            its branch automerge for GitHub Actions updates
+    //
+    // NOT THE JOB TOKEN. A protected branch makes Forgejo's pre-receive hook
+    // look the pusher up by id (routers/private/hook_pre_receive.go,
+    // preReceiveBranch), and the job token pushes as the Actions user, -2,
+    // which is not in the user table: every push fails with a 500, "Unable to
+    // GetUserByID ... user does not exist [uid: -2]", whatever this rule says.
+    // That froze the sync from 2026-10-17 18:47, when the rule first landed.
+    //
+    // A required status gates merging a pull request, not a push, so neither
+    // account waits for the window.
+    //
+    // NEVER A FORCE PUSH. Forgejo refuses every non-fast-forward update of a
+    // protected branch before it reads any allow-list, admins included. The
+    // sync's two leased pushes to this main -- replaying Forgejo's commits
+    // after the two sides diverge, and `discard_local` -- are refused for as
+    // long as this rule exists. docs/runbooks/forgejo-merge-window.md says how
+    // to get through one.
     //
     // Every field the provider allows is set, defaults included. The provider
     // gives each one left out a default rather than reading the forge's value,
@@ -335,7 +354,13 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         branchName: "main",
 
         enablePush: true,
-        enablePushWhitelist: false,
+        enablePushWhitelist: true,
+        // Forgejo drops an allow-listed user who has no write on the
+        // repository, silently: the sync bot's comes from the collaborator
+        // grant above, Renovate's from its team in ./forgejo-renovate.ts.
+        pushWhitelistUsernames: [syncBot.user.login, args.forgejo.renovateBot.user.login],
+        pushWhitelistTeams: [],
+        pushWhitelistDeployKeys: false,
 
         // A required pattern that matches no status on a pull request counts
         // as pending (services/pull/commit_status.go), so every one here must
@@ -373,7 +398,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         protectedFilePatterns: "",
         unprotectedFilePatterns: "",
       },
-      { provider, parent: repository },
+      { provider, parent: repository, dependsOn: [syncCollaborator] },
     );
 
     // What the workflow pushes to GitHub with. ed25519, as for claude-code's
@@ -414,6 +439,10 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // token the operator already writes onto every repository's webhook,
       // and all it can do is start a run.
       MIRROR_RENOVATE_TOKEN: args.forgejo.webhookToken,
+      // What the sync clones and pushes this repository with: the sync bot's
+      // own token, the one the relay already dispatches with. It has to be a
+      // real account to push to the protected main (see the branch rule).
+      MIRROR_SYNC_TOKEN: syncBot.token.token,
     };
     for (const [name, data] of Object.entries(secrets)) {
       new forgejo.RepositoryActionSecret(`forgejo-github-mirror-secret-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });
