@@ -133,6 +133,13 @@ spec:
           - name: dind
             restartPolicy: Always
             image: data.forgejo.org/oci/docker:29-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+            # The job images come from the cluster's zot over plain HTTP
+            # (./resources/config.yml says why). dockerd refuses an HTTP
+            # registry unless it is named here. dockerd-entrypoint.sh treats
+            # arguments that start with `-` as dockerd flags and keeps its own
+            # --host/--tls* flags alongside them.
+            args:
+              - --insecure-registry=registry.kube-system.svc.cluster.local:8080
             env:
               - name: DOCKER_TLS_CERTDIR
                 value: /certs
@@ -238,7 +245,7 @@ spec:
               # in ./resources/config.yml. Keep the two in step, or this
               # warms an image no job uses.
               - name: PREPULL_IMAGES
-                value: ghcr.io/catthehacker/ubuntu:act-24.04
+                value: registry.kube-system.svc.cluster.local:8080/ghcr.io/catthehacker/ubuntu:act-24.04
               - name: DOCKER_HOST
                 value: tcp://127.0.0.1:2376
               - name: DOCKER_TLS_VERIFY
