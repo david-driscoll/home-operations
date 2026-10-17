@@ -156,6 +156,15 @@ const RENOVATE_LOGIN = "renovate";
 /** The Claude Code account's login, also the name of its per-org team. */
 const CLAUDE_CODE_LOGIN = "claude-code";
 
+/**
+ * The organization that owns the forge's copy of this repository
+ * (./forgejo-github-mirror.ts). It gets Renovate's team like every other
+ * organization, but NOT claude-code's write team: write to that repository's
+ * main is publishing to GitHub. ./forgejo-github-mirror.ts gives claude-code a
+ * read-only team there instead.
+ */
+export const GITHUB_MIRROR_ORG = "github-mirror";
+
 /** One page of the Forgejo API, and the instance default for MAX_RESPONSE_ITEMS. */
 const PAGE_SIZE = 50;
 
@@ -653,6 +662,10 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     // an agent writing to them should be something that person opts into per
     // repository, not something a nightly resync hands out.
     for (const org of args.targets.organizations) {
+      // Read-only there, and granted by ./forgejo-github-mirror.ts -- see
+      // GITHUB_MIRROR_ORG.
+      if (org === GITHUB_MIRROR_ORG) continue;
+
       const team = new forgejo.Team(
         `forgejo-claude-code-${org}-team`,
         {

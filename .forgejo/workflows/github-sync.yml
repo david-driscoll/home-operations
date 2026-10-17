@@ -117,10 +117,12 @@ jobs:
           export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/github-mirror -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/github-known-hosts"
 
           # Only stamped on commits the script has to replay after the two
-          # sides diverge. The address is this account's under Forgejo's
-          # NO_REPLY_ADDRESS (kubernetes/apps/coder/forgejo/helmrelease.yaml).
-          git config --global user.name "github-mirror"
-          git config --global user.email "github-mirror@noreply.forgejo.invalid"
+          # sides diverge. The address is the sync bot's under Forgejo's
+          # NO_REPLY_ADDRESS (kubernetes/apps/coder/forgejo/helmrelease.yaml);
+          # `github-mirror` itself is the organization now, which has no
+          # address to map a commit back to.
+          git config --global user.name "github-mirror-sync"
+          git config --global user.email "github-mirror-sync@noreply.forgejo.invalid"
           git config --global advice.detachedHead false
 
           # Scoped to the forge's URL, so the header is never offered to GitHub.

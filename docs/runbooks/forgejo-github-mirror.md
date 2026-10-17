@@ -41,7 +41,7 @@ Flux already had (`stacks/vault/KubernetesFluxWebhooks.ts`).
 
 | Piece | Where | What it does |
 | --- | --- | --- |
-| the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` account that owns it, the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
+| the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` organization that owns it, the `github-mirror-sync` account whose token the relay dispatches with, claude-code's read-only team there, the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
 | the sync workflow | `.forgejo/workflows/github-sync.yml` | decides when to run and hands over credentials |
 | the sync | `scripts/forgejo-github-sync` | compares the two branches and moves whichever is behind |
 | the labels | `scripts/forgejo-github-labels` | copies GitHub's labels to the forge after each sync; Renovate there only attaches labels that already exist. It creates and updates, and never deletes |
@@ -95,6 +95,72 @@ delete Renovate's own open branches; that closes their pull requests, and
 Renovate reopens them on its next run. Leaving the branches is harmless: the
 forge's Renovate commits with the identity Mend used, so it treats the
 `renovate/*` ones as its own.
+
+### 3. Turn the `github-mirror` user into an organization (once, 2026-10)
+
+The repository used to be owned by a **user** called `github-mirror`. It is now
+owned by an **organization** of the same name, so the path
+`github-mirror/home-operations`, which every repository-scoped rule in
+`.github/renovate.json5` names, does not change. Forgejo cannot convert a user
+into an organization, and a user and an organization cannot share a name, so
+the move is a rename, a Pulumi run and a transfer. Do it in this order and
+outside the forge's automerge window (00:00–07:59 ET). Between steps 3 and 5
+the repository sits at another path, where Renovate's repository-scoped rules
+do not match it.
+
+1. **Stop `system` from applying.** Suspend its Flux Kustomization, then put
+   the Stack in preview-only mode:
+
+   ```bash
+   flux -n pulumi suspend kustomization system
+   kubectl -n pulumi patch stack system --type merge -p '{"spec":{"preview":true}}'
+   ```
+
+2. **Take the old account out of Pulumi's state** without deleting it. The code
+   no longer declares the `forgejo-github-mirror` user, its password or its
+   token. Left in state, the next `up` would delete the user by the name
+   `github-mirror`, and after step 4 that name is the organization. Delete the
+   token first, because it is a child of the user:
+
+   ```bash
+   cd stacks/system
+   pulumi stack --show-urns | grep -E 'forgejo-github-mirror(-password|-token)?$'
+   pulumi state delete '<urn of forgejo-github-mirror-token>'
+   pulumi state delete '<urn of forgejo-github-mirror>'
+   pulumi state delete '<urn of forgejo-github-mirror-password>'
+   ```
+
+3. **Rename the user** to `github-mirror-legacy`: *Site administration → User
+   accounts → github-mirror → Edit → Username*. The repository goes with it.
+   The relay keeps working, because the old token still belongs to the
+   repository's owner.
+
+4. **Merge the PR and let `system` apply.** Revert step 1:
+
+   ```bash
+   kubectl -n pulumi patch stack system --type merge -p '{"spec":{"preview":false}}'
+   flux -n pulumi resume kustomization system
+   ```
+
+   The run creates the `github-mirror` organization, the `github-mirror-sync`
+   account, its token (written to OpenBao, where the relay picks it up within
+   4 minutes), its `write` collaborator grant and claude-code's read team. The
+   Repository resource does not change: its owner string is still
+   `github-mirror`.
+
+5. **Transfer the repository**: *github-mirror-legacy/home-operations →
+   Settings → Danger zone → Transfer ownership → `github-mirror`*. As a site
+   admin, the transfer is immediate. Pull requests, issues, Actions secrets,
+   variables and the sync bot's collaborator grant stay with the repository.
+
+6. **Check, then clean up:**
+   - The next `system` run adds Renovate's admin team to the organization.
+     Discovery only sees organizations that exist when a run starts. Until
+     then Renovate still has its old collaborator grant.
+   - `forgejo__pull_request_read` on any open PR works for claude-code.
+   - A push to GitHub's `main` logs `dispatched` in the relay.
+   - Then delete `github-mirror-legacy` (*Site administration → User
+     accounts*). It owns nothing now, and its token dies with it.
 
 ## Checks on a forge pull request
 
@@ -202,7 +268,7 @@ and the only style offered besides fast-forward.
 It happens when a commit lands on GitHub while the forge holds one that has not
 been published yet. The sync replays the forge's commits onto GitHub's `main`,
 fast-forwards GitHub, and moves Forgejo's `main` to the replayed history. The
-replayed commits keep their author and get `github-mirror` as committer.
+replayed commits keep their author and get `github-mirror-sync` as committer.
 
 It gives up, loudly, instead of guessing when:
 
