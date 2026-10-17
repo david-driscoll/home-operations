@@ -132,8 +132,9 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
 
     const provider = args.forgejo.forgejoProvider;
 
-    // `limited`, like the user it replaced: visible to signed-in accounts, and
-    // the instance is REQUIRE_SIGNIN_VIEW anyway. Owned by whoever the
+    // `public`. The instance is REQUIRE_SIGNIN_VIEW, so in practice that is
+    // signed-in accounts only, as `limited` was; the repository itself stays
+    // private either way. Owned by whoever the
     // provider authenticates as -- the forge's admin -- and nobody else.
     const organization = new forgejo.Organization(
       "forgejo-github-mirror-organization",
@@ -321,8 +322,12 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // only Renovate, github-mirror-sync and the forge's admins (see the
     // header); claude-code's team is read-only.
     //
-    // Every field is set, defaults included. A field left out keeps whatever
-    // the forge has, so a box ticked in the UI would never show up as drift.
+    // Every field the provider allows is set, defaults included. The provider
+    // gives each one left out a default rather than reading the forge's value,
+    // so a box ticked in the UI still shows up as drift. The allow-lists are
+    // the exception: the provider refuses `*WhitelistUsernames`, `*Teams` and
+    // `pushWhitelistDeployKeys` outright, even empty or false, unless their
+    // `enable*Whitelist` is true. Left out, they default to empty.
     new forgejo.BranchProtection(
       "forgejo-github-mirror-branch-protection-main",
       {
@@ -331,28 +336,38 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
 
         enablePush: true,
         enablePushWhitelist: false,
-        pushWhitelistUsernames: [],
-        pushWhitelistTeams: [],
-        pushWhitelistDeployKeys: false,
 
+        // A required pattern that matches no status on a pull request counts
+        // as pending (services/pull/commit_status.go), so every one here must
+        // be posted on EVERY pull request, or that pull request never merges:
+        //
+        //   merge-window             .forgejo/workflows/merge-window.yml
+        //   flate*                   .forgejo/workflows/flate.yml, both jobs;
+        //                            several matches, the worst one counts
+        //   renovate/stability-days  every Renovate update here (the first
+        //                            mirror rule in .github/renovate.json5).
+        //                            A pull request Renovate did not open never
+        //                            gets it, so on this copy only Renovate's
+        //                            pull requests can merge.
+        //
+        // Not `Image Check*`: .forgejo/workflows/image-check.yml runs only for
+        // docker/**, so requiring it would block every other pull request.
+        // Renovate still waits for it where it runs, since it waits for every
+        // status.
         enableStatusCheck: true,
-        statusCheckContexts: [MERGE_WINDOW_CONTEXT, "flate*", "renovate/stability-days", "Image Check*"],
+        statusCheckContexts: [MERGE_WINDOW_CONTEXT, "flate*", "renovate/stability-days"],
 
         // Renovate's pull requests merge unreviewed, and rebase only when they
         // conflict (`rebaseWhen: conflicted`), so neither reviews nor an
         // up-to-date branch can be required here.
         requiredApprovals: 0,
         enableApprovalsWhitelist: false,
-        approvalsWhitelistUsernames: [],
-        approvalsWhitelistTeams: [],
         dismissStaleApprovals: false,
         blockOnRejectedReviews: true,
         blockOnOfficialReviewRequests: true,
         blockOnOutdatedBranch: false,
 
         enableMergeWhitelist: false,
-        mergeWhitelistUsernames: [],
-        mergeWhitelistTeams: [],
 
         requireSignedCommits: false,
         protectedFilePatterns: "",

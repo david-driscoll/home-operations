@@ -144,8 +144,13 @@ next `pulumi preview` and is put back by the next `pulumi up`.
 
 What it holds, and why:
 
-- **Required status:** `merge-window`, the one context. The constant must
-  match the workflow's `MERGE_WINDOW_CONTEXT`.
+- **Required statuses:** `merge-window` (the constant must match the
+  workflow's `MERGE_WINDOW_CONTEXT`), `flate*` and `renovate/stability-days`.
+  A required pattern that matches no status counts as pending, so each must
+  appear on every pull request. That is why `Image Check*` is not on the list:
+  it only runs for `docker/**`. `renovate/stability-days` is on every Renovate
+  update here and on nothing else, so on this copy only Renovate's pull
+  requests can merge.
 - **Push stays enabled** for anyone with write access, with no allow-list.
   `.forgejo/workflows/github-sync.yml` pushes GitHub's commits straight to the
   forge's `main` with the job token, and so does Renovate's branch automerge
