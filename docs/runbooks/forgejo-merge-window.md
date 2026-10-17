@@ -35,8 +35,16 @@ The workflow runs it only when the answer can change:
 | Trigger | When | Covers |
 | --- | --- | --- |
 | `schedule` | just after the window opens and just after it closes | every open pull request |
-| `pull_request` | `opened`, `reopened`, `synchronize`, `edited` | that pull request's new head commit |
+| `pull_request` | `opened`, `reopened`, `synchronize` | that pull request's new head commit |
 | `workflow_dispatch` | by hand, optionally a dry run | every open pull request |
+
+`edited` is deliberately not a trigger. Renovate rewrites a pull request's body
+as it pushes to it, so with `edited` each push started two runs for the same
+commit. The second cancelled the first, and Forgejo shows a cancelled job as a
+red `merge-window / Post merge-window statuses (pull_request)` until the next
+run finishes. The cost is drafts: a draft (a `WIP:` title prefix here) that is
+made ready gets no `merge-window` status until the next scheduled run. *Run
+workflow* by hand gives it one at once.
 
 Forgejo reads cron in UTC, and New York is UTC−4 in summer and UTC−5 in winter.
 So each edge is listed at both of its UTC hours (`1 4,5,12,13 * * *`). The run
