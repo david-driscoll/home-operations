@@ -29,15 +29,29 @@
  * commit is stamped with an address under the private domain. The workflow
  * does the same job with a fast-forward and a look at each commit.
  *
- * ## Owned by an account, not by the `home-operations` organization
+ * ## Its own organization, not `home-operations`, and claude-code read-only
  *
  * Whoever can write to this repository's main can publish to GitHub's without
  * a pull request there. Every organization on the forge gets a `claude-code`
  * team with write access to all of its repositories (./forgejo-renovate.ts),
- * so an organization repository would hand that to every agent session. A
- * user-owned repository is reachable only by its owner, by Renovate -- which
- * gets its usual collaborator grant from the discovery in that file, on the
- * run after this one creates the repository -- and by the forge's admins.
+ * so putting this repository in `home-operations` would hand that to every
+ * agent session.
+ *
+ * So it lives in an organization of its own, {@link MIRROR_ORG}, which
+ * ./forgejo-renovate.ts skips when it hands out claude-code's write teams
+ * (GITHUB_MIRROR_ORG). What can reach the repository:
+ *
+ *   renovate             admin, from the per-org team in ./forgejo-renovate.ts,
+ *                        on the run after this one creates the organization
+ *   github-mirror-sync   write, from a collaborator grant below; its token is
+ *                        what the relay dispatches the sync workflow with
+ *   claude-code          read, from a team below: view, diff, comment, review
+ *   the forge's admins   as owners of the organization
+ *
+ * Until 2026-10 the repository was owned by a USER called `github-mirror`,
+ * for the same reason. docs/runbooks/forgejo-github-mirror.md has the
+ * hand-run steps that turned it into this organization without changing the
+ * repository's path.
  *
  * ## The deploy key: both halves from here, the ruleset not
  *
@@ -66,16 +80,38 @@ import * as github from "@pulumi/github";
 import type * as pulumi from "@pulumi/pulumi";
 import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
-import type { ForgejoConfigurationComponent, TOKEN_SCOPES } from "./forgejo-renovate.ts";
+import { type ForgejoConfigurationComponent, GITHUB_MIRROR_ORG, type TOKEN_SCOPES } from "./forgejo-renovate.ts";
 
-/** The account that owns the mirror. Also the committer on commits the sync replays. */
-const MIRROR_LOGIN = "github-mirror";
+/**
+ * The organization that owns the mirror. The repository's path,
+ * `github-mirror/home-operations`, is what every repository-scoped rule in
+ * .github/renovate.json5 names, so this name must not change.
+ */
+const MIRROR_ORG = GITHUB_MIRROR_ORG;
+
+/**
+ * The account whose token dispatches the sync workflow. Also the committer on
+ * commits the sync replays (.forgejo/workflows/github-sync.yml).
+ */
+const SYNC_LOGIN = "github-mirror-sync";
 
 /** `owner/name` on GitHub. The workflow builds both of its GitHub URLs from this. */
 const UPSTREAM = "david-driscoll/home-operations";
 
-/** The repository's name on Forgejo, under {@link MIRROR_LOGIN}. */
+/** The repository's name on Forgejo, under {@link MIRROR_ORG}. */
 const REPOSITORY = "home-operations";
+
+/**
+ * claude-code's units on the mirror: enough to read code, issues, pull
+ * requests and Actions logs, and to comment on and review a pull request.
+ * Nothing at `write`. See the header.
+ */
+const CLAUDE_CODE_MIRROR_UNITS = {
+  "repo.code": "read",
+  "repo.issues": "read",
+  "repo.pulls": "read",
+  "repo.actions": "read",
+};
 
 export interface ForgejoGithubMirrorArgs {
   globals: GlobalResources;
@@ -89,15 +125,32 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
 
     const provider = args.forgejo.forgejoProvider;
 
+    // `limited`, like the user it replaced: visible to signed-in accounts, and
+    // the instance is REQUIRE_SIGNIN_VIEW anyway. Owned by whoever the
+    // provider authenticates as -- the forge's admin -- and nobody else.
+    const organization = new forgejo.Organization(
+      "forgejo-github-mirror-organization",
+      {
+        name: MIRROR_ORG,
+        fullName: "GitHub Mirror",
+        description: "The forge's copy of GitHub's home-operations. Managed by stacks/system; see docs/runbooks/forgejo-github-mirror.md.",
+        location: "Equestria",
+        visibility: "limited",
+        // Only the org's owners decide who can reach the repository.
+        repoAdminChangeTeamAccess: false,
+      },
+      { provider, parent: this },
+    );
+
     // Same construction as the two accounts in forgejo-renovate.ts, and the
     // same reasons: a generated password nothing logs in with, and
     // `prohibitLogin: false` because Forgejo applies that flag to token
     // authentication too.
-    const owner = args.forgejo.createUser(
+    const syncBot = args.forgejo.createUser(
       {
-        fullName: "GitHub Mirror",
-        login: MIRROR_LOGIN,
-        description: "Owns the GitHub mirror of home-operations. Managed by stacks/system; see docs/runbooks/forgejo-github-mirror.md.",
+        fullName: "GitHub Mirror Sync",
+        login: SYNC_LOGIN,
+        description: "Dispatches the github-sync workflow on github-mirror/home-operations. Managed by stacks/system; see docs/runbooks/forgejo-github-mirror.md.",
         active: true,
         admin: false,
         mustChangePassword: false,
@@ -106,7 +159,8 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         location: "Equestria",
         prohibitLogin: false,
         allowGitHook: false,
-        // Sees its own repository and nothing else on the forge.
+        // Owns nothing and creates nothing; sees only the grant below.
+        maxRepoCreation: 0,
         restricted: true,
       },
       // The token's one use is dispatching the sync workflow, which Forgejo
@@ -115,13 +169,16 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       ["write:repository"] as TOKEN_SCOPES[],
       args.globals,
       provider,
-      { resourcePrefix: "forgejo-github-mirror", tokenName: "Sync dispatch", versionTokenName: true },
+      { resourcePrefix: "forgejo-github-mirror-sync", tokenName: "Sync dispatch", versionTokenName: true },
     );
 
     const repository = new forgejo.Repository(
       "forgejo-github-mirror-repository",
       {
-        owner: owner.user.login,
+        // The same string the user-owned repository had, so this is not the
+        // owner change that would replace -- re-import -- the repository. The
+        // move itself is a hand-run transfer (see the header).
+        owner: organization.name,
         name: REPOSITORY,
         description: `GitHub's ${UPSTREAM}; main is kept in step by .forgejo/workflows/github-sync.yml. Managed by stacks/system.`,
         // GitHub's copy is public. This one holds pull requests and Actions
@@ -187,6 +244,22 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       },
     );
 
+    // The sync bot's access: `write`, because Forgejo files workflow dispatch
+    // under it. A collaborator grant rather than a team so that it holds
+    // whoever owns the repository -- it is what kept the relay working across
+    // the hand-run transfer into the organization. The user that owned the
+    // repository before had owner rights here; this is less.
+    new forgejo.Collaborator(
+      "forgejo-github-mirror-collaborator-sync",
+      {
+        // The numeric id, as for Renovate's grants: it survives a rename.
+        repositoryId: repository.repositoryId,
+        user: syncBot.user.login,
+        permission: "write",
+      },
+      { provider, parent: repository },
+    );
+
     // `claude-code` READS this repository, and that is all. It is a restricted
     // account (./forgejo-renovate.ts), so without a grant of its own the Forgejo
     // MCP server answers every call here -- the pull request, its diff, a file
@@ -194,19 +267,31 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // review one of the forge's Renovate PRs cannot even open it.
     //
     // `read`, never more. Write here is write to main, and main is what the
-    // sync publishes to GitHub: the reason this repository is user-owned rather
-    // than in an organization, where the `claude-code` team would get write on
-    // it automatically (see the header). Read is enough to view, diff, comment
-    // on and review a pull request; it cannot push, merge or change settings.
-    new forgejo.Collaborator(
-      "forgejo-github-mirror-collaborator-claude-code",
+    // sync publishes to GitHub -- see the header. Read is enough to view, diff,
+    // comment on and review a pull request; it cannot push, merge or change
+    // settings. A team covering the whole organization, so a second repository
+    // here would be readable too and nothing more.
+    const claudeCodeTeam = new forgejo.Team(
+      "forgejo-github-mirror-claude-code-team",
       {
-        // The numeric id, as for Renovate's grants: it survives a rename.
-        repositoryId: repository.repositoryId,
-        user: args.forgejo.claudeCode.user.login,
+        organization: organization.name,
+        name: "claude-code",
+        description: "Claude Code (agentboard), read-only. Managed by stacks/system.",
         permission: "read",
+        includesAllRepositories: true,
+        unitsMap: CLAUDE_CODE_MIRROR_UNITS,
+        canCreateOrgRepo: false,
       },
-      { provider, parent: repository },
+      { provider, parent: organization },
+    );
+
+    new forgejo.TeamMember(
+      "forgejo-github-mirror-claude-code-team-member",
+      {
+        teamId: claudeCodeTeam.teamId,
+        user: args.forgejo.claudeCode.user.login,
+      },
+      { provider, parent: claudeCodeTeam },
     );
 
     // What the workflow pushes to GitHub with. ed25519, as for claude-code's
@@ -276,8 +361,8 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         mount: "secrets",
         path: "clusters/equestria/apps/forgejo-github-sync/credentials",
         data: {
-          forgejo_token: owner.token.token,
-          bot_password: owner.password.result,
+          forgejo_token: syncBot.token.token,
+          bot_password: syncBot.password.result,
           repository: repository.fullName,
         },
         concealedFields: ["forgejo_token", "bot_password"],
