@@ -65,3 +65,6 @@ resources:
   # only ever an MCP CLIENT of over plain HTTP+OAuth at runtime, never a
   # build-time dependent.
   - ./agentboard/ks.yaml
+  # Paseo: a daemon + web UI for running coding agents in parallel, reached
+  # directly by its desktop/mobile/CLI clients. Independent of agentboard.
+  - ./paseo/ks.yaml

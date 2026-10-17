@@ -1,0 +1,154 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app paseo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    defaultPodOptions:
+      # The image's entrypoint only needs root to chown volumes on first run
+      # and then drops to `paseo` (1000) with gosu. Starting as 1000 with
+      # fsGroup does the same job, and the entrypoint skips its chown/gosu
+      # steps when it is not root.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+          # Agents run for hours; a nightly scale-down would kill them mid-task.
+          downscaler/exclude: "true"
+        strategy: Recreate
+        initContainers:
+          # The base image ships no agent CLIs; upstream's answer is a child
+          # image (docker/Dockerfile.agents.example). Installing them into the
+          # persistent home instead needs no image build and no registry, and
+          # NPM_CONFIG_PREFIX below makes the daemon find them -- and makes an
+          # agent's own `npm install -g` land on the volume too. Re-run every
+          # start, so a version bump here is applied on the next rollout.
+          agent-clis:
+            image: &image
+              repository: ghcr.io/getpaseo/paseo
+              tag: 0.11.4@sha256:0e64b56fa1f99808623f4de70321cdd292e85b6db151636c13b0e6786b0e1ba5
+              pullPolicy: IfNotPresent
+            command:
+              - sh
+              - -c
+              - >-
+                npm install --global --no-fund --no-audit
+                "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
+                "@openai/codex@$CODEX_VERSION"
+            env: &env
+              TZ: "${TIMEZONE}"
+              NPM_CONFIG_PREFIX: /home/paseo/.local/npm
+              PATH: /home/paseo/.local/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              # renovate: datasource=npm depName=@anthropic-ai/claude-code
+              CLAUDE_CODE_VERSION: "2.1.302"
+              # renovate: datasource=npm depName=@openai/codex
+              CODEX_VERSION: "0.163.0"
+            securityContext: &securityContext
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+        containers:
+          app:
+            image: *image
+            env:
+              <<: *env
+              # Host-header allowlist. IPs and localhost are always allowed,
+              # which is what keeps the kubelet's probes working.
+              PASEO_HOSTNAMES: ${APP}.agents.${ROOT_DOMAIN}
+            envFrom:
+              - secretRef:
+                  name: ${APP}
+            probes:
+              # /api/health is the one daemon route that skips the bearer check.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &health
+                    path: /api/health
+                    port: &port 6767
+                  periodSeconds: 5
+                  failureThreshold: 60
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                # Headroom for several agent CLIs running side by side.
+                memory: 8Gi
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *port
+    persistence:
+      home:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /home/paseo
+      workspace:
+        existingClaim: ${APP}-workspace
+        globalMounts:
+          - path: /workspace
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
