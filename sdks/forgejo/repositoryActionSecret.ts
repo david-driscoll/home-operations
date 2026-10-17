@@ -36,10 +36,9 @@ export class RepositoryActionSecret extends pulumi.CustomResource {
      * Time at which the secret was created.
      */
     declare public /*out*/ readonly createdAt: pulumi.Output<string>;
-    /**
-     * Data of the secret.
-     */
-    declare public readonly data: pulumi.Output<string>;
+    declare public readonly data: pulumi.Output<string | undefined>;
+    declare public readonly dataWo: pulumi.Output<string | undefined>;
+    declare public readonly dataWoVersion: pulumi.Output<number | undefined>;
     /**
      * Name of the secret. Changing this forces a new resource to be created.
      */
@@ -64,23 +63,24 @@ export class RepositoryActionSecret extends pulumi.CustomResource {
             const state = argsOrState as RepositoryActionSecretState | undefined;
             resourceInputs["createdAt"] = state?.createdAt;
             resourceInputs["data"] = state?.data;
+            resourceInputs["dataWo"] = state?.dataWo;
+            resourceInputs["dataWoVersion"] = state?.dataWoVersion;
             resourceInputs["name"] = state?.name;
             resourceInputs["repositoryId"] = state?.repositoryId;
         } else {
             const args = argsOrState as RepositoryActionSecretArgs | undefined;
-            if (args?.data === undefined && !opts.urn) {
-                throw new Error("Missing required property 'data'");
-            }
             if (args?.repositoryId === undefined && !opts.urn) {
                 throw new Error("Missing required property 'repositoryId'");
             }
             resourceInputs["data"] = args?.data ? pulumi.secret(args.data) : undefined;
+            resourceInputs["dataWo"] = args?.dataWo ? pulumi.secret(args.dataWo) : undefined;
+            resourceInputs["dataWoVersion"] = args?.dataWoVersion;
             resourceInputs["name"] = args?.name;
             resourceInputs["repositoryId"] = args?.repositoryId;
             resourceInputs["createdAt"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["data"] };
+        const secretOpts = { additionalSecretOutputs: ["data", "dataWo"] };
         opts = pulumi.mergeOptions(opts, secretOpts);
         super(RepositoryActionSecret.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
@@ -94,10 +94,9 @@ export interface RepositoryActionSecretState {
      * Time at which the secret was created.
      */
     createdAt?: pulumi.Input<string | undefined>;
-    /**
-     * Data of the secret.
-     */
     data?: pulumi.Input<string | undefined>;
+    dataWo?: pulumi.Input<string | undefined>;
+    dataWoVersion?: pulumi.Input<number | undefined>;
     /**
      * Name of the secret. Changing this forces a new resource to be created.
      */
@@ -112,10 +111,9 @@ export interface RepositoryActionSecretState {
  * The set of arguments for constructing a RepositoryActionSecret resource.
  */
 export interface RepositoryActionSecretArgs {
-    /**
-     * Data of the secret.
-     */
-    data: pulumi.Input<string>;
+    data?: pulumi.Input<string | undefined>;
+    dataWo?: pulumi.Input<string | undefined>;
+    dataWoVersion?: pulumi.Input<number | undefined>;
     /**
      * Name of the secret. Changing this forces a new resource to be created.
      */
