@@ -40,9 +40,13 @@ on:
     - cron: "1 4,5,12,13 * * *"
   pull_request:
     branches: [main]
-    # `edited` is how a draft becomes ready here: Forgejo's drafts are a
-    # `WIP:` title prefix, and dropping it is an edit.
-    types: [opened, reopened, synchronize, edited]
+    # Not `edited`. Renovate rewrites a pull request's body as it pushes to
+    # it, so a push arrived as two events for one commit; the second run
+    # cancelled the first, and Forgejo marks a cancelled job red on the pull
+    # request until the next one finishes. The cost: a draft (a `WIP:` title
+    # prefix here) made ready gets no status until the next scheduled run,
+    # or a run by hand.
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
       dry_run:
