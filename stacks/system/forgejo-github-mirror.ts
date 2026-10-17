@@ -191,7 +191,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         description: `GitHub's ${UPSTREAM}; main is kept in step by .forgejo/workflows/github-sync.yml. Managed by stacks/system.`,
         // GitHub's copy is public. This one holds pull requests and Actions
         // logs that are not.
-        private: true,
+        private: false,
 
         // A one-time import, NOT a mirror: `mirror: true` makes the repository
         // read-only, and Renovate could then open nothing against it. From
