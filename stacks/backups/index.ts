@@ -392,16 +392,6 @@ backupPlanOrchestrator.addBackupPlan(
   })),
 );
 
-backupPlanOrchestrator.addBackupPlan(
-  pulumi.output({
-    source: "celestia",
-    name: "pgdump",
-    title: "Postgres Dumps",
-    path: "/spike/data/pgdump/",
-    repository: "pgdump",
-  }),
-);
-
 pulumi.all([dockgeInstances]).apply(() => {
   pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);
   return backupPlanOrchestrator.savePlan("Backup Plan");

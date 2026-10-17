@@ -73,32 +73,28 @@
 //
 // ─── WHERE THE DUMPS GO ─────────────────────────────────────────────────────
 //
-// Two places, for now (docs/plans/host-owned-backups.md §C4, phase 3 step 5):
+// Straight into Garage, and nowhere else (docs/plans/host-owned-backups.md
+// §C4, phase 3 step 5). `restic backup --stdin-from-command` runs pg_dump
+// itself and stores its output as `/<db>.dump`, tagged `db:<db>`, so no dump
+// file ever touches disk. The dump is uncompressed (`--compress=0`): restic's
+// chunker then deduplicates one night against the next, and restic
+// compresses it.
 //
-//   1. `/backups/<db>.sql.gz` on TrueNAS's NFS share, as before. celestia's
-//      Backrest `pgdump` plan snapshots that directory.
-//   2. A restic snapshot per database in Garage. `restic backup
-//      --stdin-from-command` runs pg_dump itself and stores its output as
-//      `/<db>.dump`, tagged `db:<db>`, so no dump file exists anywhere. The
-//      dump is uncompressed (`--compress=0`): restic's chunker then
-//      deduplicates one night against the next, and restic compresses it.
-//
-// The file is written first and the stream second, and neither depends on the
-// other: a Garage outage must not cost a night's dump files while the stream
-// is still proving itself. Either one failing fails the run. After a week of
-// green runs, step 5 deletes the file path here and the NFS mount.
+// A database is backed up when its stream succeeds, and not otherwise. Any
+// failure -- the repository being unreachable, pg_dump itself failing --
+// fails the run. This replaced a dual write (a `.sql.gz` file on TrueNAS's
+// NFS share alongside the stream) that ran for a week to prove the stream
+// before the file path was deleted.
 //
 // Restore from the stream:
 //   restic dump --tag db:<db> latest /<db>.dump | pg_restore -d <db>
 
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Serialization;
 using k8s;
 using k8s.Models;
 using Npgsql;
-using File = System.IO.File;
 
 // The annotation contract, in one place because three files reference it: this
 // script, kubernetes/components/postgres/database/database.yaml and
@@ -158,8 +154,6 @@ var decommissioned = (Environment.GetEnvironmentVariable("DECOMMISSIONED_DATABAS
   .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
   .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-var backupDir = "/backups";
-
 // The restic side. Everything restic needs is in the pod's environment, from
 // the postgres-backup-restic Secret (externalsecret.yaml): the repository, its
 // password and the Garage key. The binary comes from the init container.
@@ -169,15 +163,13 @@ const string ResticHost = "equestria";
 
 Console.WriteLine($"Starting PostgreSQL backup at {DateTime.UtcNow}");
 
-// Create backup directory
-Directory.CreateDirectory(backupDir);
-
-// Null when the repository is ready, otherwise why nothing can be streamed
-// tonight. It never stops the file dumps: see WHERE THE DUMPS GO.
+// Null when the repository is ready, otherwise why nothing can be backed up
+// tonight. See WHERE THE DUMPS GO: there is no fallback path any more, so
+// this fails the run below regardless of what the per-database loop finds.
 var streamUnavailable = await PrepareResticRepository();
 if (streamUnavailable is not null)
 {
-  Console.Error.WriteLine($"Error preparing the restic repository: {streamUnavailable}. The dump files are still written; no database is streamed tonight, and the run fails.");
+  Console.Error.WriteLine($"Error preparing the restic repository: {streamUnavailable}. No database can be backed up tonight, and the run fails.");
 }
 
 // THE REGISTER: what this cluster says should be backed up, and how.
@@ -225,7 +217,7 @@ foreach (var name in decommissioned.Order(StringComparer.Ordinal))
   }
 }
 
-// Create individual database dumps
+// Stream each database into restic
 // How long a newly-created Database CR may go without its credential Secret
 // before this job treats it as a real failure. The observed gap on 2026-08-27
 // was 8.5 minutes; 30 gives generous headroom for a slow ESO refresh or a
@@ -238,8 +230,7 @@ var skipped = new List<string>();
 // see the CredentialGrace note below -- a brand-new Database CR is allowed to be
 // briefly credential-less without failing the whole run.
 var deferred = new List<string>();
-// The restic side, counted apart from the files so the summary can say which
-// of the two a database missed.
+// Whether each live, enabled database's stream into restic succeeded.
 var streamed = new List<string>();
 var streamFailed = new List<string>();
 foreach (var db in live)
@@ -270,25 +261,6 @@ foreach (var db in live)
     continue;
   }
 
-  var backupFile = Path.Combine(backupDir, $"{db}.sql.gz");
-  // Dump to a sibling temp file and only replace the existing backup once pg_dump
-  // has exited 0. Writing straight to backupFile truncates the last known-good
-  // dump before the new one is known to be valid.
-  //
-  // The staging name carries the pod name so two concurrent runs can never share
-  // it. They could before: the name was a bare "{db}.sql.gz.tmp", and the finally
-  // block below deletes stagingFile unconditionally -- including on the path where
-  // THIS run failed because the other run already had the file open. On 2026-08-27
-  // that is exactly what happened to immich: one pod logged "The process cannot
-  // access the file ... because it is being used by another process", deleted the
-  // other pod's in-flight dump on its way out, and the winning pod then died on
-  // "Could not find file '/backups/immich.sql.gz.tmp'". Both runs lost the
-  // database. Note the mutual exclusion that produced that error is node-local
-  // flock -- both pods happened to land on the same node -- so two overlapping
-  // runs on DIFFERENT nodes over this NFS mount may not be serialized at all.
-  // HOSTNAME is the pod name, which is unique per attempt.
-  var runId = Environment.GetEnvironmentVariable("HOSTNAME") is { Length: > 0 } h ? h : Guid.NewGuid().ToString("N");
-  var stagingFile = $"{backupFile}.{runId}.tmp";
   try
   {
     var secretName = entry.CredentialsSecret;
@@ -299,23 +271,7 @@ foreach (var db in live)
     // rather than derived from the database name, which Secret was used is no
     // longer inferable from this line.
     Console.WriteLine($"Backing up database: {db} ({GetField(postgres, secretName, "username")}@{GetField(postgres, secretName, "hostname")}:{GetField(postgres, secretName, "port")} via {secretName})");
-    Directory.CreateDirectory(Path.GetDirectoryName(backupFile) ?? throw new InvalidOperationException("Failed to get directory name for backup file"));
 
-    await CreateDatabaseDump(postgres, secretName, db, stagingFile);
-    File.Move(stagingFile, backupFile, overwrite: true);
-
-    if (File.Exists(backupFile))
-    {
-      Console.WriteLine($"Successfully created backup: {backupFile}");
-    }
-    else
-    {
-      Console.Error.WriteLine($"Failed to create backup for database: {db}");
-      failed.Add(db);
-    }
-
-    // The stream, after the file is safely in place. Its own try: a failure
-    // here is reported and fails the run, and the file above stays.
     if (streamUnavailable is null)
     {
       try
@@ -328,6 +284,10 @@ foreach (var db in live)
         Console.Error.WriteLine($"Error streaming database {db} into restic: {ex.Message}");
         streamFailed.Add(db);
       }
+    }
+    else
+    {
+      streamFailed.Add(db);
     }
   }
   // A Database CR and its credential Secret are created by two different
@@ -355,10 +315,6 @@ foreach (var db in live)
     Console.Error.WriteLine($"Error backing up database {db}: {ex.Message}");
     failed.Add(db);
   }
-  finally
-  {
-    if (File.Exists(stagingFile)) File.Delete(stagingFile);
-  }
 }
 
 if (failed.Count > 0)
@@ -367,16 +323,17 @@ if (failed.Count > 0)
   return 1;
 }
 
-// The files are all written, so last night's dumps exist. The run still fails
-// when the restic side did not keep up, or nothing would ever say so.
+// Nothing is backed up unless it is streamed into restic, so an unavailable
+// repository or a failed stream fails the run exactly the same way a failed
+// dump used to.
 if (streamUnavailable is not null)
 {
-  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: every dump file was written, but nothing was streamed into restic: {streamUnavailable}");
+  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: the restic repository is not available, so nothing was streamed: {streamUnavailable}");
   return 1;
 }
 if (streamFailed.Count > 0)
 {
-  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: every dump file was written, but {streamFailed.Count} database(s) were not streamed into restic: {string.Join(", ", streamFailed)}");
+  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: {streamFailed.Count} database(s) were not streamed into restic: {string.Join(", ", streamFailed)}");
   return 1;
 }
 
@@ -384,7 +341,7 @@ if (streamFailed.Count > 0)
 // names go in the success line so a database that is deferred every night --
 // which would mean its Secret never arrived and the grace window is masking a
 // real problem -- is visible without reading the whole log.
-Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({live.Count - skipped.Count - deferred.Count} databases, {streamed.Count} streamed into restic{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")}{(deferred.Count > 0 ? $", {deferred.Count} deferred until their credential Secret syncs: {string.Join(", ", deferred)}" : "")})");
+Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({streamed.Count} database(s) streamed into restic{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")}{(deferred.Count > 0 ? $", {deferred.Count} deferred until their credential Secret syncs: {string.Join(", ", deferred)}" : "")})");
 return 0;
 
 // Helper methods
@@ -459,49 +416,10 @@ async Task<List<string>> GetLiveDatabases(NpgsqlDataSource dataSource)
   return databases;
 }
 
-async Task CreateDatabaseDump(IDictionary<string, byte[]> postgres, string secretName, string database, string outputFile)
-{
-  var host = GetField(postgres, secretName, "hostname");
-  var port = GetField(postgres, secretName, "port");
-  var user = GetField(postgres, secretName, "username");
-  var password = GetField(postgres, secretName, "password");
-  var psi = new ProcessStartInfo
-  {
-    FileName = "pg_dump",
-    Arguments = $"-h {host} -p {port} -U {user} -d {database} --verbose --no-password --format=custom --no-privileges --no-owner",
-    UseShellExecute = false,
-    RedirectStandardOutput = true,
-    RedirectStandardError = true,
-    CreateNoWindow = true,
-  };
-  psi.Environment["PGPASSWORD"] = password;
-
-  using var process = Process.Start(psi);
-  if (process == null) throw new InvalidOperationException("Failed to start pg_dump process");
-
-  // --verbose writes progress to stderr throughout the dump. Drain it concurrently
-  // with stdout: reading it only after the process exits deadlocks once the stderr
-  // pipe buffer fills, because pg_dump then blocks before it can finish writing stdout.
-  var errorTask = process.StandardError.ReadToEndAsync();
-
-  // Compress the output
-  await using (var fileStream = File.Create(outputFile))
-  await using (var gzipStream = new GZipStream(fileStream, CompressionMode.Compress))
-  {
-    await process.StandardOutput.BaseStream.CopyToAsync(gzipStream);
-  }
-
-  await process.WaitForExitAsync();
-  var error = await errorTask;
-
-  if (process.ExitCode != 0)
-  {
-    throw new InvalidOperationException($"pg_dump failed: {error}");
-  }
-}
-
 // Runs restic and returns its exit code with everything it printed. Both
-// pipes are drained while it runs, for the reason given in CreateDatabaseDump.
+// pipes are drained while it runs: reading one only after the process exits
+// deadlocks once that pipe's buffer fills, because restic (and the pg_dump it
+// runs as its own child) then blocks before it can finish writing the other.
 async Task<(int ExitCode, string Output, string Error)> RunRestic(IEnumerable<string> arguments, IDictionary<string, string>? environment = null)
 {
   var psi = new ProcessStartInfo
