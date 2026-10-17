@@ -66,8 +66,14 @@ jobs:
   gate:
     name: Post merge-window statuses
     runs-on: ubuntu-latest
-    # A few API calls per pull request. Anything longer is hung.
-    timeout-minutes: 5
+    # The script itself is a few API calls per pull request, but the budget
+    # also covers the runner pulling ubuntu:act-24.04 (~1.5 GB) into a fresh
+    # one-job pod. During a burst -- every Renovate rebase starts this, flate
+    # and image-check, ten runner pods pulling at once -- that pull alone took
+    # five minutes on 2026-10-17, and at `5` the job died in `docker create`
+    # before the script ran, leaving the pull request without its status.
+    # Same budget as image-check.
+    timeout-minutes: 15
     steps:
       # Only the script: the whole tree is over 100 MiB, fetched for one file.
       - name: Checkout
