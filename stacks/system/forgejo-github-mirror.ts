@@ -142,7 +142,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         fullName: "GitHub Mirror",
         description: "The forge's copy of GitHub's home-operations. Managed by stacks/system; see docs/runbooks/forgejo-github-mirror.md.",
         location: "Equestria",
-        visibility: "limited",
+        visibility: "public",
         // Only the org's owners decide who can reach the repository.
         repoAdminChangeTeamAccess: false,
       },
@@ -236,6 +236,13 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         allowRebaseUpdate: true,
         defaultUpdateStyle: "rebase",
         defaultDeleteBranchAfterMerge: true,
+        defaultAllowMaintainerEdit: true,
+        defaultBranch: "main",
+        internalTracker: {
+          allowOnlyContributorsToTrackTime: true,
+          enableTimeTracker: false,
+          enableIssueDependencies: false,
+        },
 
         // Destroying this resource archives the repository rather than
         // deleting its pull requests along with it.
@@ -329,7 +336,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         pushWhitelistDeployKeys: false,
 
         enableStatusCheck: true,
-        statusCheckContexts: [MERGE_WINDOW_CONTEXT],
+        statusCheckContexts: [MERGE_WINDOW_CONTEXT, "flate*", "renovate/stability-days", "Image Check*"],
 
         // Renovate's pull requests merge unreviewed, and rebase only when they
         // conflict (`rebaseWhen: conflicted`), so neither reviews nor an
@@ -339,8 +346,8 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         approvalsWhitelistUsernames: [],
         approvalsWhitelistTeams: [],
         dismissStaleApprovals: false,
-        blockOnRejectedReviews: false,
-        blockOnOfficialReviewRequests: false,
+        blockOnRejectedReviews: true,
+        blockOnOfficialReviewRequests: true,
         blockOnOutdatedBranch: false,
 
         enableMergeWhitelist: false,
