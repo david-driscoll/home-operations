@@ -1,0 +1,166 @@
+// Talos service and kernel logs -> Loki.
+//
+// Talos holds kubelet, containerd/cri, machined and kernel logs in memory
+// only, so a reboot erases exactly the evidence a node failure leaves behind
+// (2026-10-17: two workers lost their CRI and the logs that would have said
+// why went with the power-cycle). talos/patches/global/machine-logging.yaml
+// makes every node stream both to this receiver as JSON lines over TCP.
+//
+// This runs as a hostNetwork DaemonSet and listens on loopback only, so each
+// node talks to its own receiver: nothing reaches these ports from the LAN,
+// and the node a line came from is simply the node this pod runs on. Neither
+// stream carries a hostname (KmsgLogConfig cannot take extraTags at all), so
+// that locality is the only per-node identity there is.
+//
+// otelcol.receiver.tcplog is EXPERIMENTAL in Alloy, hence its own instance:
+// --stability.level=experimental is set here and nowhere near ../alloy.
+
+logging {
+	level  = "warn"
+	format = "json"
+}
+
+// Service logs: {"msg", "talos-level", "talos-service", "talos-time"}.
+otelcol.receiver.tcplog "service" {
+	listen_address = "127.0.0.1:6051"
+
+	output {
+		logs = [otelcol.exporter.loki.service.input]
+	}
+}
+
+// Kernel logs: {"msg", "talos-level", "talos-time", "facility", "priority",
+// "seq", "clock"}.
+otelcol.receiver.tcplog "kernel" {
+	listen_address = "127.0.0.1:6050"
+
+	output {
+		logs = [otelcol.exporter.loki.kernel.input]
+	}
+}
+
+// The exporter wraps each raw TCP line as {"body":"<the Talos JSON>"} and adds
+// an `exporter="OTLP"` label; both pipelines below unwrap and drop those.
+otelcol.exporter.loki "service" {
+	forward_to = [loki.process.service.receiver]
+}
+
+otelcol.exporter.loki "kernel" {
+	forward_to = [loki.process.kernel.receiver]
+}
+
+loki.process "service" {
+	stage.json {
+		expressions = { body = "body" }
+	}
+
+	stage.json {
+		source      = "body"
+		expressions = {
+			msg           = "msg",
+			level         = "\"talos-level\"",
+			talos_service = "\"talos-service\"",
+			time          = "\"talos-time\"",
+		}
+	}
+
+	stage.template {
+		source   = "job"
+		template = "talos/{{ .talos_service }}"
+	}
+
+	stage.labels {
+		values = {
+			job           = "",
+			talos_service = "",
+			level         = "",
+		}
+	}
+
+	stage.timestamp {
+		source            = "time"
+		format            = "RFC3339Nano"
+		action_on_failure = "fudge"
+	}
+
+	stage.output {
+		source = "msg"
+	}
+
+	forward_to = [loki.process.common.receiver]
+}
+
+loki.process "kernel" {
+	stage.json {
+		expressions = { body = "body" }
+	}
+
+	stage.json {
+		source      = "body"
+		expressions = {
+			msg      = "msg",
+			level    = "\"talos-level\"",
+			time     = "\"talos-time\"",
+			facility = "facility",
+		}
+	}
+
+	// Kernel messages arrive with their trailing newline.
+	stage.replace {
+		source     = "msg"
+		expression = "(\\n+)$"
+		replace    = ""
+	}
+
+	stage.static_labels {
+		values = {
+			job           = "talos/kernel",
+			talos_service = "kernel",
+		}
+	}
+
+	stage.labels {
+		values = { level = "" }
+	}
+
+	stage.structured_metadata {
+		values = { facility = "" }
+	}
+
+	stage.timestamp {
+		source            = "time"
+		format            = "RFC3339Nano"
+		action_on_failure = "fudge"
+	}
+
+	stage.output {
+		source = "msg"
+	}
+
+	forward_to = [loki.process.common.receiver]
+}
+
+loki.process "common" {
+	stage.label_drop {
+		values = ["exporter"]
+	}
+
+	stage.static_labels {
+		values = {
+			node          = sys.env("NODE_NAME"),
+			cluster       = "${CLUSTER_CNAME}",
+			cluster_title = "${CLUSTER_TITLE}",
+			environment   = "homelab",
+			region        = "${LOCATION}",
+			machine_type  = "kubernetes",
+		}
+	}
+
+	forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+	endpoint {
+		url = "http://loki-headless.observability.svc.cluster.local:3100/loki/api/v1/push"
+	}
+}
