@@ -62,6 +62,10 @@ nodes:
         systemExtensions:
           officialExtensions:
             - siderolabs/iscsi-tools
+            # fstrim. Longhorn's filesystem-trim RecurringJob nsenters the
+            # host mount namespace and runs it there; without this every
+            # trim of a volume attached here fails with exit 127.
+            - siderolabs/util-linux-tools
             - siderolabs/qemu-guest-agent
             - siderolabs/amdgpu
             # - siderolabs/tailscale
