@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# Internal gateway only (LAN + tailnet), with no authentik in front: the
+# desktop, mobile and CLI clients connect straight to the daemon's WebSocket
+# with PASEO_PASSWORD as a bearer and cannot follow a forward-auth redirect.
+# Traefik passes WebSocket upgrades through an HTTPRoute as-is.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "${APP}.agents.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        - name: ${APP}
+          port: 6767
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: local-user

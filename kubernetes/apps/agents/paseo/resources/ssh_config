@@ -1,0 +1,20 @@
+# git over SSH to the in-cluster Forgejo as the `claude-code` account -- the
+# same account and key agentboard uses (../../agentboard/resources/ssh_config).
+# Mounted at /etc/ssh/ssh_config.d/forgejo.conf; Debian's /etc/ssh/ssh_config
+# `Include`s that directory, so it applies to the daemon, every agent and any
+# exec shell without touching ~/.ssh on the home volume.
+#
+# Remotes keep the public name (git@git.<root domain>:<org>/<repo>.git); only
+# the connection is redirected, to Forgejo's own SSH Service, because
+# git.<root domain>:22 is the internal gateway's LAN address and does not
+# answer from inside the cluster. HostKeyAlias makes the host key check use the
+# public name, which is what ./known_hosts pins.
+Host git.${ROOT_DOMAIN}
+  HostName forgejo-ssh.coder.svc.cluster.local
+  Port 22
+  User git
+  HostKeyAlias git.${ROOT_DOMAIN}
+  IdentityFile /var/run/secrets/forgejo-ssh/id_ed25519
+  IdentitiesOnly yes
+  UserKnownHostsFile /etc/paseo/ssh/known_hosts
+  StrictHostKeyChecking yes

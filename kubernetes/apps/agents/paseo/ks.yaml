@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app paseo
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/agents/paseo
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+    # /home/paseo only: daemon state plus the agent CLIs' logins and installs.
+    # /workspace is ./pvc.yaml and is deliberately not backed up -- it holds
+    # clones, and the copy that matters is the remote.
+    - ../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      VOLSYNC_CAPACITY: 10Gi
+      # The image's `paseo` user.
+      VOLSYNC_PUID: "1000"
+      VOLSYNC_PGID: "1000"
