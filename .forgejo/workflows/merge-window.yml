@@ -29,15 +29,20 @@ name: merge-window
 
 on:
   schedule:
-    # 00:01 and 08:01 New York. Forgejo reads cron in UTC, and New York is
-    # UTC-4 in summer and UTC-5 in winter, so each edge is listed at both of
-    # its UTC hours: 04/05 for the opening and 12/13 for the close. The run
-    # an hour off finds the state already right and posts nothing. In summer
-    # the 13:01 run is also a second chance at the close.
+    # 00:01 and 08:01 New York, read in New York time. Without `timezone`
+    # Forgejo reads cron in UTC, which is why this used to list each edge at
+    # both of its UTC hours (04/05 and 12/13) to survive the DST change.
+    # `timezone` is a per-entry key Forgejo 16 honours (the runner's
+    # jobparser allows `cron` and `timezone`, and
+    # models/actions/schedule_spec.go loads it as the cron's location), so
+    # the edges are now written once and follow DST on their own. It has to
+    # name the same zone as MERGE_WINDOW_TZ below. Workflows cannot read the
+    # cluster's TIMEZONE, hence the literal.
     #
     # Forgejo schedules from the default branch only: a change here, or a copy
     # on another branch, does nothing until it is on main.
-    - cron: "1 4,5,12,13 * * *"
+    - cron: "1 0,8 * * *"
+      timezone: America/New_York
   pull_request:
     branches: [main]
     # Not `edited`. Renovate rewrites a pull request's body as it pushes to

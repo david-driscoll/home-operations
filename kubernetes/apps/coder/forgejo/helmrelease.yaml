@@ -127,6 +127,15 @@ spec:
       # First boot runs the full schema migration; the default 60s is enough for
       # shutdown but a long migration should not be interrupted by a rollout.
       terminationGracePeriodSeconds: 60
+      env:
+        # The estate's zone, as every other app has it (the timezone sweep):
+        # Forgejo's own scheduled tasks (`[cron.*]` in app.ini) and its log
+        # timestamps follow the process's local time. NOT what Actions
+        # `schedule:` crons use -- those default to UTC whatever this says,
+        # and take a per-entry `timezone:` in the workflow instead
+        # (.forgejo/workflows/merge-window.yml).
+        - name: TZ
+          value: "${TIMEZONE}"
 
     resources:
       requests:
@@ -478,6 +487,12 @@ spec:
 
         metrics:
           ENABLED: true
+
+        time:
+          # The zone dates are shown in on the web UI, for every viewer.
+          # Forgejo's default is the server's, which in a container without
+          # TZ was UTC.
+          DEFAULT_UI_LOCATION: "${TIMEZONE}"
 
         cron.update_checker:
           # Nothing here should be phoning home for release announcements; the

@@ -46,10 +46,10 @@ run finishes. The cost is drafts: a draft (a `WIP:` title prefix here) that is
 made ready gets no `merge-window` status until the next scheduled run. *Run
 workflow* by hand gives it one at once.
 
-Forgejo reads cron in UTC, and New York is UTC−4 in summer and UTC−5 in winter.
-So each edge is listed at both of its UTC hours (`1 4,5,12,13 * * *`). The run
-an hour off finds the state already right and posts nothing. In summer the
-13:01 UTC run is also a second chance at the close.
+The schedule is `1 0,8 * * *` with `timezone: America/New_York`: 00:01 and
+08:01 New York time, following daylight saving by itself. Without `timezone`
+Forgejo reads cron in UTC, so until 2026-10-18 each edge was listed at both of
+its UTC hours (`1 4,5,12,13 * * *`) to cover the summer and winter offsets.
 
 So a pull request gets two statuses a day, one at each edge, plus one each
 time a new commit is pushed to it. Each run logs one line per pull request:
@@ -90,8 +90,8 @@ cron hours decide only when to look. Change both in the same commit.
 | `MERGE_WINDOW_END` | `HH:MM`, local, exclusive. At or before the start, the window ends the next day; equal to the start, it lasts 24 hours | `08:00` |
 | `MERGE_WINDOW_TZ` | an IANA zone | `America/New_York` |
 
-For the cron, take a minute just after each edge in local time. Write down its
-UTC hour under both the summer and the winter offset, and list all of them.
+For the cron, take a minute just after each edge in local time and write it as
+is; the schedule's `timezone` must name the same zone as `MERGE_WINDOW_TZ`.
 Nothing breaks if the cron is wrong in the safe direction (an extra run posts
 nothing). A missing edge leaves the last state in place: a missed opening
 skips a night, and a missed close leaves green pull requests mergeable until
@@ -227,7 +227,7 @@ run's. The first line of the log says what the script decided and why
 request up to date.
 
 **Green pull requests merged during the day.** The close run did not happen,
-or failed. Look for the 12:01 and 13:01 UTC runs. The next edge, or a run by
+or failed. Look for the 08:01 New York run. The next edge, or a run by
 hand, posts `pending` again.
 
 **No runs at all.** The schedule runs only from `main`, and only where
