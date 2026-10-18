@@ -6,6 +6,11 @@ commit status, `merge-window`, that is `success` only inside a configured time
 window. With branch protection requiring it, a pull request set to merge when
 checks succeed waits for the window to open, then merges by itself.
 
+Only pull requests that merge unattended wait for it: those labelled
+`renovate/automerge` and not `renovate/automerge-hold`. Every other pull
+request gets `success` at any hour ("Not set to automerge: no merge window"),
+because a person merging it is the gate.
+
 It runs on the forge's copy of this repository, `github-mirror/home-operations`
 ([forgejo-github-mirror.md](./forgejo-github-mirror.md)).
 
@@ -24,11 +29,15 @@ The script:
    the configured time zone;
 2. reads the open pull requests, skipping drafts — all of them, or the one a
    `pull_request` run is about;
-3. reads the newest `merge-window` status on each pull request's head commit,
+3. decides per pull request whether the window applies: only with the
+   `renovate/automerge` label and without `renovate/automerge-hold` (a held
+   update can carry both, since `addLabels` never removes one);
+4. reads the newest `merge-window` status on each pull request's head commit,
    and posts a new one **only if the state has to change**: `success` with
    "Merge window open until Sun 08:00 America/New_York", or `pending` with
-   "Merge window opens Sat 00:00 America/New_York". Each status links to the
-   run that posted it.
+   "Merge window opens Sat 00:00 America/New_York" -- or, where the window
+   doesn't apply, `success` with "Not set to automerge: no merge window". Each
+   status links to the run that posted it.
 
 The workflow runs it only when the answer can change:
 
@@ -36,6 +45,7 @@ The workflow runs it only when the answer can change:
 | --- | --- | --- |
 | `schedule` | just after the window opens and just after it closes | every open pull request |
 | `pull_request` | `opened`, `reopened`, `synchronize` | that pull request's new head commit |
+| `pull_request` | `labeled`, `unlabeled` | that pull request, which may have moved in or out of the window's reach |
 | `workflow_dispatch` | by hand, optionally a dry run | every open pull request |
 
 `edited` is deliberately not a trigger. Renovate rewrites a pull request's body
@@ -115,8 +125,10 @@ committed window and the current time.
 
 ## Using it on a pull request
 
-1. Open the pull request on the forge. Outside the window it shows
-   `merge-window` as pending, with the time the window next opens.
+1. Open the pull request on the forge and add the `renovate/automerge` label.
+   Without it `merge-window` is green at any hour and the merge would happen
+   at once. With it, outside the window, `merge-window` turns pending within a
+   minute or so, with the time the window next opens.
 2. Choose the merge style. **Rebase then fast-forward** is the safe one here:
    **Fast-forward only** fails if `main` has moved by the time the window
    opens. The repository allows only those two.

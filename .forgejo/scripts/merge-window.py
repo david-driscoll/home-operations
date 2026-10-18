@@ -8,6 +8,10 @@ merges by itself: Forgejo re-checks a scheduled merge whenever a status is
 posted on its head commit. docs/runbooks/forgejo-merge-window.md is the long
 version.
 
+The window gates only what merges unattended: a pull request labelled
+`renovate/automerge` (and not `renovate/automerge-hold`). Every other one is
+`success` at any hour -- a person merging it is the gate.
+
 Run by .forgejo/workflows/merge-window.yml. Standard library only, so it runs
 on the runner image as it is. Configured by environment variables (each one
 also a flag, see --help):
@@ -47,6 +51,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 DEFAULT_CONTEXT = "merge-window"
+# The labels the automerge rules in .github/renovate.json5 add. A held update
+# can carry both: the hold rule turns automerge off, but `addLabels` only adds,
+# so it cannot take back the label an earlier rule gave it.
+AUTOMERGE_LABEL = "renovate/automerge"
+HOLD_LABEL = "renovate/automerge-hold"
 PAGE_SIZE = 50
 HTTP_TIMEOUT_SECONDS = 30
 
@@ -85,6 +94,15 @@ class Verdict:
     @property
     def state(self) -> str:
         return "success" if self.is_open else "pending"
+
+
+UNGATED = Verdict(True, "Not set to automerge: no merge window")
+
+
+def is_gated(pull: dict[str, Any]) -> bool:
+    """Does the window apply? Only to a pull request that will merge itself."""
+    labels = {label.get("name") for label in pull.get("labels") or []}
+    return AUTOMERGE_LABEL in labels and HOLD_LABEL not in labels
 
 
 def parse_days(spec: str) -> frozenset[int]:
@@ -272,13 +290,13 @@ def reconcile_repo(
     log: Any = print,
     only: int | None = None,
 ) -> int:
-    """Bring every open, non-draft pull request to `verdict`. Returns failures.
+    """Bring every open, non-draft pull request to `verdict`, or to `UNGATED`
+    if it is not set to automerge. Returns failures.
 
     `only` narrows that to one pull request, as a `pull_request` run does: it
     has one new head commit to label, not the whole list to re-read.
     """
     failures = 0
-    desired = verdict.state
     pulls = [forge.pull(repo, only)] if only is not None else forge.open_pulls(repo)
     for pull in pulls:
         number = pull.get("number")
@@ -290,6 +308,8 @@ def reconcile_repo(
         if pull.get("draft"):
             log(f"{prefix} draft, skipped")
             continue
+        wanted = verdict if is_gated(pull) else UNGATED
+        desired = wanted.state
         try:
             current = latest_state(forge.statuses(repo, sha), context)
             if current == desired:
@@ -302,7 +322,7 @@ def reconcile_repo(
                     {
                         "context": context,
                         "state": desired,
-                        "description": verdict.description,
+                        "description": wanted.description,
                         "target_url": target_url,
                     },
                 )

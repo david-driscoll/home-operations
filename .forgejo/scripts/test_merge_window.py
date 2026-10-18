@@ -34,6 +34,14 @@ def window(days: str, start: str, end: str, tz: str = NEW_YORK):
     return mw.parse_window(days, start, end, tz)
 
 
+AUTOMERGE = [{"name": "renovate/automerge"}]
+
+
+def pr(number: int, sha: str, labels=AUTOMERGE, **extra):
+    """An open pull request, set to automerge unless `labels` says otherwise."""
+    return {"number": number, "head": {"sha": sha * 40}, "labels": labels, **extra}
+
+
 class InsideOutside(unittest.TestCase):
     # The default: every night, 00:00-07:00 New York (EDT, UTC-4, in October).
     nightly = window("Mon-Sun", "00:00", "07:00")
@@ -185,22 +193,59 @@ class FakeForge:
 
 class Reconcile(unittest.TestCase):
     open_verdict = mw.Verdict(True, "Merge window open until Fri 07:00 America/New_York")
+    closed_verdict = mw.Verdict(False, "Merge window opens Sat 00:00 America/New_York")
 
-    def run_once(self, forge, dry_run=False, only=None):
+    def run_once(self, forge, dry_run=False, only=None, verdict=None):
         lines = []
         failures = mw.reconcile_repo(
-            forge, "o/r", self.open_verdict, "merge-window", "https://forge/run/1", dry_run, lines.append, only=only
+            forge,
+            "o/r",
+            verdict or self.open_verdict,
+            "merge-window",
+            "https://forge/run/1",
+            dry_run,
+            lines.append,
+            only=only,
         )
         return failures, lines
 
-    def test_posts_only_what_changed(self):
+    def test_only_automerge_waits_for_the_window(self):
         forge = FakeForge(
             pulls=[
-                {"number": 1, "head": {"sha": "a" * 40}},
-                {"number": 2, "head": {"sha": "b" * 40}},
-                {"number": 3, "head": {"sha": "c" * 40}},
-                {"number": 4, "head": {"sha": "d" * 40}, "draft": True},
+                pr(1, "a"),
+                pr(2, "b", labels=[]),
+                pr(3, "c", labels=None),
+                # Held: both labels, and Renovate will not merge it.
+                pr(4, "d", labels=AUTOMERGE + [{"name": "renovate/automerge-hold"}]),
+                pr(5, "e", labels=[{"name": "renovate/automerge-hold"}, {"name": "dependencies"}]),
             ],
+            statuses={"b" * 40: [{"id": 1, "context": "merge-window", "state": "pending"}]},
+        )
+        _, lines = self.run_once(forge, verdict=self.closed_verdict)
+        self.assertEqual(
+            [(sha[0], body["state"], body["description"]) for sha, body in forge.posted],
+            [
+                ("a", "pending", self.closed_verdict.description),
+                ("b", "success", mw.UNGATED.description),
+                ("c", "success", mw.UNGATED.description),
+                ("d", "success", mw.UNGATED.description),
+                ("e", "success", mw.UNGATED.description),
+            ],
+        )
+        self.assertEqual(lines[1], "o/r#2 bbbbbbb pending -> success")
+
+    def test_losing_the_label_ends_the_wait(self):
+        # Pending from when it was set to automerge; the label is gone now.
+        forge = FakeForge(
+            pulls=[pr(1, "a", labels=[])],
+            statuses={"a" * 40: [{"id": 1, "context": "merge-window", "state": "pending"}]},
+        )
+        self.run_once(forge, only=1, verdict=self.closed_verdict)
+        self.assertEqual([body["state"] for _, body in forge.posted], ["success"])
+
+    def test_posts_only_what_changed(self):
+        forge = FakeForge(
+            pulls=[pr(1, "a"), pr(2, "b"), pr(3, "c"), pr(4, "d", draft=True)],
             statuses={
                 # Newest (highest id) wins, and other contexts are ignored.
                 "a" * 40: [
@@ -234,14 +279,14 @@ class Reconcile(unittest.TestCase):
         )
 
     def test_dry_run_posts_nothing(self):
-        forge = FakeForge(pulls=[{"number": 1, "head": {"sha": "a" * 40}}], statuses={})
+        forge = FakeForge(pulls=[pr(1, "a")], statuses={})
         _, lines = self.run_once(forge, dry_run=True)
         self.assertEqual(forge.posted, [])
         self.assertEqual(lines, ["o/r#1 aaaaaaa none -> success (dry run)"])
 
     def test_one_pull_request_only(self):
         forge = FakeForge(
-            pulls=[{"number": 1, "head": {"sha": "a" * 40}}, {"number": 2, "head": {"sha": "b" * 40}}],
+            pulls=[pr(1, "a"), pr(2, "b")],
             statuses={},
         )
         _, lines = self.run_once(forge, only=2)
@@ -250,7 +295,7 @@ class Reconcile(unittest.TestCase):
 
     def test_one_pull_request_that_has_closed(self):
         # A run queued behind a merge can find its pull request already closed.
-        forge = FakeForge(pulls=[{"number": 1, "state": "closed", "head": {"sha": "a" * 40}}], statuses={})
+        forge = FakeForge(pulls=[pr(1, "a", state="closed")], statuses={})
         _, lines = self.run_once(forge, only=1)
         self.assertEqual(forge.posted, [])
         self.assertEqual(lines, ["o/r#1 aaaaaaa closed, skipped"])
@@ -272,7 +317,7 @@ class Reconcile(unittest.TestCase):
                 super().post_status(repo, sha, body)
 
         forge = Refusing(
-            pulls=[{"number": 1, "head": {"sha": "a" * 40}}, {"number": 2, "head": {"sha": "b" * 40}}],
+            pulls=[pr(1, "a"), pr(2, "b")],
             statuses={},
         )
         failures, lines = self.run_once(forge)

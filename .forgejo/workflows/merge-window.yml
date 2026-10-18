@@ -8,6 +8,10 @@
 # merge whenever a status lands, so the merge happens as the window opens.
 # docs/runbooks/forgejo-merge-window.md is the long version.
 #
+# Only what merges unattended waits: a pull request labelled
+# `renovate/automerge` (and not `renovate/automerge-hold`). Any other one gets
+# `success` at any hour, since a person merging it is the gate.
+#
 # The work is .forgejo/scripts/merge-window.py; this file decides when it
 # runs and what it is told. It runs when the answer can change, and not in
 # between:
@@ -16,7 +20,9 @@
 #                 every open pull request.
 #   pull_request  a new head commit, which has no status of its own yet, for
 #                 that one pull request. Without this a commit pushed inside
-#                 the window would wait for the next night's opening.
+#                 the window would wait for the next night's opening. And a
+#                 label added or removed, which can move it in or out of the
+#                 window's reach.
 #
 # THE WINDOW IS WRITTEN TWICE: in `env` below, which decides, and in the cron
 # hours, which decide only when to look. Move one, move the other. The
@@ -51,7 +57,12 @@ on:
     # request until the next one finishes. The cost: a draft (a `WIP:` title
     # prefix here) made ready gets no status until the next scheduled run,
     # or a run by hand.
-    types: [opened, reopened, synchronize]
+    #
+    # `labeled` and `unlabeled` because the label decides whether the window
+    # applies at all. Without them, `renovate/automerge` added to a pull
+    # request that already holds a daytime `success` would let it merge
+    # before the window opens.
+    types: [opened, reopened, synchronize, labeled, unlabeled]
   workflow_dispatch:
     inputs:
       dry_run:
