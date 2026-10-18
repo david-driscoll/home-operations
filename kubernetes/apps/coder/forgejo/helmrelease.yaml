@@ -190,6 +190,11 @@ spec:
         mountPath: /etc/forgejo-signing
         readOnly: true
     extraInitVolumeMounts: *signingMounts
+
+    podSecurityContext:
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+
     containerSecurityContext:
       runAsNonRoot: true
       runAsUser: 1000
@@ -197,8 +202,6 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-      fsGroup: 1000
-      fsGroupChangePolicy: OnRootMismatch
 
     service:
       http:
