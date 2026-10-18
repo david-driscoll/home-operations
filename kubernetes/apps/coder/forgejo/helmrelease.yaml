@@ -162,6 +162,35 @@ spec:
       mount: true
       claimName: *app
 
+    # The commit-signing key pair (`[repository.signing]` below). Mounted into
+    # the init containers as well as the main one, and that is not optional:
+    # Forgejo reads SIGNING_KEY while it loads its settings and log.Fatal()s
+    # when the file is missing, and configure-gitea runs `forgejo migrate` and
+    # the admin commands, which load the same settings -- so an init-only gap
+    # would crash-loop the pod before the main container ever started.
+    #
+    # The files land as root:1000 0440 (fsGroup below adds the group). That is
+    # readable by the git user, and it is also why ssh-keygen accepts the key:
+    # its "UNPROTECTED PRIVATE KEY FILE" refusal only applies to a key file the
+    # CALLING user owns, and these are owned by root.
+    #
+    # Not the chart's own `signing.ssh.existingSecret`, which does the same job
+    # with one less key: its configure-ssh-signing init container COPIES the
+    # private key onto the data PVC (/data/git/.ssh-signing/), which puts it
+    # into every nightly volsync restic snapshot and leaves it behind there if
+    # signing is ever turned off. Mounted like this it only ever exists in the
+    # pod's tmpfs and in OpenBao.
+    extraVolumes:
+      - name: signing-key
+        secret:
+          secretName: ${APP}-signing
+          defaultMode: 0440
+    extraContainerVolumeMounts: &signingMounts
+      - name: signing-key
+        mountPath: /etc/forgejo-signing
+        readOnly: true
+    extraInitVolumeMounts: *signingMounts
+
     podSecurityContext:
       fsGroup: 1000
       fsGroupChangePolicy: OnRootMismatch
@@ -360,6 +389,60 @@ spec:
           # in [server] it would be silently ignored and the default would keep
           # applying with nothing to show for the line.
           USE_COMPAT_SSH_URI: true
+
+        # Signs the commits Forgejo writes itself: web-editor and API file
+        # edits, wiki edits, a new repository's first commit, and the commit a
+        # pull-request merge COMPOSES -- the `merge`, `rebase-merge` and
+        # `squash` styles. NOT the plain `rebase` style: Forgejo replays the
+        # pull request's commits with git-replay/git-rebase and no `-S`, so
+        # they land unsigned, and `fast-forward-only` writes no commit at all.
+        # Those are the only two styles github-mirror/home-operations allows
+        # (stacks/system/forgejo-github-mirror.ts), so on that repository this
+        # signs web edits but not merges. The key is mounted from the
+        # `-signing` Secret above; the runbook
+        # (docs/runbooks/forgejo-commit-signing.md) has how it was made and
+        # where its public half lives.
+        #
+        # SSH rather than OpenPGP because it is one file pair and nothing else:
+        # no keyring to import into a GNUPGHOME on the PVC, no gpg-agent, no
+        # trustdb. Git 2.34+ and ssh-keygen are both already in the image.
+        #
+        # Nothing has to be registered on any account for the UI to say
+        # Verified. Forgejo checks a signature against the committer's own
+        # keys first, then against THIS key, and an instance-key signature is
+        # "trusted" under the `collaborator` trust model every repository has
+        # by default (CalculateTrustStatus, models/asymkey). Do NOT add the
+        # public key to a user as an SSH key: that makes it a login key for
+        # that account over the git SSH server, so whoever holds this Secret
+        # could push as them.
+        repository.signing:
+          FORMAT: ssh
+          SIGNING_KEY: /etc/forgejo-signing/signing_key.pub
+          # Shown as the signer on the commit page; never written into a
+          # commit while the trust model is `collaborator` (the committer
+          # stays the person who pressed the button). The `.invalid` address
+          # for the same reason as NO_REPLY_ADDRESS below: a commit made here
+          # is published to GitHub, and the sync refuses one that names the
+          # domain.
+          SIGNING_NAME: Forgejo
+          SIGNING_EMAIL: forgejo@noreply.forgejo.invalid
+          # `always` everywhere, and deliberately so. Each conditional rule
+          # would quietly turn signing off for this forge:
+          #   twofa         -- accounts sign in through authentik, which owns
+          #                    MFA; Forgejo has no 2FA record for any of them.
+          #   pubkey        -- Renovate and the bot accounts hold no keys.
+          #   basesigned /  -- `main` arrives from GitHub, whose merge commits
+          #   parentsigned     carry GitHub's web-flow signature, which this
+          #                    forge cannot verify.
+          #   commitssigned -- Renovate's and most agents' commits are unsigned.
+          #   approved      -- one human; nobody can approve their own PR.
+          # A signature from this key therefore means "Forgejo wrote this
+          # commit", not "the content was vetted" -- which is all an instance
+          # key can honestly say anyway.
+          INITIAL_COMMIT: always
+          CRUD_ACTIONS: always
+          WIKI: always
+          MERGES: always
 
         database:
           DB_TYPE: postgres
