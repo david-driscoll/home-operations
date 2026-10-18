@@ -61,7 +61,7 @@ kind: MCPServer
 metadata:
   name: toolhive-openbao
 spec:
-  image: knucklessg1/openbao-mcp:mcp@sha256:8ecbddbdcea090190a3ba4b1c33e465ca659d0804ae68f98cc013cce54eb6e61
+  image: knucklessg1/openbao-mcp:mcp@sha256:aa37094310edd526fcf383db0471b8f5e491f4cd6f7fd31e031e465f88f4f6c9
   transport: streamable-http
   proxyPort: 8080
   mcpPort: 8000
