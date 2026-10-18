@@ -51,12 +51,18 @@ load_names() {
     root="$PRIVATE_DOMAIN_ROOT" tailnet="$PRIVATE_DOMAIN_TAILNET"
     return 0
   fi
-  # .config/mise.toml points SOPS_AGE_KEY_FILE at a path that does not exist
-  # in the agentboard pod; fall back to the pod's mounted key, then to sops'
-  # own defaults.
+  # .config/mise.toml points SOPS_AGE_KEY_FILE at <checkout>/age.key, which
+  # does not exist in the agentboard pod, nor in a git worktree (the key is
+  # untracked, so only the main checkout has it). Fall back to the pod's
+  # mounted key, then the main checkout's key, then sops' own defaults.
   if [[ -n "${SOPS_AGE_KEY_FILE:-}" && ! -r "$SOPS_AGE_KEY_FILE" ]]; then
+    local common main_key=""
+    common="$(git -C "$top" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" &&
+      main_key="$(dirname "$common")/age.key"
     if [[ -r /var/run/secrets/sops-age/age.agekey ]]; then
       export SOPS_AGE_KEY_FILE=/var/run/secrets/sops-age/age.agekey
+    elif [[ -n "$main_key" && -r "$main_key" ]]; then
+      export SOPS_AGE_KEY_FILE="$main_key"
     else
       unset SOPS_AGE_KEY_FILE
     fi
@@ -85,8 +91,23 @@ patterns() {
   printf '%s\n' "${esc//\\./$sep}" "${tailnet%%.*}"
 }
 
+# Still exit 0 -- there is nothing to compare against -- but say plainly that
+# NOTHING was checked: hk shows a passing step's stderr only in its summary,
+# and a one-line "skipping" there read as a pass. `stdin` (the per-Write hook)
+# stays one line, since it runs on every edit.
 skip() {
-  echo "private-domain-guard: cannot decrypt $secrets (no age key?) -- skipping" >&2
+  if [[ "$cmd" == stdin ]]; then
+    echo "private-domain-guard: cannot decrypt ${secrets#"$top"/} (no age key?) -- not checked" >&2
+    exit 0
+  fi
+  cat >&2 <<EOF
+private-domain-guard: WARNING -- NOTHING WAS CHECKED.
+  Cannot decrypt ${secrets#"$top"/},
+  so no file was scanned for the root domain or tailnet name. Point
+  SOPS_AGE_KEY_FILE at the estate's age key (default: <checkout>/age.key;
+  a worktree falls back to the main checkout's), then re-run:
+    scripts/private-domain-guard check --cached
+EOF
   exit 0
 }
 
@@ -115,19 +136,23 @@ case "$cmd" in
         exit 1
       fi
     fi
+    # Bash 3.2 rules from here on: hk runs whichever `bash` is first on PATH,
+    # and on macOS that is /bin/bash 3.2 -- no `mapfile`, and an empty
+    # "${a[@]}" is an unbound variable under `set -u` (hence ${a[@]+...}).
     mode=()
     [[ "${2:-}" == "--cached" ]] && mode=(--cached)
+    ggrep() { git -C "$top" grep ${mode[@]+"${mode[@]}"} "$@"; }
     words=()
-    mapfile -t words < <(entries "$allowlist")
+    while IFS= read -r f; do words+=("$f"); done < <(entries "$allowlist")
     # Allow-listed files get the words-ok patterns; everything else but SOPS
     # files gets the full set.
-    hits="$(git -C "$top" grep "${mode[@]}" -I -i -n -E -f <(patterns) \
-      -- . ':(exclude,glob)**/*.sops.*' "${words[@]/#/:(exclude,literal)}" | cut -d: -f1-2 || true)"
+    hits="$(ggrep -I -i -n -E -f <(patterns) \
+      -- . ':(exclude,glob)**/*.sops.*' ${words[@]+"${words[@]/#/:(exclude,literal)}"} | cut -d: -f1-2 || true)"
     if ((${#words[@]})); then
-      hits+=$'\n'"$(git -C "$top" grep "${mode[@]}" -I -i -n -E -f <(patterns words-ok) \
+      hits+=$'\n'"$(ggrep -I -i -n -E -f <(patterns words-ok) \
         -- "${words[@]/#/:(literal)}" | cut -d: -f1-2 || true)"
       for f in "${words[@]}"; do
-        git -C "$top" grep "${mode[@]}" -q -I -i -E -f <(patterns) -- ":(literal)$f" ||
+        ggrep -q -I -i -E -f <(patterns) -- ":(literal)$f" ||
           echo "private-domain-guard: $f no longer spells the name -- remove it from .config/private-domain-allow" >&2
       done
     fi
