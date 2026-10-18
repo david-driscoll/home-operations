@@ -1,0 +1,227 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app patchmon
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+          # Low Power keep-list. Agents hold a WebSocket here and report on a
+          # schedule; a 7-hour nightly shed would show every hypervisor as
+          # offline each morning and drop any patch run in flight.
+          # docs/cluster-consolidation/24-power-states.md
+          downscaler/exclude: "true"
+        replicas: 1
+        # Upstream's own manifest: one replica, Recreate. More than one needs
+        # sticky sessions for the agent WebSockets, and the agent presence
+        # registry in Redis is keyed on POD_ID.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # 2.x is a single Go binary with the frontend embedded. The
+              # separate patchmon-backend / patchmon-frontend images stop at
+              # 1.4.2 and are not this app any more.
+              repository: ghcr.io/patchmon/patchmon-server
+              tag: 2.1.6@sha256:f27e1a059caf97331473de9e907d9592428b88857abb9f4b221cb80027b5a67f
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-jwt
+            env:
+              TZ: "${TIMEZONE}"
+              PORT: &port 3000
+              APP_ENV: production
+              # Stable identity for the agent presence registry. Upstream's
+              # compose gets this from `hostname: patchmon-server`; a pod's
+              # hostname changes on every Recreate.
+              POD_ID: *app
+              # ⚠️ NOT just CORS. A middleware on EVERY route returns 403
+              # `host_mismatch` when the request's Host (or the rightmost
+              # X-Forwarded-Host) is not a host listed here
+              # (internal/middleware/cors.go). Both names must be present: the
+              # UI is used on the first, and the agents report to the second.
+              CORS_ORIGIN: "https://${APP}.${ROOT_DOMAIN},https://${APP}.${TAILSCALE_DOMAIN}"
+              # Upstream default, stated because OIDC depends on it:
+              # OIDC_ENFORCE_HTTPS (default true) accepts plain HTTP from the
+              # gateway only when X-Forwarded-Proto is trusted. The empty
+              # TRUSTED_PROXY_RANGES default trusts private and CGNAT peers,
+              # which covers Traefik.
+              TRUST_PROXY: "true"
+              # Upstream's default is 30, sized for a dedicated database. This
+              # is the shared CNPG cluster.
+              DB_CONNECTION_LIMIT: "10"
+
+              # --- redis -------------------------------------------------
+              # The shared valkey in `database`, which sets no password.
+              # Database 7 is free: 0 immich/dawarich, 5 romm, 6 dispatcharr,
+              # 8 searxng, 9 degoog, 10 postiz, 11 tracearr, 12 outline,
+              # 13 sure, 14 renovate. Upstream documents Redis 7; Asynq and
+              # go-redis use nothing valkey lacks. No eviction policy is set on
+              # the shared instance (noeviction), which the Asynq queue needs.
+              REDIS_HOST: valkey.database.svc.cluster.local
+              REDIS_PORT: "6379"
+              REDIS_DB: "7"
+
+              # --- oidc --------------------------------------------------
+              # Env-only OIDC: once any of these is set, PatchMon ignores the
+              # OIDC section of its settings UI entirely, so git stays the
+              # source of truth.
+              OIDC_ENABLED: "true"
+              OIDC_REDIRECT_URI: "https://${APP}.${ROOT_DOMAIN}/api/v1/auth/oidc/callback"
+              OIDC_SCOPES: "openid email profile groups"
+              OIDC_BUTTON_TEXT: "Sign in with authentik"
+              OIDC_AUTO_CREATE_USERS: "true"
+              # Authentik only lets `admins` through (./definition.yaml), and
+              # each login re-syncs the role from the groups claim.
+              OIDC_SYNC_ROLES: "true"
+              OIDC_SUPERADMIN_GROUP: admins
+              OIDC_POST_LOGOUT_URI: "https://${APP}.${ROOT_DOMAIN}"
+              # OIDC_DISABLE_LOCAL_AUTH stays unset: the local admin created by
+              # the first-run wizard is the break-glass account for when
+              # authentik is down.
+            probes:
+              # `custom: true` is load-bearing on every probe in this file: a
+              # handler-bearing spec without it is silently swapped for a
+              # tcpSocket, and `enabled: true` omitted means no probe at all.
+              #
+              # The Host header is load-bearing too. Without it the kubelet
+              # sends Host = pod IP, which the host check above rejects with a
+              # 403. Loopback names are the one exemption.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &health
+                    path: /health
+                    port: *port
+                    httpHeaders:
+                      - name: Host
+                        value: localhost
+                  # The embedded migrations (100+ files) run BEFORE the
+                  # listener opens. Upstream's manifest allows 400s; so does this.
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 40
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  # /health is 503 when Postgres or Redis is unreachable, which
+                  # is exactly when the pod should leave the Service.
+                  httpGet: *health
+                  periodSeconds: 15
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  # The listener only, deliberately. A database blip should
+                  # make the pod unready, not restart it.
+                  tcpSocket:
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                # The image sets GOMEMLIMIT=256MiB; this leaves headroom over
+                # the Go heap for goroutine stacks and the embedded assets.
+                memory: 512Mi
+
+    defaultPodOptions:
+      securityContext:
+        # The image declares USER 65532 (distroless "nonroot").
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      # The server's only disk write: the SSH-terminal known_hosts file. It
+      # tries /app/patchmon-ssh (not writable by 65532) and falls back to
+      # $TMPDIR/patchmon-ssh. Losing it on restart means a TOFU prompt again,
+      # nothing more.
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *port
+            filters:
+              # Native OIDC -- `local-user`, the network gate without the
+              # authentik outpost hop. It also matters before first login: the
+              # unauthenticated setup wizard claims the instance for whoever
+              # reaches it first, so it must never be reachable from outside.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

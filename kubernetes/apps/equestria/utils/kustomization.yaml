@@ -7,3 +7,4 @@ resources:
   - ./openspeedtest/ks.yaml
   - ./librespeed/ks.yaml
   - ./lan-orangutan/ks.yaml
+  - ./patchmon/ks.yaml

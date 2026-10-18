@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: PatchMon
+  category: Infrastructure
+  description: Linux patch and package monitoring for every host in the estate
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/patchmon.svg
+  access_policy:
+    groups:
+      # The agents run as root on every hypervisor, and the server can push
+      # patch runs and open SSH terminals through them. Admins only.
+      - admins
+  authentik:
+    # oauth2, NOT proxy. PatchMon speaks OIDC itself, and its agents call the
+    # API with their own X-API-ID/X-API-KEY headers -- a forward-auth outpost
+    # in front would turn every agent report into a login redirect.
+    oauth2:
+      clientType: confidential
+      # Fixed path: internal/handler/oidc.go serves the callback at
+      # /api/v1/auth/oidc/callback. Only the first URL is ever sent, because
+      # OIDC_REDIRECT_URI in ./helmrelease.yaml pins it. The tailnet one costs
+      # nothing and covers that pin being changed.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/api/v1/auth/oidc/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/api/v1/auth/oidc/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # Load-bearing twice over, as for mealie
+        # (components/authentik/property-mappings.ts):
+        #   1. the `groups` claim, which OIDC_SUPERADMIN_GROUP matches by name;
+        #   2. `email_verified: True`. PatchMon refuses a login whose claim is
+        #      not true (OIDC_TRUST_UNVERIFIED_EMAIL defaults to false), and
+        #      authentik's built-in `email` mapping hardcodes it to false.
+        - groups
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # /health checks Postgres AND Redis (200 `healthy`, 503 `unhealthy`), so
+    # one probe covers the whole dependency chain. No maintenance window: the
+    # controller is excluded from the nightly Low Power shed (./helmrelease.yaml).
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
