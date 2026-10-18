@@ -190,10 +190,6 @@ spec:
         mountPath: /etc/forgejo-signing
         readOnly: true
     extraInitVolumeMounts: *signingMounts
-
-    podSecurityContext:
-      fsGroup: 1000
-      fsGroupChangePolicy: OnRootMismatch
     containerSecurityContext:
       runAsNonRoot: true
       runAsUser: 1000
@@ -201,6 +197,8 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
 
     service:
       http:
@@ -326,8 +324,33 @@ spec:
               key: secret-access-key
 
       config:
-        APP_NAME: Forgejo
         RUN_MODE: prod
+        # APP_NAME: "${CLUSTER_TITLE} - Coding for ourselves"
+        repository:
+          DISABLE_HTTP_GIT: true
+          ENABLE_PUSH_CREATE_USER: true
+          ENABLE_PUSH_CREATE_ORG: true
+          USE_COMPAT_SSH_URI: true
+
+        repository.pull-request:
+          DEFAULT_MERGE_STYLE: squash
+
+        repository.issue:
+          MAX_PINNED: "6"
+
+        repository.release:
+          DEFAULT_PAGING_NUM: "20"
+
+        ui:
+          DIFF_PAGING_NUM: "50"
+          EXPLORE_PAGING_NUM: "50"
+          ISSUE_PAGING_NUM: "50"
+          MEMBERS_PAGING_NUM: "50"
+          FEED_MAX_COMMIT_NUM: "10"
+          FEED_PAGING_NUM: "50"
+          SITEMAP_PAGING_NUM: "50"
+          GRAPH_MAX_COMMIT_NUM: "200"
+          DEFAULT_THEME: forgejo-auto
 
         server:
           DOMAIN: git.${ROOT_DOMAIN}
@@ -375,20 +398,6 @@ spec:
           # under `lfs/` in the bucket. Only the git repositories themselves are
           # on the PVC; Forgejo has no S3 backend for those.
           LFS_START_SERVER: true
-
-        repository:
-          # Pinned to the upstream default so a chart or image bump cannot
-          # quietly change what the clone box tells people to paste. true keeps
-          # the `ssh://` form; false would switch every SSH clone URL to the
-          # scp-style `git@git.<root domain>:<owner>/<repo>.git`. The two are
-          # equivalent to git -- this is a display choice, not a routing one.
-          #
-          # It belongs HERE and not under `server:` next to the other SSH keys,
-          # which is where it looks like it should go: Forgejo reads it from
-          # `rootCfg.Section("repository")` (modules/setting/repository.go), so
-          # in [server] it would be silently ignored and the default would keep
-          # applying with nothing to show for the line.
-          USE_COMPAT_SSH_URI: true
 
         # Signs the commits Forgejo writes itself: web-editor and API file
         # edits, wiki edits, a new repository's first commit, and the commit a
