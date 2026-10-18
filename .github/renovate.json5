@@ -776,7 +776,6 @@
       // -- for this one, that would mean every patch automerging again.
       description: "No automerge in this repo unless a rule below opts in",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       automerge: false,
@@ -826,7 +825,6 @@
       // IN SYNC with the minor rule below.
       description: "Automerge app image patch/digest bumps once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchFileNames: [
@@ -872,7 +870,7 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
@@ -902,7 +900,6 @@
       // and a breaking-changes list to everyone else.
       description: "Automerge app image minor bumps (not 0.x) once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchFileNames: [
@@ -955,7 +952,7 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
@@ -1234,7 +1231,6 @@
       // and this is a workaround for this repo's layout, not house policy.
       description: "Bump npm ranges: lockfile-only updates never reach hoisted workspace deps",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchManagers: [
@@ -1250,7 +1246,6 @@
       // regeneration. Bump them by regenerating the SDK instead.
       description: "Skip npm deps of generated Pulumi SDKs",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchManagers: [
@@ -1277,7 +1272,6 @@
       // an automerge would land exactly the half that silently does nothing.
       description: "Automerge named dependencies (minor/patch/digest) once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchUpdateTypes: [
@@ -1364,7 +1358,7 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
@@ -1389,7 +1383,6 @@
       // nothing.
       description: "Automerge hold list (maintained by renovate-watchdog)",
       matchRepositories: [
-        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchFileNames: [
