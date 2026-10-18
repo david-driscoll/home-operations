@@ -11,13 +11,14 @@ metadata:
   # restart.
 spec:
   # Hourly, on the hour. This is when the bot RUNS; when PRs may OPEN is the
-  # inherited `schedule` in .github/renovate.json5, now "at any time", and when
-  # they may MERGE is the `automergeSchedule` on the rules there (overnight).
+  # inherited `schedule` in .github/renovate.json5, now "at any time". When
+  # they MERGE is not up to the bot: it hands each automerge to Forgejo
+  # (`platformAutomerge: true`), which merges once the required statuses,
+  # `merge-window` among them, are green (docs/renovate-automerge.md).
   #
-  # It was once a night, which automerge cannot work with: Renovate never waits
-  # for a check. The run that opens a pull request sees its checks pending and
-  # moves on, and it is the NEXT run that finds them green and merges -- so the
-  # overnight window needs more than one run inside it.
+  # It was once a night. Hourly still matters: the bot is what opens and
+  # rebases pull requests and turns automerge on, and a run that finds an
+  # update not yet a day old leaves it for a later one.
   #
   # The operator reads a schedule in its own TZ, which
   # ../renovate-operator/helmrelease.yaml sets from TIMEZONE. For "every hour"
