@@ -33,10 +33,6 @@ on:
         description: Delete every branch here except main (cleanup after the first import)
         type: boolean
         default: false
-  schedule:
-    # Hourly, off the top of the hour. Forgejo schedules from the default
-    # branch only.
-    - cron: "23 * * * *"
 
 # Only the latest run goes: a new one cancels whichever is waiting or running.
 # Every run compares the two `main`s as they are when it starts, so the newest

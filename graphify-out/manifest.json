@@ -4134,8 +4134,8 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/coder/forgejo-runner/resources/config.yml": {
-    "mtime": 1792300931.453605,
-    "seen": 1792300996.473282,
+    "mtime": 1792302275.8115923,
+    "seen": 1792332230.109021,
     "ast_hash": "c633b93e188695d7f4c1f5abef3b93b9",
     "semantic_hash": ""
   },
@@ -20670,9 +20670,9 @@
     "semantic_hash": ""
   },
   "scripts/private-domain-guard": {
-    "mtime": 1790871362.2673783,
-    "seen": 1790908908.178043,
-    "ast_hash": "782657621f926b3195c4414d81308bd6",
+    "mtime": 1792302776.5720909,
+    "seen": 1792332230.1073558,
+    "ast_hash": "6a528c44d4a196a66faeacbca140e3b2",
     "semantic_hash": ""
   },
   "stacks/system/application-backups.ts": {
@@ -21522,9 +21522,9 @@
     "semantic_hash": ""
   },
   ".forgejo/workflows/github-sync.yml": {
-    "mtime": 1792268602.4436326,
-    "seen": 1792300996.473006,
-    "ast_hash": "9e8f33fc8871b47d0aa6b979ee18fcc2",
+    "mtime": 1792332204.655759,
+    "seen": 1792332230.1087308,
+    "ast_hash": "b47e108dd57bc9421d4ff35fbd8cf85d",
     "semantic_hash": ""
   },
   ".forgejo/workflows/image-check.yml": {
@@ -21618,9 +21618,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/coder/forgejo-runner/scaledjob.yaml": {
-    "mtime": 1792300931.456085,
-    "seen": 1792300996.473283,
-    "ast_hash": "dd1566d07d9f9ca6ae5ecf075880b013",
+    "mtime": 1792302776.5716298,
+    "seen": 1792332230.109021,
+    "ast_hash": "5bcf15fbf4da9fd07e19353a0b7e2fbe",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/actual-budget/definition.yaml": {
@@ -22212,9 +22212,9 @@
     "semantic_hash": ""
   },
   ".forgejo/workflows/merge-window.yml": {
-    "mtime": 1792300974.8119502,
-    "seen": 1792300996.4730072,
-    "ast_hash": "c83a79efa6f98d3f8796f5aaef45de0f",
+    "mtime": 1792302776.5713105,
+    "seen": 1792332230.108733,
+    "ast_hash": "02aebca38fad378ba5a5e451d4ee19eb",
     "semantic_hash": ""
   },
   "docs/runbooks/forgejo-merge-window.md": {
