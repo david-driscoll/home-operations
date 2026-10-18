@@ -10,15 +10,14 @@ using Cysharp.Diagnostics;
 // apps/tailscale-system/services. Invoked by `mise run update`.
 //
 // Children are invoked PLAINLY, with no secret-resolution wrapper. The
-// `update` task runs this whole script under `mise run vals-run`, so the
+// `update` task runs this whole script under `fnox exec`, so the
 // environment already carries resolved values and every child inherits them --
 // one resolution per run rather than one per script.
 //
 // This deliberately does NOT use `op run`, which is what it did in
 // equestria-cluster. That repo's secrets were all `op://` literals; here every
-// value in .config/mise.toml names its own backend (`ref+openbao://`,
-// `ref+sops://`, `ref+op://`, ...) and `vals-run` is the documented `op run`
-// replacement. Hardcoding a backend here would undo that.
+// secret in .config/fnox.toml names its own provider (openbao, sops, ...) and
+// `fnox exec` is the wrapper. Hardcoding a backend here would undo that.
 //
 // Order is sorted rather than filesystem order: these scripts mint credentials,
 // and a run that regenerates them in a different sequence each time is much

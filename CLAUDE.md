@@ -18,9 +18,10 @@ cd stacks/<stack-name>
 pulumi preview        # always preview before deploying
 pulumi up --yes       # deploy
 
-# Required env vars are `vals` refs in .config/mise.toml (`ref+openbao://`,
-# `ref+sops://`, … -- not op:// any more), resolved per command by
-# `mise run vals-run <cmd>`. See that file's [env] header.
+# Secrets live in .config/fnox.toml (OpenBao via the sops AppRole), resolved
+# per command: `fnox exec -- <cmd>`, or `mise x --secrets KEY[,KEY] -- <cmd>`
+# for only the keys named. Non-secret env stays in .config/mise.toml [env].
+# `mise run vals-run` is a deprecated alias for `fnox exec --`.
 # CONNECT_HOST, CONNECT_TOKEN, PULUMI_CONFIG_PASSPHRASE
 # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (Garage `pulumi-state` key, the state backend)
 # AUTHENTIK_TOKEN, AUTHENTIK_URL

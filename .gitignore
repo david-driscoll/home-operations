@@ -14,6 +14,10 @@ node_modules
 _home-operations-pulumi/
 bin/
 age.key
+# fnox personal overrides and `fnox sync` caches (see .config/fnox.toml)
+fnox.local.toml
+.fnox.local.toml
+.config/fnox.local.toml
 
 
 # APM dependencies

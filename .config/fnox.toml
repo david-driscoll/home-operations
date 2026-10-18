@@ -1,0 +1,80 @@
+#:schema https://fnox.jdx.dev/schema.json
+#
+# Secrets for local commands, resolved per command by fnox:
+#
+#   fnox exec -- pulumi preview
+#   fnox exec -- kubectl get pods
+#   fnox get PULUMI_CONFIG_PASSPHRASE
+#
+# This replaces the `ref+` values that used to sit in .config/mise.toml's [env]
+# and the `mise run vals-run` wrapper that resolved them. Non-secret settings
+# (BAO_ADDR, AWS_REGION, ROOT_DOMAIN, ...) stay in mise; fnox reads them from
+# the environment mise provides, so run fnox under mise (an activated shell, or
+# `mise x -- fnox ...`).
+#
+# The chain is the same as before: age key -> sops -> AppRole -> OpenBao. fnox
+# has no sops provider and its `vault` provider takes only a token, so both
+# links are small Lua plugins next to this file (fnox >= 1.40.0).
+#
+# vals itself is NOT gone: components/store/refs.ts still uses it to resolve
+# `ref+openbao://` inside docker env documents, and the in-cluster Pulumi
+# stacks install it in an initContainer. Only the environment wrapper moved.
+
+# Stop the upward search here. A worktree lives under the main checkout
+# (.claude/worktrees/<name>/), and without this a worktree would also load the
+# main checkout's copy of this file.
+root = true
+
+# Nothing here enters an interactive shell, even with `fnox activate`: these
+# reach only the command `fnox exec` starts. Same intent as resolving per
+# command under vals-run, which kept OpenBao off every `cd` into the repo.
+env = "exec"
+
+[providers.sops]
+type = "lua"
+plugin = "./fnox/sops.lua"
+
+[providers.openbao]
+type = "lua"
+plugin = "./fnox/openbao.lua"
+# Resolved by fnox before the plugin runs: BAO_ADDR from mise's environment,
+# the AppRole from the sops secrets below.
+options = { address = { secret = "BAO_ADDR" }, role_id = { secret = "BAO_ROLE_ID" }, secret_id = { secret = "BAO_SECRET_ID" } }
+
+[secrets]
+# `if_missing = "error"` on each one, as vals-run did: a value that does not
+# resolve stops the command instead of fnox's default warn-and-run. A Pulumi
+# run missing CONNECT_TOKEN or the AppRole is worse than no run. It is per
+# secret rather than top-level so it does not also harden the secrets in your
+# personal ~/.config/fnox/config.toml, which fnox merges in.
+#
+# The AppRole the openbao provider logs in WITH. It lives in SOPS, not in
+# OpenBao: the credential you authenticate with cannot live in the store it
+# unlocks (bootstrap/INVENTORY.md §2). Create or rotate it with
+# ./scripts/bao-mise-approle.sh. Also injected into the command, because
+# Pulumi's own OpenBao client (components/bao.ts) logs in with it too.
+BAO_ROLE_ID = { provider = "sops", value = ".config/bao-approle.sops.yaml#role_id", if_missing = "error" }
+BAO_SECRET_ID = { provider = "sops", value = ".config/bao-approle.sops.yaml#secret_id", if_missing = "error" }
+
+# The Pulumi state backend: a Garage key scoped to the `pulumi-state` bucket
+# on the dockge cluster (every stacks/*/.mise.toml points PULUMI_BACKEND_URL
+# there).
+AWS_ACCESS_KEY_ID = { provider = "openbao", value = "secrets/apps/pulumi/state-s3#username", if_missing = "error" }
+AWS_SECRET_ACCESS_KEY = { provider = "openbao", value = "secrets/apps/pulumi/state-s3#password", if_missing = "error" }
+
+# The Pulumi state passphrase. bootstrap/openbao/pulumi-passphrase.sops.yaml is
+# kept as break-glass for when OpenBao is sealed or unreachable: point this at
+# it with the sops provider (or put the override in .config/fnox.local.toml).
+PULUMI_CONFIG_PASSPHRASE = { provider = "openbao", value = "secrets/apps/pulumi/passphrase#password", if_missing = "error" }
+
+# Pulumi WRITES the PBS items a human logs into the generated LXCs with
+# (Phase 11 estate decision). Nothing reads 1Password any more.
+CONNECT_TOKEN = { provider = "openbao", value = "secrets/third-party-tokens/onepassword/eris-connect#credential", if_missing = "error" }
+AUTHENTIK_TOKEN = { provider = "openbao", value = "secrets/clusters/alpha-site/apps/authentik/token#credential", if_missing = "error" }
+AUTHENTIK_URL = { provider = "openbao", value = "secrets/clusters/alpha-site/apps/authentik/token#url", if_missing = "error" }
+
+# Tailscale OAuth client. Its reader, kubernetes/apps/tailscale-system/services/Update.cs
+# (via `mise run update`), was removed in #1272, so nothing in the repo reads
+# these now; they stay for ad-hoc API calls (`mise x --secrets TAILSCALE_CLIENT_ID,…`).
+TAILSCALE_CLIENT_ID = { provider = "openbao", value = "secrets/third-party-tokens/tailscale/pulumi-oauth#username", if_missing = "warn" }
+TAILSCALE_CLIENT_SECRET = { provider = "openbao", value = "secrets/third-party-tokens/tailscale/pulumi-oauth#credential", if_missing = "warn" }

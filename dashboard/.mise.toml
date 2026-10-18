@@ -15,9 +15,8 @@ GITHUB_TOKEN = "op://Development/GitHub Personal Access Token/token"
 GRAFANA_TOKEN = "op://Eris/Grafana ApiKey/credential"
 SONARR_API_KEY = "op://Eris/Media Management Secrets/sonarr_apikey"
 TAUTULLI_API_KEY = "op://Eris/Media Management Secrets/tautulli_token"
-# No 1Password item exists for Tracearr -- it was created after the OpenBao move --
-# so this is a vals reference, resolved by `mise run vals-run`, not by `op run`.
-TRACEARR_API_KEY = "ref+openbao://secrets/clusters/equestria/apps/tracearr/api-key#/value"
+# TRACEARR_API_KEY is in dashboard/fnox.toml: it has no 1Password item, only an
+# OpenBao one. Run with `fnox exec -- op run -- <command>`.
 SABNZBD_API_KEY = "op://Eris/Media Management Secrets/sabnzbd_apikey"
 JELLYFIN_API_KEY = "op://Eris/Media Management Secrets/jellyfin_token"
 PLEX_API_KEY = "op://Eris/Media Management Secrets/plex_token"

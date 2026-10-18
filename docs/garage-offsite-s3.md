@@ -123,9 +123,9 @@ Losing it loses no data, but no node can rejoin its own cluster without it.
 matter. Preview first, per the estate rule for every stack:
 
 ```bash
-cd stacks/home            && mise run vals-run pulumi preview && mise run vals-run pulumi up   # celestia
-cd ../gulf-of-mexico      && mise run vals-run pulumi preview && mise run vals-run pulumi up   # luna
-cd ../ocracoke            && mise run vals-run pulumi preview && mise run vals-run pulumi up   # skystar
+cd stacks/home            && fnox exec -- pulumi preview && fnox exec -- pulumi up   # celestia
+cd ../gulf-of-mexico      && fnox exec -- pulumi preview && fnox exec -- pulumi up   # luna
+cd ../ocracoke            && fnox exec -- pulumi preview && fnox exec -- pulumi up   # skystar
 ```
 
 Checkpoint — expected, correct, degraded state:
@@ -191,7 +191,7 @@ Peer addresses persist in the metadata dir; `node connect` is not needed again.
 `system` stack, which owns the garage module (`stacks/system/garage.ts`):
 
 ```bash
-cd stacks/system && mise run vals-run pulumi preview && mise run vals-run pulumi up
+cd stacks/system && fnox exec -- pulumi preview && fnox exec -- pulumi up
 ```
 
 This creates `cnpg-equestria`, `postgres-{celestia,luna,skystar}` and
