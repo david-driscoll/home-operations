@@ -346,11 +346,13 @@ container was killed for memory; `kubectl -n coder describe pod forgejo-runner-0
 shows `OOMKilled` on `dind`. Several cold `flate` renders at the same moment
 are the usual cause.
 
-**A pull request on the forge never merges itself.** Renovate needs every
-status on the branch green and at least one status to exist. A job that failed
-stays red until the branch is pushed again. Otherwise check the rule that
-should match names `github-mirror/home-operations`, and that a run happened
-inside its `automergeSchedule`.
+**A pull request on the forge never merges itself.** Forgejo merges it once
+every required status is green: `merge-window`, `flate*` and
+`renovate/stability-days`. A job that failed stays red until the branch is
+pushed again. Otherwise check that the rule that should match names
+`github-mirror/home-operations`, that the pull request has the
+`renovate/automerge` label, and that it is set to merge when checks succeed
+([forgejo-merge-window.md](./forgejo-merge-window.md#renovate)).
 
 **The sync fails and the forge's `main` stops moving.** If Forgejo's log has
 `Unable to GetUserByID ... [uid: -2]` from `preReceiveBranch`, something pushed

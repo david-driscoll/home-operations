@@ -25,12 +25,10 @@
 #                 window's reach.
 #
 # THE WINDOW IS WRITTEN TWICE: in `env` below, which decides, and in the cron
-# hours, which decide only when to look. Move one, move the other. The
-# window is the forge copy's own Renovate `automergeSchedule`, 00:00-07:59 New
-# York every night (the last rule in .github/renovate.json5; GitHub's copy
-# stops an hour earlier). Renovate here merges only when every
-# status on a pull request is green, so this status gates its merges too:
-# narrow this window and Renovate's narrows with it.
+# hours, which decide only when to look. Move one, move the other. It is
+# the only time limit on the forge's automerges: Renovate has no
+# `automergeSchedule` any more, and with `platformAutomerge: true` it leaves
+# the merge to Forgejo, which waits for this required status.
 name: merge-window
 
 on:
