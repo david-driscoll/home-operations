@@ -17,7 +17,7 @@
 #     and this runs on the estate's own runner, four jobs at a time: side by
 #     side the two would double the memory for no gain.
 #   * No `flate Success` job. On GitHub that exists to give the ruleset one
-#     name to require; Renovate here reads every status on the commit.
+#     name to require; the forge's branch protection requires `flate*`.
 #   * The base branch is merged in first. GitHub hands a workflow the pull
 #     request already merged into main; Forgejo hands it the branch as pushed,
 #     which Renovate leaves behind main until it conflicts.

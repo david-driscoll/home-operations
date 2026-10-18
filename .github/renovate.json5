@@ -156,7 +156,8 @@
   //
   // PRs open whenever an update is found -- this used to be "every weekend".
   // What is allowed to MERGE unattended, and when, is governed separately by
-  // the automerge rules below (overnight window, docs/renovate-automerge.md),
+  // the automerge rules below and the forge's merge window
+  // (docs/renovate-automerge.md),
   // so a weekday PR is still reviewed or gated exactly like a weekend one.
   // This is also the house default the Forgejo bot inherits through
   // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
@@ -252,14 +253,14 @@
   },
   packageRules: [
     {
-      // EVERY update on the Forgejo copy waits three days and carries the
+      // EVERY update on the Forgejo copy waits a day and carries the
       // `renovate/stability-days` status, not only the ones the automerge
       // rules below pick out. FIRST in the list on purpose: it is the default
       // for that repository, and any rule below that sets its own wait still
       // wins.
       //
       // What that means in practice, with Renovate's default
-      // `internalChecksFilter: strict`: an update younger than three days gets
+      // `internalChecksFilter: strict`: an update younger than a day gets
       // no branch and no pull request yet -- it waits under "Pending Status
       // Checks" on the Dependency Dashboard -- including the majors and the
       // others that are merged by hand. The dashboard's checkbox for it
@@ -270,7 +271,7 @@
       // The default, `timestamp-required`, would hold those for ever.
       //
       // GitHub's copy is unchanged.
-      description: "Forgejo copy: a three-day wait and a stability-days check on every update",
+      description: "Forgejo copy: a one-day wait and a stability-days check on every update",
       matchRepositories: [
         "github-mirror/home-operations"
       ],
@@ -805,20 +806,22 @@
       //      `image-check.yaml` proves every changed image exists (and, for
       //      the Docker hosts, ships linux/amd64) and every changed compose
       //      file still parses;
-      //   2. the merge itself -- Renovate merges only when ALL checks pass.
-      //      `platformAutomerge: false` because main has no branch protection:
-      //      GitHub's native auto-merge would merge straight away without it,
-      //      so Renovate does the check-then-merge itself;
+      //   2. the merge itself -- `platformAutomerge: true` hands it to
+      //      Forgejo, which merges once the REQUIRED statuses on the forge's
+      //      main are green: `merge-window` (00:00-08:00 New York), `flate*`
+      //      and `renovate/stability-days`. Image Check is not required, so
+      //      docker/** bumps do not wait for it;
       //   3. after merge -- a HelmRelease that fails its upgrade dispatches to
-      //      `renovate-watchdog.yaml`, which opens a revert of the automerged
-      //      PR and puts the app on the hold list at the bottom of this file.
+      //      `renovate-watchdog.yaml`, which would revert the automerged PR and
+      //      hold the app. DORMANT: it looks for a GitHub PR, and these merge
+      //      on the forge, which has none.
       //
       // `minimumReleaseAgeBehaviour: timestamp-optional` is load-bearing.
       // GHCR returns no release timestamps, and under the Renovate 42 default
       // (`timestamp-required`) an update with no timestamp never ages -- every
-      // ghcr.io bump would be held forever. So the 3-day soak is real for
-      // Docker Hub and absent for GHCR; the post-merge revert is what covers
-      // the difference.
+      // ghcr.io bump would be held forever. So the one-day soak is real for
+      // Docker Hub and for full X.Y.Z ghcr pins (dated by `custom.ghcr`, the
+      // last rule but one), and absent for other GHCR tags.
       //
       // The negated names are what must never merge unattended: databases and
       // anything that migrates its schema on start, identity, secrets,
@@ -1246,9 +1249,9 @@
     },
     {
       // Named dependencies outside the app-image scope of the automerge rules
-      // above, each opted in by hand. Same gate -- every check green, 3-day
-      // soak where the registry has timestamps, the overnight window, and the
-      // watchdog revert for kubernetes/** -- but matched by NAME, so it
+      // above, each opted in by hand. Same gate -- the forge's required
+      // statuses, a one-day soak where the release has a date, and the merge
+      // window -- but matched by NAME, so it
       // reaches other managers and paths (mise tools; the coder, network and
       // pulumi apps) and the 0.x minors the app rule refuses. Placed here,
       // after the baseline and before the hold list, so the hold list still
@@ -1436,9 +1439,9 @@
       timezone: "America/New_York",
 
       // HOW. Forgejo does the merge ("merge when checks succeed"), not
-      // Renovate. The automerge rules above say `platformAutomerge: false`
-      // because GitHub's main has no branch protection, so GitHub's native
-      // auto-merge would merge at once. The forge's main does: branch
+      // Renovate. The automerge rules above say the same; it is repeated here
+      // so the forge copy keeps it whatever a rule above sets. The forge's
+      // main has branch protection to make that safe: branch
       // protection in stacks/system/forgejo-github-mirror.ts requires
       // `merge-window`, `flate*` and `renovate/stability-days`, and Forgejo
       // re-checks a scheduled merge whenever a status lands -- so a pull
@@ -1447,13 +1450,15 @@
       //
       // Forgejo only waits for REQUIRED checks. `Image Check` is not one (it
       // runs for docker/** only, and a required check that never posts blocks
-      // forever), so docker/** updates are taken back out in the next rule.
+      // forever), so a docker/** update can merge with it red or pending. The
+      // rule that once gave those back to Renovate's own merge was removed on
+      // 2026-10-18.
       platformAutomerge: true,
     },
     {
       // RELEASE DATES FOR GHCR IMAGES: look these up through
       // `customDatasources.ghcr` above, which knows when each tag was pushed.
-      // With a date, the three-day `minimumReleaseAge` in the automerge rules
+      // With a date, the one-day `minimumReleaseAge` in the automerge rules
       // actually counts for a ghcr image; without one, `timestamp-optional`
       // lets the update through the moment it appears. The digest comes back
       // with it, so a `tag@sha256:` pin stays pinned.
