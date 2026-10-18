@@ -48,11 +48,16 @@ spec:
   # with N jobs in hand it wants N + 2 pods, so when a waiting pod takes a
   # job, the next poll starts another to wait in its place.
   minReplicaCount: 2
-  # EIGHT HERE MEANS TEN PODS. KEDA caps the reported job count at this
-  # number and then adds the two spares above, so the most that ever run is
-  # maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
+  # SIXTEEN HERE MEANS EIGHTEEN PODS. KEDA caps the reported job count at
+  # this number and then adds the two spares above, so the most that ever run
+  # is maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
   # raise this with that in mind, not by itself.
-  maxReplicaCount: 8
+  #
+  # Raised from 8 on 2026-10-18: every burst sat at that ceiling (a queue of
+  # 113 took about two hours to drain), and the four worker nodes the pods
+  # can land on had the room. The spread constraint in the pod template keeps
+  # eighteen of them from piling onto two nodes.
+  maxReplicaCount: 16
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
   # A change to this file must not kill jobs that are running. `gradual`
@@ -109,6 +114,20 @@ spec:
         # after SIGTERM, so the kubelet has to wait about that long before
         # it sends SIGKILL.
         terminationGracePeriodSeconds: 1860
+        # ONE RUNNER PER NODE BEFORE A SECOND ON ANY OF THEM. Without this the
+        # scheduler packed every pod onto the two emptiest workers, and each
+        # burst started five Docker daemons on one node at once. It is a
+        # preference (ScheduleAnyway), not a rule: a job must never sit
+        # Pending because one node is full or out of rotation, and the
+        # finished pods kept for ttlSecondsAfterFinished can count towards
+        # the skew.
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: ${APP}
         securityContext:
           fsGroup: 1000
           fsGroupChangePolicy: OnRootMismatch
