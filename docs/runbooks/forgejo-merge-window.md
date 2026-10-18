@@ -107,10 +107,10 @@ nothing). A missing edge leaves the last state in place: a missed opening
 skips a night, and a missed close leaves green pull requests mergeable until
 the next run.
 
-The current values match the forge copy's own Renovate `automergeSchedule`,
-00:00–07:59 New York every night: the last rule in `.github/renovate.json5`,
-an hour longer than GitHub's copy gets
-([renovate-automerge.md](../renovate-automerge.md)).
+This window is the only time limit the forge's automerges have. Renovate's
+`automergeSchedule` came out of `.github/renovate.json5` on 2026-10-18, so
+Renovate sets a pull request to merge at any hour and this status decides when
+it lands. Moving the window here is the whole change.
 
 To check a window before you commit it, run the script against a given moment
 with `--dry-run`. It reads and reports, and posts nothing:
@@ -124,6 +124,11 @@ merge-window → Run workflow* with **dry_run** ticked does the same with the
 committed window and the current time.
 
 ## Using it on a pull request
+
+On this copy branch protection also requires `renovate/stability-days`, which
+only Renovate's pull requests carry ([below](#branch-protection)). So in
+practice these steps are what Renovate does for itself; by hand they work only
+on a Renovate pull request, such as one whose automerge was held.
 
 1. Open the pull request on the forge and add the `renovate/automerge` label.
    Without it `merge-window` is green at any hour and the merge would happen
@@ -142,17 +147,32 @@ window that run posts `success` and a scheduled merge goes ahead.
 
 ### Renovate
 
-Renovate on the forge doesn't use this button. It merges the pull request
-itself (`platformAutomerge: false`), only when **every** status is green and
-only inside its own `automergeSchedule`. This status is one of those, so it
-gates Renovate as soon as the workflow is on `main`, before branch protection
-is involved at all. Renovate merges only where its window and this one overlap.
-With the current values the two are the same window, and nothing changes for
-Renovate.
+Renovate uses the same button. On the forge's copy the rule "Settings for the
+Forgejo copy of this repository" in `.github/renovate.json5` sets
+`platformAutomerge: true`, so for every update an automerge rule opts in (the
+ones it labels `renovate/automerge`) Renovate turns on **Merge when checks
+succeed** and leaves the merge to Forgejo. Forgejo merges once every
+**required** status is green: `merge-window`, `flate*` and
+`renovate/stability-days`. There is no `automergeSchedule`, so the window here
+is the only time limit, and the merge happens as soon as the window opens
+rather than at Renovate's next hourly run.
 
-The workflow's own job also leaves a status on each pull request it runs for,
-`merge-window / Post merge-window statuses (pull_request)`. It is green
-whenever the run worked, and Renovate counts it like any other.
+Forgejo waits **only** for required statuses. Anything else on the pull
+request does not hold the merge:
+
+- **`Image Check`**, the only pre-merge check `docker/**` updates get. It
+  cannot be required: it runs for `docker/**` alone, and a required check that
+  never posts blocks every other pull request. Until 2026-10-18 a rule handed
+  `docker/**` updates back to Renovate's own merge, which waits for every
+  status. That rule is gone, so a `docker/**` update can now merge with
+  `Image Check` red or still running.
+- **The workflow's own job status**, `merge-window / Post merge-window
+  statuses (pull_request)`. Red means a run failed; what Forgejo reads is the
+  `merge-window` status that run did or did not post.
+
+GitHub Actions updates are the exception to all of this. They automerge as a
+branch (`automergeType: branch`): the `renovate` account pushes straight to
+`main`, with no pull request and so no window.
 
 ## Branch protection
 
@@ -214,8 +234,9 @@ After an apply, check two things:
 
 **To turn it off**, remove `merge-window` from `statusCheckContexts` and apply.
 Then delete the workflow, or set `MERGE_WINDOW_DAYS` to `*` with the start
-equal to the end (always open). As long as the workflow posts `pending`,
-Renovate waits for it.
+equal to the end (always open). Forgejo stops waiting as soon as the status is
+no longer required; the second step keeps a `pending` that means nothing off
+the pull requests.
 
 ## The token
 
