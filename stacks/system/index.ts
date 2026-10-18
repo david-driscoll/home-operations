@@ -91,6 +91,7 @@ import { configureAuthentikVip } from "./authentik-vip.ts";
 import { CoderTemplatesComponent } from "./coder-templates.ts";
 import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
+import { configureForgejoSigning } from "./forgejo-signing.ts";
 import { configureGarage } from "./garage.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
@@ -148,6 +149,11 @@ configureAuthentikPg(globals);
 
 // The VRRP password for authentik's keepalived VIP, both sites. See authentik-vip.ts.
 configureAuthentikVip(globals);
+
+// The in-cluster Forgejo's commit-signing key, into OpenBao only -- unlike the
+// Forgejo components further down it never calls Forgejo's API, so it cannot
+// fail on a forge outage. See forgejo-signing.ts.
+configureForgejoSigning(globals);
 
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
