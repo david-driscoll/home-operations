@@ -1451,21 +1451,6 @@
       platformAutomerge: true,
     },
     {
-      // The exception to the rule above. `Image Check` is the only pre-merge
-      // check docker/** bumps get, and branch protection cannot require it
-      // without blocking every other pull request -- so Forgejo's own
-      // auto-merge would merge one of these with that check red. Renovate's
-      // own merge waits for every status, required or not, so these keep it.
-      description: "Forgejo copy: docker/** updates keep Renovate's check-then-merge",
-      matchRepositories: [
-        "github-mirror/home-operations"
-      ],
-      matchFileNames: [
-        "docker/**"
-      ],
-      platformAutomerge: false,
-    },
-    {
       // RELEASE DATES FOR GHCR IMAGES: look these up through
       // `customDatasources.ghcr` above, which knows when each tag was pushed.
       // With a date, the three-day `minimumReleaseAge` in the automerge rules
