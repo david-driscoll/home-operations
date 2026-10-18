@@ -70,6 +70,11 @@ Requirements on the site:
 (`setup-guide`) gives the guide a Gatus check and a family tile in authentik.
 The check fails until `docs/setup` has been published.
 
+**Holm mirrors this guide.** The family home page at `holm.<root domain>` has
+one tile per guide page, with the guide's store links and a condensed copy of
+each page's steps. When a page, address or store link changes here, update
+Holm's config too: [holm.md](holm.md).
+
 ### My apps: the guide's API (`setup-status`)
 
 The guide's **My apps** page (its landing page, `/setup/`) shows each family
