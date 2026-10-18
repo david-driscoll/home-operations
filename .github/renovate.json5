@@ -776,6 +776,7 @@
       // -- for this one, that would mean every patch automerging again.
       description: "No automerge in this repo unless a rule below opts in",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       automerge: false,
@@ -1231,6 +1232,7 @@
       // and this is a workaround for this repo's layout, not house policy.
       description: "Bump npm ranges: lockfile-only updates never reach hoisted workspace deps",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchManagers: [
@@ -1246,6 +1248,7 @@
       // regeneration. Bump them by regenerating the SDK instead.
       description: "Skip npm deps of generated Pulumi SDKs",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchManagers: [
@@ -1383,6 +1386,7 @@
       // nothing.
       description: "Automerge hold list (maintained by renovate-watchdog)",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchFileNames: [
