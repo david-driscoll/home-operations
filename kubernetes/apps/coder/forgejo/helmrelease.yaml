@@ -330,9 +330,17 @@ spec:
         RUN_MODE: prod
         # APP_NAME: "${CLUSTER_TITLE} - Coding for ourselves"
         repository:
-          DISABLE_HTTP_GIT: true
+          # No DISABLE_HTTP_GIT. Everything in the cluster talks git to the
+          # forge over HTTP (forgejo-http:3000): Renovate, the runners'
+          # actions/checkout, github-sync's pushes, git-pages. With it set,
+          # every one of them gets `Interacting with repositories by HTTP
+          # protocol is not allowed` (403), as on 2026-10-18.
           ENABLE_PUSH_CREATE_USER: true
           ENABLE_PUSH_CREATE_ORG: true
+          # Pinned to the upstream default so a chart or image bump cannot
+          # quietly change what the clone box tells people to paste: true keeps
+          # the `ssh://` form. It belongs here, not under `server:` with the
+          # other SSH keys -- Forgejo reads it from the [repository] section.
           USE_COMPAT_SSH_URI: true
 
         repository.pull-request:
