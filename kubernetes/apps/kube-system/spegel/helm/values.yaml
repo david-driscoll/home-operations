@@ -50,6 +50,8 @@ spegel:
     - https://registry.k8s.io
     - https://public.ecr.aws
     - https://cgr.dev
+    - https://mcr.microsoft.com
+    - https://data.forgejo.org
   logLevel: "DEBUG"
   debugWebEnabled: true
   containerdSock: /run/containerd/containerd.sock
