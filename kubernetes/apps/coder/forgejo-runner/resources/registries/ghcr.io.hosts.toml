@@ -1,5 +1,5 @@
 # Mounted at /etc/docker/certs.d/ghcr.io/hosts.toml in each runner pod's dind
-# sidecar (../scaledjob.yaml). Docker 29 with the containerd image store
+# sidecar (../../scaledjob.yaml). Docker 29 with the containerd image store
 # resolves every registry through containerd's hosts.toml layout under its
 # certs.d directory, so a pull of ghcr.io/<repo> tries the cluster's zot first
 # and ghcr.io itself only if zot fails. Image references stay ghcr.io/....

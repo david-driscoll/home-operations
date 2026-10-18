@@ -45,7 +45,7 @@ runner:
   #
   # These references are the real ghcr.io names, but the bytes come from the
   # cluster's zot: the dind sidecar carries a containerd hosts.toml for
-  # ghcr.io (./ghcr.io.hosts.toml, mounted by ../scaledjob.yaml) that tries
+  # ghcr.io (./registries/ghcr.io.hosts.toml, mounted by ../scaledjob.yaml) that tries
   # zot first. Keep PREPULL_IMAGES there naming the same image, or the
   # pre-pull warms one no job uses.
   labels:
