@@ -1,0 +1,7 @@
+# cgr.dev through the cluster's zot, falling back to https://cgr.dev.
+# See ./ghcr.io.hosts.toml for how the runner's dind reads this.
+server = "https://cgr.dev"
+
+[host."http://registry.kube-system.svc.cluster.local:8080/v2/cgr.dev"]
+  capabilities = ["pull", "resolve"]
+  override_path = true
