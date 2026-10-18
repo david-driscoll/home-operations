@@ -101,6 +101,19 @@ export abstract class VaultStore {
   public abstract getSecretByPath<T>(path: string): Output<Unwrap<T & Meta>>;
 
   /**
+   * `getSecretByPath`, but `undefined` when the path does not exist instead of
+   * failing the run.
+   *
+   * For an OPTIONAL integration a human seeds after the code lands — the
+   * PatchMon enrollment token is the first (components/patchmon.ts). There the
+   * path is created in an app's UI after the deploy, and a hard read would
+   * fail every stack that constructs a `ProxmoxHost` until someone did it.
+   * Anything a stack cannot work without must keep using `getSecretByPath`,
+   * so a missing secret stays loud.
+   */
+  public abstract tryGetSecretByPath<T>(path: string): Output<Unwrap<T & Meta> | undefined>;
+
+  /**
    * `ref+openbao://secrets/<path>#/<field>` resolution (PLAN §D.1), the
    * `ref+openbao://secrets/<path>#/<field>` resolution — now the ONLY
    * reference syntax a rendered file can carry. It had a 1Password counterpart

@@ -125,6 +125,21 @@ describe("BaoStore", () => {
     assert.equal(item.username, "z");
   });
 
+  it("tryGetSecretByPath returns undefined for an absent path instead of throwing", async () => {
+    const store = new BaoStore(stubClient({}));
+    const item = await new Promise<unknown>(res => store.tryGetSecretByPath("clusters/equestria/apps/nope/x").apply(v => (res(v), v)));
+    assert.equal(item, undefined);
+  });
+
+  it("tryGetSecretByPath shapes a present path exactly like getSecretByPath, secret markers included", async () => {
+    const store = new BaoStore(stubClient({ "clusters/equestria/apps/x/y": kv({ key: "k", secret: "s" }, { concealed_fields: "secret", contains_secrets: "true" }) }));
+    const item = store.tryGetSecretByPath<{ key: string; secret: string }>("clusters/equestria/apps/x/y");
+    const value = await new Promise<any>(res => item.apply(v => (res(v), v)));
+    assert.equal(value.key, "k");
+    assert.equal(value.secret, "s");
+    assert.equal(await isSecret(item.apply(v => v?.secret)), true);
+  });
+
   it("reads a path once however many times it is asked for", async () => {
     let reads = 0;
     const client = {
