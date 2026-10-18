@@ -133,13 +133,6 @@ spec:
           - name: dind
             restartPolicy: Always
             image: data.forgejo.org/oci/docker:29-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
-            # The job images come from the cluster's zot over plain HTTP
-            # (./resources/config.yml says why). dockerd refuses an HTTP
-            # registry unless it is named here. dockerd-entrypoint.sh treats
-            # arguments that start with `-` as dockerd flags and keeps its own
-            # --host/--tls* flags alongside them.
-            args:
-              - --insecure-registry=registry.kube-system.svc.cluster.local:8080
             env:
               - name: DOCKER_TLS_CERTDIR
                 value: /certs
@@ -178,6 +171,20 @@ spec:
                 mountPath: /var/lib/docker
               - name: docker-certs
                 mountPath: /certs
+              # Pulls of ghcr.io and docker.io go through the cluster's zot,
+              # with the image references unchanged
+              # (./resources/ghcr.io.hosts.toml). Docker 29's containerd
+              # image store reads containerd hosts.toml files under this
+              # directory for EVERY registry; the older `registry-mirrors`
+              # setting only ever covered Docker Hub. Tested 2026-10-18 in a
+              # throwaway pod on this image: `docker pull
+              # ghcr.io/catthehacker/ubuntu:act-24.04` made all ten requests
+              # to zot and finished in 30s, against about five minutes per
+              # pod straight from ghcr.io during a burst. Read-only, and not
+              # /certs: that is where dind writes its own TLS material.
+              - name: registries
+                mountPath: /etc/docker/certs.d
+                readOnly: true
         containers:
           - name: app
             image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
@@ -245,7 +252,7 @@ spec:
               # in ./resources/config.yml. Keep the two in step, or this
               # warms an image no job uses.
               - name: PREPULL_IMAGES
-                value: registry.kube-system.svc.cluster.local:8080/ghcr.io/catthehacker/ubuntu:act-24.04
+                value: ghcr.io/catthehacker/ubuntu:act-24.04
               - name: DOCKER_HOST
                 value: tcp://127.0.0.1:2376
               - name: DOCKER_TLS_VERIFY
@@ -278,6 +285,14 @@ spec:
           - name: scripts
             configMap:
               name: forgejo-runner-scripts
+          - name: registries
+            configMap:
+              name: forgejo-runner-registries
+              items:
+                - key: ghcr.io
+                  path: ghcr.io/hosts.toml
+                - key: docker.io
+                  path: docker.io/hosts.toml
           - name: data
             emptyDir:
               sizeLimit: 6Gi

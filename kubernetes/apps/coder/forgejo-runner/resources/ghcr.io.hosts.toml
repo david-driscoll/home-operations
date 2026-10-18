@@ -1,0 +1,16 @@
+# Mounted at /etc/docker/certs.d/ghcr.io/hosts.toml in each runner pod's dind
+# sidecar (../scaledjob.yaml). Docker 29 with the containerd image store
+# resolves every registry through containerd's hosts.toml layout under its
+# certs.d directory, so a pull of ghcr.io/<repo> tries the cluster's zot first
+# and ghcr.io itself only if zot fails. Image references stay ghcr.io/....
+#
+# Plain HTTP to the in-cluster Service: the scheme on the host line is all
+# containerd needs, so dockerd's --insecure-registry is not involved.
+# `override_path` because zot serves each upstream under its own prefix
+# (kubernetes/apps/kube-system/registry), the same as the nodes' mirrors in
+# talos/patches/global/machine-registries.yaml.
+server = "https://ghcr.io"
+
+[host."http://registry.kube-system.svc.cluster.local:8080/v2/ghcr.io"]
+  capabilities = ["pull", "resolve"]
+  override_path = true

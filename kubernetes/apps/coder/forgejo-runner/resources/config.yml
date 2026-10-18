@@ -43,24 +43,16 @@ runner:
   # runners; they carry Node.js, which `uses: actions/checkout@v4` and most
   # other JavaScript actions require.
   #
-  # PULLED THROUGH THE CLUSTER'S ZOT, NOT FROM GHCR. Each runner pod is a fresh
-  # Docker daemon with nothing in it, so every pod pulls this ~1.5 GB image;
-  # from ghcr.io, ten pods pulling at once took five minutes each on
-  # 2026-10-17. zot (kubernetes/apps/kube-system/registry) proxies every
-  # upstream under its own prefix, so `<zot>/ghcr.io/<repo>` is the same image,
-  # served from inside the cluster. It has to be spelled out like this: a
-  # Docker daemon's `registry-mirrors` only ever applies to Docker Hub, so
-  # there is no transparent mirror for ghcr.io the way the nodes' containerd
-  # has one (talos/patches/global/machine-registries.yaml).
-  #
-  # The address is plain HTTP, which the dind sidecar in ../scaledjob.yaml
-  # allows with `--insecure-registry`, and the PREPULL_IMAGES there must name
-  # the same reference or the pre-pull warms an image no job uses.
+  # These references are the real ghcr.io names, but the bytes come from the
+  # cluster's zot: the dind sidecar carries a containerd hosts.toml for
+  # ghcr.io (./ghcr.io.hosts.toml, mounted by ../scaledjob.yaml) that tries
+  # zot first. Keep PREPULL_IMAGES there naming the same image, or the
+  # pre-pull warms one no job uses.
   labels:
-    - ubuntu-latest:docker://registry.kube-system.svc.cluster.local:8080/ghcr.io/catthehacker/ubuntu:act-24.04
-    - ubuntu-24.04:docker://registry.kube-system.svc.cluster.local:8080/ghcr.io/catthehacker/ubuntu:act-24.04
-    - ubuntu-22.04:docker://registry.kube-system.svc.cluster.local:8080/ghcr.io/catthehacker/ubuntu:act-22.04
-    - docker:docker://registry.kube-system.svc.cluster.local:8080/ghcr.io/catthehacker/ubuntu:act-24.04
+    - ubuntu-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04
+    - ubuntu-24.04:docker://ghcr.io/catthehacker/ubuntu:act-24.04
+    - ubuntu-22.04:docker://ghcr.io/catthehacker/ubuntu:act-22.04
+    - docker:docker://ghcr.io/catthehacker/ubuntu:act-24.04
 
 cache:
   # Serves ACTIONS_CACHE_URL to workflow containers, which is what

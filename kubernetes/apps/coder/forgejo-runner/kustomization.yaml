@@ -11,6 +11,16 @@ configMapGenerator:
       - config.yml=./resources/config.yml
     options:
       disableNameSuffixHash: true
+  # containerd hosts.toml files for the dind sidecar: pulls of ghcr.io and
+  # docker.io go through the cluster's zot (./resources/ghcr.io.hosts.toml).
+  # Keys cannot hold a `/`, so the ScaledJob's volume maps each key to
+  # <registry>/hosts.toml. No hash suffix, for the same reason as below.
+  - name: forgejo-runner-registries
+    files:
+      - ghcr.io=./resources/ghcr.io.hosts.toml
+      - docker.io=./resources/docker.io.hosts.toml
+    options:
+      disableNameSuffixHash: true
   # The shell scripts the runner pods run. Flux substitution is OFF for
   # this ConfigMap, because envsubst would blank every shell variable in them
   # -- which is also why the name is spelled out. No hash suffix: the
