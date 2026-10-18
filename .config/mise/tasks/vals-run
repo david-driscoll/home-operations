@@ -1,131 +1,25 @@
 #!/usr/bin/env bash
-#MISE description="Resolve ref+ values in the environment with vals, then run the command (the `op run` replacement)"
+#MISE description="DEPRECATED alias for `fnox exec --`: run a command with the repo's secrets (.config/fnox.toml)"
 #MISE dir="{{cwd}}"
 #
+# vals-run resolved the `ref+` values in .config/mise.toml's [env] with two
+# nested `vals exec` calls. Those values now live in .config/fnox.toml and fnox
+# resolves them, so this only forwards:
+#
+#   mise run vals-run pulumi preview   ==   fnox exec -- pulumi preview
+#
+# Kept so older notes, docs and muscle memory still work. Call fnox directly in
+# anything new; this file can go once nothing says `vals-run` any more.
+#
 # dir={{cwd}} because mise runs tasks from the CONFIG ROOT by default, and
-# these commands are per-stack: without it `mise run vals-run pulumi preview`
-# executes in the repo root and picks up the wrong Pulumi.yaml.
-#
-# vals-run — resolve every `ref+…` value in the environment, then exec.
-#
-#   mise run vals-run pulumi preview --stack home-operations
-#   mise run vals-run kubectl get pods
-#
-# This replaces `op run`. `op run` substituted `op://` values it found in the
-# environment; `vals exec` only resolves what is in its `-f` file, so this
-# builds that file from the environment and hands it over. Same ergonomics,
-# any backend vals supports — each value in .config/mise.toml names its own
-# (`ref+openbao://`, `ref+sops://`, `ref+op://`, …).
-#
-# Resolution happens per command rather than in mise's `[env]` on purpose:
-# mise re-evaluates env on EVERY load with no caching, so resolving there
-# would hit OpenBao on every `cd` into the repo and break the shell whenever
-# you are off-network or without an age key.
-#
-# The temp file holds REFERENCES, never resolved values — the secrets exist
-# only in the environment vals hands to the child. It is a real file rather
-# than a pipe because `-f /dev/stdin` leaves the child with a consumed stdin,
-# which breaks anything interactive (a `pulumi up` confirmation).
-#
-# ## Two passes, because the credential is itself a reference
-#
-# .config/mise.toml sets BAO_ROLE_ID / BAO_SECRET_ID to `ref+sops://` values —
-# the AppRole vals authenticates to OpenBao WITH. Resolving everything in one
-# pass does not work: vals reads those variables straight out of the
-# environment, finds the literal string "ref+sops://…", and every
-# `ref+openbao://` value fails with a bare 403 that names no cause.
-#
-# So the bootstrap variables are split out and resolved first, by NESTING two
-# `vals exec` calls rather than capturing anything:
-#
-#   vals exec -f bootstrap.yaml -- vals exec -f refs.yaml -- <command>
-#
-# The outer call puts the resolved AppRole in the inner call's environment,
-# where its openbao provider picks it up. No secret is ever assigned to a shell
-# variable or written to disk — which a `vals get` + `export` version could not
-# claim.
+# these commands are per-stack: without it the command would run in the repo
+# root and pick up the wrong Pulumi.yaml.
 set -Eeuo pipefail
 
-[[ $# -gt 0 ]] || { printf 'usage: mise run vals-run <command> [args…]\n' >&2; exit 2; }
+# Older docs wrote `mise run vals-run -- <command>`; mise passes that `--` through.
+[[ "${1:-}" == "--" ]] && shift
+[[ $# -gt 0 ]] || { printf 'usage: mise run vals-run <command> [args…]  (now: fnox exec -- <command>)\n' >&2; exit 2; }
 
-# A temp DIRECTORY, not `mktemp <tpl>.yaml`: BSD mktemp requires the X's at the
-# end of the template, so a suffixed template fails on macOS — where this is
-# mostly run. vals picks its parser from the extension, so the file needs one.
-refsdir="$(mktemp -d "${TMPDIR:-/tmp}/vals-run.XXXXXX")"
-refs="${refsdir}/refs.yaml"
-bootstrap="${refsdir}/bootstrap.yaml"
-trap 'rm -rf "${refsdir}"' EXIT
-
-# The credentials vals (and `components/bao.ts`) authenticate WITH, which have
-# to be resolved before anything that needs them. VAULT_* are here too because
-# vals' vault provider reads those, and a repo that moves back to it should not
-# rediscover this ordering from a 403.
-is_bootstrap() {
-  case "$1" in
-    BAO_ROLE_ID | BAO_SECRET_ID | BAO_TOKEN | VAULT_ROLE_ID | VAULT_SECRET_ID | VAULT_TOKEN) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-while IFS= read -r line; do
-  name="${line%%=*}"
-  value="${line#*=}"
-  case "${value}" in
-    ref+*) ;;
-    *) continue ;;
-  esac
-  quoted="$(printf '%s' "${value}" | sed 's/"/\\"/g; s/^/"/; s/$/"/')"
-  if is_bootstrap "${name}"; then
-    case "${value}" in
-      ref+openbao://* | ref+vault://*)
-        # Nothing can break this cycle at runtime, so name it precisely rather
-        # than letting it surface as a 403 from the store itself.
-        printf 'vals-run: %s is an OpenBao/Vault reference, but it is the credential used to REACH OpenBao.\n' "${name}" >&2
-        printf 'vals-run: point it at a backend that needs no OpenBao (ref+sops://, ref+file://).\n' >&2
-        exit 2
-        ;;
-    esac
-    printf '%s: %s\n' "${name}" "${quoted}" >> "${bootstrap}"
-  else
-    printf '%s: %s\n' "${name}" "${quoted}" >> "${refs}"
-  fi
-done < <(env)
-
-if [[ ! -s "${refs}" && ! -s "${bootstrap}" ]]; then
-  # Nothing to resolve is not an error, but say so: the alternative is a silent
-  # run against unresolved config that fails much further along, somewhere that
-  # does not mention secrets at all.
-  printf 'vals-run: no ref+ values in the environment; running unchanged.\n' >&2
-  exec "$@"
-fi
-
-# shellcheck disable=SC2016  # the backticks are prose emphasis in the message,
-# not a command substitution -- the single quotes are intentional.
-command -v vals >/dev/null || { printf 'vals-run: vals is not installed — `mise install` in this repo.\n' >&2; exit 127; }
-
-# vals' sops provider does NOT read SOPS_AGE_KEY_FILE -- only SOPS_AGE_KEY, the
-# key material itself. Verified 2026-09-12 by isolating each: with just the file
-# variable set, `vals exec` fails "Error getting data key: 0 successful groups
-# required, got 0"; with just SOPS_AGE_KEY it decrypts, and plain `sops -d` on
-# the same file succeeds with the file variable. So bridge the one to the other.
-#
-# This is the one place the script puts a secret in the environment, against its
-# own rule above. It is the age identity rather than a resolved value, it reaches
-# only the vals processes and the command they exec, and without it no
-# ref+sops:// value resolves wherever SOPS_AGE_KEY_FILE is how the key is
-# delivered (every agentboard pod). An explicit SOPS_AGE_KEY always wins.
-if [[ -z "${SOPS_AGE_KEY:-}" && -n "${SOPS_AGE_KEY_FILE:-}" && -r "${SOPS_AGE_KEY_FILE}" ]]; then
-  SOPS_AGE_KEY="$(<"${SOPS_AGE_KEY_FILE}")"
-  export SOPS_AGE_KEY
-fi
-
-# Resolving the bootstrap credential alone is still worth doing when nothing
-# else references OpenBao: `pulumi` itself reads BAO_ROLE_ID/BAO_SECRET_ID
-# (components/bao.ts), so this is what replaces `eval "$(pulumi-env.sh)"`.
-if [[ -s "${bootstrap}" && -s "${refs}" ]]; then
-  exec vals exec -i -f "${bootstrap}" -- vals exec -i -f "${refs}" -- "$@"
-elif [[ -s "${bootstrap}" ]]; then
-  exec vals exec -i -f "${bootstrap}" -- "$@"
-else
-  exec vals exec -i -f "${refs}" -- "$@"
-fi
+# shellcheck disable=SC2016  # the backticks are prose, not a substitution.
+printf 'vals-run: deprecated, running `fnox exec -- %s`\n' "$*" >&2
+exec fnox exec -- "$@"
