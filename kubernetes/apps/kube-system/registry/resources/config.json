@@ -162,6 +162,20 @@
               "destination": "/mcr.microsoft.com"
             }
           ]
+        },
+        {
+          "urls": ["https://data.forgejo.org"],
+          "tlsVerify": true,
+          "onDemand": true,
+          "maxRetries": 3,
+          "retryDelay": "15m",
+          "onlySigned": false,
+          "content": [
+            {
+              "prefix": "**",
+              "destination": "/data.forgejo.org"
+            }
+          ]
         }
       ]
     }
