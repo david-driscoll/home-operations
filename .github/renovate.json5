@@ -273,6 +273,7 @@
       // GitHub's copy is unchanged.
       description: "Forgejo copy: a one-day wait and a stability-days check on every update",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       minimumReleaseAge: "1 days",
@@ -829,6 +830,7 @@
       // IN SYNC with the minor rule below.
       description: "Automerge app image patch/digest bumps once CI is green",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchFileNames: [
@@ -896,6 +898,7 @@
       // and a breaking-changes list to everyone else.
       description: "Automerge app image minor bumps (not 0.x) once CI is green",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchFileNames: [
@@ -1263,6 +1266,7 @@
       // an automerge would land exactly the half that silently does nothing.
       description: "Automerge named dependencies (minor/patch/digest) once CI is green",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       matchUpdateTypes: [
@@ -1383,33 +1387,6 @@
       addLabels: [
         "renovate/automerge-hold"
       ],
-    },
-    {
-      // The ONE thing the forge's copy of this repository does not get
-      // (`github-mirror/home-operations`, the second name in every
-      // `matchRepositories` above; docs/runbooks/forgejo-github-mirror.md).
-      // Everything else here applies to both copies alike, automerge included:
-      // the forge runs the same pre-merge checks from .forgejo/workflows, and
-      // what merges there is pushed to main here.
-      //
-      // A bump to a provider pin in the root Pulumi.yaml is half a change until
-      // .github/workflows/pulumi-sdk-regen.yaml regenerates the SDK onto the
-      // pull request (see the customManager below). That workflow has no copy
-      // on the forge, so a pull request raised there would stay the half that
-      // silently does nothing -- and merging it would publish exactly that.
-      // The pull request Mend raises on GitHub for the same bump is completed
-      // as before.
-      //
-      // After the hold list without competing with it: the two never match the
-      // same update.
-      description: "Provider pins in Pulumi.yaml are raised on GitHub only",
-      matchRepositories: [
-        "github-mirror/home-operations"
-      ],
-      matchFileNames: [
-        "Pulumi.yaml"
-      ],
-      enabled: false,
     },
     {
       // EVERYTHING THAT IS DIFFERENT ON THE FORGE'S COPY, in one rule. No
