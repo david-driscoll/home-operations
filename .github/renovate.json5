@@ -1469,6 +1469,36 @@
         "* 0-7 * * *"
       ],
       timezone: "America/New_York",
+
+      // HOW. Forgejo does the merge ("merge when checks succeed"), not
+      // Renovate. The automerge rules above say `platformAutomerge: false`
+      // because GitHub's main has no branch protection, so GitHub's native
+      // auto-merge would merge at once. The forge's main does: branch
+      // protection in stacks/system/forgejo-github-mirror.ts requires
+      // `merge-window`, `flate*` and `renovate/stability-days`, and Forgejo
+      // re-checks a scheduled merge whenever a status lands -- so a pull
+      // request merges the moment its last required check goes green inside
+      // the window, instead of waiting for Renovate's next hourly run.
+      //
+      // Forgejo only waits for REQUIRED checks. `Image Check` is not one (it
+      // runs for docker/** only, and a required check that never posts blocks
+      // forever), so docker/** updates are taken back out in the next rule.
+      platformAutomerge: true,
+    },
+    {
+      // The exception to the rule above. `Image Check` is the only pre-merge
+      // check docker/** bumps get, and branch protection cannot require it
+      // without blocking every other pull request -- so Forgejo's own
+      // auto-merge would merge one of these with that check red. Renovate's
+      // own merge waits for every status, required or not, so these keep it.
+      description: "Forgejo copy: docker/** updates keep Renovate's check-then-merge",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      matchFileNames: [
+        "docker/**"
+      ],
+      platformAutomerge: false,
     },
     {
       // RELEASE DATES FOR GHCR IMAGES: look these up through
