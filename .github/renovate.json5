@@ -875,14 +875,6 @@
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
-      // shared-secrets). PRs still open and test at any hour; Renovate just
-      // leaves a green one waiting until a run lands in the window.
-      // `timezone` is set here, not at the top level, so nothing else in this
-      // repo or the Forgejo repos that inherit it changes timezone.
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
       timezone: "America/New_York",
       // Rebase only on conflict. With automerge on, `rebaseWhen: auto` means
       // behind-base-branch: every merge left the other green PRs behind main,
@@ -957,14 +949,7 @@
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
-      // shared-secrets). PRs still open and test at any hour; Renovate just
-      // leaves a green one waiting until a run lands in the window.
-      // `timezone` is set here, not at the top level, so nothing else in this
-      // repo or the Forgejo repos that inherit it changes timezone.
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
+
       timezone: "America/New_York",
       rebaseWhen: "conflicted",
       addLabels: [
@@ -1365,9 +1350,6 @@
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
       timezone: "America/New_York",
       rebaseWhen: "conflicted",
       addLabels: [
@@ -1451,20 +1433,6 @@
       // that default is `rebase`: rebase onto main, then fast-forward. Same
       // result as GitHub's, and it still works when the branch is behind.
       automergeStrategy: "auto",
-
-      // WHEN. Between 00:00 and 07:59 Eastern, an hour longer than the
-      // 00:00-06:59 the rules above give GitHub's copy. From 2026-10-11 to
-      // 2026-10-12 this was "at any time", which had updates landing on main
-      // and deploying through the day.
-      //
-      // `timezone` is repeated here because a cron schedule is read in UTC
-      // without it; the rules above set the same value.
-      //
-      // It changes WHEN, not WHAT: `automerge` itself still comes from the
-      // rules above, and so do the holds and the minimum release age.
-      automergeSchedule: [
-        "* 0-7 * * *"
-      ],
       timezone: "America/New_York",
 
       // HOW. Forgejo does the merge ("merge when checks succeed"), not
