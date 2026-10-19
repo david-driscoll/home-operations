@@ -140,20 +140,47 @@ echo "::endgroup::"
 
 echo "::group::plugins"
 node "$here/list-plugins.mjs" "$stage/node_modules" | tee "$stage/plugins.txt"
-while read -r kind name version rest; do
+# The list is read on fd 3 and every command in the loop gets /dev/null as
+# stdin, so nothing it runs can swallow the lines still to come.
+while read -r -u 3 kind name version rest; do
   case "$kind" in
     resource)
       # `rest` is the optional server URL.
-      retry as_user pulumi plugin install resource "$name" "$version" ${rest:+--server "$rest"}
+      retry as_user pulumi plugin install resource "$name" "$version" ${rest:+--server "$rest"} </dev/null
       ;;
     parameterized)
       read -r source tf_version <<<"$rest"
       # The schema itself is thrown away; downloading the Terraform provider
       # into ~/.pulumi/dynamic_tf_plugins is the side effect wanted.
-      (cd "$stage" && retry as_user pulumi package get-schema "${name}@${version}" "$source" "$tf_version" >/dev/null)
+      (cd "$stage" && retry as_user pulumi package get-schema "${name}@${version}" "$source" "$tf_version" >/dev/null </dev/null)
       ;;
   esac
-done <"$stage/plugins.txt"
+done 3<"$stage/plugins.txt"
+
+# EVERY plugin on the list must now be on disk, or the image is not published.
+# The forge's first build (2026-10-19, run 4715) reported success without
+# resource-unifi-v0.3.0 -- the one `github://` plugin that every unifi-touching
+# workspace then downloaded again, 75 MB a run. Whatever the cause (the
+# runner's anonymous api.github.com allowance is shared with the cluster's
+# Renovate), an incomplete image must fail here, where the next scheduled run
+# retries it, rather than ship.
+missing=0
+while read -r -u 3 kind name version rest; do
+  case "$kind" in
+    resource)
+      dir="$home/.pulumi/plugins/resource-${name}-v${version}"
+      [ -n "$(find "$dir" -maxdepth 1 -type f -name "pulumi-resource-${name}*" 2>/dev/null)" ] ||
+        { echo "bake.sh: plugin missing after install: resource ${name} ${version}" >&2; missing=1; }
+      ;;
+    parameterized)
+      read -r source tf_version <<<"$rest"
+      [ -n "$(find "$home/.pulumi/dynamic_tf_plugins/${source}/${tf_version}" -mindepth 2 -maxdepth 2 -type f 2>/dev/null)" ] ||
+        { echo "bake.sh: Terraform provider missing after get-schema: ${source} ${tf_version}" >&2; missing=1; }
+      ;;
+  esac
+done 3<"$stage/plugins.txt"
+[ "$missing" -eq 0 ] || exit 1
+echo "all $(wc -l <"$stage/plugins.txt") plugins and providers present"
 echo "::endgroup::"
 
 echo "::group::tidy"
