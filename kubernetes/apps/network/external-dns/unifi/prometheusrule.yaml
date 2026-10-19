@@ -41,3 +41,37 @@ spec:
           for: 2m
           labels:
             severity: critical
+        # ./static-dns-check.yaml checks the RESULT the alert above guards
+        # against, whatever caused it. With a 15m schedule, 30m without a
+        # success means two runs in a row failed (or none ran). The second
+        # branch covers a check that has never succeeded, which has no
+        # last_successful_time series at all. KubeJobFailed also fires, as a
+        # warning, on the first failed run.
+        - alert: UnifiStaticDnsCheckFailing
+          annotations:
+            summary: The UniFi static-DNS check has not passed in 30 minutes.
+            description: >-
+              unifi-static-dns-check last succeeded {{ $value | humanizeDuration }} ago.
+              It fails when a non-TXT static-DNS name is stored twice, when the gateway
+              logged DEVICE_COMMIT_ERROR ("Gateway Config Change Failed"), or when it
+              cannot read the gateway at all. Read the failed Job's `check` container log
+              (`kubectl -n network logs job/<job> -c check`) for the duplicate records and
+              their `_id`s, or the `fetch` container log for a read failure. Delete the
+              extra record in UniFi static DNS, and gateway commits resume.
+          expr: |
+            (
+              time() - max by (namespace, cronjob) (
+                kube_cronjob_status_last_successful_time{namespace="network", cronjob="unifi-static-dns-check"}
+              )
+              or
+              (
+                time() - max by (namespace, cronjob) (
+                  kube_cronjob_created{namespace="network", cronjob="unifi-static-dns-check"}
+                )
+              )
+              unless on (namespace, cronjob)
+              kube_cronjob_status_last_successful_time{namespace="network", cronjob="unifi-static-dns-check"}
+            ) > 1800
+          for: 1m
+          labels:
+            severity: critical
