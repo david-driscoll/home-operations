@@ -43,8 +43,8 @@ spec:
                   echo "$(date -u): Pruning auto.pulumi.com/Update older than ${KEEP_DAYS}d"
 
                   # Every Stack's CURRENT update is protected regardless of age.
-                  # This matters for the once-a-day stacks: home-operations,
-                  # ocracoke and vault run on resyncFrequencySeconds=86400, so a
+                  # This matters for the once-a-day stacks: home-operations
+                  # and ocracoke run on resyncFrequencySeconds=86400, so a
                   # stack that has not changed in a while can legitimately have
                   # its newest Update be older than the cutoff. Deleting that one
                   # would strip the object `status.lastUpdate` points at.

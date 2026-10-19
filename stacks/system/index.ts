@@ -89,6 +89,7 @@ import { configureApplications } from "./applications.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
 import { CoderTemplatesComponent } from "./coder-templates.ts";
+import { configureFluxWebhooks } from "./flux-webhooks.ts";
 import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureForgejoSigning } from "./forgejo-signing.ts";
@@ -193,6 +194,13 @@ const forgejoConfiguration = new ForgejoConfigurationComponent({ globals, target
 // provider in components/globals.ts, a third thing this stack talks to. See
 // forgejo-github-mirror.ts and docs/runbooks/forgejo-github-mirror.md.
 new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration });
+
+// The GitHub push webhooks that wake equestria's Flux. This was the whole of
+// `stacks/vault`, folded in with its state moved rather than recreated. It
+// reads equestria's API (the Receiver's path and the token Secret) through the
+// tailnet kubeproxy, so it fails with the cluster, like the applications below.
+// See flux-webhooks.ts.
+await configureFluxWebhooks(globals);
 
 // Authentik applications, the proxy outpost and backrest plans for equestria,
 // discovered from the cluster. Last, because it is the part most likely to

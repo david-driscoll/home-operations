@@ -71,14 +71,14 @@ spec:
     # default, so it applies to the Stack, Workspace and Update controllers alike,
     # and the last two BLOCK for the whole operation -- Workspace on the Install
     # RPC (npm, plugins), Update on the Up stream. 3 means at most 3 installs and
-    # 3 ups in flight. The rest queue: a commit's 7 runs finish in about three
+    # 3 ups in flight. The rest queue: a commit's 6 runs finish in about three
     # waves instead of one. Workspace pods are still created together, but their
     # init containers (agent copy, artifact fetch, vals) are small. The heavy
     # /var I/O is in Install, and that is what this queues.
     #
     # Not lower: a wedged `pulumi up` holds its worker until it returns, so 1 or
-    # 2 would let one stuck provider stall the vault token refresh and the
-    # unifi-network DNS poll behind it.
+    # 2 would let one stuck provider stall the system stack's 5-minute
+    # resync and the unifi-network DNS poll behind it.
     extraEnv:
       - name: MAX_CONCURRENT_RECONCILES
         value: "3"

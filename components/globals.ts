@@ -281,7 +281,8 @@ export class GlobalResources extends ComponentResource {
   /**
    * The GitHub App the estate automates GitHub with (installation tokens for
    * the clusters, the Flux push webhooks). Lazy, like `baoProvider`: only
-   * `stacks/vault` uses it, and an eager read would make every other stack's
+   * `stacks/system` uses it (stacks/system/flux-webhooks.ts and the Forgejo
+   * mirror's deploy key), and an eager read would make every other stack's
    * preview depend on one more OpenBao path for nothing.
    *
    * By PATH, not by title, unlike the seven providers above. In the vault repo

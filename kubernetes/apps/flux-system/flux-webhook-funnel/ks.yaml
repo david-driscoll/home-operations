@@ -65,7 +65,7 @@ spec:
       # A literal, not flux-CLUSTER_CNAME-webhook: a missing substitution
       # would render a wrong public name silently rather than failing. It is
       # also on both funnel-policy allow-lists verbatim, and it is what
-      # stacks/vault/KubernetesFluxWebhooks.ts builds (flux-<cluster.key>-webhook).
+      # stacks/system/flux-webhooks.ts builds (flux-<cluster.key>-webhook).
       FUNNEL_HOST: flux-equestria-webhook
       FUNNEL_PATH: /hook/
       FUNNEL_SERVICE: webhook-receiver

@@ -37,7 +37,7 @@ overnight window moves one step an hour. A failed request is a warning in the
 job log, never a failed run.
 
 Nothing new is reachable from outside. GitHub's side of this is the webhook
-Flux already had (`stacks/vault/KubernetesFluxWebhooks.ts`).
+Flux already had (`stacks/system/flux-webhooks.ts`).
 
 | Piece | Where | What it does |
 | --- | --- | --- |

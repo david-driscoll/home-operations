@@ -17,7 +17,7 @@ configureTechnitiumZones(globals);
 // Re-mints on every run of this stack (every 5 minutes,
 // kubernetes/apps/pulumi/unifi-network/stack.yaml's resyncFrequencySeconds)
 // -- see tailscale-api-token.ts's own header for why THIS stack, not
-// stacks/vault or stacks/system.
+// stacks/system (stacks/vault, the other candidate then, is now part of it).
 await configureTailscaleApiToken(globals);
 
 // Per-cluster Tailscale auth keys (app + DNS), one Kubernetes Secret each in
