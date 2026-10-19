@@ -41,9 +41,9 @@
  *
  * One `vals eval` per document that contains references, memoized by content
  * for the life of the process. `vals` comes from mise locally
- * (`.config/mise.toml [tools]`) and from the `vals` initContainer on the
- * operator's workspace pods, which exports its path as `VALS_BIN` — see
- * `kubernetes/apps/pulumi/<stack>/stack.yaml`.
+ * (`.config/mise.toml [tools]`) and is baked into the operator's workspace
+ * image at /usr/local/bin/vals (images/pulumi-workspace/bake.sh), on PATH in
+ * both. `VALS_BIN` still overrides it when set.
  *
  * Authentication is NOT delegated to vals: `BaoClient` mints the token
  * (BAO_TOKEN, or the AppRole pair — the same two ways in as everything else)
@@ -220,9 +220,8 @@ function lineOf(original: string, scheme: string): string {
 }
 
 /**
- * Spawn the real vals binary: `VALS_BIN` when set (the operator workspace
- * pods point it at the initContainer-installed copy), otherwise `vals` from
- * PATH (mise, locally). The document goes in on stdin and comes back on
+ * Spawn the real vals binary: `VALS_BIN` when set, otherwise `vals` from
+ * PATH (mise locally, /usr/local/bin in the operator's workspace image). The document goes in on stdin and comes back on
  * stdout, so no secret value ever touches argv or a file.
  */
 function execVals(doc: string, env: Record<string, string>): Promise<string> {
@@ -231,7 +230,7 @@ function execVals(doc: string, env: Record<string, string>): Promise<string> {
       process.env.VALS_BIN || "vals",
       ["eval", "-f", "-"],
       // PATH is deliberately inherited: locally that is what carries mise's
-      // shims; in the workspace pod VALS_BIN is absolute and PATH is inert.
+      // shims, and in the workspace pod it is how the baked vals is found.
       { env: { ...process.env, ...env }, maxBuffer: 16 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
