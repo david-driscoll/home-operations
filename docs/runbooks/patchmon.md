@@ -8,7 +8,7 @@ same `pulumi up` that creates it.
 | | |
 | --- | --- |
 | UI | `https://patchmon.<root domain>`: authentik OIDC, `admins` only |
-| Agent URL | `https://patchmon.<tailnet>`. Must equal Settings -> Server URL |
+| Agent URL | `https://patchmon.<root domain>`. Must equal Settings -> Server URL. Not the tailnet name: Proxmox hosts resolve through the LAN DNS, which has no tailnet zone |
 | Image | `ghcr.io/patchmon/patchmon-server` (2.x: one Go binary with the UI embedded) |
 | State | Postgres (`components/postgres`) and Redis (shared valkey, database 7). Nothing on disk |
 | OpenBao | `clusters/equestria/apps/patchmon/keys` (`encryption_key`), `.../enrollment` (`token_key`, `token_secret`) |
@@ -58,7 +58,7 @@ configured:
 1. Create a **local** admin. This is the break-glass account for when authentik
    is down. Store the username and password at
    `secrets/clusters/equestria/apps/patchmon/admin`.
-2. When the wizard asks for the **Server URL**, enter `https://patchmon.<tailnet>`.
+2. When the wizard asks for the **Server URL**, enter `https://patchmon.<root domain>`.
    The agent installer bakes this value into every agent's config, so getting
    it wrong breaks enrollment. The enrollment script refuses to install against
    a mismatch and names the value it expected.
@@ -100,7 +100,10 @@ Proxmox-owning stack enrolls its hosts. `pulumi preview` shows them as updates:
 | `ocracoke` | skystar |
 | `gulf-of-mexico` | luna |
 
-All three are operator-managed. Nudge each one with
+`home-operations` and `gulf-of-mexico` are operator-managed. `ocracoke` is
+commented out of `kubernetes/apps/pulumi/kustomization.yaml` while that site is
+offline, so skystar enrolls only once it is re-enabled or run locally. Nudge
+each one with
 `kubectl annotate stack -n pulumi <stack> pulumi.com/reconciliation-request=$(date +%s) --overwrite`,
 or run `pulumi up` locally. Each command logs `patchmon: enrolled <host>`, and
 the host appears in the UI with its first agent report. The operator stacks do
@@ -136,6 +139,7 @@ host. To force a re-check on one host:
 | Pod never Ready, probe 403 | A probe lost its `Host: localhost` header. The kubelet sends the pod IP, which fails the same check. |
 | `patchmon: PatchMon's Settings -> Server URL is '...'` | Step 3.2 was skipped or changed. Fix the setting and re-run; the host is enrolled without a duplicate, because the script left a `host_id` stub. |
 | `patchmon: PatchMon already lists <host> but this machine holds no working credentials` (409) | The host's `/etc/patchmon` was wiped but the PatchMon record survived. Delete the host in the UI and re-run. |
+| `curl: (6) Could not resolve host` | The agent URL is a name the host's resolver does not serve. Proxmox hosts use the LAN DNS, which has no tailnet zone; the agent URL must be the root-domain name. |
 | Every host offline at once | Redis. `/health` reports `database` and `redis` separately with `?format=json`. |
 | Notification secrets unreadable after a restore | `encryption_key` changed. Restore the old value from OpenBao history (`bao kv get -version=N`). |
 

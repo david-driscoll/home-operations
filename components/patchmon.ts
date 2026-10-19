@@ -36,15 +36,19 @@ import type { GlobalResources } from "./globals.ts";
 export const PATCHMON_ENROLLMENT_PATH = "clusters/equestria/apps/patchmon/enrollment";
 
 /**
- * The URL agents report to. The tailnet name, not the LAN one: the off-site
- * Proxmox hosts have no LAN path to equestria, and every one of them reaches
- * tag:apps:443 through the `default-apps-access` grant.
+ * The URL agents report to. The root-domain name, NOT the tailnet one: the
+ * Proxmox hosts run tailscale with `acceptDns: false` and resolve through the
+ * LAN DNS, which returns NXDOMAIN for every tailnet name. The first rollout used
+ * the tailnet name and enrollment died on `curl: (6) Could not resolve host`,
+ * stalling every stack that owns a ProxmoxHost. The root-domain name resolves
+ * there to the internal gateway, and the route's `local-user` gate admits the
+ * LAN. An off-site host with no LAN route cannot use it; none is active today.
  *
  * Must equal PatchMon's Settings -> Server URL. The installer bakes THAT value
  * into the agent's config, so the script below checks the two agree.
  */
 export function patchmonUrl(globals: GlobalResources): Output<string> {
-  return interpolate`https://patchmon.${globals.tailscaleDomain}`;
+  return interpolate`https://patchmon.${globals.searchDomain}`;
 }
 
 export interface PatchmonAgentArgs {
