@@ -102,7 +102,7 @@ patches:
             # Break-glass, if this cannot be pulled (forge down and no spegel
             # peer has it): ghcr.io/pulumi/pulumi-nodejs:<the Dockerfile's
             # FROM version>. Read the doc first -- upstream has no vals.
-            image: git.${ROOT_DOMAIN}/estate-images/pulumi-workspace:3.270.0-8acda0435c18@sha256:6dd6e6b4d66774973a4539f6ce1ac7f509d3c3c4fec96775b0a8e83925d60cae
+            image: git.${ROOT_DOMAIN}/estate-images/pulumi-workspace:3.270.0-6c3f405ec0ba@sha256:4114e19df79e6bb06899fa29c4746a0a8b0c07e5683f643b1869b8260d07dc7d
             podTemplate:
               spec:
                 # kubernetes/apps/pulumi/workspace-image: estate-images'
