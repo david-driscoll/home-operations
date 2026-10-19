@@ -3,23 +3,63 @@
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
-  name: audiobookshelf
+  name: ${APP}
 spec:
   name: Audiobookshelf
-  category: Media Management
-  description: Audiobookshelf
-  url: &url https://${APP}.${ROOT_DOMAIN}
+  category: Media
+  description: Self-hosted audiobook and ebook server with web and mobile players
+  url: https://${APP}.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/audiobookshelf.svg
   access_policy:
+    # The same audience as ../readmeabook: anyone who can request an audiobook
+    # there can listen to it here.
     groups:
       - media-managers
+      - family
+      - friends
   authentik:
-    proxy:
-      mode: "forward_single"
-      externalHost: *url
+    oauth2:
+      clientType: confidential
+      # Audiobookshelf's OIDC settings live in its own database, not in env
+      # (ServerSettings.authOpenID*), so these are entered once in the UI --
+      # see ./externalsecret.yaml for the field-by-field list.
+      #
+      # /auth/openid/callback is the web login. /auth/openid/mobile-redirect is
+      # where authentik returns the mobile apps; Audiobookshelf then bounces
+      # them on to `audiobookshelf://oauth` (its "Allowed Mobile Redirect URIs"
+      # setting, which already defaults to that).
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid/callback"
+        - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid/mobile-redirect"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/openid/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/openid/mobile-redirect"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # Audiobookshelf's role mapping only accepts the literal names `admin`,
+        # `user` and `guest` in its group claim (OidcAuthStrategy.js,
+        # rolesInOrderOfPriority) and refuses a login carrying none of them,
+        # so the real group names cannot be sent. This claim translates:
+        # authentik `admins` -> `admin`, everyone else -> `user`. It is applied
+        # on every login, so removing someone from `admins` demotes them too.
+        # Set "Group Claim" to `abs_groups` in the UI; ABS requests that name
+        # as a scope. See components/authentik/property-mappings.ts.
+        - abs_groups
+      includeClaimsInIdToken: true
+      subMode: user_email
   gatus:
     - group: "Applications"
-      url: *url
+      # Unauthenticated, and answers only once the server is up.
+      url: https://${APP}.${ROOT_DOMAIN}/healthcheck
       method: GET
       conditions:
         - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

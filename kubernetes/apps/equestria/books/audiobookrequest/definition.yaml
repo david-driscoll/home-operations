@@ -1,0 +1,78 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: AudioBookRequest
+  category: Media Management
+  description: Audiobook wishlist and requests (Overseerr-style) -- searches Audible, and sends approved requests to Prowlarr to download
+  url: https://${APP}.${ROOT_DOMAIN}
+  icon: https://raw.githubusercontent.com/markbeep/AudioBookRequest/main/static/favicon.svg
+  # The same audience as ../readmeabook and ../audiobookshelf: anyone who can
+  # listen there can ask for a book here. Who is an ABR *admin* is decided by
+  # the group claim below, not by this list.
+  access_policy:
+    groups:
+      - media-managers
+      - family
+      - friends
+  authentik:
+    oauth2:
+      clientType: confidential
+      # ABR's callback is the `login_oidc` route, mounted at /auth/oidc
+      # (app/routers/pages/auth/oidc.py under the /auth router), and it is
+      # built from the request: `request.url_for("login_oidc")`. So each
+      # hostname ABR is served on needs its own entry. The scheme is pinned to
+      # https by "OIDC Redirect Scheme" in the UI (./externalsecret.yaml), and
+      # independently by uvicorn trusting Traefik's X-Forwarded-Proto
+      # (ABR_APP__FORWARDED_ALLOW_IPS in ./helmrelease.yaml).
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/auth/oidc"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/oidc"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # ABR's group claim does not map group NAMES -- it looks for the
+        # literal role names `admin`, `trusted` or `untrusted` in it
+        # (app/routers/pages/auth/oidc.py), so the estate's `groups` claim
+        # (`admins`, `family`, ...) would never match. `abr_groups` translates:
+        # authentik `admins` -> `admin`, `media-managers` -> `trusted`
+        # (requests auto-download), everyone else -> `untrusted` (requests wait
+        # for approval). It always carries one of the three, and ABR applies it
+        # on every login, so leaving a group demotes too -- a role changed by
+        # hand in Settings -> Users lasts only until that user's next login.
+        # The root admin is never touched. See
+        # components/authentik/property-mappings.ts.
+        - abr_groups
+      # ABR reads every claim from USERINFO, never from the ID token
+      # (oidc.py fetches userinfo_endpoint with the access token), so
+      # includeClaimsInIdToken would change nothing here.
+      subMode: user_email
+      # LOAD-BEARING. ABR ends its own session when the authentik access token
+      # would expire: oidc.py stores `exp = now + expires_in` from the token
+      # response and authentication.py rejects the session past it. authentik's
+      # default is five minutes, which would bounce users back through SSO
+      # every five minutes and fail every in-page (htmx) action with a 401 in
+      # between. ABR never keeps or reuses the token -- it calls userinfo once
+      # and drops it -- so this only sets how long an ABR login lasts. A day
+      # still re-applies the access policy and the admin claim daily.
+      accessTokenValidity: hours=24
+  gatus:
+    - group: "Applications"
+      # Unauthenticated (no auth dependency in app/routers/api/__init__.py), a
+      # `SELECT 1` through the app's own Postgres session: 200 or 500.
+      url: https://${APP}.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

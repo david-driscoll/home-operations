@@ -115,7 +115,10 @@ patches:
                     name: RetryOnFailure
                     retryInterval: 5m
 resources:
-  # - ./books   # deliberately disabled upstream; carried for parity only
+  # Enabled for chaptarr, grimmory, lazylibrarian, readmeabook and shelfmark.
+  # The legacy apps carried over from the old repo stay disabled in
+  # books/kustomization.yaml.
+  - ./books
   - ./dns
   - ./downloads
   - ./games

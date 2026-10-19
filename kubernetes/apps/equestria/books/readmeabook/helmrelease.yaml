@@ -1,0 +1,222 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app readmeabook
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        containers:
+          app:
+            # The "unified" image: supervisord running PostgreSQL 16, Redis and
+            # the Next.js server in one container. docker/unified/entrypoint.sh
+            # detects an external DATABASE_URL / REDIS_URL (any host but
+            # localhost) and then leaves both bundled services as `sleep
+            # infinity` placeholders, so nothing here needs a pgdata or redis
+            # volume. Upstream publishes only this image -- no slim variant.
+            image:
+              repository: ghcr.io/kikootwo/readmeabook
+              tag: 1.2.3@sha256:a769c582af85cadb8b048ebd1069ee1946b4ff1930ba8da2978c9fef6fc29638
+              pullPolicy: IfNotPresent
+            env:
+              TZ: ${TIMEZONE}
+              # The entrypoint remaps the image's `node` user to PUID:PGID and
+              # gosu's the server down to it, so everything written to the
+              # media share lands as 568:568 like qbittorrent, sabnzbd and plex.
+              PUID: ${PUID}
+              PGID: ${PGID}
+              UMASK: "002"
+              # OIDC redirect base -- the callback is built from this, never
+              # from the request. Without it it points at http://localhost:3030.
+              PUBLIC_URL: https://${APP}.${ROOT_DOMAIN}
+              # The Next.js middleware fetches /api/setup/status on every page
+              # load, trying the REQUEST origin first -- which here is the
+              # public hostname, a hairpin out through the gateway from inside
+              # the pod. Loopback skips that hop.
+              SETUP_CHECK_BASE_URL: http://127.0.0.1:3030
+              # Shared valkey in `database` (no password). Index 7 is this
+              # app's; ioredis and Bull both read the index from the path.
+              REDIS_URL: redis://valkey.database.svc.cluster.local:6379/7
+              # Local login stays ON: the wizard's setup admin is the only way in
+              # until OIDC is configured, and it remains the break-glass account
+              # if authentik is down. DISABLE_LOCAL_LOGIN: "true" would turn it
+              # off -- including the admin login route -- once OIDC is proven.
+              # Chapter merging writes the whole merged M4B here before the
+              # copy into the library -- gigabytes for a long book. On the
+              # media share rather than node-local /tmp, so a big merge cannot
+              # put the node under DiskPressure; checkDiskSpace() reads it fine.
+              TEMP_DIR: /media/downloads/readmeabook-temp
+              # app-start.sh waits this long for /api/health before calling
+              # /api/init, which is what registers the scheduled jobs. The
+              # default 60s skips init outright on a slow start; the schema
+              # sync has already finished by then, so this is pure headroom.
+              APP_READY_TIMEOUT: "180"
+              # Fallback only: RMAB reads the Prowlarr URL and key from its own
+              # database (the setup wizard), and uses this when that is empty.
+              PROWLARR_URL: http://prowlarr.equestria.svc.cluster.local:9696
+              LOG_LEVEL: info
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-secrets
+            probes:
+              # /api/health is a `SELECT 1` through Prisma: 200 or 503.
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: &port 3030
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *probes
+              # Every boot runs `prisma db push` and the data migrations
+              # against Postgres BEFORE supervisord starts the server, and the
+              # 30-day password rotation forces a boot each time. 300s.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+            # ROOT, deliberately, as upstream requires: the entrypoint runs
+            # usermod/groupmod, chowns /app/config and /app/cache, writes
+            # /etc/environment, and supervisord + gosu then drop the server to
+            # PUID:PGID. The capability set is the minimum for exactly that:
+            #   CHOWN               chown -R node:node /app/config /app/cache
+            #   DAC_OVERRIDE/FOWNER root rewriting/chmod'ing .secrets and dirs
+            #                       that are owned by 568 after first boot
+            #   SETUID/SETGID       gosu, `su - node` (prisma), supervisord
+            #   KILL                supervisord stopping its `postgres`-user
+            #                       placeholder on shutdown
+            securityContext:
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETUID", "SETGID", "KILL"]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 384Mi
+              limits:
+                memory: 2Gi
+
+    defaultPodOptions:
+      # No fsGroup: the entrypoint chowns its own volumes, and an fsGroup would
+      # also be applied to the NFS media share.
+      securityContext:
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            # Hardcoded: the entrypoint exports PORT=3030 over any value given.
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          # .secrets (the persisted JWT/encryption keys, see externalsecret.yaml)
+          - path: /app/config
+            subPath: config
+          # thumbnails/ and library/ cover caches
+          - path: /app/cache
+            subPath: cache
+      # SAME container paths as qbittorrent, sabnzbd and plex, which all mount
+      # the whole share at /media -- so the paths RMAB hands the download
+      # clients, and the paths they report back, need no remote path mapping.
+      # Only the two subtrees RMAB touches are mounted.
+      media:
+        existingClaim: truenas-media
+        globalMounts:
+          # qbittorrent: default save /media/downloads/completed, temp
+          # /media/downloads/torrents. sabnzbd: complete_dir
+          # /media/downloads/completed. Set RMAB's Download Directory to
+          # /media/downloads/completed/readmeabook; it creates a `readmeabook`
+          # category in BOTH clients pointing there.
+          - path: /media/downloads
+            subPath: downloads
+          # Author/Title tree, also ../audiobookshelf's /media/audiobooks and
+          # RMAB's own default Media Directory.
+          - path: /media/audiobooks
+            subPath: audiobooks
+      # The image's .next/cache is owned by uid 1000 from the build, and the
+      # server runs as 568 -- Next's image/fetch cache needs a writable one.
+      next-cache:
+        type: emptyDir
+        globalMounts:
+          - path: /app/.next/cache
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  # local-user, not authenticated-user: RMAB does its own OIDC
+                  # login against authentik, the same split ../shelfmark and
+                  # ../audiobookshelf make.
+                  name: local-user

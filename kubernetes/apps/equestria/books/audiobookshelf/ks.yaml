@@ -15,10 +15,13 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
+    # The `audiobooks` and `ebooks` subPaths of truenas-media.
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
     - name: volsync
       namespace: volsync-system
-    - name: tailscale-operator
-      namespace: tailscale-system
   path: ./kubernetes/apps/equestria/books/audiobookshelf
   prune: true
   wait: true
@@ -30,9 +33,22 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: Audiobookshelf's only database is SQLite
+    # (absdatabase.sqlite under CONFIG_PATH, opened by server/Database.js
+    # through Sequelize's sqlite dialect), with no other dialect wired up.
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      # No TAILSCALE_MIDDLEWARE override: login is Audiobookshelf's own OIDC,
+      # and the mobile apps talk to the API with their own tokens, so the
+      # tailnet takes the default tailscale-local chain like the internal
+      # route's local-user.
+      #
+      # One claim, two subPaths (./helmrelease.yaml): /config holds the SQLite
+      # database, /metadata the covers, item cache, logs and ABS's own nightly
+      # backups.
+      VOLSYNC_CAPACITY: 5Gi

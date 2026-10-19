@@ -1,0 +1,208 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app audiobookrequest
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          # On the WORKLOAD, where Reloader looks: restarts the pod when the
+          # 30-day Postgres rotation rewrites ${APP}-env.
+          reloader.stakater.com/auto: "true"
+        # Not RollingUpdate: every boot runs `alembic upgrade heads` before the
+        # server starts (the image's CMD), and two pods migrating at once on an
+        # image bump is how that goes wrong. ABR also caches its settings in a
+        # process-local dict (app/util/cache.py), so a second replica would
+        # serve stale settings anyway -- one pod, ever.
+        strategy: Recreate
+        containers:
+          app:
+            # Docker Hub only: upstream's release workflow pushes nowhere else
+            # (.github/workflows/build.yaml), and ghcr.io/markbeep/audiobookrequest
+            # does not exist. Multi-arch index digest.
+            image:
+              repository: docker.io/markbeep/audiobookrequest
+              tag: 1.10.7@sha256:7b7df351abece608fb84147dc43705f0eb1b350fc1427e0a7e5fea84a7852a19
+              pullPolicy: IfNotPresent
+            envFrom:
+              # ABR_DB__POSTGRES_HOST/PORT/DB/USER/PASSWORD.
+              - secretRef:
+                  name: ${APP}-env
+              # ABR_APP__INIT_ROOT_PASSWORD. Required, not optional: without it
+              # a forced-OIDC ABR refuses env bootstrap and serves the open
+              # /init form instead (init.py). See ./externalsecret.yaml.
+              - secretRef:
+                  name: ${APP}-root
+            # Every setting ABR takes from the environment is here or in the
+            # two Secrets above (app/internal/env_settings.py, ABR_ prefix,
+            # `__` nesting). Everything else -- OIDC, Prowlarr, Audiobookshelf,
+            # download heuristics, notifications -- is UI-only and lives in
+            # Postgres; ./externalsecret.yaml lists what to enter.
+            env:
+              TZ: ${TIMEZONE}
+              # Also what the image's CMD passes to `fastapi run --port`.
+              ABR_APP__PORT: &port 8000
+
+              # --- Database ----------------------------------------------------
+              # Plain env, NOT in ${APP}-env, so it can never go missing on its
+              # own: with it unset ABR silently falls back to SQLite under
+              # /config -- which is an emptyDir here, so every restart would
+              # start from an empty database. Set here, a missing credential
+              # fails loudly (connection refused) instead.
+              ABR_DB__USE_POSTGRES: "true"
+              # What every other app here uses (pgsql-user-template's URIs all
+              # carry sslmode=disable). ABR's own default is `prefer`.
+              ABR_DB__POSTGRES_SSL_MODE: disable
+
+              # --- Reverse proxy -----------------------------------------------
+              # The image's CMD runs `fastapi run --proxy-headers` and passes
+              # this variable as --forwarded-allow-ips, defaulting to 127.0.0.1.
+              # Traefik reaches the pod from the pod network, so without this
+              # uvicorn ignores X-Forwarded-Proto and ABR thinks it is served
+              # over http. Scoped to the pod CIDR rather than `*`, as
+              # ../shelfmark does for gunicorn. (The OIDC callback is also pinned
+              # to https in the UI; this keeps request.url and client IPs honest.)
+              ABR_APP__FORWARDED_ALLOW_IPS: ${CLUSTER_NETWORK}
+
+              # --- Authentication ----------------------------------------------
+              # Login is authentik OIDC, locked: the UI cannot switch it to
+              # forms/basic/none (settings/security.py refuses a login type
+              # other than the forced one). The OIDC client itself is entered
+              # once in Settings -> Security; see ./externalsecret.yaml.
+              ABR_APP__FORCE_LOGIN_TYPE: oidc
+              # The break-glass root admin, created from these on first boot so
+              # the /init page is never served (see ${APP}-root). Only this
+              # account can use /login?backup=1. Its name must never be a
+              # possible OIDC username -- ABR makes any OIDC login with the
+              # root's username root -- which is why the username claim is
+              # `email` and this has no `@`.
+              ABR_APP__INIT_ROOT_USERNAME: abr-root
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # Unauthenticated; a `SELECT 1` through the app's session.
+                    # Until the first user exists ABR redirects every GET,
+                    # this one included, to /init -- and the kubelet following
+                    # that redirect is what creates the root admin.
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              readiness: *probes
+              # `alembic upgrade heads` runs before uvicorn starts: all 25
+              # migrations on a fresh database, usually a no-op afterwards.
+              # 300s, the same budget the other Postgres apps here allow.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  failureThreshold: 30
+                  periodSeconds: 10
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              # The image runs as root by default but needs nothing of it:
+              # /app is only read, /config gets an empty directory created in
+              # it (alembic/env.py mkdirs the unused SQLite path's parent), and
+              # both writable paths are emptyDirs below.
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                # One uvicorn worker, server-rendered htmx pages, and an
+                # in-memory cache of Audible search results.
+                memory: 512Mi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      # ABR_APP__CONFIG_DIR. Empty with Postgres on -- nothing writes here but
+      # alembic's mkdir -- so there is nothing to back up; see ./ks.yaml.
+      config:
+        type: emptyDir
+        globalMounts:
+          - path: /config
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # local-user, not authenticated-user: ABR does its own OIDC login, the
+          # same split ../shelfmark and ../audiobookshelf make. It also keeps
+          # ABR's API-key REST endpoints (/api/..., `Authorization: Bearer`)
+          # usable by scripts, which a forward-auth outpost would bounce.
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

@@ -360,6 +360,22 @@
       versioning: "semver",
     },
     {
+      // Listenarr publishes ONLY `canary-X.Y.Z` tags -- every GitHub release is
+      // a prerelease and there is no `latest` or bare-version tag -- and the
+      // install docs say to pin one. `docker` versioning needs a tag that
+      // starts with a number, so it parses no version out of these and the pin
+      // would only ever get digest refreshes of the same tag. The regex takes
+      // the canary channel as the release line.
+      description: "Listenarr canary tags: canary-X.Y.Z is the release line",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/listenarrs/listenarr"
+      ],
+      versioning: "regex:^canary-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
       // lakker/pulsarr carries stray 1.x tags that are NOT the project's
       // current release line (that is 0.x), so Renovate kept raising them as a
       // major: "0.19.2 -> 1.1.6" (#1621). Excluding just 1.1.6 only moved it on

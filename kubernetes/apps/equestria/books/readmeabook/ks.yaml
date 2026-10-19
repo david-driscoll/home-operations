@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app readmeabook
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # downloads/ and audiobooks/ on the shared media share (truenas-media).
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    # The Bull job queue -- every search, download monitor and import runs
+    # through it. Database index 7, set in ./helmrelease.yaml.
+    - name: valkey
+      namespace: database
+  path: ./kubernetes/apps/equestria/books/readmeabook
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # The image bundles its own PostgreSQL and Redis, and skips both when
+    # DATABASE_URL / REDIS_URL point anywhere but localhost -- see the
+    # entrypoint notes in ./helmrelease.yaml.
+    #
+    # BRAND-NEW DATABASE, so the new-app ordering trap in
+    # components/postgres/ks.yaml applies: `stacks/system` can try to create
+    # `database/static-roles/readmeabook` before CNPG has applied the
+    # DatabaseRole and stall once on `role "readmeabook" does not exist`.
+    # Recovery is that file's ORDER OF OPERATIONS block.
+    #
+    # Rotation gates: reloader is on the Deployment, DATABASE_URL arrives from
+    # readmeabook-env via envFrom and is read at boot, and the startup probe
+    # allows 300s for the entrypoint's schema sync.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      # No TAILSCALE_MIDDLEWARE override: login is RMAB's own OIDC (see
+      # ./definition.yaml), so the tailnet takes the default tailscale-local
+      # chain, the same posture as the internal route's local-user.
+      APP: *app
+      NAMESPACE: *namespace
+      # /app/config (the entrypoint's persisted secrets) and /app/cache (cover
+      # and library thumbnails). Everything else lives in Postgres or on the
+      # media share. Only ever raise this -- components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 5Gi

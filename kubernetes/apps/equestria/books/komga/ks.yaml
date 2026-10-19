@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app komga
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The `comics` and `ebooks` subPaths of truenas-media, mounted read-only.
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/equestria/books/komga
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: Komga is SQLite-only, and upstream has said so.
+    # The jOOQ dialect is hard-coded (KomgaJooqConfiguration.kt:
+    # `configuration.set(SQLDialect.SQLITE)`), the only JDBC driver in
+    # komga/build.gradle.kts is org.xerial:sqlite-jdbc, and every Flyway tree
+    # (db/, tasks/, sessions/ under src/flyway/resources) has a `sqlite`
+    # vendor directory and nothing else. The Postgres feature request,
+    # gotson/komga#1269, was closed "not planned" by the maintainer.
+    # No valkey either: nothing in it speaks Redis.
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # NOT the default tailscale-local, on purpose: that chain starts with
+      # error-pages, which swaps every 401-599 response for an HTML page and
+      # drops WWW-Authenticate. OPDS readers authenticate with HTTP Basic
+      # (SecurityConfiguration.kt, `.httpBasic {}` on /opds/**), and the ones
+      # that wait for the challenge before sending credentials (URLSession-
+      # based iOS readers, for one) never get it -- the failure
+      # ../../home/nextcloud/helmrelease.yaml documents for DAV. The tailnet is
+      # where the readers live when they are away from home, so it takes the
+      # network gate alone: tailscale-network is what tailscale-local chains
+      # after error-pages. The counterpart of local-api on the internal route
+      # in ./helmrelease.yaml.
+      TAILSCALE_MIDDLEWARE: tailscale-network
+      # /config holds three SQLite files (library, tasks, sessions), the
+      # Lucene search index and uploaded fonts. Thumbnails are not files:
+      # Komga stores them as blobs in database.sqlite, so that file is the one
+      # that grows -- with the number of books, not their size. Today that is
+      # ~250 EPUBs and an empty comics tree; 5Gi is room for tens of thousands.
+      # File logs are pointed at /tmp instead (./helmrelease.yaml), so they
+      # are not backed up.
+      VOLSYNC_CAPACITY: 5Gi
