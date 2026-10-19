@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# Every path a MACHINE talks to on the forge -- package registries, the REST
+# API, git over HTTPS -- WITHOUT the error-pages middleware the chart's own
+# route carries (`local-user` in ./helmrelease.yaml: error-pages ->
+# internal-network). Browsers keep the error pages on everything else.
+#
+# error-pages is a Traefik `errors` middleware over 401-599: it swaps the
+# backend's response for an HTML page, and the backend's headers go with it.
+# For a client, a 401 is not an error page, it is the auth handshake. Forgejo
+# answers with a challenge on every one of these paths, and through the chart's
+# route every one arrived as HTML with the challenge gone (measured
+# 2026-10-19, localhost:3000 against the public hostname):
+#
+#   /v2/...                   Www-Authenticate: Bearer realm=".../v2/token"
+#                             containerd never learned where to get a token, so
+#                             no node could pull from the forge -- the Pulumi
+#                             workspace image (docs/kubernetes/pulumi-workspace-image.md)
+#                             failed 401 with only HEADs in Forgejo's log.
+#   /api/packages/<owner>/... Www-Authenticate: Basic -- every other registry
+#                             type (npm, PyPI, Maven, NuGet, Helm, Cargo, Conda,
+#                             Debian, RPM, Alpine, Arch, Go, Generic, ...). pip,
+#                             apt, Helm and Composer only send credentials after
+#                             that challenge; the rest get HTML where they parse
+#                             JSON or XML errors.
+#   /api/v1/...               JSON errors, which the Pulumi forgejo provider,
+#                             Renovate and tea read.
+#   <owner>/<repo>[.git]/     Www-Authenticate: Basic -- git's credential helper
+#     info/refs, git-*-pack,  answers the challenge; without it a clone or push
+#     info/lfs/...            with stored credentials fails.
+#
+# Same hostname as the chart's route. Gateway API prefers the longest path match
+# and a regular expression over a `/` prefix, so these land here and the web UI
+# stays on the chart's route. `local-api` (kubernetes/components/common) is
+# internal-network alone: nothing here is more exposed than the forge already
+# is, and every client authenticates to Forgejo itself.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}-clients
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "git.${ROOT_DOMAIN}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v2
+        - path:
+            type: PathPrefix
+            value: /api
+        # Smart HTTP and LFS, with or without the `.git` suffix. Anchored on
+        # owner/repo so it never matches a UI page.
+        - path:
+            type: RegularExpression
+            value: ^/[^/]+/[^/]+?(\.git)?/(info/refs|git-upload-pack|git-receive-pack|info/lfs/.*)$
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: local-api
+      backendRefs:
+        # The chart's HTTP Service (service.http in ./helmrelease.yaml).
+        - name: ${APP}-http
+          port: 3000
