@@ -28,10 +28,14 @@
 #   13  sure         Sidekiq + Rails cache
 #   14  renovate     lookup cache      (coder/renovate/renovatejob.yaml)
 #   15  paperless    Celery broker
+#   16  readmeabook  Bull queues
+#   17-31 free
 #
-# FULL. `databases` is Valkey's default of 16, so the next app needs either a
-# key prefix inside an existing index or `--databases` raised on this server
-# (which restarts it under every consumer at once).
+# 32 databases, not Valkey's default 16 (VALKEY_EXTRA_FLAGS below), since
+# 2026-10-18. That evening 0-15 were all taken and readmeabook merged onto 7
+# beside patchmon -- the two PRs landed in the same minute, so neither could
+# see the other's row. Raising it a second time restarts this server under
+# every consumer at once, the same cost paid here.
 #
 # Checked against the live server on 2026-10-18: `INFO keyspace` for which
 # indexes hold keys, and CLIENT LIST's per-connection `db=` for who is
@@ -77,6 +81,12 @@ spec:
               tag: 9.2-trixie@sha256:247b5e730bdc9dc29fddb8274d1731b203a1a1a46af63eae3a9d55b4bf74853f
             env:
               VALKEY_PORT: &port 6379
+              # The image's entrypoint appends this to `valkey-server`
+              # (`exec "$@" $VALKEY_EXTRA_FLAGS`), so it is the one knob needed
+              # -- there is no config file to carry it. See the table above for
+              # why 32. Lowering it again would strand every index at or above
+              # the new limit: SELECT fails with "DB index is out of range".
+              VALKEY_EXTRA_FLAGS: "--databases 32"
     persistence:
       data:
         accessMode: ReadWriteOnce
