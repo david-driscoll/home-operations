@@ -1,0 +1,103 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# A per-node receiver for Talos's own service and kernel logs -- see
+# ./resources/config.alloy for why it exists and how the pipeline works, and
+# talos/patches/global/machine-logging.yaml for the sending half.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app talos-logs
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      *app :
+        type: daemonset
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          # Talos sends to 127.0.0.1 from the host network namespace, so the
+          # receiver has to listen in it. Loopback-only binds keep the ports
+          # off the LAN; ClusterFirstWithHostNet still resolves loki-headless.
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          priorityClassName: observability-critical
+          # The image's `alloy` user. Not an arbitrary non-root uid: the image's
+          # /var/lib/alloy is alloy:alloy 0770, so anyone else cannot even reach
+          # the data mount beneath it ("mkdir /var/lib/alloy/data: permission
+          # denied", seen running this exact config under 65534).
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 473
+            runAsGroup: 473
+            seccompProfile:
+              type: RuntimeDefault
+          # Every node, whatever it is tainted with: a node's logs matter most
+          # exactly when something has gone wrong with it.
+          tolerations:
+            - operator: Exists
+        containers:
+          app:
+            image:
+              repository: docker.io/grafana/alloy
+              tag: v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+            args:
+              - run
+              - /etc/alloy/config.alloy
+              - --storage.path=/var/lib/alloy/data
+              # Loopback, and not Alloy's default 12345: this is the host's
+              # port space, and the UI stays off the node's LAN address.
+              - --server.http.listen-addr=127.0.0.1:6052
+              # For otelcol.receiver.tcplog only. Scoped to this instance.
+              - --stability.level=experimental
+            env:
+              NODE_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    host: 127.0.0.1
+                    path: /-/ready
+                    port: 6052
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+    persistence:
+      config:
+        type: configMap
+        name: talos-logs-config
+        globalMounts:
+          - path: /etc/alloy
+            readOnly: true
+      data:
+        type: emptyDir
+        globalMounts:
+          - path: /var/lib/alloy/data

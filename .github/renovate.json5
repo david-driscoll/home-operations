@@ -23,6 +23,17 @@
   ],
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
+  // The rules below that set `minimumReleaseAgeBehaviour: timestamp-optional`
+  // make Renovate warn, on every run and on the Dependency Dashboard, that
+  // some release had no timestamp and was let through anyway. That is the
+  // behaviour asked for, so the warning becomes an info line. The pattern is
+  // the one from Renovate's "minimum release age" page.
+  logLevelRemap: [
+    {
+      matchMessage: "/Some .+ did not have a releaseTimestamp, but as we're running with minimumReleaseAgeBehaviour=timestamp-optional, proceeding/",
+      newLogLevel: "info",
+    },
+  ],
   suppressNotifications: [
     "prEditedNotification",
     "prIgnoreNotification",
@@ -145,7 +156,8 @@
   //
   // PRs open whenever an update is found -- this used to be "every weekend".
   // What is allowed to MERGE unattended, and when, is governed separately by
-  // the automerge rules below (overnight window, docs/renovate-automerge.md),
+  // the automerge rules below and the forge's merge window
+  // (docs/renovate-automerge.md),
   // so a weekday PR is still reviewed or gated exactly like a weekend one.
   // This is also the house default the Forgejo bot inherits through
   // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
@@ -213,6 +225,21 @@
     pinDigests: true,
   },
   customDatasources: {
+    // ghcr.io images with the day each tag was PUSHED and its digest. The
+    // `docker` datasource has no release date for anything but Docker Hub, so
+    // `minimumReleaseAge` cannot count for a ghcr image. This asks the relay
+    // in kubernetes/apps/coder/forgejo-github-sync (resources/ghcr.mjs), which
+    // reads GitHub's Packages API and answers in the shape Renovate wants --
+    // hence no transform. Its `digest` is what keeps a `tag@sha256:` pin
+    // pinned through a datasource that is not `docker`.
+    //
+    // An in-cluster address: only the Renovate that runs in the cluster can
+    // use this, which is why the two rules that route to it name the Forgejo
+    // copy of the repository only.
+    ghcr: {
+      defaultRegistryUrlTemplate: "http://forgejo-github-sync.coder.svc.cluster.local:8080/ghcr/{{{replace '^ghcr\\.io/' '' packageName}}}",
+      format: "json",
+    },
     "1password-cli": {
       defaultRegistryUrlTemplate: "https://app-updates.agilebits.com/product_history/CLI2",
       format: "html",
@@ -225,6 +252,33 @@
     },
   },
   packageRules: [
+    {
+      // EVERY update on the Forgejo copy waits a day and carries the
+      // `renovate/stability-days` status, not only the ones the automerge
+      // rules below pick out. FIRST in the list on purpose: it is the default
+      // for that repository, and any rule below that sets its own wait still
+      // wins.
+      //
+      // What that means in practice, with Renovate's default
+      // `internalChecksFilter: strict`: an update younger than a day gets
+      // no branch and no pull request yet -- it waits under "Pending Status
+      // Checks" on the Dependency Dashboard -- including the majors and the
+      // others that are merged by hand. The dashboard's checkbox for it
+      // creates it at once.
+      //
+      // `timestamp-optional`, as in the automerge rules: a release with no
+      // date (digest-only updates, registries that keep none) is not held.
+      // The default, `timestamp-required`, would hold those for ever.
+      //
+      // GitHub's copy is unchanged.
+      description: "Forgejo copy: a one-day wait and a stability-days check on every update",
+      matchRepositories: [
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
+      ],
+      minimumReleaseAge: "1 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+    },
     {
       // Jellyfin's 12.0 release candidates are tagged `12.0-rcN`, and the
       // DEFAULT `docker` versioning reads everything after the first `-` as an
@@ -306,6 +360,22 @@
       versioning: "semver",
     },
     {
+      // Listenarr publishes ONLY `canary-X.Y.Z` tags -- every GitHub release is
+      // a prerelease and there is no `latest` or bare-version tag -- and the
+      // install docs say to pin one. `docker` versioning needs a tag that
+      // starts with a number, so it parses no version out of these and the pin
+      // would only ever get digest refreshes of the same tag. The regex takes
+      // the canary channel as the release line.
+      description: "Listenarr canary tags: canary-X.Y.Z is the release line",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/listenarrs/listenarr"
+      ],
+      versioning: "regex:^canary-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
       // lakker/pulsarr carries stray 1.x tags that are NOT the project's
       // current release line (that is 0.x), so Renovate kept raising them as a
       // major: "0.19.2 -> 1.1.6" (#1621). Excluding just 1.1.6 only moved it on
@@ -320,6 +390,26 @@
         "lakker/pulsarr"
       ],
       allowedVersions: "!/^v?1\\./",
+    },
+    {
+      // Paperless-ngx's Tika (kubernetes/apps/equestria/home/paperless) has to
+      // stay on 3.x. Tika 4.0 removed the /tika/form/* endpoints Paperless's
+      // bundled tika-client calls and renamed the metadata keys, so every
+      // Office/.eml parse fails (paperless-ngx/paperless-ngx#13755); upstream
+      // pinned 3.3.1.0 (#13758) and closed the 4.x bump (#13908). A regex
+      // rather than "<4" because docker versioning does not do ranges. Lift
+      // it when a Paperless release notes Tika 4 support, not before -- the
+      // 4.x tags look like any other major and the breakage only shows up on
+      // the first Office document.
+      description: "Tika: hold on 3.x until Paperless-ngx supports Tika 4",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "docker.io/apache/tika",
+        "apache/tika"
+      ],
+      allowedVersions: "/^3\\./",
     },
     {
       description: "CoreDNS Group",
@@ -415,6 +505,28 @@
       },
     },
     {
+      // Everything a Coder template pins -- thirteen registry modules, two
+      // Terraform providers and the Docker sidecar image -- in ONE pull
+      // request. Each merge that touches the templates directory is a new
+      // template version in Coder (stacks/system/coder-templates.ts), and
+      // every workspace is then offered an update; thirteen separate bumps
+      // would be thirteen of those prompts for what is one refresh.
+      //
+      // Matched by path, not by package name, so a module added to a template
+      // later is in the group without anyone remembering to list it here.
+      // The `coder/coderd` provider in the root Pulumi.yaml is NOT part of
+      // this: that is the provider Pulumi uses to upload the templates, it
+      // lives in a different file, and it needs the SDK regenerated.
+      description: "Coder templates Group",
+      groupName: "coder-templates",
+      matchFileNames: [
+        "kubernetes/apps/coder/coder/templates/**"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       // The gateway image (docker, kubernetes/apps/agents/toolport) and the
       // vendored skill (github-releases, .claude/skills/toolport/SKILL.md)
       // are one upstream release: the skill documents the meta-tools that
@@ -428,6 +540,63 @@
       group: {
         commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
         commitMessageExtra: "",
+      },
+    },
+    {
+      // The server (docker/alpha-site/authentik, stargate-command/authentik)
+      // and the proxy outpost (docker/_common/authentik-outpost) are tagged
+      // from one upstream release, and an outpost is expected to run its
+      // server's version. Split PRs left them a release apart until both were
+      // merged by hand. The @goauthentik/api npm client (components/) is
+      // generated from the same release's API schema, so it rides along.
+      //
+      // NOT here: the Helm chart, version-locked to the image by hand
+      // (docs/authentik-active-active/PLAN.md), and the Pulumi.yaml provider,
+      // which needs its SDK regenerated. No datasource filter, so the npm
+      // client matches too, and so the images still match on the Forgejo copy
+      // after they move to `custom.ghcr`.
+      description: "authentik Group",
+      groupName: "authentik",
+      matchPackageNames: [
+        "/^ghcr\\.io\\/goauthentik\\//",
+        "@goauthentik/api"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // Everything Stacklok ships for ToolHive, in one PR: the operator chart
+      // and its CRDs chart (kubernetes/apps/agents/toolhive-operator{,-crds}),
+      // which must move together -- an operator on CRDs from another release
+      // is unsupported -- plus the registry server
+      // (agents/toolhive-registry) and the `thv` CLI in .config/mise.toml.
+      // The registry server is on its own 1.x line, so the title carries no
+      // version: a group with two version lines would print only one of them.
+      description: "ToolHive Group",
+      groupName: "ToolHive",
+      matchPackageNames: [
+        "/stacklok\\/toolhive/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      // unifi-network-mcp, unifi-protect-mcp and unifi-access-mcp are three
+      // apps in one upstream monorepo (github.com/sirkirby/unifi-mcp) and
+      // release together (kubernetes/apps/agents/agent-tools-servers). Each
+      // is on its own version line, so the title carries no version. No
+      // datasource filter, so the images still match on the Forgejo copy
+      // after they move to `custom.ghcr`.
+      description: "UniFi MCP Group",
+      groupName: "UniFi MCP",
+      matchPackageNames: [
+        "/^ghcr\\.io\\/sirkirby\\/unifi-.+-mcp$/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
       },
     },
     {
@@ -636,9 +805,17 @@
       //
       // Scoped to this repository: the Forgejo bot inherits this file through
       // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
+      //
+      // "This repository" is TWO names, here and in every rule below that is
+      // scoped the same way. The second is its copy on the forge
+      // (docs/runbooks/forgejo-github-mirror.md), which the in-cluster Renovate
+      // works on under the same rules; what merges there is pushed to main
+      // here. A rule naming only the first would simply not exist over there
+      // -- for this one, that would mean every patch automerging again.
       description: "No automerge in this repo unless a rule below opts in",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       automerge: false,
     },
@@ -654,7 +831,7 @@
         "patch",
         "digest"
       ],
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       ignoreTests: true,
     },
     {
@@ -666,20 +843,22 @@
       //      `image-check.yaml` proves every changed image exists (and, for
       //      the Docker hosts, ships linux/amd64) and every changed compose
       //      file still parses;
-      //   2. the merge itself -- Renovate merges only when ALL checks pass.
-      //      `platformAutomerge: false` because main has no branch protection:
-      //      GitHub's native auto-merge would merge straight away without it,
-      //      so Renovate does the check-then-merge itself;
+      //   2. the merge itself -- `platformAutomerge: true` hands it to
+      //      Forgejo, which merges once the REQUIRED statuses on the forge's
+      //      main are green: `merge-window` (00:00-08:00 New York), `flate*`
+      //      and `renovate/stability-days`. Image Check is not required, so
+      //      docker/** bumps do not wait for it;
       //   3. after merge -- a HelmRelease that fails its upgrade dispatches to
-      //      `renovate-watchdog.yaml`, which opens a revert of the automerged
-      //      PR and puts the app on the hold list at the bottom of this file.
+      //      `renovate-watchdog.yaml`, which would revert the automerged PR and
+      //      hold the app. DORMANT: it looks for a GitHub PR, and these merge
+      //      on the forge, which has none.
       //
       // `minimumReleaseAgeBehaviour: timestamp-optional` is load-bearing.
       // GHCR returns no release timestamps, and under the Renovate 42 default
       // (`timestamp-required`) an update with no timestamp never ages -- every
-      // ghcr.io bump would be held forever. So the 3-day soak is real for
-      // Docker Hub and absent for GHCR; the post-merge revert is what covers
-      // the difference.
+      // ghcr.io bump would be held forever. So the one-day soak is real for
+      // Docker Hub and for full X.Y.Z ghcr pins (dated by `custom.ghcr`, the
+      // last rule but one), and absent for other GHCR tags.
       //
       // The negated names are what must never merge unattended: databases and
       // anything that migrates its schema on start, identity, secrets,
@@ -687,7 +866,8 @@
       // IN SYNC with the minor rule below.
       description: "Automerge app image patch/digest bumps once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchFileNames: [
         "kubernetes/apps/equestria/**",
@@ -697,7 +877,12 @@
       ],
       matchDatasources: [
         "docker",
-        "helm"
+        "helm",
+        // What a ghcr image is looked up through on the Forgejo copy (the
+        // last rule in this list). Renovate reads `minimumReleaseAge` DURING
+        // that lookup, when the datasource is no longer `docker`; without
+        // this name here the wait below would not be applied there.
+        "custom.ghcr"
       ],
       matchUpdateTypes: [
         "patch",
@@ -727,18 +912,10 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
-      // shared-secrets). PRs still open and test at any hour; Renovate just
-      // leaves a green one waiting until a run lands in the window.
-      // `timezone` is set here, not at the top level, so nothing else in this
-      // repo or the Forgejo repos that inherit it changes timezone.
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
       timezone: "America/New_York",
       // Rebase only on conflict. With automerge on, `rebaseWhen: auto` means
       // behind-base-branch: every merge left the other green PRs behind main,
@@ -757,7 +934,8 @@
       // and a breaking-changes list to everyone else.
       description: "Automerge app image minor bumps (not 0.x) once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchFileNames: [
         "kubernetes/apps/equestria/**",
@@ -767,7 +945,9 @@
       ],
       matchDatasources: [
         "docker",
-        "helm"
+        "helm",
+        // As in the patch/digest rule above: a ghcr image on the Forgejo copy.
+        "custom.ghcr"
       ],
       matchUpdateTypes: [
         "minor"
@@ -807,18 +987,11 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
-      // shared-secrets). PRs still open and test at any hour; Renovate just
-      // leaves a green one waiting until a run lands in the window.
-      // `timezone` is set here, not at the top level, so nothing else in this
-      // repo or the Forgejo repos that inherit it changes timezone.
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
+
       timezone: "America/New_York",
       rebaseWhen: "conflicted",
       addLabels: [
@@ -1086,7 +1259,8 @@
       // and this is a workaround for this repo's layout, not house policy.
       description: "Bump npm ranges: lockfile-only updates never reach hoisted workspace deps",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchManagers: [
         "npm"
@@ -1101,7 +1275,8 @@
       // regeneration. Bump them by regenerating the SDK instead.
       description: "Skip npm deps of generated Pulumi SDKs",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchManagers: [
         "npm"
@@ -1112,10 +1287,22 @@
       enabled: false,
     },
     {
+      // kubernetes/apps/agents/agent-tools-servers/openbao.yaml. Digest
+      // 8ecbddb (2026-10-18) pulled in agent-connector-sdk, which refuses to
+      // serve streamable-http without an auth provider, and nothing but code
+      // turns that off, so every later digest crashloops the backend. Held on
+      // 33ad5f9 until the backend gets real auth (see that file's header).
+      description: "Hold openbao-mcp: newer images require backend auth",
+      matchPackageNames: [
+        "knucklessg1/openbao-mcp"
+      ],
+      enabled: false,
+    },
+    {
       // Named dependencies outside the app-image scope of the automerge rules
-      // above, each opted in by hand. Same gate -- every check green, 3-day
-      // soak where the registry has timestamps, the overnight window, and the
-      // watchdog revert for kubernetes/** -- but matched by NAME, so it
+      // above, each opted in by hand. Same gate -- the forge's required
+      // statuses, a one-day soak where the release has a date, and the merge
+      // window -- but matched by NAME, so it
       // reaches other managers and paths (mise tools; the coder, network and
       // pulumi apps) and the 0.x minors the app rule refuses. Placed here,
       // after the baseline and before the hold list, so the hold list still
@@ -1127,7 +1314,8 @@
       // an automerge would land exactly the half that silently does nothing.
       description: "Automerge named dependencies (minor/patch/digest) once CI is green",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchUpdateTypes: [
         "minor",
@@ -1139,13 +1327,17 @@
         // home-operations OCI mirror of it
         "external-dns",
         "ghcr.io/home-operations/charts-mirror/external-dns",
-        // mise tools (.config/mise.toml, agentboard's mise.toml)
+        // mise tools (.config/mise.toml, paseo's mise.toml)
         "mikefarah/yq",
         "pulumi/pulumi",
         "cli/cli",
         "jdx/hk",
-        // kubernetes/apps/agents/agent-tools-servers (a 0.x image)
+        // kubernetes/apps/agents/agent-tools-servers (0.x images). All three:
+        // they share the "UniFi MCP" group, and a group branch automerges
+        // only when every update in it would.
         "ghcr.io/sirkirby/unifi-network-mcp",
+        "ghcr.io/sirkirby/unifi-protect-mcp",
+        "ghcr.io/sirkirby/unifi-access-mcp",
         // kubernetes/apps/pulumi/*/stack.yaml workspace image
         "ghcr.io/pulumi/pulumi-nodejs",
         // kubernetes/apps/coder/renovate-operator
@@ -1154,7 +1346,7 @@
         "ghcr.io/renovatebot/renovate",
         // kubernetes/apps/observability/unpoller
         "ghcr.io/unpoller/unpoller",
-        // agentboard's mise.toml (`npm:` tools keep their npm name)
+        // paseo's mise.toml (`npm:` tools keep their npm name)
         "@anthropic-ai/claude-code",
         // root package.json dev tooling
         "@biomejs/biome",
@@ -1176,9 +1368,6 @@
         // kubernetes/apps/coder/forgejo: the Helm chart only. The Forgejo
         // server image (data.forgejo.org/forgejo/forgejo) stays manual.
         "data.forgejo.org/forgejo-helm/forgejo",
-        // kubernetes/apps/network/cloudflare-tunnel. CalVer: a month bump is
-        // a "minor"; the year rollover is a "major" and stays manual.
-        "cloudflare/cloudflared",
         // dashboard/resources/compose.yaml, outside the app rules' docker/**
         "ghcr.io/panonim/dynacat",
         // docker/_common/prometheus/compose.yaml (a 0.x image, so the app
@@ -1212,13 +1401,10 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
-      minimumReleaseAge: "3 days",
+      minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
       timezone: "America/New_York",
       rebaseWhen: "conflicted",
       addLabels: [
@@ -1226,8 +1412,8 @@
       ],
     },
     {
-      // The automerge hold list. LAST on purpose, so it beats the automerge
-      // rules above. `.github/workflows/renovate-watchdog.yaml` appends an
+      // The automerge hold list. After every automerge rule on purpose, so it
+      // beats them. `.github/workflows/renovate-watchdog.yaml` appends an
       // app's directory here (between the markers, one glob per line) in the
       // same PR that reverts a failed automerge. Without it, the reverted
       // update comes straight back as a new PR and merges itself again.
@@ -1237,7 +1423,8 @@
       // nothing.
       description: "Automerge hold list (maintained by renovate-watchdog)",
       matchRepositories: [
-        "david-driscoll/home-operations"
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
       ],
       matchFileNames: [
         // automerge-hold:start
@@ -1248,6 +1435,112 @@
       addLabels: [
         "renovate/automerge-hold"
       ],
+    },
+    {
+      // EVERYTHING THAT IS DIFFERENT ON THE FORGE'S COPY, in one rule. No
+      // matcher but the repository, so it covers every update there, and last
+      // in the list so that each value below wins over the same setting in
+      // any rule above. (The rule just before this one is the other
+      // mirror-only rule; it stays separate because it matches one file.)
+      description: "Settings for the Forgejo copy of this repository",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+
+      // MERGE STYLE. The shared preset sets `automergeStrategy: "rebase"`. On
+      // GitHub that is a rebase merge. On Forgejo, Renovate turns the same
+      // word into the `rebase-merge` style (rebase, then a merge commit),
+      // which the copy does not allow -- stacks/system/forgejo-github-mirror.ts
+      // permits `rebase` and `fast-forward-only` only, to keep main linear for
+      // the fast-forward push to GitHub. Every automerge on the first night
+      // (2026-10-11) came back
+      //
+      //   405 rebase-merge is not an allowed merge style for this repository
+      //
+      // `auto` makes Renovate use the repository's own default instead, and
+      // that default is `rebase`: rebase onto main, then fast-forward. Same
+      // result as GitHub's, and it still works when the branch is behind.
+      automergeStrategy: "auto",
+      timezone: "America/New_York",
+
+      // HOW. Forgejo does the merge ("merge when checks succeed"), not
+      // Renovate. The automerge rules above say the same; it is repeated here
+      // so the forge copy keeps it whatever a rule above sets. The forge's
+      // main has branch protection to make that safe: branch
+      // protection in stacks/system/forgejo-github-mirror.ts requires
+      // `merge-window`, `flate*` and `renovate/stability-days`, and Forgejo
+      // re-checks a scheduled merge whenever a status lands -- so a pull
+      // request merges the moment its last required check goes green inside
+      // the window, instead of waiting for Renovate's next hourly run.
+      //
+      // Forgejo only waits for REQUIRED checks. `Image Check` is not one (it
+      // runs for docker/** only, and a required check that never posts blocks
+      // forever), so a docker/** update can merge with it red or pending. The
+      // rule that once gave those back to Renovate's own merge was removed on
+      // 2026-10-18.
+      platformAutomerge: true,
+    },
+    {
+      // RELEASE DATES FOR GHCR IMAGES: look these up through
+      // `customDatasources.ghcr` above, which knows when each tag was pushed.
+      // With a date, the one-day `minimumReleaseAge` in the automerge rules
+      // actually counts for a ghcr image; without one, `timestamp-optional`
+      // lets the update through the moment it appears. The digest comes back
+      // with it, so a `tag@sha256:` pin stays pinned.
+      //
+      // LAST IN THE LIST, AND IT HAS TO BE. Rules are applied in order and
+      // this one changes the dependency's datasource, so any rule after it
+      // that says `matchDatasources: ["docker"]` would stop matching. Here,
+      // every rule above has already had its say.
+      //
+      // One place still sees the new datasource: Renovate re-applies the
+      // rules per update type INSIDE the lookup, to decide which releases are
+      // old enough. A rule that sets `minimumReleaseAge` and matches on
+      // `docker` has to name `custom.ghcr` too -- the two app-image automerge
+      // rules above do. Versioning is unaffected: it is fixed, as `docker` or
+      // whatever a rule above chose, before any datasource changes.
+      //
+      // Only full `X.Y.Z` pins. A moving tag (`stable`, `latest`, `5`, `5.4`)
+      // is followed by its digest alone, and a custom datasource cannot answer
+      // "what is the digest of this tag now"; those stay on `docker`, without
+      // a date, as before.
+      //
+      // Only the Forgejo copy: the lookup is an in-cluster address that
+      // GitHub's hosted Renovate cannot reach.
+      description: "ghcr images on the Forgejo copy: release dates from GitHub's Packages API",
+      matchRepositories: [
+        "github-mirror/home-operations"
+      ],
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/^ghcr\\.io\\//"
+      ],
+      matchCurrentValue: "/^v?\\d+\\.\\d+\\.\\d+/",
+      overrideDatasource: "custom.ghcr",
+    },
+    {
+      // Only the forge's Renovate handles the updates that automerge. On
+      // GitHub, Mend's bot skips them entirely -- no pull request, no
+      // `renovate/automerge` label, no branch automerge for Actions -- because
+      // the forge merges the same update under the rules above and the sync
+      // pushes it to main here (docs/runbooks/forgejo-github-mirror.md).
+      // Everything that waits for a human still gets a pull request on both.
+      //
+      // `matchJsonata` sees the config as built by every EARLIER rule
+      // (applyPackageRules matches each rule against the running merge), so
+      // `automerge = true` here means "some rule above opted this update in".
+      // That is why this must stay the LAST rule: one added after it that sets
+      // automerge would be invisible to it. Names only the GitHub copy.
+      description: "GitHub bot skips updates the forge automerges",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchJsonata: [
+        "automerge = true"
+      ],
+      enabled: false,
     },
   ],
   customManagers: [
@@ -1309,6 +1602,68 @@
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n.+/(?<currentValue>(v|\\d)[^/]+)",
       ],
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
+    },
+    {
+      // Every app-template HelmRelease pins its editor schema to the chart
+      // release it is validated against:
+      //
+      //   # yaml-language-server: $schema=https://raw.githubusercontent.com/
+      //     bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/...
+      //
+      // The chart version itself lives in ONE place
+      // (kubernetes/components/repos/app-template/ocirepository.yaml, flux
+      // manager, docker datasource). This manager reports each schema URL as
+      // the SAME dependency -- same depName, same datasource -- so branchify
+      // puts them on the branch the flux manager's bump already uses and the
+      // chart and its ~115 schema references move in one PR.
+      //
+      // No annotation comment per file, on purpose: the URL names the package
+      // unambiguously, and an annotation would be 115 more lines to keep right.
+      //
+      // The references used to float on `main`, which needed no upkeep but
+      // validated a 5.x release against whatever upstream had merged that day,
+      // and three files were still pinned to 3.7.3 / 4.1.1 by hand.
+      //
+      // pinDigest updates for these are already dropped by the
+      // "Don't pin digests on annotated deps" rule (matchManagers custom.regex).
+      description: "app-template schema references follow the chart version",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)kubernetes/.+\\.ya?ml$/",
+        "/(^|/)dashboard/helmrelease\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "raw\\.githubusercontent\\.com/bjw-s-labs/helm-charts/app-template-(?<currentValue>\\d+\\.\\d+\\.\\d+)/charts/other/app-template/",
+      ],
+      depNameTemplate: "ghcr.io/bjw-s-labs/helm/app-template",
+      datasourceTemplate: "docker",
+    },
+    {
+      // The Coder templates (kubernetes/apps/coder/coder/templates) are
+      // Terraform, and the stock `terraform` manager already covers most of
+      // them with no help: every `module` block's `version` -- they resolve
+      // from registry.coder.com, which serves the module protocol at the
+      // /.well-known/terraform.json it advertises -- and the two
+      // `required_providers` pins in shared/providers.tf.
+      //
+      // What it cannot see is a version held in a `local`. It only reads
+      // container images out of a literal `container { image = "..." }`, and
+      // the Docker sidecar's image sits inside a `dynamic "init_container"`
+      // block, so it is a local with an annotation instead. Same annotation
+      // as the manager below; a separate manager because HCL quotes its
+      // values and puts no `:` or `=` straight before the version.
+      //
+      // The optional `name:` prefix is what lets one pattern hold both an
+      // image reference ("docker:29-dind" -> 29-dind) and a bare version
+      // ("1.2.3"). No lookahead: Renovate compiles these with RE2.
+      description: "Annotated Terraform pins (Coder templates)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)kubernetes/apps/coder/.+\\.tf$/",
+      ],
+      matchStrings: [
+        "renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[^\\n\"]*\"(?:[^\"\\n]*:)?(?<currentValue>[^\"\\n:]+)\"",
+      ],
     },
     {
       description: "Process annotated dependencies",

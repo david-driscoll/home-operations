@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ReadMeABook
+  category: Media Management
+  description: Audiobook requests and automation -- searches Prowlarr, downloads through qBittorrent or SABnzbd, and files the result into the audiobook library
+  url: https://${APP}.${ROOT_DOMAIN}
+  icon: https://raw.githubusercontent.com/kikootwo/ReadMeABook/main/public/RMAB_180x180_APPICON.png
+  # A request portal (friends/family, like ../../media/seerr) that also drives
+  # the download clients (media-managers, like ../lazylibrarian).
+  access_policy:
+    groups:
+      - media-managers
+      - family
+      - friends
+  # ReadMeABook runs in "Audiobookshelf" backend mode (../audiobookshelf),
+  # the only mode in which it offers OIDC: in Plex mode /api/auth/providers
+  # answers `providers: ['plex']` unconditionally. Backend mode and every OIDC
+  # setting live in RMAB's own database and are entered in the setup wizard --
+  # see the readmeabook-oidc ExternalSecret in ./externalsecret.yaml for the
+  # field-by-field list.
+  authentik:
+    oauth2:
+      clientType: confidential
+      # One URI only: RMAB builds its callback from PUBLIC_URL
+      # plus /api/auth/oidc/callback (OIDCAuthProvider.ts), never from the
+      # request, so a login started on the tailnet name still comes back here.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/api/auth/oidc/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # RMAB adds the `groups` scope once its admin claim is enabled, and
+        # reads the claim from USERINFO (checkAdminClaim), so authentik `admins`
+        # become RMAB admins. The mapping also asserts email_verified.
+        - groups
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

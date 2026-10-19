@@ -3,7 +3,7 @@
 #:package CliWrap@3.10.5
 #:package Dumpify@0.8.0
 #:package 1Password.Connect.Sdk@1.0.4
-#:package Microsoft.Extensions.Hosting@10.0.12
+#:package Microsoft.Extensions.Hosting@10.0.13
 #:package NCronJob@4.12.3
 #:package Humanizer.Core@*
 #:package System.Reactive@7.0.0
@@ -260,7 +260,7 @@ static async Task Rclone(RCloneJob job)
 /// The check is filesystem-level and needs NO repository password: restic's
 /// layout puts one file per snapshot under `snapshots/`, so an empty directory
 /// there means zero snapshots. Every copy job's destination is a LocalBackend
-/// (see BackupPlanDirector's destinationJobTasks/volsyncJobTasks, both
+/// (see BackupPlanDirector's destinationJobTasks, all
 /// `destinationType: "local"`); anything else is left alone rather than guessed
 /// at, so this can only ever add red, never hide it.
 /// </summary>

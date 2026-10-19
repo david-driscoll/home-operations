@@ -1,0 +1,11 @@
+#:schema https://fnox.jdx.dev/schema.json
+#
+# The dashboard's secrets that are not `op://` items (those still resolve
+# through `op run` from dashboard/.mise.toml). The openbao provider comes from
+# the repo's .config/fnox.toml, which fnox loads on its way up.
+#
+#   fnox exec -- op run -- <command>
+
+[secrets]
+# No 1Password item exists for Tracearr -- it was created after the OpenBao move.
+TRACEARR_API_KEY = { provider = "openbao", value = "secrets/clusters/equestria/apps/tracearr/api-key#value", if_missing = "error" }

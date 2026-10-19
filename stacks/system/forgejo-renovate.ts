@@ -69,7 +69,7 @@ import * as vault from "@pulumi/vault";
  * renovate-operator needs, because `spec.webhook.sync` has it create and
  * maintain the hook on every discovered repository using this same token.
  */
-type TOKEN_SCOPES =
+export type TOKEN_SCOPES =
   | "read:activitypub"
   | "write:activitypub"
   | "read:admin"
@@ -155,6 +155,15 @@ const RENOVATE_LOGIN = "renovate";
 
 /** The Claude Code account's login, also the name of its per-org team. */
 const CLAUDE_CODE_LOGIN = "claude-code";
+
+/**
+ * The organization that owns the forge's copy of this repository
+ * (./forgejo-github-mirror.ts). It gets Renovate's team like every other
+ * organization, but NOT claude-code's write team: write to that repository's
+ * main is publishing to GitHub. ./forgejo-github-mirror.ts gives claude-code a
+ * read-only team there instead.
+ */
+export const GITHUB_MIRROR_ORG = "github-mirror";
 
 /** One page of the Forgejo API, and the instance default for MAX_RESPONSE_ITEMS. */
 const PAGE_SIZE = 50;
@@ -330,6 +339,8 @@ export class ForgejoConfigurationComponent extends ComponentResource {
   public forgejoToken;
   public renovateBot;
   public claudeCode;
+  /** The operator's webhook bearer. ./forgejo-github-mirror.ts hands it to the sync workflow. */
+  public webhookToken: pulumi.Output<string>;
 
   constructor(args: ForgejoConfigurationArgs, opts?: ComponentResourceOptions) {
     super("custom:forgejo:configuration", "forgejo-configuration", args, opts);
@@ -389,6 +400,39 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       { provider: args.globals.baoProvider, parent: this },
     );
 
+    // What KEDA reads the Actions queue with, to decide how many overflow
+    // runners to start (kubernetes/apps/coder/forgejo-runner).
+    //
+    // Its own token and not the one above: the scaler only ever calls
+    // GET /api/v1/admin/runners/jobs, and that needs an administrator's token
+    // with `read:admin` and nothing else. The token above can rewrite every
+    // repository and organisation on the forge, which is not something to
+    // mount into a pod that polls a queue.
+    const runnerQueueToken = new forgejo.PersonalAccessToken(
+      "forgejo-runner-queue-token",
+      {
+        user: adminCredentials.data.apply(d => d.username),
+        name: "KEDA runner queue (read only)",
+        scopes: ["read:admin"] as TOKEN_SCOPES[],
+      },
+      { provider: this.forgejoProvider, parent: this },
+    );
+
+    baoKvSecret(
+      "forgejo-runner-queue-token",
+      {
+        mount: "secrets",
+        path: "clusters/equestria/apps/forgejo-runner/queue-token",
+        data: { token: runnerQueueToken.token },
+        concealedFields: ["token"],
+        customMetadata: baoProvenance({
+          source_title: "Forgejo runner queue token for KEDA",
+          source_tags: "forgejo",
+        }),
+      },
+      { provider: args.globals.baoProvider, parent: this },
+    );
+
     // The Forgejo -> operator webhook shared secret. Generated here for the same
     // reason as the password: it has no meaning outside this pairing, so having
     // a human invent it only creates a step that can be skipped.
@@ -400,6 +444,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       },
       { parent: this },
     );
+    this.webhookToken = webhookToken.result;
 
     // The bot's own password, which nothing ever uses to log in: the provider
     // authenticates as the admin, and Renovate authenticates with the token.
@@ -617,6 +662,10 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     // an agent writing to them should be something that person opts into per
     // repository, not something a nightly resync hands out.
     for (const org of args.targets.organizations) {
+      // Read-only there, and granted by ./forgejo-github-mirror.ts -- see
+      // GITHUB_MIRROR_ORG.
+      if (org === GITHUB_MIRROR_ORG) continue;
+
       const team = new forgejo.Team(
         `forgejo-claude-code-${org}-team`,
         {
@@ -756,7 +805,13 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     });
   }
 
-  private createUser(
+  /**
+   * An account, its generated password and its personal access token.
+   *
+   * Public because ./forgejo-github-mirror.ts makes its account the same way.
+   * The resources are parented to THIS component whoever calls it.
+   */
+  createUser(
     details: Omit<forgejo.UserArgs, "password" | "email">,
     scopes: TOKEN_SCOPES[],
     globals: GlobalResources,

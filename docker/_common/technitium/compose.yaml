@@ -1,6 +1,6 @@
 services:
   tailscale:
-    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+    image: tailscale/tailscale:v1.104.1@sha256:87c55d6be56ad85b3d8bceca5f87f73de288c609131460dd1be1874c250cc41d
     container_name: technitium-ts
     # hostname lives on the net ns owner; technitium shares this namespace and
     # therefore cannot set its own hostname (network_mode: service:tailscale)
@@ -70,7 +70,7 @@ services:
 
   technitium:
     restart: unless-stopped
-    image: technitium/dns-server:15.6.0@sha256:1045db38fd2f2e4d9578f9168b7eb4862575469ed0ffc79e03f36bdc772a93b5
+    image: technitium/dns-server:15.6.2@sha256:eb48ac5c135f4ab936b536f74f853d53e15ab39ef37fdbc9598a089b90d9f245
     container_name: technitium
     network_mode: service:tailscale
     depends_on:
@@ -78,6 +78,16 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      # Not one of the first-start DNS_SERVER_* settings in .env: the runtime
+      # reads it on every start. It is what gives
+      # DNS_SERVER_LOG_USING_LOCAL_TIME a local time other than UTC to log in,
+      # which also moves the daily log file's rollover to local midnight.
+      #
+      # On this service only. The tailscale image carries no tz database, so
+      # the variable would do nothing there, and recreating that container
+      # takes this one's network namespace (and DNS on this host) with it.
+      TZ: ${TIMEZONE}
     # DNS_SERVER_DOMAIN must be set in .env to the MagicDNS hostname (e.g. technitium-celestia.tail-abc123.ts.net)
     # so the self-signed cert CN matches what cluster nodes use to reach each other over Tailscale
     volumes:

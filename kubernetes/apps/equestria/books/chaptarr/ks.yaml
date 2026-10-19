@@ -1,0 +1,84 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Chaptarr -- the Readarr fork that manages audiobooks AND eBooks in ONE
+# instance (separate root folders per media type). It replaces the legacy
+# readarr-ebook / readarr-audio pair, which needed two instances and depended on
+# Readarr's metadata server, now dead. Chaptarr uses its own metadata service
+# (api2.chaptarr.com), which needs no configuration here.
+#
+# Wired as a Servarr app, after media/sonarr: Postgres with extra databases,
+# authentik forward-auth with the API-key carve-out, volsync /config.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app chaptarr
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: &path ./kubernetes/apps/equestria/books/chaptarr
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # The `chaptarr` database, login role and rotating credential. The
+    # Deployment reads CHAPTARR__POSTGRES__PASSWORD out of the chaptarr-env
+    # Secret via envFrom and carries reloader.stakater.com/auto, so the 30-day
+    # rotation restarts it; the startup probe in helmrelease.yaml is what makes
+    # that cold boot survivable.
+    #
+    # BRAND-NEW APP: the first Pulumi `system` run after merge races Flux and
+    # stalls once on `role "chaptarr" does not exist` -- see
+    # docs/runbooks/media-stack-postgres-migration.md section 4.1 for the unstick.
+    - ../../../../components/postgres
+    # `chaptarr-log` AND `chaptarr-cache`. Chaptarr opens THREE databases at
+    # startup -- main, log and an HTTP-response cache -- and creates none of
+    # them (README, "PostgreSQL (Optional)"). Unlike Sonarr there is no
+    # LOG__DBENABLED switch to turn the log one off: Chaptarr's AddDatabase()
+    # registers all three unconditionally. Manifests in ./postgres-databases/.
+    - ../../../../components/postgres/databases
+    - ../../../../components/tailscale
+    - ../../../../components/tailscale/api-key
+    # The same API-key carve-out on the LAN route.
+    - ../../../../components/route/api-key
+    - ../../../../components/volsync
+    - ../../../../components/failover/fast-node-eviction
+  postBuild:
+    substitute:
+      # Browsers take the authentik chain, mirroring the internal HTTPRoute.
+      # Requests carrying X-Api-Key/?apikey skip it via
+      # components/tailscale/api-key above, so API clients (Prowlarr, LunaSea,
+      # scripts) keep working over the tailnet.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      APP: *app
+      # Where components/postgres/databases looks for the extra Database
+      # manifests -- it appends `/postgres-databases`.
+      POSTGRES_APP_PATH: *path
+      NAMESPACE: *namespace
+      # /config holds config.xml, logs, MediaCover and scheduled backups only;
+      # the library database lives in Postgres.
+      VOLSYNC_CAPACITY: 5Gi

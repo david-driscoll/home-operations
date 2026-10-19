@@ -8,12 +8,8 @@ alertmanager:
   annotations:
     reloader.stakater.com/auto: "true"
   priorityClassName: observability-critical
-  service:
-    annotations:
-      tailscale.com/expose: "true"
-      tailscale.com/hostname: alertmanager
-      tailscale.com/tags: tag:observability
-      tailscale.com/proxy-group: tailnet-outbound
+  # The tailnet name `alertmanager` is served by ./tailnet-service.yaml, not by
+  # this chart Service; see that file for why.
   route:
     main:
       enabled: true

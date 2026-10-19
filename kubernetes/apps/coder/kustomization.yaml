@@ -6,8 +6,8 @@ namespace: coder
 components:
   - ../../components/alerts
   - ../../components/common
-  # The app-template OCIRepository. It is namespace-scoped and forgejo-runner's
-  # HelmRelease refers to it by bare name, so every namespace that uses the
+  # The app-template OCIRepository. It is namespace-scoped and the HelmReleases
+  # here refer to it by bare name, so every namespace that uses the
   # chart has to bring its own copy -- `equestria` does the same thing.
   - ../../components/repos/app-template
 resources:
@@ -15,11 +15,12 @@ resources:
   - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml
+  # Starts the Forgejo workflow that keeps the GitHub mirror's main in step,
+  # whenever Flux reports a new commit on GitHub.
+  - ./forgejo-github-sync/ks.yaml
   - ./git-pages/ks.yaml
   # The API behind the setup guide's My apps page, on git-pages' setup host.
   - ./setup-status/ks.yaml
-  # Disabled for now, not quite what I'm looking for at the moment.
-  - ./kube-coder/ks.yaml
   # The operator first: ./renovate/ks.yaml is nothing but a RenovateJob, and
   # the CRD that admits it ships with the operator's chart. Flux orders on
   # dependsOn rather than on this list, so the order here is documentation --

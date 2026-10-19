@@ -12,12 +12,13 @@
 # bootstrap/ here). That works, but it puts a shell-eval between the operator
 # and every command, and the token expires mid-session. This role is the same credential shape
 # reachable from home-operations alone: the sealed file lives here, and
-# .config/mise.toml points BAO_ROLE_ID / BAO_SECRET_ID at it.
+# .config/fnox.toml points BAO_ROLE_ID / BAO_SECRET_ID at it.
 #
-# `vals` resolves those two through its sops provider (age key only — no
-# OpenBao), then uses them for AppRole login on every `ref+openbao://`. The
-# ordering is enforced by .config/mise/tasks/vals-run, which resolves the
-# BAO_* bootstrap references in a first pass before anything else.
+# fnox resolves those two through its sops provider (age key only — no
+# OpenBao), then uses them for AppRole login on every OpenBao secret in
+# .config/fnox.toml (.config/fnox/sops.lua, .config/fnox/openbao.lua). fnox
+# resolves a provider's credential before the provider, which is the ordering
+# vals-run used to enforce with two passes.
 #
 # ## Policy
 #
@@ -109,8 +110,8 @@ seal_credentials() {
   local role_id="$1" secret_id="$2"
   {
     printf '# AppRole for local/CI tooling in home-operations, against equestria OpenBao.\n'
-    printf '# Consumed by .config/mise.toml as BAO_ROLE_ID / BAO_SECRET_ID via ref+sops://,\n'
-    printf '# resolved by .config/mise/tasks/vals-run before any ref+openbao:// value.\n'
+    printf '# Consumed by .config/fnox.toml as BAO_ROLE_ID / BAO_SECRET_ID (sops provider),\n'
+    printf '# resolved before any OpenBao secret: they are what fnox logs in with.\n'
     printf '# Role: %s. Policy: %s (rw secrets/, docs/, meta/).\n' "${ROLE}" "${POLICY}"
     printf '# Create/rotate with scripts/bao-mise-approle.sh — never by hand.\n'
     printf 'role_id: "%s"\n' "${role_id}"
@@ -171,7 +172,7 @@ Done. Next:
   1. Commit .config/bao-approle.sops.yaml (encrypted; the age key stays out of git).
   2. Revoke the admin token you ran this with: bao token revoke -self
   3. Check it: ./scripts/bao-mise-approle.sh verify
-  4. Use it: mise run vals-run pulumi preview
+  4. Use it: fnox exec -- pulumi preview
      — no `eval "$(bootstrap/openbao/pulumi-env.sh)"` needed any more.
 NEXT
 }
@@ -195,7 +196,7 @@ cmd_verify() {
   role_id="$(extract role_id)"
   secret_id="$(extract secret_id)"
 
-  # Log in with the sealed credential exactly as vals will, rather than with
+  # Log in with the sealed credential exactly as fnox will, rather than with
   # whatever BAO_TOKEN happens to be exported — the point is to test the file.
   token="$(bao write -field=token auth/approle/login role_id="${role_id}" secret_id="${secret_id}" 2>/dev/null)" \
     || die "AppRole login failed — the secret_id may have been destroyed by a rotate elsewhere. Re-run 'rotate'."

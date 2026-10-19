@@ -18,9 +18,10 @@ cd stacks/<stack-name>
 pulumi preview        # always preview before deploying
 pulumi up --yes       # deploy
 
-# Required env vars are `vals` refs in .config/mise.toml (`ref+openbao://`,
-# `ref+sops://`, … -- not op:// any more), resolved per command by
-# `mise run vals-run <cmd>`. See that file's [env] header.
+# Secrets live in .config/fnox.toml (OpenBao via the sops AppRole), resolved
+# per command: `fnox exec -- <cmd>`, or `mise x --secrets KEY[,KEY] -- <cmd>`
+# for only the keys named. Non-secret env stays in .config/mise.toml [env].
+# `mise run vals-run` is a deprecated alias for `fnox exec --`.
 # CONNECT_HOST, CONNECT_TOKEN, PULUMI_CONFIG_PASSPHRASE
 # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (Garage `pulumi-state` key, the state backend)
 # AUTHENTIK_TOKEN, AUTHENTIK_URL
@@ -66,7 +67,7 @@ Pulumi TypeScript monorepo managing homelab infrastructure across multiple clust
 ```
 bootstrap/      # Bootstrap-tier secrets (SOPS) + INVENTORY/RUNBOOK: the OpenBao seal chain, recovery shares, Pulumi AppRole/passphrase
 components/     # Shared Pulumi ComponentResource code (providers, helpers)
-stacks/         # Deployable Pulumi stacks (home, authentik, backups, unifi-network, system, vault, ...)
+stacks/         # Deployable Pulumi stacks (home, authentik, backups, unifi-network, system, ...)
 sdks/           # Vendor SDK wrappers (unifi, authentik, adguard, b2, pbs, terrifi)
 dynamic/        # Code-generated Pulumi resources (1Password item types)
 docker/         # Docker/Dockge stack configs per cluster

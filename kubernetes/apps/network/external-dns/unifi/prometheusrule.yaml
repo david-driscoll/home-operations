@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# Guard for the invariant that helmrelease.yaml's not-ready/unreachable
+# tolerations exist to keep: at most ONE unifi-dns pod is running at a time.
+#
+# Two concurrent loops with the same owner ID race each other's creates, and
+# UniFi's uniqueness check does not always win that race. A duplicate
+# static-DNS name breaks the gateway's dnsmasq config, so every later gateway
+# config commit fails with nothing in the cluster to show it (2026-10-19, 12
+# hours). This alert catches the cause in-cluster, before the gateway shows it.
+#
+# kube_pod_status_phase is the right signal because a pod on a NotReady node
+# keeps phase=Running until its kubelet reports again. During the incident,
+# 76mz4 read Running until ~01:43 while r6cgk was already up, so this
+# expression read 2 for that whole half-hour. A Recreate rollout never
+# overlaps, so in normal operation the count is exactly 1.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: unifi-dns-rules
+spec:
+  groups:
+    - name: unifi-dns.rules
+      rules:
+        - alert: UnifiDnsMultipleWriters
+          annotations:
+            summary: More than one unifi-dns pod is running, so two external-dns loops are writing to UniFi.
+            description: >-
+              {{ $value }} unifi-dns pods report phase Running. Each one runs its own
+              external-dns loop with the same owner ID against the same UniFi controller,
+              and they can store the same static-DNS name twice. A duplicate name breaks the
+              gateway's dnsmasq config, so every later gateway config commit fails.
+              Find the pod on a NotReady or unreachable node
+              (`kubectl -n network get pods -l app.kubernetes.io/instance=unifi-dns -o wide`)
+              and force-delete it. Then check UniFi static DNS for duplicate non-TXT names.
+          expr: |
+            count(
+              kube_pod_status_phase{namespace="network", pod=~"unifi-dns-[a-z0-9]+-[a-z0-9]+", phase="Running"} == 1
+            ) > 1
+          for: 2m
+          labels:
+            severity: critical
+        # ./static-dns-check.yaml checks the RESULT the alert above guards
+        # against, whatever caused it. With a 15m schedule, 30m without a
+        # success means two runs in a row failed (or none ran). The second
+        # branch covers a check that has never succeeded, which has no
+        # last_successful_time series at all. KubeJobFailed also fires, as a
+        # warning, on the first failed run.
+        - alert: UnifiStaticDnsCheckFailing
+          annotations:
+            summary: The UniFi static-DNS check has not passed in 30 minutes.
+            description: >-
+              unifi-static-dns-check last succeeded {{ $value | humanizeDuration }} ago.
+              It fails when a non-TXT static-DNS name is stored twice, when the gateway
+              logged DEVICE_COMMIT_ERROR ("Gateway Config Change Failed"), or when it
+              cannot read the gateway at all. Read the failed Job's `check` container log
+              (`kubectl -n network logs job/<job> -c check`) for the duplicate records and
+              their `_id`s, or the `fetch` container log for a read failure. Delete the
+              extra record in UniFi static DNS, and gateway commits resume.
+          expr: |
+            (
+              time() - max by (namespace, cronjob) (
+                kube_cronjob_status_last_successful_time{namespace="network", cronjob="unifi-static-dns-check"}
+              )
+              or
+              (
+                time() - max by (namespace, cronjob) (
+                  kube_cronjob_created{namespace="network", cronjob="unifi-static-dns-check"}
+                )
+              )
+              unless on (namespace, cronjob)
+              kube_cronjob_status_last_successful_time{namespace="network", cronjob="unifi-static-dns-check"}
+            ) > 1800
+          for: 1m
+          labels:
+            severity: critical

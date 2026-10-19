@@ -11,9 +11,9 @@
 # and a URLRewrite ReplacePrefixMatch would re-open the whole backend under the
 # allow-listed prefix.
 #
-# NEVER the `external` Gateway: deriveTunnelRules (components/tunnelRules.ts)
-# has no domain filter and would push a ts.net name into the Cloudflare config.
-# Nothing publishes routes on `funnel`: external-dns runs --gateway-name
+# NEVER the `external` Gateway: external-dns/cloudflare publishes every
+# hostname on it to public DNS, and the Gateway itself goes in step 8b of the
+# plan. Nothing publishes routes on `funnel`: external-dns runs --gateway-name
 # internal/external, k8s-gateway serves ROOT_DOMAIN only.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

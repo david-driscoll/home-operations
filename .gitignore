@@ -14,6 +14,10 @@ node_modules
 _home-operations-pulumi/
 bin/
 age.key
+# fnox personal overrides and `fnox sync` caches (see .config/fnox.toml)
+fnox.local.toml
+.fnox.local.toml
+.config/fnox.local.toml
 
 
 # APM dependencies
@@ -123,3 +127,7 @@ graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 # branches each from origin/main and symlinks node_modules, so nothing in one is
 # worth keeping that is not already on a branch.
 .claude/worktrees/
+.agents/skills/.mise-skills.json
+.agents/skills/fnox
+.agents/skills/hk-configure
+.agents/skills/hk-debug

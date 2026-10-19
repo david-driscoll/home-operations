@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/app-template-4.1.1/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -44,7 +44,7 @@ spec:
           *app :
             image:
               repository: johannesjo/super-productivity
-              tag: v19.1.0@sha256:6177a56563e855ad613782860955c61ed256afb68e1d0bfdaa4df98aad77c9e4
+              tag: v19.2.0@sha256:5013128f5c8af8f7f836d6bfce9b7678f64aa4de803637f6d164a51162a3e33c
               pullPolicy: IfNotPresent
             env:
               TZ: "${TIMEZONE}"

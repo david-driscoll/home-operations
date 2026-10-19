@@ -3,16 +3,26 @@
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
-  name: lazylibrarian
+  name: ${APP}
 spec:
   name: LazyLibrarian
   category: Media Management
-  description: LazyLibrarian
+  description: LazyLibrarian follows authors and series and grabs their ebooks, audiobooks and magazines
   url: &url https://${APP}.${ROOT_DOMAIN}
+  # The same app under its tailnet name. authentik's ProxyProvider.external_host
+  # holds ONE hostname, so without this the outpost has no application for
+  # ${APP}.${TAILSCALE_DOMAIN} and answers 400 "no app for hostname". Paired
+  # with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml; the two go together.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/lazylibrarian.png
   access_policy:
     groups:
       - media-managers
+  # Forward auth, because LazyLibrarian has no OIDC client: its only logins are
+  # its own user table, HTTP basic/form auth, and a trusted-header PROXY_AUTH mode
+  # (lazylibrarian/webServe.py). No skipPathRegex -- the API carve-out is made on
+  # the routes instead, scoped to `/api` with `?apikey`, so the outpost never
+  # sees it.
   authentik:
     proxy:
       mode: "forward_single"
@@ -23,3 +33,11 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

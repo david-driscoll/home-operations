@@ -1,0 +1,11 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# No externalsecret.yaml: Listenarr has no Postgres backend, no OIDC client
+# and no environment-settable API key (see ./ks.yaml and ./helmrelease.yaml),
+# so there is nothing for ESO to hand it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml

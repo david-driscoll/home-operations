@@ -123,9 +123,9 @@ Losing it loses no data, but no node can rejoin its own cluster without it.
 matter. Preview first, per the estate rule for every stack:
 
 ```bash
-cd stacks/home            && mise run vals-run pulumi preview && mise run vals-run pulumi up   # celestia
-cd ../gulf-of-mexico      && mise run vals-run pulumi preview && mise run vals-run pulumi up   # luna
-cd ../ocracoke            && mise run vals-run pulumi preview && mise run vals-run pulumi up   # skystar
+cd stacks/home            && fnox exec -- pulumi preview && fnox exec -- pulumi up   # celestia
+cd ../gulf-of-mexico      && fnox exec -- pulumi preview && fnox exec -- pulumi up   # luna
+cd ../ocracoke            && fnox exec -- pulumi preview && fnox exec -- pulumi up   # skystar
 ```
 
 Checkpoint — expected, correct, degraded state:
@@ -191,7 +191,7 @@ Peer addresses persist in the metadata dir; `node connect` is not needed again.
 `system` stack, which owns the garage module (`stacks/system/garage.ts`):
 
 ```bash
-cd stacks/system && mise run vals-run pulumi preview && mise run vals-run pulumi up
+cd stacks/system && fnox exec -- pulumi preview && fnox exec -- pulumi up
 ```
 
 This creates `cnpg-equestria`, `postgres-{celestia,luna,skystar}` and
@@ -250,7 +250,7 @@ stores itself — the failure lands on the one run that would recreate it.
 
 | Thing | Where |
 |---|---|
-| Bucket | `pulumi-state`, 100 GiB quota (history headroom: every update writes a full checkpoint copy to `.pulumi/history/`, pruned after 3 days by `kubernetes/apps/pulumi/history-pruner`) |
+| Bucket | `pulumi-state`, 100 GiB quota (history headroom: every update writes a full checkpoint copy to `.pulumi/history/`, pruned after 3 days by `kubernetes/apps/pulumi/history-pruner`, and expired after 4 by the bucket's lifecycle rules below if the pruner stops) |
 | Read/write key `pulumi-state` | OpenBao `apps/pulumi/state-s3` (`username`/`password`); break-glass SOPS copy `bootstrap/openbao/pulumi-state-s3.sops.yaml` |
 | Read-only key `pulumi-state-reader` | OpenBao `apps/pulumi/state-s3-reader` — backrest pre-sync and the alpha-site mirror |
 | Endpoint | `https://garage-s3.<tailnet>` (the Tailscale VIP: HTTPS on 443, answered by whichever Garage node is up), region `garage`, path-style — for every Stack except `system` and `unifi-network`. Those two own the VIP path (`svc:garage-s3` in `stacks/system/garage.ts`; the egress Service and ACL in `stacks/unifi-network`), so they stay on `http://dockge-celestia.<tailnet>:3900` through the Flux-owned bootstrap egress: a run of theirs that broke the VIP must still be able to reach its own state to repair it. The VIP path is guarded by the `garage-s3-vip-egress` grant (a policy test, plus a pre-write assertion in `acl-manager.ts`), and both objects on it are `protect`ed. Break-glass for any Stack: point its `backend` back at `dockge-celestia:3900` — same bucket, nothing to copy. |
@@ -267,6 +267,28 @@ provider uses; `garage` CLI on celestia is equivalent):
 # CreateKey pulumi-state-reader -> AllowBucketKey read
 # both keys -> OpenBao kv-v2 with cas=0 (never overwrite), username/password
 ```
+
+**Lifecycle rules (set 2026-10-19).** A safety net behind the history-pruner,
+not a replacement: per stack prefix, `Expiration Days=4` on `<prefix>/.pulumi/history/`
+and `<prefix>/.pulumi/backups/` (14 rules), plus `AbortIncompleteMultipartUpload`
+after 1 day. Nothing matches `.pulumi/stacks/`. Without them a stopped pruner
+fills the quota in about a month (~2.7 GiB/day of history, most of it `system`),
+and every `pulumi up` then fails. Garage supports only `Expiration` and
+`AbortIncompleteMultipartUpload`, each needing `Filter.Prefix`; it has no object
+versioning, so there are no noncurrent versions to expire (the TrueNAS Minio did,
+which is how its copy of this state reached ~1 TB). A rule needs an **owner** key
+and neither key above is one, so it is set with a temporary key, then dropped:
+
+```bash
+# Admin API: CreateKey pulumi-state-lifecycle-tmp -> AllowBucketKey owner+read+write
+# (wait ~10 s for the grant to apply; a first try straight after it was Forbidden)
+mc ilm import g/pulumi-state < lifecycle.json   # Rules: ID, Status, Filter.Prefix, Expiration.Days
+mc ilm rule ls g/pulumi-state                   # read back
+# Admin API: DeleteKey <temp key id>
+```
+
+A new stack prefix needs its own two rules: re-import the whole set (import
+replaces it).
 
 Losing the keys loses nothing — mint new ones the same way and update the two
 OpenBao paths and the SOPS copy. Losing the bucket is what the backups exist

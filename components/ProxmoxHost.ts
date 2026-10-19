@@ -16,6 +16,7 @@ import * as yaml from "yaml";
 import type { GlobalResources } from "./globals.ts";
 import { clientIdPair, getHostnames } from "./helpers.ts";
 import type { OPClient } from "./op.ts";
+import { installPatchmonAgent } from "./patchmon.ts";
 import { StandardDns } from "./StandardDns.ts";
 import type { ClusterDefinition, CredentialDefinition } from "./store/index.ts";
 import type { TruenasVm } from "./TruenasVm.ts";
@@ -158,6 +159,11 @@ export class ProxmoxHost extends ComponentResource {
       },
       cro,
     ).stdout.apply(z => z.trim());
+
+    // Outside the installTailscale block on purpose: alpha-site skips that
+    // block and still gets an agent. A no-op until the enrollment token is in
+    // OpenBao — see components/patchmon.ts.
+    installPatchmonAgent(`${name}-patchmon-agent`, { globals: args.globals, connection, friendlyName: name }, cro);
 
     if (args.installTailscale) {
       const _snippetsCommand = new remote.Command(

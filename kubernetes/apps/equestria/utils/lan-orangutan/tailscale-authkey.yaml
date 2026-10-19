@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/secret.json
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lan-orangutan-tailscale-authkey
+  annotations:
+    # Mirrored from tailscale-system by emberstack reflector (the source secret
+    # carries reflection-allowed=true) -- the same mechanism as
+    # dns/technitium/tailscale-authkey.yaml, pointed at the tag:apps key
+    # instead of the tag:dns one.
+    #
+    # That key is reusable and pre-tagged, so the sidecar joins as tag:apps.
+    # What the app then lists as "Tailscale devices" is whatever the tailnet
+    # policy lets a tag:apps node see (stacks/unifi-network/acl-manager.ts),
+    # not the whole tailnet.
+    reflector.v1.k8s.emberstack.com/reflects: tailscale-system/tailscale-authkey

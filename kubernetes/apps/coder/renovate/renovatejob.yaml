@@ -10,13 +10,24 @@ metadata:
   # run, so a rotated token is picked up by the next run with nothing to
   # restart.
 spec:
-  # 03:00 nightly. This is when the bot RUNS; when PRs may OPEN is the
-  # inherited `schedule` in .github/renovate.json5, now "at any time", so a
-  # nightly run files its PRs that night.
-  schedule: "0 3 * * *"
+  # Hourly, on the hour. This is when the bot RUNS; when PRs may OPEN is the
+  # inherited `schedule` in .github/renovate.json5, now "at any time". When
+  # they MERGE is not up to the bot: it hands each automerge to Forgejo
+  # (`platformAutomerge: true`), which merges once the required statuses,
+  # `merge-window` among them, are green (docs/renovate-automerge.md).
+  #
+  # It was once a night. Hourly still matters: the bot is what opens and
+  # rebases pull requests and turns automerge on, and a run that finds an
+  # update not yet a day old leaves it for a later one.
+  #
+  # The operator reads a schedule in its own TZ, which
+  # ../renovate-operator/helmrelease.yaml sets from TIMEZONE. For "every hour"
+  # that changes nothing; it is there so a wall-clock time written here later
+  # means what it says.
+  schedule: "0 * * * *"
 
   # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
-  image: ghcr.io/renovatebot/renovate:44.139.0
+  image: ghcr.io/renovatebot/renovate:44.167.1
 
   # No digest, on purpose. This is a CRD field, so neither the `kubernetes` nor
   # the `helm-values` manager sees it -- it is picked up by the repo's
@@ -119,6 +130,35 @@ spec:
           name: github-token
           key: token
 
+    # Why `data.forgejo.org`, `codeberg.org` and `docker.gitea.com` kept
+    # failing with "Error obtaining docker token" and then "Failed to look up
+    # docker package ...: no-result" -- 32 times in two days, always those
+    # three hosts and never ghcr.io.
+    #
+    # It is not a token problem and not the registries. Every one of those
+    # errors is `ETIMEDOUT` roughly 250 ms after the DNS lookup, thrown out of
+    # `internalConnectMultipleTimeout`. That is Node's Happy Eyeballs: when a
+    # name resolves to more than one address it gives each connection attempt
+    # 250 ms before moving to the next. These three hosts publish both an A and
+    # an AAAA record, pods here have no IPv6 route, and the IPv4 handshake to
+    # Europe takes 80-120 ms. So the IPv4 attempt has about 130 ms to spare,
+    # and the deadline is a timer on Renovate's own event loop -- one busy
+    # stretch of parsing longer than that and Node drops a connection that was
+    # about to succeed, tries IPv6, gets ENETUNREACH and reports a timeout.
+    # ghcr.io publishes no AAAA record, so it gets a single attempt with no
+    # deadline at all.
+    #
+    # Reproduced outside Renovate on Node 24: blocking the loop for 300 ms
+    # after the lookup fails 10 connects of 10 to data.forgejo.org and none to
+    # ghcr.io; with this flag, none to either.
+    #
+    # The flag lengthens the per-attempt deadline rather than turning address
+    # selection off, so a host that is IPv6-first still falls through to IPv4.
+    # It needs Node 20.13 / 22.1 or newer, which the pinned image has; tools
+    # Renovate spawns inherit it.
+    - name: NODE_OPTIONS
+      value: --network-family-autoselection-attempt-timeout=5000
+
   renovateConfig:
     # Mounted read-only at /etc/renovate/config.js with RENOVATE_CONFIG_FILE
     # pointed at it. The operator writes it into a ConfigMap it owns -- so
@@ -201,6 +241,40 @@ spec:
             matchHost: 'http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000',
             allowInternal: true,
           },
+          // The same grant for the relay that answers `customDatasources.ghcr`
+          // (.github/renovate.json5; ../forgejo-github-sync/resources/ghcr.mjs),
+          // the other in-cluster address this bot calls. No credential: the
+          // relay holds the GitHub token, not Renovate.
+          {
+            matchHost: 'http://forgejo-github-sync.${NAMESPACE}.svc.cluster.local:8080',
+            allowInternal: true,
+            // Three minutes, not Renovate's 60 seconds: at the start of a run
+            // the relay queues GitHub calls for every image at once (sixteen
+            // in flight), so a lookup can wait its turn. Measured: thirty at
+            // once took 56 seconds at eight in flight.
+            timeout: 180000,
+          },
+          // DOCKER HUB, AUTHENTICATED. Anonymous lookups share one budget per
+          // egress address; once it is spent Docker Hub answers 429 and
+          // Renovate abandons the whole repository for that run ("External
+          // host error causing abort"), which on 2026-10-10 took out both a
+          // hand-triggered run and one a Dependency Dashboard checkbox had
+          // asked for.
+          //
+          // The credential is NOT in this ConfigMap: this file is JavaScript,
+          // and it reads the two variables that ./externalsecret.yaml puts in
+          // the pod's environment. Left out entirely when they are absent, so
+          // a missing Secret key costs the rate limit and nothing else.
+          ...(process.env.DOCKER_HUB_USERNAME && process.env.DOCKER_HUB_PASSWORD
+            ? [
+                {
+                  hostType: 'docker',
+                  matchHost: 'docker.io',
+                  username: process.env.DOCKER_HUB_USERNAME,
+                  password: process.env.DOCKER_HUB_PASSWORD,
+                },
+              ]
+            : []),
         ],
 
         // Not set here and deliberately so: `endpoint` and `token` come from
@@ -209,11 +283,37 @@ spec:
         // because it is cheap to read and impossible to get wrong twice.
         platform: 'forgejo',
 
-        // Must be an address on the bot's Forgejo account, or the forge
-        // attributes the commits to nobody and the PR author does not match
-        // the account the token belongs to. stacks/system builds the bot's
-        // email as `<login>@git.<domain>`; keep the two in step.
-        gitAuthor: 'Renovate Bot <renovate@git.${ROOT_DOMAIN}>',
+        // THE IDENTITY GITHUB'S RENOVATE COMMITS WITH, name and address both --
+        // not an address on this forge.
+        //
+        // One of the repositories this bot works on is the Forgejo copy of the
+        // estate's GitHub repository, and what merges there is pushed to
+        // GitHub (docs/runbooks/forgejo-github-mirror.md). With this, an
+        // update reads the same in GitHub's history whichever bot raised it:
+        // authored by renovate[bot], avatar and all.
+        //
+        // It used to be `renovate@git.<root domain>`, the bot's account
+        // address, and could not stay that: the repository on GitHub is
+        // public, and the sync refuses to publish a commit that names the
+        // domain -- so not one update would ever have got out.
+        //
+        // What it costs is on the forge only. The address belongs to no
+        // account here, so Forgejo shows these commits with no avatar and no
+        // link to the bot. The pull request is still the bot's, and Renovate
+        // tells its own branches from edited ones by this address, not by the
+        // account. The same branches imported from GitHub are, for the same
+        // reason, already its own.
+        //
+        // The `[bot]` in the address is not valid RFC 5322 and Renovate's
+        // parser has a special case for exactly this spelling.
+        gitAuthor: 'renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>',
+
+        // Addresses whose commits count as Renovate's own, besides the one
+        // above. Without this a branch whose last commit has any other author
+        // is "edited by someone else": Renovate stops updating it and waits
+        // for a checkbox. This is `gitAuthor` as it was until now -- every
+        // branch already open on the forge was committed with it.
+        gitIgnoredAuthors: ['renovate@git.${ROOT_DOMAIN}'],
 
         // Every repository gets a dashboard issue rather than silent PRs.
         // This is what the webhook above makes interactive.
@@ -279,6 +379,41 @@ spec:
         // `persistRepoData` stays off. That one caches the git working copy,
         // which lands on the scratch emptyDir below and dies with the Job no
         // matter what this says -- the S3 cache holds metadata, not clones.
+
+        // THE PACKAGE CACHE, which is a third thing and the one that was
+        // missing. The repository cache above remembers what was EXTRACTED
+        // from a repository; this one remembers what registries ANSWERED --
+        // tag lists, manifests, image labels, release notes. Its default home
+        // is a directory under RENOVATE_BASE_DIR, i.e. the scratch emptyDir,
+        // so every Job started with none and asked every registry everything
+        // again.
+        //
+        // That is what Docker Hub's limit could not afford. The account gets
+        // 200 manifest pulls an hour. One run on the estate's repository fits;
+        // but a run that automerges stops there and the webhook starts the
+        // next one minutes later, and on 2026-10-11 the fourth run inside an
+        // hour got a 429 -- which Renovate treats as a reason to abandon the
+        // whole repository, so the three runs after it did nothing at all.
+        // Authenticating (the host rule above) raised the budget; it did not
+        // stop each run spending it from zero.
+        //
+        // The shared, passwordless Valkey in `database`. Index 14: 6, 8, 9,
+        // 10, 11, 12 and 13 are taken, and 0 is where every host-only consumer
+        // lands. Every key Renovate writes carries a TTL, so this needs no
+        // eviction policy to stay bounded.
+        //
+        // In this file rather than as RENOVATE_REDIS_URL in `extraEnv`, since
+        // it holds no credential and the rest of the bot's behaviour is here.
+        //
+        // Measured on 44.139.0 with a sample of this repository, same lookups
+        // twice: 82 registry requests cold, 16 warm, and Docker Hub 10 -> 0.
+        //
+        // The cost: Renovate does not fall back when it cannot connect. Pointed
+        // at a dead address it logs "Redis cache connection error" and keeps
+        // retrying -- still at it four minutes later -- rather than running
+        // uncached. So with Valkey down, runs stall instead of working; hence
+        // the `dependsOn` in ./ks.yaml.
+        redisUrl: 'redis://valkey.database.svc.cluster.local:6379/14',
       };
 
   scratchVolume:

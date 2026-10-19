@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: LAN Orangutan
+  category: Infrastructure
+  description: Network scanner -- discovers, labels and tracks the devices on the LAN and the tailnet
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # authentik's ProxyProvider holds ONE external host; this gives the outpost
+  # an application for the tailnet name too. Pairs with
+  # TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml -- see media/lidarr.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  # Not in homarr-labs/dashboard-icons; upstream's own icon.
+  icon: https://raw.githubusercontent.com/291-Group/LAN-Orangutan/main/internal/web/static/orangutan.svg
+  access_policy:
+    # A device inventory of the whole house, with delete buttons and no user
+    # accounts of its own behind the proxy.
+    groups:
+      - admins
+  authentik:
+    # Proxy, not oauth2: the app has one shared password and no OIDC. That
+    # password is switched off (ORANGUTAN_ALLOW_INSECURE) and this is the gate.
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

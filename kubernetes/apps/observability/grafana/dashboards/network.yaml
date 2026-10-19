@@ -26,21 +26,6 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: cloudflared
-spec:
-  instanceSelector:
-    matchLabels:
-      dashboards: "grafana"
-  folder: "network"
-  datasources:
-    - datasourceName: Prometheus
-      inputName: DS_PROMETHEUS
-  grafanaCom:
-    id: 17457
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
   name: external-dns
 spec:
   instanceSelector:

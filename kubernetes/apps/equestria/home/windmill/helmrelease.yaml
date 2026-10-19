@@ -18,7 +18,7 @@ spec:
   chart:
     spec:
       chart: windmill
-      version: 4.0.268
+      version: 4.0.286
       sourceRef:
         kind: HelmRepository
         name: windmill
@@ -77,7 +77,7 @@ spec:
         # stays on a tag that provably exists. Raise this when -- and only when --
         # a newer windmill-extra tag actually returns 200.
         # renovate: datasource=docker depName=ghcr.io/windmill-labs/windmill-extra
-        tag: "1.824.1"
+        tag: "1.839.0"
       # Read the connection URI from the Secret at runtime instead of baking it
       # into the rendered manifests. Three things were wrong with the old
       # `valuesFrom -> windmill.databaseUrl` mapping, and this fixes all three:

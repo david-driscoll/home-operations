@@ -59,7 +59,7 @@ services:
     volumes:
       - .:/app/config/
   extensions:
-    image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317
+    image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
     develop:
       watch:
         - action: restart
@@ -81,7 +81,7 @@ services:
       - dashboard
 
   equestria-glance:
-    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.7@sha256:695cb6945f95fa2a246a8c273151d81d50919d72a4afda4b9e6be88e35e61253
+    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.8@sha256:e96b0d80b96a6d01afbf881f722507476133b770da1edb91b43f5bf60ec9f352
     environment:
       GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
     networks:

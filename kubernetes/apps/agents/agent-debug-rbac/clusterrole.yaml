@@ -311,6 +311,31 @@ rules:
     resources: ["renovatejobs", "renovateprojects"]
     verbs: ["patch", "update"]
 
+  # Services: patch/update -- for ONE annotation,
+  # `agents.home-operations/requeue`, and NOTHING else, which
+  # ./service-requeue-only.yaml enforces; grant and limit ship together, like
+  # `stacks` above.
+  #
+  # WHY IT IS NEEDED. Controllers that watch Services (the tailscale operator
+  # above all) re-run only when the object changes, and a Service they gave
+  # up on stays given up on. 2026-10-14, #2664: four new tailnet LoadBalancer
+  # Services reconciled seconds before the old ones lost their annotations,
+  # were refused as duplicates, and were never retried -- the names kept
+  # working only because the proxy pod happened not to restart. The fix was
+  # an annotation on each, and the agent that diagnosed it was refused it.
+  #
+  # WHY `update` AS WELL AS `patch`: mkp's apply_resource is a GET then a full
+  # PUT. See `stacks` above.
+  #
+  # WHY THE POLICY IS NOT OPTIONAL. Unnarrowed, `update` on a Service is
+  # "publish anything": `tailscale.com/expose` / `proxy-group` put a Service
+  # on the tailnet, external-dns and LB annotations publish or re-address it,
+  # and its spec chooses the pods behind it and whether it is a LoadBalancer
+  # at all. Only the requeue key is free to change.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["patch", "update"]
+
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["delete"]

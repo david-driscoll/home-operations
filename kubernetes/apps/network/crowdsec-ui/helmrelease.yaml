@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -62,7 +62,7 @@ spec:
           register-watcher:
             image:
               repository: curlimages/curl
-              tag: 8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              tag: 8.23.0@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06
               pullPolicy: IfNotPresent
             env:
               LAPI_URL: http://crowdsec-service.network.svc.cluster.local:8080
@@ -112,7 +112,7 @@ spec:
               # old, single-maintainer, and ships multiple releases per week;
               # a floating tag would mean unreviewed code in a console that can
               # issue and revoke bans. Renovate proposes bumps.
-              tag: 2026.10.3@sha256:5d3ef6c46ce08d8c53cb774f8429103d2571986db93517715cc691756c07ce66
+              tag: 2026.10.8@sha256:1e7ef2ddb701c8610301787c9ed476b57184ec5f5e839db804fbb4da3dccc17f
               pullPolicy: IfNotPresent
             envFrom:
               - secretRef:

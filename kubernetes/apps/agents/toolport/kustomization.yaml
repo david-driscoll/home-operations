@@ -19,6 +19,18 @@ configMapGenerator:
   # envsubst runs first and leaves the double-brace templates alone; ESO then
   # renders those.
   #
+  # SCHEMA v3, WRITTEN BY HAND -- keep it there. toolport 2.x migrates an
+  # older registry on load and then rewrites the file (atomic temp + rename).
+  # Ours is a read-only subPath Secret mount, so that rewrite fails, the
+  # registry never loads, and the gateway serves an empty catalog with
+  # /healthz at 503. A v3 file needs no migration and is never written. In
+  # v3 a server is off unless it says `"enabled": true` (the global switch);
+  # a profile's enabledServerIds then narrows that per caller. `safetyLevel`
+  # and `codeMode` are explicit because headless has no approval broker and
+  # 2.x defaults new registries to Ask (destructive calls fail closed) and
+  # Code Mode off. Shape: btsouth/toolport docs/headless.md, "Minimal
+  # registry.json"; the v1->v3 steps are src-tauri/src/registry/v*_migration.rs.
+  #
   # disableNameSuffixHash: the ExternalSecret's templateFrom names it literally.
   - name: ${APP}-registry-template
     files:

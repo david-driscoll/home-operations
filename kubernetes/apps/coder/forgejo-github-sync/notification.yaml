@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/notification.toolkit.fluxcd.io/provider_v1beta3.json
+#
+# The outbound half of the chain that starts at GitHub's webhook:
+#
+#   GitHub push -> Receiver `github-webhook` (flux-system) -> source-controller
+#   fetches ./gitrepository.yaml -> `NewArtifact` event -> the Alert below ->
+#   this Provider -> the relay -> Forgejo runs .forgejo/workflows/github-sync.yml
+#
+# So GitHub needs no second webhook and nothing new is reachable from outside:
+# the only public endpoint involved is the one Flux already had.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: ${APP}
+spec:
+  # `generic` POSTs the Flux Event as JSON, unchanged. No provider type can
+  # shape the body, which is the whole reason the relay exists: Forgejo's
+  # dispatch endpoint wants `{"ref": ...}` and rejects anything without it.
+  type: generic
+  address: http://${APP}.${NAMESPACE}.svc.cluster.local:8080/flux
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/notification.toolkit.fluxcd.io/alert_v1beta3.json
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: ${APP}
+spec:
+  providerRef:
+    name: ${APP}
+  # `info`, unlike the namespace's other Alerts: a new artifact is not an error.
+  eventSeverity: info
+  eventSources:
+    # This app's own GitRepository, not one of the three the cluster deploys
+    # from: those skip commits that only touch `.github/`. See
+    # ./gitrepository.yaml.
+    - kind: GitRepository
+      name: ${APP}
+  # No inclusionList. The relay filters on the event's `reason`, which is part
+  # of Flux's API; matching the message text here would fail silently the day
+  # the wording changes.
+  suspend: false

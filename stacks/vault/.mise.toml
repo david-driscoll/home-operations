@@ -1,3 +1,0 @@
-[env]
-PULUMI_STACK = "vault"
-PULUMI_BACKEND_URL = "s3://pulumi-state/vault?endpoint=garage-s3.{{ env.TAILSCALE_DOMAIN }}&s3ForcePathStyle=true&region=garage"

@@ -451,7 +451,7 @@ Verification per consumer kind:
 | Kind | Check |
 | --- | --- |
 | ExternalSecret | `kubectl get externalsecret -A` → all `SecretSynced`; a 404 shows as `SecretSyncedError` |
-| `vals` (Dockge) | `mise run vals-run -- <cmd>` on the host — a missing path is a hard error, not an empty string |
+| `vals` (Dockge) | `fnox exec -- <cmd>` on the host (was `mise run vals-run`) — a missing path is a hard error, not an empty string |
 | `vals` (mise env) | any `pulumi` invocation; env load fails before the stack starts |
 | Pulumi by title 🅟 | `pulumi preview` on the owning stack — a missing path throws by name |
 

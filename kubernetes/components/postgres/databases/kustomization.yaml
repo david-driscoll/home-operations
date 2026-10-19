@@ -30,6 +30,8 @@
 # and creates neither, and the estate ran with `LOG__DBENABLED: "False"` --
 # no log database at all -- until this component existed to declare the second
 # one. See docs/runbooks/media-stack-postgres-migration.md §1.1.
+# chaptarr declares two, chaptarr-log and chaptarr-cache: it opens main, log
+# and cache at startup and has no switch to turn either extra one off.
 #
 # Before this component the options were all bad: give the app ../superuser so
 # it can `CREATE DATABASE` itself, create the database by hand and leave it

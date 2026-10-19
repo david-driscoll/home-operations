@@ -58,15 +58,13 @@ spec:
   # Keep in step with every ClusterRoleBinding to `agent-debug`, exactly as in
   # ./node-cordon-only.yaml:
   #   ../agent-tools-servers/kubernetes.yaml  -> agents/toolhive-kubernetes
-  #   ../agentboard/rbac.yaml                 -> agents/agentboard
   # A new binding of the role that is not added here gets the unnarrowed
   # `update` on every RenovateJob.
   matchConditions:
     - name: is-agent-debug-identity
       expression: >
         request.userInfo.username in [
-          "system:serviceaccount:agents:toolhive-kubernetes",
-          "system:serviceaccount:agents:agentboard"
+          "system:serviceaccount:agents:toolhive-kubernetes"
         ]
   validations:
     - expression: >

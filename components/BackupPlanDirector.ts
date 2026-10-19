@@ -59,10 +59,10 @@ const BACKREST_PLAN_SCHEDULE: BackrestPlan["schedule"] = { cron: "0 1 * * *", cl
  * Copy-job schedule, in UTC: NCronJob's default, and the backups container
  * sets no TZ. A host's Backrest queue starts at 01:00 local, 05:00 or 06:00
  * UTC, and the longest night in the 2026-09-27 → 09-29 logs ran about six and
- * a half hours, so every plan is done well before 16:00, when the other PBS
+ * a half hours, so every plan is done well before 21:00, when the other PBS
  * hosts pull it over SFTP.
  */
-const REMOTE_COPY_SCHEDULE = "0 16 * * *";
+const REMOTE_COPY_SCHEDULE = "0 21 * * *";
 
 export class BackupPlanDirector extends ComponentResource {
   private readonly globals: GlobalResources;

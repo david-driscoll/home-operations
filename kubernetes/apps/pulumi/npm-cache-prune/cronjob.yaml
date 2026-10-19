@@ -6,7 +6,9 @@ metadata:
   name: pulumi-npm-cache-prune
   namespace: pulumi
 spec:
+  # Sundays at 03:00 local time.
   schedule: "0 3 * * 0"
+  timeZone: ${TIMEZONE}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

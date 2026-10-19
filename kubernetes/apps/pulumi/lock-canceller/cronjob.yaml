@@ -21,7 +21,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: lock-canceller
-              image: bitnami/kubectl@sha256:f7f9e4f64d9e114650c115a4ac6fd383394b3d494061a8f17b1a0f6c8d55bc25
+              image: bitnami/kubectl@sha256:599e67d36ff511e071ffe9a002347e58cf395e9fbd5f4992c233fd5e089e333e
               command: ["/bin/bash", "-c"]
               args:
                 - |
@@ -33,6 +33,11 @@ spec:
                   # ../pulumi-operator/helmrelease.yaml): `shared.ReconcileRequestAnnotation`
                   # in operator/api/pulumi/shared/stack_types.go.
                   RECONCILE_ANNOTATION="pulumi.com/reconciliation-request"
+                  # Where this job records the lock it found, so PulumiStackLocked can see it.
+                  # kube-state-metrics exports it as kube_stack_lock_created_timestamp_seconds
+                  # (observability/prometheus/values.yaml). The operator ignores it: its
+                  # Stack watch only fires on a generation change or a reconcile request.
+                  LOCK_ANNOTATION="pulumi-lock-canceller/locked-since"
 
                   # WHY cancelling is not enough on its own (2026-09-21, pulumi/vault):
                   # an update took the state lock at 00:02:20Z, the operator pod restarted
@@ -54,6 +59,18 @@ spec:
                   # is what finally ends the loop (and the alert). `pulumi cancel` on the
                   # self-managed backend is idempotent, so a stack whose lock is already gone
                   # goes through the same cancel-then-nudge path rather than looping.
+                  #
+                  # WHY the workspace pod log (2026-10-17, pulumi/vault): from v2.9.3 the
+                  # agent reports only engine diagnostics in the message. A lock fails the
+                  # CLI before the engine starts, so there are none, and the message is the
+                  # generic "<op> failed; see the workspace pod logs" (failureMessage() in
+                  # agent/pkg/server/diagnostics.go). The Update object carries the same
+                  # string. The lock text survives only in the agent's
+                  # "<op> completed with an error" log line, which embeds the CLI's stderr:
+                  #   ...locks/organization/applications/vault/<id>.json?...: created by
+                  #   node@vault-workspace-0 (pid 472) at 2026-10-17T18:03:18Z
+                  # Matching "locked by" in the message alone missed that lock for 33h while
+                  # vault sat Stalled, and PulumiStackLocked never fired.
 
                   echo "$(date -u): Checking for stale Pulumi stack locks"
 
@@ -66,11 +83,31 @@ spec:
                   for stack_line in "${STACKS[@]:-}"; do
                     [[ -z "$stack_line" ]] && continue
                     read -r stack_name stack_ns <<< "$stack_line"
+                    workspace_pod="${stack_name}-workspace-0"
 
                     message=$(kubectl get stack "$stack_name" -n "$stack_ns" \
                       -o jsonpath='{.status.lastUpdate.message}' 2>/dev/null || echo "")
+                    state=$(kubectl get stack "$stack_name" -n "$stack_ns" \
+                      -o jsonpath='{.status.lastUpdate.state}' 2>/dev/null || echo "")
+                    recorded_lock=$(kubectl get stack "$stack_name" -n "$stack_ns" \
+                      -o jsonpath='{.metadata.annotations.pulumi-lock-canceller/locked-since}' 2>/dev/null || echo "")
 
-                    echo "$message" | grep -q "locked by" || continue
+                    # The message can only point at a lock in two ways: it quotes one, or it
+                    # is the bare "see the workspace pod logs" a pre-engine failure leaves.
+                    # The longer "... (N further diagnostics; see the workspace pod logs)"
+                    # follows real engine errors and is not a candidate.
+                    if echo "$message" | grep -q "locked by"; then
+                      lock_source="message"
+                    elif [[ "$state" == "failed" ]] \
+                      && echo "$message" | grep -qxE '[a-z]+ failed; see the workspace pod logs'; then
+                      lock_source="log"
+                    else
+                      if [[ -n "$recorded_lock" ]]; then
+                        kubectl annotate stack "$stack_name" -n "$stack_ns" "${LOCK_ANNOTATION}-" >/dev/null \
+                          && echo "  $stack_ns/$stack_name no longer lock-blocked, cleared $LOCK_ANNOTATION"
+                      fi
+                      continue
+                    fi
 
                     # lastUpdate only changes when a run FINISHES, so a run we (or anyone)
                     # just kicked off still shows the old lock text -- while itself holding a
@@ -92,20 +129,62 @@ spec:
                       continue
                     fi
 
-                    # Lock timestamp format: "at YYYY-MM-DDTHH:MM:SSZ"
-                    lock_time=$(echo "$message" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z' | tail -1)
+                    if [[ "$lock_source" == "message" ]]; then
+                      lock_text="$message"
+                    else
+                      # Only the run that wrote lastUpdate counts: take the agent's LAST
+                      # "completed with an error" line from around the time it finished
+                      # (lastResyncTime), not any older lock still in the pod's log.
+                      resync=$(kubectl get stack "$stack_name" -n "$stack_ns" \
+                        -o jsonpath='{.status.lastUpdate.lastResyncTime}' 2>/dev/null || echo "")
+                      if [[ -z "$resync" ]]; then
+                        echo "  $stack_ns/$stack_name failed with no lastResyncTime, cannot place its run in the log, skipping"
+                        continue
+                      fi
+                      since=$(date -u -d "@$(( $(date -d "$resync" +%s) - 600 ))" +%Y-%m-%dT%H:%M:%SZ)
+                      if ! run_log=$(kubectl logs -n "$stack_ns" "$workspace_pod" -c pulumi \
+                        --since-time="$since" 2>/dev/null); then
+                        echo "  $stack_ns/$stack_name failed opaquely and $workspace_pod has no log to read, skipping"
+                        continue
+                      fi
+                      lock_text=$(echo "$run_log" | grep 'completed with an error' | tail -1 || true)
+                      if ! echo "$lock_text" | grep -q "locked by"; then
+                        echo "  $stack_ns/$stack_name failed, but not on a state lock (per $workspace_pod log)"
+                        if [[ -n "$recorded_lock" ]]; then
+                          kubectl annotate stack "$stack_name" -n "$stack_ns" "${LOCK_ANNOTATION}-" >/dev/null \
+                            && echo "  cleared $LOCK_ANNOTATION"
+                        fi
+                        continue
+                      fi
+                    fi
+
+                    # Lock owner format: "created by <user>@<host> (pid N) at YYYY-MM-DDTHH:MM:SSZ".
+                    # Several locks are possible; the NEWEST decides, because `pulumi cancel`
+                    # removes them all and a fresh one may belong to a live run.
+                    lock_time=$(echo "$lock_text" \
+                      | grep -oE 'created by [^ ]+ \(pid [0-9]+\) at [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z' \
+                      | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' \
+                      | sort | tail -1 || true)
+                    if [[ -z "$lock_time" ]]; then
+                      lock_time=$(echo "$lock_text" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z' | tail -1 || true)
+                    fi
                     if [[ -z "$lock_time" ]]; then
                       echo "  Cannot parse lock timestamp for $stack_name, skipping"
                       continue
                     fi
 
+                    if [[ "$recorded_lock" != "$lock_time" ]]; then
+                      kubectl annotate stack "$stack_name" -n "$stack_ns" \
+                        "${LOCK_ANNOTATION}=${lock_time}" --overwrite >/dev/null \
+                        || echo "  WARNING: could not record $LOCK_ANNOTATION on $stack_ns/$stack_name"
+                    fi
+
                     lock_epoch=$(date -d "$lock_time" +%s)
                     age=$(( NOW - lock_epoch ))
 
-                    echo "  $stack_ns/$stack_name locked for ${age}s (threshold: ${LOCK_THRESHOLD}s)"
+                    echo "  $stack_ns/$stack_name locked since $lock_time for ${age}s (threshold: ${LOCK_THRESHOLD}s, seen in $lock_source)"
 
                     if (( age > LOCK_THRESHOLD )); then
-                      workspace_pod="${stack_name}-workspace-0"
                       echo "  Cancelling stale lock for $stack_ns/$stack_name via pod $workspace_pod"
 
                       if ! kubectl get pod -n "$stack_ns" "$workspace_pod" &>/dev/null; then

@@ -1,0 +1,249 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app komga
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          # On the WORKLOAD, where Reloader looks. It will NOT restart the pod
+          # when ${APP}-oidc first appears: that Secret goes from absent to
+          # created behind an `optional: true` secretRef, which Reloader treats
+          # as a create, not a change (see ../../home/dawarich/helmrelease.yaml).
+          # Restart once by hand after `stacks/system` has run.
+          reloader.stakater.com/auto: "true"
+        # Three SQLite files on a RWO volume: never two pods at once.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # GHCR, which upstream publishes alongside gotson/komga on Docker
+              # Hub (same index digest). Multi-arch: amd64, arm64, arm/v7.
+              repository: ghcr.io/gotson/komga
+              tag: 1.29.1@sha256:9fa656e8259bbd75c0f654bdfa91abf2b4813cbf4f40e80eb292495446ffdf1f
+              pullPolicy: IfNotPresent
+            envFrom:
+              # The whole spring.security.oauth2.client.* registration. Optional
+              # so the pod boots before `stacks/system` has created the
+              # authentik client; see ./externalsecret.yaml for why that boot
+              # is local-login-only rather than broken or open.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            # Reference: komga.org/docs/installation/configuration at the
+            # pinned tag, and komga/src/main/resources/application.yml.
+            env:
+              TZ: ${TIMEZONE}
+              SERVER_PORT: &port 25600
+              # No user in the image (it runs as root unless told otherwise),
+              # and none is needed: upstream documents --user as the way to
+              # run it, and nothing in the entrypoint expects a passwd entry.
+              # The image already sets KOMGA_CONFIGDIR=/config, so the three
+              # databases and the Lucene index land on the VolSync claim.
+              #
+              # Heap as a share of the container limit rather than a fixed
+              # -Xmx, so raising the limit raises the heap. 70% of 3Gi is
+              # ~2.1Gi -- upstream's advice when it OOMs is "-Xmx2048m or 4g" --
+              # and the rest covers metaspace, thread stacks, the native image
+              # codecs (libheif, libjxl, libwebp) and kepubify, which Kobo sync
+              # forks as a separate process per EPUB download.
+              #
+              # user.home: 568 has no passwd entry, so the JVM would resolve it
+              # to `?` and PDFBox would try to write its font cache to
+              # /app/?/.pdfbox.cache, which root owns. /tmp is the emptyDir below.
+              JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70.0 -Duser.home=/tmp
+              # The rolling file log (up to 1GB, application.yml) would
+              # otherwise sit in /config and ride every VolSync backup. stdout
+              # still gets everything.
+              LOGGING_FILE_NAME: /tmp/logs/komga.log
+
+              # --- OIDC account handling ---------------------------------
+              # Plain env, not in ${APP}-oidc: both are inert until a
+              # registration exists, and they are policy, not credentials.
+              #
+              # Create a Komga user on first SSO login. authentik's access
+              # policy (./definition.yaml) is the gate. New accounts get
+              # Komga's defaults (KomgaUser.kt): FILE_DOWNLOAD and
+              # PAGE_STREAMING, all libraries, NOT admin, and no KOBO_SYNC or
+              # KOREADER_SYNC -- an admin grants those per user in Settings >
+              # Users. Komga has no claim-to-role mapping, so membership of
+              # authentik's `admins` changes nothing here.
+              #
+              # The admin is whoever CLAIMS the server, which the web UI only
+              # offers while it has no users at all -- and it disables the SSO
+              # button until then (LoginView.vue, `:disabled="unclaimed"`).
+              # Claim it with the email your authentik account uses: Komga
+              # links SSO logins to users by email, so that is what makes your
+              # SSO login the admin.
+              KOMGA_OAUTH2ACCOUNTCREATION: "true"
+              # Left at its default (true) on purpose, and stated so nobody
+              # "fixes" a login failure by turning it off: the `groups` scope
+              # mapping supplies email_verified=True (./definition.yaml).
+              KOMGA_OIDCEMAILVERIFICATION: "true"
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # Unauthenticated (SecurityConfiguration.kt permits
+                    # HealthEndpoint); details stay hidden from anonymous
+                    # callers, the status code does not.
+                    path: /actuator/health
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              readiness: *probes
+              # A JVM, then Flyway over three databases before the port opens.
+              # An upgrade can carry long data migrations, so 600s rather than
+              # the 300s most apps here get.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /actuator/health
+                    port: *port
+                  failureThreshold: 60
+                  periodSeconds: 10
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              # Not tried read-only. Everything known to write -- hsperfdata,
+              # sqlite-jdbc's extracted native library, kepubify output --
+              # goes to java.io.tmpdir, the /tmp emptyDir, so it may well
+              # work; flip it on a deploy someone is watching.
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+                memory: 768Mi
+              limits:
+                memory: 3Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        # The share is 568:568 with group-inherited ACLs; the extra groups
+        # match the other readers of truenas-media.
+        supplementalGroups: [0, 1, 44, 109, 303, 568, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      # database.sqlite (books, users, settings, thumbnails as blobs),
+      # tasks.sqlite, sessions.sqlite, lucene/ and fonts/. Block storage, which
+      # matters: Komga refuses to start with its SQLite files on a network
+      # filesystem (komga.database.check-local-filesystem defaults to true).
+      config:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /config
+      # JVM temp files, kepubify's EPUB->KEPUB output for Kobo downloads,
+      # PDFBox's font cache and the file log.
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+      truenas-media:
+        existingClaim: truenas-media
+        # READ-ONLY, both. Komga only needs to read to scan, analyse, hash
+        # (for KOReader sync and duplicate detection) and serve. Neither tree
+        # is Komga's: Kapowarr and Mylar own comics, LazyLibrarian and Grimmory
+        # own ebooks. What read-only switches off, all of it file mutation:
+        #   - deleting books or series from the UI (it would delete the files);
+        #   - "Import" of books from another folder into a library;
+        #   - CBR->CBZ conversion and "repair extensions" (rewrite files);
+        #   - removing known duplicate pages (scan-group credits and the like)
+        #     from archives -- the "delete" action on Duplicate pages.
+        # Metadata edits, collections, read lists, covers and read progress all
+        # live in database.sqlite, not beside the books, and are unaffected.
+        #
+        # Add these as libraries in Komga's UI; nothing creates them.
+        globalMounts:
+          # The path ../../media/kapowarr and ../../media/mylar use, so a
+          # series folder reads the same in all three.
+          - path: /comics
+            subPath: comics
+            readOnly: true
+          # The path ../lazylibrarian and ../grimmory use. Komga reads EPUB
+          # and PDF; the MOBI and AZW3 files in this tree are skipped. Each
+          # Author/Title/ folder becomes a one-book series.
+          - path: /media/ebooks
+            subPath: ebooks
+            readOnly: true
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # local-api, NOT local-user, for the same reason as nextcloud's whole
+          # host: local-user starts with error-pages, which replaces every
+          # 401-599 with an HTML page and drops WWW-Authenticate. Komga's
+          # clients live on those responses -- OPDS readers on the Basic-auth
+          # challenge, the web UI and mobile apps on the JSON error bodies,
+          # Kobo and KOReader sync on plain status codes. Komga renders its own
+          # error pages. No authentik forward-auth either: Komga does its own
+          # OIDC (./definition.yaml), and every non-browser client
+          # authenticates with Komga's own API keys or Basic auth, which an
+          # outpost in front would bounce. The tailnet twin is
+          # TAILSCALE_MIDDLEWARE in ./ks.yaml.
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api

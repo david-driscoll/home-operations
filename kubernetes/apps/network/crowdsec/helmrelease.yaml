@@ -131,6 +131,30 @@ spec:
   #
   # Deliberately no dollar signs anywhere in the command: this file is subject
   # to Flux postBuild envsubst, and a bare or braced name would be eaten.
+  # ---- re-registration guard ----------------------------------------------
+  # Makes a node reboot unable to wedge an agent or the AppSec pod.
+  #
+  # THE TRAP (values.yaml, "KNOWN TRAP", above `appsec:`): the chart's
+  # `wait-for-lapi-and-register` init container registers a machine named
+  # after the pod and keeps the credentials in an emptyDir. A node that reboots
+  # without a drain keeps the pod -- same name -- but not the emptyDir, so the
+  # init container runs again, the LAPI answers 403 "user already exist", and
+  # it crash-loops until someone deletes the pod. Seen on pegasus 2026-09-12,
+  # then on fluttershy (546 restarts) and kerfuffle (179) after the 10-17..19
+  # reboots: CrowdsecAgentsMissing, two nodes' logs unparsed for ~2 days.
+  #
+  # WHAT IT DOES: the chart's own command, except that a failed registration
+  # retries ONCE under `<pod>-<epoch>`. A name nobody has used always
+  # registers. Any failure takes that path, not just the 403; the cost of
+  # taking it needlessly is one spare machine row. Each re-registration leaves
+  # the old row behind, and `agents_autodelete` (values.yaml, `db_config`)
+  # ages those out. Grep CROWDSEC_REREGISTER in the init logs to see it fire.
+  #
+  # COUPLING TO WATCH: the command is copied from chart 0.24.2
+  # templates/agent-daemonSet.yaml and appsec-deployment.yaml (identical in
+  # both, and unchanged on the chart's main branch). Re-diff it on a chart bump,
+  # like the LAPI command above. The dollar signs are doubled because this
+  # file goes through Flux postBuild envsubst; `$$` comes out as one `$`.
   postRenderers:
     - kustomize:
         patches:
@@ -155,3 +179,49 @@ spec:
                             && ln -s /etc/crowdsec_data /etc/crowdsec
                             && sed 's#^\( *\)cscli console enroll \(.*\)#\1cscli console enroll \2 || echo CROWDSEC_CONSOLE_ENROLL_FAILED_NONFATAL#' /docker_start.sh > /tmp/docker_start.sh
                             && bash /tmp/docker_start.sh
+          - target:
+              kind: DaemonSet
+              name: crowdsec-agent
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: crowdsec-agent
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                      - name: wait-for-lapi-and-register
+                        command:
+                          - sh
+                          - -c
+                          - >-
+                            until nc "$${LAPI_HOST}" "$${LAPI_PORT}" -z; do echo waiting for lapi to start; sleep 5; done;
+                            ln -s /staging/etc/crowdsec /etc/crowdsec
+                            && { cscli lapi register --machine "$${USERNAME}" -u "$${LAPI_URL}" --token "$${REGISTRATION_TOKEN}"
+                            || { M="$${USERNAME}-$$(date +%s)"; echo "CROWDSEC_REREGISTER: $${USERNAME} is taken (pod outlived its credentials), registering as $${M}";
+                            cscli lapi register --machine "$${M}" -u "$${LAPI_URL}" --token "$${REGISTRATION_TOKEN}"; }; }
+                            && cp /etc/crowdsec/local_api_credentials.yaml /tmp_config/local_api_credentials.yaml
+          - target:
+              kind: Deployment
+              name: crowdsec-appsec
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: crowdsec-appsec
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                      - name: wait-for-lapi-and-register
+                        command:
+                          - sh
+                          - -c
+                          - >-
+                            until nc "$${LAPI_HOST}" "$${LAPI_PORT}" -z; do echo waiting for lapi to start; sleep 5; done;
+                            ln -s /staging/etc/crowdsec /etc/crowdsec
+                            && { cscli lapi register --machine "$${USERNAME}" -u "$${LAPI_URL}" --token "$${REGISTRATION_TOKEN}"
+                            || { M="$${USERNAME}-$$(date +%s)"; echo "CROWDSEC_REREGISTER: $${USERNAME} is taken (pod outlived its credentials), registering as $${M}";
+                            cscli lapi register --machine "$${M}" -u "$${LAPI_URL}" --token "$${REGISTRATION_TOKEN}"; }; }
+                            && cp /etc/crowdsec/local_api_credentials.yaml /tmp_config/local_api_credentials.yaml

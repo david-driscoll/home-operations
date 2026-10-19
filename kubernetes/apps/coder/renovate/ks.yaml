@@ -30,6 +30,10 @@ spec:
     # bootstrap from filing a spurious RenovateDiscoveryFailing.
     - name: forgejo
       namespace: coder
+    # Renovate's package cache (`redisUrl` in renovatejob.yaml). A run that
+    # cannot reach it stalls retrying instead of running uncached.
+    - name: valkey
+      namespace: database
   path: ./kubernetes/apps/coder/renovate
   prune: true
   force: false

@@ -43,11 +43,19 @@ spec:
         #
         # https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-smartctl-exporter/rules/rules.txt
         #
+        #
+        # Fires on NEW media errors, not on the lifetime count. The upstream
+        # `> 10` is a counter compared to a constant, so once a drive crosses it
+        # the alert fires for the rest of the drive's life: othalla's nvme0 sat
+        # at 89 (flat since 2026-09-12) as a permanent critical that taught
+        # everyone to ignore it. A drive whose count is still climbing is the
+        # one to act on. A restarted exporter pod starts a new series, and
+        # increase() never counts a series' first sample, so that cannot fire it.
         - alert: SmartDeviceMediaErrors
           annotations:
-            description: "Mounted drive {{ $labels.device }} on device {{ $labels.instance }} has {{ $value | humanize }} media errors (threshold: > 10)."
-            summary: Device has media errors
-          expr: smartctl_device_media_errors > 10
+            description: "Mounted drive {{ $labels.device }} on device {{ $labels.instance }} logged {{ $value | humanize }} new media errors in the last day."
+            summary: Device has new media errors
+          expr: increase(smartctl_device_media_errors[1d]) > 0
           for: 15m
           labels:
             severity: critical

@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -41,7 +41,7 @@ spec:
           server:
             image:
               repository: stremio/server
-              tag: v4.22.0@sha256:30829e739e6336811830f87c3d725eb5f14169f94f54725c907f42275a3bda27
+              tag: v4.22.2@sha256:3fae6846c1c7ac4c6ff69c30770573da8e81d8361882676fe84f45b0d810fe12
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}
@@ -70,7 +70,7 @@ spec:
           web:
             image:
               repository: tsaridas/stremio-docker
-              tag: v1.3.11@sha256:27e6f2a3e31b8ed598524acaa5717b448a30533defef9066dc92443288ba1379
+              tag: v1.3.13@sha256:f93826539d0607a662b7cfdeeb56a364abdb6cbc02e32b14f0e3179c7674ac31
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}

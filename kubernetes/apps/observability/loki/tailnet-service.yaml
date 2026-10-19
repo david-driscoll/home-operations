@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/v1/service.json
+#
+# THE TAILNET NAME `loki`, on the tailnet-outbound ProxyGroup. The Docker hosts'
+# Alloy and the Proxmox hosts (components/ProxmoxHost.ts) push logs to
+# loki.<tailnet>:3100.
+#
+# WHY A SEPARATE SERVICE, NOT ANNOTATIONS ON THE CHART'S. The chart Service is
+# ClusterIP. The operator accepts `tailscale.com/expose` on a ClusterIP Service
+# for a ProxyGroup, but then writes the Tailscale Service's address into
+# `status.loadBalancer.ingress`, which the API server refuses for anything but
+# `type: LoadBalancer` (svc-for-pg.go, operator 1.104.1). From 1.104.1 on, the
+# reconcile looped on that error for every such Service; traffic was unaffected.
+# A LoadBalancer Service with class `tailscale` is the shape the operator
+# documents for HA Service ingress, and its status write is valid.
+#
+# `allocateLoadBalancerNodePorts: false` keeps Loki's unauthenticated push API
+# off every node's LAN address. The class keeps Cilium's LB IPAM away from it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki-tailnet
+  annotations:
+    tailscale.com/hostname: loki
+    tailscale.com/tags: tag:observability
+    tailscale.com/proxy-group: tailnet-outbound
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  allocateLoadBalancerNodePorts: false
+  selector:
+    app.kubernetes.io/component: single-binary
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/name: loki
+  ports:
+    - name: http-metrics
+      port: 3100
+      targetPort: http-metrics
+      protocol: TCP
+    - name: grpc
+      port: 9095
+      targetPort: grpc
+      protocol: TCP

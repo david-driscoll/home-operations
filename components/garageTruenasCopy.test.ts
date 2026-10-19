@@ -71,6 +71,12 @@ describe("garageCopyTask", () => {
     assert.deepEqual(task.exclude, ["locks/**"]);
   });
 
+  it("skips Pulumi's per-update history and backups on pulumi-state only, never its checkpoints", () => {
+    const pulumi = garageCopyTask({ bucket: "pulumi-state", credentialsId: 7, uptimeUrl: "https://uptime.example.test" });
+    assert.deepEqual(pulumi.exclude, ["locks/**", "*/.pulumi/history/**", "*/.pulumi/backups/**"]);
+    assert.ok(!pulumi.exclude.some(e => e.includes("stacks")), "the checkpoints are the point of the copy");
+  });
+
   it("pushes the bucket's own Gatus token, and never fails the pull over it", () => {
     const token = toGatusKey(TRUENAS_GARAGE_COPY_GROUP, "cnpg-equestria");
     assert.equal(token, "truenas-garage-copy_cnpg-equestria");

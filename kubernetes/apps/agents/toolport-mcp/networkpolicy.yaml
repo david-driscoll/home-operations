@@ -9,8 +9,8 @@
 # file breaks nothing visibly, it just opens everything.
 #
 # Admitted, on the proxy port only:
-#   - agentboard and the ws-david workspace -- the in-cluster callers, which
-#     reach these proxies straight from .mcp.json (TOOLPORT_<PROFILE>_URL).
+#   - paseo and the ws-david workspace -- the in-cluster callers,
+#     which reach these proxies straight from .mcp.json (TOOLPORT_<PROFILE>_URL).
 #   - the six toolport-<profile>-mcp vMCPs, the OAuth doors in front of them.
 #
 # One policy for all six, so a vMCP could technically reach another profile's
@@ -44,7 +44,7 @@ spec:
               kubernetes.io/metadata.name: agents
           podSelector:
             matchLabels:
-              app.kubernetes.io/name: agentboard
+              app.kubernetes.io/name: paseo
         # kube-coder workspaces, one entry per workspace, never a label
         # selector: a label is something any workspace could be given by
         # copying another, and admission here is a grant of everything above.

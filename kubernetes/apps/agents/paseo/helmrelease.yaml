@@ -1,0 +1,295 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app paseo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 20m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    defaultPodOptions:
+      # The image's entrypoint only needs root to chown volumes on first run
+      # and then drops to `paseo` (1000) with gosu. Starting as 1000 with
+      # fsGroup does the same job, and the entrypoint skips its chown/gosu
+      # steps when it is not root.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      *app :
+        annotations:
+          # NOT `reloader.stakater.com/auto: "true"`, which this was and which
+          # restarted the pod EVERY 30 MINUTES: `auto` watches every Secret
+          # the pod references, including `github-token`, whose ExternalSecret
+          # re-mints on `refreshInterval: 30m`. Reloader's log, 2026-10-17:
+          # "Changes detected in 'github-token' ... updated 'paseo'" at :07
+          # and :37 past every hour. Each roll kills running agents, and with
+          # Recreate plus RWO volumes it takes minutes to come back. Same trap
+          # as ../agentboard/helmrelease.yaml, fixed the same way.
+          #
+          # Only what a restart actually helps: the two ConfigMaps, which are
+          # mounted by subPath and so never update in place, and the
+          # PASEO_PASSWORD Secret, which is read once through envFrom.
+          # `github-token` and `${APP}-forgejo-ssh` are directory mounts that
+          # update live, which is the whole reason they are mounted that way.
+          configmap.reloader.stakater.com/reload: ${APP}-ssh,paseo-tools
+          secret.reloader.stakater.com/reload: ${APP}
+          # Agents run for hours; a nightly scale-down would kill them mid-task.
+          downscaler/exclude: "true"
+        strategy: Recreate
+        initContainers:
+          # The base image ships no agent CLIs; upstream's answer is a child
+          # image (docker/Dockerfile.agents.example). Instead this installs
+          # mise and agentboard's tool set (./resources/mise.toml -- gh,
+          # kubectl, pulumi, sops, Claude Code, Codex, ...) onto the home
+          # volume, with no image build and no registry. Re-run every start
+          # (./resources/install-tools.sh), so a Renovate bump to the pins
+          # lands on the next rollout. The first start downloads everything
+          # and takes a few minutes; later ones are no-ops.
+          tools:
+            image: &image
+              repository: ghcr.io/getpaseo/paseo
+              tag: 0.12.0@sha256:0d17dd75a51c591907a4bbcd505013102048246a0cd6e824de3b38a6057ff862
+              pullPolicy: IfNotPresent
+            command: ["/bin/bash", "/opt/paseo/install-tools.sh"]
+            env: &env
+              TZ: "${TIMEZONE}"
+              MISE_DATA_DIR: /home/paseo/.local/share/mise
+              MISE_CONFIG_DIR: /home/paseo/.config/mise
+              MISE_CACHE_DIR: /home/paseo/.cache/mise
+              MISE_INSTALL_PATH: /home/paseo/.local/bin/mise
+              # The mise binary itself, read by ./resources/install-tools.sh.
+              # renovate: datasource=github-releases depName=jdx/mise
+              MISE_VERSION: "v2026.10.14"
+              # The system dirs FIRST: the daemon must keep running on the
+              # image's node (its native modules are built for it), not on
+              # the newer node mise installs for the `npm:` tools. Everything
+              # the image lacks -- gh, kubectl, claude, codex, ... -- falls
+              # through to the shims. The npm prefix is last, for anything an
+              # agent `npm install -g`s itself.
+              PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/paseo/.local/share/mise/shims:/home/paseo/.local/bin:/home/paseo/.local/npm/bin
+              NPM_CONFIG_PREFIX: /home/paseo/.local/npm
+              # The Claude Code version ./resources/mise.toml pins is the one
+              # that runs. Its updater would `npm install -g` a newer copy
+              # beside mise's -- see ../agentboard/helmrelease.yaml, where
+              # that happened. DISABLE_UPDATES also makes `claude update`
+              # refuse.
+              DISABLE_UPDATES: "1"
+            securityContext: &securityContext
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+        containers:
+          app:
+            image: *image
+            env:
+              <<: *env
+              # Host-header allowlist. IPs and localhost are always allowed,
+              # which is what keeps the kubelet's probes working.
+              PASEO_HOSTNAMES: ${APP}.agents.${ROOT_DOMAIN}
+              # GitHub as the estate's App installation token -- the same
+              # `github-token` Secret agentboard uses, mounted below as a
+              # directory so each rotation (30m, against a 60m life) lands in
+              # place. Nothing here reads it once: `gh` reads hosts.yml from
+              # GH_CONFIG_DIR on every invocation, and git's credential helper
+              # cats the token on every request.
+              GH_CONFIG_DIR: /var/run/secrets/github-token
+              # Git config through the environment rather than a ~/.gitconfig,
+              # because there is no entrypoint of ours to write one, and so
+              # that it applies to the daemon, every agent it spawns and any
+              # `kubectl exec` shell alike. The helper stays a literal
+              # `$(cat ...)`: git's own shell runs it per request, and the
+              # kubelet leaves `$(...)` alone when it names no env var.
+              # Identity matches agentboard (entrypoint.sh): commits are
+              # David's, Claude is credited by a Co-Authored-By trailer.
+              GIT_CONFIG_COUNT: "3"
+              GIT_CONFIG_KEY_0: credential.https://github.com.helper
+              GIT_CONFIG_VALUE_0: >-
+                !f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f
+              GIT_CONFIG_KEY_1: user.name
+              GIT_CONFIG_VALUE_1: David Driscoll
+              GIT_CONFIG_KEY_2: user.email
+              GIT_CONFIG_VALUE_2: david.driscoll@gmail.com
+              # The estate's age identity, mounted below -- the same `sops-age`
+              # Secret agentboard mounts, with the same weight (see the
+              # SOPS_AGE_KEY_FILE comment in ../agentboard/helmrelease.yaml).
+              # The repo's .config/mise.toml decrypts .config/domains.sops.yaml
+              # with it, which is the only thing that gives ROOT_DOMAIN and
+              # TAILSCALE_DOMAIN a value here; without it both are empty.
+              SOPS_AGE_KEY_FILE: /var/run/secrets/sops-age/age.agekey
+              # Each toolport profile's in-cluster remote proxy, which holds the
+              # profile's bearer itself. The repo-root .mcp.json reads these;
+              # unset, Claude Code gets the template literally and every
+              # toolport-* server fails with ENOTFOUND. mise's [env] does not
+              # cover it: the daemon starts agents without a mise-activated
+              # shell. Admission is ../toolport-mcp/networkpolicy.yaml, which
+              # names this pod. Why env vars and not a mounted .mcp.json:
+              # ../agentboard/helmrelease.yaml, beside the same six.
+              TOOLPORT_POSTGRES_URL: http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_INFRASTRUCTURE_URL: http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_NETWORKING_URL: http://mcp-toolport-networking-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_HOME_URL: http://mcp-toolport-home-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_MEDIA_URL: http://mcp-toolport-media-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_RESEARCH_URL: http://mcp-toolport-research-remote-proxy.agents.svc.cluster.local:8080/mcp
+            envFrom:
+              - secretRef:
+                  name: ${APP}
+            probes:
+              # /api/health is the one daemon route that skips the bearer check.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &health
+                    path: /api/health
+                    port: &port 6767
+                  periodSeconds: 5
+                  failureThreshold: 60
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                # Headroom for several agent CLIs running side by side.
+                memory: 8Gi
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *port
+    persistence:
+      home:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /home/paseo
+      workspace:
+        existingClaim: ${APP}-workspace
+        globalMounts:
+          - path: /workspace
+      github-token:
+        type: secret
+        # NOT `${APP}` -- the estate-wide Secret
+        # (apps/kube-system/secrets/github-app-token), reflected into every
+        # namespace. A directory mount, never a subPath: subPath mounts do not
+        # receive updates, and this token expires hourly.
+        name: github-token
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/github-token
+                readOnly: true
+      sops-age:
+        type: secret
+        # The estate-wide reflected Secret, not `${APP}` -- see the
+        # SOPS_AGE_KEY_FILE comment in the `env` block for what it grants.
+        name: sops-age
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/sops-age
+                readOnly: true
+      # git over SSH to Forgejo as `claude-code` -- ./externalsecret.yaml
+      # (`${APP}-forgejo-ssh`) and ./resources/ssh_config. `custom` because
+      # app-template's secret type passes neither field through:
+      #   optional: true   a pod that rolls before the key reaches OpenBao
+      #                    still starts, just keyless.
+      #   defaultMode 256  0400. With fsGroup the kubelet makes it 0440
+      #                    root:1000, readable by `paseo` through the group;
+      #                    ssh only rejects group bits on a key the user owns.
+      forgejo-ssh:
+        type: custom
+        volumeSpec:
+          secret:
+            secretName: ${APP}-forgejo-ssh
+            optional: true
+            defaultMode: 256
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/forgejo-ssh
+                readOnly: true
+      ssh-config:
+        type: configMap
+        name: ${APP}-ssh
+        advancedMounts:
+          *app :
+            app:
+              - path: /etc/ssh/ssh_config.d/forgejo.conf
+                subPath: forgejo.conf
+                readOnly: true
+              - path: /etc/paseo/ssh/known_hosts
+                subPath: known_hosts
+                readOnly: true
+      tools:
+        type: configMap
+        name: paseo-tools
+        advancedMounts:
+          *app :
+            tools:
+              - path: /opt/paseo/install-tools.sh
+                subPath: install-tools.sh
+                readOnly: true
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+            # The daemon and every agent read the same global config.
+            app:
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp

@@ -1,14 +1,14 @@
 
 [tools]
-python = "3.14.8"
+python = "3.15.0"
 kubectl = "1.37.1"
 # kubectl plugin (invoked as `kubectl cnpg ...`) for CNPG replica surgery and
 # planned primary switchovers -- see docs/cluster-consolidation/*.md, which
 # repeatedly calls out `kubectl cnpg destroy`/`promote` over touching a PVC or
 # forcing a failover by hand.
 "github:cloudnative-pg/cloudnative-pg" = { version = "v1.30.1", bin = "kubectl-cnpg" }
-powershell-core = "7.6.6"
-1password-cli = "2.40.0"
+powershell-core = "7.6.7"
+1password-cli = "2.41.0"
 # Talos tooling for the `talos:*` tasks under .config/mise/tasks/talos/.
 #
 # `talosctl` MUST stay in step with talos/talenv.yaml's talosVersion. That is
@@ -16,7 +16,7 @@ powershell-core = "7.6.6"
 # the two and refuses to validate a machine config with a mismatched schema.
 # Renovate bumps talenv.yaml from the ghcr.io/siderolabs/installer tag; this
 # line has to move with it.
-talosctl = "1.14.2"
+talosctl = "1.14.4"
 talhelper = "3.1.17"
 yq = "4.54.1"
 jq = "1.8.2"
@@ -28,10 +28,10 @@ gh = "2.102.0"
 # itself as `hk run pre-commit --from-hook` via git config, and an unpinned mise
 # shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
 # The hook exits non-zero and git aborts the commit.
-hk = "2.4.0"
+hk = "2.7.0"
 pkl = "0.32.1"
 biome = "2.5.2"
-typos = "1.50.3"
+typos = "1.51.1"
 # Linters invoked by hk. The same pinning rule as hk applies -- an unpinned
 # shim here fails the individual step rather than the whole commit, but still
 # breaks the hook.
@@ -55,17 +55,22 @@ shellcheck = "0.11.0"
 go = "1.27.2"
 "pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
-node = "24.21.0"
-pulumi = "3.267.0"
+node = "24.22.0"
+pulumi = "3.270.0"
 "github:microsoft/apm" = { version = "v0.33.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
 "github:home-operations/flate" = "v0.6.5"
 dotnet = { version = "10.0.203" }
-# Secret-reference resolver for ref+openbao:// (PLAN §D.1). Keep this version
-# in step with the vals initContainer in kubernetes/apps/pulumi/*/stack.yaml —
-# the workspace pods install the same pin via mise.
+# Secret-reference resolver for ref+openbao:// inside documents
+# (components/store/refs.ts, PLAN §D.1). Keep this version in step with the
+# vals initContainer in kubernetes/apps/pulumi/*/stack.yaml — the workspace
+# pods install the same pin via mise.
 vals = "0.47.0"
-"github:stacklok/toolhive" = "v0.51.4"
+# Resolves the secrets local commands need: `fnox exec -- <command>`, configured
+# by .config/fnox.toml. 1.40.0 is the floor: the sops and openbao providers
+# there are Lua plugins, which landed in that release.
+fnox = "1.40.0"
+"github:stacklok/toolhive" = "v0.54.0"
 # REQUIRED BY the `pipx:` backend below, and the reason it never installed here.
 # mise's pipx backend shells out to a `pipx` on PATH (or `uv`, with
 # MISE_PIPX_UVX=1); it does not vendor one. Neither was pinned, so
@@ -79,8 +84,8 @@ vals = "0.47.0"
 # `python` above is also required (pipx builds the venv with it) and was
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
-pipx = "1.17.12"
-"pipx:graphifyy" = "0.9.77"
+pipx = "1.18.4"
+"pipx:graphifyy" = "0.9.92"
 
 [tasks.codegen]
 description = 'Regenerate types/application-definition.d.ts from schemas/'
@@ -107,7 +112,7 @@ description = 'Update all apps that have an update script'
 # the working directory -- without it, `mise run update` from a subdirectory
 # finds no update scripts.
 #
-# The dotnet step goes through `vals-run` rather than resolving secrets itself:
+# The dotnet step goes through `fnox exec` rather than resolving secrets itself:
 # the Update.cs scripts read credentials from the environment, and this way they
 # are resolved ONCE for the whole run instead of once per script. In
 # equestria-cluster this was `op run` inside do-update.cs; see that file.
@@ -118,7 +123,7 @@ description = 'Update all apps that have an update script'
 dir = '{{config_root}}'
 depends = ['codegen']
 run = [
-  'mise run vals-run dotnet run scripts/do-update.cs',
+  'fnox exec -- dotnet run scripts/do-update.cs',
   # `mise task <name>` prints information about a task; `mise run <name>` runs
   # it. This line was the former and had never actually run flate.
   'mise run flate',
@@ -156,6 +161,14 @@ description = 'Install the Pkl VS Code extension (not on the marketplace; instal
 # something `mise install` should do unasked. Run it once by hand.
 run = ['bash scripts/install-pkl-vscode.sh']
 
+[tasks."claude:toolport-env"]
+description = 'Pin the toolport MCP door URLs into ~/.claude/settings.json (for desktop-app sessions)'
+# The Claude desktop app starts sessions without mise's environment, so the
+# TOOLPORT_<PROFILE>_URL references in .mcp.json stay unexpanded there. This
+# writes the six URLs [env] resolves below into the user's own settings `env`,
+# never into the repo. Once per machine; see the script's header.
+run = ['bash scripts/claude-toolport-env.sh']
+
 [settings]
 experimental = true
 prereleases = true
@@ -180,27 +193,41 @@ activate_aggressive = true
 # just empty there, and nothing that needs them works anyway.
 sops.strict = false
 
+# fnox as mise's secrets source (experimental, mise >= 2026.10.4). It adds a
+# NARROWER way in than `fnox exec`: mise asks fnox for the named keys only and
+# hands them to that one command or task.
+#
+#   mise x --secrets PULUMI_CONFIG_PASSPHRASE,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY -- pulumi stack ls
+#   [tasks.x] secrets = ["AUTHENTIK_TOKEN"]         # a task's own grant
+#   mise secrets ls                                 # what exists, never values
+#
+# `fnox exec` resolves EVERY secret fnox can see, including any in your
+# personal ~/.config/fnox/config.toml, which can mean a password-manager prompt
+# for a value the command never reads.
+[secrets.fnox]
+
 [env]
-# Secret values are `vals` references, resolved per command:
+# Secrets are NOT in this block. They live in .config/fnox.toml and are
+# resolved per command:
 #
-#   mise run vals-run pulumi preview
+#   fnox exec -- pulumi preview
+#   mise x --secrets KEY[,KEY…] -- <command>    # only those keys ([secrets.fnox] above)
 #
-# They were `op://` literals, which mise passed through untouched and `op run`
-# substituted — so every value had to come from 1Password. Each one now names
-# its own backend (openbao, sops, op, …), and moving a value between stores is
-# a one-line edit here.
+# This block keeps only non-secret settings, which fnox reads from the
+# environment mise provides (BAO_ADDR below is the OpenBao provider's address).
 #
 # Resolution is per command rather than by mise itself on purpose: mise
 # re-evaluates `[env]` on EVERY load with no caching, so resolving here would
 # hit OpenBao on every `cd` into the repo and break the shell whenever you are
 # off-network or without an age key.
 #
-# `mise run vals-run` is the `op run` replacement — it resolves whatever `ref+`
-# values are in the environment. It is self-contained: the OpenBao credential
-# comes from the BAO_* references at the bottom of this block, so there is no
-# `eval "$(bootstrap/openbao/pulumi-env.sh)"` step any more. That script
-# still works and is still the break-glass path when the mise AppRole is
-# revoked.
+# History: these were `op://` literals substituted by `op run`, then `ref+`
+# values resolved by `mise run vals-run` (2026-08 to 2026-10). fnox replaced the
+# wrapper; the references moved into fnox.toml one for one. The OpenBao
+# credential still comes from the mise AppRole in SOPS, so no
+# `eval "$(bootstrap/openbao/pulumi-env.sh)"` step is needed. That script still
+# works and is still the break-glass path when the AppRole is revoked: fnox's
+# openbao provider uses an exported BAO_TOKEN ahead of the AppRole.
 
 # The estate's root domain and tailnet: the two names this public repo never
 # writes (docs/plans/private-domain-scrub.md). They are the one exception to
@@ -229,44 +256,22 @@ _.file = "{{config_root}}/.config/domains.sops.yaml"
 # Always defined, so the templates below render empty instead of failing.
 ROOT_DOMAIN = "{{ env.ROOT_DOMAIN | default(value='') }}"
 TAILSCALE_DOMAIN = "{{ env.TAILSCALE_DOMAIN | default(value='') }}"
-# The Pulumi state backend: a Garage key scoped to the `pulumi-state` bucket
-# on the dockge cluster (every stacks/*/.mise.toml points PULUMI_BACKEND_URL
-# there). Region `garage` is part of every SigV4 signature.
-AWS_ACCESS_KEY_ID = "ref+openbao://secrets/apps/pulumi/state-s3#/username"
-AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/apps/pulumi/state-s3#/password"
+# The Pulumi state backend's region: the key itself (AWS_ACCESS_KEY_ID /
+# AWS_SECRET_ACCESS_KEY) is in .config/fnox.toml. Region `garage` is part of
+# every SigV4 signature.
 AWS_REGION = "garage"
 # Same as every Stack CR: no copy of the previous checkpoint in
 # .pulumi/backups/ per update (kubernetes/apps/pulumi/history-pruner/cronjob.yaml).
 PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS = "true"
-# The Pulumi state passphrase. It lives in OpenBao like everything else
-# (estate decision 2026-08-12), reached through the AppRole that
-# pulumi-env.sh exports — so the chain is age key -> sops -> AppRole ->
-# OpenBao, and no step needs 1Password.
-#
-# bootstrap/openbao/pulumi-passphrase.sops.yaml is KEPT as break-glass: if
-# OpenBao is sealed or unreachable, that offline copy is what still lets
-# you decrypt state and run Pulumi to fix it. Point this at the sops file
-# if you ever need that.
-PULUMI_CONFIG_PASSPHRASE = "ref+openbao://secrets/apps/pulumi/passphrase#/password"
+# Same as every Stack CR: gzip every state write (<stack>.json.gz). The backend
+# reads whichever of .json/.json.gz is newest, so a CLI run without this still
+# works -- but keep the two in step, or each side rewrites the other's format.
+PULUMI_DIY_BACKEND_GZIP = "true"
+# 1Password Connect, which Pulumi still WRITES PBS items to. CONNECT_TOKEN, the
+# Pulumi passphrase, the authentik token and the Tailscale OAuth client are in
+# .config/fnox.toml.
 CONNECT_HOST = "https://op-connect.equestria.{{ env.ROOT_DOMAIN }}/"
 CONNECT_VAULT = "Eris"
-# Still needed: Pulumi WRITES the PBS items a human logs into the generated
-# LXCs with (Phase 11 estate decision). Nothing READS 1Password any more.
-CONNECT_TOKEN = "ref+openbao://secrets/third-party-tokens/onepassword/eris-connect#/credential"
-AUTHENTIK_TOKEN = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/credential"
-AUTHENTIK_URL = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/url"
-
-# Tailscale OAuth client, read by kubernetes/apps/tailscale-system/services/Update.cs
-# (via `mise run update`). That script REFUSES to run without these rather than
-# regenerating an empty list, because a run without the API would delete every
-# per-device Service, Gatus probe and alert it manages.
-#
-# These were declared in equestria-cluster's mise.toml and never carried across
-# during the repo consolidation, which is why `mise run update` could not
-# complete here. The path also moved: it was `secrets/shared/tailscale-terraform-oauth-client`
-# before `secrets/shared/` was drained (scripts/bao-reorg/plan.ts, phase 3).
-TAILSCALE_CLIENT_ID = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/username"
-TAILSCALE_CLIENT_SECRET = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/credential"
 
 # The toolport MCP doors that .mcp.json reads. It has no defaults, because a
 # default would name the domain. An agentboard or kube-coder pod exports its
@@ -281,27 +286,19 @@ TOOLPORT_POSTGRES_URL = "{{ get_env(name='TOOLPORT_POSTGRES_URL', default='https
 TOOLPORT_RESEARCH_URL = "{{ get_env(name='TOOLPORT_RESEARCH_URL', default='https://toolport-research.agents.' ~ env.ROOT_DOMAIN ~ '/mcp') }}"
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 
-# How every ref+openbao:// value above authenticates.
+# Where OpenBao is. fnox's openbao provider (.config/fnox/openbao.lua) reads
+# this, and so does `components/bao.ts` for the Pulumi provider.
 #
-# `vals` reads BAO_ADDR / BAO_ROLE_ID / BAO_SECRET_ID (its openbao provider is
-# BAO_*-only — it does not fall back to VAULT_*), and BAO_AUTH_METHOD selects
-# AppRole over the default token auth. `components/bao.ts` reads the same three
-# for the Pulumi provider, so one credential covers vals and Pulumi both.
+# The AppRole they log in with, BAO_ROLE_ID / BAO_SECRET_ID, is in
+# .config/fnox.toml (from .config/bao-approle.sops.yaml). It used to be a pair
+# of `ref+sops://` values here, which is why vals-run had to resolve in two
+# passes; fnox resolves a provider's credential before the provider itself.
 #
-# The role_id/secret_id are themselves `ref+`, which is why the ordering is not
-# free: .config/mise/tasks/vals-run resolves these BAO_* references in a first
-# pass (sops, age key only) before resolving anything that needs OpenBao. A
-# single-pass resolve authenticates with the literal string "ref+sops://…" and
-# fails with a bare 403.
-#
-# The AppRole lives in SOPS, not in OpenBao: the credential you authenticate
-# WITH cannot live in the store it unlocks (bootstrap/INVENTORY.md §2).
-# Create or rotate it with ./scripts/bao-mise-approle.sh — the sealed file is
-# committed, and the age key is what actually gates access.
+# BAO_AUTH_METHOD selects AppRole over token auth for `vals`, which
+# components/store/refs.ts still spawns to resolve ref+openbao:// inside
+# documents.
 BAO_ADDR = "https://bao.equestria.{{ env.ROOT_DOMAIN }}"
 BAO_AUTH_METHOD = "approle"
-BAO_ROLE_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/role_id"
-BAO_SECRET_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/secret_id"
 
 # Where talhelper writes the generated admin talosconfig, and where every
 # `talos:*` task expects to find it. Set globally so an ad-hoc `talosctl` in

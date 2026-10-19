@@ -47,11 +47,13 @@ export interface KvReadResult {
 
 /**
  * Read an OpenBao credential from the environment, treating an UNRESOLVED
- * `vals` reference as absent.
+ * `ref+` reference as absent.
  *
- * `.config/mise.toml` sets BAO_ROLE_ID / BAO_SECRET_ID to `ref+sops://` values,
- * so every process started through a mise shim sees the reference itself unless
- * it was started through `mise run vals-run`, which resolves it first. Taking
+ * BAO_ROLE_ID / BAO_SECRET_ID come from `.config/fnox.toml` under
+ * `fnox exec`. Before that (to 2026-10) `.config/mise.toml` set them to
+ * `ref+sops://` values that only `mise run vals-run` resolved, so a process
+ * started any other way saw the reference itself; an old shell or a stray
+ * export can still carry one. Taking
  * that string at face value is worse than having no credential at all: it
  * satisfies every "do we have credentials?" check — including
  * `GlobalResources.baoDualWriteEnabled`, whose whole job is to decide whether
@@ -70,7 +72,7 @@ export function baoEnvUnresolved(): boolean {
 }
 
 /** Appended to credential errors so the fix is in the message that reports them. */
-export const BAO_CREDENTIAL_HINT = "Run it through `mise run vals-run <command>`, which resolves the AppRole in .config/bao-approle.sops.yaml (or set BAO_TOKEN directly).";
+export const BAO_CREDENTIAL_HINT = "Run it through `fnox exec -- <command>`, which resolves the AppRole in .config/bao-approle.sops.yaml (or set BAO_TOKEN directly).";
 
 export class BaoClient {
   private readonly addr: string;
@@ -93,7 +95,7 @@ export class BaoClient {
     // every write on an AppRole run.
     if (!token && !(roleId && secretId)) {
       throw new Error(
-        baoEnvUnresolved() ? `OpenBao credentials are unresolved \`vals\` references, not values. ${BAO_CREDENTIAL_HINT}` : `No OpenBao credentials — set BAO_TOKEN, or BAO_ROLE_ID/BAO_SECRET_ID. ${BAO_CREDENTIAL_HINT}`,
+        baoEnvUnresolved() ? `OpenBao credentials are unresolved \`ref+\` references, not values. ${BAO_CREDENTIAL_HINT}` : `No OpenBao credentials — set BAO_TOKEN, or BAO_ROLE_ID/BAO_SECRET_ID. ${BAO_CREDENTIAL_HINT}`,
       );
     }
     this.addr = addr.replace(/\/+$/, "");

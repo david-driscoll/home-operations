@@ -79,6 +79,9 @@ services:
       traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.dynamic.refreshFrequency: 20s
 
       traefik.http.services.openspeedtest.loadbalancer.server.port: 3000
+    environment:
+      # Web-server log timestamps only.
+      TZ: ${TIMEZONE}
     networks:
       - dockge_default
 x-dockge:

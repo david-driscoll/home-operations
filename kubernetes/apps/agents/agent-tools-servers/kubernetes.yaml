@@ -22,7 +22,7 @@ kind: MCPServer
 metadata:
   name: toolhive-kubernetes
 spec:
-  image: ghcr.io/stackloklabs/mkp/server:0.4.3
+  image: ghcr.io/stackloklabs/mkp/server:0.4.4@sha256:47b54ea7a5f2b32b09c4a7c72d744c0196658da50615576ed1c655886d1020b9
   transport: streamable-http
   proxyPort: 8080
   mcpPort: 8080

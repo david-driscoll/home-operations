@@ -15,11 +15,11 @@ resources:
   - ./history-pruner/ks.yaml
   - ./update-pruner/ks.yaml
   - ./npm-cache-prune/ks.yaml
+  - ./workspace-image/ks.yaml
   - ./kubeproxies/ks.yaml
   - ./unifi-network/ks.yaml
   - ./backups/ks.yaml
   - ./authentik/ks.yaml
-  - ./vault/ks.yaml
   - ./home-operations/ks.yaml
   - ./gulf-of-mexico/ks.yaml
   # disabled due to ocracoke being offline

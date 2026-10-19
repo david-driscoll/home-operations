@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -14,7 +14,9 @@ spec:
       backup:
         type: cronjob
         cronjob:
+          # 04:12 local time.
           schedule: "12 4 * * *"
+          timeZone: ${TIMEZONE}
           parallelism: 1
           successfulJobsHistory: 1
           failedJobsHistory: 1
@@ -23,7 +25,7 @@ spec:
           talosctl:
             image:
               repository: ghcr.io/siderolabs/talosctl
-              tag: v1.14.2@sha256:b655ae1c73789c4789fcf6fbd61c8f45400ed4b3bd9892a26092fcd4d8d95d86
+              tag: v1.14.4@sha256:b3233234327350f20ed194f3fad83d90a64344c1940f839c7b0c0abef50c8c33
             args:
               - --talosconfig
               - /var/run/secrets/talos.dev/config
@@ -99,7 +101,15 @@ spec:
       defrag:
         type: cronjob
         cronjob:
-          schedule: "3 9 * * *" # daily at 09:03
+          # Daily at 09:03 local time: 13:03 UTC in summer, 14:03 in winter.
+          #
+          # Longhorn's snapshot-cleanup RecurringJob cannot carry a timezone
+          # (the CRD has no field for one) and is fixed at 15:00 UTC, chosen
+          # so that this stays ahead of it all year: by 1h57 in summer and by
+          # 57 minutes in winter. At 14:00 UTC this would start three minutes
+          # after it every winter.
+          schedule: "3 9 * * *"
+          timeZone: ${TIMEZONE}
           parallelism: 1
           successfulJobsHistory: 1
           failedJobsHistory: 1
@@ -108,7 +118,7 @@ spec:
           defrag:
             image:
               repository: ghcr.io/ahrtr/etcd-defrag
-              tag: v0.45.0@sha256:84df8071f671917857996c4afdf494b55b26c0f7ae117c9f9720f9ff4b758b49
+              tag: v0.46.0@sha256:bdfa3a1b110fce58f5bac9de2b5054da3ff7de388598a8b9230de0246ff6643a
             args:
               - --endpoints=https://127.0.0.1:2379
               - --cluster
@@ -150,7 +160,9 @@ spec:
       prune:
         type: cronjob
         cronjob:
+          # The 1st at 05:32 local time.
           schedule: "32 5 1 * *"
+          timeZone: ${TIMEZONE}
           successfulJobsHistory: 1
           failedJobsHistory: 1
 

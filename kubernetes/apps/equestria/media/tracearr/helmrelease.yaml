@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -46,7 +46,7 @@ spec:
             image:
               repository: ghcr.io/connorgallopo/tracearr
               # No `v` prefix on this project's tags -- `v2.2.3` does not exist.
-              tag: 2.6.2@sha256:933af2d7835b82fe8d1cf3d9fc7694500c598b8f5f724558828dbd0b068acbb9
+              tag: 2.8.3@sha256:df06e1a22b7eda67929a3076c5fe4ad2e03df8f92324ab09c2f3b18137a82c83
             # Every variable in https://docs.tracearr.com/configuration/environment
             # is either set here, set in externalsecret.yaml, or deliberately
             # left at its default below. Media servers (Plex, Jellyfin, Emby)

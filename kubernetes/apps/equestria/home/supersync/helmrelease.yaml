@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 #
 # SuperSync, the Super Productivity sync server, with authentik as its only
 # way in. Two controllers:
@@ -83,7 +83,7 @@ spec:
               # `latest` lets Renovate propose digest bumps; each one runs this
               # initContainer's migrations before the server starts.
               repository: ghcr.io/super-productivity/supersync
-              tag: latest@sha256:72e76bf9aef305af33f4e582243bed5a93c3a3aa5af87db4cbbf404f6f8f34bc
+              tag: latest@sha256:c083af5f43edf85fae966cd25819d1194e190c6582837436ab6fd49a6c3fc682
               pullPolicy: IfNotPresent
             command: ["sh", "scripts/migrate-deploy.sh"]
             env:
@@ -184,7 +184,7 @@ spec:
             # price of not having an image to build and publish.
             image:
               repository: mcr.microsoft.com/dotnet/sdk
-              tag: 10.0-noble@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317
+              tag: 10.0-noble@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
               pullPolicy: IfNotPresent
             command: ["dotnet", "run", "/scripts/App.cs"]
             env:

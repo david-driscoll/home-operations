@@ -24,17 +24,14 @@ spec:
         # namespace (modules/metrics/collector.go, `namespace = "gitea_"`).
         # There is deliberately no alert on runner count here -- the collector
         # exports no runner metric at all, so that rule could never fire. The
-        # runner is watched through kube-state-metrics instead; see
-        # kubernetes/apps/coder/forgejo-runner/prometheusrule.yaml.
-        - alert: ForgejoWebhookBacklog
-          annotations:
-            description: >-
-              {{ humanize $value }} webhook deliveries are queued. Forgejo
-              Actions dispatches through the hook task queue, so a backlog that
-              does not drain means workflows are not being triggered.
-            summary: Forgejo webhook queue is not draining.
-          expr: |
-            gitea_hooktasks > 1000
-          for: 30m
-          labels:
-            severity: warning
+        # runners are short-lived pods started by KEDA now; what watches them is
+        # the KEDA alerts in kubernetes/apps/kube-system/keda.
+        #
+        # There is deliberately no webhook-backlog alert either. The obvious
+        # metric, `gitea_hooktasks`, counts EVERY row of the hook_task table,
+        # delivered or not -- it is delivery history, which Forgejo keeps for a
+        # week. A `> 1000` rule on it fired permanently on 2026-10-14 with 2,752
+        # rows, all `is_delivered = true`. Forgejo exports nothing for the
+        # undelivered count; the honest check is
+        #   select count(*) from hook_task where not is_delivered;
+        # against the forgejo database.

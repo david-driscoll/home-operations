@@ -7,6 +7,11 @@ services:
       - 100.100.100.100
     environment:
       GATUS_CONFIG_PATH: /config
+      # Log timestamps only. The image has no /usr/share/zoneinfo, but the
+      # binary embeds the tz database, so the name resolves. Maintenance
+      # windows do not move: Gatus evaluates them in UTC unless a window names
+      # its own timezone.
+      TZ: ${TIMEZONE}
     labels:
       # Enable Traefik
       traefik.enable: true
@@ -41,6 +46,11 @@ services:
       # into — in-repo rather than Pulumi-written because the consumers are
       # GitOps jobs, not Pulumi-managed backup plans.
       - ./config/openbao-break-glass.yaml:/config/openbao-break-glass.yaml:ro
+      # The endpoint the Forgejo runner canary reports into. The file had been
+      # in the repo since the canary was added, but without a mount here Gatus
+      # never read it, so every hourly push got a 404 and the canary's job was
+      # red from its first run.
+      - ./config/forgejo-actions.yaml:/config/forgejo-actions.yaml:ro
     networks:
       - dockge_default
 x-dockge:

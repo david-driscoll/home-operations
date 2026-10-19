@@ -1,0 +1,72 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Komga
+  category: Media
+  description: Comics, manga and ebook server with a web reader, OPDS, and Kobo and KOReader sync
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/komga.svg
+  access_policy:
+    # The reading audience, the same one ../audiobookshelf serves. Komga
+    # creates an account for anyone authentik lets through
+    # (KOMGA_OAUTH2ACCOUNTCREATION in ./helmrelease.yaml), so this list IS the
+    # account gate.
+    groups:
+      - media-managers
+      - family
+      - friends
+  authentik:
+    oauth2:
+      clientType: confidential
+      # Spring Security's callback, {baseUrl}/login/oauth2/code/{registrationId},
+      # with `authentik` as the registration id (SPRING_SECURITY_OAUTH2_CLIENT_
+      # REGISTRATION_AUTHENTIK_* in ./externalsecret.yaml). {baseUrl} is built
+      # from the request, so each hostname Komga is served on needs its own
+      # entry; it comes out as https:// because Komga runs with
+      # server.forward-headers-strategy=framework (application.yml) and so
+      # honours Traefik's X-Forwarded-Proto.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/login/oauth2/code/authentik"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/login/oauth2/code/authentik"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # For email_verified=True, not for the groups. Komga refuses an OIDC
+        # login whose email_verified claim is missing (ERR_1027) or false
+        # (ERR_1026) -- KomgaOAuth2UserServiceConfiguration.kt, with
+        # komga.oidc-email-verification left at its default of true -- and
+        # authentik's built-in `email` mapping hardcodes it to False. This
+        # mapping asserts True and wins because authentik merges mappings in
+        # scope-name order. authentik only evaluates it because the
+        # registration asks for the `groups` scope (SCOPE in
+        # ./externalsecret.yaml). See components/authentik/property-mappings.ts.
+        #
+        # The groups claim itself is unused: Komga has no claim-to-role
+        # mapping. Roles are set per user in Komga's own UI.
+        - groups
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      # Spring Boot's health endpoint, which Komga leaves unauthenticated
+      # (SecurityConfiguration.kt permits HealthEndpoint), so this reports the
+      # app rather than the login page. It goes DOWN with the SQLite
+      # datasource or a full /config.
+      url: https://${APP}.${ROOT_DOMAIN}/actuator/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == UP"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

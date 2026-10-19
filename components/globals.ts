@@ -165,10 +165,10 @@ export class GlobalResources extends ComponentResource {
    * Remove this once the operator mints tokens and go back to hard-failing.
    */
   public get baoDualWriteEnabled(): boolean {
-    // baoEnv(), not process.env: .config/mise.toml sets BAO_ROLE_ID/BAO_SECRET_ID
-    // to `ref+sops://` references, which are only values when the command ran
-    // under `mise run vals-run`. Reading the raw variables would flip this gate
-    // to true on a bare `pulumi up` and fail at the API instead of here.
+    // baoEnv(), not process.env: BAO_ROLE_ID/BAO_SECRET_ID can still be
+    // unresolved `ref+sops://` references (an old shell from before fnox, a
+    // stray export). Reading the raw variables would flip this gate to true on
+    // such a run and fail at the API instead of here.
     const haveApprole = !!baoEnv("BAO_ROLE_ID") && !!baoEnv("BAO_SECRET_ID");
     return !!baoEnv("BAO_TOKEN") || haveApprole || runtime.isDryRun();
   }
@@ -194,8 +194,8 @@ export class GlobalResources extends ComponentResource {
     //
     // The AppRole path is the normal one, and it is what removes the manual
     // step this used to require: nobody has to mint a token by hand before a
-    // deploy. `.config/mise.toml` supplies both from
-    // `.config/bao-approle.sops.yaml`, resolved by `mise run vals-run`;
+    // deploy. `.config/fnox.toml` supplies both from
+    // `.config/bao-approle.sops.yaml` under `fnox exec`;
     // `eval "$(bootstrap/openbao/pulumi-env.sh)"` still works and is the
     // break-glass path. Either way they live in SOPS rather than
     // 1Password on purpose (INVENTORY §2: this is the credential Pulumi
@@ -210,7 +210,7 @@ export class GlobalResources extends ComponentResource {
     // write nowhere.
     if (!token && !haveApprole && !runtime.isDryRun()) {
       throw new Error(
-        baoEnvUnresolved() ? `OpenBao credentials are unresolved \`vals\` references, so writes would be skipped. ${BAO_CREDENTIAL_HINT}` : `No OpenBao credentials — writes would be skipped. ${BAO_CREDENTIAL_HINT}`,
+        baoEnvUnresolved() ? `OpenBao credentials are unresolved \`ref+\` references, so writes would be skipped. ${BAO_CREDENTIAL_HINT}` : `No OpenBao credentials — writes would be skipped. ${BAO_CREDENTIAL_HINT}`,
       );
     }
 
@@ -281,7 +281,8 @@ export class GlobalResources extends ComponentResource {
   /**
    * The GitHub App the estate automates GitHub with (installation tokens for
    * the clusters, the Flux push webhooks). Lazy, like `baoProvider`: only
-   * `stacks/vault` uses it, and an eager read would make every other stack's
+   * `stacks/system` uses it (stacks/system/flux-webhooks.ts and the Forgejo
+   * mirror's deploy key), and an eager read would make every other stack's
    * preview depend on one more OpenBao path for nothing.
    *
    * By PATH, not by title, unlike the seven providers above. In the vault repo

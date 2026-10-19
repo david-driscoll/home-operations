@@ -1,0 +1,132 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+# Scheduling for every Pulumi operator workspace pod. Each Stack under
+# kubernetes/apps/pulumi/<stack>/ pulls this in from its own kustomization.yaml,
+# because each one is rendered by its own Flux Kustomization -- the parent
+# kubernetes/apps/pulumi/kustomization.yaml only renders the ks.yaml objects.
+#
+# Why it exists: on 2026-10-19 one commit to main made the operator reconcile
+# all 7 Stacks at once. Each was a cold workspace (artifact extract, npm into
+# the /var/lib/pulumi-npm-cache hostPath, mise/vals, plugins), and 6 of the 7
+# landed on fluttershy. Its /var is a DRAM-less PNY SATA SSD that tops out
+# around 40 MiB/s. It went to 95% util, CRI wedged, the node went NotReady, and
+# the Longhorn force-detach fallout took kerfuffle (the same hardware) down too.
+#
+# Two rules, both applied to the pod template the operator merges into its
+# workspace StatefulSet (strategic merge, so the volumes/initContainers each
+# stack.yaml declares are untouched):
+#
+#  1. REQUIRED: never on a node labelled `driscoll.dev/ephemeral-disk: sata`.
+#     The label comes from talos/talconfig.yaml nodeLabels (fluttershy,
+#     kerfuffle). NotIn also matches a node WITHOUT the label, so until those
+#     two nodes have had `mise run talos:apply-node` this rule is a no-op
+#     rather than a scheduling failure. Required, not preferred: a preferred
+#     term is just one score among several, and ImageLocality plus free
+#     capacity is how 6 of 7 ended up on fluttershy in the first place. The
+#     control planes are tainted, so this leaves hard-hat and shining-armor.
+#     If both are down, Stacks wait. They don't fall back onto the disks that
+#     caused the outage.
+#
+#  2. PREFERRED: spread workspaces across nodes. Every workspace pod carries
+#     `auto.pulumi.com/component: workspace` (set by the operator, verified
+#     live). ScheduleAnyway, not DoNotSchedule: with only two eligible nodes,
+#     a hard skew limit plus the default nodeTaintsPolicy (Ignore) would count
+#     a NotReady node as an empty domain and hold every later workspace
+#     Pending. A spread preference must never block a Pulumi run.
+#
+# And the workspace IMAGE, in a patch of its own below: upstream pulumi-nodejs
+# with every plugin, the Terraform providers behind sdks/, a warm npm cache,
+# npm 11 and vals baked in, so a run stops writing ~2.5 GB to /var
+# (docs/kubernetes/pulumi-workspace-image.md).
+#
+# ONLY SCALARS AND LISTS NO stack.yaml SETS GO IN THESE PATCHES. The Stack CRD
+# has no schema kustomize knows, so a list here REPLACES the stack's list rather
+# than merging into it by name: an `env:` here would wipe every stack's
+# GITHUB_TOKEN and NODE_OPTIONS. `image` is a scalar and `imagePullSecrets` is
+# set nowhere else, so both are safe.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      group: pulumi.com
+      kind: Stack
+    patch: |-
+      apiVersion: pulumi.com/v1
+      kind: Stack
+      metadata:
+        name: not-used
+      spec:
+        workspaceTemplate:
+          spec:
+            podTemplate:
+              spec:
+                affinity:
+                  nodeAffinity:
+                    requiredDuringSchedulingIgnoredDuringExecution:
+                      nodeSelectorTerms:
+                        - matchExpressions:
+                            - key: driscoll.dev/ephemeral-disk
+                              operator: NotIn
+                              values: ["sata"]
+                topologySpreadConstraints:
+                  - maxSkew: 1
+                    topologyKey: kubernetes.io/hostname
+                    whenUnsatisfiable: ScheduleAnyway
+                    labelSelector:
+                      matchLabels:
+                        auto.pulumi.com/component: workspace
+  - target:
+      group: pulumi.com
+      kind: Stack
+    patch: |-
+      apiVersion: pulumi.com/v1
+      kind: Stack
+      metadata:
+        name: not-used
+      spec:
+        workspaceTemplate:
+          spec:
+            # Built by .forgejo/workflows/pulumi-workspace-image.yml, whose last
+            # step prints this line whenever the build is newer than the pin.
+            # Tag AND digest: the tag says what it was built from
+            # (<pulumi-nodejs version>-<hash>, images/pulumi-workspace/tag.sh),
+            # the digest is what is trusted -- a registry tag can be
+            # overwritten by anyone with the push token, and this image runs
+            # with the OpenBao AppRole and the state passphrase in its env.
+            #
+            # A stale pin is not an outage: the old image still covers every
+            # plugin and package that did not change, and the workspace
+            # downloads the rest as it always did. Bump it when convenient;
+            # each bump is a commit, and every commit re-runs every Stack.
+            #
+            # Break-glass, if this cannot be pulled (forge down and no spegel
+            # peer has it): ghcr.io/pulumi/pulumi-nodejs:<the Dockerfile's
+            # FROM version>. Read the doc first -- upstream has no vals.
+            image: git.${ROOT_DOMAIN}/estate-images/pulumi-workspace:3.270.0-6c3f405ec0ba@sha256:4114e19df79e6bb06899fa29c4746a0a8b0c07e5683f643b1869b8260d07dc7d
+            podTemplate:
+              spec:
+                # kubernetes/apps/pulumi/workspace-image: estate-images'
+                # read:package token. The forge refuses anonymous pulls.
+                imagePullSecrets:
+                  - name: pulumi-workspace-image-pull
+  # Explicitly empty, not absent, and a JSON patch because a strategic merge
+  # drops an empty list. a0662905 removed the vals init container, its volumes
+  # and its mounts from every stack.yaml, but kustomize-controller still owns
+  # those fields on the live Stacks: dropping the last item makes server-side
+  # apply write `null`, which the CRD rejects ("initContainers: Invalid value:
+  # "null" ... must be of type array") and fails the whole Kustomization. An
+  # empty list is what the apply should own instead. No stack.yaml sets these
+  # (see the rule above), and the pulumi container is the only one, at index 0.
+  - target:
+      group: pulumi.com
+      kind: Stack
+    patch: |-
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/initContainers
+        value: []
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/volumes
+        value: []
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/containers/0/volumeMounts
+        value: []

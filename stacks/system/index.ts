@@ -88,7 +88,11 @@ import { CLUSTERS } from "@components/store/clusters.ts";
 import { configureApplications } from "./applications.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
+import { CoderTemplatesComponent } from "./coder-templates.ts";
+import { configureFluxWebhooks } from "./flux-webhooks.ts";
+import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
+import { configureForgejoSigning } from "./forgejo-signing.ts";
 import { configureGarage } from "./garage.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
@@ -147,6 +151,11 @@ configureAuthentikPg(globals);
 // The VRRP password for authentik's keepalived VIP, both sites. See authentik-vip.ts.
 configureAuthentikVip(globals);
 
+// The in-cluster Forgejo's commit-signing key, into OpenBao only -- unlike the
+// Forgejo components further down it never calls Forgejo's API, so it cannot
+// fail on a forge outage. See forgejo-signing.ts.
+configureForgejoSigning(globals);
+
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
 // there, which must wait for the widened `pulumi` policy -- so this cannot
@@ -157,6 +166,13 @@ new PostgresRotationComponent({ globals });
 // (kubernetes/apps/agents/agent-tools-servers/openbao.yaml). ENABLED --
 // the `pulumi` policy grant it needs is live -- see openbao-mcp.ts's header.
 new OpenBaoMcpComponent({ globals });
+
+// Coder's workspace templates (kubernetes/apps/coder/coder/templates) and the
+// OpenBao auth mount their workspaces log in through. It mints its own Coder
+// API token with a Job in the `coder` namespace, which makes Coder's API and
+// database two more things this stack depends on; each half has a switch in
+// coder-templates.ts.
+new CoderTemplatesComponent({ globals });
 
 // The Forgejo identity Renovate runs as -- the bot account, its token, and the
 // repository grants that decide what Renovate manages. Unlike everything else
@@ -170,7 +186,21 @@ new OpenBaoMcpComponent({ globals });
 // `pulumi preview`. discoverForgejoTargets explains what that cost this estate
 // last time.
 const forgejoTargets = await discoverForgejoTargets(globals);
-new ForgejoConfigurationComponent({ globals, targets: forgejoTargets });
+const forgejoConfiguration = new ForgejoConfigurationComponent({ globals, targets: forgejoTargets });
+
+// The Forgejo copy of THIS repository, so the forge's Renovate can work on it,
+// plus the credentials that keep its main in step with GitHub's -- one of which
+// is a deploy key registered on GitHub. That makes GitHub, through the App
+// provider in components/globals.ts, a third thing this stack talks to. See
+// forgejo-github-mirror.ts and docs/runbooks/forgejo-github-mirror.md.
+new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration });
+
+// The GitHub push webhooks that wake equestria's Flux. This was the whole of
+// `stacks/vault`, folded in with its state moved rather than recreated. It
+// reads equestria's API (the Receiver's path and the token Secret) through the
+// tailnet kubeproxy, so it fails with the cluster, like the applications below.
+// See flux-webhooks.ts.
+await configureFluxWebhooks(globals);
 
 // Authentik applications, the proxy outpost and backrest plans for equestria,
 // discovered from the cluster. Last, because it is the part most likely to

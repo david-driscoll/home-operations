@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 #
 # arr-mcp -- ONE MCP server for the whole media stack, rather than one per
 # service. The Plex half of a matched pair; ../arr-mcp-jellyfin is the other.
@@ -89,7 +89,7 @@ spec:
           seed-config:
             image: &image
               repository: ghcr.io/bardesss/arr-mcp
-              tag: 1.39.1@sha256:3603c7b04715e7032d99a5b681fde92fba57a3958f68efa12d58a8a669fe4ca9
+              tag: 1.44.1@sha256:513afeacbf0e603dc531bc1f93b68ad50f2e6cb1a1c160a266be7f9af8b77d38
               pullPolicy: IfNotPresent
             command: ["/usr/bin/install"]
             args: ["-m", "0600", "/config-source/config.yaml", "/config/config.yaml"]
