@@ -57,7 +57,7 @@ spec:
   # 113 took about two hours to drain), and the four worker nodes the pods
   # can land on had the room. The spread constraint in the pod template keeps
   # eighteen of them from piling onto two nodes.
-  maxReplicaCount: 16
+  maxReplicaCount: 8
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
   # A change to this file must not kill jobs that are running. `gradual`
