@@ -203,11 +203,24 @@ export function garageCopyNfsShare(bucket: string): { path: string; config: NfsS
  * is skipped at any depth: restic and Pulumi both keep short-lived lock files
  * there, and a copy of one is noise at best.
  *
+ * `pulumi-state` also skips each stack's `.pulumi/history/` and `.pulumi/backups/`
+ * (GARAGE_COPY_EXTRA_EXCLUDES). Every Pulumi update writes a full checkpoint copy
+ * there, pruned after 3 days by kubernetes/apps/pulumi/history-pruner, so the
+ * pull was ~8 GiB a day of files that live three days, each one pinned by the
+ * dataset snapshots for the length of their retention. The checkpoints that
+ * matter, `.pulumi/stacks/`, are still copied; restic (backrest plan
+ * `pulumi-state`) and the alpha-site mirror skip history the same way.
+ *
  * The post-script is the heartbeat. TrueNAS runs it only after rclone exits 0
  * (plugins/cloud_sync.py), so a failed pull pushes nothing and Gatus pages when
  * the 25-hour window runs out. `|| true` keeps a Gatus outage from marking a
  * good pull as failed.
  */
+/** Per-bucket excludes on top of `locks/**`; see garageCopyTask. */
+export const GARAGE_COPY_EXTRA_EXCLUDES: Readonly<Record<string, readonly string[]>> = {
+  "pulumi-state": ["*/.pulumi/history/**", "*/.pulumi/backups/**"],
+};
+
 export function garageCopyTask(args: { bucket: string; credentialsId: number; uptimeUrl: string }): CloudSyncTaskInput {
   const token = toGatusKey(TRUENAS_GARAGE_COPY_GROUP, args.bucket);
   return {
@@ -218,7 +231,7 @@ export function garageCopyTask(args: { bucket: string; credentialsId: number; up
     schedule: GARAGE_COPY_PULL_SCHEDULE,
     direction: "PULL",
     transfer_mode: "SYNC",
-    exclude: ["locks/**"],
+    exclude: ["locks/**", ...(GARAGE_COPY_EXTRA_EXCLUDES[args.bucket] ?? [])],
     pre_script: "",
     post_script: `curl -sf -X POST -H "Authorization: Bearer ${token}" "${args.uptimeUrl}/api/v1/endpoints/${token}/external?success=true" || true`,
     args: GARAGE_COPY_RCLONE_ARGS,
