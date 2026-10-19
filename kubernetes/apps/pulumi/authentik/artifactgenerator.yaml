@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.extensions.fluxcd.io/artifactgenerator_v1beta1.json
+# The authentik Stack's own source: only the files its program reads, cut out
+# of the home-operations GitRepository by Flux source-watcher.
+#
+# Why: the operator re-runs a Stack whenever its source artifact's REVISION
+# changes (isSynced() in pulumi-kubernetes-operator v2.9.3 compares it with
+# status.lastUpdate.lastSuccessfulCommit). On the GitRepository that revision is
+# the commit SHA, so every commit to main re-ran this Stack -- about 40 runs a
+# day on 2026-10-19, none of them touching stacks/authentik. An ExternalArtifact
+# from an ArtifactGenerator has the revision `latest@sha256:<tarball digest>`,
+# and the tarball is reproducible (fluxcd/pkg artifact/storage zeroes mtimes,
+# owners and modes), so a commit that changes none of the files below produces
+# the same revision and the Stack stays put.
+#
+# The layout matches the repo, so the Stack keeps `dir: stacks/authentik` and
+# the program's relative paths (../../components, ../../clusters) still hold.
+#
+# KEEP THIS LIST IN STEP WITH WHAT THE PROGRAM READS. The failure is lopsided:
+#   - a file the program needs that is NOT here fails the run loudly (module not
+#     found, or components/store/clusters.ts throwing on an empty clusters/);
+#   - a file it reads whose CHANGES are not here is silent: the run that should
+#     have picked up the change never happens.
+# So when in doubt, include. An extra path costs an extra run, nothing more.
+# Traced 2026-10-19 from stacks/authentik/index.ts: 43 files across components/,
+# dynamic/, sdks/ and the stack; clusters/*.yaml read at runtime; types/ for
+# the @openapi/* aliases. docs/kubernetes/pulumi-stack-artifacts.md has the
+# method and the rollout for the other Stacks.
+apiVersion: source.extensions.fluxcd.io/v1beta1
+kind: ArtifactGenerator
+metadata:
+  name: ${APP}
+spec:
+  sources:
+    - alias: repo
+      kind: GitRepository
+      name: home-operations
+  artifacts:
+    - name: ${APP}
+      # Kept in the artifact's metadata only; it does not feed the revision.
+      # It is the commit the current artifact was cut from, for debugging.
+      originRevision: "@repo"
+      copy:
+        # npm. `pulumi install` in stacks/authentik is an `npm install` against
+        # the ROOT workspace, so it needs the root manifest and lockfile and
+        # every workspace member's package.json -- the other stacks' too, or npm
+        # resolves a different tree from the lockfile the workspace image's
+        # cache was baked from (images/pulumi-workspace/inputs.sh).
+        - from: "@repo/package.json"
+          to: "@artifact/"
+        - from: "@repo/package-lock.json"
+          to: "@artifact/"
+        - from: "@repo/tsconfig.json"
+          to: "@artifact/"
+        # A glob that is not `dir/**` keeps the full match path:
+        # stacks/<name>/package.json, not a flattened stacks/package.json.
+        - from: "@repo/stacks/*/package.json"
+          to: "@artifact/"
+        # The program. Excludes are for files nothing imports at run time.
+        - from: "@repo/stacks/authentik/"
+          to: "@artifact/stacks/"
+          exclude: ["*.md", "*.test.ts"]
+        - from: "@repo/components/"
+          to: "@artifact/"
+          exclude: ["*.md", "*.test.ts"]
+        - from: "@repo/dynamic/"
+          to: "@artifact/"
+        # Every file: dependency of the root package.json, bin/ included.
+        - from: "@repo/sdks/"
+          to: "@artifact/"
+        - from: "@repo/types/"
+          to: "@artifact/"
+        # components/store/clusters.ts reads these at run time.
+        - from: "@repo/clusters/"
+          to: "@artifact/"
