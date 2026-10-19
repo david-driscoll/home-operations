@@ -8,7 +8,7 @@ spec:
   name: "Holm"
   category: Applications
   description: "The family's home page: each person's own apps, bookmarks and search"
-  url: &url https://${APP}.${ROOT_DOMAIN}
+  url: &url https://apps.${ROOT_DOMAIN}
   icon: https://raw.githubusercontent.com/man15h/holm/main/static/icon-512.png
   # The same audience as the setup guide it mirrors (coder/git-pages
   # definition.yaml, `setup-guide`).
@@ -18,11 +18,12 @@ spec:
   authentik:
     oauth2:
       clientType: confidential
-      # One URI. Holm builds its callback from `auth.oidc.redirect_base` in
-      # resources/config.yml, never from the host the visitor used, so a
-      # sign-in started on the tailnet name still returns here.
+      # One URI, on the apps host. Holm builds its callback from
+      # `auth.oidc.redirect_base` in resources/config.yml, never from the host
+      # the visitor used, so a sign-in started on the tailnet name still
+      # returns here. holm.<root domain> only redirects (helmrelease.yaml).
       allowedRedirectUris:
-        - url: https://${APP}.${ROOT_DOMAIN}/auth/callback
+        - url: https://apps.${ROOT_DOMAIN}/auth/callback
       # `profile` is authentik's built-in mapping, which already carries the
       # `groups` claim Holm reads; no `groups` scope is needed.
       propertyMappings:

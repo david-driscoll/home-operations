@@ -6,10 +6,17 @@ wallpaper, built from a catalog of apps the operator publishes. Its search bar
 also searches inside Immich, Nextcloud, Jellyfin, Seerr, Navidrome, Mealie and
 the Nextcloud calendar, each with that person's own login.
 
-- **Deployed at** `https://holm.<root domain>`, internal only (LAN and
-  Tailscale), behind the `local-user` middleware. Holm signs people in itself
-  over OIDC; access is limited to the `family` group, the same audience as the
-  setup guide.
+- **Deployed at** `https://apps.<root domain>`, internal only (LAN and
+  Tailscale, where the device is `apps` too), behind the `local-user`
+  middleware. Holm signs people in itself over OIDC; access is limited to the
+  `family` group, the same audience as the setup guide.
+- **Alias:** `https://holm.<root domain>` 302-redirects to the apps address,
+  keeping the path. It is a redirect rather than a second served hostname
+  because Holm's sign-in only works on its `redirect_base` host: the OIDC state
+  cookies and the session cookie are per-host. Moving the main address means
+  changing `redirect_base` (`config.yml`), `ORIGIN` and both routes
+  (`helmrelease.yaml`), the redirect URI (`definition.yaml`) and
+  `TAILSCALE_HOST` (`ks.yaml`) together.
 - **Manifests:** [`kubernetes/apps/equestria/home/holm/`](../../kubernetes/apps/equestria/home/holm/).
 - **Configuration:** one file,
   [`resources/config.yml`](../../kubernetes/apps/equestria/home/holm/resources/config.yml),
