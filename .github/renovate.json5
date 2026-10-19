@@ -392,6 +392,26 @@
       allowedVersions: "!/^v?1\\./",
     },
     {
+      // Paperless-ngx's Tika (kubernetes/apps/equestria/home/paperless) has to
+      // stay on 3.x. Tika 4.0 removed the /tika/form/* endpoints Paperless's
+      // bundled tika-client calls and renamed the metadata keys, so every
+      // Office/.eml parse fails (paperless-ngx/paperless-ngx#13755); upstream
+      // pinned 3.3.1.0 (#13758) and closed the 4.x bump (#13908). A regex
+      // rather than "<4" because docker versioning does not do ranges. Lift
+      // it when a Paperless release notes Tika 4 support, not before -- the
+      // 4.x tags look like any other major and the breakage only shows up on
+      // the first Office document.
+      description: "Tika: hold on 3.x until Paperless-ngx supports Tika 4",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "docker.io/apache/tika",
+        "apache/tika"
+      ],
+      allowedVersions: "/^3\\./",
+    },
+    {
       description: "CoreDNS Group",
       groupName: "CoreDNS",
       matchDatasources: [

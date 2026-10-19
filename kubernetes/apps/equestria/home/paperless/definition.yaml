@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Paperless-ngx"
+  category: Applications
+  description: "Paperless-ngx — scanned and digital document archive with OCR and full-text search"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/paperless-ngx.svg
+  access_policy:
+    groups:
+      # No `friends`: this is where tax returns, medical letters and contracts
+      # live.
+      - family
+      # NOT decoration. ./helmrelease.yaml sets
+      # PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP=admins, and a group can
+      # only grant superuser to someone authentik lets through the application
+      # binding in the first place.
+      - admins
+  authentik:
+    # oauth2, NOT proxy. Paperless speaks OIDC itself (django-allauth's
+    # openid_connect provider), so a forward-auth outpost in front would
+    # authenticate twice and break the callback hop.
+    oauth2:
+      clientType: confidential
+      # allauth's callback is /accounts/oidc/<provider_id>/login/callback/:
+      # `accounts/` is where paperless/urls.py mounts allauth, `oidc` is
+      # SOCIALACCOUNT_OPENID_CONNECT_URL_PREFIX's default, and `authentik` is
+      # the provider_id in ./externalsecret.yaml's
+      # PAPERLESS_SOCIALACCOUNT_PROVIDERS. Change that id and both of these
+      # must change with it. The trailing slash is part of the path, and
+      # authentik's default matching_mode is `strict`.
+      #
+      # allauth builds the URL from the request's own host, so the tailnet
+      # hostname sends the second one.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/accounts/oidc/authentik/login/callback/"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/accounts/oidc/authentik/login/callback/"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # The `groups` claim (authentik group NAMES, see
+        # components/authentik/property-mappings.ts) is what
+        # PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP matches against. The
+        # provider JSON in ./externalsecret.yaml requests the scope; without
+        # the mapping the claim is absent and every `admins` member is DEMOTED
+        # on their next login, not merely left unpromoted.
+        - groups
+      # `subMode` is deliberately NOT set. allauth keys the SocialAccount on
+      # `sub` and nothing else reads it, so authentik's default hashed user id
+      # is as good as any -- but changing it later orphans every linked
+      # account, so it should not be set casually either.
+  gatus:
+    - group: "Applications"
+      # The sign-in page, not `*url`: `/` is a redirect to it for everyone.
+      # It is a real check of the app AND its database -- the template's
+      # context processor (documents/context_processors.py) reads the
+      # ApplicationConfiguration row and counts users on every render, so a
+      # pod that has lost Postgres answers 500 here. Paperless has no
+      # unauthenticated health endpoint; /api/status/ needs a login.
+      url: https://${APP}.${ROOT_DOMAIN}/accounts/login/
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY] == pat(*Paperless-ngx sign in*)"

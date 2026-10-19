@@ -43,3 +43,4 @@ resources:
   # - ./opencloud/ks.yaml
   - ./nextcloud/ks.yaml
   - ./actual-budget/ks.yaml
+  - ./paperless/ks.yaml
