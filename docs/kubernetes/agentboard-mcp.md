@@ -73,6 +73,14 @@ There is no default in the file, because a default would name the domain
   decrypts. Start Claude Code from a shell where mise is active in the repo,
   with the age key present. Needs the LAN or Tailscale, and one authentik
   login per profile through `/mcp`.
+- **Claude desktop app** — its sessions get no mise environment at all (it
+  launches them from launchd with only PATH and its own `CLAUDE_*` variables),
+  so the six references stay unexpanded and every server fails with
+  `INVALID_CONFIG: 'url' is not a valid URL`. Run `mise run claude:toolport-env`
+  once per machine: it writes the six resolved URLs into the `env` block of
+  `~/.claude/settings.json`, which Claude Code applies to every local session
+  before it expands `.mcp.json`. The domain lands only in that user file, never
+  in the repo. Re-run it if the domain or a profile changes.
 - **agentboard** — [`helmrelease.yaml`](../../kubernetes/apps/agents/agentboard/helmrelease.yaml)
   sets all six `TOOLPORT_<PROFILE>_URL` to the internal proxies, so the same
   committed file resolves to the in-cluster doors.
@@ -480,6 +488,7 @@ claude mcp get toolport-infrastructure
 |---|---|---|
 | All six `CONNECT_TIMEOUT`, URL shows `TOOLPORT_URL` | Stale checkout: its `.mcp.json` predates the per-profile doors | Update the checkout to `origin/main`, restart `claude` |
 | URL is the `https://` hostname, status `Needs authentication` | `TOOLPORT_<PROFILE>_URL` not set in the pod, or a stale pod predating it | Confirm `env \| grep TOOLPORT_`; restart the pod to pick up the HelmRelease change |
+| All six `INVALID_CONFIG: 'url' is not a valid URL` in a desktop-app session | The app starts sessions without mise's env, so `${TOOLPORT_<PROFILE>_URL}` is unset | `mise run claude:toolport-env` from the repo, then start a new session |
 | Status `Pending approval` | Changing `.mcp.json` re-triggers project-server approval | Run `claude` once and approve, or add the entry to `.claude/settings.local.json`'s `enabledMcpjsonServers` |
 | Connection refused / timeout on an internal URL | NetworkPolicy no longer selects this pod, or the proxy is down | Check the `app.kubernetes.io/name: agentboard` selector in `toolport-mcp/networkpolicy.yaml`; check the `toolport-<profile>` proxy pods |
 | A profile connects but a server is missing from `toolport_status` | It is in another profile, or failed discovery | Check `registry.json`; `toolport_status` in the right profile |

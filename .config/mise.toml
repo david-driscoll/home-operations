@@ -161,6 +161,14 @@ description = 'Install the Pkl VS Code extension (not on the marketplace; instal
 # something `mise install` should do unasked. Run it once by hand.
 run = ['bash scripts/install-pkl-vscode.sh']
 
+[tasks."claude:toolport-env"]
+description = 'Pin the toolport MCP door URLs into ~/.claude/settings.json (for desktop-app sessions)'
+# The Claude desktop app starts sessions without mise's environment, so the
+# TOOLPORT_<PROFILE>_URL references in .mcp.json stay unexpanded there. This
+# writes the six URLs [env] resolves below into the user's own settings `env`,
+# never into the repo. Once per machine; see the script's header.
+run = ['bash scripts/claude-toolport-env.sh']
+
 [settings]
 experimental = true
 prereleases = true
