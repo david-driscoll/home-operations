@@ -9,7 +9,7 @@
 # file breaks nothing visibly, it just opens everything.
 #
 # Admitted, on the proxy port only:
-#   - agentboard, paseo and the ws-david workspace -- the in-cluster callers,
+#   - paseo and the ws-david workspace -- the in-cluster callers,
 #     which reach these proxies straight from .mcp.json (TOOLPORT_<PROFILE>_URL).
 #   - the six toolport-<profile>-mcp vMCPs, the OAuth doors in front of them.
 #
@@ -39,12 +39,6 @@ spec:
     - Ingress
   ingress:
     - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: agents
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: agentboard
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: agents

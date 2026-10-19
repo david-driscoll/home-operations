@@ -107,15 +107,13 @@ spec:
   #     (the StatefulSet pod running mkp itself; NOT
   #     toolhive-kubernetes-proxy-runner, the ToolHive proxy in front of it,
   #     which carries no agent-debug binding)
-  #   ../agentboard/rbac.yaml                 -> agents/agentboard
   # A new binding of the role that is not added here gets the unnarrowed
   # `update` on every Node.
   matchConditions:
     - name: is-agent-debug-identity
       expression: >
         request.userInfo.username in [
-          "system:serviceaccount:agents:toolhive-kubernetes",
-          "system:serviceaccount:agents:agentboard"
+          "system:serviceaccount:agents:toolhive-kubernetes"
         ]
   validations:
     - expression: >

@@ -1315,7 +1315,7 @@
         // home-operations OCI mirror of it
         "external-dns",
         "ghcr.io/home-operations/charts-mirror/external-dns",
-        // mise tools (.config/mise.toml, agentboard's mise.toml)
+        // mise tools (.config/mise.toml, paseo's mise.toml)
         "mikefarah/yq",
         "pulumi/pulumi",
         "cli/cli",
@@ -1334,7 +1334,7 @@
         "ghcr.io/renovatebot/renovate",
         // kubernetes/apps/observability/unpoller
         "ghcr.io/unpoller/unpoller",
-        // agentboard's mise.toml (`npm:` tools keep their npm name)
+        // paseo's mise.toml (`npm:` tools keep their npm name)
         "@anthropic-ai/claude-code",
         // root package.json dev tooling
         "@biomejs/biome",
