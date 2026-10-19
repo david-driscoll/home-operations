@@ -53,7 +53,7 @@ jobs:
     # MUST be the version in images/pulumi-workspace/Dockerfile's FROM line,
     # which the first step checks. Renovate bumps both in one branch.
     container:
-      image: ghcr.io/pulumi/pulumi-nodejs:3.270.0
+      image: ghcr.io/pulumi/pulumi-nodejs:3.270.0@sha256:b9587e3ed318d0e1e3d4d05560f061e8cd3e81929433bfdb82bba1ad74e27e85
     env:
       PULUMI_SKIP_UPDATE_CHECK: "true"
       # The account that owns the image (stacks/system/forgejo-github-mirror.ts).
