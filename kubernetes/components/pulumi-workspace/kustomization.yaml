@@ -33,6 +33,17 @@
 #     a hard skew limit plus the default nodeTaintsPolicy (Ignore) would count
 #     a NotReady node as an empty domain and hold every later workspace
 #     Pending. A spread preference must never block a Pulumi run.
+#
+# And the workspace IMAGE, in a patch of its own below: upstream pulumi-nodejs
+# with every plugin, the Terraform providers behind sdks/, a warm npm cache,
+# npm 11 and vals baked in, so a run stops writing ~2.5 GB to /var
+# (docs/kubernetes/pulumi-workspace-image.md).
+#
+# ONLY SCALARS AND LISTS NO stack.yaml SETS GO IN THESE PATCHES. The Stack CRD
+# has no schema kustomize knows, so a list here REPLACES the stack's list rather
+# than merging into it by name: an `env:` here would wipe every stack's
+# GITHUB_TOKEN and NODE_OPTIONS. `image` is a scalar and `imagePullSecrets` is
+# set nowhere else, so both are safe.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 patches:
@@ -64,3 +75,37 @@ patches:
                     labelSelector:
                       matchLabels:
                         auto.pulumi.com/component: workspace
+  - target:
+      group: pulumi.com
+      kind: Stack
+    patch: |-
+      apiVersion: pulumi.com/v1
+      kind: Stack
+      metadata:
+        name: not-used
+      spec:
+        workspaceTemplate:
+          spec:
+            # Built by .forgejo/workflows/pulumi-workspace-image.yml, whose last
+            # step prints this line whenever the build is newer than the pin.
+            # Tag AND digest: the tag says what it was built from
+            # (<pulumi-nodejs version>-<hash>, images/pulumi-workspace/tag.sh),
+            # the digest is what is trusted -- a registry tag can be
+            # overwritten by anyone with the push token, and this image runs
+            # with the OpenBao AppRole and the state passphrase in its env.
+            #
+            # A stale pin is not an outage: the old image still covers every
+            # plugin and package that did not change, and the workspace
+            # downloads the rest as it always did. Bump it when convenient;
+            # each bump is a commit, and every commit re-runs every Stack.
+            #
+            # Break-glass, if this cannot be pulled (forge down and no spegel
+            # peer has it): ghcr.io/pulumi/pulumi-nodejs:<the Dockerfile's
+            # FROM version>. Read the doc first -- upstream has no vals.
+            image: git.${ROOT_DOMAIN}/estate-images/pulumi-workspace:3.270.0-b825ebd67d4a@sha256:REPLACE-WITH-THE-DIGEST-THE-WORKFLOW-PRINTS
+            podTemplate:
+              spec:
+                # kubernetes/apps/pulumi/workspace-image: estate-images'
+                # read:package token. The forge refuses anonymous pulls.
+                imagePullSecrets:
+                  - name: pulumi-workspace-image-pull

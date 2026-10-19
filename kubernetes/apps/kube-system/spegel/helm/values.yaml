@@ -52,6 +52,14 @@ spegel:
     - https://cgr.dev
     - https://mcr.microsoft.com
     - https://data.forgejo.org
+    # The forge's own registry: the Pulumi workspace image
+    # (docs/kubernetes/pulumi-workspace-image.md). Not in machine-registries.yaml,
+    # and needs nothing there -- verified on a node for data.forgejo.org, also
+    # absent there, that spegel's file then ends at `server = '<registry>'`, so
+    # the order is peers, then the registry itself. This is what lets a node
+    # with no copy start a workspace while the forge is down, as long as a peer
+    # has the digest the workspaces pin.
+    - https://git.${ROOT_DOMAIN}
   logLevel: "DEBUG"
   debugWebEnabled: true
   containerdSock: /run/containerd/containerd.sock
