@@ -59,14 +59,21 @@ jobs:
       # The account that owns the image (stacks/system/forgejo-github-mirror.ts).
       IMAGE_OWNER: estate-images
       IMAGE_NAME: pulumi-workspace
+      # The forge's PUBLIC host is git.<root domain>: the name nodes pull the
+      # image by, served by Traefik on the LAN. NOT `github.server_url`, which
+      # in these jobs is the runner's own connection, the in-cluster
+      # http://forgejo-http...:3000 -- crane talks HTTPS to a registry, so a
+      # push there dies in the TLS handshake (the 2026-10-19 04:41Z run: every
+      # registry call failed and Forgejo logged none of them). The root domain
+      # comes from the secret stacks/system already sets for
+      # scripts/private-domain-guard, which also keeps it masked in the log.
+      ROOT_DOMAIN: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Work out the tag
         id: tag
-        env:
-          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
           tag="$(images/pulumi-workspace/tag.sh "$PWD")"
@@ -76,15 +83,19 @@ jobs:
             echo "::error::job container runs pulumi ${running} but the Dockerfile says ${tag%%-*}; bump both"
             exit 1
           fi
-          registry="${SERVER_URL#*://}"
-          registry="${registry%/}"
+          if [ -z "$ROOT_DOMAIN" ]; then
+            echo "::error::PRIVATE_DOMAIN_ROOT is not set on this repository (stacks/system sets it)"
+            exit 1
+          fi
+          # Only the host-free half leaves this step: an output holding a
+          # secret's value is not something to rely on. Every step that needs
+          # the full reference rebuilds it from ROOT_DOMAIN.
           {
             echo "tag=${tag}"
             echo "base_version=${tag%%-*}"
-            echo "registry=${registry}"
-            echo "ref=${registry}/${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
+            echo "path=${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
           } >> "$GITHUB_OUTPUT"
-          echo "Image: ${registry}/${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
+          echo "Image: git.${ROOT_DOMAIN}/${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
 
       - name: Setup crane
         env:
@@ -104,8 +115,7 @@ jobs:
       - name: Log in and check for the tag
         id: exists
         env:
-          REGISTRY: ${{ steps.tag.outputs.registry }}
-          REF: ${{ steps.tag.outputs.ref }}
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
           # write:package for IMAGE_OWNER, minted by stacks/system. Empty until
           # that stack has run once after this file landed.
           TOKEN: ${{ secrets.ESTATE_IMAGES_TOKEN }}
@@ -115,13 +125,23 @@ jobs:
             echo "::error::ESTATE_IMAGES_TOKEN is not set on this repository yet (stacks/system creates it)"
             exit 1
           fi
+          REGISTRY="git.${ROOT_DOMAIN}"
+          REF="${REGISTRY}/${IMAGE_PATH}"
           printf '%s' "$TOKEN" | crane auth login "$REGISTRY" --username "$IMAGE_OWNER" --password-stdin
-          if digest="$(crane digest "$REF" 2>/dev/null)"; then
+          # Only the registry saying "no such tag" means build. Anything else --
+          # an unreachable host, a refused token -- fails here, with crane's own
+          # message, instead of quietly baking for a push that cannot happen.
+          if digest="$(crane digest "$REF" 2>"$RUNNER_TEMP/digest.err")"; then
             echo "Already built: ${REF}@${digest}"
             echo "built=true" >> "$GITHUB_OUTPUT"
             echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          else
+          elif grep -qE 'MANIFEST_UNKNOWN|NAME_UNKNOWN|404 Not Found' "$RUNNER_TEMP/digest.err"; then
+            echo "Not built yet: ${REF}"
             echo "built=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::could not check ${REF} in the registry"
+            cat "$RUNNER_TEMP/digest.err"
+            exit 1
           fi
 
       - name: Bake
@@ -133,9 +153,10 @@ jobs:
         if: ${{ steps.exists.outputs.built != 'true' }}
         env:
           BASE_VERSION: ${{ steps.tag.outputs.base_version }}
-          REF: ${{ steps.tag.outputs.ref }}
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
         run: |
           set -euo pipefail
+          REF="git.${ROOT_DOMAIN}/${IMAGE_PATH}"
           # The digest of the base this container was started from, resolved
           # now rather than trusted to the tag, so the layer is appended to the
           # filesystem it was baked against.
@@ -150,17 +171,16 @@ jobs:
       # plugins and npm cache still cover everything that did not change, and
       # the workspace downloads the rest as it always did.
       - name: Report
-        if: ${{ always() && steps.tag.outputs.ref != '' }}
+        if: ${{ always() && steps.tag.outputs.path != '' }}
         env:
-          REF: ${{ steps.tag.outputs.ref }}
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
           DIGEST: ${{ steps.push.outputs.digest || steps.exists.outputs.digest }}
-          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
           [ -n "$DIGEST" ] || exit 0
           # Written with ${ROOT_DOMAIN} in place of the host, the way the
           # component spells it.
-          wanted="${REF#*/}@${DIGEST}"
+          wanted="${IMAGE_PATH}@${DIGEST}"
           pinned="$(sed -nE 's#.*image: git\.\$\{ROOT_DOMAIN\}/(estate-images/pulumi-workspace:[^[:space:]]+).*#\1#p' kubernetes/components/pulumi-workspace/kustomization.yaml | head -n1)"
           echo "built:  ${wanted}"
           echo "pinned: ${pinned:-<none>}"
