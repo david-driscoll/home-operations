@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app grimmory
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # truenas-media: the ebook library (`ebooks`) and the Shelfmark ingest
+    # folder under `downloads` that Grimmory watches as its BookDrop.
+    - name: truenas-volumes
+      namespace: equestria
+    # The MariaDB credential and the volsync restic Secret.
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/equestria/books/grimmory
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  # 15m rather than 10m: a first boot initialises MariaDB and then runs
+  # Grimmory's ~150 Flyway migrations before /api/v1/healthcheck answers, and
+  # `wait: true` blocks on it.
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # NO components/postgres, and that is upstream's call, not ours. Grimmory
+    # (the BookLore fork) is MariaDB/MySQL only: backend/build.gradle.kts ships
+    # mariadb-java-client and flyway-mysql and no other driver, and every one of
+    # its Flyway migrations is MariaDB-dialect SQL. Postgres/SQLite support is
+    # grimmory-tools/grimmory#22, where the maintainers want vendor-neutral
+    # migrations first; checked against v3.5.0 and `develop`, 2026-10-18.
+    #
+    # The estate has no MariaDB service, so ./helmrelease.yaml runs a private
+    # one as a native sidecar in the SAME pod, bound to 127.0.0.1, with its
+    # datadir on the same volsync PVC as /app/data. See the comment on
+    # `initContainers.mariadb` there for why that beats a separate controller.
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # No TAILSCALE_MIDDLEWARE override: login is Grimmory's own (local users
+      # plus native OIDC), so the tailnet takes the default tailscale-local
+      # chain, the same posture as the internal route's local-user. An
+      # authentik outpost in front would also break OPDS, KOReader and Kobo
+      # sync, which authenticate with their own credentials.
+      #
+      # ONE volume, two subPaths: `data` (/app/data -- covers, thumbnails,
+      # settings, logs) and `mariadb` (the datadir). Only ever raise this --
+      # see components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 10Gi
+      # Pinned rather than inherited: the movers default differently (2Gi on
+      # the ReplicationSource, 8Gi on the ReplicationDestination).
+      VOLSYNC_CACHE_CAPACITY: 2Gi

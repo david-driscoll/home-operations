@@ -140,6 +140,8 @@ documents an `<app>-main`/`<app>-log` pair, the app opens both at startup and **
 neither**, and the estate ran with `LOG__DBENABLED: "False"` — no log database at all — until
 this component existed to declare the second one. See
 [`docs/runbooks/media-stack-postgres-migration.md`](../../../docs/runbooks/media-stack-postgres-migration.md) §1.1.
+`chaptarr` declares two, `chaptarr-log` and `chaptarr-cache`: it opens main, log and cache at
+startup and has no switch to turn either extra one off.
 
 **⚠️ An extra database must name its credential.** `kubernetes/apps/database/postgres/backups`
 enumerates the `Database` resources in the `database` namespace and, for each, reads the Secret

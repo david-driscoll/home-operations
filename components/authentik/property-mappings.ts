@@ -70,6 +70,32 @@ if "admins" in groups:
     groups.append("admin")
 return {"nextcloud_groups": groups}`,
     },
+    // Audiobookshelf's group claim does not map groups to roles -- it looks for
+    // the literal role names `admin`, `user` or `guest` in it
+    // (server/auth/OidcAuthStrategy.js, rolesInOrderOfPriority) and refuses a
+    // login that carries none of them. So this claim carries exactly one role
+    // name, never the real group names. ABS requests the claim's name as a
+    // scope, so the scope name has to match the claim. Who can log in at all is
+    // the application's access_policy, not this.
+    abs_groups: {
+      description: "Audiobookshelf role claim: `admin` for members of authentik's admins, `user` for everyone else",
+      expression: `if ak_is_group_member(request.user, name="admins"):
+    return {"abs_groups": ["admin"]}
+return {"abs_groups": ["user"]}`,
+    },
+    // AudioBookRequest has the same literal-role-name scheme with different
+    // names: `admin`, `trusted` (requests auto-download) and `untrusted`
+    // (requests wait for approval), matched in app/routers/pages/auth/oidc.py.
+    // It applies whichever it finds on every login, so this always emits
+    // exactly one -- otherwise a user dropped from a group would keep the role.
+    abr_groups: {
+      description: "AudioBookRequest role claim: `admin` for admins, `trusted` for media-managers, `untrusted` for everyone else",
+      expression: `if ak_is_group_member(request.user, name="admins"):
+    return {"abr_groups": ["admin"]}
+if ak_is_group_member(request.user, name="media-managers"):
+    return {"abr_groups": ["trusted"]}
+return {"abr_groups": ["untrusted"]}`,
+    },
     remote_user: {
       description: "Set remote-user based on the username",
       expression: `return {

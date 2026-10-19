@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Grimmory
+  category: Applications
+  description: Self-hosted ebook, comic and audiobook library with a built-in reader, OPDS, KOReader and Kobo sync (the BookLore fork)
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # Not in homarr-labs/dashboard-icons; upstream's own logo.
+  icon: https://raw.githubusercontent.com/grimmory-tools/grimmory/develop/assets/logo.svg
+  access_policy:
+    groups:
+      - admins
+      - media-managers
+      - family
+      - friends
+  authentik:
+    # Native OIDC, so oauth2 rather than the outpost -- but Grimmory reads its
+    # OIDC settings from its DATABASE, set in the admin UI (Settings ->
+    # Authentication). There is no environment variable for issuer, client or
+    # secret (only FORCE_DISABLE_OIDC / OIDC_ALLOW_UNSAFE_HOSTS), so this
+    # provider is wired up by hand once; ./externalsecret.yaml copies the three
+    # values into the namespace for that. The UI fields are listed there.
+    oauth2:
+      # Confidential with PKCE. Upstream's authentik guide says "Public", but
+      # the backend does the code exchange itself and sends client_secret when
+      # one is configured (OidcTokenClient.exchangeAuthorizationCode), so a
+      # confidential client works and keeps the secret server-side.
+      clientType: confidential
+      # <origin>/oauth2-callback, built from the browser's own origin -- and the
+      # backend rejects a redirect whose origin differs from the request's
+      # (OidcAuthService.validateRedirectUri), hence both hostnames.
+      #
+      # The mobile app's grimmory://oauth2-callback is deliberately NOT here.
+      # Grimmory already accepts it (its OIDC_REDIRECT_URIS app setting
+      # defaults to that value); add it on this side only if anyone starts
+      # using the app.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/oauth2-callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/oauth2-callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # Grimmory requests `openid profile email groups offline_access` by
+        # default. `groups` (components/authentik/property-mappings.ts) carries
+        # the group names its Group Sync matches on -- admins, media-managers,
+        # family, friends -- and offline_access gets it a refresh token, so a
+        # session does not end at access-token expiry.
+        - groups
+        - offline_access
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      # Unauthenticated, the endpoint the image's own HEALTHCHECK uses. It does
+      # not query the database per request, but Spring cannot finish booting
+      # without MariaDB (Flyway runs at startup), so a 200 implies both.
+      url: https://${APP}.${ROOT_DOMAIN}/api/v1/healthcheck
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

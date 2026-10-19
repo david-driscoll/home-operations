@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/database_v1.json
+#
+# Chaptarr's log database -- the Servarr `<app>-log` half, unchanged by the
+# Readarr fork.
+#
+# A HARD STARTUP DEPENDENCY with no off switch. Sonarr only opens its log
+# database when LOG__DBENABLED is "True"; Chaptarr's LogOptions has no such key
+# and AddDatabase() registers the log database unconditionally, and Chaptarr
+# will not create it. The pod crash-loops on `database "chaptarr-log" does not
+# exist` until this has applied (the nested Kustomization is `wait: false`), then
+# recovers on its own.
+#
+# The app's own role and credential: ConnectionStringFactory builds every
+# connection from the same PostgresUser/PostgresPassword and varies only the
+# database name. No second role, no second OpenBao static role.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: ${APP}-log
+  annotations:
+    # Nothing in this component family is ever pruned; see
+    # kubernetes/components/postgres/AGENTS.md.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    # NOT backed up: nothing but the app's own log entries, which it trims on
+    # its own schedule and which nobody would restore. Opt-OUT, the same call
+    # the Servarr four make.
+    driscoll.dev/backup: "false"
+    driscoll.dev/backup-reason: >-
+      transient application log, trimmed by Chaptarr's own housekeeping
+    # Belt and braces: flipping the annotation above to "true" would otherwise
+    # send the backup looking for `${APP}-log-postgres`, which never exists.
+    driscoll.dev/backup-credentials: ${APP}-postgres
+spec:
+  cluster:
+    name: postgres
+  name: ${APP}-log
+  # The app's own login role -- components/postgres renders it.
+  owner: ${APP}
+  ensure: present
+  allowConnections: true
+  # ⚠️ `ensure: absent` DROPS the database. Deleting this file is the safe way
+  # to stop managing it; the reclaim policy then leaves the live database alone.
+  databaseReclaimPolicy: retain
+  # ONLY `public` -- see kubernetes/components/postgres/database/database.yaml
+  # for why a schema named after the role would shadow it.
+  schemas:
+    - ensure: present
+      name: public
+      owner: ${APP}
