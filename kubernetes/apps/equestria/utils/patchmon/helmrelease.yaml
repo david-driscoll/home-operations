@@ -71,7 +71,7 @@ spec:
               # `host_mismatch` when the request's Host (or the rightmost
               # X-Forwarded-Host) is not a host listed here
               # (internal/middleware/cors.go). Both names must be present: the
-              # UI is used on the first, and the agents report to the second.
+              # agents and the LAN use the first, tailnet clients the second.
               CORS_ORIGIN: "https://${APP}.${ROOT_DOMAIN},https://${APP}.${TAILSCALE_DOMAIN}"
               # Upstream default, stated because OIDC depends on it:
               # OIDC_ENFORCE_HTTPS (default true) accepts plain HTTP from the
