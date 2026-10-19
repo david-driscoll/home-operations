@@ -83,7 +83,7 @@ spec:
               repository: docker.io/freikin/dawarich
               # Docker Hub only -- there is no GHCR mirror (ghcr.io/freika/
               # dawarich returns DENIED, checked 2026-09-21).
-              tag: 1.15.3@sha256:589e3606b11b61c3fa2d9661832cb73645a9b93a9cc7d807a071e2bc6c584498
+              tag: 1.16.0@sha256:b533e6eac4464d55479d030229cf9487f338972cdb88924e8060ca759d0e28b8
               pullPolicy: IfNotPresent
             # Compose sets `entrypoint:` and `command:`; the Kubernetes
             # spelling is command + args. The script ends in
@@ -255,7 +255,7 @@ spec:
           sidekiq:
             image:
               repository: docker.io/freikin/dawarich
-              tag: 1.15.3@sha256:589e3606b11b61c3fa2d9661832cb73645a9b93a9cc7d807a071e2bc6c584498
+              tag: 1.16.0@sha256:b533e6eac4464d55479d030229cf9487f338972cdb88924e8060ca759d0e28b8
               pullPolicy: IfNotPresent
             # sidekiq-entrypoint.sh ignores its arguments and execs
             # `bundle exec sidekiq` itself; `sidekiq` is passed anyway to match

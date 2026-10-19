@@ -42,9 +42,9 @@ spec:
     # merge commit and fails on `role "patchmon" does not exist`. The recovery
     # is in docs/runbooks/patchmon.md.
     - ../../../../components/postgres
-    # patchmon.${TAILSCALE_DOMAIN} is the URL the agents use. Every Proxmox host
-    # reaches it under the `default-apps-access` grant (tag:proxmox ->
-    # tag:apps:443), including the off-site ones that have no LAN path here.
+    # patchmon.<tailnet>, for people on the tailnet. NOT the agent URL:
+    # Proxmox hosts cannot resolve tailnet names (they use the LAN DNS), so
+    # agents report to patchmon.<root domain> -- see components/patchmon.ts.
     - ../../../../components/tailscale
     # No volsync: the server writes nothing to disk that matters. Agent binaries
     # are served from the image, logos are stored in Postgres, and the only

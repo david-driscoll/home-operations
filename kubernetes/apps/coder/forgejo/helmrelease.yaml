@@ -335,6 +335,7 @@ spec:
           # actions/checkout, github-sync's pushes, git-pages. With it set,
           # every one of them gets `Interacting with repositories by HTTP
           # protocol is not allowed` (403), as on 2026-10-18.
+          DISABLE_HTTP_GIT: false
           ENABLE_PUSH_CREATE_USER: true
           ENABLE_PUSH_CREATE_ORG: true
           # Pinned to the upstream default so a chart or image bump cannot

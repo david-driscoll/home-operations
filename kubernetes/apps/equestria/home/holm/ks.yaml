@@ -51,3 +51,7 @@ spec:
       # The image runs as `node` (uid 1000), not the estate's usual 568.
       VOLSYNC_PUID: "1000"
       VOLSYNC_PGID: "1000"
+      # The app is `holm`; the address is `apps` (holm only redirects, see
+      # helmrelease.yaml). This names the tailnet device, which the component
+      # otherwise defaults to the app name. Same split as degoog/`search`.
+      TAILSCALE_HOST: apps

@@ -69,7 +69,7 @@ spec:
               # adapter-node behind Traefik sees plain http, so without this
               # url.origin (the OpenSearch descriptor, the logout fallback)
               # would say http://. Same host as `redirect_base` in config.yml.
-              ORIGIN: "https://${APP}.${ROOT_DOMAIN}"
+              ORIGIN: "https://apps.${ROOT_DOMAIN}"
             probes:
               liveness: &probes
                 enabled: true
@@ -151,12 +151,19 @@ spec:
 
     route:
       internal:
+        # Keeps the HTTPRoute named `holm`. With a second route below,
+        # app-template would otherwise suffix it to `holm-internal`, deleting
+        # and recreating the live route (and churning its DNS record).
+        forceRename: *app
         parentRefs:
           - name: internal
             namespace: network
             kind: Gateway
         hostnames:
-          - "${APP}.${ROOT_DOMAIN}"
+          # The family-facing address, not the app name: also redirect_base in
+          # resources/config.yml, ORIGIN above and the redirect URI in
+          # definition.yaml. Change all four together.
+          - "apps.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
           - backendRefs:
@@ -169,3 +176,30 @@ spec:
                   kind: Middleware
                   # Network gate only: Holm signs people in itself over OIDC.
                   name: local-user
+      # holm.<root domain> -> apps.<root domain>, the app's own name kept as
+      # an alias. A REDIRECT, not a second hostname on the route above:
+      # Holm's /auth/login keeps its OIDC state and PKCE cookies on the host
+      # it was opened on, but authentik always returns to `redirect_base`
+      # (the apps host). Served under both names, a sign-in started on holm.*
+      # would land on apps.* without those cookies and fail, and the session
+      # cookie would never reach holm.* anyway. Path and query are kept.
+      legacy:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: "apps.${ROOT_DOMAIN}"
+                  # 302, not 301: browsers cache a 301 indefinitely.
+                  statusCode: 302

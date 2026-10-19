@@ -49,7 +49,9 @@ auth:
     # authentik puts `groups` in its built-in `profile` mapping.
     scopes: "openid profile email"
     # Must match the redirect URI in ../definition.yaml (+ /auth/callback).
-    redirect_base: "https://holm.${ROOT_DOMAIN}"
+    # Sign-in only works on this host, which is why holm.<root domain> in
+    # ../helmrelease.yaml redirects here instead of serving Holm.
+    redirect_base: "https://apps.${ROOT_DOMAIN}"
   # authentik's own user settings page.
   password_change_url: "https://canterlot.${ROOT_DOMAIN}/if/user/#/settings"
   registration:
