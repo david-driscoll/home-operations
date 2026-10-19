@@ -64,20 +64,32 @@ sessions may already hold it.
 
 The receiver is plain Flux and deploys on merge. The Talos patch does
 **not** apply itself. `machine.logging` and `KmsgLogConfig` both take effect
-without a reboot. Apply one node at a time and look at the diff first: the
-rendered `talos/clusterconfig/*.yaml` are gitignored and can be stale, so diff
-against the **live** config.
+without a reboot.
+
+As of 2026-10-18 it had been applied to **no** node: talhelper renders both
+documents correctly, but nobody had run the apply, so Loki had no `talos/*`
+streams at all. Check with `talosctl get kmsglogconfigs`; an empty list means
+the node is not shipping.
+
+Patch the file itself onto the live config, one node at a time. Don't apply
+the whole rendered `clusterconfig/equestria-<node>.yaml`: that carries every
+other change pending in the repo. On 2026-10-18 the full-file dry run also added
+the `data.forgejo.org` and `mcr.microsoft.com` registry mirrors, and on a
+control plane it can carry a Kubernetes version bump that belongs to tuppr.
 
 ```bash
-mise run talos:genconfig
-cd talos
-talosctl apply-config -n <ip> -e <ip> --file clusterconfig/equestria-<node>.yaml --dry-run
-talosctl apply-config -n <ip> -e <ip> --file clusterconfig/equestria-<node>.yaml --mode=no-reboot
+talosctl -n <ip> -e <ip> patch machineconfig \
+  --patch-file talos/patches/global/machine-logging.yaml --mode=no-reboot --dry-run
+talosctl -n <ip> -e <ip> patch machineconfig \
+  --patch-file talos/patches/global/machine-logging.yaml --mode=no-reboot
 ```
 
 The dry run should show only the `logging` block and the new `KmsgLogConfig`
-document. Anything else means live has drifted from the repo; stop and find out
-why before applying.
+document. Anything else means live has drifted from the repo; stop and find
+out why before applying. The patch is multi-document (strategic merge plus a
+new document), and `talosctl patch` takes it as is. It lands in STATE, so it
+survives a reboot. A later full `apply-config` from the rendered file keeps
+it, because the file contains it too.
 
 ## Verifying
 
