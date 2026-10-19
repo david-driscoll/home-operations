@@ -16,13 +16,12 @@ resources:
   # the next `stacks/system` run removes its authentik app. ./supersync stays
   # for the installed apps that still sync through it.
   # - ./super-productivity/ks.yaml
-  - ./supersync/ks.yaml
+  # - ./supersync/ks.yaml
   - ./windmill/ks.yaml
   - ./rustdesk/ks.yaml
   # - ./tandoor/ks.yaml
   - ./freshrss/ks.yaml
   # On trial, to compare against FreshRSS.
-  - ./yarr/ks.yaml
   - ./ttrss/ks.yaml
   - ./searxng/ks.yaml
   - ./degoog/ks.yaml
