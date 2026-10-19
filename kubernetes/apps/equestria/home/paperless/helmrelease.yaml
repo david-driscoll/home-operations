@@ -1,0 +1,475 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template: Paperless-ngx publishes no Helm chart, only compose files. This
+# follows upstream's docker-compose.postgres-tika.yml, service for service:
+#
+#   webserver -> the `paperless` controller. ONE container, as upstream ships
+#                it: s6-overlay runs the granian webserver, the Celery worker,
+#                Celery beat and the consume-folder watcher side by side.
+#   tika      -> the `tika` controller   } Office documents and .eml mail.
+#   gotenberg -> the `gotenberg` controller } Stateless, so separate Deployments
+#                (as ../nextcloud does for Collabora) that restart on their own
+#                without taking a running OCR job down with them.
+#   db        -> the shared CNPG cluster, via components/postgres.
+#   broker    -> the shared Valkey in `database`.
+#
+# ROOTLESS. The image detects a non-zero uid at start (init-start writes
+# USER_IS_NON_ROOT) and takes its non-root path through every s6 init step:
+# no usermod, no chown of the volume, no s6-setuidgid. USERMAP_UID/USERMAP_GID
+# are for the root-started path only and must NOT be set here. The one thing
+# rootless forbids is PAPERLESS_OCR_LANGUAGES, which apt-installs extra
+# tesseract packs at boot -- eng, deu, fra, ita and spa are baked into the
+# image, and anything else needs a different approach than that variable.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app paperless
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the WORKLOAD, which is where Reloader looks. It matters more than
+          # usual here: ${APP}-oidc does not exist on first boot (see
+          # ./externalsecret.yaml), so the restart that turns SSO on is entirely
+          # Reloader's job -- as is picking up each rotated Postgres password.
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Recreate, not RollingUpdate. Either reason is sufficient: the volume
+        # is ReadWriteOnce, and the container runs `manage.py migrate` at boot.
+        # The image takes an s6-setlock in data/ around it, but a lock on a
+        # volume only one pod can mount is no help to a second pod.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/paperless-ngx/paperless-ngx
+              # Upstream tags carry no `v` prefix.
+              tag: 3.3.2@sha256:d232cba37cc0bab0d6c6581ecd320383b7a6f49f33e0fd16adda4d009eb600dd
+              pullPolicy: IfNotPresent
+            envFrom:
+              # PAPERLESS_DBENGINE and the PAPERLESS_DB* set -- always present.
+              - secretRef:
+                  name: ${APP}-env
+              # PAPERLESS_SECRET_KEY. Required: v3 refuses to start without it.
+              - secretRef:
+                  name: ${APP}-secret-key
+              # PAPERLESS_ADMIN_PASSWORD, for PAPERLESS_ADMIN_USER below.
+              - secretRef:
+                  name: ${APP}-admin
+              # PAPERLESS_SOCIALACCOUNT_PROVIDERS. OPTIONAL, and that is
+              # load-bearing: the authentik credential only exists once
+              # stacks/system has read ./definition.yaml and created the
+              # provider, which is after this pod first boots. With it absent
+              # there is simply no SSO button; Reloader restarts the pod when
+              # it lands.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            env:
+              TZ: "${TIMEZONE}"
+              # Django's TIME_ZONE, and through it Celery beat's
+              # (CELERY_TIMEZONE = TIME_ZONE in paperless/settings). That makes
+              # it the clock the *_CRON schedules below are read in, and it has
+              # to be the same clock as go-kube-downscaler's shed window.
+              PAPERLESS_TIME_ZONE: "${TIMEZONE}"
+              PAPERLESS_PORT: &port 8000
+              # The canonical URL. Paperless appends its host to ALLOWED_HOSTS
+              # (whose default stays `*`, which is what lets the kubelet's
+              # probes in by pod IP) and its origin to CSRF_TRUSTED_ORIGINS and
+              # CORS_ALLOWED_ORIGINS.
+              PAPERLESS_URL: "https://${APP}.${ROOT_DOMAIN}"
+              # The tailnet origin, which PAPERLESS_URL cannot also carry.
+              # Without it every form POST on the tailnet hostname -- sign-in
+              # included -- fails Django's CSRF origin check, because Traefik
+              # terminates TLS and the request reaches Django as plain http.
+              # Listing the origin is the narrow fix; PAPERLESS_PROXY_SSL_HEADER
+              # would also work but tells Django to trust X-Forwarded-Proto from
+              # anything that can reach the pod.
+              PAPERLESS_CSRF_TRUSTED_ORIGINS: "https://${APP}.${TAILSCALE_DOMAIN}"
+
+              # ---- Redis / Valkey -------------------------------------------
+              # The shared, passwordless Valkey in `database`, as Celery's
+              # broker. Index 15, per the allocation table in
+              # database/valkey/helmrelease.yaml -- the last free one.
+              # The instance runs with no maxmemory, i.e. noeviction, which is
+              # what a broker needs: under an allkeys-* policy a queued consume
+              # task could be evicted and silently never run.
+              PAPERLESS_REDIS: "redis://valkey.database.svc.cluster.local:6379/15"
+
+              # ---- Storage ----------------------------------------------------
+              # All three on the ONE volume mounted at /data below, as plain
+              # subdirectories the image's init-folders step creates as this
+              # uid. Redirected by environment rather than with three `subPath`
+              # mounts, so every directory on the volume is Paperless's own
+              # 568:568: the kubelet creates a missing subPath directory as
+              # root, and init-folders' ownership check would then log it as a
+              # permission issue on every boot.
+              PAPERLESS_DATA_DIR: /data/data
+              PAPERLESS_MEDIA_ROOT: /data/media
+              # Only fed by things that write files into it; web, mobile and
+              # e-mail uploads never pass through here. It is a Longhorn ext4
+              # volume, so inotify works and PAPERLESS_CONSUMER_POLLING_INTERVAL
+              # stays at its 0 default.
+              PAPERLESS_CONSUMPTION_DIR: /data/consume
+
+              # ---- Workers ----------------------------------------------------
+              # Both stated, because the default for threads is
+              # multiprocessing.cpu_count() / TASK_WORKERS -- and cpu_count()
+              # in a container is the NODE's core count, not this pod's share
+              # of it. Unset, one large scan would run OCR on every core of the
+              # node at once. Two workers so a long OCR job does not hold up
+              # mail fetching and indexing behind it; 2 x 2 = 4 OCR threads at
+              # most, which is what the memory limit below is sized for.
+              PAPERLESS_TASK_WORKERS: 2
+              PAPERLESS_THREADS_PER_WORKER: 2
+              PAPERLESS_OCR_LANGUAGE: eng
+
+              # ---- Schedules --------------------------------------------------
+              # `equestria` is go-kube-downscaler's shed-list namespace: this
+              # pod is scaled to zero 01:00-07:00 every night
+              # (kube-system/go-kube-downscaler, DEFAULT_DOWNTIME). Celery beat
+              # does not catch up on a missed run, so a task scheduled inside
+              # that window never runs at all. Two defaults land there and are
+              # pulled in front of it:
+              #
+              #   empty trash         01:00 -> 00:45  (races the shed exactly)
+              #   share-link cleanup  02:00 -> 00:50  (would never run)
+              #
+              # The rest already fall outside it: index optimise 00:00, sanity
+              # check 00:30 on Sundays, train and scheduled workflows hourly at
+              # :05, mail every ten minutes. The 02:10 LLM index only exists
+              # with PAPERLESS_AI_ENABLED, which is off.
+              PAPERLESS_EMPTY_TRASH_TASK_CRON: "45 0 * * *"
+              PAPERLESS_SHARE_LINK_BUNDLE_CLEANUP_CRON: "50 0 * * *"
+
+              # ---- Tika / Gotenberg -------------------------------------------
+              # The two Services below. Without them Paperless still takes PDFs
+              # and images; it refuses Office documents and .eml mail.
+              PAPERLESS_TIKA_ENABLED: "true"
+              PAPERLESS_TIKA_ENDPOINT: "http://${APP}-tika:9998"
+              PAPERLESS_TIKA_GOTENBERG_ENDPOINT: "http://${APP}-gotenberg:3000"
+
+              # ---- Accounts and SSO -------------------------------------------
+              # Created at start if no superuser exists yet; its password is in
+              # ${APP}-admin. See ./externalsecret.yaml for why it exists at all.
+              PAPERLESS_ADMIN_USER: admin
+              # Registers allauth's OIDC provider app. Harmless before
+              # ${APP}-oidc exists: an installed provider with no APPS
+              # configured just renders no button.
+              PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+              # The open registration form stays off; authentik decides who
+              # exists. SOCIAL_AUTO_SIGNUP then creates the Paperless account on
+              # a first SSO login straight from the claims, instead of stopping
+              # on a signup form. (PAPERLESS_SOCIALACCOUNT_ALLOW_SIGNUPS, which
+              # it depends on, already defaults to true.) The gate is
+              # authentik's own: ./definition.yaml binds the app to
+              # family/admins, so nobody else reaches this point.
+              PAPERLESS_ACCOUNT_ALLOW_SIGNUPS: "false"
+              PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
+              # Matched against the `groups` claim, granting superuser AND
+              # revoking it on every login (paperless/signals.py). Two things
+              # to know before relying on it:
+              #
+              #   * It runs on allauth's `social_account_updated` signal, which
+              #     only fires for an ALREADY-LINKED account. An `admins`
+              #     member's FIRST SSO login creates an ordinary user; they
+              #     become superuser on the second.
+              #   * A missing claim is read as "not in the group". If the
+              #     `groups` mapping or scope ever goes away (./definition.yaml,
+              #     ./externalsecret.yaml), every admin is demoted on their next
+              #     login -- the break-glass `admin` account is the way back.
+              #
+              # New SSO users get NO document permissions by default. Grant
+              # them in Paperless (Users & Groups) -- a `family` group there
+              # with view/change rights is the usual shape.
+              # PAPERLESS_SOCIAL_ACCOUNT_SYNC_GROUPS is deliberately NOT set:
+              # it would make authentik groups the only source of Paperless
+              # group membership, replacing (groups.set(..., clear=True)) any
+              # assignment made in the UI on every login.
+              PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP: admins
+              # ⚠️ MUST STAY false while `admin` is the only way back in. The
+              # username/password form is the break-glass path for when
+              # authentik is down or has demoted everyone. (It does not affect
+              # API token logins or /admin/ either way.) For the same reason
+              # PAPERLESS_REDIRECT_LOGIN_TO_SSO is left at false: its
+              # JavaScript redirect fires before anyone can reach the form.
+              PAPERLESS_DISABLE_REGULAR_LOGIN: "false"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 1Gi
+              limits:
+                # Idle is roughly a gigabyte: granian, beat, the consumer and
+                # each Celery worker are separate Python processes. OCR on a
+                # large scan (ocrmypdf + tesseract + ghostscript, four threads)
+                # and the hourly classifier retrain are what spike above it.
+                memory: 4Gi
+            probes:
+              # tcpSocket, deliberately NOT an HTTP check. The Celery worker
+              # and the consumer run in this same container, so a liveness
+              # restart also kills whatever document is mid-OCR. Postgres
+              # blipping -- or a rotated password Reloader has not yet rolled
+              # out -- is a reason to stop routing traffic here (readiness), not
+              # to throw that work away.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 4
+              # The sign-in page: unauthenticated, and it reads the database on
+              # every render (see the gatus note in ./definition.yaml), so a
+              # pass means app and Postgres are both answering.
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /accounts/login/
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              # granian only starts after s6's init-complete, i.e. after
+              # init-wait-for-db, `migrate`, the search-index check and the
+              # superuser step. Against an empty database that is every
+              # migration Paperless has ever shipped, and a major upgrade can
+              # carry a long data migration of its own. 10 minutes before the
+              # pod is declared failed.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              allowPrivilegeEscalation: false
+              # NOT read-only. s6-overlay writes its runtime state under /run
+              # (the image chmods it 1777 for exactly this) and Paperless's
+              # scratch directory defaults to /tmp/paperless; S6_READ_ONLY_ROOT
+              # plus an emptyDir for each would be the read-only shape, and is
+              # not worth a boot loop discovered in production.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+
+      tika:
+        replicas: 1
+        strategy: RollingUpdate
+        containers:
+          app:
+            image:
+              repository: docker.io/apache/tika
+              # ⚠️ STAYS ON 3.x. Tika 4.0 removed the /tika/form/* endpoints the
+              # bundled tika-client PUTs to and renamed the metadata keys, so
+              # every Office/.eml parse fails (paperless-ngx#13755). Upstream
+              # pinned its compose files to 3.3.1.0 (#13758) and closed the 4.x
+              # bump (#13908). .github/renovate.json5 holds this at <4 until
+              # Paperless ships a tika-client that speaks 4.
+              tag: 3.3.1.0@sha256:90b7fa1dc018434075fce9e1d9b88b1e3d0ea6979d0cf86e116c79a8073ae973
+              pullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                # Two JVMs: tika-server does its parsing in a forked child
+                # process by default (so a parser crash restarts the child, not
+                # the server), and each sizes its default heap from this limit.
+                memory: 1536Mi
+            probes:
+              liveness: &tikaProbes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # The server's own greeting, under the same /tika resource
+                    # Paperless calls.
+                    path: /tika
+                    port: &tikaPort 9998
+                  initialDelaySeconds: 15
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness: *tikaProbes
+            securityContext:
+              # The image's own numeric user.
+              runAsUser: 35002
+              runAsGroup: 35002
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+
+      gotenberg:
+        replicas: 1
+        strategy: RollingUpdate
+        containers:
+          app:
+            image:
+              repository: docker.io/gotenberg/gotenberg
+              tag: 8.38.1@sha256:aa552cc115db488e0f0bcb07446aac13071ad51505b642c84bb894500907b42b
+              pullPolicy: IfNotPresent
+            # `args`, replacing the image's CMD and keeping its tini
+            # ENTRYPOINT -- the same thing upstream's compose `command:` does.
+            # The two flags are upstream's too: Paperless uses the Chromium
+            # route to render .eml bodies, and mail is the one input here that
+            # strangers write, so no JavaScript runs and Chromium may load
+            # nothing but the temp files Gotenberg itself wrote (no remote
+            # images, no tracking pixels).
+            args:
+              - gotenberg
+              - --chromium-disable-javascript=true
+              - --chromium-allow-list=^file:///tmp/.*
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                # Chromium for mail, LibreOffice for Office documents.
+                memory: 1536Mi
+            probes:
+              liveness: &gotenbergProbes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: &gotenbergPort 3000
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness: *gotenbergProbes
+            securityContext:
+              # The image's `gotenberg` user, which owns /home/gotenberg.
+              # Without this the container inherits 568:568 from
+              # defaultPodOptions, and the image's arbitrary-uid support
+              # (gotenberg#1049, for OpenShift) does not cover that: it makes
+              # /home/gotenberg writable by GROUP 0, not by any uid.
+              runAsUser: 1001
+              runAsGroup: 1001
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # 568/568 rather than the image's own 1000: it matches
+        # VOLSYNC_PUID/VOLSYNC_PGID, so the restic mover and the app agree on
+        # the ownership of every file on the PVC. A mismatch there is only
+        # discovered at RESTORE time, which is the worst moment to find it.
+        # tika and gotenberg override the uid per container and mount nothing.
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          *app :
+            *app :
+              # data/, media/ and consume/ -- see the Storage block above. The
+              # media/ half is the archive itself; the database only indexes
+              # it.
+              #
+              # The image's own /usr/src/paperless/export stays unmounted and
+              # owned by uid 1000, so init-folders logs a "No write permission"
+              # WARNING for it on every boot. Expected: it is only a target for
+              # a hand-run document_exporter, not something Paperless writes to.
+              - path: /data
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          # `http` is load-bearing: components/tailscale's IngressRoute targets
+          # the `${APP}` Service on a port of that name.
+          http:
+            port: *port
+      tika:
+        controller: tika
+        type: ClusterIP
+        ports:
+          http:
+            port: *tikaPort
+      gotenberg:
+        controller: gotenberg
+        type: ClusterIP
+        ports:
+          http:
+            port: *gotenbergPort
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              # `local-api`, not `local-user` and certainly not
+              # `authenticated-user`. Paperless speaks OIDC itself, so the
+              # authentik forward-auth outpost would authenticate twice and
+              # break the callback. And `local-user` chains error-pages, which
+              # replaces every 401-599 body with HTML: the web UI shows field
+              # errors from the JSON body of a 400, and the mobile apps parse
+              # the one /api/token/ returns. This is the LAN check alone, as
+              # ../nextcloud uses for the same reason; the tailnet route in
+              # ./ks.yaml makes the matching choice.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-api

@@ -27,11 +27,11 @@
 #   12  outline
 #   13  sure         Sidekiq + Rails cache
 #   14  renovate     lookup cache      (coder/renovate/renovatejob.yaml)
-#   15  free -- the last one
+#   15  paperless    Celery broker
 #
-# `databases` is Valkey's default of 16, so the app after the last free index
-# needs either a key prefix inside an existing index or `--databases` raised on
-# this server (which restarts it under every consumer at once).
+# FULL. `databases` is Valkey's default of 16, so the next app needs either a
+# key prefix inside an existing index or `--databases` raised on this server
+# (which restarts it under every consumer at once).
 #
 # Checked against the live server on 2026-10-18: `INFO keyspace` for which
 # indexes hold keys, and CLIENT LIST's per-connection `db=` for who is
