@@ -20,7 +20,8 @@
   },
   "http": {
     "address": "0.0.0.0",
-    "port": "6785"
+    "port": "6785",
+    "compat": ["docker2s2"]
   },
   "log": { "level": "info" },
   "extensions": {
