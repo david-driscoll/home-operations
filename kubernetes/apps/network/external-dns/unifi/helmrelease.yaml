@@ -62,6 +62,44 @@ spec:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
         effect: NoSchedule
+      # ---- AT MOST ONE WRITER: NEVER EVICTED OFF A SICK NODE -----------------
+      #
+      # No tolerationSeconds, on purpose: this pod is never evicted for its
+      # node going NotReady or unreachable. The default is 300s, and after
+      # that the taint-eviction controller marks the pod for deletion, which
+      # is all the ReplicaSet waits for before it starts a replacement. But
+      # a NotReady node is not a dead one. Its containers can keep running
+      # and keep reaching the gateway, so for as long as the node is sick
+      # there are TWO external-dns loops with the same owner ID writing to
+      # one UniFi. external-dns has no leader election (the upstream proposal
+      # is "not-planned", and v0.23.0 has no such flag). `Recreate` does not
+      # help either: it only applies to rollouts, not to ReplicaSet
+      # replacement.
+      #
+      # That happened on 2026-10-19. kerfuffle's containerd degraded and the
+      # node went NotReady at 01:06:08. At 01:11:12 76mz4 was marked for
+      # deletion and r6cgk started on pegasus, while 76mz4 kept running on
+      # kerfuffle until about 01:43. Both loops planned the same creates. At
+      # 01:15:10 UniFi's uniqueness check lost the race and stored
+      # `listenarr` twice. A duplicate static-DNS name breaks the gateway's
+      # dnsmasq config, so every gateway config commit failed for the next
+      # 12 hours, until the duplicate was deleted by hand.
+      #
+      # The cost is that if the node really dies, UniFi DNS updates stop
+      # until it comes back or someone runs `kubectl delete pod --force`.
+      # Records already published keep resolving, and
+      # KubeDeploymentReplicasMismatch fires after 15m. That trade is
+      # deliberate: a stalled sync is visible and harmless, and a duplicate
+      # record breaks the gateway silently. Planned moves are unaffected,
+      # because the Battery runbook (§6.1 step 3 of 20-low-power-tier.md)
+      # `rollout restart`s this Deployment off the workers before powering
+      # them down, rather than relying on eviction.
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
     fullnameOverride: *app
     logLevel: debug
     interval: 10m
