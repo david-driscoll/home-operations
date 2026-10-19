@@ -13,6 +13,12 @@ spec:
     dir: stacks/unifi-network
   serviceAccountName: ${APP}
   stack: unifi-network
+  # Stays at 300s. Two things here are polls, not git changes: local-dns.ts
+  # points DHCP DNS at the Technitium hosts whose tailnet node is online right
+  # now, so this interval IS the DNS failover lag; and tailscale-api-token.ts
+  # mints an OAuth access token (~1h TTL) for the tailscale MCP server every
+  # run. It is cheap because of workspaceReclaimPolicy: Retain below: a resync
+  # reuses the warm workspace pod instead of cold-starting one.
   resyncFrequencySeconds: 300
   retryMaxBackoffDurationSeconds: 60
   # Pulumi state on the dockge Garage cluster (celestia/luna/skystar), one

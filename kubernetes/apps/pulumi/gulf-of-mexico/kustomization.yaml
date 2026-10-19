@@ -5,3 +5,6 @@ kind: Kustomization
 resources:
   - ./serviceaccount.yaml
   - ./stack.yaml
+components:
+  # Workspace pod placement: off the SATA-/var nodes, spread across the rest.
+  - ../../../components/pulumi-workspace
