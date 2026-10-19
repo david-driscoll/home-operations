@@ -25,6 +25,7 @@ target="${2:?usage: append-layer.sh <base-ref@digest> <target-ref>}"
 paths=(
   home/node/.pulumi
   home/node/.npm
+  home/node/.npmrc
   opt/npm
   usr/local/bin/npm
   usr/local/bin/npx

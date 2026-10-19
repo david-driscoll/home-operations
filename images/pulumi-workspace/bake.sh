@@ -20,6 +20,8 @@
 #                                         sdks/ packages (~60 MB, every run)
 #   /home/node/.npm                       a warm npm cache for this lockfile
 #                                         (~100-170 MB, every run)
+#   /home/node/.npmrc                     prefer-offline, so that cache is used
+#                                         without revalidating each package
 #   /opt/npm + /usr/local/bin/{npm,npx}   npm 11 (see NPM_VERSION below)
 #   /usr/local/bin/vals                   the ref+openbao:// resolver, which a
 #                                         jdxcode/mise init container used to
@@ -28,7 +30,7 @@
 # NOT baked: node_modules. The operator extracts the source into /share, an
 # emptyDir mounted over whatever the image has there, and `pulumi install`
 # runs `npm install` at that workspace root. With the warm cache it is an
-# offline extract (npm_config_prefer_offline in the workspace env), not a
+# offline extract (prefer-offline in /home/node/.npmrc), not a
 # download -- but it is still ~0.5 GB written to the node's disk per run.
 set -euo pipefail
 
@@ -122,6 +124,18 @@ install -d -o "$user" -g "$user" "$home/.npm" "$home/.pulumi"
 # SDKs' postinstall `tsc` (no SDK source is staged) and the
 # install-pulumi-plugin.js scripts, whose plugins are installed below instead.
 (cd "$stage" && retry as_user npm ci --ignore-scripts --no-audit --no-fund)
+
+# The workspace's own npm settings, so a pod needs no env for them.
+#   prefer-offline  use a cached tarball or packument without revalidating it
+#                   against the registry; only a real cache miss goes out.
+#   audit, fund,    each a registry round trip (or a nag) on every
+#   update-notifier `npm install`, and nobody reads a workspace's output for them.
+install -m 0644 -o "$user" -g "$user" /dev/stdin "$home/.npmrc" <<'NPMRC'
+prefer-offline=true
+audit=false
+fund=false
+update-notifier=false
+NPMRC
 echo "::endgroup::"
 
 echo "::group::plugins"
