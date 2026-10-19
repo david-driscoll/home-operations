@@ -25,7 +25,13 @@ spec:
     - name: postgres
       namespace: database
     # The Bull job queue -- every search, download monitor and import runs
-    # through it. Database index 7, set in ./helmrelease.yaml.
+    # through it. Database index 16, set in ./helmrelease.yaml.
+    #
+    # Also an ORDERING guard, not just readiness: index 16 only exists once
+    # valkey runs with `--databases 32`. kustomize-controller refuses a
+    # dependency on the same source until it has applied the CURRENT revision
+    # ("dependency revision is not up to date"), and valkey's ks has
+    # `wait: true`, so this cannot switch indexes ahead of the server.
     - name: valkey
       namespace: database
   path: ./kubernetes/apps/equestria/books/readmeabook

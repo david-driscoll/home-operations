@@ -65,9 +65,13 @@ spec:
               # public hostname, a hairpin out through the gateway from inside
               # the pod. Loopback skips that hop.
               SETUP_CHECK_BASE_URL: http://127.0.0.1:3030
-              # Shared valkey in `database` (no password). Index 7 is this
-              # app's; ioredis and Bull both read the index from the path.
-              REDIS_URL: redis://valkey.database.svc.cluster.local:6379/7
+              # Shared valkey in `database` (no password). Index 16, per the
+              # allocation table in database/valkey/helmrelease.yaml; ioredis
+              # and Bull both read the index from the path. Was 7 for its first
+              # hours, which patchmon already had -- 16 exists only because
+              # that server now runs 32 databases, and ./ks.yaml's dependsOn on
+              # valkey is what keeps this from switching before it does.
+              REDIS_URL: redis://valkey.database.svc.cluster.local:6379/16
               # Local login stays ON: the wizard's setup admin is the only way in
               # until OIDC is configured, and it remains the break-glass account
               # if authentik is down. DISABLE_LOCAL_LOGIN: "true" would turn it
