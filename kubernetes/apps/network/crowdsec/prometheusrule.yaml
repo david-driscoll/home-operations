@@ -266,7 +266,7 @@ spec:
         # the public -- the door keeps serving, uninspected, and nothing is red.
         #
         # Only meaningful because of plan step 3's Gatus probe
-        # (stacks/vault/KubernetesFluxWebhooks.ts): alpha-site fetches
+        # (stacks/system/flux-webhooks.ts): alpha-site fetches
         # flux-<cluster>-webhook's /hook/ through the public Funnel path every
         # 5 minutes, from an address that is NOT in the bouncer's
         # clientTrustedIPs, so a working door asks AppSec ~12 times an hour.

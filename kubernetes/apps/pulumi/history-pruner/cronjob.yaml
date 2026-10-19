@@ -83,7 +83,7 @@ spec:
                   BUCKET=pulumi-state
                   # One prefix per Pulumi backend root. `backups` holds both the
                   # backups and system stacks.
-                  PREFIXES="authentik backups gulf-of-mexico home ocracoke unifi-network vault"
+                  PREFIXES="authentik backups gulf-of-mexico home ocracoke unifi-network"
 
                   prune() {
                     echo "  Pruning garage:$BUCKET/$1/.pulumi/$2/ older than $3"

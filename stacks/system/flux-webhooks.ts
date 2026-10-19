@@ -1,15 +1,56 @@
+/**
+ * The GitHub push webhooks that wake Flux on equestria.
+ *
+ * This was `stacks/vault` (project `applications`, stack `vault`) until it
+ * shrank to this one component and was folded in here. Its state was moved
+ * with `pulumi state move`, not recreated, so every name below is spelled the
+ * way that stack spelled it: the component is `equestria-flux-webhooks`, its
+ * children `equestria-flux-webhooks-webhook-<repo>` and
+ * `gatus-equestria-flux-webhooks-<hash>`. Those names ARE the URNs the moved
+ * state is keyed on. Rename one and Pulumi plans a delete plus a create; for a
+ * webhook that means a new hook id on GitHub and a window with no pushes
+ * reaching Flux.
+ *
+ * The cluster comes from `/clusters/equestria.yaml`, not from
+ * `globals.store.getKubernetesClusters()` as it did in the vault stack. That
+ * call reads `clusters/<key>/details`, which THIS stack publishes -- the
+ * self-read index.ts's header forbids. applications.ts does the same.
+ *
+ * Unlike the rest of this stack it reads equestria's API at run time (the
+ * Receiver's webhook path and the token Secret), through the tailnet
+ * kubeproxy. It does that with the Kubernetes client, not a Pulumi provider,
+ * so nothing here is a Kubernetes resource.
+ */
 import type { GlobalResources } from "@components/globals.ts";
-import { addUptimeGatus } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
+import { generateTailscaleKubeConfig } from "@components/store/index.ts";
 import type { KubernetesClusterDefinition } from "@components/store/interfaces.ts";
 import * as k8s from "@kubernetes/client-node";
 import type { GatusDefinition } from "@openapi/application-definition.js";
 import * as github from "@pulumi/github";
-import type kubernetes from "@pulumi/kubernetes";
-import { ComponentResource, type ComponentResourceOptions, interpolate, jsonStringify, log, output } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, interpolate, output } from "@pulumi/pulumi";
+import { equestriaDefinition } from "./applications.ts";
+
+/**
+ * The repositories whose pushes wake equestria's Flux. `vault` was in this
+ * list until that repo was retired; dropping a repo DELETES its webhook, which
+ * has to happen BEFORE the repo is archived, because GitHub rejects hook
+ * changes on an archived repo and the stack would stall on the delete forever.
+ */
+const FLUX_WEBHOOK_REPOS = ["equestria-cluster", "home-operations"];
+
+export async function configureFluxWebhooks(globals: GlobalResources) {
+  const definition = equestriaDefinition();
+  const kubeConfig = await awaitOutput(generateTailscaleKubeConfig(definition.key, globals.tailscaleDomain));
+  return new KubernetesFluxWebhooksComponent(`${definition.key}-flux-webhooks`, {
+    cluster: { ...definition, kubeConfig },
+    globals,
+    repos: FLUX_WEBHOOK_REPOS,
+  });
+}
 
 export interface KubernetesFluxWebhooksArgs {
   cluster: KubernetesClusterDefinition & { kubeConfig: string };
-  kubernetes: kubernetes.Provider;
   globals: GlobalResources;
   repos: string[];
   receiverName?: string;
@@ -22,8 +63,6 @@ export class KubernetesFluxWebhooksComponent extends ComponentResource {
 
     const receiverName = args.receiverName ?? "github-webhook";
     const receiverNamespace = args.receiverNamespace ?? "flux-system";
-
-    const cro = { parent: this, provider: args.kubernetes };
 
     // TODO: update to use kube client to get the info
     const kubeConfig = new k8s.KubeConfig();
