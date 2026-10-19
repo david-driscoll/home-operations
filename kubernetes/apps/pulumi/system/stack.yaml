@@ -13,11 +13,18 @@ spec:
     dir: stacks/system
   serviceAccountName: ${APP}
   stack: system
-  # 300s since stacks/applications moved in (stacks/system/applications.ts): a
+  # Resyncs since stacks/applications moved in (stacks/system/applications.ts): a
   # new ApplicationDefinition gets its authentik app and OIDC Secret from the
   # next run, and the run a commit triggers usually races Flux applying the
   # ApplicationDefinition itself -- so it is the resync that picks it up.
-  resyncFrequencySeconds: 300
+  #
+  # 600s, not the 300s it was. At 300s with workspaceReclaimPolicy: Delete,
+  # every resync was a COLD workspace pod (fetch, npm install, plugins, vals)
+  # on some node's /var, 288 times a day: the background churn under the
+  # 2026-10-19 fluttershy/kerfuffle outage. Retain (below) removes the cold
+  # start from same-commit resyncs. 600s halves the warm `pulumi up` too, at the
+  # cost of a new app waiting up to 10 minutes for its OIDC Secret.
+  resyncFrequencySeconds: 600
   retryMaxBackoffDurationSeconds: 60
   # Pulumi state on the dockge Garage cluster (celestia/luna/skystar), one
   # prefix per Stack exactly as on the old TrueNAS Minio. DELIBERATELY still
@@ -28,7 +35,15 @@ spec:
   backend: s3://pulumi-state/backups?endpoint=dockge-celestia.${TAILSCALE_DOMAIN}:3900&s3ForcePathStyle=true&disableSSL=true&region=garage
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
-  workspaceReclaimPolicy: Delete
+  # Retain, not Delete: this Stack resyncs on a timer (resyncFrequencySeconds
+  # above), and under Delete every one of those runs was a cold workspace pod --
+  # fetch, npm install, plugins, vals -- on some node's /var. Retain keeps the pod
+  # between runs, so a same-commit resync reuses its installed node_modules and
+  # plugins. A new commit still replaces the pod (the operator stamps the source
+  # hash on the pod template), so commits are cold either way. An idle workspace
+  # costs ~100-200Mi and ~1m CPU. pulumi-kubernetes-operator v2.9.3
+  # stack_controller.go only deletes after a SUCCESSFUL update anyway.
+  workspaceReclaimPolicy: Retain
   prerequisites: []
   # Deliberately none. This stack publishes clusters/<key>/details, which every
   # other stack reads — Flux cannot express "before

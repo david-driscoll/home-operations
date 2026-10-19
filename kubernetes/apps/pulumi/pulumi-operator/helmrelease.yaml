@@ -60,6 +60,28 @@ spec:
       requests:
         memory: 256Mi
         cpu: 100m
+    # Caps how many workspaces run `pulumi install` and how many run `pulumi up`
+    # at once, cluster-wide. The default is 25, so a commit to main runs every
+    # Stack at once: they all share the home-operations GitRepository, and the
+    # operator compares the artifact REVISION (the commit SHA), so no `ignore`
+    # rule on the source can narrow that down. 2026-10-19 was 7 cold workspaces
+    # at once, 6 of them on one SATA /var.
+    #
+    # Why it bites, from v2.9.3 source: cmd/main.go makes this the manager-wide
+    # default, so it applies to the Stack, Workspace and Update controllers alike,
+    # and the last two BLOCK for the whole operation -- Workspace on the Install
+    # RPC (npm, plugins), Update on the Up stream. 3 means at most 3 installs and
+    # 3 ups in flight. The rest queue: a commit's 7 runs finish in about three
+    # waves instead of one. Workspace pods are still created together, but their
+    # init containers (agent copy, artifact fetch, vals) are small. The heavy
+    # /var I/O is in Install, and that is what this queues.
+    #
+    # Not lower: a wedged `pulumi up` holds its worker until it returns, so 1 or
+    # 2 would let one stuck provider stall the vault token refresh and the
+    # unifi-network DNS poll behind it.
+    extraEnv:
+      - name: MAX_CONCURRENT_RECONCILES
+        value: "3"
     controller:
       metricsSecure: false
     serviceMonitor:

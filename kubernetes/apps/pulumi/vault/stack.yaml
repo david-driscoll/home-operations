@@ -45,7 +45,15 @@ spec:
   backend: s3://pulumi-state/vault?endpoint=garage-s3.${TAILSCALE_DOMAIN}&s3ForcePathStyle=true&region=garage
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
-  workspaceReclaimPolicy: Delete
+  # Retain, not Delete: this Stack resyncs on a timer (resyncFrequencySeconds
+  # above), and under Delete every one of those runs was a cold workspace pod --
+  # fetch, npm install, plugins, vals -- on some node's /var. Retain keeps the pod
+  # between runs, so a same-commit resync reuses its installed node_modules and
+  # plugins. A new commit still replaces the pod (the operator stamps the source
+  # hash on the pod template), so commits are cold either way. An idle workspace
+  # costs ~100-200Mi and ~1m CPU. pulumi-kubernetes-operator v2.9.3
+  # stack_controller.go only deletes after a SUCCESSFUL update anyway.
+  workspaceReclaimPolicy: Retain
   prerequisites:
     - name: backups
   # refresh: true
