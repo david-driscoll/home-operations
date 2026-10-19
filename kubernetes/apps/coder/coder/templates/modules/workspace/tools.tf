@@ -5,7 +5,7 @@
 module "claude_code" {
   count   = data.coder_workspace.me.start_count
   source  = "registry.coder.com/coder/claude-code/coder"
-  version = "5.5.1"
+  version = "5.5.2"
 
   agent_id = coder_agent.main.id
   # Pre-creates the folder and pre-accepts the trust prompt for it.
