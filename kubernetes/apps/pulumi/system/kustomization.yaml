@@ -6,5 +6,5 @@ resources:
   - ./serviceaccount.yaml
   - ./stack.yaml
 components:
-  # Workspace pod placement: off the SATA-/var nodes, spread across the rest.
+  # Workspace pod placement: prefer non-SATA-/var nodes, spread across nodes.
   - ../../../components/pulumi-workspace

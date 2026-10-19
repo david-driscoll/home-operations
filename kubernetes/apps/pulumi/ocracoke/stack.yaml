@@ -151,6 +151,12 @@ spec:
         # on a fresh install, alongside `0` and `0.45`.
         - name: VALS_BIN
           value: /opt/vals/installs/vals/latest/vals
+        # npm's cache, in the shared /var/lib/pulumi-npm-cache hostPath. The
+        # container runs as uid 1000 (HOME=/home/node), so npm's default
+        # would be /home/node/.npm in the pod's own throwaway filesystem. See
+        # the npm-cache-owner init container for the `node/` subdirectory.
+        - name: NPM_CONFIG_CACHE
+          value: /var/cache/pulumi-npm/node
       resources:
         requests:
           cpu: 200m
@@ -248,6 +254,48 @@ spec:
               volumeMounts:
                 - name: vals-bin
                   mountPath: /opt/vals
+            # Gives npm a cache directory in the shared hostPath that it can write.
+            # The pulumi container runs as uid 1000 (node, HOME=/home/node), so npm
+            # caches in /home/node/.npm. The hostPath used to be mounted at
+            # /root/.npm, which that user can't even read, so the "shared" cache
+            # never held a byte and every run re-downloaded ~100 MB.
+            #
+            # DirectoryOrCreate leaves the hostPath root-owned, and anything left
+            # in it from when workspaces ran as root is root-owned too. npm stops
+            # on root-owned cache files, so uid 1000 gets a fresh `node/`
+            # subdirectory, and NPM_CONFIG_CACHE (env above) points npm at it.
+            # The chown is non-recursive on purpose: only uid 1000 ever writes
+            # inside it, so there is nothing to fix below the top, and chown -R
+            # on a warm cache would walk every file on every pod start.
+            # ../npm-cache-prune still ages out the whole hostPath, this
+            # subdirectory included.
+            #
+            # Not `subPath: node` on the mount, though that looks simpler. On
+            # Talos the kubelet resolves a hostPath subPath in its OWN mount
+            # namespace, which has no /var/lib/pulumi-npm-cache unless
+            # machine.kubelet.extraMounts says so. Tested on hard-hat on
+            # 2026-10-19: the init's chown landed on the real directory, but the
+            # subPath bind showed uid 1000 a different, root-owned, empty one
+            # (Permission denied). The whole-volume mount below plus the env var
+            # was tested the same way: `npm cache add` as uid 1000 wrote
+            # _cacache into the hostPath.
+            - name: npm-cache-owner
+              # Same digest-pinned busybox as ../npm-cache-prune/cronjob.yaml.
+              image: busybox:latest@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
+              command: ["/bin/sh", "-ec", "mkdir -p /cache/node && chown 1000:1000 /cache/node"]
+              securityContext:
+                runAsUser: 0
+                runAsGroup: 0
+                runAsNonRoot: false
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 32Mi
+              volumeMounts:
+                - name: npm-cache
+                  mountPath: /cache
           containers:
             - name: pulumi
               resources:
@@ -257,7 +305,9 @@ spec:
                 limits:
                   memory: 6Gi
               volumeMounts:
+                # The whole hostPath, NOT a subPath of it. npm is pointed at its
+                # `node/` subdirectory by NPM_CONFIG_CACHE; see npm-cache-owner.
                 - name: npm-cache
-                  mountPath: /root/.npm
+                  mountPath: /var/cache/pulumi-npm
                 - name: vals-bin
                   mountPath: /opt/vals

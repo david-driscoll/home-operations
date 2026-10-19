@@ -231,7 +231,7 @@ nodes:
       <<: *nodeLabels
       # EPHEMERAL (/var, installDisk /dev/sda) on these two is a DRAM-less PNY
       # 500GB SATA SSD that saturates around 40 MiB/s. The Samsung NVMe holds only
-      # u-longhorn. Pulumi workspace pods keep off nodes carrying this label
+      # u-longhorn. Pulumi workspace pods prefer nodes WITHOUT this label
       # (kubernetes/components/pulumi-workspace), after the 2026-10-19 outage
       # where six cold workspaces on fluttershy's /var wedged its CRI. It has no
       # effect until applied per node: `mise run talos:apply-node <ip>`.

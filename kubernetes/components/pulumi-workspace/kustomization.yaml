@@ -16,23 +16,26 @@
 # workspace StatefulSet (strategic merge, so the volumes/initContainers each
 # stack.yaml declares are untouched):
 #
-#  1. REQUIRED: never on a node labelled `driscoll.dev/ephemeral-disk: sata`.
+#  1. PREFERRED: avoid nodes labelled `driscoll.dev/ephemeral-disk: sata`.
 #     The label comes from talos/talconfig.yaml nodeLabels (fluttershy,
-#     kerfuffle). NotIn also matches a node WITHOUT the label, so until those
-#     two nodes have had `mise run talos:apply-node` this rule is a no-op
-#     rather than a scheduling failure. Required, not preferred: a preferred
-#     term is just one score among several, and ImageLocality plus free
-#     capacity is how 6 of 7 ended up on fluttershy in the first place. The
-#     control planes are tainted, so this leaves hard-hat and shining-armor.
-#     If both are down, Stacks wait. They don't fall back onto the disks that
-#     caused the outage.
+#     kerfuffle) and does nothing until those two nodes have had
+#     `mise run talos:apply-node`. Preferred, not required, so any worker can
+#     still run a workspace. With only hard-hat and shining-armor eligible, a
+#     required rule would hold every Stack Pending whenever both were down.
+#     The weight is the maximum (100) so the preference outweighs the
+#     ImageLocality and free-capacity scores that packed 6 of 7 onto
+#     fluttershy, but it is still only a score. What actually limits load on
+#     one /var is the MAX_CONCURRENT_RECONCILES cap on the operator
+#     (../../apps/pulumi/pulumi-operator/helmrelease.yaml). The control
+#     planes stay out because of their NoSchedule taint, on purpose: they
+#     have 4 cores, and the low-power tier sheds workspaces.
 #
 #  2. PREFERRED: spread workspaces across nodes. Every workspace pod carries
 #     `auto.pulumi.com/component: workspace` (set by the operator, verified
-#     live). ScheduleAnyway, not DoNotSchedule: with only two eligible nodes,
-#     a hard skew limit plus the default nodeTaintsPolicy (Ignore) would count
-#     a NotReady node as an empty domain and hold every later workspace
-#     Pending. A spread preference must never block a Pulumi run.
+#     live). ScheduleAnyway, not DoNotSchedule: a hard skew limit plus the
+#     default nodeTaintsPolicy (Ignore) counts a NotReady node as an empty
+#     domain and holds later workspaces Pending. A spread preference must
+#     never block a Pulumi run.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 patches:
@@ -51,9 +54,10 @@ patches:
               spec:
                 affinity:
                   nodeAffinity:
-                    requiredDuringSchedulingIgnoredDuringExecution:
-                      nodeSelectorTerms:
-                        - matchExpressions:
+                    preferredDuringSchedulingIgnoredDuringExecution:
+                      - weight: 100
+                        preference:
+                          matchExpressions:
                             - key: driscoll.dev/ephemeral-disk
                               operator: NotIn
                               values: ["sata"]
