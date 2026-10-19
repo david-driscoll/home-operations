@@ -1287,6 +1287,18 @@
       enabled: false,
     },
     {
+      // kubernetes/apps/agents/agent-tools-servers/openbao.yaml. Digest
+      // 8ecbddb (2026-10-18) pulled in agent-connector-sdk, which refuses to
+      // serve streamable-http without an auth provider, and nothing but code
+      // turns that off, so every later digest crashloops the backend. Held on
+      // 33ad5f9 until the backend gets real auth (see that file's header).
+      description: "Hold openbao-mcp: newer images require backend auth",
+      matchPackageNames: [
+        "knucklessg1/openbao-mcp"
+      ],
+      enabled: false,
+    },
+    {
       // Named dependencies outside the app-image scope of the automerge rules
       // above, each opted in by hand. Same gate -- the forge's required
       // statuses, a one-day soak where the release has a date, and the merge

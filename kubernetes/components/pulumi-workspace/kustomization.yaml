@@ -109,3 +109,24 @@ patches:
                 # read:package token. The forge refuses anonymous pulls.
                 imagePullSecrets:
                   - name: pulumi-workspace-image-pull
+  # Explicitly empty, not absent, and a JSON patch because a strategic merge
+  # drops an empty list. a0662905 removed the vals init container, its volumes
+  # and its mounts from every stack.yaml, but kustomize-controller still owns
+  # those fields on the live Stacks: dropping the last item makes server-side
+  # apply write `null`, which the CRD rejects ("initContainers: Invalid value:
+  # "null" ... must be of type array") and fails the whole Kustomization. An
+  # empty list is what the apply should own instead. No stack.yaml sets these
+  # (see the rule above), and the pulumi container is the only one, at index 0.
+  - target:
+      group: pulumi.com
+      kind: Stack
+    patch: |-
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/initContainers
+        value: []
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/volumes
+        value: []
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/containers/0/volumeMounts
+        value: []
