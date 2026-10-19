@@ -85,11 +85,11 @@ spec:
 
               # --- redis -------------------------------------------------
               # The shared valkey in `database`, which sets no password.
-              # Database 7 is free: 0 immich/dawarich, 5 romm, 6 dispatcharr,
-              # 8 searxng, 9 degoog, 10 postiz, 11 tracearr, 12 outline,
-              # 13 sure, 14 renovate. Upstream documents Redis 7; Asynq and
-              # go-redis use nothing valkey lacks. No eviction policy is set on
-              # the shared instance (noeviction), which the Asynq queue needs.
+              # Database 7, per the allocation table in
+              # database/valkey/helmrelease.yaml. Upstream documents Redis 7;
+              # Asynq and go-redis use nothing valkey lacks. No eviction policy
+              # is set on the shared instance (noeviction), which the Asynq
+              # queue needs.
               REDIS_HOST: valkey.database.svc.cluster.local
               REDIS_PORT: "6379"
               REDIS_DB: "7"
