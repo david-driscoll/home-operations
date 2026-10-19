@@ -255,6 +255,10 @@ AWS_REGION = "garage"
 # Same as every Stack CR: no copy of the previous checkpoint in
 # .pulumi/backups/ per update (kubernetes/apps/pulumi/history-pruner/cronjob.yaml).
 PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS = "true"
+# Same as every Stack CR: gzip every state write (<stack>.json.gz). The backend
+# reads whichever of .json/.json.gz is newest, so a CLI run without this still
+# works -- but keep the two in step, or each side rewrites the other's format.
+PULUMI_DIY_BACKEND_GZIP = "true"
 # 1Password Connect, which Pulumi still WRITES PBS items to. CONNECT_TOKEN, the
 # Pulumi passphrase, the authentik token and the Tailscale OAuth client are in
 # .config/fnox.toml.

@@ -65,6 +65,13 @@ spec:
       type: Literal
       literal:
         value: "true"
+    # gzip every state write: each checkpoint save is the WHOLE state (13 MiB
+    # for home), repeated per resource step and per run. Same in
+    # .config/mise.toml, so CLI and operator runs agree on the format.
+    PULUMI_DIY_BACKEND_GZIP:
+      type: Literal
+      literal:
+        value: "true"
     GITHUB_TOKEN:
       type: Secret
       secret:
