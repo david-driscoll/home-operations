@@ -96,6 +96,14 @@ const MIRROR_ORG = GITHUB_MIRROR_ORG;
  */
 const SYNC_LOGIN = "github-mirror-sync";
 
+/**
+ * The account that owns the forge's container images. Part of every image
+ * reference (`git.<root domain>/estate-images/...`), and named in
+ * .forgejo/workflows/pulumi-workspace-image.yml (IMAGE_OWNER) and
+ * kubernetes/components/pulumi-workspace.
+ */
+const ESTATE_IMAGES_LOGIN = "estate-images";
+
 /** `owner/name` on GitHub. The workflow builds both of its GitHub URLs from this. */
 const UPSTREAM = "david-driscoll/home-operations";
 
@@ -180,6 +188,76 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       args.globals,
       provider,
       { resourcePrefix: "forgejo-github-mirror-sync", tokenName: "Sync dispatch", versionTokenName: true },
+    );
+
+    // The account that OWNS the images .forgejo/workflows/pulumi-workspace-image.yml
+    // builds: `git.<root domain>/estate-images/pulumi-workspace`. A user rather
+    // than this organization, because a user can always write its own packages
+    // with a `write:package` token; pushing to an organization's would take a
+    // team with the packages unit, and every team here is a grant on this
+    // repository too. docs/kubernetes/pulumi-workspace-image.md.
+    //
+    // Two tokens, so each holder gets only its half:
+    //
+    //   push  write:package, an Actions secret on THIS repository
+    //         (ESTATE_IMAGES_TOKEN below), read by that workflow only. Never
+    //         given to a pull_request workflow -- see its header.
+    //   pull  read:package, into OpenBao for the image pull secret in namespace
+    //         `pulumi` (kubernetes/apps/pulumi/workspace-image). The instance is
+    //         REQUIRE_SIGNIN_VIEW, so an anonymous pull is refused.
+    const imagesBot = args.forgejo.createUser(
+      {
+        fullName: "Estate images",
+        login: ESTATE_IMAGES_LOGIN,
+        description: "Owns the container images built by github-mirror/home-operations' workflows. Managed by stacks/system; see docs/kubernetes/pulumi-workspace-image.md.",
+        active: true,
+        admin: false,
+        mustChangePassword: false,
+        // Its packages are as visible as it is: `limited` is every signed-in
+        // account, which on this forge is everyone who can see anything.
+        visibility: "limited",
+        deactivateOnDestroy: true,
+        location: "Equestria",
+        // Forgejo applies this flag to token authentication too.
+        prohibitLogin: false,
+        allowGitHook: false,
+        maxRepoCreation: 0,
+        restricted: true,
+      },
+      ["write:package"] as TOKEN_SCOPES[],
+      args.globals,
+      provider,
+      { resourcePrefix: "forgejo-estate-images", tokenName: "Image push", versionTokenName: true },
+    );
+    const imagesPullToken = new forgejo.PersonalAccessToken(
+      "forgejo-estate-images-pull-token",
+      {
+        user: imagesBot.user.login,
+        name: "Image pull (read:package)",
+        scopes: ["read:package"] as TOKEN_SCOPES[],
+      },
+      // Create the replacement before deleting the old one, as createUser's
+      // tokens do; the ExternalSecret's refresh closes the gap.
+      { provider, parent: imagesBot.user, deleteBeforeReplace: false },
+    );
+    // Read by kubernetes/apps/pulumi/workspace-image/externalsecret.yaml
+    // (`username`, `token`); field names are load-bearing there.
+    baoKvSecret(
+      "forgejo-estate-images-pull",
+      {
+        mount: "secrets",
+        path: "clusters/equestria/apps/pulumi/workspace-image-pull",
+        data: {
+          username: imagesBot.user.login,
+          token: imagesPullToken.token,
+        },
+        concealedFields: ["token"],
+        customMetadata: baoProvenance({
+          source_title: "Forgejo estate-images pull token",
+          source_tags: "forgejo,pulumi",
+        }),
+      },
+      { provider: args.globals.baoProvider, parent: this },
     );
 
     const repository = new forgejo.Repository(
@@ -443,6 +521,9 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // own token, the one the relay already dispatches with. It has to be a
       // real account to push to the protected main (see the branch rule).
       MIRROR_SYNC_TOKEN: syncBot.token.token,
+      // What .forgejo/workflows/pulumi-workspace-image.yml pushes the
+      // workspace image with (write:package, estate-images' own packages).
+      ESTATE_IMAGES_TOKEN: imagesBot.token.token,
     };
     for (const [name, data] of Object.entries(secrets)) {
       new forgejo.RepositoryActionSecret(`forgejo-github-mirror-secret-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });

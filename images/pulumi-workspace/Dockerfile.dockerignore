@@ -1,0 +1,13 @@
+# BuildKit reads <Dockerfile>.dockerignore beside the Dockerfile in place of the
+# context's .dockerignore. Everything is excluded except what ./inputs.sh lists;
+# it cannot run that script, so the globs are repeated here -- keep them in step
+# with the root package.json `workspaces`.
+*
+!package.json
+!package-lock.json
+!.config/mise.lock
+!components/package.json
+!dynamic/package.json
+!stacks/*/package.json
+!sdks/*/package.json
+!images/pulumi-workspace/

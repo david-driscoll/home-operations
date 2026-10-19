@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+# The pull secret for the Pulumi workspace image
+# (docs/kubernetes/pulumi-workspace-image.md).
+#
+# ITS OWN KUSTOMIZATION, NOT A FILE IN ../secrets, AND NOTHING DEPENDS ON IT.
+# The token comes from stacks/system, which runs behind `pulumi-secrets`
+# (../system/ks.yaml). Put there, this ExternalSecret going NotReady -- the
+# first time round, or after the token is deleted -- would hold back the one
+# stack that writes it: a deadlock. Here it only means new nodes cannot pull
+# the image until stacks/system has run, and nodes holding the digest are
+# unaffected (IfNotPresent).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app pulumi-workspace-image
+  namespace: &namespace pulumi
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/pulumi/workspace-image
+  prune: true
+  # false: a missing token is expected until stacks/system's first run after
+  # this lands, and must not turn this Kustomization's failure into anything
+  # else's.
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

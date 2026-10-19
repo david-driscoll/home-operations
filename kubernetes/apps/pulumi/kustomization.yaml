@@ -15,6 +15,7 @@ resources:
   - ./history-pruner/ks.yaml
   - ./update-pruner/ks.yaml
   - ./npm-cache-prune/ks.yaml
+  - ./workspace-image/ks.yaml
   - ./kubeproxies/ks.yaml
   - ./unifi-network/ks.yaml
   - ./backups/ks.yaml
