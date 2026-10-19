@@ -1,6 +1,4 @@
-# Paseo's agent tooling -- the same set, at the same pins, as
-# ../../agentboard/resources/mise.toml, minus agentboard itself and plus
-# Codex. Renovate's mise manager bumps both files.
+# Paseo's agent tooling. Renovate's mise manager bumps this file.
 #
 # Installed by ./install-tools.sh (the `tools` init container) onto the home
 # volume and reached through the mise shims on PATH. The shims come AFTER the
