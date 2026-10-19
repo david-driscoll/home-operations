@@ -146,7 +146,16 @@ while read -r -u 3 kind name version rest; do
   case "$kind" in
     resource)
       # `rest` is the optional server URL.
-      retry as_user pulumi plugin install resource "$name" "$version" ${rest:+--server "$rest"} </dev/null
+      #
+      # FROM THE STAGING DIRECTORY, NEVER THE CHECKOUT. Inside a Pulumi project
+      # `pulumi plugin install resource <name>` resolves <name> against the
+      # project's `packages:` first, and the root Pulumi.yaml defines `unifi`
+      # as the Terraform bridge for ubiquiti-community/unifi. So from the repo
+      # root this installs terraform-provider-0.14.0 instead of
+      # @pulumiverse/unifi's resource-unifi-v0.3.0 -- and exits 0. That is how
+      # the forge's first image shipped without it (2026-10-19). $stage holds
+      # only ./inputs.sh's files, and Pulumi.yaml is not one of them.
+      (cd "$stage" && retry as_user pulumi plugin install resource "$name" "$version" ${rest:+--server "$rest"} </dev/null)
       ;;
     parameterized)
       read -r source tf_version <<<"$rest"
