@@ -6,10 +6,17 @@ metadata:
   name: ${APP}
 spec:
   fluxSource:
+    # The ExternalArtifact from ../../../components/pulumi-stack-artifact (plus
+    # the paths this kustomization.yaml appends), not the home-operations
+    # GitRepository: its revision moves only when a file this program reads
+    # changes, so an unrelated commit to main no longer re-runs the Stack. The
+    # operator reads any kind's status.artifact here, and gets get/list/watch on
+    # externalartifacts from the HelmRelease's rbac.extraRules
+    # (../pulumi-operator/helmrelease.yaml).
     sourceRef:
       apiVersion: source.toolkit.fluxcd.io/v1
-      kind: GitRepository
-      name: home-operations
+      kind: ExternalArtifact
+      name: ${APP}
     dir: stacks/backups
   serviceAccountName: ${APP}
   stack: backups

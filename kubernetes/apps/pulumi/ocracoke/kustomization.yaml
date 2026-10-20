@@ -8,3 +8,22 @@ resources:
 components:
   # Workspace pod placement: off the SATA-/var nodes, spread across the rest.
   - ../../../components/pulumi-workspace
+  # This Stack's own source: an ArtifactGenerator holding what every Stack
+  # reads, and the ExternalArtifact that stack.yaml's fluxSource points at.
+  - ../../../components/pulumi-stack-artifact
+patches:
+  # What only this Stack reads, appended to the component's copy list. Traced
+  # from stacks/ocracoke/index.ts; docs/kubernetes/pulumi-stack-artifacts.md has
+  # the method. A new runtime read of a repo path goes here, or edits to that
+  # path will never trigger a run.
+  - target:
+      group: source.extensions.fluxcd.io
+      kind: ArtifactGenerator
+    patch: |-
+      - op: add
+        path: /spec/artifacts/0/copy/-
+        value: {from: "@repo/stacks/ocracoke/", to: "@artifact/stacks/", exclude: ["*.md", "*.test.ts"]}
+      # components/DockgeLxc.ts: every file under docker/_common/ and docker/<host>/ (it uploads them)
+      - op: add
+        path: /spec/artifacts/0/copy/-
+        value: {from: "@repo/docker/", to: "@artifact/"}
