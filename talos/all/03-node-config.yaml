@@ -1,0 +1,16 @@
+# The generated KubeNodeConfig is DELETED and rebuilt from patches:
+# ./21-kubelet.yaml (nodeIP), ./32-node-labels.yaml.tpl (labels, annotations)
+# and, on the control planes, control-plane/12-node-role.yaml (role label,
+# NoSchedule taint).
+#
+# Why not merge into it: on a control plane the generated document also labels
+# the node `node.kubernetes.io/exclude-from-external-load-balancers`. No node in
+# this cluster has ever carried that label -- the config these nodes ran before
+# TOPF never set it -- and the label exists to take a node out of
+# LoadBalancer service backends, so adding it would quietly change which nodes
+# front those services. KubeNodeConfig `labels` is a plain string map: a patch
+# can add keys but cannot delete one. So the document goes, and what the
+# cluster actually runs with is restated.
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+$patch: delete

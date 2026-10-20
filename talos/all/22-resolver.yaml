@@ -1,0 +1,44 @@
+# Migrated off `.machine.network.*` for Talos 1.14 (#1914). Both fields this
+# file used to set -- `nameservers` and `disableSearchDomain` -- are owned by
+# the `ResolverConfig` document, and the two sources are MUTUALLY EXCLUSIVE:
+# the generated config already carries a ResolverConfig (for hostDNS), so
+# either v1alpha1 field fails rendering outright with
+# "`.machine.network.nameservers` is already set in v1alpha1 config".
+#
+# This document MERGES into the generated ResolverConfig -- it does not
+# replace it, so the hostDNS block (enabled, forwardKubeDNSToHost) survives.
+# Verified by diffing the rendered config, under talhelper at #1914 and again
+# under TOPF.
+#
+# THE INTERNAL RESOLVERS GO FIRST, AND THE ORDER IS LOAD-BEARING. Talos's host
+# DNS (the 169.254.116.108 forwarder containerd and the kubelet use) takes the
+# FIRST upstream's answer. For a name that only exists inside -- the forge
+# (`git.<root domain>`), zot (`registry.equestria.<root domain>`) -- Quad9 does
+# not fail, it answers NOERROR with no records, and that empty answer is final.
+# With Quad9 first (until 2026-10-19), every host lookup of those names came
+# back empty: zot, endpoint 1 of every mirror in ./25-registries.yaml.tpl,
+# was silently skipped on every pull, and the Pulumi workspace image could not
+# be pulled from the forge at all ("lookup ... no such host"). Verified from a
+# hostNetwork pod: 10/10 lookups of both names, and of 10 fresh never-cached
+# names, empty -- deterministic, not a cache.
+#
+#   10.10.10.9  Technitium on the alpha-site Pi (dockge-as), the split-horizon
+#               authority for the internal names. Outside the cluster, so host
+#               DNS does not depend on the cluster being up.
+#   10.10.0.1   the UCG gateway: carries the same records (external-dns' unifi
+#               provider writes them), and forwards everything else.
+#   Quad9       public fallback, for when both of the above are down.
+apiVersion: v1alpha1
+kind: ResolverConfig
+nameservers:
+  - address: 10.10.10.9
+  - address: 10.10.0.1
+  - address: 9.9.9.9
+  - address: 149.112.112.112
+  # 10.10.209.202 — Stargate Command's Technitium — removed 2026-08-17.
+  # SGC was decommissioned and its nodes wiped, so this stopped answering
+  # entirely. Each remaining resolver was verified to resolve an internal name
+  # on its own before that -- but only the order decides which one is asked.
+searchDomains:
+  # Was `.machine.network.disableSearchDomain: true`.
+  disableDefault: true

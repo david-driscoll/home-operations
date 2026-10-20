@@ -1,0 +1,14 @@
+# EPHEMERAL (/var) keeps its current mount options: no `nosuid,nodev`.
+#
+# A generated 1.14 config emits `VolumeConfig EPHEMERAL` with
+# `mount.secure: true`, which mounts /var nosuid,nodev. These nodes have no
+# such document and /var is mounted without either (verified on hard-hat:
+# `rw,seclabel,relatime,inode64,logbufs=8,logbsize=32k,prjquota`). Turning it
+# on is a reasonable hardening, but it is a behaviour change for everything
+# under /var -- containerd's state, kubelet pod volumes, hostPath mounts -- so
+# it is a separate, tested change, not a side effect of changing tools.
+apiVersion: v1alpha1
+kind: VolumeConfig
+name: EPHEMERAL
+mount:
+  secure: false
