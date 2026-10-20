@@ -1,20 +1,7 @@
-kubernetes-shining-armor.yaml
-kubernetes-flurry-heart.yaml
-kubernetes-marble-pie.yaml
-kubernetes-limestone-pie.yaml
-kubernetes-pharynx.yaml
-kubernetes-ember.yaml
-talosconfig
-equestria-shining-armor.yaml
-equestria-flurry-heart.yaml
-equestria-marble-pie.yaml
-equestria-limestone-pie.yaml
-equestria-pharynx.yaml
-equestria-ember.yaml
-equestria-fluttershy.yaml
-equestria-kerfuffle.yaml
-equestria-hard-hat.yaml
-equestria-pinkie-pie.yaml
-equestria-milky-way.yaml
-equestria-othalla.yaml
-equestria-pegasus.yaml
+# Everything rendered here is secret: one machine config per node (cluster
+# PKI, tokens, the secretbox key) and the generated admin `talosconfig` that
+# $TALOSCONFIG points at. Ignore all of it, not a list of names -- the old
+# per-file list matched talhelper's `equestria-<host>.yaml` names, and would
+# have left every file TOPF writes (`<host>.yaml`) untracked but NOT ignored.
+*
+!.gitignore
