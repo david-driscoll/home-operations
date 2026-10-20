@@ -54,7 +54,7 @@ spec:
               #     the next step is seccompProfile: { type: Unconfined }, NOT a
               #     wider capability set.
               #  3. sysctl — kernel.perf_event_paranoid is 3 on every node
-              #     (Talos default; not overridden in talos/patches). Verified
+              #     (Talos default; not overridden anywhere in talos/). Verified
               #     the kernel is built WITHOUT
               #     CONFIG_SECURITY_PERF_EVENTS_RESTRICT, so there is no
               #     Debian/AOSP-style "paranoid > 2 blocks everyone" tier — the
