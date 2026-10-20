@@ -1,6 +1,6 @@
-amends "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Config.pkl"
+amends "package://github.com/jdx/hk/releases/download/v2.7.0/hk@2.7.0#/Config.pkl"
 
-import "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Builtins.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.7.0/hk@2.7.0#/Builtins.pkl"
 
 // These two package URLs MUST move with `hk` in .config/mise.toml across a
 // major version. Renovate bumps the binary but not these URLs: hk 2.0.1
@@ -13,21 +13,31 @@ import "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Builtins.
 // both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603),
 // then extended when this repo absorbed the Kubernetes tree.
 //
-// DELIBERATE SAFETY POSTURE (preserved from #601 — do not "fix" this)
+// HOOK POSTURE
 //
-//   * `fix = false` on pre-commit / pre-push. hk NEVER mutates the working
-//     tree during a commit or push. This repo is frequently worked in by
-//     several concurrent agents sharing one checkout; an auto-fixer that
-//     rewrites files mid-commit can pick up a neighbour's unstaged edits.
-//     Auto-fixing stays available on demand via `hk fix`.
-//   * `stash = "none"` follows from the above — with no mutation there is
-//     nothing to stash, so hk never runs `git stash` and can never strand a
-//     concurrent agent's work in the stash if it is interrupted.
-//
-// NOTE: pre-commit previously carried `fix = true`, which contradicted the
-// paragraph directly above it — a drift bug from the #601/#603 merge. It is
-// now `false`, matching the stated contract. This matters more than it used
-// to: the `typos` step added below rewrites file contents.
+//   * pre-commit runs with `fix = true`: a step that has a fixer (biome,
+//     pkl-format, trailing-whitespace, newlines) rewrites the staged files
+//     and hk re-stages them, so a formatting slip is repaired in the commit
+//     instead of failing it. Steps with no fixer still fail the commit. This
+//     was `false` while every agent shared one checkout; sessions now work in
+//     their own git worktree (see CLAUDE.md), so the files a commit touches
+//     belong to the session making it.
+//   * Two fixers are deliberately NOT allowed to run unattended -- see
+//     `preCommitSteps` below: `typos` stays check-only on commit, and biome
+//     applies only its safe fixes. `hk fix` still runs both in full.
+//   * `stash = "none"` stays, on both hooks. Measured on hk 2.5.0 in a
+//     throwaway repo: `"patch-file"` (like `"git"`) pushes a `git stash` for
+//     the length of the hook, taking unstaged edits AND untracked files out
+//     of the working tree, and a killed hook leaves them stranded there. The
+//     stash stack is shared by every worktree of this repo, and hooks do get
+//     killed here (a cold-cache `flate` can hang).
+//     THE COST: fixers see the whole working-tree file, and hk re-stages the
+//     whole file. If a file is only PARTLY staged (`git add -p`) and a fixer
+//     changes it, its unstaged hunks are committed too. Files with nothing
+//     staged are never touched. Use `HK_FIX=0 git commit` for a partial
+//     commit, or `HK=0 git commit` to skip the hook.
+//   * pre-push stays `fix = false`: a fix there would land after the commits
+//     being pushed, as dirt.
 //
 // Crew's own hooks are NOT re-expressed here. hk registers via git config
 // (`hook.hk-pre-commit.*`) and git 2.55 runs that channel *alongside*
@@ -172,8 +182,8 @@ local linters = new Mapping<String, Step> {
   // typos.toml's excludes to apply to explicitly-named files rather than only
   // to directory walks.
   //
-  // This step REWRITES file contents under `hk fix`. It is the reason the
-  // pre-commit `fix = false` correction at the top of this file matters.
+  // This step REWRITES file contents under `hk fix`. It is the reason
+  // pre-commit overrides it to check-only (`preCommitSteps` below).
   ["typos"] = Builtins.typos
 
   // --- Whitespace hygiene ---
@@ -264,6 +274,19 @@ local linters = new Mapping<String, Step> {
 
 exclude = excludes
 
+// Load-bearing for `fix = true` on pre-commit. After a fixer rewrites a file,
+// hk re-stages it with `git add` while a `git status` of its own is still
+// running. `git status` normally takes index.lock to write back the refreshed
+// index, so in this repo the `git add` lost that race EVERY time (4 of 4
+// runs): the commit failed with `Unable to create ... index.lock: File
+// exists` and the lock was left behind, blocking all further git commands in
+// the worktree until removed by hand. With optional locks off, `git status`
+// reads without locking and the race is gone (4 of 4 clean). A tiny repo does
+// not show this -- its status finishes before the add starts.
+env {
+  ["GIT_OPTIONAL_LOCKS"] = "0"
+}
+
 // The ONE deliberate exception to the no-mutation posture above, and only in
 // pre-commit: keep graphify-out/ current IN the commit being made. See
 // .config/hooks/graphify-precommit.sh for why this replaced graphify's own
@@ -273,22 +296,45 @@ exclude = excludes
 // neighbour's edits; it acts only on `main` (branches never touch the ~25 MiB
 // graph.json, so parallel PRs cannot conflict on it); and it fails open.
 //
-// `exclusive` because it writes the Git index itself: hk only stages a step's
-// output in fix mode, and this hook runs with `fix = false`. Listed last, so
-// under hk's default fail-fast a failing linter cancels it before it runs.
-// Not in `check`/`fix`/pre-push, which stay read-only.
+// `exclusive` because it writes the Git index itself: it is a `check`
+// command, and hk stages only what a step's `fix` command changed. Listed
+// last, so under hk's default fail-fast a failing linter cancels it before it
+// runs. Not in `check`/`fix`/pre-push.
 local graphifyStep = new Step {
   exclusive = true
   check = ".config/hooks/graphify-precommit.sh"
 }
 
+// What pre-commit runs: every linter, with two fixers reined in because
+// nobody reads the diff a commit hook makes.
+//
+//   * `typos` -- check-only. Its fixer rewrites any word it has exactly one
+//     suggestion for, and in a manifest that word can be a hostname, an image
+//     name or a key. A wrong "correction" would be committed silently, so a
+//     spelling finding still fails the commit: fix it, or teach typos.toml.
+//   * `biome` -- without `--unsafe`. Unsafe fixes may change what the code
+//     does; whatever they would have fixed fails the commit instead.
+local preCommitSteps = (linters) {
+  // All three lines are needed (each verified). With only `fix` cleared, hk
+  // applies the patch that `check_diff` prints and the typo is still
+  // rewritten. With `check_diff` cleared too, the builtin has no command left
+  // and the step silently passes -- hence the explicit `check`.
+  ["typos"] {
+    fix = null
+    check_diff = null
+    check = "typos --force-exclude {{ files }}"
+  }
+  ["biome"] {
+    fix = "biome check --write --no-errors-on-unmatched {{ files }}"
+  }
+  ["graphify"] = graphifyStep
+}
+
 hooks {
   ["pre-commit"] {
-    fix = false
+    fix = true
     stash = "none"
-    steps = (linters) {
-      ["graphify"] = graphifyStep
-    }
+    steps = preCommitSteps
   }
 
   ["pre-push"] {

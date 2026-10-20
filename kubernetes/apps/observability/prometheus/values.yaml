@@ -298,6 +298,18 @@ kube-state-metrics:
                     labelsFromPath:
                       message: [message]
                       state: [state]
+              # Set by the pulumi lock-canceller CronJob when it finds a state lock --
+              # including the ones operator v2.9.3+ hides behind a generic "up failed;
+              # see the workspace pod logs" message -- and removed once the stack is
+              # clear. The annotation holds the lock's RFC3339 creation time, which KSM
+              # turns into epoch seconds; 0 means no lock recorded.
+              - name: lock_created_timestamp_seconds
+                help: "Creation time of the Pulumi state lock blocking the Stack, as recorded by the lock-canceller (0 = none)"
+                each:
+                  type: Gauge
+                  gauge:
+                    path: [metadata, annotations, pulumi-lock-canceller/locked-since]
+                    nilIsZero: true
   prometheus:
     monitor:
       enabled: true

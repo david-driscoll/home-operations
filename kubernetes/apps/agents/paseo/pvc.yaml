@@ -1,0 +1,16 @@
+---
+# /workspace -- the code Paseo's agents read and write. Not under VolSync: it
+# holds git clones and worktrees, which are recoverable from their remotes, and
+# backing it up would also double it every night through the restore
+# destination (components/volsync/AGENTS.md). Push work you want to keep.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}-workspace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 20Gi

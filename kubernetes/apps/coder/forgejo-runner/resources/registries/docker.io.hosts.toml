@@ -1,0 +1,10 @@
+# Mounted at /etc/docker/certs.d/docker.io/hosts.toml in each runner pod's
+# dind sidecar; see ./ghcr.io.hosts.toml for how this is read. Covers the
+# images workflows start themselves (`services:`, `container:`). zot pulls
+# Docker Hub with the estate's account, so this also keeps those pulls off
+# the anonymous per-IP rate limit.
+server = "https://registry-1.docker.io"
+
+[host."http://registry.kube-system.svc.cluster.local:8080/v2/docker.io"]
+  capabilities = ["pull", "resolve"]
+  override_path = true

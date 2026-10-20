@@ -15,22 +15,23 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "up": "mise run vals-run pulumi up --skip-preview",
-    "cancel": "mise run vals-run pulumi cancel --yes",
-    "refresh": "mise run vals-run pulumi refresh --yes"
+    "up": "fnox exec -- pulumi up --skip-preview",
+    "cancel": "fnox exec -- pulumi cancel --yes",
+    "refresh": "fnox exec -- pulumi refresh --yes"
   },
   "dependencies": {
-    "@axnic/pulumi-garage": "^1.0.1",
+    "@axnic/pulumi-garage": "^1.1.2",
     "@kubernetes/client-node": "^2.0.0",
-    "@llamaduck/forgejo-ts": "^15.0.9",
+    "@llamaduck/forgejo-ts": "^15.0.10",
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
+    "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/command": "^1.2.1",
     "@pulumi/forgejo": "file:sdks/forgejo",
     "@pulumi/kubernetes": "^4.34.2",
-    "@pulumi/random": "^4.21.2",
+    "@pulumi/random": "^4.21.4",
     "@pulumi/std": "^2.3.2",
-    "@pulumi/tls": "^5.6.1",
-    "@pulumi/vault": "^7.13.0",
+    "@pulumi/tls": "^5.6.2",
+    "@pulumi/vault": "^7.14.0",
     "glob": "^13.0.6",
     "rxjs": "^7.8.2",
     "yaml": "^2.9.1"

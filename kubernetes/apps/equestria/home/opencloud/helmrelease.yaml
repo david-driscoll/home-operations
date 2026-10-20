@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 #
 # app-template: OpenCloud publishes no chart this estate can use. The
 # `opencloud-eu/helm` charts are community-maintained and bundle a Keycloak, a
@@ -391,7 +391,7 @@ spec:
               # It is the one the integration is written against and is what
               # upstream's radicale/radicale.yml pulls.
               repository: docker.io/opencloudeu/radicale
-              tag: v3.8.1@sha256:28c2c44cbf241755a5cfb80eea0521ef280993da20537e2d6980dae1254e552d
+              tag: v3.8.3@sha256:0c3fb9019410423639776285f830fd71e565935e7bdb3dc3b3252e4d99c2a29b
               pullPolicy: IfNotPresent
             resources:
               requests:
@@ -511,7 +511,7 @@ spec:
           app:
             image:
               repository: docker.io/collabora/code
-              tag: 26.04.4.2.1@sha256:4e983196eb9878f339cc506c38c21f1cc3473bca3d6de883c5de08f9c0cc3a6c
+              tag: 26.04.5.1.1@sha256:bb8f3c9c5c9016045f25fccb5f0649be94469ebc7c7cc379f3576e470cccf33d
               pullPolicy: IfNotPresent
             # ⚠ NO `command`/`args` OVERRIDE, DELIBERATELY. Do not reintroduce
             # one from upstream's helm chart or compose file -- they are written
@@ -568,6 +568,7 @@ spec:
               # told not to. TLS terminates at Traefik, so it would be a
               # certificate nothing ever presents.
               DONT_GEN_SSL_CERT: "YES"
+              TZ: "${TIMEZONE}"
               extra_params: >-
                 --o:ssl.enable=false
                 --o:ssl.ssl_verification=false

@@ -79,5 +79,6 @@
     "activityBarTop.activeBorder": "#15202b",
     "statusBar.inactiveBackground": "#459583"
   },
-  "peacock.color": "#459583"
+  "peacock.color": "#459583",
+  "focusbar.currentMode": "default"
 }

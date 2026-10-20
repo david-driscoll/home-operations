@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -54,7 +54,7 @@ spec:
           app:
             image: &image
               repository: docker.io/awinterstein/habitica-server
-              tag: 5.50.6@sha256:964caa1adddda20b7e11116f0892339bd0c740e4c7d9e2253b7991a0a610d5f1
+              tag: 5.51.0@sha256:187e697156f503c918c2e7dffe7320128974b2180e8ee3082b05278cabf2cb53
             # The image's own CMD is `printenv >> /etc/environment &&
             # /etc/init.d/cron start && node ...`, and both of the first two
             # need root: as uid 1000 it died with "cannot create
@@ -145,7 +145,7 @@ spec:
           mongo:
             image:
               repository: mongo
-              tag: 8.3.11@sha256:d731d77bfd7afd66bd487bdf627b5bf7ce4c3602ec461d635977021db529ebbc
+              tag: 8.3.13@sha256:0e900a3364da37b76d642b73b0bba56bd4c6c509ab470cf700436fd866bee3ff
             # Habitica needs a replica set (it uses transactions), which is why
             # NODE_DB_URI above says `replicaSet=rs`. Upstream's compose starts
             # mongod this way and has its healthcheck call rs.initiate(); with

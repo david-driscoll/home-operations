@@ -1,0 +1,7 @@
+# data.forgejo.org through the cluster's zot, falling back to https://data.forgejo.org.
+# See ./ghcr.io.hosts.toml for how the runner's dind reads this.
+server = "https://data.forgejo.org"
+
+[host."http://registry.kube-system.svc.cluster.local:8080/v2/data.forgejo.org"]
+  capabilities = ["pull", "resolve"]
+  override_path = true

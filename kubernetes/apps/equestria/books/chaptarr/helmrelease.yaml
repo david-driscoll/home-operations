@@ -1,0 +1,190 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app chaptarr
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # Docker Hub is the ONLY registry upstream publishes to
+              # (.github/workflows/docker-publish.yml: chaptarr/chaptarr and
+              # robertlordhood/chaptarr) -- no GHCR image exists. Tags are bare
+              # versions, no `v` prefix; 0.9.965 is the latest non-prerelease
+              # and is what `latest`/`main` point at.
+              repository: docker.io/chaptarr/chaptarr
+              tag: 0.9.965@sha256:bb00d67cbe1485d1cd61ef178362a29b42aa08f86b290841aab4b115ad2647a6
+              pullPolicy: IfNotPresent
+            env:
+              # The image's entrypoint only acts on PUID/PGID when started as
+              # root; running as 568 below it takes its "not running as root"
+              # branch and execs the app directly. Kept for parity with the
+              # other *arr apps.
+              PUID: ${PUID}
+              PGID: ${PGID}
+              # QUOTED, unlike sonarr's. The entrypoint validates UMASK against
+              # ^0?[0-7]{3}$ and exits on a mismatch; an unquoted 002 is the
+              # integer 2 by the time it reaches the container.
+              UMASK: "002"
+              # What the entrypoint's root path gives its runtime user
+              # (`useradd -d /config`). Started as 568 there is no passwd entry
+              # and the kubelet would default HOME to the unwritable `/`.
+              HOME: /config
+              TZ: ${TIMEZONE}
+              CHAPTARR__APP__INSTANCENAME: Chaptarr
+              CHAPTARR__APP__THEME: dark
+              # authentik forward auth does the login (definition.yaml); the
+              # API-key carve-out on both routes lets key-bearing clients in.
+              CHAPTARR__AUTH__METHOD: External
+              CHAPTARR__AUTH__REQUIRED: DisabledForLocalAddresses
+              CHAPTARR__AUTH__APIKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}-apikey
+                    key: apikey
+              CHAPTARR__LOG__LEVEL: info
+              CHAPTARR__SERVER__PORT: &port 8789
+              # The image ships no package_info, so Chaptarr would otherwise
+              # offer its BuiltIn updater, which cannot write /app as 568 and
+              # would fight Renovate's pin anyway. The env value wins over the
+              # config.xml one UpdaterConfigProvider logs about at startup.
+              CHAPTARR__UPDATE__MECHANISM: Docker
+            # CHAPTARR__POSTGRES__{HOST,PORT,USER,PASSWORD,MAINDB,LOGDB,CACHEDB}
+            # from the ExternalSecret next door. envFrom so the whole
+            # connection moves as one unit; the password rotates, and
+            # reloader.stakater.com/auto above turns that into a restart.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # [AllowAnonymous], and it reads the Config table, so it
+                    # fails if the main database is unreachable.
+                    path: /ping
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 20
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *probes
+              # First boot against EMPTY Postgres databases runs the whole
+              # migration chain for all three, and every 30-day password
+              # rotation forces a cold start. A startup probe suspends liveness
+              # and readiness until it passes: 60 x 10s buys ten minutes.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ping
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 60
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                # Readarr's was 4Gi. Upstream has open reports of memory
+                # spikes on large libraries (Chaptarr#12, #290) -- raise this
+                # rather than chase OOMKills if the initial scan hits it.
+                memory: 4Gi
+
+    defaultPodOptions:
+      securityContext:
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: [0, 1, 44, 109, 303, 568, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      config:
+        existingClaim: ${APP}
+      # The download clients (downloads/qbittorrent, downloads/sabnzbd) mount
+      # the whole share at /media, so a completed download is
+      # /media/downloads/... in their pods and in this one -- no remote path
+      # mapping needed. The two root folders are the existing library trees
+      # readarr and audiobookshelf already use.
+      media:
+        existingClaim: truenas-media
+        globalMounts:
+          - path: /media/downloads
+            subPath: downloads
+          - path: /media/audiobooks
+            subPath: audiobooks
+          - path: /media/ebooks
+            subPath: ebooks
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        # components/route/api-key prepends the X-Api-Key / ?apikey rule to
+        # this list; this is only the browser catch-all.
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user

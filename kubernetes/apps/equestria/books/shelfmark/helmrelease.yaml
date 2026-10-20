@@ -1,0 +1,298 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app shelfmark
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          # On the WORKLOAD, where Reloader looks. It will NOT restart the pod
+          # when ${APP}-oidc first appears: that Secret goes from absent to
+          # created behind an `optional: true` secretRef, which Reloader treats
+          # as a create, not a change (see ../../home/dawarich/helmrelease.yaml).
+          # Restart once by hand after `stacks/system` has run.
+          reloader.stakater.com/auto: "true"
+        # SQLite (users.db) on a RWO volume: never two pods at once.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # The FULL image, not ghcr.io/calibrain/shelfmark-lite. The two
+              # differ only in the Cloudflare/DDoS-Guard bypasser: full bundles
+              # Chromium + SeleniumBase and solves challenges in-process; lite
+              # sets USING_EXTERNAL_BYPASSER=true and expects a FlareSolverr.
+              # The estate has no shared one -- the only FlareSolverr is a
+              # same-pod sidecar inside home/degoog, unreachable from here --
+              # and upstream documents the external path as slower and less
+              # reliable than the internal one, which is also where the Anna's
+              # Archive fixes land. So the browser lives in this pod.
+              #
+              # Tor and WireGuard egress are also in this image but stay off:
+              # both require root startup (entrypoint.sh) and NET_ADMIN.
+              repository: ghcr.io/calibrain/shelfmark
+              tag: v1.4.0@sha256:4ef757349c3c7a7d90ba95b1e2a46ce4dd460a4776efbcf2aa1b1c476e7d5de5
+              pullPolicy: IfNotPresent
+            envFrom:
+              # PROWLARR_API_KEY, SABNZBD_API_KEY.
+              - secretRef:
+                  name: ${APP}-env
+              # OIDC_DISCOVERY_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET. Optional
+              # so the pod boots before `stacks/system` has created the
+              # authentik client; see ./externalsecret.yaml.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            # Every setting below is env-backed, and an env value always wins
+            # and greys the field out in the UI (core/config.py: "Deployment-
+            # level ENV values always win"). That is the point for these:
+            # wiring, paths and auth belong to git. Sources, indexers, metadata
+            # providers, naming and request policy are left to Settings.
+            # Reference: docs/environment-variables.md at the pinned tag.
+            env:
+              TZ: ${TIMEZONE}
+              FLASK_PORT: &port 8084
+              # No PUID/PGID. The pod starts as 568, which takes the
+              # entrypoint's non-root branch: no gosu, no chown, and it only
+              # checks that /config and /tmp/shelfmark are writable. 568 has no
+              # passwd entry in the image (upstream's own user is 1000), which
+              # that branch handles by running under the numeric identity with
+              # HOME=/tmp/shelfmark/home -- on the emptyDir below, where
+              # Chromium's profile belongs, not on NFS.
+              #
+              # 0002 so what lands in the shared downloads tree is group-
+              # writable for the other 568 apps that import or clean it up.
+              UMASK: "0002"
+              # File logs go under /tmp (the image's /var/log/shelfmark is
+              # owned by 1000). They back the in-app log download; stdout gets
+              # everything regardless.
+              LOG_ROOT: /tmp/log
+
+              # --- Reverse proxy ---------------------------------------------
+              # LOAD-BEARING FOR OIDC. Shelfmark wraps Flask in ProxyFix with
+              # x_host and x_port only, NOT x_proto, so the scheme comes from
+              # gunicorn -- and gunicorn honours X-Forwarded-Proto only from
+              # FORWARDED_ALLOW_IPS, default 127.0.0.1. Traefik reaches the pod
+              # from the pod network, so without this the OIDC callback is
+              # built as http://<host>:443/... and authentik's strict redirect
+              # match rejects it. Scoped to the pod CIDR rather than `*`.
+              FORWARDED_ALLOW_IPS: ${CLUSTER_NETWORK}
+              SESSION_COOKIE_SECURE: "true"
+
+              # --- Authentication --------------------------------------------
+              # OIDC against authentik (./definition.yaml). Credentials come
+              # from ${APP}-oidc. Kept here rather than in that Secret so the
+              # instance fails closed, not open, before SSO exists.
+              AUTH_METHOD: oidc
+              # Members of authentik's `admins` group are Shelfmark admins:
+              # settings, user management and the request-approval queue.
+              # Re-evaluated on every login (provision_oidc_user syncs the
+              # role), so removing someone from the group demotes them.
+              # Everyone else the access policy lets in is a regular user.
+              OIDC_ADMIN_GROUP: admins
+              # No local accounts at all. Without this, Shelfmark expects a
+              # local admin with a password as an OIDC fallback (the settings
+              # page refuses to enable OIDC without one, and every boot warns)
+              # and keeps the password form on the login page.
+              # Break-glass if authentik is down: set AUTH_METHOD=none for one
+              # boot (docs/users-and-requests.md), behind the LAN-only route.
+              DISABLE_LOCAL_AUTH: "true"
+              OIDC_AUTO_REDIRECT: "true"
+
+              # --- Output ----------------------------------------------------
+              # Ingest folders under this app's own downloads/<app> directory,
+              # the convention downloads/lazylibrarian and downloads/openbooks
+              # already follow. Shelfmark writes `<name>.tmp` and renames, so
+              # an importer watching these never sees a partial book.
+              #
+              #   ebooks      -> Grimmory's BookDrop picks these up.
+              #   audiobooks  -> kept apart so a different importer can own it.
+              INGEST_DIR: /media/downloads/shelfmark/ebooks
+              DESTINATION_AUDIOBOOK: /media/downloads/shelfmark/audiobooks
+              # Author/Title folders: a multi-part audiobook stays one folder
+              # instead of a flat spill of part files.
+              FILE_ORGANIZATION_AUDIOBOOK: organize
+
+              # --- Prowlarr and download clients -----------------------------
+              # The clients report completed paths under /media/downloads (both
+              # complete into /media/downloads/completed), and the
+              # truenas-media mount below reproduces that path exactly, so no
+              # remote path mapping is needed.
+              PROWLARR_ENABLED: "true"
+              PROWLARR_URL: http://prowlarr.${NAMESPACE}.svc.cluster.local:9696
+              PROWLARR_TORRENT_CLIENT: qbittorrent
+              PROWLARR_USENET_CLIENT: sabnzbd
+              # Auth by subnet whitelist; no username, password or API key.
+              QBITTORRENT_URL: http://qbittorrent.${NAMESPACE}.svc.cluster.local:8080
+              # An app-named category like the *arrs' (radarr, lidarr,
+              # tv-sonarr), so Shelfmark's torrents are tellable apart and its
+              # category scan never sees another app's. qBittorrent creates it
+              # on first use, saving to its default path.
+              QBITTORRENT_CATEGORY: shelfmark
+              # This exact FQDN is one of SABNZBD__HOST_WHITELIST_ENTRIES in
+              # ../../downloads/sabnzbd/helmrelease.yaml; SABnzbd rejects an
+              # unlisted Host outright.
+              SABNZBD_URL: http://sabnzbd.${NAMESPACE}.svc.cluster.local:8080
+              # Not defined in SABnzbd, so jobs fall back to its default `*`
+              # category and complete into /media/downloads/completed like
+              # everything else. Shelfmark tracks jobs by nzo_id, not category.
+              SABNZBD_CATEGORY: shelfmark
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # Exempt from session and API-key auth (main.py), and the
+                    # same endpoint the image's own HEALTHCHECK curls.
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              readiness: *probes
+              # The image's HEALTHCHECK allows a 90s start period: the
+              # entrypoint runs write probes and a /tmp space check before
+              # gunicorn starts. 300s here, so a slow NFS attach is not a
+              # crash loop.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  failureThreshold: 30
+                  periodSeconds: 10
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              # The entrypoint and SeleniumBase both write outside the mounts.
+              readOnlyRootFilesystem: false
+              # Chromium is launched with sandbox=False (bypass/
+              # internal_bypasser.py), so it needs no user namespaces or
+              # capabilities.
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 384Mi
+              limits:
+                # Python plus, while a challenge is being solved, Xvfb and a
+                # headful Chromium. The browser is shut down after
+                # BYPASS_BROWSER_IDLE_TIMEOUT (180s), so idle sits far below.
+                # The 512Mi /dev/shm tmpfs counts against this too.
+                memory: 3Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        # The groups the download clients run with, so Shelfmark can read what
+        # they leave in /media/downloads/completed.
+        supplementalGroups: [0, 1, 44, 109, 303, 568, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      config:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /config
+      # Scratch, and more of it than the name suggests: TMP_DIR defaults to
+      # /tmp/shelfmark, so direct downloads land here before they are moved to
+      # the ingest folder, and a torrent's files are COPIED here first
+      # (download/staging.py, copy=True to keep it seeding) before being
+      # processed. Also Chromium's HOME and SeleniumBase's download dirs (the
+      # image symlinks /app/downloaded_files into /tmp/shelfmark). The same
+      # unbounded emptyDir posture SABnzbd's /tmp has.
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+      # Kubernetes gives a container 64Mi of /dev/shm and Chromium crashes past
+      # it mid-challenge. 512Mi, not the compose files' 2Gi: `medium: Memory`
+      # counts against the container's memory limit. Same reasoning as the
+      # FlareSolverr sidecar in ../../home/degoog/helmrelease.yaml.
+      dev-shm:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 512Mi
+        globalMounts:
+          - path: /dev/shm
+      truenas-media:
+        existingClaim: truenas-media
+        globalMounts:
+          # ONE mount for both the client handoff and the ingest folders, on
+          # purpose. Read side: qBittorrent and SABnzbd report completed paths
+          # under /media/downloads, which must resolve here byte for byte.
+          # Write side: audiobook torrents are HARDLINKED into the ingest
+          # folder by default (HARDLINK_TORRENTS_AUDIOBOOK), and link() fails
+          # with EXDEV across two mounts even of the same export, so a separate
+          # subPath for the ingest folders would quietly turn every hardlink
+          # into a full copy.
+          - path: /media/downloads
+            subPath: downloads
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # local-user, not authenticated-user: Shelfmark does its own OIDC
+          # login, the same split games/romm makes. Socket.IO's websocket
+          # upgrade rides this route; Traefik passes it through as-is.
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

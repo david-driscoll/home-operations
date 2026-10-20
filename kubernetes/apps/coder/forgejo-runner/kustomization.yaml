@@ -3,12 +3,43 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ./helmrelease.yaml
   - ./externalsecret.yaml
-  - ./prometheusrule.yaml
+  - ./scaledjob.yaml
 configMapGenerator:
   - name: ${APP}-config
     files:
       - config.yml=./resources/config.yml
     options:
       disableNameSuffixHash: true
+  # containerd hosts.toml files for the dind sidecar: pulls from every
+  # registry the cluster's zot covers go through it
+  # (./resources/registries/ghcr.io.hosts.toml). Keep this list equal to the
+  # `sync.registries` in kubernetes/apps/kube-system/registry/resources/config.json,
+  # and add a matching item to the ScaledJob's `registries` volume. Keys
+  # cannot hold a `/`, so that volume maps each key to <registry>/hosts.toml.
+  # No hash suffix, for the same reason as below.
+  - name: forgejo-runner-registries
+    files:
+      - docker.io=./resources/registries/docker.io.hosts.toml
+      - ghcr.io=./resources/registries/ghcr.io.hosts.toml
+      - quay.io=./resources/registries/quay.io.hosts.toml
+      - gcr.io=./resources/registries/gcr.io.hosts.toml
+      - registry.k8s.io=./resources/registries/registry.k8s.io.hosts.toml
+      - public.ecr.aws=./resources/registries/public.ecr.aws.hosts.toml
+      - cgr.dev=./resources/registries/cgr.dev.hosts.toml
+      - mcr.microsoft.com=./resources/registries/mcr.microsoft.com.hosts.toml
+      - data.forgejo.org=./resources/registries/data.forgejo.org.hosts.toml
+    options:
+      disableNameSuffixHash: true
+  # The shell scripts the runner pods run. Flux substitution is OFF for
+  # this ConfigMap, because envsubst would blank every shell variable in them
+  # -- which is also why the name is spelled out. No hash suffix: the
+  # ScaledJob names it literally, and each pod is new anyway.
+  - name: forgejo-runner-scripts
+    files:
+      - prepull.sh=./resources/prepull.sh
+      - run-job.sh=./resources/run-job.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

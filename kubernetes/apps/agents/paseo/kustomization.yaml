@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./pvc.yaml
+  - ./helmrelease.yaml
+  - ./httproute.yaml
+  - ./definition.yaml
+configMapGenerator:
+  - name: ${APP}-ssh
+    files:
+      - forgejo.conf=./resources/ssh_config
+      - known_hosts=./resources/known_hosts
+    options:
+      disableNameSuffixHash: true
+  # Substitution off: install-tools.sh is shell, and Flux would read its
+  # brace-form variables as its own and fail the build on the unset ones.
+  # That also covers the name, hence a literal `paseo-` rather than APP.
+  - name: paseo-tools
+    files:
+      - mise.toml=./resources/mise.toml
+      - install-tools.sh=./resources/install-tools.sh
+      - apm.yml=./resources/apm.yml
+      - apm-refresh.sh=./resources/apm-refresh.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

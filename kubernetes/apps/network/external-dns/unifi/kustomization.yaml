@@ -4,4 +4,20 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./helmrelease.yaml
+  - ./prometheusrule.yaml
   - ./secret.yaml
+  - ./static-dns-check.yaml
+configMapGenerator:
+  # The name is literal: `substitute: disabled` covers the whole object,
+  # metadata.name included.
+  - name: unifi-static-dns-check
+    files:
+      - ./resources/fetch.sh
+      - ./resources/check.jq
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        # Shell and jq, full of `$var`. Flux postBuild substitution would
+        # rewrite them, so it is off for this object. The gateway host arrives
+        # as an env var set in ./static-dns-check.yaml instead.
+        kustomize.toolkit.fluxcd.io/substitute: disabled

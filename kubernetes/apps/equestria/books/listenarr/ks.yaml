@@ -1,0 +1,80 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Listenarr -- an *arr-style manager for AUDIOBOOKS only (search indexers, send
+# to a download client, import into an Author/Title tree, Audible/Audnexus
+# metadata). Docs: https://getlistenarr.com/docs/ ; source:
+# github.com/Listenarrs/Listenarr.
+#
+# It overlaps chaptarr and readmeabook, which also manage audiobooks; all three
+# share the one /media/audiobooks root folder that audiobookshelf serves.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app listenarr
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # downloads/ and audiobooks/ on the shared media share (truenas-media).
+    - name: truenas-volumes
+      namespace: equestria
+    # components/volsync renders the restic repository ExternalSecret.
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/books/listenarr
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: Listenarr is SQLite-only. Its sole EF Core
+    # provider is Microsoft.EntityFrameworkCore.Sqlite
+    # (listenarr.infrastructure/Listenarr.Infrastructure.csproj; no Npgsql in
+    # Directory.Packages.props), wired unconditionally as
+    # `options.UseSqlite($"Data Source={sqliteDbPath}")` in
+    # InfrastructureStartupCompositionExtensions.cs. The database is
+    # /app/config/database/listenarr.db, in WAL mode -- so it stays on the
+    # Longhorn volsync PVC, never on NFS. No valkey either: nothing in it
+    # speaks Redis.
+    - ../../../../components/tailscale
+    # NO components/tailscale/api-key and NO components/route/api-key, unlike
+    # the Servarr apps. That carve-out assumes "the app authenticates the key
+    # itself", and Listenarr only does so when its own login is switched on:
+    # with AuthenticationRequired=false (the default, and what we want behind
+    # authentik) AuthenticationEnforcerMiddleware and RequireApiKeyFilter let
+    # every /api request through. A carve-out would therefore open the whole
+    # API to anyone who sends `X-Api-Key: x`. Nothing needs it anyway:
+    # Listenarr PULLS from Prowlarr and polls the download clients, and its
+    # in-pod Discord bot talks to it over loopback (LISTENARR_PUBLIC_URL).
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      # Browsers take the authentik chain on the tailnet too, mirroring the
+      # internal HTTPRoute's authenticated-user.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      APP: *app
+      NAMESPACE: *namespace
+      # /app/config: listenarr.db, config.json (API key), data-protection keys,
+      # cover/author/series image cache, the ffprobe it downloads on first boot
+      # (~80 MB), logs, and temp/downloads -- the staging area for direct
+      # downloads before import. Only ever raise this --
+      # components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 5Gi

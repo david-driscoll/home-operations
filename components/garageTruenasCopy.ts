@@ -98,13 +98,18 @@ const GARAGE_REGION = "garage";
 
 /**
  * When spike pulls, in TrueNAS's local time (the estate's TIMEZONE): after the
- * Backrest queue (01:00 local, done by mid-morning) and the copy tier (15:00
- * and 16:00 UTC), so the Garage hosts are otherwise quiet.
+ * Backrest queue (01:00 local, done by mid-morning), the VolSync movers (19:00
+ * UTC) and the Backrest copy jobs (21:00 UTC), so the Garage hosts are
+ * otherwise quiet. 18:00 local is 22:00 UTC in summer and 23:00 in winter:
+ * one hour after the last copy starts in summer, two in winter.
+ *
+ * It was 13:00 while VolSync ran at 14:00 UTC, and moved five hours with it.
+ * At 13:00 it would now pull before the movers have run.
  */
-export const GARAGE_COPY_PULL_SCHEDULE: CronSchedule = { minute: "00", hour: "13", dom: "*", month: "*", dow: "*" };
+export const GARAGE_COPY_PULL_SCHEDULE: CronSchedule = { minute: "00", hour: "18", dom: "*", month: "*", dow: "*" };
 
-/** When the snapshots are taken: well after the pulls, so each one captures a finished pull. */
-const GARAGE_COPY_SNAPSHOT_HOUR = "18";
+/** When the snapshots are taken: well after the pulls (five hours), so each one captures a finished pull. */
+const GARAGE_COPY_SNAPSHOT_HOUR = "23";
 
 /**
  * Where spike reaches Garage: celestia's own node, through the per-node route
@@ -198,11 +203,24 @@ export function garageCopyNfsShare(bucket: string): { path: string; config: NfsS
  * is skipped at any depth: restic and Pulumi both keep short-lived lock files
  * there, and a copy of one is noise at best.
  *
+ * `pulumi-state` also skips each stack's `.pulumi/history/` and `.pulumi/backups/`
+ * (GARAGE_COPY_EXTRA_EXCLUDES). Every Pulumi update writes a full checkpoint copy
+ * there, pruned after 3 days by kubernetes/apps/pulumi/history-pruner, so the
+ * pull was ~8 GiB a day of files that live three days, each one pinned by the
+ * dataset snapshots for the length of their retention. The checkpoints that
+ * matter, `.pulumi/stacks/`, are still copied; restic (backrest plan
+ * `pulumi-state`) and the alpha-site mirror skip history the same way.
+ *
  * The post-script is the heartbeat. TrueNAS runs it only after rclone exits 0
  * (plugins/cloud_sync.py), so a failed pull pushes nothing and Gatus pages when
  * the 25-hour window runs out. `|| true` keeps a Gatus outage from marking a
  * good pull as failed.
  */
+/** Per-bucket excludes on top of `locks/**`; see garageCopyTask. */
+export const GARAGE_COPY_EXTRA_EXCLUDES: Readonly<Record<string, readonly string[]>> = {
+  "pulumi-state": ["*/.pulumi/history/**", "*/.pulumi/backups/**"],
+};
+
 export function garageCopyTask(args: { bucket: string; credentialsId: number; uptimeUrl: string }): CloudSyncTaskInput {
   const token = toGatusKey(TRUENAS_GARAGE_COPY_GROUP, args.bucket);
   return {
@@ -213,7 +231,7 @@ export function garageCopyTask(args: { bucket: string; credentialsId: number; up
     schedule: GARAGE_COPY_PULL_SCHEDULE,
     direction: "PULL",
     transfer_mode: "SYNC",
-    exclude: ["locks/**"],
+    exclude: ["locks/**", ...(GARAGE_COPY_EXTRA_EXCLUDES[args.bucket] ?? [])],
     pre_script: "",
     post_script: `curl -sf -X POST -H "Authorization: Bearer ${token}" "${args.uptimeUrl}/api/v1/endpoints/${token}/external?success=true" || true`,
     args: GARAGE_COPY_RCLONE_ARGS,

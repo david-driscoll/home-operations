@@ -6,8 +6,10 @@ metadata:
   namespace: pulumi
 ---
 # ClusterRole: read Stacks across all namespaces (CRD is cluster-scoped access).
-# `patch` is for `kubectl annotate ... pulumi.com/reconciliation-request`, which
-# the job sets after a cancel so a Stalled stack actually re-runs (see cronjob.yaml).
+# `patch` is for `kubectl annotate`: pulumi.com/reconciliation-request, which the
+# job sets after a cancel so a Stalled stack actually re-runs, and
+# pulumi-lock-canceller/locked-since, which records a lock for PulumiStackLocked
+# (see cronjob.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -30,7 +32,9 @@ subjects:
     name: pulumi-lock-canceller
     namespace: pulumi
 ---
-# Role: exec into workspace pods in the pulumi namespace
+# Role: read logs of and exec into workspace pods in the pulumi namespace.
+# `pods/log` is how the job finds a lock behind the generic "up failed; see the
+# workspace pod logs" message (see cronjob.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -40,6 +44,9 @@ rules:
   - apiGroups: [""]
     resources: [pods]
     verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
   - apiGroups: [""]
     resources: [pods/exec]
     verbs: [create]

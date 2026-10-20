@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Listenarr
+  category: Media Management
+  description: Listenarr is an *arr-style audiobook collection manager, with Audible/Audnexus metadata
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # The same app under its tailnet name, so authentik has a provider for that
+  # hostname too. Paired with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/listenarr.svg
+  access_policy:
+    groups:
+      - media-managers
+  # Forward auth: Listenarr has NO OIDC/OAuth support at all -- its only login
+  # is a single local admin account (AccountController, session cookie), and
+  # nothing in the source references OpenID Connect. authentik fronts every
+  # route instead, and Listenarr's own "Enable login screen"
+  # (AuthenticationRequired in /app/config/config.json) stays at its default
+  # `false`, so there is one login, not two.
+  #
+  # Known cost of that: a handful of controllers are [LocalOrAdmin] -- loopback
+  # or a Listenarr admin session/API key, REGARDLESS of AuthenticationRequired
+  # -- so through the proxy the Discord bot controls (/api/v1/discord/*),
+  # ffprobe info/rescan (/api/v1/ffmpeg/*) and "test notification" answer 403.
+  # If those are ever wanted: create the admin account and turn on "Enable
+  # login screen" in Settings > General (a second login), and at that point
+  # the API-key carve-out in ./ks.yaml becomes safe to add as well.
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      # [AllowAnonymous] readiness probe (SystemController.GetReady): 200 once
+      # SQLite opens and no EF migration is pending, 503 otherwise.
+      url: https://${APP}.${ROOT_DOMAIN}/api/v1/system/ready
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # The estate-default downscaler window scales this to 0 between 02:00 and
+      # 09:00, so a failed check in that window is expected, not an incident.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

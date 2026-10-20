@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 #
 # app-template: Mealie publishes no Helm chart, only the compose file in the
 # docs. That compose has ONE service since v2 -- the api/frontend split that
@@ -60,7 +60,7 @@ spec:
           *app :
             image:
               repository: ghcr.io/mealie-recipes/mealie
-              tag: v3.28.0@sha256:8b02290f4d1806f02acac6f25f6d48a3c965612fda1f8e914d5af533276f8688
+              tag: v3.29.0@sha256:78eb28b8776d0bad40c5e605c72b3f4f5976793e491558c7dcbdfc04c835d4bc
               pullPolicy: IfNotPresent
             envFrom:
               # DB_ENGINE and the POSTGRES_* set -- always present.

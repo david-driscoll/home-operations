@@ -61,6 +61,13 @@ kind: MCPServer
 metadata:
   name: toolhive-openbao
 spec:
+  # HELD on this digest; Renovate is off for it (.github/renovate.json5).
+  # Every :mcp digest from 8ecbddb (2026-10-18) on bundles
+  # agent-connector-sdk, which exits on start: "Refusing to serve over
+  # streamable-http: no authentication provider is configured". Its only
+  # opt-out is in code; stdio is no way out either (header above). Unpin
+  # only together with giving the backend AUTH_TYPE=jwt/static and making
+  # ToolHive forward a token it accepts.
   image: knucklessg1/openbao-mcp:mcp@sha256:33ad5f9c58657f6bf5abf523e903544e3097be7ffdde8c1681d646720b78128a
   transport: streamable-http
   proxyPort: 8080

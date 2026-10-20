@@ -43,16 +43,27 @@ spec:
             description: "Stack {{ $labels.namespace }}/{{ $labels.name }} prerequisites have not been satisfied for 30 minutes."
 
         - alert: PulumiStackLocked
-          # Fires when status.lastUpdate.message contains a Pulumi state lock.
+          # Fires when a Pulumi state lock blocks the stack. Two sources, because since
+          # operator v2.9.3 the lock text often never reaches the Stack status:
+          #   - status.lastUpdate.message quotes the lock ("locked by ...")
+          #   - the lock-canceller CronJob found it in the workspace pod log behind the
+          #     generic "up failed; see the workspace pod logs" message and recorded it
+          #     as the pulumi-lock-canceller/locked-since annotation (exported by KSM).
+          # The second leg is what the 2026-10-17 vault lock needed: its message never
+          # said "locked by", so this alert stayed silent for 33h.
           # Stale locks occur when the workspace pod restarts mid-run without releasing the lock.
           # The auto-canceller CronJob (../lock-canceller) resolves locks held > 10m via
           # `pulumi cancel`, then sets pulumi.com/reconciliation-request so the stack re-runs
           # and this message is replaced -- without that re-run a Stalled stack keeps the old
-          # "locked by" text forever and this alert never clears.
-          expr: kube_stack_last_update_info{message=~"(?s).*locked by.*"} == 1
+          # "locked by" text forever and this alert never clears. The annotation is removed
+          # by the same job once the stack's last run is no longer lock-blocked.
+          expr: |
+            max by (namespace, name) (kube_stack_last_update_info{message=~"(?s).*locked by.*"} == 1)
+            or
+            max by (namespace, name) (kube_stack_lock_created_timestamp_seconds > 0)
           for: 5m
           labels:
             severity: critical
           annotations:
             summary: "Pulumi Stack {{ $labels.name }} is lock-blocked"
-            description: "Stack {{ $labels.namespace }}/{{ $labels.name }} is failing because the Pulumi state is locked. The auto-canceller will resolve this after 10 minutes, or run `kubectl exec -n {{ $labels.namespace }} {{ $labels.name }}-workspace-0 -- pulumi cancel --yes` followed by `kubectl annotate stack -n {{ $labels.namespace }} {{ $labels.name }} pulumi.com/reconciliation-request=$(date +%s) --overwrite` to resolve immediately."
+            description: "Stack {{ $labels.namespace }}/{{ $labels.name }} is failing because the Pulumi state is locked (the lock text may only be in `kubectl -n {{ $labels.namespace }} logs {{ $labels.name }}-workspace-0 -c pulumi | grep 'locked by'`). The auto-canceller will resolve this after 10 minutes, or run `kubectl exec -n {{ $labels.namespace }} {{ $labels.name }}-workspace-0 -- pulumi cancel --yes` followed by `kubectl annotate stack -n {{ $labels.namespace }} {{ $labels.name }} pulumi.com/reconciliation-request=$(date +%s) --overwrite` to resolve immediately."

@@ -9,3 +9,4 @@ resources:
   - ./definition.yaml
   - ./podmonitor.yaml
   - ./prometheusrule.yaml
+  - ./rbac.yaml

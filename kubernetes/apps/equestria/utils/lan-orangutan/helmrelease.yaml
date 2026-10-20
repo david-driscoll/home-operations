@@ -1,0 +1,328 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app lan-orangutan
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # Three reasons, any one sufficient: the volume is RWO, the LAN address
+        # in ./lan-nad.yaml is static (one pod per NAD), and two tailscaled
+        # processes on one state dir would fight over the node key.
+        strategy: Recreate
+        pod:
+          annotations:
+            # net1 on the flat Home LAN. Why this and not hostNetwork, and what
+            # an ipvlan child cannot see: ./lan-nad.yaml.
+            k8s.v1.cni.cncf.io/networks: lan-orangutan-lan-net
+        initContainers:
+          # The app's whole Tailscale integration is `exec tailscale ...`
+          # (internal/network/tailscale*.go): `status --json` for the peer
+          # list, `up` / `down` for the dashboard's connect button. It looks
+          # the binary up on PATH and its image does not ship one -- which is
+          # why upstream's README says Tailscale "needs a host install, not
+          # Docker" and the card reads "Not Installed" in a container.
+          #
+          # So the CLI is copied out of the tailscale image into an emptyDir
+          # the app mounts at /usr/local/bin/tailscale. It is a static Go
+          # binary, so it runs on the app's Alpine as-is, and taking it from
+          # the SAME image as the sidecar keeps client and daemon in step
+          # across Renovate bumps (one anchor, below).
+          tailscale-cli:
+            image: &tailscaleImage
+              repository: tailscale/tailscale
+              tag: v1.104.1@sha256:87c55d6be56ad85b3d8bceca5f87f73de288c609131460dd1be1874c250cc41d
+            command:
+              - /bin/sh
+              - -c
+              - cp -L /usr/local/bin/tailscale /ts-bin/tailscale
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
+        containers:
+          app:
+            image:
+              repository: ghcr.io/291-group/lan-orangutan
+              tag: 3.4.2@sha256:5f2ca8cfa4ee7721b021c697f0fcff8672019adb2a7ae1db1f1925d7a71dae08
+              pullPolicy: IfNotPresent
+            # https://github.com/291-Group/LAN-Orangutan/blob/main/config.example.ini
+            env:
+              TZ: ${TIMEZONE}
+              # Upstream's 291 is a privileged port and only exists to be
+              # memorable on a host. Nothing here dials it directly.
+              ORANGUTAN_PORT: &port 8080
+              # LOAD-BEARING, and the reason this is not simply 0.0.0.0.
+              #
+              # The app's own password is off (next variable), so anything that
+              # can reach the listener can read the device list, delete devices
+              # and disconnect tailscale. With 0.0.0.0 that would include the
+              # whole Home LAN, straight to net1 on LAN_ORANGUTAN_LAN_IP --
+              # past Traefik, past authentik, and past NetworkPolicy, which
+              # Cilium does not enforce on a Multus interface.
+              #
+              # Binding the pod IP puts the listener on eth0 only, so the only
+              # way in is the cluster network, i.e. Traefik.
+              ORANGUTAN_BIND_ADDRESS:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              # Proxy auth. Upstream's documented switch for "a reverse proxy
+              # that handles login" -- it removes the first-run "create a
+              # password" screen and the session cookie entirely. Both routes
+              # to this pod carry the authentik outpost: `authenticated-user`
+              # on the HTTPRoute below, `tailscale-user` on the tailnet one
+              # (TAILSCALE_MIDDLEWARE in ./ks.yaml).
+              ORANGUTAN_ALLOW_INSECURE: "true"
+              # Three groups, each there for a reason found on the running pod.
+              #
+              # 1. The Home LAN as eight /19s, NOT as the one /16 detection
+              #    offers. Upstream gives every network a hard 5-minute limit
+              #    (internal/api/api.go scanNetwork) and keeps nothing from a
+              #    scan that overruns it. `nmap -sn` over the /16 measured
+              #    1174s from this pod, so the detected network failed on every
+              #    pass and no Home device was ever recorded. One /19 measured
+              #    30s.
+              #    Smaller pieces cannot be picked by hand: hosts were spread
+              #    over 26 different /24s, from 10.10.0 to 10.10.255.
+              #    Declared networks still get MAC addresses and vendors --
+              #    nmap ARPs anything on-link, and net1 is on this segment.
+              #
+              # 2. The IoT VLAN, which has no local interface and so is never
+              #    detected. Routed, not attached: found by ping from eth0,
+              #    with NO MAC address or manufacturer (ARP stops at the
+              #    gateway).
+              #
+              # 3. The Tailscale range. The app only asks tailscaled for peers
+              #    when it "scans" a network inside 100.64.0.0/10
+              #    (internal/scanner/scanner.go), and expects to find one on a
+              #    tailscale0 interface. The sidecar is userspace and has none,
+              #    so without this entry the Tailscale card says Connected and
+              #    no peer ever reaches the device list. Nothing is swept: the
+              #    entry is only a trigger for `tailscale status --json`.
+              ORANGUTAN_NETWORKS: >-
+                10.10.0.0/19,10.10.32.0/19,10.10.64.0/19,10.10.96.0/19,
+                10.10.128.0/19,10.10.160.0/19,10.10.192.0/19,10.10.224.0/19,
+                192.168.100.0/24,
+                100.64.0.0/10
+              # Detected networks to drop. net1's /16, replaced by the /19s
+              # above (a declared network is kept even when it falls inside an
+              # excluded range), and eth0's /32 out of the pod network, which
+              # only ever finds this pod.
+              # Quoted so an offline render (CI cannot decrypt cluster-secrets)
+              # yields a string rather than null, which the chart schema rejects.
+              ORANGUTAN_EXCLUDE_NETWORKS: "10.10.0.0/16,${CLUSTER_NETWORK}"
+              # Upstream's default is every 5 minutes, sized for a /24. One
+              # pass here ARPs 65,536 addresses.
+              ORANGUTAN_SCAN_INTERVAL: 900
+            probes:
+              # exec, and NOT tunable back to httpGet while this pod carries
+              # the ipvlan interface -- the trap media/plex documents at
+              # length. A kubelet-dialed probe sources from the node's LAN
+              # address, the reply leaves by net1's more specific /16 route,
+              # and an ipvlan child cannot reach its parent.
+              #
+              # The address is `hostname -i` because the server is bound to the
+              # pod IP rather than loopback (see ORANGUTAN_BIND_ADDRESS); the
+              # pod's hostname resolves to that address through /etc/hosts.
+              # The path is upstream's own HEALTHCHECK target: a static asset,
+              # served without authentication in every state.
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - wget -q -T 5 --spider "http://$(hostname -i):8080/static/orangutan.svg"
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext:
+              # Root, as upstream's Dockerfile insists: capabilities granted to
+              # a process that starts as non-root land in the permitted set and
+              # never become effective, and without them nmap falls back to an
+              # unprivileged connect scan that reports no MAC addresses.
+              #
+              # NET_RAW only. Upstream's compose file also adds NET_ADMIN
+              # ("helps some scan modes") and NET_BIND_SERVICE (port 291);
+              # neither is needed for the `nmap -sn` this version runs on 8080.
+              # If MACs are missing after the first scan, NET_ADMIN is the
+              # first thing to try.
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                add: ["NET_RAW"]
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 512Mi
+          tailscale:
+            # The daemon the copied CLI talks to. The two containers share one
+            # network namespace and one socket directory (`tailscale-run`
+            # below), so from the app's point of view this is "Tailscale is
+            # installed and connected on this machine".
+            #
+            # Same containerboot shape as dns/technitium and
+            # tailscale-system/taildrive. No `command:` override: containerboot
+            # is what starts tailscaled and runs `tailscale up`.
+            image: *tailscaleImage
+            env:
+              TS_STATE_DIR: &tsState /var/lib/tailscale
+              # containerboot keeps state in a kube Secret when it detects
+              # Kubernetes; it lives on the volsync PVC instead, so the node
+              # identity survives a restart and a restore, and the pod needs no
+              # service-account token.
+              TS_KUBE_SECRET: ""
+              # Userspace: no TUN device, no NET_ADMIN, not privileged. The app
+              # only ever asks tailscaled what it knows -- peers come from
+              # `tailscale status --json`, never from sweeping addresses -- so
+              # nothing needs a tailscale0 interface in the pod. The cost is
+              # that the app detects no Tailscale network by itself, which is
+              # what the 100.64.0.0/10 entry in ORANGUTAN_NETWORKS stands in
+              # for.
+              TS_USERSPACE: "true"
+              TS_AUTH_ONCE: "true"
+              TS_ACCEPT_DNS: "false"
+              # NOT the default /tmp/tailscaled.sock. containerboot would then
+              # symlink the default path to it, and a symlink into this
+              # container's /tmp dangles in the app container. Naming the CLI's
+              # own default path makes containerboot skip the symlink
+              # (cmd/containerboot/main.go) and puts the real socket in the
+              # shared directory, where a bare `tailscale` finds it.
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
+              # Not `lan-orangutan`: components/tailscale already publishes
+              # that name on the tailnet for the browser route.
+              TS_HOSTNAME: lan-orangutan-scanner
+              TS_AUTHKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: lan-orangutan-tailscale-authkey
+                    key: authkey
+            securityContext:
+              # Root with no capabilities: the socket and the state dir are
+              # shared with a root app container, and tailscaled's LocalAPI
+              # grants full access to uid 0 -- which is what lets the
+              # dashboard's disconnect button work.
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        # Separate subPaths on purpose: the app's data dir must not contain
+        # tailscaled's node key, and vice versa.
+        advancedMounts:
+          app:
+            app:
+              - path: /var/lib/lan-orangutan
+                subPath: data
+            tailscale:
+              - path: *tsState
+                subPath: tailscale-state
+      tailscale-bin:
+        type: emptyDir
+        advancedMounts:
+          app:
+            tailscale-cli:
+              - path: /ts-bin
+            app:
+              - path: /usr/local/bin/tailscale
+                subPath: tailscale
+                readOnly: true
+      # /var/run is a symlink to /run in both images, so this one directory is
+      # where tailscaled creates its socket and where the CLI looks for it.
+      tailscale-run:
+        type: emptyDir
+        advancedMounts:
+          app:
+            app:
+              - path: /run/tailscale
+            tailscale:
+              - path: /run/tailscale
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user

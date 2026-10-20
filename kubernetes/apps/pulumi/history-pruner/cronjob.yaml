@@ -21,7 +21,10 @@ spec:
   # Age is rclone's view of the object's mtime. Pulumi makes backups/ entries
   # with a server-side copy, which can carry the source's older mtime -- fine
   # for a tree whose contents are disposable anyway.
+  #
+  # 03:17 local time.
   schedule: "17 3 * * *"
+  timeZone: ${TIMEZONE}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -36,7 +39,7 @@ spec:
               # Same pin as the garage-sync / garage-mirror loops
               # (docker/_common/garage/compose.yaml).
               # renovate: datasource=docker depName=rclone/rclone
-              image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+              image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
               command: ["/bin/sh", "-c"]
               env:
                 # An env-defined rclone remote named `garage`, the same shape the
@@ -80,7 +83,7 @@ spec:
                   BUCKET=pulumi-state
                   # One prefix per Pulumi backend root. `backups` holds both the
                   # backups and system stacks.
-                  PREFIXES="authentik backups gulf-of-mexico home ocracoke unifi-network vault"
+                  PREFIXES="authentik backups gulf-of-mexico home ocracoke unifi-network"
 
                   prune() {
                     echo "  Pruning garage:$BUCKET/$1/.pulumi/$2/ older than $3"

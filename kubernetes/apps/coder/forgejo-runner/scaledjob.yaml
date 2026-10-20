@@ -1,0 +1,335 @@
+---
+# The Forgejo Actions runners. One pool, run by KEDA: two pods are always up
+# and waiting, and more are started while the forge has more jobs than that.
+#
+# This replaced a single always-on runner pod (four jobs at a time in one
+# Docker daemon). Renovate's first pass over github-mirror/home-operations
+# opened about sixty pull requests at once, each with a `flate` check, and the
+# job that publishes merges to GitHub sat in the same queue behind them.
+#
+# How it works (https://keda.sh/docs/2.21/scalers/forgejo/): every pod runs
+# `forgejo-runner one-job --wait`. It waits for a job, runs that one job and
+# exits. KEDA asks Forgejo every 30 seconds how many jobs it has in hand and
+# keeps (that many + 2) pods alive, so two are always idle and ready. A job
+# therefore starts within a couple of seconds, and the pod that took it is
+# replaced at the next poll.
+#
+# WHAT A WAITING POD HAS READY: it is scheduled, its Docker daemon is up, and
+# the `prepull` container has already pulled the job image. What it does NOT
+# have is anything from an earlier job: each pod serves one job, so the
+# actions cache starts empty every time and every `flate` render is cold.
+#
+# EVERY POD IS THE SAME RUNNER AS FAR AS FORGEJO IS CONCERNED. They all mount
+# the one registration in `forgejo-runner-config` (./externalsecret.yaml),
+# which is how KEDA's own documentation sets it up: each process asks for one
+# task and reports only on that task. If Forgejo ever starts refusing that,
+# the answer is a registration per pod (its ephemeral runners), not a
+# different shape here.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/triggerauthentication_v1alpha1.json
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: ${APP}
+spec:
+  secretTargetRef:
+    # ./externalsecret.yaml: an administrator's token that can only read.
+    - parameter: token
+      name: ${APP}-queue
+      key: token
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/keda.sh/scaledjob_v1alpha1.json
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: ${APP}
+spec:
+  pollingInterval: 30
+  # TWO PODS ALWAYS WAITING. KEDA counts these as spares on top of demand:
+  # with N jobs in hand it wants N + 2 pods, so when a waiting pod takes a
+  # job, the next poll starts another to wait in its place.
+  minReplicaCount: 2
+  # SIXTEEN HERE MEANS EIGHTEEN PODS. KEDA caps the reported job count at
+  # this number and then adds the two spares above, so the most that ever run
+  # is maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
+  # raise this with that in mind, not by itself.
+  #
+  # Raised from 8 on 2026-10-18: every burst sat at that ceiling (a queue of
+  # 113 took about two hours to drain), and the four worker nodes the pods
+  # can land on had the room. The spread constraint in the pod template keeps
+  # eighteen of them from piling onto two nodes.
+  maxReplicaCount: 8
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 5
+  # A change to this file must not kill jobs that are running. `gradual`
+  # leaves existing pods alone and uses the new template for the next ones;
+  # KEDA's default deletes every pod of the old template at once. A waiting
+  # pod on the old template is replaced when it takes a job or reaches its
+  # idle limit (./resources/run-job.sh).
+  rollout:
+    strategy: gradual
+  scalingStrategy:
+    # THE NUMBER FORGEJO REPORTS IS WAITING PLUS RUNNING JOBS
+    # (routers/api/v1/shared/runners.go asks for both statuses, and KEDA
+    # counts every row). `default` is the strategy for a count like that: it
+    # starts (reported - pods beyond the two spares), and every running job
+    # is in one of these pods. `accurate` would assume the count is the
+    # backlog alone and start a second pod for each job already running.
+    strategy: default
+  triggers:
+    - type: forgejo-runner
+      metadata:
+        # Informational; the scaler does not read it.
+        name: equestria
+        address: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000
+        # Every waiting job on the forge, whichever user, organisation or
+        # repository it belongs to. This is the admin endpoint
+        # (/api/v1/admin/runners/jobs), hence the administrator's token.
+        global: "true"
+        # Every label ./resources/config.yml declares, since these pods run
+        # from that file. Add a label there and it has to
+        # be added here, or jobs that ask for it never start a pod.
+        labels: ubuntu-latest,ubuntu-24.04,ubuntu-22.04,docker
+      authenticationRef:
+        name: ${APP}
+  jobTargetRef:
+    # A runner pod that fails did not necessarily fail its job: Forgejo has
+    # the job's own result. Never re-run the pod.
+    backoffLimit: 0
+    # A backstop for a pod that is stuck, not the idle limit: a pod may
+    # wait up to 6h (./resources/run-job.sh) and then run a job for up to 3h
+    # (`runner.timeout` in the config), with 30m to shut down. Anything older
+    # than that is not doing either. It has to stay ABOVE that sum, because
+    # it is counted from pod start and would kill a job that began late.
+    activeDeadlineSeconds: 36000
+    ttlSecondsAfterFinished: 600
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: ${APP}
+      spec:
+        restartPolicy: Never
+        automountServiceAccountToken: false
+        enableServiceLinks: false
+        # `runner.shutdown_timeout` in the config gives a job 30m to finish
+        # after SIGTERM, so the kubelet has to wait about that long before
+        # it sends SIGKILL.
+        terminationGracePeriodSeconds: 1860
+        # ONE RUNNER PER NODE BEFORE A SECOND ON ANY OF THEM. Without this the
+        # scheduler packed every pod onto the two emptiest workers, and each
+        # burst started five Docker daemons on one node at once. It is a
+        # preference (ScheduleAnyway), not a rule: a job must never sit
+        # Pending because one node is full or out of rotation, and the
+        # finished pods kept for ttlSecondsAfterFinished can count towards
+        # the skew.
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: ${APP}
+        securityContext:
+          fsGroup: 1000
+          fsGroupChangePolicy: OnRootMismatch
+        initContainers:
+          # A native sidecar (`restartPolicy: Always` on an initContainer): the
+          # kubelet starts it BEFORE the runner, waits for its startup probe,
+          # and in a Job stops it once the runner container has exited. A
+          # plain second container gives no ordering, and would keep the Job
+          # from ever completing.
+          #
+          # privileged is unavoidable for Docker-in-Docker: dockerd manages
+          # cgroups, mounts and iptables in its own namespace. The JOB
+          # containers are not privileged and get no Docker socket
+          # (./resources/config.yml).
+          #
+          # TLS ON, with client verification, and that is not belt-and-braces.
+          # dockerd-entrypoint.sh always adds its own `--host` on 0.0.0.0, so
+          # there is no loopback-only listener to be had; with a certdir it
+          # generates a CA and client certs and starts with --tlsverify, so
+          # the listener is useless without the client key only the runner
+          # container has.
+          - name: dind
+            restartPolicy: Always
+            image: data.forgejo.org/oci/docker:29-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+            env:
+              - name: DOCKER_TLS_CERTDIR
+                value: /certs
+            securityContext:
+              privileged: true
+              runAsUser: 0
+              runAsNonRoot: false
+            resources:
+              requests:
+                cpu: 100m
+                # What one cold render of this repository is known to reach is
+                # about 3.7 GB; the request is what the scheduler should plan
+                # around, so six of these do not all land on one node.
+                memory: 2Gi
+                ephemeral-storage: 4Gi
+              limits:
+                # One job per pod, so this is the ceiling for one job.
+                memory: 6Gi
+                ephemeral-storage: 24Gi
+            startupProbe:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - >-
+                    docker --tlsverify
+                    --tlscacert=/certs/client/ca.pem
+                    --tlscert=/certs/client/cert.pem
+                    --tlskey=/certs/client/key.pem
+                    -H tcp://127.0.0.1:2376 info
+              initialDelaySeconds: 2
+              periodSeconds: 2
+              failureThreshold: 32
+            volumeMounts:
+              - name: docker-storage
+                mountPath: /var/lib/docker
+              - name: docker-certs
+                mountPath: /certs
+              # Pulls from every registry zot covers go through the cluster's
+              # zot, with the image references unchanged
+              # (./resources/registries/ghcr.io.hosts.toml). Docker 29's
+              # containerd image store reads containerd hosts.toml files under
+              # this directory for EVERY registry; the older
+              # `registry-mirrors` setting only ever covered Docker Hub.
+              # Tested 2026-10-18 in throwaway pods on this image: `docker
+              # pull ghcr.io/catthehacker/ubuntu:act-24.04` made all ten
+              # requests to zot and finished in 30s, against about five
+              # minutes per pod straight from ghcr.io during a burst;
+              # docker.io (library/), quay.io and mcr.microsoft.com came from
+              # zot too, and data.forgejo.org -- a prefix zot did not have
+              # yet -- got a 404 from zot and fell back to upstream. Read-only,
+              # and not /certs: that is where dind writes its own TLS material.
+              - name: registries
+                mountPath: /etc/docker/certs.d
+                readOnly: true
+        containers:
+          - name: app
+            image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
+            # ./resources/run-job.sh: `forgejo-runner one-job --wait`, with a
+            # limit on how long a pod waits before making way for a fresh one.
+            # Under dumb-init, as the image's own entrypoint is, so SIGTERM
+            # reaches the runner and its 30-minute shutdown grace applies.
+            command: ["/usr/bin/dumb-init", "--", "bash", "/scripts/run-job.sh"]
+            env:
+              - name: TZ
+                value: "${TIMEZONE}"
+              # How long a pod may wait for a job before it exits and KEDA
+              # starts a new one in its place. This is what moves a waiting
+              # pod onto a changed image, config or registration.
+              - name: IDLE_MAX_SECONDS
+                value: "21600"
+              - name: DOCKER_HOST
+                value: tcp://127.0.0.1:2376
+              - name: DOCKER_TLS_VERIFY
+                value: "1"
+              - name: DOCKER_CERT_PATH
+                value: /certs/client
+              - name: HOME
+                value: /data
+              - name: XDG_CACHE_HOME
+                value: /data/.cache
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+                ephemeral-storage: 1Gi
+              limits:
+                memory: 1Gi
+                ephemeral-storage: 8Gi
+            volumeMounts:
+              - name: data
+                mountPath: /data
+              - name: docker-certs
+                mountPath: /certs
+                readOnly: true
+              - name: config
+                mountPath: /config
+                readOnly: true
+              - name: scripts
+                mountPath: /scripts
+                readOnly: true
+          # Pulls the job image into this pod's Docker daemon while the runner
+          # waits (./resources/prepull.sh), then exits. Without it the first
+          # thing a job did was download about 1.5 GB. The dind image, for
+          # its docker CLI. It always exits 0: a failed pull only means the
+          # runner pulls the image itself, as it always did.
+          - name: prepull
+            image: data.forgejo.org/oci/docker:29-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+            command: ["sh", "/scripts/prepull.sh"]
+            env:
+              # What `ubuntu-latest`, `ubuntu-24.04` and `docker` resolve to
+              # in ./resources/config.yml. Keep the two in step, or this
+              # warms an image no job uses.
+              - name: PREPULL_IMAGES
+                value: ghcr.io/catthehacker/ubuntu:act-24.04
+              - name: DOCKER_HOST
+                value: tcp://127.0.0.1:2376
+              - name: DOCKER_TLS_VERIFY
+                value: "1"
+              - name: DOCKER_CERT_PATH
+                value: /certs/client
+              - name: HOME
+                value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+            volumeMounts:
+              - name: docker-certs
+                mountPath: /certs
+                readOnly: true
+              - name: scripts
+                mountPath: /scripts
+                readOnly: true
+        volumes:
+          - name: scripts
+            configMap:
+              name: forgejo-runner-scripts
+          - name: registries
+            configMap:
+              name: forgejo-runner-registries
+              # One per key in ../kustomization.yaml's
+              # forgejo-runner-registries, i.e. every registry zot covers.
+              items:
+                - { key: docker.io, path: docker.io/hosts.toml }
+                - { key: ghcr.io, path: ghcr.io/hosts.toml }
+                - { key: quay.io, path: quay.io/hosts.toml }
+                - { key: gcr.io, path: gcr.io/hosts.toml }
+                - { key: registry.k8s.io, path: registry.k8s.io/hosts.toml }
+                - { key: public.ecr.aws, path: public.ecr.aws/hosts.toml }
+                - { key: cgr.dev, path: cgr.dev/hosts.toml }
+                - { key: mcr.microsoft.com, path: mcr.microsoft.com/hosts.toml }
+                - { key: data.forgejo.org, path: data.forgejo.org/hosts.toml }
+          - name: data
+            emptyDir:
+              sizeLimit: 6Gi
+          - name: docker-storage
+            emptyDir:
+              sizeLimit: 20Gi
+          - name: docker-certs
+            emptyDir: {}
+          - name: config
+            secret:
+              secretName: forgejo-runner-config

@@ -34,3 +34,4 @@ resources:
   - ./openbao/ks.yaml
   - ./openbao-replica/ks.yaml
   - ./vsc-retention/ks.yaml
+  - ./keda/ks.yaml

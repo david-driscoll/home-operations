@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -24,7 +24,7 @@ spec:
           app:
             image:
               repository: ghcr.io/haveagitgat/tdarr
-              tag: 2.94.02@sha256:e06ecd0a5fc27ab248622f61b59b5ab1d797d8249a3a6e12f2bcce6decfebd8c
+              tag: 3.01.00@sha256:5b3b8d4e54f41738d12ff71705cf8eb8e90fcbcc05209c331853aef119879992
             env:
               TZ: ${TIMEZONE}
               PUID: 568
@@ -76,7 +76,7 @@ spec:
           app:
             image: &nodeImage
               repository: ghcr.io/haveagitgat/tdarr_node
-              tag: 2.94.02@sha256:5493c345c3bfc13e107985ae702b0157897f3e1697bc1120af2798ba3f4d520a
+              tag: 3.01.00@sha256:58d1c5f319c7fc5ece1c7ee54afffca81339efe5298d342bbc1a356ee858d9c5
             env:
               TZ: ${TIMEZONE}
               serverURL: http://tdarr-server.${CLUSTER_CNAME}.svc.cluster.local:8266
@@ -180,11 +180,8 @@ spec:
         ports:
           http:
             port: &server-port 8266
-        annotations:
-          tailscale.com/expose: "true"
-          tailscale.com/hostname: tdarr-server
-          tailscale.com/tags: tag:observability
-          tailscale.com/proxy-group: tailnet-outbound
+        # The tailnet name `tdarr-server` is served by ./tailnet-service.yaml,
+        # not by this Service; see that file for why.
       *app :
         controller: *app
         ports:

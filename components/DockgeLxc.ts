@@ -1,3 +1,4 @@
+import { hash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -406,11 +407,18 @@ export class DockgeLxc extends ComponentResource {
       }),
     );
 
+    // A stable per-host id for cAdvisor (docker/_common/prometheus mounts this
+    // file). It MUST be 32 lowercase hex characters: until 2026-10-14 this wrote
+    // the bare name ("celestia-dockge"), which journald rejects -- `journalctl`
+    // then found no journal at all, nothing was ever vacuumed, and every boot's
+    // fallback id left another orphaned /var/log/journal/<id> behind (11 GB on
+    // celestia). md5 of the name keeps it stable and unique per host.
+    const machineId = hash("md5", name, "hex");
     keyWrites.push(
       copyFileToRemote(`${name}-machine-id`, {
         connection: this.remoteConnection,
         remotePath: "/etc/machine-id",
-        content: interpolate`${name}`,
+        content: `${machineId}\n`,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         triggers: [dailyTrigger],
@@ -528,13 +536,56 @@ export class DockgeLxc extends ComponentResource {
       );
     }
 
-    const deleteDockerDaemon = new remote.Command(
-      `${name}-delete-docker-daemon`,
+    // Host-wide log caps. Docker's json-file default and journald's default
+    // both grow until the disk is full, and on 2026-10-14 they had: celestia's
+    // root at 100% with a 24 GB garage log, a 2.4 GB pve-exporter log and 11 GB
+    // of journal.
+    //
+    // daemon.json is a default for containers CREATED after dockerd loads it;
+    // a container keeps the log config it was created with, so existing ones
+    // pick the cap up on their next recreate. log-opts are not reloadable --
+    // they need a dockerd restart -- but live-restore is, so the reload below
+    // turns it on and any later `systemctl restart docker` (or reboot) keeps
+    // the containers running while it applies the cap.
+    const dockerDaemonJson = `${JSON.stringify({ "log-driver": "json-file", "log-opts": { "max-size": "50m", "max-file": "3" }, "live-restore": true }, null, 2)}\n`;
+    const dockerDaemonConfig = copyFileToRemote(`${name}-docker-daemon-json`, {
+      connection: this.remoteConnection,
+      remotePath: "/etc/docker/daemon.json",
+      content: dockerDaemonJson,
+      parent: this.dockerParent,
+      dependsOn: depends,
+      triggers: [dockerDaemonJson],
+    });
+    const dockerDaemonReload = new remote.Command(
+      `${name}-docker-daemon-reload`,
       {
         connection: this.remoteConnection,
-        create: interpolate`rm -f /etc/docker/daemon.json`,
+        create: "systemctl reload docker",
+        triggers: [dockerDaemonConfig.id],
       },
-      mergeOptions(cro, { dependsOn: depends }),
+      mergeOptions(cro, { dependsOn: [dockerDaemonConfig] }),
+    );
+
+    // journald: cap it, then drop journals that belong to any other machine id.
+    // Those are the orphans the invalid /etc/machine-id above left behind; no
+    // vacuum ever touches them because journald only manages its own id's dir.
+    const journaldConf = "[Journal]\nSystemMaxUse=1G\n";
+    const journaldConfig = copyFileToRemote(`${name}-journald-size`, {
+      connection: this.remoteConnection,
+      remotePath: "/etc/systemd/journald.conf.d/size.conf",
+      content: journaldConf,
+      parent: this.dockerParent,
+      dependsOn: depends,
+      triggers: [journaldConf],
+    });
+    const journaldApply = new remote.Command(
+      `${name}-journald-apply`,
+      {
+        connection: this.remoteConnection,
+        create: interpolate`systemctl restart systemd-journald && find /var/log/journal -mindepth 1 -maxdepth 1 -type d ! -name ${machineId} -exec rm -rf {} +`,
+        triggers: [journaldConfig.id, machineId],
+      },
+      mergeOptions(cro, { dependsOn: [journaldConfig, ...keyWrites] }),
     );
 
     const stacksDirectory = new remote.Command(
@@ -546,7 +597,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.resources = [...depends, dockgeInfo, ...keyWrites, deleteDockerDaemon, stacksDirectory];
+    this.resources = [...depends, dockgeInfo, ...keyWrites, dockerDaemonReload, journaldApply, stacksDirectory];
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {

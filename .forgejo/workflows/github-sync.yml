@@ -1,0 +1,203 @@
+---
+# Keeps `main` the same on Forgejo and on GitHub. Runs on FORGEJO, in the copy
+# of this repository that stacks/system/forgejo-github-mirror.ts creates;
+# GitHub ignores this directory. docs/runbooks/forgejo-github-mirror.md is the
+# long version.
+#
+# The work is scripts/forgejo-github-sync; this file only decides when it runs
+# and hands it credentials. Three triggers, one job:
+#
+#   push               something merged here (a Renovate pull request). The
+#                      new commits are checked and GitHub is fast-forwarded.
+#   workflow_dispatch  GitHub's main moved. Flux already hears about that from
+#                      GitHub's webhook; kubernetes/apps/coder/forgejo-github-sync
+#                      turns its "new commit" event into this dispatch.
+#   schedule           the backstop for a dispatch that never arrived.
+#
+# THIS DIRECTORY EXISTING IS LOAD-BEARING. Forgejo reads `.forgejo/workflows`
+# and falls back to `.github/workflows` only when it is absent -- without it,
+# every GitHub workflow in this repository would run on the Forgejo runner on
+# each push.
+name: github-sync
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      discard_local:
+        description: Drop commits that exist only on Forgejo and reset main to GitHub's
+        type: boolean
+        default: false
+      prune_branches:
+        description: Delete every branch here except main (cleanup after the first import)
+        type: boolean
+        default: false
+
+# Only the latest run goes: a new one cancels whichever is waiting or running.
+# Every run compares the two `main`s as they are when it starts, so the newest
+# does everything an older one would have, and a backlog (runners down, a burst
+# of merges) collapses into one run instead of being worked through in turn.
+#
+# Cancelling mid-run is safe. Each push the script makes is atomic and is a
+# fast-forward or leased, so a run stopped between its two pushes leaves the
+# sides one step apart, which is what the run that replaced it starts from.
+#
+# A hand-run dispatch with `discard_local` or `prune_branches` set is the
+# exception, because no later run carries its inputs. It cancels nothing, and
+# it goes in a group of its own: it is the NEW run that decides whether older
+# ones in its group are cancelled, so only a different group keeps the next
+# push or hourly run from cancelling it. It may then overlap an ordinary run,
+# which does no harm -- the loser of a leased push just fails.
+#
+# `github.event.inputs`, where the values are strings and are simply absent
+# on push and schedule.
+concurrency:
+  group: ${{ (github.event.inputs.discard_local == 'true' || github.event.inputs.prune_branches == 'true') && 'github-sync-by-hand' || 'github-sync' }}
+  cancel-in-progress: ${{ !(github.event.inputs.discard_local == 'true' || github.event.inputs.prune_branches == 'true') }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # A clone and at most two pushes. Anything longer is hung.
+    timeout-minutes: 15
+    steps:
+      - name: Sync main with GitHub
+        env:
+          # `github.*` is Forgejo's own context under its compatibility name:
+          # this is the FORGE's token, repository and URL, nothing of GitHub's.
+          # Spelled this way, and not `forgejo.*`, only so actionlint can read
+          # the file.
+          #
+          # The github-mirror-sync account's token, NOT the job's own. `main`
+          # here is a protected branch (stacks/system/forgejo-github-mirror.ts),
+          # and Forgejo refuses every push to one made with the job token: its
+          # pre-receive hook looks the pusher up by id, and the Actions user
+          # (-2) is not in the user table. This account is on the rule's push
+          # allow-list.
+          #
+          # A push made with a real account's token DOES start workflows, so
+          # the script's own fast-forward of this main answers the `push`
+          # trigger above with one more run. That run finds the sides in sync
+          # and pushes nothing, so it ends there; under `concurrency` it also
+          # replaces this run's last two steps, which it repeats.
+          #
+          # The job token is the fallback until stacks/system has created the
+          # secret: it can still clone, and only the push to main fails.
+          TOKEN: ${{ secrets.MIRROR_SYNC_TOKEN || github.token }}
+          REPOSITORY: ${{ github.repository }}
+          # The in-cluster Service when stacks/system has set it, so the clone
+          # does not leave the cluster and come back through the gateway.
+          SERVER: ${{ vars.MIRROR_FORGEJO_URL || github.server_url }}
+          # owner/name on GitHub.
+          UPSTREAM: ${{ vars.MIRROR_UPSTREAM }}
+          # A GitHub deploy key with write access, and the only credential here
+          # that reaches outside the forge.
+          DEPLOY_KEY: ${{ secrets.MIRROR_DEPLOY_KEY }}
+          # What scripts/private-domain-guard looks for. Secrets so that the
+          # two names stay out of this file and out of the log.
+          PRIVATE_DOMAIN_ROOT: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
+          PRIVATE_DOMAIN_TAILNET: ${{ secrets.PRIVATE_DOMAIN_TAILNET }}
+          # Both empty on every trigger but a hand-run dispatch.
+          SYNC_DISCARD_LOCAL: ${{ github.event.inputs.discard_local }}
+          SYNC_PRUNE_BRANCHES: ${{ github.event.inputs.prune_branches }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          # Only where the mirror has been set up. This file is in a public
+          # repository, and any other Forgejo that receives the tree would
+          # otherwise fail here hourly. Checked in the step rather than as a
+          # job-level `if`, which would skip silently if `vars` did not resolve.
+          if [ -z "$UPSTREAM" ]; then
+            echo "MIRROR_UPSTREAM is not set on this repository: not a mirror, nothing to do."
+            exit 0
+          fi
+
+          install -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" >"$HOME/.ssh/github-mirror"
+          # GitHub's published host key (https://api.github.com/meta, also
+          # docs.github.com "GitHub's SSH key fingerprints"). Pinned rather
+          # than scanned: a key learned at run time proves nothing.
+          printf '%s\n' \
+            'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+            >"$HOME/.ssh/github-known-hosts"
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/github-mirror -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/github-known-hosts"
+
+          # Only stamped on commits the script has to replay after the two
+          # sides diverge. The address is the sync bot's under Forgejo's
+          # NO_REPLY_ADDRESS (kubernetes/apps/coder/forgejo/helmrelease.yaml);
+          # `github-mirror` itself is the organization now, which has no
+          # address to map a commit back to.
+          git config --global user.name "github-mirror-sync"
+          git config --global user.email "github-mirror-sync@noreply.forgejo.invalid"
+          git config --global advice.detachedHead false
+
+          # Scoped to the forge's URL, so the header is never offered to GitHub.
+          server="${SERVER%/}"
+          git config --global "http.${server}/.extraheader" \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+
+          # The whole of main, not a shallow clone: telling "behind" from
+          # "diverged" needs the history back to where the two sides last agreed.
+          git clone --quiet --no-tags --single-branch --branch main "${server}/${REPOSITORY}.git" repo
+          cd repo
+
+          # Fetched anonymously over HTTPS and pushed over SSH, so GitHub's
+          # commits still arrive here while the deploy key is missing or wrong.
+          export SYNC_UPSTREAM_FETCH_URL="https://github.com/${UPSTREAM}.git"
+          export SYNC_UPSTREAM_PUSH_URL="git@github.com:${UPSTREAM}.git"
+          export SYNC_DEPLOY_KEY_FILE="$HOME/.ssh/github-mirror"
+          exec bash scripts/forgejo-github-sync
+
+      # Renovate here only attaches labels that already exist in this
+      # repository, so GitHub's set is copied over (never deleted from).
+      # After the branch sync and whatever its result, so a failed publish
+      # does not also leave new pull requests unlabelled; a failure here
+      # still turns the run red.
+      - name: Copy GitHub's labels
+        if: ${{ !cancelled() && vars.MIRROR_UPSTREAM != '' }}
+        env:
+          LABELS_TOKEN: ${{ github.token }}
+          LABELS_REPOSITORY: ${{ github.repository }}
+          LABELS_FORGEJO_URL: ${{ vars.MIRROR_FORGEJO_URL || github.server_url }}
+          LABELS_UPSTREAM: ${{ vars.MIRROR_UPSTREAM }}
+        run: |
+          set -euo pipefail
+          # The first step's clone, when it got that far.
+          if [ ! -f repo/scripts/forgejo-github-labels ]; then
+            echo "No checkout from the sync step; labels are left for the next run."
+            exit 0
+          fi
+          bash repo/scripts/forgejo-github-labels
+
+      # Renovate never waits for a check: the run that opens a pull request
+      # moves on, and it is the NEXT run that finds the checks green and
+      # merges. On the hourly schedule alone that is one step an hour. A sync
+      # finishing is the moment something has just changed -- a merge here was
+      # published, or GitHub's main arrived -- so a run is asked for now, and
+      # inside the automerge window one merge leads straight to the next.
+      #
+      # It stops by itself: a run that merges nothing pushes nothing, so no
+      # sync follows it. The operator only marks the project as scheduled, so
+      # asking while a run is under way starts nothing extra.
+      #
+      # After the labels, so the run finds them. Never fails the job: this is
+      # a shortcut, and the hourly run is still there when it does not work.
+      - name: Ask for a Renovate run
+        if: ${{ !cancelled() && vars.MIRROR_RENOVATE_URL != '' }}
+        env:
+          RENOVATE_URL: ${{ vars.MIRROR_RENOVATE_URL }}
+          RENOVATE_TOKEN: ${{ secrets.MIRROR_RENOVATE_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          project="$(printf '%s' "$REPOSITORY" | sed 's#/#%2F#g')"
+          status="$(curl --silent --show-error --max-time 20 --output /dev/null \
+            --write-out '%{http_code}' --request POST \
+            --header "Authorization: Bearer ${RENOVATE_TOKEN}" \
+            "${RENOVATE_URL}&project=${project}")" || status="none ($status)"
+          case "$status" in
+            2*) echo "Renovate run asked for (HTTP $status)." ;;
+            *) echo "::warning::Could not ask for a Renovate run (HTTP $status); the hourly run will do it." ;;
+          esac

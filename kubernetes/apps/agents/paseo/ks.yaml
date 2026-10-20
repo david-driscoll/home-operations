@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app paseo
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/agents/paseo
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 25m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+    # /home/paseo only: daemon state plus the agent CLIs' logins and installs.
+    # /workspace is ./pvc.yaml and is deliberately not backed up -- it holds
+    # clones, and the copy that matters is the remote.
+    - ../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # 40Gi, up from 10Gi. /home/paseo holds mise's tool installs, the
+      # npm/Go/flate caches AND the repo checkout with every agent's git
+      # worktree (~/.paseo/worktrees) -- /workspace sits empty. At 10Gi it hit
+      # 98% on 2026-10-17 and writes ran out of space mid-flight, leaving
+      # zero-byte git objects and cache files. Only ever raise this
+      # (components/volsync/AGENTS.md).
+      VOLSYNC_CAPACITY: 40Gi
+      # The image's `paseo` user.
+      VOLSYNC_PUID: "1000"
+      VOLSYNC_PGID: "1000"

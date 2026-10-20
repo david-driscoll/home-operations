@@ -6,6 +6,9 @@ resources:
   - ./immich/ks.yaml
   - ./n8n/ks.yaml
   - ./dynacat/ks.yaml
+  # The family's home page. Its app list mirrors the setup guide
+  # (docs/kubernetes/holm.md).
+  - ./holm/ks.yaml
   - ./obsidian-sync/ks.yaml
   # Super Productivity's web app is retired: the family's to-do list is ./tududi
   # now, and the setup guide's Tasks page points there. Unlisting it makes Flux
@@ -13,13 +16,12 @@ resources:
   # the next `stacks/system` run removes its authentik app. ./supersync stays
   # for the installed apps that still sync through it.
   # - ./super-productivity/ks.yaml
-  - ./supersync/ks.yaml
+  # - ./supersync/ks.yaml
   - ./windmill/ks.yaml
   - ./rustdesk/ks.yaml
   # - ./tandoor/ks.yaml
   - ./freshrss/ks.yaml
   # On trial, to compare against FreshRSS.
-  - ./yarr/ks.yaml
   - ./ttrss/ks.yaml
   - ./searxng/ks.yaml
   - ./degoog/ks.yaml
@@ -41,3 +43,4 @@ resources:
   # - ./opencloud/ks.yaml
   - ./nextcloud/ks.yaml
   - ./actual-budget/ks.yaml
+  - ./paperless/ks.yaml

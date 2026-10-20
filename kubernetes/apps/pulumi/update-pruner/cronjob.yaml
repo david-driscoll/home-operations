@@ -10,7 +10,14 @@ metadata:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   # Daily, offset from history-pruner's "17 3 * * *" so the two never overlap.
+  # Local time, like that one.
+  #
+  # The zone is spelled out because substitution is off for this object (the
+  # annotation above), so the TIMEZONE variable every other schedule uses would
+  # arrive unexpanded and the API server would reject it. Keep it equal to
+  # TIMEZONE in kubernetes/flux/meta/shared-secrets.sops.yaml.
   schedule: "47 3 * * *"
+  timeZone: America/New_York
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -23,7 +30,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: update-pruner
-              image: bitnami/kubectl@sha256:f7f9e4f64d9e114650c115a4ac6fd383394b3d494061a8f17b1a0f6c8d55bc25
+              image: bitnami/kubectl@sha256:9b58231669c7c371ecd976626a61d72ae7e46326f30932e8934a087f5f26fbd8
               command: ["/bin/bash", "-c"]
               args:
                 - |
@@ -36,8 +43,8 @@ spec:
                   echo "$(date -u): Pruning auto.pulumi.com/Update older than ${KEEP_DAYS}d"
 
                   # Every Stack's CURRENT update is protected regardless of age.
-                  # This matters for the once-a-day stacks: home-operations,
-                  # ocracoke and vault run on resyncFrequencySeconds=86400, so a
+                  # This matters for the once-a-day stacks: home-operations
+                  # and ocracoke run on resyncFrequencySeconds=86400, so a
                   # stack that has not changed in a while can legitimately have
                   # its newest Update be older than the cutoff. Deleting that one
                   # would strip the object `status.lastUpdate` points at.

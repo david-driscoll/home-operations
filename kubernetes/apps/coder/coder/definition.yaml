@@ -41,6 +41,14 @@ spec:
         # CODER_OIDC_IGNORE_EMAIL_VERIFIED instead and explains why.
       includeClaimsInIdToken: true
       subMode: user_email
+      # Workspaces log in to OpenBao with this access token (the vault-jwt
+      # module in kubernetes/apps/coder/coder/templates). Coder refreshes it
+      # at build time, but the login only runs once the workspace pod is up,
+      # and a cold pull of the Universal image takes over ten minutes.
+      # authentik's default of five minutes expired first (2026-10-17: "token
+      # is expired" 12 min after the refresh). Coder renews it with the
+      # refresh token either way, so this only widens that window.
+      accessTokenValidity: hours=1
 
   gatus:
     - group: "Applications"

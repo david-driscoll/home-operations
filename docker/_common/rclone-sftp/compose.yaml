@@ -38,12 +38,17 @@ services:
     cap_add:
       - DAC_READ_SEARCH
     container_name: rclone-sftp
-    image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
     restart: unless-stopped
     dns:
       - 100.100.100.100
     env_file:
       - path: .env
+    environment:
+      # Log timestamps only: this is a server, nothing here runs on a
+      # schedule. Same as the other rclone services (garage-sync,
+      # garage-mirror, pulumi-state-backup).
+      TZ: ${TIMEZONE}
     command: >-
       serve sftp /data/ --addr :2022
       --authorized-keys /config/ssh/authorized_keys

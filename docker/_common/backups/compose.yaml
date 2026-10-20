@@ -1,7 +1,7 @@
 services:
   backups:
     user: "65534:65534"
-    image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317
+    image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
     volumes:
       - ./:/workspace
       - /opt/stacks-data/${APP}/keys:/keys:ro
@@ -25,6 +25,16 @@ services:
       - XDG_DATA_HOME=/tmp
       - RCLONE_CONFIG=/tmp/rclone.conf
       - TMPDIR=/tmp
+      # LOAD-BEARING. uid 65534 is `nobody`, whose passwd home is
+      # /nonexistent. From SDK 10.0.402 `dotnet` resolves its named-mutex
+      # storage through HOME, so every start died in first-run setup with
+      # "IOException: The system cannot open the device or file specified.
+      # : 'NuGet-Migrations'" and the container crash-looped (1,100+
+      # restarts on luna and celestia, 2026-10-14 to 10-17). No copy job ran
+      # and none pushed a failure, so Gatus saw only aging heartbeats.
+      # Reproduced locally: 10.0.401 runs as 65534, 10.0.402 does not, and
+      # 10.0.402 runs as 65534 once HOME points somewhere writable.
+      - HOME=/tmp
     env_file:
       - .env
     cpus: 1

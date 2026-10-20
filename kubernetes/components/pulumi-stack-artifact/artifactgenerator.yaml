@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.extensions.fluxcd.io/artifactgenerator_v1beta1.json
+# A Stack's own source: only the files its program reads, cut out of the
+# home-operations GitRepository by Flux source-watcher. Each Stack under
+# kubernetes/apps/pulumi/<stack>/ pulls this in from its kustomization.yaml and
+# points spec.fluxSource.sourceRef at the ExternalArtifact it produces.
+#
+# Why: the operator re-runs a Stack whenever its source artifact's REVISION
+# changes (isSynced() in pulumi-kubernetes-operator v2.9.3 compares it with
+# status.lastUpdate.lastSuccessfulCommit). On the GitRepository that revision is
+# the commit SHA, so every commit to main re-ran every Stack -- about 40 runs a
+# day each on 2026-10-19. An ExternalArtifact's revision is
+# `latest@sha256:<tarball digest>`, and the tarball is reproducible
+# (fluxcd/pkg artifact/storage zeroes mtimes, owners and modes), so a commit
+# that changes none of the copied files leaves it alone and the Stack stays put.
+#
+# THIS FILE HOLDS WHAT EVERY STACK READS. Each Stack's kustomization.yaml
+# appends what only it reads -- its own stacks/<dir>/ at minimum -- with a JSON
+# patch onto /spec/artifacts/0/copy/-. A path that more than one Stack reads
+# because of something in components/ belongs there, per Stack, not here: here
+# it would re-run Stacks that never read it.
+#
+# KEEP THESE LISTS IN STEP WITH WHAT THE PROGRAMS READ. The failure is lopsided:
+#   - a file a program needs that is NOT copied fails the run loudly (module
+#     not found, or components/store/clusters.ts throwing on an empty clusters/);
+#   - a file it reads whose CHANGES are not copied is silent: the run that
+#     should have picked up the change never happens.
+# So when in doubt, include. An extra path costs an extra run, nothing more.
+# docs/kubernetes/pulumi-stack-artifacts.md has the tracing method and the
+# per-Stack lists as of the last trace.
+#
+# The layout matches the repo, so every Stack keeps `dir: stacks/<dir>` and its
+# relative paths (../../components, ../../clusters, ../docker) still hold.
+apiVersion: source.extensions.fluxcd.io/v1beta1
+kind: ArtifactGenerator
+metadata:
+  name: ${APP}
+spec:
+  sources:
+    - alias: repo
+      kind: GitRepository
+      name: home-operations
+  artifacts:
+    - name: ${APP}
+      # Kept in the artifact's metadata only; it does not feed the revision.
+      # It is the commit the current artifact was cut from, for debugging.
+      originRevision: "@repo"
+      copy:
+        # npm. `pulumi install` in stacks/<dir> is an `npm install` against
+        # the ROOT workspace, so it needs the root manifest and lockfile and
+        # every workspace member's package.json -- the other stacks' too, or npm
+        # resolves a different tree from the lockfile the workspace image's
+        # cache was baked from (images/pulumi-workspace/inputs.sh).
+        - from: "@repo/package.json"
+          to: "@artifact/"
+        - from: "@repo/package-lock.json"
+          to: "@artifact/"
+        - from: "@repo/tsconfig.json"
+          to: "@artifact/"
+        # A glob that is not `dir/**` keeps the full match path:
+        # stacks/<name>/package.json, not a flattened stacks/package.json.
+        - from: "@repo/stacks/*/package.json"
+          to: "@artifact/"
+        # Shared code. Excludes are for files nothing imports at run time.
+        - from: "@repo/components/"
+          to: "@artifact/"
+          exclude: ["*.md", "*.test.ts"]
+        - from: "@repo/dynamic/"
+          to: "@artifact/"
+        # Every file: dependency of the root package.json, bin/ included.
+        - from: "@repo/sdks/"
+          to: "@artifact/"
+        - from: "@repo/types/"
+          to: "@artifact/"
+        # components/store/clusters.ts reads these at run time, from every Stack.
+        - from: "@repo/clusters/"
+          to: "@artifact/"

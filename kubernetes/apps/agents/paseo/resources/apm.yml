@@ -1,0 +1,214 @@
+# Paseo's user-scope agent skills, instructions and MCP servers.
+#
+# The `apm` sidecar (./apm-refresh.sh) copies this to ~/.apm/apm.yml and runs
+# `apm install -g --refresh` at each start and then daily, so anything added
+# here lands shortly after the next rollout and anything already on the home
+# volume is kept at its latest upstream ref. Distinct
+# from the repo-root apm.yml, which is project scope for home-operations.
+name: paseo
+version: 1.0.0
+description: User-scope agent packages for the paseo pod
+# NOT `codex`: apm 0.34.0's Codex integration crashes on microsoft/azure-skills
+# ("Object of type mappingproxy is not JSON serializable"), and one failed
+# package rolls back the whole install. `agent-skills` writes ~/.agents/skills,
+# which Codex reads natively, so it still gets every skill -- just not the
+# instructions, agents, hooks or MCP servers.
+targets:
+  - claude
+  - agent-skills
+dependencies:
+  apm:
+    - github/awesome-copilot/skills/acquire-codebase-knowledge
+    - github/awesome-copilot/skills/lsp-setup
+    - github/awesome-copilot/instructions/agents.instructions.md
+    - github/awesome-copilot/instructions/context-engineering.instructions.md
+    - github/awesome-copilot/instructions/instructions.instructions.md
+    - github/awesome-copilot/instructions/memory-bank.instructions.md
+    - github/awesome-copilot/instructions/powershell.instructions.md
+    - github/awesome-copilot/instructions/prompt.instructions.md
+    - microsoft/aspire-skills
+    - DuendeSoftware/duende-skills
+    - microsoft/azure-skills
+    - microsoft/postgres-skills
+    - microsoft/skills
+    - microsoft/upgrade-agent-plugins/plugins/upgrade-agent
+    - addyosmani/agent-skills
+    - mattpocock/skills
+    - upstash/context7
+    - Agents365-ai/drawio-skill/skills/drawio-skill
+    - lukasniessen/kubernetes-skill
+    - fluxcd/agent-skills
+    - tt-a1i/archify/archify
+    - blader/humanizer
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/auditing/audit-logging
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/auditing/aws-cloudtrail
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/auditing/azure-monitor-audit
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/auditing/gcp-audit-logs
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/continuity/business-continuity
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/continuity/disaster-recovery
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/continuity/incident-management
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/continuity/runbook-creation
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/frameworks/fedramp-compliance
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/frameworks/gdpr-compliance
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/frameworks/hipaa-compliance
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/frameworks/iso27001-compliance
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/frameworks/pci-dss-compliance
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/frameworks/soc2-compliance
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/governance/access-review
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/governance/asset-inventory
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/governance/change-management
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/governance/policy-as-code
+    - BagelHole/DevOps-Security-Agent-Skills/compliance/governance/vendor-management
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/agent-evals
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/agent-observability
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/ai-pipeline-orchestration
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/ai-sre-incident-response
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/llm-caching
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/llm-cost-optimization
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/llmops-platform-engineering
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/model-registry-governance
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ai/rag-observability-evals
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ci-cd/azure-devops
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ci-cd/circleci
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ci-cd/github-actions
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ci-cd/gitlab-ci
+    - BagelHole/DevOps-Security-Agent-Skills/devops/ci-cd/jenkins
+    - BagelHole/DevOps-Security-Agent-Skills/devops/containers/container-registries
+    - BagelHole/DevOps-Security-Agent-Skills/devops/containers/docker-compose
+    - BagelHole/DevOps-Security-Agent-Skills/devops/containers/docker-management
+    - BagelHole/DevOps-Security-Agent-Skills/devops/containers/podman
+    - BagelHole/DevOps-Security-Agent-Skills/devops/developer-experience/devcontainers-nix
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/alerting-oncall
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/datadog
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/ebpf-observability
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/elk-stack
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/loki-logging
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/new-relic
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/opentelemetry
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/prometheus-grafana
+    - BagelHole/DevOps-Security-Agent-Skills/devops/observability/sre-dashboards
+    - BagelHole/DevOps-Security-Agent-Skills/devops/orchestration/argocd-gitops
+    - BagelHole/DevOps-Security-Agent-Skills/devops/orchestration/helm-charts
+    - BagelHole/DevOps-Security-Agent-Skills/devops/orchestration/kubernetes-ops
+    - BagelHole/DevOps-Security-Agent-Skills/devops/orchestration/kustomize
+    - BagelHole/DevOps-Security-Agent-Skills/devops/orchestration/model-serving-kubernetes
+    - BagelHole/DevOps-Security-Agent-Skills/devops/orchestration/openshift
+    - BagelHole/DevOps-Security-Agent-Skills/devops/platforms/platform-engineering
+    - BagelHole/DevOps-Security-Agent-Skills/devops/release/blue-green-deploy
+    - BagelHole/DevOps-Security-Agent-Skills/devops/release/feature-flags
+    - BagelHole/DevOps-Security-Agent-Skills/devops/release/git-workflow
+    - BagelHole/DevOps-Security-Agent-Skills/devops/release/semantic-versioning
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-cost-optimization
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-ec2
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-ecs-fargate
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-iam
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-lambda
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-rds
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-s3
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/aws-vpc
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/cloudformation
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-aws/terraform-aws
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/arm-templates
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/azure-aks
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/azure-functions
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/azure-networking
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/azure-sql
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/azure-vms
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-azure/terraform-azure
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-gcp/gcp-cloud-functions
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-gcp/gcp-cloud-sql
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-gcp/gcp-compute
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-gcp/gcp-gke
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-gcp/gcp-networking
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloud-gcp/terraform-gcp
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloudflare/cloudflare-pages
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloudflare/cloudflare-r2
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloudflare/cloudflare-workers
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/cloudflare/cloudflare-zero-trust
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/database-backups
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/mongodb
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/mysql
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/planetscale
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/postgresql
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/redis
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/databases/vector-database-ops
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/iac/opentofu-migration
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/it/identity-access-management
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/it/mdm-device-management
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/it/saas-security-posture
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/it/startup-it-troubleshooting
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/gpu-kubernetes-operations
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/llm-fine-tuning
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/llm-inference-scaling
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/mac-mini-llm-lab
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/multi-tenant-llm-hosting
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/ollama-stack
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/openclaw-local-mac-mini
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/openclaw-security-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/rag-infrastructure
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/local-ai/vllm-server
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/ai-inference-service-mesh
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/cdn-setup
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/dns-management
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/llm-gateway
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/load-balancing
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/reverse-proxy
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/networking/service-mesh
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/platforms/convex-backend
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/platforms/firebase-app-platform
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/platforms/vercel-deployments
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/gpu-server-management
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/linux-administration
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/performance-tuning
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/ssh-configuration
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/systemd-services
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/user-management
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/servers/windows-server
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/storage/backup-recovery
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/storage/block-storage
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/storage/nfs-storage
+    - BagelHole/DevOps-Security-Agent-Skills/infrastructure/storage/object-storage
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/ai-agent-security
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/ai-coding-agent-guardrails
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/ai-red-teaming
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/ai-security-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/llm-app-security
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/mcp-server-security
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/model-supply-chain-security
+    - BagelHole/DevOps-Security-Agent-Skills/security/ai/prompt-injection-defense
+    - BagelHole/DevOps-Security-Agent-Skills/security/hardening/cis-benchmarks
+    - BagelHole/DevOps-Security-Agent-Skills/security/hardening/container-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/security/hardening/kubernetes-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/security/hardening/linux-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/security/hardening/openclaw-deployment-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/security/hardening/windows-hardening
+    - BagelHole/DevOps-Security-Agent-Skills/security/network/firewall-config
+    - BagelHole/DevOps-Security-Agent-Skills/security/network/ssl-tls-management
+    - BagelHole/DevOps-Security-Agent-Skills/security/network/vpn-setup
+    - BagelHole/DevOps-Security-Agent-Skills/security/network/waf-setup
+    - BagelHole/DevOps-Security-Agent-Skills/security/network/zero-trust
+    - BagelHole/DevOps-Security-Agent-Skills/security/operations/incident-response
+    - BagelHole/DevOps-Security-Agent-Skills/security/operations/penetration-testing
+    - BagelHole/DevOps-Security-Agent-Skills/security/operations/security-automation
+    - BagelHole/DevOps-Security-Agent-Skills/security/operations/threat-modeling
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/container-scanning
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/dast-scanning
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/dependency-scanning
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/sast-scanning
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/sbom-supply-chain
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/supply-chain-attack-response
+    - BagelHole/DevOps-Security-Agent-Skills/security/scanning/vulnerability-scanning
+    - BagelHole/DevOps-Security-Agent-Skills/security/secrets/aws-secrets-manager
+    - BagelHole/DevOps-Security-Agent-Skills/security/secrets/azure-keyvault
+    - BagelHole/DevOps-Security-Agent-Skills/security/secrets/gcp-secret-manager
+    - BagelHole/DevOps-Security-Agent-Skills/security/secrets/hashicorp-vault
+    - BagelHole/DevOps-Security-Agent-Skills/security/secrets/sops-encryption
+  mcp:
+    - name: mise
+      registry: false
+      transport: stdio
+      command: mise
+      env:
+        MISE_EXPERIMENTAL: "1"
+      args:
+        - mcp

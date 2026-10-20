@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 #
 # app-template, not the official nextcloud/helm chart: every other app in this
 # namespace is app-template, which is what lets components/volsync,
@@ -57,7 +57,7 @@ spec:
           *app :
             image:
               repository: docker.io/library/nextcloud
-              tag: 35.0.1-apache@sha256:f4e0ee28ac9e54cad6e04e148489d79a609acba86dfbff69c8f666d50f96e414
+              tag: 35.0.2-apache@sha256:a588aa5353703b44106a6129adaaf7bf22521b7a4754f9f529b3228d6aa390c5
               pullPolicy: IfNotPresent
             env:
               # Read by ./resources/zz-app.config.php (Flux substitution is off
@@ -144,7 +144,7 @@ spec:
           cron:
             image:
               repository: docker.io/library/nextcloud
-              tag: 35.0.1-apache@sha256:f4e0ee28ac9e54cad6e04e148489d79a609acba86dfbff69c8f666d50f96e414
+              tag: 35.0.2-apache@sha256:a588aa5353703b44106a6129adaaf7bf22521b7a4754f9f529b3228d6aa390c5
               pullPolicy: IfNotPresent
             command: ["/bin/sh", "-c"]
             args:
@@ -196,7 +196,7 @@ spec:
           exporter:
             image:
               repository: ghcr.io/xperimental/nextcloud-exporter
-              tag: 0.9.1@sha256:3e90a38976516444d05f5f6758e5d572ca559b69ad3005ec4029786e9daf9129
+              tag: 0.9.2@sha256:512ddd1f1e1ea0ea7b4f0821c9740bcefa5fc15deb57fb9cd05dfb68e7e8390d
               pullPolicy: IfNotPresent
             env:
               NEXTCLOUD_SERVER: http://localhost
@@ -274,7 +274,7 @@ spec:
           app:
             image:
               repository: docker.io/collabora/code
-              tag: 26.04.4.2.1@sha256:4e983196eb9878f339cc506c38c21f1cc3473bca3d6de883c5de08f9c0cc3a6c
+              tag: 26.04.5.1.1@sha256:bb8f3c9c5c9016045f25fccb5f0649be94469ebc7c7cc379f3576e470cccf33d
               pullPolicy: IfNotPresent
             envFrom:
               # `username` / `password` for the admin console.
@@ -285,6 +285,7 @@ spec:
               # WOPISrc is Nextcloud.
               aliasgroup1: "https://cloud.${ROOT_DOMAIN}"
               DONT_GEN_SSL_CERT: "YES"
+              TZ: ${TIMEZONE}
               extra_params: >-
                 --o:ssl.enable=false
                 --o:ssl.ssl_verification=false

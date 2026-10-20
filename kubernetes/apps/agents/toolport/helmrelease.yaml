@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -51,9 +51,11 @@ spec:
           *app :
             image:
               repository: ghcr.io/btsouth/toolport-gateway
-              tag: v1.23.5@sha256:f5cc8219d9b1e4b508da492b97bbbc9cbf8195245d94e61acdc5e54c3b0b9dd0
+              tag: v2.2.0@sha256:faab2fc709c8fa1a98333bf77fd4f69cb7a6a30d511aeb6b45505c20817fbdb3
             # No command/args: the image's ENTRYPOINT is already
-            # `toolport-gateway --http 8765`. Use the flag, not TOOLPORT_HTTP --
+            # `docker-entrypoint.sh toolport-gateway --http 8765` (the script
+            # only warns when /data is not writable, then execs). Use the
+            # flag, not TOOLPORT_HTTP --
             # the env form is ignored whenever stdin is a pipe.
             env:
               TOOLPORT_HTTP_HOST: 0.0.0.0
@@ -83,8 +85,9 @@ spec:
               # LIVENESS ASKS THE WATCHDOG SIDECAR, not toolport. toolport never
               # re-initializes a backend session the backend has forgotten
               # (see the watchdog container below), and nothing it serves
-              # anonymously can show that -- every route sits behind the bearer
-              # check, and toolport_status reads only its own cache. The
+              # anonymously can show that -- its own /healthz reports only
+              # whether the registry loaded, and toolport_status reads only its
+              # own cache. The
               # watchdog calls a canary on every backend through toolport and
               # answers 503 here only for what a restart fixes: a stale
               # session, a backend that failed at startup and is up now, or
@@ -105,13 +108,18 @@ spec:
                   periodSeconds: 60
                   timeoutSeconds: 5
                   failureThreshold: 3
-              # tcpSocket, not HTTP: every route, `/` included, sits behind the
-              # bearer check and answers 401 to an anonymous probe.
+              # /healthz (2.x) is the one route outside the bearer check. It
+              # answers 200 only once the registry loaded, and 503 while
+              # toolport serves its cached catalog -- e.g. a registry it could
+              # not load (see ./kustomization.yaml on the v3 schema). Not
+              # Ready means a bad registry fails the upgrade instead of
+              # rolling out a gateway with no tools.
               readiness:
                 enabled: true
                 custom: true
                 spec:
-                  tcpSocket:
+                  httpGet:
+                    path: /healthz
                     port: 8765
                   initialDelaySeconds: 5
                   periodSeconds: 30
@@ -158,7 +166,7 @@ spec:
             image:
               # The same pin as agent-tools-servers/tdarr.yaml's MCPServer.
               repository: oven/bun
-              tag: 1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f
+              tag: 1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373
             command: ["bun", "/watchdog/watchdog.mjs"]
             env:
               HOME: /tmp

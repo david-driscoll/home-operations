@@ -110,6 +110,11 @@ export class BaoStore extends VaultStore {
    * `globals.ts` alone), and `OPClient` memoises for the same reason.
    */
   private readonly cache = new Map<string, Output<BaoItem>>();
+  /**
+   * `tryGetSecretByPath`'s memo. Separate from `cache` because an entry there
+   * is an Output that throws on a missing path.
+   */
+  private readonly optionalCache = new Map<string, Output<BaoItem | undefined>>();
   /** One LIST + N reads per process; every cluster read goes through it. */
   private _clusterDetails?: Output<ClusterDetails[]>;
 
@@ -127,6 +132,14 @@ export class BaoStore extends VaultStore {
    */
   public getSecretByPath<T>(path: string): Output<T & Meta> {
     return this.read(path) as Output<T & Meta>;
+  }
+
+  public override tryGetSecretByPath<T>(path: string): Output<(T & Meta) | undefined> {
+    const cached = this.optionalCache.get(path);
+    if (cached) return cached as Output<(T & Meta) | undefined>;
+    const item = output(this.bao.read(SECRETS_MOUNT, path)).apply((result): Output<BaoItem | undefined> => (result ? shapeItem(path, result) : output(undefined)));
+    this.optionalCache.set(path, item);
+    return item as Output<(T & Meta) | undefined>;
   }
 
   /**

@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app paperless
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    # Celery's broker. Paperless does not boot without it: the image's
+    # init-wait-for-redis gives up and the container exits.
+    - name: valkey
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/paperless
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # ⚠️ BRAND-NEW DATABASE. Paperless has never had a role, a database or an
+    # OpenBao static role, so the new-app ordering trap in
+    # components/postgres/ks.yaml applies in full: `stacks/system` discovers
+    # this component and creates `database/static-roles/paperless`, which
+    # issues `ALTER ROLE ... PASSWORD` immediately and fails with
+    #   ERROR: role "paperless" does not exist (SQLSTATE 42704)
+    # if CNPG has not applied the DatabaseRole yet. Expect the `system` stack
+    # to go Stalled/UpdateFailed ONCE; recovery is the four commands in the
+    # ORDER OF OPERATIONS block in components/postgres/ks.yaml.
+    #
+    # No extension patch: Paperless is plain Django and creates everything it
+    # needs with its own login role.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # `tailscale-network`, not the `tailscale-local` default: that chain
+      # starts with error-pages, which rewrites every 401-599 body into HTML.
+      # Paperless's web UI shows field errors from the JSON body of a 400
+      # ("a document with this ASN already exists") and the mobile apps parse
+      # the one /api/token/ returns, so both break behind it. This is
+      # tailscale-local minus error-pages -- the tailnet twin of `local-api` on
+      # the internal route in ./helmrelease.yaml.
+      TAILSCALE_MIDDLEWARE: tailscale-network
+      # ONE volume for data/ (search index, classifier model, migration lock),
+      # media/ (originals, OCR'd archive copies, thumbnails) and consume/, so a
+      # restic snapshot is a single point in time. media/ is what grows:
+      # roughly twice each original, since every document also gets a PDF/A
+      # archive copy. Capacity can only ever be RAISED -- see
+      # components/volsync/AGENTS.md before touching it.
+      VOLSYNC_CAPACITY: 20Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce

@@ -85,3 +85,19 @@ machine:
           - https://registry.equestria.${ROOT_DOMAIN}/v2/cgr.dev
           - https://registry.${ROOT_DOMAIN}/v2/cgr.dev
           - https://cgr.dev/v2
+      # zot synced this one already; the nodes simply never asked it.
+      mcr.microsoft.com:
+        overridePath: true
+        endpoints:
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/mcr.microsoft.com
+          - https://registry.${ROOT_DOMAIN}/v2/mcr.microsoft.com
+          - https://mcr.microsoft.com/v2
+      # The Forgejo project's own registry: the forge, its runner and the dind
+      # image the runner pods use (kubernetes/apps/coder). data.forgejo.org
+      # serves /v2/ anonymously, so zot syncs it with no credentials.
+      data.forgejo.org:
+        overridePath: true
+        endpoints:
+          - https://registry.equestria.${ROOT_DOMAIN}/v2/data.forgejo.org
+          - https://registry.${ROOT_DOMAIN}/v2/data.forgejo.org
+          - https://data.forgejo.org/v2

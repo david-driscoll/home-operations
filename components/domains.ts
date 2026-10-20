@@ -6,8 +6,8 @@
  *
  * - in the cluster, every Stack CR carries `envRefs.ROOT_DOMAIN`, a literal that
  *   Flux substitutes from shared-secrets (kubernetes/apps/pulumi/<stack>/stack.yaml);
- * - locally, `.config/mise.toml` declares it as a `ref+sops://` that
- *   `mise run vals-run` resolves per command.
+ * - locally, mise decrypts `.config/domains.sops.yaml` into `[env]` on every
+ *   load (.config/mise.toml), so any command run under mise has it.
  *
  * A plain function rather than a Pulumi `Output` so that code which must run
  * without a Pulumi runtime -- components/store/clusters.ts parses the cluster
@@ -23,7 +23,7 @@ export function rootDomain(): string {
   if (!value) {
     throw new Error(
       "ROOT_DOMAIN is not set. In a Stack it comes from envRefs (Flux substitutes it from shared-secrets); " +
-        "locally run through `mise run vals-run`, which resolves the ref+sops in .config/mise.toml. " +
+        "locally run under mise, which decrypts .config/domains.sops.yaml (needs the age key, SOPS_AGE_KEY_FILE). " +
         "Tests: ROOT_DOMAIN=example.com.",
     );
   }

@@ -25,6 +25,7 @@
   ],
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@types/node": "^26.6.5",
     "@types/ssh2": "^1.15.6",
     "json-schema-to-typescript": "^16.0.0",
     "tsx": "^4.23.15",
@@ -33,16 +34,17 @@
   },
   "dependencies": {
     "@pulumi/authentik": "file:sdks/authentik",
+    "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/forgejo": "file:sdks/forgejo",
     "@pulumi/github": "^6.15.0",
-    "@pulumi/http": "^0.3.3",
+    "@pulumi/http": "^0.3.4",
     "@pulumi/kubernetes": "^4.34.2",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/tailscale": "file:sdks/tailscale",
     "@pulumi/technitium": "file:sdks/technitium",
     "@pulumi/terrifi": "file:sdks/terrifi",
     "@pulumi/unifi": "file:sdks/unifi",
-    "@pulumi/vault": "^7.13.0",
+    "@pulumi/vault": "^7.14.0",
     "@pulumiverse/purrl": "^0.6.2",
     "confbox": "^0.3.1",
     "diff": "^9.0.0",
@@ -54,11 +56,16 @@
   },
   "allowScripts": {
     "file:sdks/authentik": true,
+    "file:sdks/coderd": true,
     "file:sdks/forgejo": true,
     "file:sdks/pbs": true,
     "file:sdks/tailscale": true,
     "file:sdks/technitium": true,
     "file:sdks/terrifi": true,
     "file:sdks/unifi": true
+  },
+  "overrides": {
+    "typescript": "$typescript",
+    "@types/node": "$@types/node"
   }
 }

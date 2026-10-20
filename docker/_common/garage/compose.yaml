@@ -50,6 +50,8 @@ services:
       # never enters the picture.
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+      # See `logging:` below for why resync is quieter than the rest.
+      RUST_LOG: garage=info,garage_block::resync=warn
     # A dedicated uid. The image is scratch + a static binary and runs as
     # whatever uid it is given; init.sh pre-creates the two data directories
     # with this ownership, because with cap_drop ALL the container cannot chown
@@ -68,6 +70,21 @@ services:
       # stacks/{home,gulf-of-mexico,ocracoke}); /opt/stacks-data is the SSD.
       - /opt/stacks-data/garage/meta:/var/lib/garage/meta
       - /data/garage:/var/lib/garage/data
+      # metadata_snapshots_dir (garage.toml): full LMDB copies, on ZFS rather
+      # than the SSD. A sibling of the data dir, never inside it.
+      - /data/garage-meta-snapshots:/var/lib/garage/snapshots
+    # Docker's json-file default has no size limit, and the default log level
+    # writes an INFO line for every block resync attempt. With skystar's zone
+    # never seen (offline since 2026-08-31) the resync queue cannot drain:
+    # ~1.4M blocks retried forever, 24 GB of log on both celestia and luna by
+    # 2026-10-14, and celestia's root disk at 100%. Cap the file, and drop
+    # resync to WARN so the per-block "offloading and deleting" line goes.
+    # The matching ERROR line stays on purpose -- it is the real signal.
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     ports:
       # Published on the host so the other nodes (tailnet) and equestria's
       # egress proxy can reach them; the tailnet side is gated by the
@@ -232,7 +249,7 @@ services:
   # sync.sh re-reads it every cycle, so the first sync succeeds on the cycle
   # after the ceremony finishes and a key rotation converges with no restart.
   garage-sync:
-    image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
     container_name: garage-sync
     depends_on:
       garage:
@@ -302,7 +319,7 @@ services:
   # loop idles healthy and pushes no heartbeat; the Gatus endpoint
   # (stacks/backups) is registered for celestia only.
   garage-mirror:
-    image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
     container_name: garage-mirror
     depends_on:
       garage:

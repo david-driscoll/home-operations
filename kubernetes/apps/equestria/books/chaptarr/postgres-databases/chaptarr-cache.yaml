@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/database_v1.json
+#
+# Chaptarr's cache database -- the third connection Chaptarr adds to the
+# Servarr main/log pair (`PostgresCacheDb`, README default `chaptarr-cache`).
+# It holds the `HttpResponse` table CachedHttpResponseService uses to cache
+# metadata/provider responses (migration 014_add_http_response_cache_table).
+#
+# A hard startup dependency, exactly like ./chaptarr-log.yaml: AddDatabase()
+# opens it unconditionally and Chaptarr will not create it.
+#
+# Same role, same credential as the main and log databases.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: ${APP}-cache
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    # NOT backed up: a cache of upstream HTTP responses with its own expiry
+    # column. Losing it costs a few refetches from the metadata service.
+    driscoll.dev/backup: "false"
+    driscoll.dev/backup-reason: >-
+      HTTP response cache with its own expiry, rebuilt from the metadata service
+    driscoll.dev/backup-credentials: ${APP}-postgres
+spec:
+  cluster:
+    name: postgres
+  name: ${APP}-cache
+  owner: ${APP}
+  ensure: present
+  allowConnections: true
+  # ⚠️ `ensure: absent` DROPS the database. Delete the file instead.
+  databaseReclaimPolicy: retain
+  schemas:
+    - ensure: present
+      name: public
+      owner: ${APP}

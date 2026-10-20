@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__toolport-infrastructure__toolport_call_tool",
+      "mcp__toolport-infrastructure__toolport_run_script"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

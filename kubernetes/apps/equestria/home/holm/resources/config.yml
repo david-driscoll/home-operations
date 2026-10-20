@@ -1,0 +1,674 @@
+# Holm configuration, mounted at /config/config.yml (CONFIG_PATH).
+#
+# Started from upstream's annotated example,
+# https://github.com/man15h/holm/blob/main/config.example.yml; every key is in
+# its docs/configuration.md#reference.
+#
+# SOURCE OF TRUTH FOR THE APP LIST: the family setup guide, Forgejo repo
+# `docs/setup` (https://git.<root domain>/docs/setup, branch main), published
+# at https://setup.<root domain>. Review this file whenever the guide changes:
+#   - src/data/services.ts  every app: slug, title, address, blurb. Each app
+#                           below uses the guide page's slug as its `id`, and
+#                           onboarding.services carries the guide's blurbs.
+#   - src/data/apps.ts      every App Store / Play Store link (app_store below).
+#   - src/content/docs/<slug>.mdx  the page each setup_guide card condenses.
+# docs/kubernetes/holm.md has the review checklist.
+#
+# EVERY DOLLAR-BRACE VARIABLE HERE IS HOLM'S, not Flux's: the ConfigMap is
+# generated with `kustomize.toolkit.fluxcd.io/substitute: disabled`, and Holm
+# expands the variables at startup from the container environment. An unset or
+# empty one stops Holm from starting, so a new variable needs a matching `env:`
+# entry in ../helmrelease.yaml first. Available: ROOT_DOMAIN, OIDC_ISSUER,
+# OIDC_CLIENT_ID, OIDC_CLIENT_SECRET. (Spelled out in words in these comments:
+# eso-values-lint treats the dollar-brace form in a comment as live.)
+#
+# Holm polls this file every 2s and reloads everything except auth.oidc and
+# database, which need a restart (Reloader does that on any ConfigMap change).
+
+# ── Branding ─────────────────────────────────────────────────
+branding:
+  name: "Driscoll Family"
+  short_name: "Family"
+  description: "The family's home page for the home apps"
+  font:
+    family: "JetBrains Mono"
+    url: null
+  theme_color: "#09090b"
+  accent_color: "#f5b942"
+  show_footer: true
+
+# ── Authentication ───────────────────────────────────────────
+# authentik, provisioned by stacks/system from ../definition.yaml. The issuer
+# and client come from the holm-oidc Secret (../externalsecret.yaml).
+auth:
+  enabled: true
+  oidc:
+    issuer: "${OIDC_ISSUER}"
+    client_id: "${OIDC_CLIENT_ID}"
+    client_secret: "${OIDC_CLIENT_SECRET}"
+    # authentik puts `groups` in its built-in `profile` mapping.
+    scopes: "openid profile email"
+    # Must match the redirect URI in ../definition.yaml (+ /auth/callback).
+    # Sign-in only works on this host, which is why holm.<root domain> in
+    # ../helmrelease.yaml redirects here instead of serving Holm.
+    redirect_base: "https://apps.${ROOT_DOMAIN}"
+  # authentik's own user settings page.
+  password_change_url: "https://canterlot.${ROOT_DOMAIN}/if/user/#/settings"
+  registration:
+    enabled: false
+    url: null
+
+# ── Database ─────────────────────────────────────────────────
+# SQLite on the volsync-backed PVC; DATABASE_PATH in ../helmrelease.yaml.
+database:
+  enabled: true
+
+# ── Customization ───────────────────────────────────────────
+customization:
+  enabled: true
+
+# ── Apps ────────────────────────────────────────────────────
+# The setup guide's services, in its order, plus a tile for the guide itself.
+# `id` is the guide page's slug and must never change: each person's layout is
+# keyed on it.
+#
+# on_click: getting_started is set on the apps the guide sets up with a phone
+# app, so a first tap shows the store links and steps. Website-only apps open
+# straight away; their card is still on the tile's long-press menu.
+#
+# No per-app `groups:` -- Holm is limited to `family` in ../definition.yaml,
+# and every app here admits `family`.
+apps:
+  # ── Do these first ──
+  - id: setup
+    name: "Setup guide"
+    url: "https://setup.${ROOT_DOMAIN}"
+    icon: "https://setup.${ROOT_DOMAIN}/setup/favicon.svg"
+    self_hosted: true
+    default_visible: true
+    tags: ["help", "setup"]
+
+  - id: tailscale
+    name: "Tailscale"
+    # Tailscale has no web address of its own; the tile opens its guide page.
+    url: "https://setup.${ROOT_DOMAIN}/setup/tailscale/"
+    icon: "di:tailscale"
+    self_hosted: false
+    default_visible: true
+    on_click: getting_started
+    tags: ["vpn", "setup"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/tailscale/id1470499037"
+      android: "https://play.google.com/store/apps/details?id=com.tailscale.ipn"
+    setup_guide:
+      subtitle: "Tailscale - your private pass to the home apps"
+      steps:
+        - label: "Accept the invite"
+          desc: "Open David's invite and sign in with the Google or Apple account he invited. Use that same account everywhere."
+        - label: "Install and log in"
+          desc: "Get Tailscale from the App Store or Play Store, allow the VPN and notifications, then tap Log in and pick the same account."
+        - label: "Keep it on always"
+          desc: "iPhone: tap your profile picture, VPN On Demand, and set Wi-Fi and Cellular to Always. Android: in your phone's Settings, VPN, tap the gear next to Tailscale and turn on Always-on VPN."
+        - label: "Test it"
+          desc: "Turn Wi-Fi off and open photos.${ROOT_DOMAIN} in your browser. If a page loads, it's working."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/tailscale/"
+
+  - id: account
+    name: "Family account"
+    url: "https://canterlot.${ROOT_DOMAIN}"
+    icon: "di:authentik"
+    self_hosted: true
+    default_visible: true
+    tags: ["authentik", "sign-in"]
+    setup_guide:
+      subtitle: "authentik - your one sign-in for the home apps"
+      steps:
+        - label: "Turn Tailscale on"
+          desc: "Signing in only works while Tailscale is on, even at home. There is no password."
+        - label: "Open the sign-in page"
+          desc: "In your phone's browser, go to canterlot.${ROOT_DOMAIN} and tap Tailscale."
+        - label: "Fill in the form"
+          desc: "The first time only, check your name, pick a short username and make sure the email is your real one. Tap Continue, then Yes to stay signed in."
+        - label: "Tell David"
+          desc: "Message David that you've signed up. Until he adds you to the family group, apps say Permission denied."
+        - label: "Signing in to apps"
+          desc: "Whenever an app sends you to the family sign-in page, tap Tailscale. It's one tap, never a password."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/account/"
+
+  # ── Everyday ──
+  - id: photos
+    name: "Photos"
+    url: "https://photos.${ROOT_DOMAIN}"
+    icon: "di:immich"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["immich", "backup"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/immich/id1613945652"
+      android: "https://play.google.com/store/apps/details?id=app.alextran.immich"
+    setup_guide:
+      subtitle: "Immich - back up every photo and video"
+      steps:
+        - label: "Install the app"
+          desc: "Turn Tailscale on, then get Immich from the App Store or Play Store."
+        - label: "Enter the server"
+          desc: "In Server Endpoint URL, type https://photos.${ROOT_DOMAIN} and tap Next. Don't add anything to the end."
+        - label: "Sign in"
+          desc: "Tap Login with Authentik and sign in with your family account. There is no separate Immich password."
+        - label: "Allow all photos"
+          desc: "When asked about photo access, choose Allow Full Access (iPhone) or Allow all (Android)."
+        - label: "Turn on backup"
+          desc: "Tap the cloud icon, select all albums, then turn on Enable Backup. Stay on Wi-Fi and plugged in for the first backup."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/photos/"
+
+  - id: cloud
+    name: "Files, Calendar & Contacts"
+    url: "https://cloud.${ROOT_DOMAIN}"
+    icon: "di:nextcloud"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["nextcloud", "files", "calendar"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/nextcloud/id1125420102"
+      android: "https://play.google.com/store/apps/details?id=com.nextcloud.client"
+    setup_guide:
+      subtitle: "Nextcloud - your files, calendar and contacts"
+      steps:
+        - label: "Install the app"
+          desc: "Get Nextcloud from the App Store or Play Store, open it and tap Log in."
+        - label: "Enter the server"
+          desc: "In Server address, type cloud.${ROOT_DOMAIN} and tap the arrow."
+        - label: "Sign in"
+          desc: "Tap Log in (not the app password option), sign in with your family account, then tap Grant access. There is no password to save."
+        - label: "Add calendar and contacts"
+          desc: "iPhone: make an app password and install the calendar profile from the full guide. Android: use the DAVx5 app and sign in with server cloud.${ROOT_DOMAIN}."
+        - label: "Leave photo upload off"
+          desc: "Nextcloud's photo upload starts off, so keep it that way. Photos (Immich) already backs up your pictures."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/cloud/"
+
+  - id: recipes
+    name: "Recipes"
+    url: "https://mealie.${ROOT_DOMAIN}"
+    icon: "di:mealie"
+    self_hosted: true
+    default_visible: true
+    tags: ["mealie", "meal plan", "shopping"]
+    setup_guide:
+      subtitle: "Mealie - recipes, meal plans and a shared shopping list"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to mealie.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android). It sleeps from about 1 AM to 7 AM Eastern."
+        - label: "Sign in"
+          desc: "Tap Login with authentik and sign in with your family account. Ignore the email and password boxes."
+        - label: "Add to Home Screen"
+          desc: "There's no app to download. iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install."
+        - label: "Save a recipe"
+          desc: "Copy a recipe page's link, then in Mealie tap Create, Import and paste it. Mealie fills in the rest."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/recipes/"
+
+  - id: tasks
+    name: "Tasks"
+    url: "https://tududi.${ROOT_DOMAIN}"
+    # No SVG of tududi in Dashboard Icons, so the PNG by URL.
+    icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/tududi.png"
+    self_hosted: true
+    default_visible: true
+    tags: ["tududi", "to-do"]
+    setup_guide:
+      subtitle: "Tududi - your own to-do list"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to tududi.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android)."
+        - label: "Sign in"
+          desc: "Tap Sign in with Authentik and sign in with your family account. The first time, this creates your Tududi account."
+        - label: "Add to Home Screen"
+          desc: "There's no app to download. iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install."
+        - label: "Open from the icon"
+          desc: "Use the new tududi icon from now on. On iPhone, reminders only work when it's opened from the Home Screen."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/tasks/"
+
+  - id: wiki
+    name: "Wiki"
+    url: "https://outline.${ROOT_DOMAIN}"
+    icon: "di:outline"
+    self_hosted: true
+    default_visible: true
+    tags: ["outline", "notes"]
+    setup_guide:
+      subtitle: "Outline - the family's shared notebook"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to outline.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android). It sleeps from about 1 AM to 7 AM Eastern."
+        - label: "Sign in"
+          desc: "The family sign-in page opens by itself, so sign in with your family account. The first time, this creates your Outline account."
+        - label: "Add to Home Screen"
+          desc: "iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install."
+        - label: "Skip the store apps"
+          desc: "Don't install anything called Outline from the App Store or Play Store. Those are unrelated apps, not ours."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/wiki/"
+
+  - id: search
+    name: "Search"
+    url: "https://search.${ROOT_DOMAIN}"
+    icon: "di:degoog"
+    self_hosted: true
+    default_visible: true
+    tags: ["degoog", "web search"]
+    setup_guide:
+      subtitle: "Degoog - private web search with no tracking"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to search.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android). There's no app and nothing to sign in to."
+        - label: "Add to Home Screen"
+          desc: "iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install. Tap the icon whenever you want to search."
+        - label: "Optional: address bar search"
+          desc: "In Chrome, search once on Degoog, then pick it in Settings, Search engine, under Recently visited. Safari can't do this, so on iPhone see the full guide for Firefox."
+        - label: "Ignore the gear icon"
+          desc: "It asks for a password only David uses. There's nothing for you to set up there."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/search/"
+
+  # ── Watch, listen and read ──
+  - id: movies-tv
+    name: "Movies & TV"
+    url: "https://jellyfin.${ROOT_DOMAIN}"
+    icon: "di:jellyfin"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["jellyfin", "moonfin"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/moonfin/id6761283970"
+      android: "https://play.google.com/store/apps/details?id=org.moonfin.androidtv"
+    setup_guide:
+      subtitle: "Jellyfin - the family movie and TV library"
+      steps:
+        - label: "Install Moonfin"
+          desc: "Get Moonfin from the App Store or Play Store. It's the same app for phones, tablets and TVs."
+        - label: "Add the server"
+          desc: "Tap Add Server, type https://jellyfin.${ROOT_DOMAIN} in Server Address and tap Connect."
+        - label: "Pick your name"
+          desc: "On Who's watching?, tap your own name. If it's missing, message David."
+        - label: "Sign in with password"
+          desc: "Tap Password (you don't need the Quick Connect code on a phone) and type the Jellyfin password David sent you. It is not your family account."
+        - label: "On a TV"
+          desc: "Pick your name on the TV to get a 6-digit code. Approve it at jellyfin.${ROOT_DOMAIN} under your user icon, Quick Connect."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/movies-tv/"
+
+  - id: request-movies
+    name: "Movie & TV requests"
+    url: "https://seerr.${ROOT_DOMAIN}"
+    icon: "di:seerr"
+    self_hosted: true
+    default_visible: true
+    tags: ["seerr", "request"]
+    setup_guide:
+      subtitle: "Seerr - ask for movies and shows we don't have"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to seerr.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android). There's no app to download."
+        - label: "Add to Home Screen"
+          desc: "Do this before signing in. iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install."
+        - label: "Sign in"
+          desc: "Open it from the new icon. Under Login with Jellyfin, use your Movies & TV username and password, not your family account."
+        - label: "Request a title"
+          desc: "Search for it, tap the poster, then tap Request. Check Requests to see when it's ready."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/request-movies/"
+
+  - id: music
+    name: "Music"
+    url: "https://navidrome.${ROOT_DOMAIN}"
+    icon: "di:navidrome"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["navidrome", "substreamer"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/substreamer/id1012991665"
+      android: "https://play.google.com/store/apps/details?id=com.ghenry22.substream2"
+    setup_guide:
+      subtitle: "Navidrome - the home music library"
+      steps:
+        - label: "Get your music password"
+          desc: "Music apps can't use the family sign-in. At setup.${ROOT_DOMAIN}/setup/music/, sign in and tap Make my music password, and it's kept there with your username."
+        - label: "Install Substreamer"
+          desc: "Get Substreamer from the App Store or Play Store. It's free."
+        - label: "Enter the server"
+          desc: "In Server, type https://navidrome.${ROOT_DOMAIN}. Don't add anything to the end."
+        - label: "Sign in"
+          desc: "Paste your username (your family-account username, not your email) and your music password. Leave Advanced options alone and tap Log in."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/music/"
+
+  - id: request-music
+    name: "Music requests"
+    url: "https://aurral.${ROOT_DOMAIN}"
+    icon: "di:aurral"
+    self_hosted: true
+    default_visible: true
+    tags: ["aurral", "request"]
+    setup_guide:
+      subtitle: "Aurral - ask for music we don't have"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to aurral.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android). It sleeps from about 1 AM to 7 AM Eastern."
+        - label: "Sign in"
+          desc: "Tap Sign in with SSO and sign in with your family account. Ignore the username and password boxes."
+        - label: "Add to Home Screen"
+          desc: "There's no app to download. iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install."
+        - label: "Request an album"
+          desc: "Search for an artist or album and tap + next to the album. Once it's downloaded, listen to it in Music."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/request-music/"
+
+  - id: podcasts
+    name: "Podcasts"
+    url: "https://pinepods.${ROOT_DOMAIN}"
+    # No SVG of PinePods in Dashboard Icons, so the PNG by URL.
+    icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/pinepods.png"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["pinepods"]
+    # Android only: the guide has iPhone users add the website to the Home
+    # Screen, as PinePods has no App Store listing right now.
+    app_store:
+      android: "https://play.google.com/store/apps/details?id=com.gooseberrydevelopment.pinepods"
+    setup_guide:
+      subtitle: "PinePods - follow podcasts on every device"
+      steps:
+        - label: "Get the app"
+          desc: "Android: get PinePods from the Play Store. iPhone: there's no app right now, so open pinepods.${ROOT_DOMAIN} in Safari and add it to your Home Screen."
+        - label: "Enter the server"
+          desc: "On Android, type https://pinepods.${ROOT_DOMAIN} in Server URL, with no slash at the end."
+        - label: "Sign in"
+          desc: "Tap Sign in with authentik and sign in with your family account. Leave the username and password boxes empty."
+        - label: "Subscribe to a show"
+          desc: "Search for a show you like and subscribe. New episodes show up by themselves."
+        - label: "Mind the night hours"
+          desc: "PinePods sleeps from about 1 AM to 7 AM Eastern. On Android, download episodes ahead of time."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/podcasts/"
+
+  - id: news
+    name: "News"
+    url: "https://freshrss.${ROOT_DOMAIN}"
+    icon: "di:freshrss"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["freshrss", "rss"]
+    # Different reader apps per platform: NetNewsWire is iOS-only and Capy
+    # Reader Android-only.
+    app_store:
+      ios: "https://apps.apple.com/us/app/netnewswire-rss-reader/id1480640210"
+      android: "https://play.google.com/store/apps/details?id=com.capyreader.app"
+    setup_guide:
+      subtitle: "FreshRSS - your news sites and blogs in one place"
+      steps:
+        - label: "Sign in on the website"
+          desc: "With Tailscale on, go to freshrss.${ROOT_DOMAIN} and sign in with your family account. This creates your FreshRSS account."
+        - label: "Make an API password"
+          desc: "Tap the gear icon and note your username after Account:. In Profile, under External access via API, set an API password and tap the Submit button right under it."
+        - label: "Install a reader app"
+          desc: "iPhone: NetNewsWire from the App Store. Android: Capy Reader from the Play Store (Android 11 or newer)."
+        - label: "Add your FreshRSS account"
+          desc: "In NetNewsWire use API URL https://freshrss.${ROOT_DOMAIN}/api/greader.php, and in Capy Reader use Server freshrss.${ROOT_DOMAIN}. Use your username (not your email) and the API password."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/news/"
+
+  # ── Fun and around the house ──
+  - id: games
+    name: "Games"
+    url: "https://romm.${ROOT_DOMAIN}"
+    icon: "di:romm"
+    self_hosted: true
+    default_visible: true
+    tags: ["romm", "retro"]
+    # No app_store: the browser is the main way to play, and the optional
+    # apps are an APK (Argosy) and a TestFlight beta, neither in a store.
+    setup_guide:
+      subtitle: "RomM - retro games in your browser"
+      steps:
+        - label: "Open the website"
+          desc: "With Tailscale on, go to romm.${ROOT_DOMAIN} in Safari (iPhone) or Chrome (Android), with no app needed. It sleeps from about 1 AM to 7 AM Eastern."
+        - label: "Sign in"
+          desc: "Tap Login with Equestria and sign in with your family account. RomM sets up your account the first time."
+        - label: "Play a game"
+          desc: "Pick a console under Platforms or search, then tap Play. Only NES, Super Nintendo, Game Boy Color, Nintendo 64 and Genesis games play in the browser."
+        - label: "Add to Home Screen"
+          desc: "iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install and create shortcut. Name it RomM."
+        - label: "Optional apps"
+          desc: "Android handhelds can use Argosy, an APK download that isn't on the Play Store, and iPhone has a RomM companion beta through TestFlight. Both connect to https://romm.${ROOT_DOMAIN}."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/games/"
+
+  - id: home
+    name: "Home"
+    url: "https://home.${ROOT_DOMAIN}"
+    icon: "di:home-assistant"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["home assistant", "lights"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/home-assistant/id1099568401"
+      android: "https://play.google.com/store/apps/details?id=io.homeassistant.companion.android"
+    setup_guide:
+      subtitle: "Home Assistant - lights, scenes and who's home"
+      steps:
+        - label: "Install the app"
+          desc: "Get Home Assistant from the App Store or Play Store. Do the next steps in one go, because the sign-in code lasts only 5 minutes."
+        - label: "Enter the server"
+          desc: "Tap Connect to my Home Assistant server, then Enter address manually, and type https://home.${ROOT_DOMAIN}. Don't pick a server it found."
+        - label: "Approve the code"
+          desc: "The app shows a 6-digit code. In Safari or Chrome on the same phone, open home.${ROOT_DOMAIN}, tap Login with OpenID Connect (SSO), sign in with your family account, type the code and tap Approve login on the other device."
+        - label: "Finish in the app"
+          desc: "Switch back to the app and name your phone. Never use Default login, because you have no Home Assistant password."
+        - label: "Share your location"
+          desc: "Tap Share my location and allow notifications. Set location to Always (iPhone, in Settings) or Allow all the time (Android)."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/home/"
+
+  - id: location
+    name: "Location history"
+    url: "https://dawarich.${ROOT_DOMAIN}"
+    icon: "di:dawarich"
+    self_hosted: true
+    default_visible: true
+    on_click: getting_started
+    tags: ["dawarich", "map"]
+    app_store:
+      ios: "https://apps.apple.com/us/app/dawarich/id6739544999"
+      android: "https://play.google.com/store/apps/details?id=app.dawarich.Dawarich"
+    setup_guide:
+      subtitle: "Dawarich - your private map of places you've been"
+      steps:
+        - label: "Sign in on the website"
+          desc: "This is optional and records where your phone goes all day. On a computer, go to dawarich.${ROOT_DOMAIN}, click Sign in with Equestria and sign in with your family account."
+        - label: "Show the QR code"
+          desc: "Click the person icon, then Account, and scroll to API access to show the QR code. No computer? Copy the API key there and use Manual Setup in the app with https://dawarich.${ROOT_DOMAIN}."
+        - label: "Install and connect"
+          desc: "Get Dawarich by ZeitFlow UG from the App Store or Play Store (on Android, not the one called Dawarich (old)). Skip its sign-in buttons and tap For self-hosters, then Scan QR Code."
+        - label: "Allow location always"
+          desc: "Allow precise location, then Always (iPhone) or Allow all the time (Android). On Android, also set the app's battery use to Unrestricted."
+        - label: "Turn on tracking"
+          desc: "On the Map tab, open the tracking card and turn Tracking on. On iPhone, don't swipe Dawarich away in the app switcher."
+        - label: "Full guide"
+          desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/location/"
+
+# ── Search Bar ──────────────────────────────────────────────
+# The fallback web search is Degoog, the guide's private search, instead of
+# upstream's Google default. Its OpenSearch template is /search?q=.
+search:
+  enabled: true
+  url: "https://search.${ROOT_DOMAIN}/search"
+  param: "q"
+  name: "Degoog"
+  icon: "di:degoog"
+
+# ── Integrations ────────────────────────────────────────────
+# Only the adapters for apps in the guide; FreshRSS, Outline, Tududi and the
+# rest have none. Each person connects with their own login, encrypted with
+# HOLM_SECRET_KEY. Holm's server makes these requests from the pod, so every
+# default_url resolves through the internal zone (CoreDNS forwards
+# <root domain> to Technitium) and goes through the internal gateway.
+#
+# default_url is set on every one: without it a user could point an
+# integration at any host Holm can reach.
+integrations:
+  immich:
+    enabled: true
+    name: "Photos"
+    default_url: "https://photos.${ROOT_DOMAIN}"
+    tip: "In Photos, open Account Settings, then API Keys, and make a new key."
+    surfaces:
+      search: true
+      widgets: false
+  nextcloud:
+    enabled: true
+    name: "Files"
+    default_url: "https://cloud.${ROOT_DOMAIN}"
+    tip: "Make an app password with Make my app password on setup.${ROOT_DOMAIN}/setup/cloud/ and use the username shown with it."
+    surfaces:
+      search: true
+      widgets: false
+  # Quick Connect, no key to copy. Jellyfin accounts are local, not authentik.
+  jellyfin:
+    enabled: true
+    name: "Movies & TV"
+    default_url: "https://jellyfin.${ROOT_DOMAIN}"
+    surfaces:
+      search: true
+      widgets: false
+  # Connects by itself through the person's Jellyfin connection; it needs
+  # default_url to know where Seerr is.
+  seerr:
+    enabled: true
+    name: "Requests"
+    default_url: "https://seerr.${ROOT_DOMAIN}"
+    surfaces:
+      search: true
+      widgets: false
+  # Subsonic API under /rest, which Navidrome's route serves without the
+  # authentik redirect (media/navidrome/helmrelease.yaml).
+  navidrome:
+    enabled: true
+    name: "Music"
+    default_url: "https://navidrome.${ROOT_DOMAIN}"
+    tip: "Use your family-account username (not your email) and the music password from setup.${ROOT_DOMAIN}/setup/music/."
+    surfaces:
+      search: true
+      widgets: true                           # the in-page player; each person turns it on
+  mealie:
+    enabled: true
+    name: "Recipes"
+    default_url: "https://mealie.${ROOT_DOMAIN}"
+    tip: "In Recipes, open your profile, then API Tokens, and make a new token."
+    surfaces:
+      search: true
+      widgets: false
+  # Nextcloud's calendar. Holm's documented Nextcloud form; the guide itself
+  # only ever gives phones the bare host.
+  caldav:
+    enabled: true
+    name: "Calendar"
+    default_url: "https://cloud.${ROOT_DOMAIN}/remote.php/dav"
+    tip: "Use the same username and app password as Files."
+    surfaces:
+      search: true
+      widgets: true                           # reminders and upcoming events
+
+# ── Wallpapers ──────────────────────────────────────────────
+# Fetched by Holm's server from gitlab.com, resized through wsrv.nl.
+wallpapers:
+  enabled: true
+
+# ── Weather Widget ──────────────────────────────────────────
+# Each visitor's browser asks Open-Meteo directly, with the place they set.
+weather:
+  enabled: true
+
+# ── Onboarding ──────────────────────────────────────────────
+# Mirrors the guide's landing page: its "Do these first" pair, then every app
+# with the guide's own one-line blurb (services.ts `blurb`). The blurb is also
+# the line under the app name on each Getting started card.
+#
+# Upstream's `privacy` and `security` slides are left out. The security slide
+# is password-manager and 2FA advice, and family sign-in here is one Tailscale
+# tap with no password.
+onboarding:
+  enabled: true
+  welcome_text: "Every home app in one place. Tap an app to open it, or to see how to set it up on your phone."
+  services:
+    - id: photos
+      desc: "Back up every photo and video on your phone, like our own iCloud Photos."
+    - id: cloud
+      desc: "Your own files, calendar and address book, like a private iCloud Drive or Google Drive."
+    - id: recipes
+      desc: "Save recipes, plan the week's meals and share one shopping list."
+    - id: tasks
+      desc: "Your to-do list, with projects and notes, on your phone and computer."
+    - id: wiki
+      desc: "The family's shared notebook: how-tos, lists and notes everyone can find."
+    - id: search
+      desc: "Private web search with no tracking and no account."
+    - id: movies-tv
+      desc: "The family movie and TV library, on your phone, tablet or TV."
+    - id: request-movies
+      desc: "Find a movie or show and ask for it to be added to Movies & TV."
+    - id: music
+      desc: "The home music library, like a private Spotify."
+    - id: request-music
+      desc: "Find an artist or album and ask for it to be added to Music."
+    - id: podcasts
+      desc: "Follow shows and pick up where you left off on any device."
+    - id: news
+      desc: "Follow your favorite websites and blogs in one place."
+    - id: games
+      desc: "Retro video games, many playable right in your browser."
+    - id: home
+      desc: "Lights, scenes, TVs and who's home."
+    - id: location
+      desc: "Your own private map of the trips and places you've been."
+  slides:
+    - type: welcome
+    - type: list
+      icon: rocket
+      title: "Do these first"
+      subtitle: "Two steps before the apps work on your phone"
+      items:
+        - title: "Tailscale"
+          desc: "Lets your phone reach home safely from anywhere. Every other app needs it."
+        - title: "Family account"
+          desc: "Your one sign-in for the home apps, with a list of every app you can use."
+      footer: "The setup guide walks you through both: setup.${ROOT_DOMAIN}"
+    - type: services
+
+# ── Privacy Policy ──────────────────────────────────────────
+# Off. Upstream's sections are promises to the family (backups, retention,
+# what is stored); write real ones before turning this on.
+privacy:
+  enabled: false
+
+# ── What's new ──────────────────────────────────────────────
+changelog:
+  enabled: true
+
+# ── Update notice ───────────────────────────────────────────
+# Off: Renovate owns upgrades (the image tag in ../helmrelease.yaml), so a
+# "vX.Y.Z available" notice would only tell the family about something they
+# cannot act on.
+update_check:
+  enabled: false

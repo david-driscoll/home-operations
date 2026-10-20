@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -43,7 +43,7 @@ spec:
             image:
               # Stable releases only: upstream also pushes a nightly per commit.
               repository: ghcr.io/viren070/aiostreams
-              tag: v2.35.9@sha256:a749e0c52563b3d8fd7ac0ea829212c96f900394e8968275de7932c1e59fdac6
+              tag: v2.36.0@sha256:83893d1c37eaaaf9ad1e9286bd857220a6b8f042a4f1eac3fa7356017aa2b184
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}

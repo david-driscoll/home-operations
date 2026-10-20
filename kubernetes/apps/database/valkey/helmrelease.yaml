@@ -1,4 +1,47 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# ─── DATABASE INDEX ALLOCATION ──────────────────────────────────────────────
+#
+# This Valkey is shared and passwordless; consumers are kept apart by database
+# index alone. THIS TABLE IS THE ALLOCATION -- add a row in the same change
+# that takes an index, and read it rather than grepping for `:6379/<n>`.
+#
+# Grepping is how db 13 ended up with two owners. Nextcloud set it in a PHP
+# file and Sure's author searched for URLs; dawarich sets three through
+# RAILS_*_DB variables and does not show up in that search either. Each app's
+# comment carried its own partial list of "taken" indexes, and each list was
+# missing someone.
+#
+#    0  default: anything that sets no index (immich explicitly, pinepods)
+#    1  dawarich     Rails cache       (RAILS_CACHE_DB)
+#    2  dawarich     Sidekiq           (RAILS_JOB_QUEUE_DB)
+#    3  dawarich     ActionCable       (RAILS_WS_DB)
+#    4  nextcloud    cache + file locking (resources/zz-redis.config.php)
+#    5  romm                           (REDIS_DB)
+#    6  dispatcharr  Celery broker
+#    7  patchmon     Asynq queues      (REDIS_DB)
+#    8  searxng      limiter           (resources/settings.yml)
+#    9  degoog
+#   10  postiz
+#   11  tracearr
+#   12  outline
+#   13  sure         Sidekiq + Rails cache
+#   14  renovate     lookup cache      (coder/renovate/renovatejob.yaml)
+#   15  paperless    Celery broker
+#   16  readmeabook  Bull queues
+#   17-31 free
+#
+# 32 databases, not Valkey's default 16 (VALKEY_EXTRA_FLAGS below), since
+# 2026-10-18. That evening 0-15 were all taken and readmeabook merged onto 7
+# beside patchmon -- the two PRs landed in the same minute, so neither could
+# see the other's row. Raising it a second time restarts this server under
+# every consumer at once, the same cost paid here.
+#
+# Checked against the live server on 2026-10-18: `INFO keyspace` for which
+# indexes hold keys, and CLIENT LIST's per-connection `db=` for who is
+# connected where. Repeat that before trusting a row nobody has touched in a
+# while -- and never FLUSHDB an index without reading this first, let alone
+# FLUSHALL.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -38,6 +81,12 @@ spec:
               tag: 9.2-trixie@sha256:247b5e730bdc9dc29fddb8274d1731b203a1a1a46af63eae3a9d55b4bf74853f
             env:
               VALKEY_PORT: &port 6379
+              # The image's entrypoint appends this to `valkey-server`
+              # (`exec "$@" $VALKEY_EXTRA_FLAGS`), so it is the one knob needed
+              # -- there is no config file to carry it. See the table above for
+              # why 32. Lowering it again would strand every index at or above
+              # the new limit: SELECT fails with "DB index is out of range".
+              VALKEY_EXTRA_FLAGS: "--databases 32"
     persistence:
       data:
         accessMode: ReadWriteOnce

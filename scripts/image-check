@@ -21,6 +21,8 @@
 # (`repo:tag@sha256:...`), and offer linux/amd64 -- every node and Docker host
 # in the estate is amd64. References still holding `${...}` are skipped: Flux
 # and Compose substitute those at apply time, so there is nothing to look up.
+# So are references whose host a render already emptied (`git./owner/app`, a
+# `${ROOT_DOMAIN}` with no value in CI): the forge's own registry.
 #
 # Needs `crane` (go-containerregistry) and `jq`; `docker` only for `compose`.
 # Exit codes: 0 every image checked out (or none changed), 1 at least one did
@@ -66,6 +68,14 @@ check_ref() {
   [[ -z "$ref" ]] && return 0
   if [[ "$ref" == *'$'* ]]; then
     echo "| \`$ref\` | skipped (substituted at apply time) |" >>"$summary"
+    return 0
+  fi
+  # A registry host with an empty label (`git./owner/app`) is a `${ROOT_DOMAIN}`
+  # the render already substituted -- with nothing, because the private names
+  # live only in SOPS and CI renders without them. There is no host to ask.
+  local host="${ref%%/*}"
+  if [[ "$ref" == */* && "$host" == *.* && ( "$host" == *. || "$host" == .* || "$host" == *..* ) ]]; then
+    echo "| \`$ref\` | skipped (private registry host, empty in this render) |" >>"$summary"
     return 0
   fi
   checked=$((checked + 1))

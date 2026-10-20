@@ -1,6 +1,5 @@
-
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -35,46 +34,75 @@ spec:
     fullnameOverride: *app
     controllers:
       app:
-        annotations:
-          reloader.stakater.com/auto: "true"
         strategy: Recreate
-        initContainers:
-          restore:
-            securityContext:
-              allowPrivilegeEscalation: true
-              readOnlyRootFilesystem: true
-              runAsUser: 0
-              runAsGroup: 0
-              fsGroup: 0
-              capabilities: { drop: ["ALL"] }
-            image:
-              repository: busybox
-              tag: 1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
-              pullPolicy: IfNotPresent
-            command:
-              - "/bin/sh"
-              - "-c"
-            args: |-
-                chown -R 568:568 /config
-                chmod -R 777 /config
-                echo "Done.";
         containers:
           app:
             image:
-              repository: lscr.io/linuxserver/lazylibrarian
-              tag: version-07258e88@sha256:94e7ab5e0ba6725b139239edce5c33a1b3b76d3a54679d2b61b2b78005b2ec66
-            # -- environment variables.
-            # See [image docs](https://github.com/dani-garcia/vaultwarden/blob/main/.env.template) for more details.
+              repository: ghcr.io/linuxserver/lazylibrarian
+              # `latest`, deliberately. linuxserver tags this image only by
+              # upstream COMMIT (`version-16ce29fe`, `16ce29fe-ls373`), which no
+              # Renovate versioning can order -- a `version-<sha>` pin would only
+              # ever get digest refreshes of that one commit and never move on.
+              # A digest-pinned `latest` is the form Renovate tracks, the same
+              # one ersatztv and kptv-fast use. Today all three tags resolve to
+              # this digest (upstream commit 16ce29fe, build ls373).
+              tag: latest@sha256:9fa710bf5a60b0c9b73e4ead7b535338dbeaa465a531164b5e09f422a4fc2863
+              pullPolicy: IfNotPresent
             env:
+              TZ: ${TIMEZONE}
+              # s6 starts as root, chowns /config and drops to PUID:PGID -- the
+              # 568:568 that owns truenas-media.
               PUID: ${PUID}
               PGID: ${PGID}
-              UMASK: 002
-              TZ: ${TIMEZONE}
-              DOCKER_MODS: linuxserver/mods:universal-calibre|linuxserver/mods:lazylibrarian-ffmpeg
+              UMASK: "002"
+              # No DOCKER_MODS. The old manifest's two are opt-in extras that
+              # apt-install at EVERY boot (so nightly, with the shed) and need
+              # egress to ghcr.io and the Ubuntu mirrors to start:
+              #   linuxserver/mods:universal-calibre   -- still maintained, but
+              #     only feeds calibredb/ebook-convert into a Calibre library;
+              #     there is none in the estate, and LL can talk to a Calibre
+              #     content server over HTTP (CALIBRE_USE_SERVER) instead.
+              #   linuxserver/mods:lazylibrarian-ffmpeg -- untouched since 2023;
+              #     only used by the off-by-default CREATE_SINGLEAUDIO and
+              #     WRITE_AUDIOTAGS audiobook options.
+              # Re-add either as `DOCKER_MODS: linuxserver/mods:<name>` (pipe-
+              # separated) if one of those features is wanted, and widen the
+              # startup probe when you do.
+            probes:
+              # `/api` answers 200 with a small JSON body whether or not the API
+              # is enabled or a key is given (errors go in the body), touches no
+              # template or database, and is exempt from every LazyLibrarian
+              # auth mode -- so it stays a valid probe after the UI is locked down.
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec: &spec
+                  httpGet:
+                    path: /api
+                    port: &port 5299
+                  initialDelaySeconds: 0
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  <<: *spec
+                  # s6 init plus the first-boot SQLite schema build; 5 minutes.
+                  periodSeconds: 10
+                  failureThreshold: 30
+            securityContext:
+              # Root at start is required by the linuxserver s6 init (chown of
+              # /config, then the drop to PUID:PGID), so no runAsNonRoot and no
+              # `drop: [ALL]` -- s6 needs CHOWN/SETUID/SETGID/DAC_OVERRIDE.
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
             resources:
               requests:
                 cpu: 50m
-                memory: 100Mi
+                memory: 256Mi
               limits:
                 memory: 2Gi
 
@@ -83,32 +111,40 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile: { type: RuntimeDefault }
 
-    # -- Configures service settings for the chart.
     service:
       app:
         controller: app
         type: ClusterIP
         ports:
           http:
-            port: &port 5299
-
+            port: *port
 
     persistence:
       config:
-        type: persistentVolumeClaim
-        storageClass: truenas-stash
-        accessMode: ReadWriteOnce
-        size: 1Gi
-      truenas-media:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /config
+      # The same paths every other app sees, so nothing needs remapping:
+      #   /media/downloads  sabnzbd (complete_dir) and qbittorrent
+      #                     (DefaultSavePath) both report finished downloads as
+      #                     /media/downloads/completed/<name>; LL reads the
+      #                     client's path back verbatim.
+      #   /media/ebooks     the ebook library readarr-ebook also uses.
+      #   /media/audiobooks the audiobook library audiobookshelf serves.
+      # There is no `books` directory on the share -- the old `/media/books`
+      # mount pointed at nothing.
+      media:
         existingClaim: truenas-media
         globalMounts:
-          - path: /books
-            subPath: downloads/lazylibrarian
-          - path: /media/books
-            subPath: books
+          - path: /media/downloads
+            subPath: downloads
+          - path: /media/ebooks
+            subPath: ebooks
+          - path: /media/audiobooks
+            subPath: audiobooks
 
     route:
-      app:
+      internal:
         parentRefs:
           - name: internal
             namespace: network
@@ -117,7 +153,25 @@ spec:
           - "${APP}.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
-          - backendRefs:
+          # HAND-WRITTEN, and deliberately NOT components/route/api-key.
+          #
+          # LazyLibrarian reads its key from the `apikey` query parameter only
+          # (lazylibrarian/api.py takes it from the request kwargs; there is no
+          # X-Api-Key header), and only on `/api`. The component matches the
+          # header OR the parameter on ANY path, and behind authentik this app
+          # has no login of its own -- so `?apikey=x` on any URL would skip SSO
+          # and land on the full UI. One match entry, so path AND parameter
+          # must both hold. Prowlarr's app sync does not need this at all: it
+          # talks to the Service in-cluster, not through the gateway.
+          - matches:
+              - path:
+                  type: Exact
+                  value: /api
+                queryParams:
+                  - name: apikey
+                    value: ".*"
+                    type: RegularExpression
+            backendRefs:
               - identifier: app
                 port: *port
             filters:
@@ -126,14 +180,12 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: local-user
-        annotations:
-          external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
-          gethomepage.dev/widget.url: "http://${APP}.${INTERNAL_CLUSTER_SERVICE}:5299"
-          # gethomepage.dev/widget.key: ""
-          gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Media Management
-          gethomepage.dev/icon: lazylibrarian.svg
-          gethomepage.dev/name: LazyLibrarian
-          gethomepage.dev/widget.type: lazylibrarian
-          gethomepage.dev/namespace: "{{ .Release.Namespace }}" # The kubernetes namespace the app resides in
-          gethomepage.dev/app: "${APP}"
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user

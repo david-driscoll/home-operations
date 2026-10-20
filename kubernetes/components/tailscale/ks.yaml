@@ -97,9 +97,16 @@ spec:
   # component, forever after. If a cold bootstrap ever does race, the symptom is
   # the `"Handlers": null` one described above; re-applying the Ingress once
   # Traefik is up resolves it.
-  dependsOn:
-    - name: tailscale-operator
-      namespace: tailscale-system
+  #
+  # `tailscale-system/tailscale-operator` went the same way, for the same
+  # reason. It is not-Ready whenever its own chain is (onepassword-connect,
+  # external-secrets) mid-reconcile after a push, and that reproduced the
+  # deadlock above with the operator as the trigger: 2026-10-19 15:50-16:11,
+  # ~20 parents (pinepods, plex, komga, sabnzbd, ...) held all 20 workers and
+  # every one failed its 10m health check at once -- the 6th time since 10-11.
+  # The ks renders a core Ingress and no Tailscale CRD, so it applies fine with
+  # the operator down, and the operator reconciles every tailscale Ingress
+  # when it starts. The ordering it bought was cosmetic.
   prune: true
   # `false`: most app ks set `wait: true`, and gating an app's readiness on a
   # tailnet VIP reaching `LoadBalancer` would make the Tailscale operator's
@@ -108,9 +115,9 @@ spec:
   # Note what this does NOT do, because the first version of this comment claimed
   # it did: it does not stop the PARENT from waiting on this Kustomization. The
   # parent's `wait: true` health-checks this object, and this object is Ready only
-  # once `dependsOn` above is satisfied. `wait: false` scopes what THIS ks waits
+  # once its `dependsOn` are satisfied. `wait: false` scopes what THIS ks waits
   # for; the parent's exposure is controlled by `dependsOn` alone. That is the
-  # whole reason the `network/traefik` entry had to go.
+  # whole reason it has none.
   wait: false
   force: false
   interval: 1h

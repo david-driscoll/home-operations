@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# No `authentik:` block on purpose -- see ./httproute.yaml. The daemon's own
+# password is the gate.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Paseo
+  category: AI
+  description: Run Claude Code, Codex and other coding agents in parallel from desktop, mobile, web and CLI
+  url: &url https://${APP}.agents.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/terminal.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    - name: Paseo
+      group: "Applications"
+      url: https://${APP}.agents.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

@@ -241,11 +241,14 @@ The command prints a UUID. It is not random — it is the hex encoding of the
 token's first 16 characters, so it is reproducible, and re-running the command
 later with the same first 16 characters and different last 24 **rotates the
 secret in place** instead of creating a second runner. Write the printed UUID
-into the `uuid` field of `clusters/equestria/apps/forgejo/runner`, then:
+into the `uuid` field of `clusters/equestria/apps/forgejo/runner`. There is
+nothing to restart: runners are one-job pods started by KEDA
+(`kubernetes/apps/coder/forgejo-runner/scaledjob.yaml`), and the next one mounts
+the refreshed Secret. To watch one:
 
 ```bash
-kubectl -n coder rollout restart statefulset/forgejo-runner
-kubectl -n coder logs statefulset/forgejo-runner -c app
+kubectl -n coder get scaledjob,jobs
+kubectl -n coder logs -l app.kubernetes.io/name=forgejo-runner -c app --tail=50
 ```
 
 `/admin/actions/runners` should list it as idle.
@@ -411,7 +414,8 @@ Two properties of this design are worth knowing:
   a config file rather than a Kubernetes image field, so none of the Renovate
   managers in `.github/renovate.json5` can see them.
 - **The runner is only observable while it is failing — unless step 7 is
-  done.** `ForgejoRunnerDown` and `ForgejoRunnerFlapping` watch the pod, and
+  done.** There is no standing runner pod to watch any more (KEDA's
+  `KedaScalerErrors` and `KedaScaledJobErrors` cover the scaling side), and
   Forgejo exports no runner metric at all (`modules/metrics/collector.go` has
   28 series, none about runners), so a runner that is up but no longer
   accepting jobs — a revoked registration, a wedged poller — looks healthy to
