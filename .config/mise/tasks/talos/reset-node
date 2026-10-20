@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 #MISE description="DESTRUCTIVE: wipe one node and return it to maintenance mode"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
 #MISE confirm="This wipes the node's STATE and EPHEMERAL partitions. Continue?"
-#USAGE arg "<ip>" help="Node IP address, as it appears in talos/talconfig.yaml"
+#USAGE arg "<ip>" help="Node IP address, as it appears in talos/topf.yaml"
 #
 # `--graceful=false` skips the etcd leave, so on a control-plane node the member
-# has to be removed from etcd separately. Bring the node back with
-# `mise run talos:add-node <ip>`.
+# has to be removed from etcd separately. `--full=false` wipes STATE and
+# EPHEMERAL only -- TOPF's default would wipe the whole system disk; see
+# talos:reset. Bring the node back with `mise run talos:add-node <ip>`.
 # shellcheck disable=SC2154  # usage_ip is injected by mise from the #USAGE
 #                            header above; shellcheck cannot see where it is
 #                            assigned.
 set -Eeuo pipefail
 
-talhelper gencommand reset --node "${usage_ip}" \
-  --extra-flags="--reboot --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false --wait=false" | bash
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+host="$(topf_host_for_ip "${usage_ip}")"
+
+topf --nodes-filter "$(topf_node_filter "${host}")" reset --full=false --graceful=false

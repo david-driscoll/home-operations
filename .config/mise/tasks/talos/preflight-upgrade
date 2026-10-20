@@ -3,7 +3,8 @@
 #MISE dir="{{config_root}}/talos"
 #
 # Read-only: it inspects and exits non-zero, it never changes anything. Run it
-# before talos:upgrade / talos:upgrade-k8s.
+# before a Talos or Kubernetes minor bump lands for tuppr to roll, and before
+# the break-glass talos:upgrade-node / talos:upgrade-k8s.
 #
 # Deliberately NOT wired as a `depends` of those tasks. It gates on live cluster
 # state (nodes Ready, VolSync quiet), so making it a hard dependency would mean
@@ -17,9 +18,9 @@
 # repo pins KUBECONFIG.
 set -Eeuo pipefail
 
-printf 'Target versions from talenv.yaml\n'
-printf '  Talos:      %s\n' "$(yq '.talosVersion' ./talenv.yaml)"
-printf '  Kubernetes: %s\n' "$(yq '.kubernetesVersion' ./talenv.yaml)"
+printf 'Target versions from topf.yaml\n'
+printf '  Talos:      %s\n' "$(yq '.talosVersion' ./topf.yaml)"
+printf '  Kubernetes: %s\n' "$(yq '.kubernetesVersion' ./topf.yaml)"
 
 printf '\nClient tooling versions\n'
 kubectl version --client

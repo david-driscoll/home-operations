@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 #MISE description="DESTRUCTIVE: wipe every node and return the cluster to maintenance mode"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
 #MISE confirm="This DESTROYS the cluster and resets every node to maintenance mode. Continue?"
 #
 # STATE and EPHEMERAL are both wiped, so this takes etcd with it. There is no
 # undo and no partial form — `talos:reset-node` is the one-node version.
+#
+# Every flag is spelled out because TOPF's defaults differ from what this task
+# has always done: `--full` defaults to TRUE (wipe the whole system disk, not
+# just STATE + EPHEMERAL) and `--graceful` to true (cordon, drain, leave etcd).
+# `--full=false --graceful=false` keeps the old behaviour; the node reboots
+# into maintenance mode, and TOPF asks once more before each node.
 set -Eeuo pipefail
 
-talhelper gencommand reset \
-  --extra-flags="--reboot --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false --wait=false" | bash
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+
+topf reset --full=false --graceful=false
