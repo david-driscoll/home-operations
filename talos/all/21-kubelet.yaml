@@ -1,0 +1,33 @@
+# Was `.machine.kubelet`. On Talos 1.14 the kubelet's own settings are the
+# KubeletConfig document (`extraConfig` is now `config`) and the node's
+# registration settings -- nodeIP here, labels and annotations in
+# 32-node-labels.yaml.tpl -- are KubeNodeConfig.
+#
+# DROPPED: `extraMounts` (/var/mnt/extra/openebs/local, bind rshared). The
+# multi-document kubelet config has no equivalent field. It existed only to
+# back the `openebs-hostpath` StorageClass (BasePath /var/mnt/extra/openebs/local),
+# which is not the default and had no PersistentVolumes when this moved
+# (2026-10-20). Without the mount that class cannot provision on any node;
+# removing openebs-system is the follow-up.
+apiVersion: v1alpha1
+kind: KubeletConfig
+config:
+  maxPods: 220
+  serializeImagePulls: false
+  imageGCHighThresholdPercent: 80
+  imageGCLowThresholdPercent: 60
+  evictionHard:
+    imagefs.available: "10%"
+    nodefs.available: "7%"
+    nodefs.inodesFree: "5%"
+  evictionSoft:
+    imagefs.available: "15%"
+  evictionSoftGracePeriod:
+    imagefs.available: "5m"
+  evictionPressureTransitionPeriod: "5m"
+---
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+nodeIP:
+  validSubnets:
+    - 10.10.0.0/16

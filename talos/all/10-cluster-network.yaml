@@ -1,0 +1,17 @@
+# Pod and service CIDRs. Was talconfig.yaml's clusterPodNets / clusterSvcNets.
+# The pod CIDR is also hard-coded where Traefik's trusted proxies are set
+# (kubernetes/apps/equestria/home/nextcloud, docs/plans/nextcloud-migration.md).
+apiVersion: v1alpha1
+kind: KubeNetworkConfig
+podSubnets: ["10.206.0.0/16"]
+serviceSubnets: ["10.196.0.0/16"]
+---
+# Disable the built-in CNI to use Cilium. Was talconfig.yaml's
+# `cniConfig: {name: none}`.
+#
+# THIS ONE IS LOAD-BEARING. A generated 1.14 config always carries a
+# KubeFlannelCNIConfig document; leaving it out of the patches is not enough,
+# it has to be deleted, or Flannel deploys beside Cilium.
+apiVersion: v1alpha1
+kind: KubeFlannelCNIConfig
+$patch: delete
