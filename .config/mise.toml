@@ -17,7 +17,6 @@ powershell-core = "7.6.7"
 # Renovate bumps both in one PR (the "Siderolabs Talos" group, which tracks
 # siderolabs/talos releases and ghcr.io/siderolabs/talosctl).
 talosctl = "1.14.4"
-talhelper = "3.1.17"
 # TOPF renders and applies talos/'s machine config (talos/topf.yaml + patch
 # tree). It vendors its own Talos machinery -- `topf --version` prints it, e.g.
 # "0.6.1 (Talos v1.14.1)" -- and generates configs against THAT, so a TOPF

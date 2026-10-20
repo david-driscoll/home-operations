@@ -83,8 +83,9 @@ spec:
           nodeSelector:
             node-role.kubernetes.io/control-plane: ""
           # The nodeSelector above PINS this job to the control planes, so once
-          # `allowSchedulingOnControlPlanes: false` lands in
-          # talos/patches/controller/cluster.yaml it becomes a contradiction:
+          # `allowSchedulingOnControlPlanes: false` lands -- the control-plane
+          # NoSchedule taint, talos/control-plane/12-node-role.yaml -- it
+          # becomes a contradiction:
           # a pod that selects the tainted nodes and does not tolerate the taint
           # is permanently unschedulable. It fails quietly -- the Job is created,
           # its pod sits Pending with "had untolerated taint", and nothing alerts.

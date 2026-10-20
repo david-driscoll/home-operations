@@ -14,7 +14,7 @@ So every node now streams both to Loki:
 | Service logs | `machine.logging.destinations` → `tcp://127.0.0.1:6051/` | `otelcol.receiver.tcplog "service"` | `talos/<service>` |
 | Kernel log | `KmsgLogConfig` → `tcp://127.0.0.1:6050/` | `otelcol.receiver.tcplog "kernel"` | `talos/kernel` |
 
-- Sending half: [`talos/patches/global/machine-logging.yaml`](../../talos/patches/global/machine-logging.yaml)
+- Sending half: [`talos/all/26-logging.yaml`](../../talos/all/26-logging.yaml)
 - Receiving half: [`kubernetes/apps/observability/talos-logs`](../../kubernetes/apps/observability/talos-logs) --
   a hostNetwork Alloy DaemonSet listening on each node's **loopback**, so every
   node ships to the receiver on itself and that receiver sets `node`. Neither

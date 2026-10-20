@@ -580,7 +580,7 @@ path also fetch the URL.
   ```
 
   - Use Quad9, the only upstream DNS egress evidenced
-    (`talos/patches/global/machine-network.yaml:14-15`).
+    (then `talos/patches/global/machine-network.yaml`; now `talos/all/22-resolver.yaml`).
   - Keep the `$`-brace form out of comments (`values.yaml:132-134`).
   - The `dns.<root domain>` and `dockge-*` blocks already rely on the more specific zone winning.
 - **Rejected alternatives:**

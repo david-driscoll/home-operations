@@ -47,7 +47,7 @@ spec:
           app:
             image:
               # ⚠️ A SELF-HOSTED GITEA REGISTRY, not ghcr or Docker Hub, and not
-              # one of the mirrors in talos/patches/global/machine-registries.yaml
+              # one of the mirrors in talos/all/25-registries.yaml.tpl
               # -- containerd pulls this one directly. Anonymous pull verified
               # from inside the cluster: token endpoint, tag list, manifest and
               # blob ranges all answer without credentials.
