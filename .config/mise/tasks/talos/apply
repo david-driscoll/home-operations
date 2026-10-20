@@ -1,13 +1,29 @@
 #!/usr/bin/env bash
-#MISE description="Apply the rendered Talos config to every node"
+#MISE description="Apply the Talos config to the nodes a --nodes-filter regex selects (TOPF shows each diff and asks first)"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
-#USAGE flag "--mode <mode>" default="auto" help="talosctl apply-config --mode (auto|no-reboot|reboot|staged|try)"
+#MISE depends=["talos:validate-config"]
+#USAGE flag "--nodes-filter <regex>" required=#true help="Go regex over topf.yaml hosts, e.g. '^hard-hat$' or '^(fluttershy|kerfuffle)$'. '.*' is every node -- see below."
+#USAGE flag "--mode <mode>" default="auto" help="Talos apply mode (auto|no-reboot|reboot|staged|try)"
 #
-# The apply mode is a flag: `mise run talos:apply --mode reboot`.
-# shellcheck disable=SC2154  # usage_mode is injected by mise from the #USAGE
-#                            header above; shellcheck cannot see where it is
-#                            assigned.
+#   mise run talos:apply --nodes-filter '^hard-hat$'
+#   mise run talos:apply --nodes-filter '^(fluttershy|kerfuffle)$' --mode no-reboot
+#
+# PER NODE BY CONVENTION, so the filter is REQUIRED -- there is no default of
+# "every node". talos:apply-node is the usual entry point; this exists for a
+# deliberate group. Passing '.*' is possible and should be rare: a blanket
+# apply is how a pending kubernetesVersion change would reach every node at
+# once (validate-config, a dependency, refuses when the pins disagree).
+#
+# TOPF dry-runs each node first, prints Talos's diff against the RUNNING
+# config, and asks before applying; after an apply it waits for the node to
+# stay Ready (30s). Nodes are handled one at a time.
+# shellcheck disable=SC2154  # usage_nodes_filter / usage_mode are injected by
+#                            mise from the #USAGE headers above; shellcheck
+#                            cannot see where they are assigned.
 set -Eeuo pipefail
 
-talhelper gencommand apply --extra-flags "--mode=${usage_mode}" | bash
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+
+topf --nodes-filter "${usage_nodes_filter}" apply --mode "${usage_mode}"

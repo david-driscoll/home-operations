@@ -1,20 +1,28 @@
 #!/usr/bin/env bash
-#MISE description="Upgrade Talos on one node to talenv.yaml's talosVersion"
+#MISE description="BREAK-GLASS: upgrade Talos on one node to topf.yaml's talosVersion with TOPF, outside tuppr"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
-#USAGE arg "<ip>" help="Node IP address, as it appears in talos/talconfig.yaml"
+#MISE depends=["talos:validate-config"]
+#MISE confirm="tuppr owns Talos upgrades. Suspend the TalosUpgrade first (or confirm it is idle), or two controllers will drain and reboot this node. Continue?"
+#USAGE arg "<ip>" help="Node IP address, as it appears in talos/topf.yaml"
 #
-# `genconfig` only, deliberately: the whole point of the per-node task is to
-# retry or resume a single node after `talos:upgrade` has already run its
-# validation once.
+# For one node tuppr cannot finish -- e.g. it stays NotReady past the health
+# checks and has to be pushed through by hand. `topf upgrade` cordons and
+# drains the node, installs the image from the node's schematic and topf.yaml's
+# talosVersion, reboots, waits for it to stay Ready, and uncordons. It asks
+# again before the upgrade itself.
 # shellcheck disable=SC2154  # usage_ip is injected by mise from the #USAGE
 #                            header above; shellcheck cannot see where it is
 #                            assigned.
 set -Eeuo pipefail
+
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+host="$(topf_host_for_ip "${usage_ip}")"
 
 talosctl --nodes "${usage_ip}" get machineconfig >/dev/null || {
   printf 'talos:upgrade-node: %s did not answer an authenticated Talos API call.\n' "${usage_ip}" >&2
   exit 1
 }
 
-talhelper gencommand upgrade --node "${usage_ip}" --extra-flags "--timeout=10m" | bash
+topf --nodes-filter "$(topf_node_filter "${host}")" upgrade

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#MISE description="Read-only: show what applying the Talos config would change on one node, or on every node in turn"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:validate-config"]
+#USAGE arg "[ip]" help="Node IP address, as it appears in talos/topf.yaml. Omit for every node, one at a time."
+#
+#   mise run talos:diff 10.10.206.14
+#   mise run talos:diff
+#
+# `topf apply --dry-run`: renders the config against the Talos version the
+# node runs, asks the node for Talos's own diff against its running config,
+# and changes nothing. Secrets are redacted in the output; the root domain is
+# not, so do not paste it anywhere public.
+#
+# Exit status follows TOPF: 0 = no change, 2 = changes (diff printed), anything
+# else = an error. With no ip, every node is checked; any error makes it 1,
+# otherwise any change makes it 2.
+# shellcheck disable=SC2154  # usage_ip is injected by mise from the #USAGE
+#                            header above; shellcheck cannot see the assignment.
+set -Euo pipefail
+
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight || exit 1
+
+if [[ -n "${usage_ip:-}" ]]; then
+  hosts="$(topf_host_for_ip "${usage_ip}")" || exit 1
+else
+  hosts="$(yq '.nodes[].host' topf.yaml)"
+fi
+
+changed=0
+errored=0
+for host in ${hosts}; do
+  printf '==> %s\n' "${host}"
+  topf --nodes-filter "$(topf_node_filter "${host}")" apply --dry-run </dev/null
+  status=$?
+  case "${status}" in
+    0) printf '==> %s: no change\n\n' "${host}" ;;
+    2) printf '==> %s: CHANGES (above)\n\n' "${host}"; changed=1 ;;
+    *) printf '==> %s: ERROR (exit %s)\n\n' "${host}" "${status}" >&2; errored=1 ;;
+  esac
+done
+
+# An error outranks "changes": a node that could not be checked is not known
+# to be clean.
+if ((errored)); then
+  exit 1
+fi
+if ((changed)); then
+  exit 2
+fi

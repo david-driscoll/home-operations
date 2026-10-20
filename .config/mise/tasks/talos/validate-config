@@ -1,81 +1,104 @@
 #!/usr/bin/env bash
-#MISE description="Validate the rendered Talos machine configs, and that talosctl matches talenv.yaml"
+#MISE description="Validate the rendered Talos machine configs, and that every version pin agrees with topf.yaml"
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:genconfig"]
 #
-# The check that matters is talosctl PINNED IN .config/mise.toml against
-# talenv.yaml's talosVersion. That is the drift that actually bites: bump
-# talenv without bumping [tools] and you validate next release's config with
-# last release's schema.
+# Gates every task that changes a node. Three kinds of drift fail it:
 #
-# Do NOT rewrite this to resolve talosctl as
-# `mise exec talosctl@${expected} -- talosctl version` and compare to
-# ${expected} — mise satisfies that by installing exactly the version asked
-# for, so the comparison can never fail. That is a tautology, not a drift
-# check, and it is what this task previously did.
+# 1. talosctl PINNED IN .config/mise.toml against topf.yaml's talosVersion.
+#    Bump topf.yaml without bumping [tools] and you validate next release's
+#    config with last release's schema.
+#
+#    Do NOT rewrite this to resolve talosctl as
+#    `mise exec talosctl@${expected} -- talosctl version` and compare to
+#    ${expected} — mise satisfies that by installing exactly the version asked
+#    for, so the comparison can never fail. That is a tautology, not a drift
+#    check, and it is what this task once did.
+#
+# 2. The Talos machinery TOPF vendors (`topf --version`) older, by minor
+#    version, than topf.yaml's talosVersion. TOPF generates each config with
+#    that machinery; a minor behind cannot know the newer release's documents
+#    or defaults.
+#
+# 3. The Kubernetes and Talos versions pinned in three places that must agree:
+#    topf.yaml, versions.env and tuppr's KubernetesUpgrade / TalosUpgrade CRs
+#    (kubernetes/apps/system-upgrade/upgrades/). tuppr owns both upgrades.
+#    `topf apply` rewrites the static pods and kubelet to topf.yaml's
+#    kubernetesVersion, so if topf.yaml runs ahead of the CR, an apply is a
+#    Kubernetes upgrade outside tuppr's node-by-node health checks. That
+#    happened once (#1262); this check is why it cannot again.
+#
+# Then `talosctl validate --strict` on every rendered config, with no
+# tolerated warnings: the one talhelper forced on us (`.machine.files is
+# deprecated`) went with the move to CRICustomizationConfig.
 # shellcheck disable=SC2016  # the backticks below are prose emphasis in an
 #                            operator-facing message, not a command
 #                            substitution -- the single quotes are intentional.
 set -Eeuo pipefail
 
-expected_talos_version="$(yq '.talosVersion' ./talenv.yaml)"
-talosctl_version="$(talosctl version --client | awk '/Tag:/ {print $2}')"
+failed=0
+mismatch() {
+  printf 'talos:validate-config: %s\n' "$*" >&2
+  failed=1
+}
 
+expected_talos_version="v$(yq '.talosVersion' topf.yaml | sed 's/^v//')"
+expected_kubernetes_version="v$(yq '.kubernetesVersion' topf.yaml | sed 's/^v//')"
+upgrades="${MISE_CONFIG_ROOT}/kubernetes/apps/system-upgrade/upgrades"
+versions_env="${MISE_CONFIG_ROOT}/versions.env"
+
+# 1. talosctl pin
+talosctl_version="$(talosctl version --client | awk '/Tag:/ {print $2}')"
 if [[ "${talosctl_version}" != "${expected_talos_version}" ]]; then
-  printf 'talos:validate-config: talosctl is %s but talos/talenv.yaml asks for %s.\n' \
-    "${talosctl_version}" "${expected_talos_version}" >&2
-  printf 'talos:validate-config: bump `talosctl` in .config/mise.toml [tools] to match, then `mise install`.\n' >&2
-  exit 1
+  mismatch "talosctl is ${talosctl_version} but talos/topf.yaml asks for ${expected_talos_version}." \
+    'Bump `talosctl` in .config/mise.toml [tools] to match, then `mise install`.'
 fi
+
+# 2. TOPF's vendored machinery, e.g. "topf version 0.6.1 (Talos v1.14.1)".
+# Compared by minor only: a patch behind (1.14.1 machinery, 1.14.4 nodes) is
+# the normal state of affairs.
+minor() { cut -d. -f1,2 <<<"${1#v}"; }
+topf_machinery="$(topf --version 2>/dev/null | sed -n 's/.*(Talos v\([0-9.]*\)).*/\1/p')" || true
+if [[ -z "${topf_machinery}" ]]; then
+  mismatch 'could not read the Talos machinery version from `topf --version`.'
+else
+  oldest="$(printf '%s\n' "$(minor "${topf_machinery}")" "$(minor "${expected_talos_version}")" | sort -V | head -1)"
+  if [[ "$(minor "${topf_machinery}")" != "$(minor "${expected_talos_version}")" && "${oldest}" == "$(minor "${topf_machinery}")" ]]; then
+    mismatch "TOPF vendors Talos ${topf_machinery}, a minor behind talosVersion ${expected_talos_version}." \
+      'Bump `aqua:postfinance/topf` in .config/mise.toml to a release built for it.'
+  fi
+fi
+
+# 3. Kubernetes and Talos pins
+cr_kubernetes="$(yq 'select(.kind == "KubernetesUpgrade") | .spec.kubernetes.version' "${upgrades}/kubernetes.yaml")"
+cr_talos="$(yq 'select(.kind == "TalosUpgrade") | .spec.talos.version' "${upgrades}/talos.yaml")"
+env_kubernetes="$(sed -n 's/^KUBERNETES_VERSION=//p' "${versions_env}")"
+env_talos="$(sed -n 's/^TALOS_VERSION=//p' "${versions_env}")"
+[[ "${cr_kubernetes}" == "${expected_kubernetes_version}" ]] ||
+  mismatch "topf.yaml kubernetesVersion is ${expected_kubernetes_version} but tuppr's KubernetesUpgrade is ${cr_kubernetes:-<unset>} -- an apply would upgrade Kubernetes outside tuppr."
+[[ "${env_kubernetes}" == "${expected_kubernetes_version}" ]] ||
+  mismatch "topf.yaml kubernetesVersion is ${expected_kubernetes_version} but versions.env KUBERNETES_VERSION is ${env_kubernetes:-<unset>}."
+[[ "${cr_talos}" == "${expected_talos_version}" ]] ||
+  mismatch "topf.yaml talosVersion is ${expected_talos_version} but tuppr's TalosUpgrade is ${cr_talos:-<unset>}."
+[[ "${env_talos}" == "${expected_talos_version}" ]] ||
+  mismatch "topf.yaml talosVersion is ${expected_talos_version} but versions.env TALOS_VERSION is ${env_talos:-<unset>}."
 
 shopt -s nullglob
 configs=(./clusterconfig/*.yaml)
-if ((${#configs[@]} == 0)); then
-  # genconfig ran (it is a dependency) yet produced nothing — that is a
-  # talconfig problem, not a missing-file problem, so say so rather than
-  # reporting a vacuous pass.
-  printf 'talos:validate-config: no ./clusterconfig/*.yaml after genconfig.\n' >&2
-  exit 1
+expected_nodes="$(yq '.nodes | length' topf.yaml)"
+if ((${#configs[@]} != expected_nodes)); then
+  # genconfig ran (it is a dependency) yet did not produce one config per
+  # node -- a topf.yaml problem, not a missing file, so say so rather than
+  # reporting a partial pass.
+  mismatch "${#configs[@]} rendered configs in ./clusterconfig, but topf.yaml has ${expected_nodes} nodes."
 fi
 
-# `--strict` turns deprecation warnings into a non-zero exit, which is what we
-# want -- EXCEPT for one the repo cannot currently act on. Talos 1.14 deprecates
-# `.machine.files`, but talhelper 3.1.17 (the newest release) will not render the
-# `CRICustomizationConfig` that replaces it, so the warning is unavoidable until
-# talhelper catches up. See talos/patches/global/machine-files.yaml.
-#
-# Tolerating it by EXACT TEXT rather than dropping `--strict` keeps the gate
-# meaningful: a second, different deprecation still fails this task rather than
-# hiding behind a blanket relaxation.
-known_deprecation='.machine.files is deprecated'
-
-failed=0
 for cfg in "${configs[@]}"; do
   printf 'Validating %s\n' "${cfg}"
-  if out="$(talosctl validate --mode metal --strict --config "${cfg}" 2>&1)"; then
-    continue
+  if ! out="$(talosctl validate --mode metal --strict --config "${cfg}" 2>&1)"; then
+    mismatch "${cfg} failed validation:"
+    printf '%s\n' "${out}" >&2
   fi
-
-  # Drop the known-and-accepted warning, then see whether anything substantive
-  # is left. `grep -v` on the message alone would leave the multi-error wrapper
-  # lines behind, so the residue is checked for real content: any line that
-  # still mentions an error or a warning.
-  # Strip the accepted warning, then the "N error(s) occurred:" wrapper lines
-  # that multierror emits around it (they can be nested and prefixed, e.g.
-  # "* v1alpha1.Config: 1 error occurred:"), then blank lines. Whatever is left
-  # is a real finding.
-  residue="$(printf '%s\n' "${out}" \
-    | grep -v -F "${known_deprecation}" \
-    | grep -viE '[0-9]+ errors? occurred:?[[:space:]]*$' \
-    | grep -vE '^[[:space:]]*\*?[[:space:]]*$' || true)"
-
-  if [[ -z "${residue}" ]]; then
-    printf '  tolerated: %s (talhelper cannot emit CRICustomizationConfig yet)\n' "${known_deprecation}"
-    continue
-  fi
-
-  printf 'talos:validate-config: %s failed validation:\n%s\n' "${cfg}" "${out}" >&2
-  failed=1
 done
 
 if ((failed)); then
