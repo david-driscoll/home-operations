@@ -120,7 +120,7 @@ It lives in Forgejo's package registry, which stores its blobs in the
   stack that writes the token, so a missing token could never be recreated.
 - **How a node reaches it.** containerd runs on the host, so it resolves the
   forge's hostname through the host's resolvers (Technitium) to the Traefik LB.
-  `talos/patches/global/machine-registries.yaml` has no mirror entry for it and
+  `talos/all/25-registries.yaml.tpl` has no mirror entry for it and
   needs none. Spegel lists the forge in `mirroredRegistries`, so a node can
   fetch the image from a peer that already has it. That's safe because the
   reference is pinned by digest.
