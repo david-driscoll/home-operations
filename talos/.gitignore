@@ -1,0 +1,8 @@
+# `topf render` without `-o` writes full machine configs -- secrets included --
+# to ./output. The talos:* tasks render into ./clusterconfig instead; this
+# covers a bare invocation.
+/output/
+# TOPF's default secrets path. This cluster's bundle is talsecret.sops.yaml
+# (topf.yaml `secretsPath`), so a secrets.yaml here can only be a plaintext
+# bundle written by mistake.
+/secrets.yaml
