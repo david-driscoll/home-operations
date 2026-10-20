@@ -72,7 +72,7 @@ spec:
             image:
               repository: ghcr.io/paperless-ngx/paperless-ngx
               # Upstream tags carry no `v` prefix.
-              tag: 3.3.2@sha256:d232cba37cc0bab0d6c6581ecd320383b7a6f49f33e0fd16adda4d009eb600dd
+              tag: 3.3.3@sha256:dba0242c1df1843643df4eb50ce5639f3a7900f414879088fd5bed8eaf2d456d
               pullPolicy: IfNotPresent
             envFrom:
               # PAPERLESS_DBENGINE and the PAPERLESS_DB* set -- always present.
