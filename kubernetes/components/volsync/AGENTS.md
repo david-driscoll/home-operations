@@ -166,9 +166,12 @@ which is until phase 3, step 7 retires them. An app falls back from its `ks.yaml
   repository worth keeping, add it to `APPS` in that Job's `job.yaml` in the same change. The Job
   is safe to re-run, and safe in either order with the app's first Garage backup. Falling back to
   `nfs` returns to the NFS repo as it stood at the switch.
-- **The copy tier lets go.** `stacks/system/application-backups.ts` skips an `s3:` repository, so
-  the hosts drop that app's copy job and Backrest browse repo on their next director run. The
-  copies already on their disks stay where they are.
+- **Garage's second copy is TrueNAS, not the hosts.** spike pulls the whole `volsync-equestria`
+  bucket every night and keeps ZFS snapshots of it (`components/garageTruenasCopy.ts`, Gatus group
+  `TrueNAS Garage Copy`). `garage-copy-drill` restores from both. The old copy tier, which copied
+  each NFS repository to celestia, luna and skystar, is gone (#2541), and so are the Backrest
+  browse repos it fed. The copies it left on those disks stay where they are, and nothing updates
+  them. An `nfs` fallback therefore has no copy beyond TrueNAS itself.
 - **Bespoke wiring is not reached by the variable.** `network/crowdsec/volsync.yaml` builds its own
   Secrets and ReplicationSources, so phase 3 wrote them out to Garage by hand. Each one extracts
   the same record, and each source carries the `garage` mover label. Any other bespoke VolSync
