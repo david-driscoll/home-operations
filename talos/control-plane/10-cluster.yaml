@@ -66,8 +66,9 @@ kind: KubeAdmissionControlConfig
 name: PodSecurity
 $patch: delete
 ---
-# The generated KubeEtcdEncryptionConfig is DELETED here and replaced wholesale
-# by ./30-etcd-encryption.yaml.tpl, which sorts after this file. See that file
+# Was `.cluster.secretboxEncryptionSecret`. The generated
+# KubeEtcdEncryptionConfig is DELETED here and replaced wholesale by
+# ./30-etcd-encryption.yaml.tpl, which sorts after this file. See that file
 # for why -- short version: the generated document does not match what every
 # Secret in etcd was written with, and the apiserver then cannot read Secrets.
 #
