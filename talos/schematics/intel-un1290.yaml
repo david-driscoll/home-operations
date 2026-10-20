@@ -1,0 +1,9 @@
+# Image Factory schematic for the Intel UN1290 workers (fluttershy, kerfuffle).
+# Hashed locally by TOPF into 249d9135...; see control-plane.yaml for how.
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/i915
+      - siderolabs/intel-ucode
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools

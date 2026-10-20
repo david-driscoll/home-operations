@@ -1,0 +1,245 @@
+# equestria's Talos machine config, rendered and applied by TOPF
+# (postfinance/topf, pinned in .config/mise.toml). Replaces talconfig.yaml --
+# talhelper was archived upstream on 2026-08-26.
+#
+# HOW A NODE'S CONFIG IS BUILT. TOPF generates a base config from the secrets
+# bundle with its OWN vendored Talos machinery (`topf --version`), then applies,
+# in order: all/*, then <role>/* (control-plane/ or worker/), then node/<host>/*,
+# each folder in lexicographic filename order. *.yaml is a strategic-merge patch;
+# *.yaml.tpl is a Go template rendered first (sprig functions, missingkey=error)
+# with this file's values -- `.Node.Host`, `.Node.IP`, `.Node.Data.<key>`.
+# talos/README.md walks through the tree.
+#
+# NOTE: none of this is GitOps -- Flux never reads it. A change here is inert
+# in-cluster until someone applies it, and it should be applied PER NODE
+# (`mise run talos:apply-node <ip>`, which first shows the dry-run diff), never
+# blanket: an apply also carries kubernetesVersion below into the static pods
+# and kubelet, which would smuggle a Kubernetes upgrade past tuppr.
+clusterName: equestria
+clusterEndpoint: https://10.10.206.201:6443
+
+# Talos v1.14.0 stopped publishing `ghcr.io/siderolabs/installer` ("chore: stop
+# publishing installer to ghcr"); v1.13.10 is the last release it exists for, so
+# a docker datasource on it reports "up to date" forever. Track the releases
+# themselves instead -- nothing installs FROM this name anyway, TOPF builds
+# factory.talos.dev URLs from each node's `schematicId` below.
+#
+# TOPF takes this with or without the leading `v`. It also picks the config
+# version contract from it when rendering offline; `talos:apply-node` and
+# `talos:diff` render against the version the node actually RUNS instead.
+# renovate: datasource=github-releases depName=siderolabs/talos
+talosVersion: v1.14.4
+# Kept in lockstep with kubernetes/apps/system-upgrade/upgrades/kubernetes.yaml
+# and versions.env -- `mise run talos:validate-config` fails when they disagree.
+# That CR is what actually rolls Kubernetes; this value only sets the images in
+# the config TOPF renders. They drifted once (renovate moved this to v1.37.0 in
+# #1262, the CR stayed on v1.36.4) and the result was a config that would have
+# upgraded Kubernetes as a side effect of `talos:apply`. Realigned 2026-09-21 --
+# if you change one, change the others in the same PR.
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.37.1
+
+# The talhelper-era filename, kept on purpose: bootstrap/INVENTORY.md and
+# docs/runbooks/talos-ca-rotation.md name it, and `.sops.yaml` says what it is.
+# TOPF decrypts it in place through sops. Same Talos secrets bundle format.
+#
+# If this file is ever MISSING, TOPF offers to generate a brand-new bundle --
+# new CAs, i.e. a different cluster. The talos:* tasks refuse to run unless it
+# exists and is sops-encrypted; never answer `y` to that prompt.
+secretsPath: talsecret.sops.yaml
+
+data:
+  # Every name the API server and the Talos API serve certificates for, used
+  # by all/11-machine-certsans.yaml.tpl (machine.certSANs, the Talos API) and
+  # control-plane/11-apiserver-certsans.yaml.tpl (KubeAPIServerConfig
+  # certExtraSANs). One list for both, so they cannot drift apart. The literal
+  # `${ROOT_DOMAIN}` is replaced at render time from the environment (mise
+  # exports it from .config/domains.sops.yaml); the templates refuse to render
+  # without it.
+  #
+  # Talos adds the machine addresses, hostnames, `kubernetes.*` names and the
+  # control-plane endpoint (10.10.206.201) itself, so only the names below are
+  # at risk -- and `apiserver.equestria.<root domain>` is LOAD-BEARING: it is
+  # the `cluster_api` server of the kubeconfig stacks/system/applications.ts
+  # builds, and a cert without it fails TLS for that client.
+  certSANs:
+    - "127.0.0.1"
+    - "10.10.206.201"
+    - "apiserver.equestria.${ROOT_DOMAIN}"
+    - "k8s-equestria.equestria.svc.cluster.local"
+
+# PER-NODE FACTS live in each node's `data:` and are rendered by shared
+# templates in all/:
+#
+#   mac          30-network.yaml.tpl      the NIC, selected by hardware address
+#   installDisk  00-install.yaml.tpl      CEL disk selector for the system disk
+#   longhornDisk 31-user-volumes.yaml.tpl CEL disk selector for u-longhorn
+#   labels       32-node-labels.yaml.tpl  Kubernetes node labels
+#   annotations  32-node-labels.yaml.tpl  Kubernetes node annotations
+#
+# The YAML anchors below play the part talconfig.yaml's did: shared by
+# hardware class or role. Every node's address is its `ip` with a /16 (see
+# 30-network.yaml.tpl). Each `schematicId` names a file under schematics/; TOPF
+# hashes it locally into the same Image Factory ID talhelper computed.
+nodes:
+  - host: shining-armor
+    ip: 10.10.206.10
+    role: worker
+    schematicId: "@schematics/shining-armor.yaml"
+    data:
+      mac: "bc:24:11:4c:62:fc"
+      installDisk: disk.dev_path == "/dev/sda"
+      longhornDisk: disk.dev_path == "/dev/sdb"
+      labels: &nodeLabels
+        node.longhorn.io/create-default-disk: "config"
+      annotations:
+        # Longhorn node tag, re-seeded automatically on a full node rebuild.
+        # Only read while Node.spec.tags is empty — a live tag set by kubectl
+        # patch always wins. See docs/cluster-consolidation/12-longhorn-critical-tier.md.
+        node.longhorn.io/default-node-tags: '["bulk"]'
+        node.longhorn.io/default-disks-config: &bulkDisksConfig |
+          {
+            "disks": [
+              {
+                "path": "/var/mnt/longhorn",
+                "allowScheduling": true,
+                "tags":["nvme", "ssd"]
+              }
+            ]
+          }
+  # - host: unused
+  #   ip: 10.10.206.11
+  #
+  # pinkie-pie, retired. Its schematic was its own -- recreate it as
+  # schematics/pinkie-pie.yaml with these extensions if it ever returns:
+  #   # - siderolabs/nonfree-kmod-nvidia-production
+  #   - siderolabs/nvidia-container-toolkit-production
+  #   - siderolabs/nvidia-open-gpu-kernel-modules-production
+  #   - siderolabs/iscsi-tools
+  #   - siderolabs/util-linux-tools
+  #   # - siderolabs/tailscale
+  # Its install disk was selected by model ("WDC  WDS100T2B0B"), and its
+  # u-longhorn was 1TB xfs, not grown.
+  # - host: pinkie-pie
+  #   ip: 10.10.206.12
+  #   role: worker
+  #   schematicId: "@schematics/pinkie-pie.yaml"
+  #   data:
+  #     mac: "a8:a1:59:00:b7:17"
+  #     installDisk: disk.model == "WDC  WDS100T2B0B"
+  #     longhornDisk: disk.model == "Micron 2300 NVMe 1024GB"
+  #     labels: {}
+  #     annotations:
+  #       node.longhorn.io/default-disks-config: *bulkDisksConfig
+  # - host: unused
+  #   ip: 10.10.206.13
+  - host: hard-hat
+    ip: 10.10.206.14
+    # Rotated out to a worker 2026-08-17 (piece 19). Talos cannot demote a
+    # control plane in place, so this node was drained, removed from etcd,
+    # wiped and rejoined — the same mechanism piece 18 used to promote the
+    # ex-SGC nodes, run in the other direction.
+    role: worker
+    schematicId: "@schematics/amd-minifm.yaml"
+    data:
+      # No VIP on this node, on purpose. It carried `vip: {ip: 10.10.206.201}`
+      # -- the API server VIP -- until 2026-08-24, left behind by piece 19's
+      # rotation: it was a control plane, and the stanza was not removed when
+      # it was wiped and rejoined as a worker. fluttershy and kerfuffle had the
+      # same leftover.
+      #
+      # It was inert, and that was VERIFIED rather than assumed: ARP for
+      # 10.10.206.201 resolves to othalla's NIC (e0:51:d8:19:d4:98), a current
+      # control plane. Talos only advertises the VIP from a control plane, so a
+      # worker declaring it simply never claims the address.
+      #
+      # Removed anyway, because "inert today" is not "correct": the stanza is
+      # config that says this node may serve the Kubernetes API, and the next
+      # person to read it -- or the next tool to act on it -- has no way to
+      # know it is vestigial. The VIP is now a control-plane/ patch, so a
+      # worker cannot pick it up at all.
+      mac: "bc:24:11:11:7d:6a"
+      installDisk: disk.model == "KINGSTON SNV3S1000G"
+      longhornDisk: &samsung990 disk.model == "Samsung SSD 990 EVO Plus 1TB"
+      labels: *nodeLabels
+      annotations: &bulkAnnotations
+        node.longhorn.io/default-node-tags: '["bulk"]'
+        node.longhorn.io/default-disks-config: *bulkDisksConfig
+  # - host: unused
+  #   ip: 10.10.206.15
+  - host: fluttershy
+    ip: 10.10.206.16
+    # Rotated out of the control plane 2026-08-18, piece 19 (2 of 3). Talos
+    # cannot demote in place, so this was a drain -> etcd leave -> wipe ->
+    # rejoin-as-worker cycle, not a flag flip on a live node.
+    role: worker
+    schematicId: &intel_un1290_schematic "@schematics/intel-un1290.yaml"
+    data: &intel_un1290_data
+      mac: "58:47:ca:7a:09:3d" # No VIP on purpose -- see the note on hard-hat.
+      installDisk: disk.dev_path == "/dev/sda"
+      longhornDisk: *samsung990
+      labels:
+        <<: *nodeLabels
+        # EPHEMERAL (/var, the install disk /dev/sda) on these two is a
+        # DRAM-less PNY 500GB SATA SSD that saturates around 40 MiB/s. The
+        # Samsung NVMe holds only u-longhorn. Pulumi workspace pods keep off
+        # nodes carrying this label (kubernetes/components/pulumi-workspace),
+        # after the 2026-10-19 outage where six cold workspaces on fluttershy's
+        # /var wedged its CRI. It has no effect until applied per node:
+        # `mise run talos:apply-node <ip>`.
+        driscoll.dev/ephemeral-disk: "sata"
+      annotations: *bulkAnnotations
+  - host: kerfuffle
+    ip: 10.10.206.17
+    # Rotated out of the control plane 2026-08-19, piece 19 (3 of 3 -- the last
+    # one). Talos cannot demote in place, so this was drain -> etcd leave ->
+    # wipe -> rejoin-as-worker. etcd is now the ex-SGC trio alone.
+    role: worker
+    schematicId: *intel_un1290_schematic
+    data:
+      <<: *intel_un1290_data
+      mac: "58:47:ca:7a:07:b4" # No VIP on purpose -- see the note on hard-hat.
+
+  - host: milky-way
+    ip: 10.10.209.10
+    role: control-plane
+    schematicId: &cp_schematic "@schematics/control-plane.yaml"
+    data: &cp_data
+      mac: "e0:51:d8:19:93:18"
+      installDisk: disk.dev_path == "/dev/nvme0n1"
+      longhornDisk: disk.dev_path == "/dev/sda"
+      labels:
+        <<: *nodeLabels
+        # Technitium DNS runs on the control planes (they carry enp3s0, which the
+        # ipvlan L2 NAD now binds). Moved here from hard-hat 2026-08-19 so the LAN
+        # resolver survives a low-power window with every worker powered off —
+        # docs/cluster-consolidation/20-low-power-tier.md §0.3.
+        technitium-dns: "true"
+      annotations:
+        # `critical` = D6's low-power survivors: Tier-1 data must live on the
+        # control planes. See docs/cluster-consolidation/12-longhorn-critical-tier.md.
+        node.longhorn.io/default-node-tags: '["critical"]'
+        node.longhorn.io/default-disks-config: |
+          {
+            "disks": [
+              {
+                "path": "/var/mnt/longhorn",
+                "allowScheduling": true,
+                "tags":["ssd"]
+              }
+            ]
+          }
+  - host: othalla
+    ip: 10.10.209.11
+    role: control-plane
+    schematicId: *cp_schematic
+    data:
+      <<: *cp_data
+      mac: "e0:51:d8:19:d4:98"
+  - host: pegasus
+    ip: 10.10.209.12
+    role: control-plane
+    schematicId: *cp_schematic
+    data:
+      <<: *cp_data
+      mac: "e0:51:d8:19:d2:b2"
