@@ -109,55 +109,90 @@ If a Stack depends on that external state changing on its own, give it
 `resyncFrequencySeconds` with `continueResyncOnCommitMatch: true`, as `system`
 and `unifi-network` have.
 
-## Pilot: authentik
+## Where it lives
 
-`kubernetes/apps/pulumi/authentik/artifactgenerator.yaml`. authentik was chosen
-because it has no resync timer, so commits were its only trigger. It has no
-`prerequisites`, no Stack lists it as one, and a run is cheap. Its import closure
-is 43 files: `components/`, `dynamic/1password`, three `sdks/*` packages, and the
-stack itself. `components/store/clusters.ts` reads `clusters/*.yaml` at run
-time, and the `@openapi/*` alias points at `types/`.
+Every Stack uses it. The shared part is a kustomize Component; each Stack adds
+only its own paths.
 
-### Verifying after merge
+- `kubernetes/components/pulumi-stack-artifact/` is the `ArtifactGenerator`
+  named after the Stack (`${APP}`, substituted by each Stack's Flux
+  Kustomization). It reads the `home-operations` GitRepository and copies what
+  **every** program reads: the npm manifests, `components/`, `dynamic/`,
+  `sdks/`, `types/` and `clusters/`.
+- `kubernetes/apps/pulumi/<stack>/kustomization.yaml` pulls in the component
+  and appends this Stack's own paths with a JSON patch onto
+  `/spec/artifacts/0/copy/-`: its `stacks/<dir>/` at minimum, plus any extra
+  repo reads from the table below. A kustomization's own `patches` run after
+  its components, so the append lands on the component's generator.
+- `kubernetes/apps/pulumi/<stack>/stack.yaml` points
+  `spec.fluxSource.sourceRef` at `ExternalArtifact/<stack>`, keeping its `dir`.
 
-1. `kubectl -n flux-system get deploy source-watcher` is available, and
-   `kubectl -n pulumi get artifactgenerator authentik` is `Ready=True`.
-2. `kubectl -n pulumi get externalartifact authentik -o jsonpath='{.status.artifact.revision}'`
+A path that only some Stacks read, even when the reason is shared code in
+`components/` (DockgeLxc reading `docker/`), goes in those Stacks' patches, not
+in the component. In the component it would re-run Stacks that never read it.
+
+### Per-Stack reads (traced 2026-10-20)
+
+| Stack (`dir`) | Import closure | Extra repo reads appended | Resync |
+| --- | --- | --- | --- |
+| authentik | 46 files | none | none: commits were its only trigger |
+| backups | 49 | `docker/` (`components/dockerStackBackups.ts`: compose files, `.ignore` markers) | 86400s, no continue |
+| home-operations (`stacks/home`) | 55 | `docker/` (`components/DockgeLxc.ts` uploads every file under `docker/_common/` and `docker/<host>/`) | 86400s, continue |
+| gulf-of-mexico | 54 | `docker/` (`DockgeLxc`) | 3600s, continue |
+| ocracoke | 54 | `docker/` (`DockgeLxc`) | 86400s, continue. Its Kustomization is commented out of `kubernetes/apps/pulumi/kustomization.yaml`, so this is wired but has never run. |
+| unifi-network | 55 | none | 300s, continue |
+| system | 61 | `kubernetes/apps/coder/coder/` (`coder-templates.ts`, `components/coderTemplates.ts`), `kubernetes/apps/**/ks.yaml` (`postgres-rotation.ts` globs them) | 600s, continue |
+
+The resync timers still fire. A Stack with `continueResyncOnCommitMatch: true`
+keeps running on its interval whatever the revision does. What goes away is the
+extra run per commit on top of it. For system that means any new app's `ks.yaml`
+still re-runs it, which is correct: `postgres-rotation.ts` reads them.
+
+The emulation for all seven (step 4 above) on 2026-10-20 found:
+- Every artifact's import closure resolves to the same files as in the repo.
+- `docker/`, `kubernetes/apps/coder/coder/` and all 243 `ks.yaml` files match the repo exactly.
+- The npm lockfile comes out byte-identical.
+
+source-watcher's copy keeps each file's mode, and the archive normalises modes
+to 0600/0700 the same way the GitRepository archive does. So uploaded coder
+templates and Dockge files are byte-for-byte what they were.
+
+### Adding a Stack
+
+1. Trace it (above), and run the emulation.
+2. Give its `kustomization.yaml` the `pulumi-stack-artifact` component and a
+   patch appending `stacks/<dir>/` plus any extra reads. Copy an existing one.
+3. Point its `stack.yaml` at `ExternalArtifact/${APP}`.
+4. Render it: `flux build kustomization <stack> -n pulumi --path kubernetes/apps/pulumi/<stack> --kustomization-file kubernetes/apps/pulumi/<stack>/ks.yaml --dry-run`.
+
+## Verifying a Stack after it switches
+
+1. `kubectl -n pulumi get artifactgenerator <stack>` is `Ready=True`.
+2. `kubectl -n pulumi get externalartifact <stack> -o jsonpath='{.status.artifact.revision}'`
    prints `latest@sha256:…`.
 3. The Stack runs **once** on the switch, because the generation and revision
    format both change. Afterwards `status.lastUpdate.lastSuccessfulCommit` holds
    that `latest@sha256:…` value.
-4. **Unrelated commit:** merge anything outside the include list. The
+4. **Unrelated commit:** merge anything outside the Stack's list. The
    home-operations GitRepository moves, the ExternalArtifact revision does not,
    `lastSuccessfulCommit` stays put, and no new `Update` appears
-   (`kubectl -n pulumi get updates -l pulumi.com/stack-name=authentik`).
-5. **Related commit:** an edit under `stacks/authentik/` (or `components/`)
-   gives a new ExternalArtifact revision and one new Update.
+   (`kubectl -n pulumi get updates -l pulumi.com/stack-name=<stack>`). On a
+   Stack with a resync timer, timer runs still appear; check the Update's
+   `status.message` says resync rather than "New commit detected".
+5. **Related commit:** an edit under `stacks/<dir>/` (or `components/`) gives a
+   new ExternalArtifact revision and one new Update.
 
-### Rolling back
+authentik, the pilot, passed all five on 2026-10-20. Two unrelated commits
+(`a476b341`, `ddadf5f8`) produced no run. `7107de2a`, a comment in
+`stacks/authentik/index.ts`, moved the revision and produced exactly one
+successful run.
 
-Point `spec.fluxSource.sourceRef` back at
-`{kind: GitRepository, name: home-operations}` and drop the generator. The other
-pieces (source-watcher, the RBAC rule) are inert on their own.
+## Rolling back
 
-## Rollout to the other Stacks
-
-The same three edits per Stack: an `artifactgenerator.yaml`, its entry in the
-Stack's `kustomization.yaml`, and the `sourceRef`. Traced on 2026-10-19; re-trace
-before each one.
-
-| Stack (`dir`) | Resync today | Extra repo reads beyond authentik's set | Benefit |
-| --- | --- | --- | --- |
-| backups (`stacks/backups`) | 86400s, `continueResyncOnCommitMatch: false` | `docker/**` (`components/dockerStackBackups.ts`: compose files, `.ignore` markers) | High: commits are its main trigger |
-| home-operations (`stacks/home`) | 86400s, continue | `docker/**` (`components/DockgeLxc.ts`) | High |
-| gulf-of-mexico | 3600s, continue | `docker/**` (`DockgeLxc`) | Medium: the hourly resync stays |
-| ocracoke | 86400s, continue (Kustomization disabled) | `docker/**` (`DockgeLxc`) | When it is re-enabled |
-| unifi-network | 300s, continue | none beyond its own 8 stack files | Low: the 5-minute resync dominates |
-| system | 600s, continue | `kubernetes/apps/coder/coder/**` (templates, `helmrelease.yaml`, `resources/pulumi-token-job.yaml`), `kubernetes/apps/**/ks.yaml` (`postgres-rotation.ts` globs them) | Low, and system's list is the widest. Do it last, or not at all. |
-
-`home-operations`, `gulf-of-mexico` and `ocracoke` list `backups` as a
-prerequisite. The operator's prerequisite check reads the other Stack's status,
-not its source, so moving `backups` first is safe.
+Per Stack: point `spec.fluxSource.sourceRef` back at
+`{kind: GitRepository, name: home-operations}` and drop the component and the
+patch from its `kustomization.yaml`. source-watcher and the RBAC rule are inert
+on their own.
 
 ## Risks
 
@@ -168,11 +203,5 @@ not its source, so moving `backups` first is safe.
   last revision. The Stack keeps running on that source and stops seeing new
   ones until it is back. With source-controller down the effect would be the
   same. A newly scheduled workspace cannot fetch until it is back.
-- **Ordering at merge.** The authentik Kustomization applies an
-  `ArtifactGenerator` before source-watcher's CRD may exist. Flux's server-side
-  dry-run fails the whole apply, so the Stack stays on the GitRepository and the
-  Kustomization retries every 2m until the CRD lands. Then the Stack may report
-  `could not resolve sourceRef` for a few seconds before the first artifact
-  appears. The operator watches the kind and picks it up.
 - **v1beta1 API.** `source.extensions.fluxcd.io` is beta. A future Flux upgrade
   may need the manifests moved to a new version.
