@@ -1,0 +1,13 @@
+# Lets pods in the listed namespaces talk to the Talos API with an `os:admin`
+# role -- tuppr in system-upgrade drives Talos upgrades through it. Was
+# `.machine.features.kubernetesTalosAPIAccess`; a KubeTalosAPIAccessConfig
+# document on Talos 1.14 (its presence is what enables it). Talos API RBAC
+# (`.machine.features.rbac`) is not deprecated and stays v1alpha1.
+machine:
+  features:
+    rbac: true
+---
+apiVersion: v1alpha1
+kind: KubeTalosAPIAccessConfig
+allowedRoles: ["os:admin"]
+allowedKubernetesNamespaces: ["actions-runner-system", "system-upgrade", "kube-system"]

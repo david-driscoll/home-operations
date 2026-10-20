@@ -1,0 +1,16 @@
+# The Kubernetes API VIP, shared by the three control planes and bound to the
+# `ethSel0` alias all/30-network.yaml.tpl defines on every node. Was the
+# per-node `vip:` under talconfig.yaml's networkInterfaces; as a control-plane/
+# patch no worker can carry it (see the note on hard-hat in topf.yaml).
+#
+# 10.10.206.201, not SGC's old 10.10.209.201. These three join
+# equestria, whose endpoint is https://10.10.206.201:6443 — a control
+# plane advertising a different VIP forms its own election for an
+# address nothing routes to, and the API server certSANs (topf.yaml
+# `data.certSANs`) do not cover .209.201, so anything reaching the API
+# that way fails TLS. Viable as a shared VIP because every node here is
+# /16 inside 10.10.0.0/16 behind gateway 10.10.0.1 — one broadcast domain.
+apiVersion: v1alpha1
+kind: Layer2VIPConfig
+name: 10.10.206.201
+link: ethSel0
