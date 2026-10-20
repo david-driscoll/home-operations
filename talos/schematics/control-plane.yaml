@@ -1,0 +1,23 @@
+# Image Factory schematic for the three control planes (milky-way, othalla,
+# pegasus) -- Intel, so i915 + intel-ucode. TOPF hashes this file locally into
+# the schematic ID (946edf75...); comments and key order do not change it,
+# only the values do. A new combination must be registered once with
+# `topf schematic-ids --submit-to-factory` before any node can install it.
+customization:
+  extraKernelArgs:
+    - i915.enable_guc=3
+    - intel_iommu=on
+    - iommu=pt
+    - sysctl.kernel.kexec_load_disabled=1
+    - apparmor=0                          # Less security, faster puter
+    - init_on_alloc=0                     # Less security, faster puter
+    - init_on_free=0                      # Less security, faster puter
+    - mitigations=off                     # Less security, faster puter
+    - security=none                       # Less security, faster puter
+    - talos.auditd.disabled=1             # Less security, faster puter
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/i915
+      - siderolabs/intel-ucode
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools

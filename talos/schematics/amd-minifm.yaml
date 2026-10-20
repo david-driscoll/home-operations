@@ -1,0 +1,9 @@
+# Image Factory schematic for the AMD mini-PC worker (hard-hat).
+# Hashed locally by TOPF into 65cf8364...; see control-plane.yaml for how.
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/amd-ucode
+      - siderolabs/amdgpu
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools
