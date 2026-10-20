@@ -105,6 +105,10 @@ spec:
               # that happened. DISABLE_UPDATES also makes `claude update`
               # refuse.
               DISABLE_UPDATES: "1"
+              # microsoft/azure-skills (./resources/apm.yml) deploys Claude
+              # hooks that run a telemetry reporter on every session start and
+              # tool call; this is the opt-out its track-telemetry.sh checks.
+              AZURE_MCP_COLLECT_TELEMETRY: "false"
             securityContext: &securityContext
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
@@ -230,6 +234,11 @@ spec:
             app:
               - path: /var/run/secrets/github-token
                 readOnly: true
+            # `apm install` fetches ~180 packages from GitHub; anonymous, the
+            # 60/hour API limit would fail it partway.
+            tools:
+              - path: /var/run/secrets/github-token
+                readOnly: true
       sops-age:
         type: secret
         # The estate-wide reflected Secret, not `${APP}` -- see the
@@ -283,6 +292,9 @@ spec:
                 readOnly: true
               - path: /home/paseo/.config/mise/config.toml
                 subPath: mise.toml
+                readOnly: true
+              - path: /opt/paseo/apm.yml
+                subPath: apm.yml
                 readOnly: true
             # The daemon and every agent read the same global config.
             app:
