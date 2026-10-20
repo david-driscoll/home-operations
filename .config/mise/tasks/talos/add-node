@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
-#MISE description="Add a node that is still in maintenance mode (applies config over the insecure API)"
+#MISE description="Add a node that is still in maintenance mode (TOPF applies its config over the insecure API)"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
-#USAGE arg "<ip>" help="Maintenance-mode node IP, as it appears in talos/talconfig.yaml"
-#USAGE flag "--mode <mode>" default="auto" help="talosctl apply-config --mode (auto|no-reboot|reboot|staged|try)"
+#MISE depends=["talos:validate-config"]
+#USAGE arg "<ip>" help="Maintenance-mode node IP, as it appears in talos/topf.yaml"
+#USAGE flag "--mode <mode>" default="auto" help="Talos apply mode (auto|no-reboot|reboot|staged|try)"
 #
-# The only difference from talos:apply-node is `--insecure`: a node in
-# maintenance mode has no machine config yet, so it has no client certificate to
-# authenticate against and the normal path cannot reach it.
+# A node in maintenance mode has no machine config yet, so it has no client
+# certificate to authenticate against. TOPF notices the maintenance stage and
+# switches to the insecure API on its own -- what talhelper needed
+# `--insecure` for. The node must already be in topf.yaml. Skipping the
+# authenticated precondition talos:apply-node runs is the only difference.
 # shellcheck disable=SC2154  # usage_ip / usage_mode are injected by mise from
 #                            the #USAGE headers above; shellcheck cannot see
 #                            where they are assigned.
 set -Eeuo pipefail
 
-talhelper gencommand apply --node "${usage_ip}" --extra-flags "--insecure --mode=${usage_mode}" | bash
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+host="$(topf_host_for_ip "${usage_ip}")"
+
+topf --nodes-filter "$(topf_node_filter "${host}")" apply --mode "${usage_mode}"

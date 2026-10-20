@@ -1,60 +1,39 @@
 #!/usr/bin/env bash
-#MISE description="Render Talos machine configs into talos/clusterconfig with talhelper"
+#MISE description="Render every node's Talos machine config into talos/clusterconfig with TOPF, plus an admin talosconfig"
 #MISE dir="{{config_root}}/talos"
 #
-# Named `genconfig` after the talhelper subcommand it wraps — every other task
-# in this namespace is named after its talhelper verb.
+# Named `genconfig` for continuity: it was the talhelper subcommand this task
+# wrapped, and every task that needs a rendered config or a working talosconfig
+# still `depends` on it. TOPF does not need a render to apply -- `topf apply`
+# renders for itself, against the Talos version each node RUNS -- so the files
+# here are for reading and for `talos:validate-config`, not an apply input.
 #
-# This is the root of the namespace: every task that needs a rendered machine
-# config or a working talosconfig `depends` on it.
+# This render is OFFLINE: the config version contract comes from topf.yaml's
+# talosVersion. `talos:diff` shows what a node would actually receive.
 #
-# Outputs land in talos/clusterconfig/, which is gitignored per node (see
-# talos/clusterconfig/.gitignore) — including the generated `talosconfig` that
-# $TALOSCONFIG points at.
+# Outputs land in talos/clusterconfig/ (gitignored wholesale, see its
+# .gitignore): <host>.yaml per node, and the generated `talosconfig` that
+# $TALOSCONFIG points at. All of it is secret.
+#
+# Preconditions, inline: mise has no `preconditions:` mechanism. There is
+# deliberately no `which topf / talosctl` check — both are pinned in
+# .config/mise.toml [tools], so mise installs them before the task body runs.
 set -Eeuo pipefail
 
-# Preconditions, inline: mise has no `preconditions:` mechanism. There is
-# deliberately no `which talhelper / talosctl` check — both are pinned in
-# .config/mise.toml [tools], so mise installs them before the task body runs.
-[[ -f talconfig.yaml ]] || {
-  printf 'talos:genconfig: talos/talconfig.yaml is missing.\n' >&2
-  exit 1
-}
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
 
-[[ -f "${MISE_CONFIG_ROOT}/.sops.yaml" ]] || {
-  printf 'talos:genconfig: .sops.yaml is missing at the repo root.\n' >&2
-  exit 1
-}
+umask 077
+# A node removed from topf.yaml would otherwise leave its last render behind
+# for validate-config to keep checking.
+find clusterconfig -maxdepth 1 -type f -name '*.yaml' -delete
 
-# talsecret.sops.yaml is SOPS-encrypted, so genconfig cannot decrypt it without
-# the age key. Absent, sops fails with a generic "no matching keys" that names
-# neither the file nor the variable — worth catching by name.
-[[ -f "${SOPS_AGE_KEY_FILE}" ]] || {
-  printf 'talos:genconfig: no age key at %s (SOPS_AGE_KEY_FILE).\n' "${SOPS_AGE_KEY_FILE}" >&2
-  printf 'talos:genconfig: it is gitignored, so a fresh clone or a git worktree will not have it.\n' >&2
-  exit 1
-}
+# </dev/null: should TOPF ever prompt (it only does to generate a missing
+# secrets bundle, which topf_preflight already rules out), a non-terminal
+# stdin makes it decline instead of waiting.
+topf render --output clusterconfig </dev/null
 
-# patches/controller/etcd-encryption.yaml needs the secretbox key, which must not
-# live in git in the clear. Read it from talsecret.sops.yaml -- the file that
-# already holds it -- rather than keeping a second encrypted copy that could
-# drift. Exported for talhelper's `${VAR}` substitution; nothing else sees it.
-TALOS_SECRETBOX_ENCRYPTION_SECRET="$(sops -d --extract '["secrets"]["secretboxencryptionsecret"]' talsecret.sops.yaml)"
-[[ -n "${TALOS_SECRETBOX_ENCRYPTION_SECRET}" ]] || {
-  printf 'talos:genconfig: talsecret.sops.yaml has no secrets.secretboxencryptionsecret.\n' >&2
-  exit 1
-}
-export TALOS_SECRETBOX_ENCRYPTION_SECRET
-
-# talconfig.yaml and the patches name hosts under the root domain as
-# ${ROOT_DOMAIN}, which talhelper substitutes from the environment the same way.
-# The repo never writes the value (docs/plans/private-domain-scrub.md); mise
-# exports it from .config/domains.sops.yaml. Empty, it would render the API
-# server's certSAN and every registry mirror as a name ending in a bare dot --
-# refuse instead.
-[[ -n "${ROOT_DOMAIN:-}" ]] || {
-  printf 'talos:genconfig: ROOT_DOMAIN is empty -- mise exports it from .config/domains.sops.yaml, which needs the age key.\n' >&2
-  exit 1
-}
-
-talhelper genconfig
+# A fresh os:admin client certificate on every run, signed by the bundle's
+# Talos CA. Endpoints are the control planes, nodes are every node.
+topf talosconfig </dev/null > clusterconfig/talosconfig

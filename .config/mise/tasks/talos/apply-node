@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-#MISE description="Apply the rendered Talos config to one node"
+#MISE description="Apply the Talos config to one node (TOPF shows the diff and asks first)"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
-#USAGE arg "<ip>" help="Node IP address, as it appears in talos/talconfig.yaml"
-#USAGE flag "--mode <mode>" default="auto" help="talosctl apply-config --mode (auto|no-reboot|reboot|staged|try)"
+#MISE depends=["talos:validate-config"]
+#USAGE arg "<ip>" help="Node IP address, as it appears in talos/topf.yaml"
+#USAGE flag "--mode <mode>" default="auto" help="Talos apply mode (auto|no-reboot|reboot|staged|try)"
 #
 #   mise run talos:apply-node 10.10.206.10
 #   mise run talos:apply-node 10.10.206.10 --mode reboot
+#
+# `topf apply` renders the node's config against the Talos version it RUNS,
+# dry-runs it, prints Talos's diff, asks, applies, then waits for the node to
+# stay Ready. `mise run talos:diff <ip>` is the same without the apply.
 # shellcheck disable=SC2154  # usage_ip / usage_mode are injected by mise from
 #                            the #USAGE headers above; shellcheck cannot see
 #                            where they are assigned.
@@ -15,13 +19,18 @@
 #                            substitution -- the single quotes are intentional.
 set -Eeuo pipefail
 
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+host="$(topf_host_for_ip "${usage_ip}")"
+
 # This precondition distinguishes "wrong IP" from "node in maintenance mode" —
-# the latter needs talos:add-node (--insecure), not this task, and without the
-# check it surfaces as a bare certificate error.
+# the latter needs talos:add-node, not this task, and without the check it
+# surfaces as a bare certificate error.
 talosctl --nodes "${usage_ip}" get machineconfig >/dev/null || {
   printf 'talos:apply-node: %s did not answer an authenticated Talos API call.\n' "${usage_ip}" >&2
   printf 'talos:apply-node: a node still in maintenance mode needs `mise run talos:add-node %s`.\n' "${usage_ip}" >&2
   exit 1
 }
 
-talhelper gencommand apply --node "${usage_ip}" --extra-flags "--mode=${usage_mode}" | bash
+topf --nodes-filter "$(topf_node_filter "${host}")" apply --mode "${usage_mode}"
