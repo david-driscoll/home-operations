@@ -6,9 +6,6 @@
 # One path per line; `#` lines and blanks are ignored. A file touched by two
 # phases is listed once, under the first.
 
-# --- Phase 2: Flux-rendered values -> ${ROOT_DOMAIN} / ${TAILSCALE_DOMAIN} ---
-kubernetes/apps/kube-system/openbao/helmrelease.yaml
-
 # --- Generated: clears as the sources above do (graphify update .) ---
 graphify-out/GRAPH_REPORT.md
 graphify-out/graph.json
