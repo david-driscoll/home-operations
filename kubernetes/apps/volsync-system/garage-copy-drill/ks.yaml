@@ -23,7 +23,8 @@ spec:
   force: false
   interval: 1h
   retryInterval: 2m
-  timeout: 30m
+  # The Job's activeDeadlineSeconds: each app is restored twice.
+  timeout: 60m
   sourceRef:
     kind: GitRepository
     name: flux-system

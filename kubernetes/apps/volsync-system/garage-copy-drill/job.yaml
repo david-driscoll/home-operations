@@ -1,7 +1,8 @@
 ---
-# Restores APPS' latest snapshots from TrueNAS's copy of the VolSync bucket
-# (garage-copy-drill.sh): the drill in docs/plans/host-owned-backups.md §E,
-# run at each phase exit. Run it again by changing APPS or the `drill`
+# Restores the newest snapshot in TrueNAS's copy of the VolSync bucket for
+# each of APPS, once from Garage and once from the copy, and checks the two
+# match (garage-copy-drill.sh): the drill in docs/plans/host-owned-backups.md
+# §E, run at each phase exit. Run it again by changing APPS or the `drill`
 # annotation below. Either one changes the Job's spec, which is immutable,
 # and the force label has Flux recreate it, as for ../garage-history-copy.
 # That is also why there is no ttlSecondsAfterFinished.
@@ -18,7 +19,7 @@ spec:
     metadata:
       annotations:
         # Which drill this run is. Change it to run the drill again.
-        driscoll.dev/drill: phase-3-pilot-2026-10-01-after-first-pull
+        driscoll.dev/drill: phase-3-exit-2026-10-20-garage-and-copy
     spec:
       restartPolicy: Never
       automountServiceAccountToken: false
@@ -36,8 +37,12 @@ spec:
             - /bin/sh
             - /script/garage-copy-drill.sh
           env:
+            # The pilot's two apps; the two whose sync metric skipped a night
+            # (jellyfin 10-06, lidarr 10-17), ~3.5 GiB each and the largest
+            # here; immich; and paperless, whose ReplicationSource is new
+            # (2026-10-19).
             - name: APPS
-              value: kapowarr rustdesk
+              value: kapowarr rustdesk jellyfin lidarr immich paperless
             - name: RESTIC_CACHE_DIR
               value: /cache
           envFrom:

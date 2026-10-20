@@ -694,9 +694,11 @@ covers the pg_dump stream (§C4), which is restic too. TrueNAS keeps the HTTPS n
        - Each bucket's copy is its own dataset, so the CNPG archive, the Postgres dumps and the
          Pulumi state, none of them encrypted client-side, are never exported.
        - `ensureNFSShare` now writes only when a share differs, as the other TrueNAS helpers do.
-     - **Built: the drill**, `kubernetes/apps/volsync-system/garage-copy-drill`. It restores each
-       app in `APPS` from the copy with `--no-lock`, with no Garage involved, and prints Garage's
-       newest snapshot beside the copy's.
+     - **Built: the drill**, `kubernetes/apps/volsync-system/garage-copy-drill`. For each app in
+       `APPS` it takes the copy's newest snapshot and restores it twice with `--no-lock`: from
+       Garage, then from the copy with no Garage involved. It passes when both restores succeed
+       and a checksum of every file matches between them. It prints each side's newest snapshot,
+       so a copy that has fallen behind shows.
        - Run it again at each phase exit by changing `APPS` or its `driscoll.dev/drill`
          annotation.
        - Merge only after a pull has landed, or the Job finds no repository and fails.
