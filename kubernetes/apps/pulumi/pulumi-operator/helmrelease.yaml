@@ -82,6 +82,18 @@ spec:
     extraEnv:
       - name: MAX_CONCURRENT_RECONCILES
         value: "3"
+    # Stacks whose fluxSource is an ExternalArtifact (Flux source-watcher; see
+    # docs/kubernetes/pulumi-stack-artifacts.md). The operator resolves any
+    # source kind generically, but its ClusterRole only lists buckets,
+    # gitrepositories and ocirepositories. Without this the Get fails and the
+    # lazy watch it installs per kind cannot list, so the Stack would neither
+    # run nor wake on a new revision. The chart appends these to the
+    # pulumi-operator-controller-manager ClusterRole.
+    rbac:
+      extraRules:
+        - apiGroups: ["source.toolkit.fluxcd.io"]
+          resources: ["externalartifacts"]
+          verbs: ["get", "list", "watch"]
     controller:
       metricsSecure: false
     serviceMonitor:
