@@ -17,7 +17,7 @@
 # stack.yaml declares are untouched):
 #
 #  1. REQUIRED: never on a node labelled `driscoll.dev/ephemeral-disk: sata`.
-#     The label comes from talos/talconfig.yaml nodeLabels (fluttershy,
+#     The label comes from talos/topf.yaml node labels (fluttershy,
 #     kerfuffle). NotIn also matches a node WITHOUT the label, so until those
 #     two nodes have had `mise run talos:apply-node` this rule is a no-op
 #     rather than a scheduling failure. Required, not preferred: a preferred

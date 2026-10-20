@@ -24,7 +24,7 @@ metadata:
     # static LAN address is equally valid on either parent interface.
     #
     # Nodes with NIC enp3s0 must be labeled: kubectl label node <name> technitium-dns=true
-    # The label is set from talos/talconfig.yaml on milky-way/othalla/pegasus; the pod's
+    # The label is set from talos/topf.yaml on milky-way/othalla/pegasus; the pod's
     # nodeSelector ensures it only lands on one of them.
     #
     # Tailscale DNS access: the Connector subnet router already advertises

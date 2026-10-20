@@ -1,5 +1,14 @@
 # 23 — Talos machine config into Pulumi (Letter V)
 
+> **Status, 2026-10-20: deferred. Its main goal — retiring talhelper — was met another way.**
+> talhelper was archived upstream on 2026-08-26 and its README points to TOPF
+> (`postfinance/topf`). equestria's machine config moved to TOPF instead of Pulumi:
+> `talos/topf.yaml` plus a patch tree, driven by the same `mise run talos:*` tasks
+> (`talos/README.md`, `docs/runbooks/talos-topf-cutover.md`). Nothing below has been built.
+> The plan stays here as the record of D10 and as a starting point if Pulumi-native machine
+> config is wanted later. If that happens, the TOPF patch tree — not talconfig.yaml — is the
+> input to port, and "talhelper" below should be read as "TOPF".
+
 > Follow-on, not critical path: machine config via `@pulumiverse/talos`,
 > talhelper retired. Part of the
 > [cluster consolidation plan](README.md) for

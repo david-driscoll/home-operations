@@ -83,7 +83,7 @@ home and is no longer what Flux reads.
 
 | File | Contents | Applied by |
 |---|---|---|
-| `talos/talsecret.sops.yaml` | Talos cluster PKI, bootstrap token, secretbox encryption secret | `talhelper` via the `mise run talos:*` tasks (`genconfig`, `apply`) |
+| `talos/talsecret.sops.yaml` | Talos cluster PKI, bootstrap token, secretbox encryption secret | TOPF (`talos/topf.yaml` `secretsPath`) via the `mise run talos:*` tasks (`apply-node`, `add-node`, `genconfig`) |
 | `kubernetes/components/common/sops-age.sops.yaml` | `age.agekey` — the in-cluster decryption key | cluster bootstrap (`bootstrap/helmfile.yaml`) → `flux-system` |
 | `kubernetes/components/common/cluster-secrets.sops.yaml` | 45 keys: cluster topology, DNS names, IPs, sizing. Mostly *non-secret configuration*. | cluster bootstrap; Flux `postBuild.substituteFrom` |
 | `kubernetes/components/common/shared-secrets.sops.yaml` | Estate-wide host/IP/domain map, incl. `ALPHA_SITE_IP` / `ALPHA_SITE_TAILSCALE_IP` | same |

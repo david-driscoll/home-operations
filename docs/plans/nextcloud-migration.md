@@ -161,7 +161,7 @@ therefore "prove it's empty, carry over the stragglers", not a bulk copy.
   - `overwriteprotocol: https`
   - `overwrite.cli.url: https://cloud.<root domain>`
   - `trusted_domains: [cloud.<root domain>]`
-  - `trusted_proxies: [10.206.0.0/16]` (`talos/talconfig.yaml` clusterPodNets)
+  - `trusted_proxies: [10.206.0.0/16]` (`talos/all/10-cluster-network.yaml` podSubnets)
   - `forwarded_for_headers: [HTTP_X_FORWARDED_FOR]`
 
   Brute-force protection depends on the last two.
