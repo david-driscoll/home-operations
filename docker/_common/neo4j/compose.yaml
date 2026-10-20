@@ -1,7 +1,7 @@
 services:
   neo4j:
     container_name: neo4j
-    image: neo4j:2026.09.0-community-trixie@sha256:d6269a020149934597c8c3df926d080a612796dbbb48861ca9d5b1109cabf0d8
+    image: neo4j:2026.10.0-community-trixie@sha256:efd913da1b8411a380d2e80682db15fb899bec681341af09a89fa85fc3107a5f
     restart: unless-stopped
     dns:
       - 100.100.100.100
