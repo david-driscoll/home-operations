@@ -1,0 +1,18 @@
+# containerd CRI customization, as a CRICustomizationConfig (Talos 1.14).
+#
+# This was the one setting #1914 could not migrate: Talos 1.14 deprecates
+# `.machine.files` in favour of this document, but talhelper 3.1.17 vendored a
+# machinery build that did not register it, so the repo kept the deprecated
+# form and `talos:validate-config` tolerated exactly that one warning. TOPF's
+# machinery renders it, so the file and the tolerance are gone. The `name` is
+# free-form except for the reserved `customization`.
+#
+# `discard_unpacked_layers = false` keeps containerd's unpacked layers on disk
+# so spegel can serve them to other nodes; without it a node advertises layers
+# it has already discarded.
+apiVersion: v1alpha1
+kind: CRICustomizationConfig
+name: spegel
+content: |-
+  [plugins."io.containerd.cri.v1.images"]
+    discard_unpacked_layers = false

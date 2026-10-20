@@ -1,0 +1,22 @@
+# Workload isolation OFF, explicitly. This keeps the behaviour every node has
+# run with until now.
+#
+# Talos 1.14 can run the container plane -- containerd, the kubelet, every pod
+# -- inside a dedicated PID and mount namespace owned by the `sandboxd` service,
+# isolated from machined and the rest of the host. A freshly GENERATED 1.14
+# config turns it on (`workloadIsolation: true`), and TOPF generates every
+# config fresh. These nodes were upgraded in place from 1.13, carry no
+# SecurityProfileConfig, and are not isolated; without this document the first
+# TOPF apply would isolate them.
+#
+# Not a free hardening: Talos documents that the in-tree iSCSI volume plugin
+# stops working across the sandbox, and Longhorn's engine uses host iSCSI. The
+# hostNetwork/host-namespace workloads (Alloy talos-logs, spegel,
+# node-exporter, Cilium) are untested with it. Enabling it is its own change,
+# one worker first.
+#
+# Explicit `false` rather than deleting the generated document, so a later
+# change of default cannot flip it silently.
+apiVersion: v1alpha1
+kind: SecurityProfileConfig
+workloadIsolation: false

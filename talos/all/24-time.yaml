@@ -1,0 +1,9 @@
+# Was `.machine.time` (`disabled: false` + servers); a TimeSyncConfig document
+# on Talos 1.14. Time sync is enabled by the document's presence (`enabled`
+# defaults to true), so the old `disabled: false` has no counterpart.
+apiVersion: v1alpha1
+kind: TimeSyncConfig
+ntp:
+  servers:
+    - 162.159.200.1
+    - 162.159.200.123
