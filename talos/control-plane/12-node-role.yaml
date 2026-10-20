@@ -1,0 +1,11 @@
+# The control-plane role label and the NoSchedule taint that keeps ordinary
+# workloads off the control planes (was `.cluster.allowSchedulingOnControlPlanes:
+# false`). Talos's generated KubeNodeConfig carries both, but it is deleted in
+# all/03-node-config.yaml -- see there -- so they are restated here. Merges
+# with the nodeIP, labels and annotations set in all/.
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+labels:
+  node-role.kubernetes.io/control-plane: ""
+taints:
+  node-role.kubernetes.io/control-plane: NoSchedule
