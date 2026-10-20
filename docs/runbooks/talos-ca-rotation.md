@@ -1,7 +1,8 @@
 # Rotating the Talos API CA
 
-Invalidating a leaked `talosconfig`. Written 2026-08-17, against Talos **v1.13.8**
-(`talos/talenv.yaml`) and a **talhelper**-managed cluster.
+Invalidating a leaked `talosconfig`. Written 2026-08-17, against Talos **v1.13.8** and a
+**talhelper**-managed cluster; updated 2026-10-20 for **TOPF** (`talos/topf.yaml`), which replaced
+talhelper. The trap below is the same under both.
 
 > **This is the only way to revoke a Talos client certificate.** Talos has no CRL. Issuing a
 > replacement admin cert does not invalidate the old one — both stay valid until expiry. Rotating
@@ -28,13 +29,14 @@ internally and has no way to accept an existing one — that is
 [siderolabs/talos#12816](https://github.com/siderolabs/talos/issues/12816), proposed as
 `--with-secrets` and **not implemented**.
 
-This cluster is talhelper-managed: `talos/talsecret.sops.yaml` holds `certs.os.crt` / `certs.os.key`,
-and `talhelper genconfig` renders machine configs from it. So after a rotation the file still holds
-the **old** CA, and the next `genconfig` + `apply-config` pushes the old CA back — undoing the
-rotation, or leaving nodes in a split trust state.
+`talos/talsecret.sops.yaml` holds `certs.os.crt` / `certs.os.key`, and TOPF renders every
+machine config from it (`topf.yaml`'s `secretsPath`) — and mints every `talosconfig` from it too.
+So after a rotation the file still holds the **old** CA, and the next `mise run talos:apply-node`
+(`topf apply`) pushes the old CA back — undoing the rotation, or leaving nodes in a split trust
+state.
 
 **Therefore: updating `talsecret.sops.yaml` is a required step, not cleanup.** Do it before any
-`genconfig` runs.
+`talos:apply*` or `talos:genconfig` runs.
 
 ## Before you start
 
@@ -98,9 +100,9 @@ talosctl -n <CONTROLPLANE> version          # new client cert works
 talosctl -n <CONTROLPLANE> get machineconfig -o yaml | grep -A3 acceptedCAs
 ```
 
-Then confirm the loop is closed — `talhelper genconfig` should produce configs whose CA matches
-what the nodes now run. If it does not, step 4 did not take, and applying would revert the
-rotation.
+Then confirm the loop is closed — `mise run talos:genconfig` should produce configs whose CA
+matches what the nodes now run, and `mise run talos:diff` should show no CA change on any node. If
+it does not, step 4 did not take, and applying would revert the rotation.
 
 **6. Confirm the leaked credential is dead.**
 

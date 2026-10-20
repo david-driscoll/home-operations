@@ -18,7 +18,7 @@ what to do with them.
 ## Prerequisites for everything below
 
 - `age.key` present on the machine, `SOPS_AGE_KEY_FILE` pointing at it
-- `mise install` complete in this repo (`sops`, `age`, `kubectl`, `talhelper`, `flux`); `bao` is not pinned here, install it separately
+- `mise install` complete in this repo (`sops`, `age`, `kubectl`, `topf`, `talosctl`, `flux`); `bao` is not pinned here, install it separately
 - Tailscale connectivity to alpha-site
 
 If you do not have `age.key`, stop. Nothing below is possible without it, and there is no
@@ -189,8 +189,10 @@ RPO is up to 24 hours.
 Order matters. Each step depends on the one before it.
 
 1. **Recover `age.key`.** Everything else is gated on this.
-2. **Talos + Kubernetes** — in this repo (`talos/`, driven by the `mise run talos:*`
-   tasks: `genconfig`, then `apply`; needs `age.key` + `talos/talsecret.sops.yaml`).
+2. **Talos + Kubernetes** — in this repo (`talos/`, rendered and applied by TOPF through the
+   `mise run talos:*` tasks: `talos:add-node <ip>` per node while it sits in maintenance mode,
+   then bootstrap etcd once on the first control plane (`talosctl bootstrap`); needs `age.key` +
+   `talos/talsecret.sops.yaml`). See `talos/README.md`.
    45+ min. Do not cancel. Read `docs/cluster-consolidation/` first — it records the
    traps the consolidation hit.
 3. **Cluster bootstrap secrets and CRDs:** `bootstrap/helmfile.yaml` plus the sops files
