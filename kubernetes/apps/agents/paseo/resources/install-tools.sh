@@ -39,25 +39,8 @@ if ! "$mise_bin" exec -- claude --version >/dev/null 2>&1; then
   "$mise_bin" install --force npm:@anthropic-ai/claude-code
 fi
 
-# User-scope agent packages (./apm.yml): skills, instructions and the mise MCP
-# server, for every Claude Code and Codex session on the pod. Copied, not
-# mounted: an agent's own `apm install -g <pkg>` writes ~/.apm/apm.yml, and a
-# read-only mount would fail it -- the copy just resets it to ./apm.yml here.
-# `--refresh` installs what is missing and moves what is already there to its
-# latest upstream ref: ~4 minutes per start for the current list, against ~1
-# for a bare `apm install --global`. Never fatal: apm rolls back the whole
-# install when one package fails, and a dead upstream repo should not keep the
-# daemon from starting.
-mkdir -p "$HOME/.apm"
-cp /opt/paseo/apm.yml "$HOME/.apm/apm.yml"
-token_file=/var/run/secrets/github-token/token
-if [ -r "$token_file" ]; then
-  GITHUB_APM_PAT="$(cat "$token_file")"
-  export GITHUB_APM_PAT
-fi
-echo "==> apm install -g ($HOME/.apm/apm.yml)"
-"$mise_bin" exec -- apm install --global --refresh \
-  || echo "WARNING: apm install failed; skills stay as they were on the volume" >&2
+# apm itself installs above; the packages in ./apm.yml are the `apm` sidecar's
+# job (./apm-refresh.sh), so the daemon does not wait on them.
 
 # Housekeeping; never fatal.
 "$mise_bin" prune --yes || echo "WARNING: mise prune failed; old versions stay on the volume" >&2

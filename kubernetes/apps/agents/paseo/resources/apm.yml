@@ -1,8 +1,9 @@
 # Paseo's user-scope agent skills, instructions and MCP servers.
 #
-# ./install-tools.sh copies this to ~/.apm/apm.yml and runs `apm install -g`
-# on each start, so anything added here lands on the next rollout and anything
-# already on the home volume is refreshed to its latest upstream ref. Distinct
+# The `apm` sidecar (./apm-refresh.sh) copies this to ~/.apm/apm.yml and runs
+# `apm install -g --refresh` at each start and then daily, so anything added
+# here lands shortly after the next rollout and anything already on the home
+# volume is kept at its latest upstream ref. Distinct
 # from the repo-root apm.yml, which is project scope for home-operations.
 name: paseo
 version: 1.0.0

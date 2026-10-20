@@ -207,6 +207,32 @@ spec:
               limits:
                 # Headroom for several agent CLIs running side by side.
                 memory: 8Gi
+          # Installs and refreshes the user-scope agent packages in
+          # ./resources/apm.yml (./resources/apm-refresh.sh): once at start,
+          # then daily. Beside the daemon rather than in `tools` so a start
+          # never waits on ~180 GitHub fetches; agents pick packages up as
+          # they land. apm itself comes from `tools`, through mise.
+          apm:
+            image: *image
+            command: ["/bin/bash", "/opt/paseo/apm-refresh.sh"]
+            env:
+              <<: *env
+            # Nothing to probe: a failed pass only logs, and the loop is the
+            # process.
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 1Gi
     service:
       app:
         controller: *app
@@ -236,7 +262,7 @@ spec:
                 readOnly: true
             # `apm install` fetches ~180 packages from GitHub; anonymous, the
             # 60/hour API limit would fail it partway.
-            tools:
+            apm:
               - path: /var/run/secrets/github-token
                 readOnly: true
       sops-age:
@@ -293,11 +319,18 @@ spec:
               - path: /home/paseo/.config/mise/config.toml
                 subPath: mise.toml
                 readOnly: true
+            # The daemon and every agent read the same global config.
+            app:
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+            apm:
+              - path: /opt/paseo/apm-refresh.sh
+                subPath: apm-refresh.sh
+                readOnly: true
               - path: /opt/paseo/apm.yml
                 subPath: apm.yml
                 readOnly: true
-            # The daemon and every agent read the same global config.
-            app:
               - path: /home/paseo/.config/mise/config.toml
                 subPath: mise.toml
                 readOnly: true

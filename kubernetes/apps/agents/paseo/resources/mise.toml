@@ -20,7 +20,7 @@ bun = "1.4.3"
 uv = "0.13.1"
 # APM, from PyPI rather than the repo's `github:microsoft/apm`: that release
 # binary needs glibc 2.38 and this image is bookworm (2.36). Installs
-# ./apm.yml at user scope -- see ./install-tools.sh.
+# ./apm.yml at user scope -- see ./apm-refresh.sh.
 "pipx:apm-cli" = "0.34.0"
 "npm:@anthropic-ai/claude-code" = { version = "2.1.303", allow_builds = true }
 "npm:@openai/codex" = "0.163.0"
