@@ -23,6 +23,7 @@ configMapGenerator:
       - mise.toml=./resources/mise.toml
       - install-tools.sh=./resources/install-tools.sh
       - apm.yml=./resources/apm.yml
+      - apm-refresh.sh=./resources/apm-refresh.sh
     options:
       disableNameSuffixHash: true
       annotations:
