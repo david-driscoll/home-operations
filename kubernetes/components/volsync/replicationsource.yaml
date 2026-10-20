@@ -23,9 +23,8 @@ spec:
     # winter.
     #
     # Things timed around this hour, all of which moved with it: Longhorn's
-    # RecurringJobs (apps/longhorn-system/longhorn/recurringjob.yaml), the
-    # copy jobs in components/BackupPlanDirector.ts, and the TrueNAS pull in
-    # components/garageTruenasCopy.ts.
+    # RecurringJobs (apps/longhorn-system/longhorn/recurringjob.yaml) and the
+    # TrueNAS pull in components/garageTruenasCopy.ts.
     schedule: "0 19 * * *"
   restic:
     copyMethod: "${VOLSYNC_COPYMETHOD:=Snapshot}"

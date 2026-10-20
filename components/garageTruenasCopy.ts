@@ -99,7 +99,7 @@ const GARAGE_REGION = "garage";
 /**
  * When spike pulls, in TrueNAS's local time (the estate's TIMEZONE): after the
  * Backrest queue (01:00 local, done by mid-morning), the VolSync movers (19:00
- * UTC) and the copy tier (20:00 and 21:00 UTC), so the Garage hosts are
+ * UTC) and the Backrest copy jobs (21:00 UTC), so the Garage hosts are
  * otherwise quiet. 18:00 local is 22:00 UTC in summer and 23:00 in winter:
  * one hour after the last copy starts in summer, two in winter.
  *
