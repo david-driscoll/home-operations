@@ -1,6 +1,6 @@
 # Private names: scrub the root domain and tailnet from the repo
 
-Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is done: 5a #2292 (mise and the MCP clients), 5b #2293 (scripts, Docker configs, notebooks) and 5c (Talos). What remains in the baseline is OpenBao's HCL comment (deferred from phase 2) and the generated graph, both phase 6. Owner: David.
+Status 2026-10-01: phases 1–4 merged (phase 4 as 4a #2282 and 4b #2285). The old Cloudflare token path is deleted, and the login titles stay, allow-listed. Phase 5 is done: 5a #2292 (mise and the MCP clients), 5b #2293 (scripts, Docker configs, notebooks) and 5c (Talos). What remains in the baseline is the generated graph (phase 6). OpenBao's HCL comment, deferred from phase 2, no longer names either domain, and left the baseline on 2026-10-20. Owner: David.
 
 This repository is public. It names the estate's **root domain** and its
 **tailnet** (the MagicDNS suffix) in hundreds of places. The goal is that
@@ -319,4 +319,3 @@ live first.
 
 - Delete the finished migration scripts (`scripts/bao-reorg/`)? They name
   nothing private any more, so this is housekeeping, not scrub work.
-- Whether OpenBao's HCL comment is worth a config roll (phase 2).
