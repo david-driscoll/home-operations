@@ -56,6 +56,14 @@ Pieces, each checked against source rather than taken from docs:
   full match path, so `@repo/stacks/*/package.json` lands as
   `stacks/<name>/package.json`. The Stack keeps `dir: stacks/<name>`, and
   `../../components` and the `clusters/` lookup still resolve.
+- **`**` matches one segment.** v2.2.4 expands every non-Extract `from` glob
+  with Go's `fs.Glob` (`getGlobMatchingEntries` in `internal/builder`), which
+  has no recursive wildcard, so `**` behaves exactly like `*`. `dir/**` still
+  copies everything, because each top-level match is then copied recursively.
+  But `a/**/b.yaml` only matches `a/<one dir>/b.yaml`. A glob that matches
+  nothing fails the whole build (v2.2.4 has no `optional`), and the Stack
+  stalls on `could not resolve sourceRef`. That is how system broke on
+  2026-10-20. Prefer whole-directory copies.
 - **Retention.** source-watcher takes the same `--artifact-retention-*` flags as
   source-controller, with the same 1m/2 defaults. The workspace pins the artifact
   URL the same way, so the FluxInstance patch that raised source-controller to
@@ -90,7 +98,9 @@ Stack:
 4. Emulate it. Copy the listed paths out of a `git archive` into a scratch dir,
    re-run the import trace there, and run
    `npm install --package-lock-only --ignore-scripts --offline`. The lockfile
-   should come out byte-identical.
+   should come out byte-identical. Expand globs the way source-watcher does
+   (`**` = `*`, see above), not with a shell's `globstar`. An emulation that
+   used `globstar` is what let the broken system glob through.
 
 Excluding `*.md` and `*.test.ts` from `components/` and the stack directory is
 safe: nothing imports them at run time, and test-only commits stop triggering runs.
@@ -141,16 +151,20 @@ in the component. In the component it would re-run Stacks that never read it.
 | gulf-of-mexico | 54 | `docker/` (`DockgeLxc`) | 3600s, continue |
 | ocracoke | 54 | `docker/` (`DockgeLxc`) | 86400s, continue. Its Kustomization is commented out of `kubernetes/apps/pulumi/kustomization.yaml`, so this is wired but has never run. |
 | unifi-network | 55 | none | 300s, continue |
-| system | 61 | `kubernetes/apps/coder/coder/` (`coder-templates.ts`, `components/coderTemplates.ts`), `kubernetes/apps/**/ks.yaml` (`postgres-rotation.ts` globs them) | 600s, continue |
+| system | 61 | all of `kubernetes/apps/`. `coder-templates.ts` and `components/coderTemplates.ts` read `kubernetes/apps/coder/coder/`, and `postgres-rotation.ts` globs every `kubernetes/apps/**/ks.yaml` (243 files at two depths). It is copied whole so that no depth can drop out of postgres-rotation's view, which would remove that app's OpenBao role. | 600s, continue |
 
 The resync timers still fire. A Stack with `continueResyncOnCommitMatch: true`
 keeps running on its interval whatever the revision does. What goes away is the
-extra run per commit on top of it. For system that means any new app's `ks.yaml`
-still re-runs it, which is correct: `postgres-rotation.ts` reads them.
+extra run per commit on top of it. For system, any commit under
+`kubernetes/apps/` still re-runs it. That is broader than the `ks.yaml` files
+`postgres-rotation.ts` reads, but it costs little on a Stack with a 10-minute
+resync.
 
 The emulation for all seven (step 4 above) on 2026-10-20 found:
 - Every artifact's import closure resolves to the same files as in the repo.
-- `docker/`, `kubernetes/apps/coder/coder/` and all 243 `ks.yaml` files match the repo exactly.
+- `docker/` and `kubernetes/apps/` match the repo exactly. The first emulation
+  used `globstar` and passed a `kubernetes/apps/**/ks.yaml` glob that
+  source-watcher then rejected; see the `**` note above.
 - The npm lockfile comes out byte-identical.
 
 source-watcher's copy keeps each file's mode, and the archive normalises modes

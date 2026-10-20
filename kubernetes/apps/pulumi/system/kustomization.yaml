@@ -23,11 +23,20 @@ patches:
       - op: add
         path: /spec/artifacts/0/copy/-
         value: {from: "@repo/stacks/system/", to: "@artifact/stacks/", exclude: ["*.md", "*.test.ts"]}
-      # coder-templates.ts and components/coderTemplates.ts: templates/, helmrelease.yaml, resources/pulumi-token-job.yaml
+      # The whole of kubernetes/apps/, for two readers:
+      #  - coder-templates.ts and components/coderTemplates.ts read
+      #    kubernetes/apps/coder/coder/ (templates/, helmrelease.yaml,
+      #    resources/pulumi-token-job.yaml);
+      #  - postgres-rotation.ts runs globSync("kubernetes/apps/**/ks.yaml") and
+      #    derives the set of apps with a database from what it finds.
+      # Deliberately NOT a `kubernetes/apps/**/ks.yaml` copy. source-watcher
+      # v2.2.4 matches non-Extract copies with Go's fs.Glob, where `**` is just
+      # `*` (one path segment), so that pattern matched nothing and failed the
+      # build (2026-10-20). Per-depth globs (`apps/*/*/ks.yaml`,
+      # `apps/*/*/*/ks.yaml`) would work today, but an app whose ks.yaml sat at
+      # a depth they missed would vanish from postgres-rotation's view, and its
+      # OpenBao role with it. The cost is a run on any kubernetes/apps/ commit,
+      # on a Stack that resyncs every 10 minutes anyway.
       - op: add
         path: /spec/artifacts/0/copy/-
-        value: {from: "@repo/kubernetes/apps/coder/coder/", to: "@artifact/kubernetes/apps/coder/"}
-      # postgres-rotation.ts: globSync("kubernetes/apps/**/ks.yaml"); the full match path is kept
-      - op: add
-        path: /spec/artifacts/0/copy/-
-        value: {from: "@repo/kubernetes/apps/**/ks.yaml", to: "@artifact/"}
+        value: {from: "@repo/kubernetes/apps/", to: "@artifact/kubernetes/"}
