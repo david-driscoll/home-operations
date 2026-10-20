@@ -254,7 +254,10 @@ live first.
     - `equestria-init.sh`'s closing instructions;
     - `test.sh`'s kubeconfig;
     - each Docker file after substitution.
-- **5c: Talos.** No `talenv.sops.yaml` was needed. talhelper already
+- **5c: Talos.** *(2026-10-20: talhelper has since been replaced by TOPF. The
+  same `ROOT_DOMAIN` export is read with `env` in the `talos/**/*.yaml.tpl`
+  patches, which fail to render without it; see `talos/README.md`.)*
+  No `talenv.sops.yaml` was needed. talhelper already
   substitutes `${VAR}` from the process environment into `talconfig.yaml` and
   `@`-referenced patches (the secretbox key in `etcd-encryption.yaml` works
   that way), and mise exports `ROOT_DOMAIN` since 5a.

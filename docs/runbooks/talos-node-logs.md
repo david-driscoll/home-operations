@@ -64,16 +64,17 @@ sessions may already hold it.
 
 The receiver is plain Flux and deploys on merge. The Talos patch does
 **not** apply itself. `machine.logging` and `KmsgLogConfig` both take effect
-without a reboot. Apply one node at a time and look at the diff first: the
-rendered `talos/clusterconfig/*.yaml` are gitignored and can be stale, so diff
-against the **live** config.
+without a reboot. Apply one node at a time and look at the diff first. The
+diff is against the **live** config (TOPF asks the node), not the gitignored
+renders in `talos/clusterconfig/`, which can be stale.
 
 ```bash
-mise run talos:genconfig
-cd talos
-talosctl apply-config -n <ip> -e <ip> --file clusterconfig/equestria-<node>.yaml --dry-run
-talosctl apply-config -n <ip> -e <ip> --file clusterconfig/equestria-<node>.yaml --mode=no-reboot
+mise run talos:diff <ip>                         # read-only
+mise run talos:apply-node <ip> --mode no-reboot  # shows the same diff, asks first
 ```
+
+(Written for talhelper, which applied a rendered file with `talosctl
+apply-config --file`; TOPF renders and applies in one step.)
 
 The dry run should show only the `logging` block and the new `KmsgLogConfig`
 document. Anything else means live has drifted from the repo; stop and find out
