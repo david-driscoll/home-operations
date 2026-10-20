@@ -602,3 +602,20 @@ spec:
           # Nothing here should be phoning home for release announcements; the
           # image tag is Renovate's job.
           ENABLED: false
+
+        # Written by Forgejo into the gitconfig under its git home on every
+        # start (syncGitConfig), so it covers every git process the forge
+        # spawns -- receive-pack for each push, the merges, the hooks.
+        git.config:
+          # fsync loose objects and refs before a push is acknowledged. Git's
+          # default fsyncs packs only, so an unclean loss of the volume can
+          # keep a ref while dropping the commit it names, or leave the ref
+          # file empty. That happened on 2026-10-20: Longhorn moved this volume
+          # off a hung node while it was still mounted there, a 0-byte
+          # refs/pull/338/head survived, and from then on every git command
+          # that walks all refs failed -- the Actions page, pull request
+          # creation, and the `git update-server-info` that post-receive runs
+          # first, so pushes stopped updating the database or starting
+          # workflows. `committed` is objects plus refs; on a forge this size
+          # the extra fsyncs per push cost nothing noticeable.
+          core.fsync: committed
