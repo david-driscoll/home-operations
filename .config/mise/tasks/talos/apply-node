@@ -22,6 +22,7 @@ set -Eeuo pipefail
 # shellcheck source=scripts/lib/talos-topf.sh
 source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
 topf_preflight
+topf_tuppr_idle
 host="$(topf_host_for_ip "${usage_ip}")"
 
 # This precondition distinguishes "wrong IP" from "node in maintenance mode" —

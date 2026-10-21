@@ -45,12 +45,15 @@ applies them first:
     re-running that install.
 - [ ] `mise run talos:validate-config` passes. Every version pin agrees and all seven configs
   validate `--strict`.
-- [ ] tuppr is idle. Neither the `TalosUpgrade` nor the `KubernetesUpgrade` in `system-upgrade`
-  is mid-rollout:
+- [ ] tuppr is idle: both the `TalosUpgrade` and the `KubernetesUpgrade` report `Completed`.
+  The apply tasks enforce this themselves and refuse otherwise (`TALOS_IGNORE_TUPPR=1`
+  overrides), so checking up front only saves a refusal halfway through:
 
   ```sh
-  kubectl -n system-upgrade get talosupgrade,kubernetesupgrade
+  kubectl get talosupgrade,kubernetesupgrade
   ```
+
+  kubectl follows your current context, so it has to be equestria's.
 
 - [ ] `mise run talos:preflight-upgrade` passes: all nodes Ready, VolSync quiet.
 - [ ] No Longhorn volume is `degraded`:
