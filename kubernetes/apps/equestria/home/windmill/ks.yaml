@@ -49,46 +49,10 @@ spec:
     # and in no manifest until this line. Manifests in ./postgres-roles/;
     # needs POSTGRES_APP_PATH below.
     - ../../../../components/postgres/roles
-  # The `windmill` LOGIN role must be a member of both RLS principals: every
-  # user_db transaction starts with `SET LOCAL ROLE windmill_admin` (or
-  # windmill_user) inside set_session_context(), and PostgreSQL only allows
-  # SET ROLE to a role you are a member of. Upstream grants this itself --
-  # migration 20241127171723_apply_windmill_roles runs
-  #   GRANT windmill_user TO CURRENT_USER; GRANT windmill_admin TO CURRENT_USER;
-  # -- but components/postgres renders DatabaseRole/windmill with no `inRoles`,
-  # and CNPG enforces that empty list, so the membership could be revoked and
-  # nothing in git would put it back. That happened on 2026-10-21: every
-  # workspace/script/folder API call failed with 42501
-  # `permission denied to set role "windmill_admin"`.
-  #
-  # Two levels of patch, the same route as components/postgres/superuser: this
-  # one patches the nested `windmill-postgres` Kustomization, which then
-  # patches the DatabaseRole it renders. JSON6902 append, so it composes with
-  # any sibling component that also adds to `spec.patches`.
-  patches:
-    - target:
-        group: kustomize.toolkit.fluxcd.io
-        kind: Kustomization
-        # A regex, as in components/postgres/superuser: patches run BEFORE
-        # postBuild substitution, so the object is still `${APP}-postgres`
-        # here, and `$` keeps `${APP}-postgres-roles` out of it.
-        name: .*-postgres$
-      patch: |-
-        - op: add
-          path: /spec/patches/-
-          value:
-            target:
-              group: postgresql.cnpg.io
-              kind: DatabaseRole
-            patch: |-
-              apiVersion: postgresql.cnpg.io/v1
-              kind: DatabaseRole
-              metadata:
-                name: not-used
-              spec:
-                inRoles:
-                  - windmill_user
-                  - windmill_admin
+    # Makes the `windmill` LOGIN role a member of both principals above, which
+    # Windmill needs to `SET LOCAL ROLE` into them. See the file for why this is
+    # a component and not `spec.patches` on this Kustomization.
+    - ./postgres-login-role
   postBuild:
     substitute:
       APP: *app
