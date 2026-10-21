@@ -145,7 +145,7 @@ spec:
           mongo:
             image:
               repository: mongo
-              tag: 8.3.13@sha256:0e900a3364da37b76d642b73b0bba56bd4c6c509ab470cf700436fd866bee3ff
+              tag: 9.0.4@sha256:dc28ed5a9d0fc616903c3f463bb1e53b92b49f441721b91926e87d90bf957ce8
             # Habitica needs a replica set (it uses transactions), which is why
             # NODE_DB_URI above says `replicaSet=rs`. Upstream's compose starts
             # mongod this way and has its healthcheck call rs.initiate(); with
