@@ -5,6 +5,7 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./externalsecret.yaml
+  - ./ai-resource-cronjob.yaml
   - ./operator-serviceaccount.yaml
   - ./definition.yaml
   - ./httproute.yaml

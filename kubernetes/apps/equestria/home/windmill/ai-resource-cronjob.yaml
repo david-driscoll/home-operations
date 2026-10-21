@@ -1,0 +1,120 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Keeps the Anthropic resource that Windmill AI reads in step with the key in
+# OpenBao (./externalsecret.yaml, `${APP}-ai`).
+#
+# WHY A DATABASE WRITE. The instance `ai_config` (./helmrelease.yaml) is the
+# operator's to own, but it holds only a RESOURCE PATH. Windmill resolves that
+# path in the `admins` workspace (backend/windmill-api/src/ai.rs: an instance
+# config's resources live in "admins") and reads `apiKey` out of the resource's
+# value. The operator manages global settings and worker configs and nothing
+# else, so it cannot create that resource, and `ai_config` is opaque JSON, so a
+# secretKeyRef inside it would be stored literally rather than resolved.
+#
+# The key is stored as a plain resource value rather than a `$var:` secret
+# variable: variables are encrypted with the workspace key, which SQL cannot
+# reproduce. That is the same exposure the operator already gives the authentik
+# client secret, which it writes into global_settings verbatim. Only `admins`
+# workspace members can read the resource.
+#
+# Writes Windmill's `resource` and `folder` tables directly. Neither is a
+# documented interface, so a release that changes them breaks this job --
+# loudly, as an SQL error, with the AI provider still on the last good key.
+#
+# The upsert is conditional (`WHERE ... IS DISTINCT FROM`), so a run that
+# changes nothing updates no row and the resource_version trigger records no
+# new version: history grows only when the key actually changes.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ${APP}-ai-resource
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: upsert-resource
+              image: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm@sha256:a8042813b0d1abe564bebb129479f9a865fb9d78a322edc36c204ac1ea9e5ddd
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  # An empty key would overwrite a working one with "".
+                  [ -n "$ANTHROPIC_API_KEY" ] || { echo "ANTHROPIC_API_KEY is empty" >&2; exit 1; }
+                  # \getenv, not `-v api_key=...`: a psql variable given on the
+                  # command line is readable in /proc/<pid>/cmdline.
+                  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+                    -v workspace="$WM_WORKSPACE" -v folder="$WM_FOLDER" \
+                    -v path="$WM_RESOURCE_PATH" <<'SQL'
+                  \getenv api_key ANTHROPIC_API_KEY
+                  BEGIN;
+                  -- Owners left empty, matching the folders Windmill seeds in
+                  -- `admins` itself (app_themes, app_groups, app_custom).
+                  INSERT INTO folder (workspace_id, name, display_name, owners, created_by, summary)
+                  VALUES (:'workspace', :'folder', :'folder', '{}', 'kubernetes',
+                          'Managed by kubernetes/apps/equestria/home/windmill. Edits are overwritten.')
+                  ON CONFLICT (workspace_id, name) DO NOTHING;
+                  INSERT INTO resource (workspace_id, path, value, description, resource_type, created_by, edited_at)
+                  VALUES (:'workspace', :'path', jsonb_build_object('apiKey', :'api_key'),
+                          'Anthropic key for Windmill AI. Synced from OpenBao by the windmill-ai-resource CronJob; edits are overwritten.',
+                          'anthropic', 'kubernetes', now())
+                  ON CONFLICT (workspace_id, path) DO UPDATE
+                     SET value = EXCLUDED.value, resource_type = EXCLUDED.resource_type, edited_at = now()
+                   WHERE resource.value IS DISTINCT FROM EXCLUDED.value
+                      OR resource.resource_type IS DISTINCT FROM EXCLUDED.resource_type;
+                  COMMIT;
+                  SQL
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${APP}-pguser-secret
+                      key: uri
+                - name: ANTHROPIC_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${APP}-ai
+                      key: anthropic_api_key
+                # Must match `ai_config.providers.anthropic.resource_path` in
+                # ./helmrelease.yaml.
+                - name: WM_WORKSPACE
+                  value: admins
+                - name: WM_FOLDER
+                  value: ai
+                - name: WM_RESOURCE_PATH
+                  value: f/ai/anthropic
+                - name: HOME
+                  value: /tmp
+              securityContext:
+                runAsUser: 26
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi
+          volumes:
+            - name: tmp
+              emptyDir: {}

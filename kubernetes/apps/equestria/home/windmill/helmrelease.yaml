@@ -213,6 +213,21 @@ spec:
             teams: {}
             custom_tags:
               - chromium
+            # Instance-wide Windmill AI: every workspace with no AI provider of
+            # its own falls back to this (backend/windmill-api/src/ai.rs). The
+            # resource path resolves in the `admins` workspace, and the
+            # resource there is written by ./ai-resource-cronjob.yaml from the
+            # key in OpenBao -- `ai_config` is opaque JSON, so it cannot take a
+            # secretKeyRef itself. Keep the path in step with that CronJob.
+            ai_config:
+              providers:
+                anthropic:
+                  resource_path: f/ai/anthropic
+                  models:
+                    - claude-opus-5-5
+              default_model:
+                provider: anthropic
+                model: claude-opus-5-5
             oauths:
               # The key is the provider name, and so the callback path:
               # /user/login_callback/authentik, as registered in
