@@ -6,6 +6,7 @@ resources:
   - ./helmrelease.yaml
   - ./externalsecret.yaml
   - ./definition.yaml
+  - ./sandbox
 configMapGenerator:
   - name: n8n-hooks
     files:

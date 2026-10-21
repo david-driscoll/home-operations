@@ -98,9 +98,33 @@ spec:
               # NODE_FUNCTION_ALLOW_EXTERNAL: databricks/sql
               NODE_FUNCTION_ALLOW_BUILTIN: crypto,fs
               NODE_OPTIONS: "--max-old-space-size=768"
+
+              # n8n Assistant. The `instance-ai` module loads by default; the
+              # model's key comes from ${APP}-ai below. The sandbox is
+              # ./sandbox, and agents share the same connection.
+              N8N_INSTANCE_AI_MODEL: anthropic/claude-sonnet-5-5
+              # Web search through degoog's SearXNG-shaped API, not the
+              # searxng app: n8n appends `/search?format=json`, and degoog
+              # serves that at /api/search. n8n reads only results[].title,
+              # url and content, which degoog's own JSON already carries; the
+              # "SearX API" server setting (`searxApiEnabled`) makes it the
+              # exact SearXNG document. n8n sends no bearer, so degoog's
+              # `apiKeySearchEnabled` must stay off.
+              N8N_INSTANCE_AI_SEARXNG_URL: http://degoog.${NAMESPACE}.svc.cluster.local:4444/api
+              N8N_INSTANCE_AI_SANDBOX_ENABLED: true
+              N8N_INSTANCE_AI_SANDBOX_PROVIDER: n8n-sandbox
+              N8N_SANDBOX_SERVICE_URL: http://${APP}-sandbox-api.${NAMESPACE}.svc.cluster.local:8080
+              N8N_SANDBOX_SERVICE_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}-sandbox-auth
+                    key: api-keys
             envFrom:
               - secretRef:
                   name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-ai
+                  optional: true
             resources:
               requests:
                 cpu: 50m
