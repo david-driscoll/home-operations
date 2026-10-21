@@ -52,7 +52,7 @@ home=/home/node
 # Kept equal to the npm bundled with .config/mise.toml's node pin, which is
 # what produced package-lock.json.
 # renovate: datasource=npm depName=npm
-NPM_VERSION=12.2.0
+NPM_VERSION=12.2.1
 
 case "$(dpkg --print-architecture)" in
   amd64) platform=linux-x64 ;;
