@@ -47,7 +47,7 @@ spec:
             # volume. Upstream publishes only this image -- no slim variant.
             image:
               repository: ghcr.io/kikootwo/readmeabook
-              tag: 1.2.3@sha256:a769c582af85cadb8b048ebd1069ee1946b4ff1930ba8da2978c9fef6fc29638
+              tag: 1.2.6@sha256:3b23cddbf2c374fc5ad3bc4dc27ca9b4953192ce897dba52a3be71531a815d7e
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}
