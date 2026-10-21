@@ -26,14 +26,19 @@ Deliberate changes, approved:
 | explicit `SecurityProfileConfig {workloadIsolation: false}` | every node | none: they were never isolated |
 | explicit `VolumeConfig EPHEMERAL {mount.secure: false}` | every node | none: `/var` keeps `rw,relatime,…` without `nosuid,nodev` |
 
-**Pre-existing drift.** These are in git but were never applied, and they ride along unless step 0
-applies them first:
+**Pre-existing drift.** These are in git but were never applied. Step 0 applies them with talhelper
+before the merge, so they do not ride along in the first TOPF diff:
 
 | Drift | Nodes |
 |---|---|
 | registry mirrors `data.forgejo.org` and `mcr.microsoft.com` | all seven |
 | label `driscoll.dev/ephemeral-disk: sata` (keeps Pulumi workspaces off them) | fluttershy, kerfuffle |
 | install image schematic `82664fb…` → `b2443f…` (the one it already runs) | shining-armor |
+
+The shining-armor row may already be gone. tuppr's v1.14.4 rollout finished on all seven nodes on
+2026-10-17, and tuppr writes each node's install image back into its config after upgrading it.
+It also refuses a node whose configured image does not embed the schematic the node runs. If step
+0's diff for shining-armor shows no install image change, that is why; it is not a problem.
 
 ## Prerequisites
 
@@ -62,10 +67,12 @@ applies them first:
   kubectl -n longhorn-system get volumes.longhorn.io -o custom-columns=NAME:.metadata.name,ROBUSTNESS:.status.robustness | grep -v healthy
   ```
 
-## Step 0 — apply the drift with the old tooling (optional, recommended)
+## Step 0 — apply the drift with the old tooling (required, before the merge)
 
 This makes the first TOPF diff format-only, so anything unexpected in it stands out. Run it from a
-checkout of `main` **before** this branch merged, i.e. with talhelper still in place:
+checkout of `main` **before** the TOPF branch merges, while talhelper is still in place. Do not
+merge until all seven are done. Afterwards the only way back to talhelper is the detached-checkout
+procedure under Rollback, and seven real changes would be mixed into a seven-node reshaping diff.
 
 ```sh
 mise run talos:apply-node 10.10.206.10   # shining-armor
@@ -74,7 +81,8 @@ git checkout -- talos/clusterconfig/.gitignore   # talhelper rewrites it on ever
 ```
 
 Each apply should show only the two mirrors, plus the label (fluttershy, kerfuffle) or the install
-image (shining-armor).
+image (shining-armor, if still pending; see above). talhelper's `talos:apply-node` defaults to
+`--mode auto`; none of these changes needs a reboot.
 
 ## Step 1 — preview every node
 
@@ -87,7 +95,8 @@ mise run talos:diff            # read-only; exit 2 = "changes", which mise repor
 For every node, check two things:
 
 - The summary line says `Applied configuration without a reboot`.
-- The hunks are only the reshaping described above, plus any step-0 drift not yet applied.
+- The hunks are only the reshaping described above. Step 0's drift must not reappear; if it does,
+  step 0 is not finished.
 
 Things that must **not** appear on the `+` side:
 
@@ -185,13 +194,11 @@ mise run talos:apply-node 10.10.206.17                    # kerfuffle
 Before each one, repeat step 2's checks for the node just done, and wait for Longhorn to show no
 `degraded` volume.
 
-After fluttershy and kerfuffle, if step 0 was skipped:
+After fluttershy and kerfuffle, both still carry the label step 0 gave them:
 
 ```sh
-kubectl get nodes -l driscoll.dev/ephemeral-disk=sata
+kubectl get nodes -l driscoll.dev/ephemeral-disk=sata   # fluttershy and kerfuffle
 ```
-
-This now lists both nodes, and the pulumi-workspace anti-affinity starts to bite.
 
 ## Step 4 — the control planes, one at a time, VIP holder last
 
