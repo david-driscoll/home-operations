@@ -259,6 +259,61 @@ mise run talos:diff   # exit 0: no node has anything left to apply
 
 Delete any rendered files you copied out of `talos/clusterconfig/`; they hold the cluster secrets.
 
+## After: the first tuppr rollouts
+
+The cutover is not fully proven until tuppr has upgraded through the new config once. Two code paths
+run live for the first time:
+
+- **`TalosUpgrade`** reads and rewrites the installer image in `UnattendedInstallConfig`, no longer
+  `.machine.install`. tuppr has supported this since 0.4.4, with unit tests, but these nodes have never
+  exercised it.
+- **`KubernetesUpgrade`** runs `talosctl upgrade-k8s`, which now patches the kubelet image in the
+  `KubeletConfig` document. The kube-* control-plane documents are already proven: v1.37.0 → v1.37.1
+  on 2026-09-25 ran against them. The kubelet was still `.machine.kubelet` then.
+
+Both arrive as ordinary Renovate PRs ("Siderolabs Talos", "Siderolabs Kubernetes"), which bump
+`topf.yaml`, the CR and `versions.env` together. For the first of each, watch the rollout instead of
+leaving it to run unattended.
+
+**First `TalosUpgrade`.** tuppr takes one node at a time, so the first node is the canary:
+
+```sh
+kubectl get talosupgrade talos -w        # phase and currentNode
+```
+
+Once that node is back and Ready, before tuppr gets far into the rest:
+
+```sh
+talosctl -n <ip> get machineconfig v1alpha1 -o yaml | yq '.spec' \
+  | yq 'select(.kind == "UnattendedInstallConfig") | .installer.image'   # new version, node's schematic
+talosctl -n <ip> get machineconfig v1alpha1 -o yaml | yq '.spec' \
+  | yq 'select(.machine) | .machine.install'                            # null: nothing re-added
+```
+
+If the first node fails, or either check is wrong, stop tuppr before it moves on. Suspending the
+Flux Kustomization would not do it; tuppr has its own annotation:
+
+```sh
+kubectl annotate talosupgrade talos tuppr.home-operations.com/suspend=topf-canary
+# … investigate; remove it to resume:
+kubectl annotate talosupgrade talos tuppr.home-operations.com/suspend-
+```
+
+While suspended the CR reports `Pending`, so the apply tasks refuse until it is removed (or
+`TALOS_IGNORE_TUPPR=1`). `talos:upgrade-node` is the break-glass path for the stuck node.
+
+**First `KubernetesUpgrade`.** This is a single run over every node. Afterwards, on each node:
+
+```sh
+talosctl -n <ip> get machineconfig v1alpha1 -o yaml | yq '.spec' \
+  | yq 'select(.kind == "KubeletConfig") | .image'      # the new kubeletVersion
+kubectl get nodes -o custom-columns=NAME:.metadata.name,KUBELET:.status.nodeInfo.kubeletVersion
+```
+
+**After each:** `mise run talos:diff` exits 0 on every node. tuppr has changed exactly what
+`topf.yaml` now says, so any hunk shows where the two disagree. Fix it in `talos/` rather than
+applying over it.
+
 ## Rollback
 
 TOPF and talhelper render from the same `talsecret.sops.yaml`, so there is no PKI to undo. Only
