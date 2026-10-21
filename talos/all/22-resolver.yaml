@@ -1,4 +1,4 @@
-# Migrated off `.machine.network.*` for Talos 1.14 (#1914). Both fields this
+# Migrated off `.machine.network.*` for Talos 1.14 (#1920). Both fields this
 # file used to set -- `nameservers` and `disableSearchDomain` -- are owned by
 # the `ResolverConfig` document, and the two sources are MUTUALLY EXCLUSIVE:
 # the generated config already carries a ResolverConfig (for hostDNS), so
@@ -7,7 +7,7 @@
 #
 # This document MERGES into the generated ResolverConfig -- it does not
 # replace it, so the hostDNS block (enabled, forwardKubeDNSToHost) survives.
-# Verified by diffing the rendered config, under talhelper at #1914 and again
+# Verified by diffing the rendered config, under talhelper at #1920 and again
 # under TOPF.
 #
 # THE INTERNAL RESOLVERS GO FIRST, AND THE ORDER IS LOAD-BEARING. Talos's host

@@ -1,5 +1,5 @@
 # Talos 1.14 moved every kube-* component out of `.cluster.*` in v1alpha1 and
-# into its own document (#1914). The old and new forms are MUTUALLY EXCLUSIVE,
+# into its own document (#1920). The old and new forms are MUTUALLY EXCLUSIVE,
 # so this file had to move wholesale: leaving `.cluster.apiServer` et al. in
 # place fails rendering with "kube-apiserver config is already set in v1alpha1
 # config (.cluster.apiServer)".

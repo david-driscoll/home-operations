@@ -1,6 +1,6 @@
 # containerd CRI customization, as a CRICustomizationConfig (Talos 1.14).
 #
-# This was the one setting #1914 could not migrate: Talos 1.14 deprecates
+# This was the one setting #1920 could not migrate: Talos 1.14 deprecates
 # `.machine.files` in favour of this document, but talhelper 3.1.17 vendored a
 # machinery build that did not register it, and rejected it outright --
 #
