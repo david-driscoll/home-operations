@@ -681,9 +681,9 @@ checksum = "sha256:d2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95
 url = "https://nodejs.org/dist/v24.22.1/node-v24.22.1-win-x64.zip"
 
 [[tools."npm:typescript"]]
-version = "5.9.3"
+version = "7.0.2"
 backend = "npm:typescript"
-specifiers = ["5.9.3"]
+specifiers = ["7.0.2"]
 
 [[tools.pipx]]
 version = "1.18.4"
