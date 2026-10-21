@@ -670,6 +670,24 @@
       },
     },
     {
+      // TOPF (.config/mise.toml `aqua:postfinance/topf`) renders equestria's
+      // Talos machine config with the Talos machinery it VENDORS, so a bump
+      // can change the rendered config -- new generated defaults, a document
+      // reshaped -- with nothing in talos/ touched. CI cannot see that: the
+      // diff needs the age key and the nodes. Not automerged (nothing opts it
+      // in above); this puts the check in front of whoever merges it. Listed
+      // under both names, as with graphifyy, in case Renovate reports the
+      // prefixed one.
+      description: "TOPF bumps: run talos:diff before merging",
+      matchPackageNames: [
+        "postfinance/topf",
+        "aqua:postfinance/topf"
+      ],
+      prBodyNotes: [
+        "**TOPF renders the Talos machine config.** Before merging, check out this branch and run `mise run talos:diff`. Every node must report `no change`, or changes you can account for: `topf --version` names the vendored Talos machinery, and a new machinery can change rendered defaults even though `talos/` is untouched. Exit 2 means changes. Do not merge on a red diff you have not read.",
+      ],
+    },
+    {
       description: "Siderolabs Kubernetes",
       groupName: "Siderolabs Kubernetes",
       matchDepNames: [
