@@ -37,7 +37,10 @@ spec:
       # fails both attempts.
       backoffLimit: 1
       activeDeadlineSeconds: 300
-      ttlSecondsAfterFinished: 86400
+      # A failed Job keeps KubeJobFailed firing until it is deleted. 4h leaves
+      # time to read it, and the logs stay in Loki after that. A real problem
+      # fails every run, so UnifiStaticDnsCheckFailing does not depend on this.
+      ttlSecondsAfterFinished: 14400
       template:
         spec:
           restartPolicy: Never
