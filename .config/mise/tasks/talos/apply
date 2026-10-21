@@ -3,10 +3,10 @@
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:validate-config"]
 #USAGE flag "--nodes-filter <regex>" required=#true help="Go regex over topf.yaml hosts, e.g. '^hard-hat$' or '^(fluttershy|kerfuffle)$'. '.*' is every node -- see below."
-#USAGE flag "--mode <mode>" default="auto" help="Talos apply mode (auto|no-reboot|reboot|staged|try)"
+#USAGE flag "--mode <mode>" default="no-reboot" help="Talos apply mode (no-reboot|auto|reboot|staged|try). no-reboot by default: a change Talos can only apply with a reboot is refused, not rebooted into"
 #
 #   mise run talos:apply --nodes-filter '^hard-hat$'
-#   mise run talos:apply --nodes-filter '^(fluttershy|kerfuffle)$' --mode no-reboot
+#   mise run talos:apply --nodes-filter '^(fluttershy|kerfuffle)$' --mode reboot
 #
 # PER NODE BY CONVENTION, so the filter is REQUIRED -- there is no default of
 # "every node". talos:apply-node is the usual entry point; this exists for a

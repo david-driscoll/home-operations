@@ -114,11 +114,12 @@ Why shining-armor:
 - It has its own schematic, so its install image is the most distinctive one to check.
 
 ```sh
-mise run talos:apply-node 10.10.206.10 --mode no-reboot
+mise run talos:apply-node 10.10.206.10
 ```
 
-`--mode no-reboot` makes Talos refuse rather than reboot, should it disagree with the dry run. TOPF
-shows the diff again and asks. After applying it waits for the node to stay Ready for 30s.
+`talos:apply-node` defaults to `--mode no-reboot`, so Talos refuses rather than reboots, should it
+disagree with the dry run. TOPF shows the diff again and asks. After applying it waits for the node
+to stay Ready for 30s.
 
 What to watch, in order:
 
@@ -176,9 +177,9 @@ Leave it at least an hour, ideally overnight, before continuing.
 ## Step 3 — the remaining workers, one at a time
 
 ```sh
-mise run talos:apply-node 10.10.206.14 --mode no-reboot   # hard-hat
-mise run talos:apply-node 10.10.206.16 --mode no-reboot   # fluttershy
-mise run talos:apply-node 10.10.206.17 --mode no-reboot   # kerfuffle
+mise run talos:apply-node 10.10.206.14                    # hard-hat
+mise run talos:apply-node 10.10.206.16                    # fluttershy
+mise run talos:apply-node 10.10.206.17                    # kerfuffle
 ```
 
 Before each one, repeat step 2's checks for the node just done, and wait for Longhorn to show no
@@ -203,9 +204,9 @@ talosctl -n 10.10.209.11 get addresses | grep 10.10.206.201
 Do the other two first:
 
 ```sh
-mise run talos:apply-node 10.10.209.10 --mode no-reboot   # milky-way
-mise run talos:apply-node 10.10.209.12 --mode no-reboot   # pegasus
-mise run talos:apply-node 10.10.209.11 --mode no-reboot   # othalla
+mise run talos:apply-node 10.10.209.10                    # milky-way
+mise run talos:apply-node 10.10.209.12                    # pegasus
+mise run talos:apply-node 10.10.209.11                    # othalla
 ```
 
 After each, in addition to step 2's checks:

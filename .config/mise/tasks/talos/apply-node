@@ -3,7 +3,7 @@
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:validate-config"]
 #USAGE arg "<ip>" help="Node IP address, as it appears in talos/topf.yaml"
-#USAGE flag "--mode <mode>" default="auto" help="Talos apply mode (auto|no-reboot|reboot|staged|try)"
+#USAGE flag "--mode <mode>" default="no-reboot" help="Talos apply mode (no-reboot|auto|reboot|staged|try). no-reboot by default: a change Talos can only apply with a reboot is refused, not rebooted into"
 #
 #   mise run talos:apply-node 10.10.206.10
 #   mise run talos:apply-node 10.10.206.10 --mode reboot
@@ -11,6 +11,12 @@
 # `topf apply` renders the node's config against the Talos version it RUNS,
 # dry-runs it, prints Talos's diff, asks, applies, then waits for the node to
 # stay Ready. `mise run talos:diff <ip>` is the same without the apply.
+#
+# `--mode no-reboot` is the DEFAULT, unlike Talos's own `auto`: should a change
+# need a reboot after all, Talos refuses it rather than rebooting a node that
+# may hold the last healthy Longhorn replica. Rebooting is opt-in with
+# `--mode reboot` (or `auto`). talos:add-node keeps `auto`: a node in
+# maintenance mode installs and reboots on its first config.
 # shellcheck disable=SC2154  # usage_ip / usage_mode are injected by mise from
 #                            the #USAGE headers above; shellcheck cannot see
 #                            where they are assigned.

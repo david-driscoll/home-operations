@@ -70,7 +70,7 @@ renders in `talos/clusterconfig/`, which can be stale.
 
 ```bash
 mise run talos:diff <ip>                         # read-only
-mise run talos:apply-node <ip> --mode no-reboot  # shows the same diff, asks first
+mise run talos:apply-node <ip>  # no-reboot by default; shows the same diff, asks first
 ```
 
 (Written for talhelper, which applied a rendered file with `talosctl
