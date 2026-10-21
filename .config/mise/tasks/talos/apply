@@ -25,5 +25,6 @@ set -Eeuo pipefail
 # shellcheck source=scripts/lib/talos-topf.sh
 source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
 topf_preflight
+topf_tuppr_idle
 
 topf --nodes-filter "${usage_nodes_filter}" apply --mode "${usage_mode}"

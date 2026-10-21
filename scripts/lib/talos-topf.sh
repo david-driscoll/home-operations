@@ -4,6 +4,7 @@
 #
 #   source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
 #   topf_preflight || exit 1
+#   topf_tuppr_idle || exit 1      # only in the tasks that apply config
 #   host="$(topf_host_for_ip "${usage_ip}")" || exit 1
 #   topf --nodes-filter "$(topf_node_filter "${host}")" apply --dry-run
 #
@@ -70,6 +71,52 @@ topf_preflight() {
     return 1
   fi
   export TALOS_SECRETBOX_ENCRYPTION_SECRET
+}
+
+# topf_tuppr_idle -- refuse while tuppr is rolling an upgrade. Called by the
+# tasks that apply config (talos:apply, apply-node, add-node), not by the
+# break-glass upgrade tasks, which exist for a stuck tuppr and confirm first.
+#
+# validate-config proves topf.yaml, versions.env and the tuppr CRs AGREE, but
+# mid-rollout they agree while some nodes still run the old version: an apply
+# to one of those would carry kubernetesVersion into its static pods and
+# kubelet, an upgrade outside tuppr's health checks (#1262 by another door).
+#
+# Passes only when BOTH CRs report phase Completed for their current spec
+# (status.observedGeneration == metadata.generation, so a just-bumped spec is
+# not read as done). Every other phase refuses, Failed included -- a failed
+# rollout leaves the nodes on mixed versions. So does an unreachable API or a
+# missing CR: fail closed. kubectl follows the ambient context (mise.toml sets
+# no KUBECONFIG). TALOS_IGNORE_TUPPR=1 overrides, for break-glass and for a
+# cluster with no API to ask.
+topf_tuppr_idle() {
+  local file kind name state phase observed generation
+
+  if [[ "${TALOS_IGNORE_TUPPR:-}" == "1" ]]; then
+    printf 'talos: TALOS_IGNORE_TUPPR=1 -- not checking whether tuppr is mid-rollout.\n' >&2
+    return 0
+  fi
+
+  # The same two files talos:validate-config reads the version pins from.
+  for file in talos kubernetes; do
+    file="${MISE_CONFIG_ROOT}/kubernetes/apps/system-upgrade/upgrades/${file}.yaml"
+    kind="$(yq 'select(.kind == "*Upgrade") | .kind' "${file}")"
+    name="$(yq 'select(.kind == "*Upgrade") | .metadata.name' "${file}")"
+    if ! state="$(kubectl get "${kind}" "${name}" -o json 2>&1)"; then
+      printf 'talos: could not read %s/%s from the cluster (%s):\n%s\n' \
+        "${kind}" "${name}" "$(kubectl config current-context 2>/dev/null || echo 'no context')" "${state}" >&2
+      printf 'talos: refusing to apply without knowing tuppr is idle. TALOS_IGNORE_TUPPR=1 overrides.\n' >&2
+      return 1
+    fi
+    state="$(jq -r '"\(.status.phase // "<none>") \(.status.observedGeneration // 0) \(.metadata.generation)"' <<<"${state}")"
+    read -r phase observed generation <<<"${state}"
+    if [[ "${phase}" != "Completed" || "${observed}" != "${generation}" ]]; then
+      printf 'talos: tuppr %s/%s is %s (observed generation %s of %s), not Completed.\n' \
+        "${kind}" "${name}" "${phase}" "${observed}" "${generation}" >&2
+      printf 'talos: an apply now could upgrade a node outside tuppr. Wait for it, or TALOS_IGNORE_TUPPR=1.\n' >&2
+      return 1
+    fi
+  done
 }
 
 # topf_host_for_ip <ip> -- the topf.yaml `host` whose `ip` is <ip>. The tasks
