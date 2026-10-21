@@ -98,9 +98,25 @@ spec:
               # NODE_FUNCTION_ALLOW_EXTERNAL: databricks/sql
               NODE_FUNCTION_ALLOW_BUILTIN: crypto,fs
               NODE_OPTIONS: "--max-old-space-size=768"
+
+              # n8n Assistant. The `instance-ai` module loads by default; the
+              # model is left at n8n's default (anthropic/claude-opus-4-8) and
+              # its key comes from ${APP}-ai below. The sandbox is ./sandbox,
+              # and agents share the same connection.
+              N8N_INSTANCE_AI_SANDBOX_ENABLED: true
+              N8N_INSTANCE_AI_SANDBOX_PROVIDER: n8n-sandbox
+              N8N_SANDBOX_SERVICE_URL: http://${APP}-sandbox-api.${NAMESPACE}.svc.cluster.local:8080
+              N8N_SANDBOX_SERVICE_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}-sandbox-auth
+                    key: api-keys
             envFrom:
               - secretRef:
                   name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-ai
+                  optional: true
             resources:
               requests:
                 cpu: 50m

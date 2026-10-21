@@ -1,0 +1,37 @@
+---
+# A CA of the sandbox's own for the API <-> runner mTLS, not the cluster-wide
+# `selfsigned-ca` ClusterIssuer. The runner trusts any client certificate its
+# CA signed, and it is a privileged Docker-in-Docker pod: on the shared CA,
+# every certificate cert-manager has ever issued in the cluster would be a
+# valid client to it.
+#
+# The leaves the chart issues from this (four Certificates, tls.mode
+# certManager) renew themselves and the binaries reload them from disk, which
+# replaces the compose stack's one-shot `sandbox-certs` job and its
+# never-renewed certificates.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${APP}-sandbox-ca
+spec:
+  isCA: true
+  commonName: ${APP}-sandbox-ca
+  secretName: ${APP}-sandbox-ca
+  duration: 87600h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/issuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: ${APP}-sandbox-ca
+spec:
+  ca:
+    secretName: ${APP}-sandbox-ca
