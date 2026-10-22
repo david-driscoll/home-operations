@@ -3,9 +3,9 @@
 lockfile_version = 1
 
 [[tools.1password-cli]]
-version = "2.41.0"
+version = "2.41.1"
 backend = "asdf:1password-cli"
-specifiers = ["2.41.0"]
+specifiers = ["2.41.1"]
 
 [[tools.actionlint]]
 version = "1.7.12"
