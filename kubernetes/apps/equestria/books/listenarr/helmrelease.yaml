@@ -54,7 +54,7 @@ spec:
               # prefix: without a regex-versioning packageRule for this package
               # in .github/renovate.json5 it will only ever re-pin the digest.
               repository: ghcr.io/listenarrs/listenarr
-              tag: canary-1.3.17@sha256:9df2c9244d2b45da84d66f45f812540668cdfa6bc8daaf1dd085a8862f1ffe33
+              tag: canary-1.3.18@sha256:3618100bdf951b13d60fefb31246c604f1afa3cbe3dcecf18c29fb02c2625527
               pullPolicy: IfNotPresent
             env:
               # docker-entrypoint.sh only acts on PUID/PGID when started as
