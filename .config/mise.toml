@@ -65,7 +65,7 @@ dotnet = { version = "10.0.203" }
 # (components/store/refs.ts, PLAN §D.1). Keep this version in step with the
 # vals initContainer in kubernetes/apps/pulumi/*/stack.yaml — the workspace
 # pods install the same pin via mise.
-vals = "0.47.0"
+vals = "0.50.0"
 # Resolves the secrets local commands need: `fnox exec -- <command>`, configured
 # by .config/fnox.toml. 1.40.0 is the floor: the sops and openbao providers
 # there are Lua plugins, which landed in that release.
