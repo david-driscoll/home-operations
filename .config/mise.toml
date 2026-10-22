@@ -29,7 +29,7 @@ gh = "2.102.1"
 # shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
 # The hook exits non-zero and git aborts the commit.
 hk = "2.8.0"
-pkl = "0.32.1"
+pkl = "0.32.2"
 biome = "2.5.2"
 typos = "1.51.1"
 # Linters invoked by hk. The same pinning rule as hk applies -- an unpinned
