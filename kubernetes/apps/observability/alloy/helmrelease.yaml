@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 1.14.1
-    digest: sha256:c1429bdfe98921f96cc49ec7289f67743ef8357afcb175d67cc5e8cc5de8549c
+    tag: 1.14.2
+    digest: sha256:e84edadced8278c63138b52e29b27e8bf5467a0d25db02590fcfc485fc7c1d18
   url: oci://ghcr.io/home-operations/charts-mirror/alloy
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
