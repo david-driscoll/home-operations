@@ -55,7 +55,7 @@ kind: MCPServer
 metadata:
   name: toolhive-forgejo
 spec:
-  image: docker.gitea.com/gitea-mcp-server:1.10.0@sha256:20701c3dcf3b71df384417d04f9f6382205b7f362380b258fb8e4dcf9599091f
+  image: docker.gitea.com/gitea-mcp-server:1.11.0@sha256:ccdb5660ecdf54c5e480f10cc8120ba2bf150b582cea8a1974de2e59883582d3
   transport: stdio
   proxyPort: 8080
   proxyMode: streamable-http
