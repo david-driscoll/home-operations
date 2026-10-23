@@ -106,7 +106,7 @@ services:
 
   prometheus-config-reloader:
     container_name: prometheus-config-reloader
-    image: ghcr.io/prometheus-operator/prometheus-config-reloader:v0.94.1@sha256:06b52bd4dbe3ed6dd5905aadaf8b9987d9da4c31d37bb86deaadae68cee2d26b
+    image: ghcr.io/prometheus-operator/prometheus-config-reloader:v0.94.2@sha256:a1897c67478bc23434534e91ad3855280771196b1daf17144db9dbcb655bef71
     restart: unless-stopped
     command:
       - --watched-dir=/etc/prometheus
@@ -124,7 +124,7 @@ services:
 
   alloy-config-reloader:
     container_name: alloy-config-reloader
-    image: ghcr.io/prometheus-operator/prometheus-config-reloader:v0.94.1@sha256:06b52bd4dbe3ed6dd5905aadaf8b9987d9da4c31d37bb86deaadae68cee2d26b
+    image: ghcr.io/prometheus-operator/prometheus-config-reloader:v0.94.2@sha256:a1897c67478bc23434534e91ad3855280771196b1daf17144db9dbcb655bef71
     restart: unless-stopped
     command:
       - --watched-dir=/etc/alloy
