@@ -14,7 +14,7 @@ So every node now streams both to Loki:
 | Service logs | `machine.logging.destinations` → `tcp://127.0.0.1:6051/` | `otelcol.receiver.tcplog "service"` | `talos/<service>` |
 | Kernel log | `KmsgLogConfig` → `tcp://127.0.0.1:6050/` | `otelcol.receiver.tcplog "kernel"` | `talos/kernel` |
 
-- Sending half: [`talos/patches/global/machine-logging.yaml`](../../talos/patches/global/machine-logging.yaml)
+- Sending half: [`talos/all/26-logging.yaml`](../../talos/all/26-logging.yaml)
 - Receiving half: [`kubernetes/apps/observability/talos-logs`](../../kubernetes/apps/observability/talos-logs) --
   a hostNetwork Alloy DaemonSet listening on each node's **loopback**, so every
   node ships to the receiver on itself and that receiver sets `node`. Neither
@@ -64,16 +64,17 @@ sessions may already hold it.
 
 The receiver is plain Flux and deploys on merge. The Talos patch does
 **not** apply itself. `machine.logging` and `KmsgLogConfig` both take effect
-without a reboot. Apply one node at a time and look at the diff first: the
-rendered `talos/clusterconfig/*.yaml` are gitignored and can be stale, so diff
-against the **live** config.
+without a reboot. Apply one node at a time and look at the diff first. The
+diff is against the **live** config (TOPF asks the node), not the gitignored
+renders in `talos/clusterconfig/`, which can be stale.
 
 ```bash
-mise run talos:genconfig
-cd talos
-talosctl apply-config -n <ip> -e <ip> --file clusterconfig/equestria-<node>.yaml --dry-run
-talosctl apply-config -n <ip> -e <ip> --file clusterconfig/equestria-<node>.yaml --mode=no-reboot
+mise run talos:diff <ip>                         # read-only
+mise run talos:apply-node <ip> --mode no-reboot  # shows the same diff, asks first
 ```
+
+(Written for talhelper, which applied a rendered file with `talosctl
+apply-config --file`; TOPF renders and applies in one step.)
 
 The dry run should show only the `logging` block and the new `KmsgLogConfig`
 document. Anything else means live has drifted from the repo; stop and find out

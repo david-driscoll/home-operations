@@ -626,7 +626,7 @@ spec:
                 drop: ["ALL"]
                 # ⚠ FIRST ADDED CAPABILITY IN THIS REPO. Nothing blocks it --
                 # PodSecurity admission is deleted cluster-wide at the Talos
-                # level (talos/patches/controller/cluster.yaml) and there is no
+                # level (talos/control-plane/10-cluster.yaml) and there is no
                 # Kyverno or ValidatingAdmissionPolicy -- but it is new ground,
                 # so: coolwsd builds a chroot per open document and populates it
                 # with device nodes (/dev/null, /dev/random, /dev/urandom),

@@ -54,8 +54,8 @@ spec:
                 valueFrom:
                   fieldRef:
                     fieldPath: spec.nodeName
-              # Every VRRP participant. The equestria nodes (talos/talconfig.yaml)
-              # and the alpha-site Dockge LXC. Keep in step with talconfig and with
+              # Every VRRP participant. The equestria nodes (talos/topf.yaml)
+              # and the alpha-site Dockge LXC. Keep in step with topf.yaml and with
               # docker/alpha-site/authentik-vip/keepalived.conf's unicast_peer.
               VRRP_PEERS: >-
                 10.10.206.10 10.10.206.14 10.10.206.16 10.10.206.17

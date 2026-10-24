@@ -16,6 +16,9 @@
 # Until the receiver pod is up (early boot, or the receiver itself down) Talos
 # cannot connect and those lines are not shipped; `talosctl logs` / `dmesg`
 # still have them in memory until the next reboot.
+#
+# `.machine.logging` stays v1alpha1: it is not deprecated on 1.14 and has no
+# multi-document replacement.
 machine:
   logging:
     destinations:

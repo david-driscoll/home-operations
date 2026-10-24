@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
-#MISE description="Upgrade Talos on every node to talenv.yaml's talosVersion"
+#MISE description="Read-only: list the nodes whose Talos version or schematic differs from topf.yaml (tuppr does the upgrading)"
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:validate-config"]
 #
-# Depends on validate-config, not genconfig: an upgrade is the one operation
-# where a config the running Talos version would reject takes the node down
-# rather than erroring in the terminal.
+# TUPPR OWNS TALOS UPGRADES. kubernetes/apps/system-upgrade/upgrades/talos.yaml
+# rolls them node by node behind VolSync, Node-Ready and Longhorn health
+# checks. Under talhelper this task ran its own upgrade of every node; running
+# one beside tuppr means two controllers draining and rebooting the same
+# nodes. So it is now the read-only half: `topf upgrade --dry-run`, which
+# compares each node's running version and schematic with the installer image
+# topf.yaml implies.
+#
+# To upgrade: bump talosVersion in topf.yaml, the TalosUpgrade CR and
+# versions.env together (talos:validate-config insists), merge, and let tuppr
+# roll it. A single stuck node has the break-glass talos:upgrade-node.
 #
 # Run `mise run talos:preflight-upgrade` first for a minor-version bump.
 set -Eeuo pipefail
 
-talhelper gencommand upgrade --extra-flags "--timeout=20m --wait" | bash
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
+topf_preflight
+
+topf upgrade --dry-run </dev/null

@@ -154,7 +154,7 @@ spec:
         runAsGroup: 0
         seccompProfile:
           type: RuntimeDefault
-      # Pin to the control planes via talconfig nodeLabel technitium-dns=true.
+      # Pin to the control planes via the technitium-dns=true node label (talos/topf.yaml).
       # Moved off hard-hat 2026-08-19: the label now sits on milky-way/othalla/pegasus
       # and the ipvlan NAD binds their enp3s0, so the LAN resolver survives a
       # low-power window with every worker off — see

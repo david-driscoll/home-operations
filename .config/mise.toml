@@ -11,13 +11,19 @@ powershell-core = "7.6.8"
 1password-cli = "2.41.1"
 # Talos tooling for the `talos:*` tasks under .config/mise/tasks/talos/.
 #
-# `talosctl` MUST stay in step with talos/talenv.yaml's talosVersion. That is
+# `talosctl` MUST stay in step with talos/topf.yaml's talosVersion. That is
 # not a convention, it is enforced: `mise run talos:validate-config` compares
 # the two and refuses to validate a machine config with a mismatched schema.
-# Renovate bumps talenv.yaml from the ghcr.io/siderolabs/installer tag; this
-# line has to move with it.
+# Renovate bumps both in one PR (the "Siderolabs Talos" group, which tracks
+# siderolabs/talos releases and ghcr.io/siderolabs/talosctl).
 talosctl = "1.14.4"
-talhelper = "3.1.17"
+# TOPF renders and applies talos/'s machine config (talos/topf.yaml + patch
+# tree). It vendors its own Talos machinery -- `topf --version` prints it, e.g.
+# "0.6.1 (Talos v1.14.1)" -- and generates configs against THAT, so a TOPF
+# bump can change rendered defaults even when nothing in talos/ moved.
+# `mise run talos:validate-config` refuses to run when the vendored minor is
+# older than topf.yaml's talosVersion. Review `talos:diff` on every bump.
+"aqua:postfinance/topf" = "0.6.1"
 yq = "4.54.1"
 jq = "1.8.2"
 sops = "3.13.3"
@@ -300,9 +306,10 @@ _.python.venv = { path = "{{config_root}}/.venv", create = true }
 BAO_ADDR = "https://bao.equestria.{{ env.ROOT_DOMAIN }}"
 BAO_AUTH_METHOD = "approle"
 
-# Where talhelper writes the generated admin talosconfig, and where every
-# `talos:*` task expects to find it. Set globally so an ad-hoc `talosctl` in
-# this repo targets equestria too.
+# Where `mise run talos:genconfig` writes the admin talosconfig TOPF mints
+# from talos/talsecret.sops.yaml, and where every `talos:*` task that calls
+# talosctl expects to find it. Set globally so an ad-hoc `talosctl` in this
+# repo targets equestria too.
 #
 # This path does not exist until `mise run talos:genconfig` has run —
 # talos/clusterconfig/.gitignore excludes the generated files, including this

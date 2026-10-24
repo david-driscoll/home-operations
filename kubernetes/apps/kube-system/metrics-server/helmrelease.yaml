@@ -45,8 +45,9 @@ spec:
   uninstall:
     keepHistory: false
   values:
-    # Tier 0. Once allowSchedulingOnControlPlanes goes false
-    # (talos/patches/controller/cluster.yaml) an untolerated Deployment can no
+    # Tier 0. Once allowSchedulingOnControlPlanes goes false (the
+    # control-plane NoSchedule taint, talos/control-plane/12-node-role.yaml)
+    # an untolerated Deployment can no
     # longer be placed on milky-way/othalla/pegasus. metrics-server runs there
     # today; without this it would silently fail to return on the next recreate,
     # degrading HPA and `kubectl top` estate-wide.

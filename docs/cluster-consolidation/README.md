@@ -184,7 +184,7 @@ Decisions David has made on the issue. Plans must not relitigate these.
 | D7 | MQTT **and** chrony renumber into `10.10.206.x`; no `.209` block is added to equestria's LB pool | Q-F + follow-up |
 | D8 | GMKtec NVMe replacement **deferred** to its own hardware issue; not a dependency of the node phases | follow-up answers |
 | D9 | Repo merge is a **greenfield** tree in home-operations based on equestria's; no history preserved | Q8 |
-| D10 | Talos-in-Pulumi (`@pulumiverse/talos`) is a follow-on **after** the merge | Q10 + v2 §4 |
+| D10 | Talos-in-Pulumi (`@pulumiverse/talos`) is a follow-on **after** the merge. *2026-10-20: talhelper was retired by moving to TOPF instead (talhelper was archived upstream); Talos-in-Pulumi is deferred — see [23](23-talos-in-pulumi.md).* | Q10 + v2 §4 |
 | D11 | Maintenance windows are fine; per-step reversibility beats speed | Q9 |
 | D12 | Test-target re-designation away from alpha-site (skystar proposed) — **needs David's explicit confirmation** | v2.1 §9 item 3 |
 
@@ -265,7 +265,7 @@ The v2/v2.1 discovery predates two waves of change; the plans reflect **today**:
 | [20-low-power-tier.md](20-low-power-tier.md) | S′ | The CP-only operating mode: tiers, placement, enter/exit runbook, rehearsal |
 | [21-repo-consolidation-flux-repoint.md](21-repo-consolidation-flux-repoint.md) | T | One tree in home-operations; Flux re-pointed with `prune: false` during the switch |
 | [22-decommission-sgc.md](22-decommission-sgc.md) | U | Every SGC reference retired: VIP, DNS, stacks, OpenBao mounts, cluster definitions, repos archived |
-| [23-talos-in-pulumi.md](23-talos-in-pulumi.md) | V | Follow-on: machine config via `@pulumiverse/talos`, talhelper retired |
+| [23-talos-in-pulumi.md](23-talos-in-pulumi.md) | V | Follow-on: machine config via `@pulumiverse/talos` — deferred; talhelper was retired via TOPF instead |
 | [24-power-states.md](24-power-states.md) | *(unfiled)* | Full/Low Power/Battery three-state model; amends 20's Tier-1 list and placement, adds `longhorn-controlplane` |
 | [25-unseal-key-scope.md](25-unseal-key-scope.md) | *(unfiled)* | A scoped age key for the alpha-site static-unseal file, additive to D5 |
 | [26-bootstrap-apps-to-pulumi.md](26-bootstrap-apps-to-pulumi.md) | *(unfiled)* | Move `scripts/bootstrap-apps.sh` (namespaces, secrets, CRDs, helmfile) into Pulumi; grounded in a live 2026-08-13 incident where a `21`-pattern redirect flip cascade-deleted every Traefik/Gateway API CRD cluster-wide |

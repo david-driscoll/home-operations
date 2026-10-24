@@ -3,7 +3,7 @@
 #
 # A per-node receiver for Talos's own service and kernel logs -- see
 # ./resources/config.alloy for why it exists and how the pipeline works, and
-# talos/patches/global/machine-logging.yaml for the sending half.
+# talos/all/26-logging.yaml for the sending half.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

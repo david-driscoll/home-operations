@@ -1,14 +1,26 @@
 #!/usr/bin/env bash
-#MISE description="Upgrade Kubernetes to talenv.yaml's kubernetesVersion"
+#MISE description="BREAK-GLASS: upgrade Kubernetes to topf.yaml's kubernetesVersion with talosctl, outside tuppr"
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:validate-config"]
 #
-# The target version is read from talenv.yaml rather than passed in, so this
-# task always converges on what the repo declares. To step through an
-# intermediate release (Kubernetes does not support skipping a minor), use
-# `mise run talos:upgrade-k8s-to <version>`.
+# TUPPR OWNS KUBERNETES UPGRADES (kubernetes/apps/system-upgrade/upgrades/
+# kubernetes.yaml). This is the manual path for when it cannot: talosctl's own
+# upgrade-k8s, which checks version skew and rolls the control-plane
+# components and kubelets one by one. TOPF has no equivalent and points at
+# talosctl for it (its `topf apply` would set the images without any of
+# those checks).
+#
+# The target version is read from topf.yaml rather than passed in, so this
+# task always converges on what the repo declares -- and validate-config has
+# already checked that tuppr's CR and versions.env agree with it. To step
+# through an intermediate release (Kubernetes does not support skipping a
+# minor), use `mise run talos:upgrade-k8s-to <version>`.
 set -Eeuo pipefail
 
-kubernetes_version="$(yq '.kubernetesVersion' ./talenv.yaml)"
+# shellcheck source=scripts/lib/talos-topf.sh
+source "${MISE_CONFIG_ROOT}/scripts/lib/talos-topf.sh"
 
-talhelper gencommand upgrade-k8s --extra-flags "--to '${kubernetes_version}'" | bash
+kubernetes_version="v$(yq '.kubernetesVersion' topf.yaml | sed 's/^v//')"
+node="$(topf_first_control_plane_ip)"
+
+talosctl --nodes "${node}" --endpoints "${node}" upgrade-k8s --to "${kubernetes_version}"

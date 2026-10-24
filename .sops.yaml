@@ -29,6 +29,24 @@ creation_rules:
       - age:
         - "age1eurl2t7pepw66guv8m7lxh5fjhs4t4frsntqjp08lmypwudlsp7qdusgnf"
         - "age150z0s36kl9vud8728c5e4zqq6nmyywekk76rwvjclcsfc8mrxuuqr0qfg6"
+  # The Talos secrets bundle, talos/talsecret.sops.yaml: cluster PKI, bootstrap
+  # token, secretbox key. Same shape as the file's own sops metadata (every
+  # value encrypted, mac_only_encrypted, both recipients), so it describes what
+  # is already there rather than reshaping it.
+  #
+  # It exists for one reason: TOPF. Asked for a secrets bundle it cannot find,
+  # TOPF offers to GENERATE one and writes it with `sops encrypt
+  # --filename-override <path>` -- and when no rule matches that path it falls
+  # back to writing the bundle IN PLAINTEXT, under a filename that says
+  # `.sops.yaml`. With this rule an accidental write is at least encrypted. The
+  # talos:* tasks also refuse to run unless the file exists and `sops filestatus`
+  # reports it encrypted.
+  - path_regex: talos/.*\.sops\.ya?ml
+    mac_only_encrypted: true
+    key_groups:
+      - age:
+        - "age1eurl2t7pepw66guv8m7lxh5fjhs4t4frsntqjp08lmypwudlsp7qdusgnf"
+        - "age150z0s36kl9vud8728c5e4zqq6nmyywekk76rwvjclcsfc8mrxuuqr0qfg6"
   # Tooling credentials under .config/ — the AppRole .config/mise.toml
   # authenticates to OpenBao with (scripts/bao-mise-approle.sh). No
   # encrypted_regex: these are not Kubernetes manifests, nothing needs to parse
