@@ -303,8 +303,8 @@ spec:
                 readOnly: true
       # Commit signing -- ./externalsecret.yaml (`${APP}-commit-signing`).
       # `custom` for the same two fields as forgejo-ssh above, for the same
-      # reasons: a pod that beats the key to OpenBao still starts, and 0400
-      # under fsGroup is a key ssh-keygen accepts.
+      # reasons: a pod that rolls before the generator has run still starts,
+      # and 0400 under fsGroup is a key ssh-keygen accepts.
       commit-signing:
         type: custom
         volumeSpec:
