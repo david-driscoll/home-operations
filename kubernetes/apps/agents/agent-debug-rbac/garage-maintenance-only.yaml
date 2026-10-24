@@ -1,0 +1,190 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# NARROWS ./clusterrole.yaml's `garageclusters (garage.rajsingh.info): patch,
+# update` GRANT TO THE ONE THING IT IS FOR: `spec.maintenance`, whose only
+# field is `suspended` -- "Suspended pauses all reconciliation for this
+# cluster" (garage-operator 0.8.2). Added 2026-10-24. Same shape as
+# ./node-cordon-only.yaml and ./stack-reconcile-only.yaml: RBAC authorises a
+# verb on a resource, never a field, and `update` on a GarageCluster is
+# "rewrite the Garage cluster" -- its storage claims, replication factor and
+# layout policy, where the operator's own docs call a factor change a full
+# layout rebuild.
+#
+# WHY IT EXISTS. On 2026-10-24 forgejo-garage's metadata volume faulted
+# repeatedly on the SATA control planes, Garage took `LMDB: I/O error (os
+# error 5)` mid-write at 07:50, and from then on panicked on every start
+# (block_ref_table.rs:113). The recovery is to stop Garage, set the corrupt
+# db.lmdb aside and start it fresh. "Stop" means scaling the StatefulSet to
+# 0, and the operator owns that StatefulSet, so it has to be suspended first
+# or it scales Garage straight back up. The agent could see all of this and
+# had the StatefulSet grant to act on it, but not the suspend -- the one
+# reversible step the procedure needs.
+#
+# WHY `update` HAS TO BE IN THE GRANT is in ./clusterrole.yaml: mkp's
+# apply_resource is a GET followed by a full PUT.
+#
+# WHAT THIS POLICY DOES. For requests from the identities that hold
+# `agent-debug` (see matchConditions), an UPDATE on a GarageCluster -- which is
+# what a PATCH is too, by the time admission sees it -- is denied unless
+# everything the request could change is what it was in `oldObject`, apart from
+# spec.maintenance:
+#
+#   spec          every field of the v1beta2 schema EXCEPT `maintenance`,
+#                 compared one by one. CEL cannot iterate a typed CRD object
+#                 (`all()` is for maps), so each field is named -- 29 of them,
+#                 checked against the live CRD. A spec field added by a future
+#                 operator version is NOT covered until listed here; re-check
+#                 `spec.versions[v1beta2].schema...spec.properties` when bumping
+#                 the garage-operator chart.
+#   versions      matchConstraints names v1beta2 only. With the default
+#                 `matchPolicy: Equivalent` the apiserver converts a request
+#                 made against another served version (v1beta1, which has 16
+#                 extra pod-level fields) to v1beta2 through the operator's
+#                 conversion webhook before evaluating, so v1beta2's field list
+#                 is the complete one. That also catches a lossy v1beta1
+#                 round-trip from a full-PUT client: whatever it dropped shows
+#                 up here as a changed v1beta2 field.
+#   status        not compared, and does not need to be: `status` is a
+#                 subresource on this CRD, so a write to the main resource has
+#                 it reset to the stored value before admission. Neither
+#                 `garageclusters/status` nor `garageclusters/scale` (which
+#                 drives spec.storage.replicas) is granted.
+#   metadata      labels, annotations, ownerReferences and finalizers compared
+#                 whole. The operator keeps its own state in annotations
+#                 (operator-admin-token-id, rpc-identity-sha256, the
+#                 static-credentials-* keys) and Flux its ownership markers.
+#
+# EVERY FIELD READ IS `has()`-GUARDED, as ./node-cordon-only.yaml explains:
+# with `failurePolicy: Fail` an absent-field error DENIES, and most of these
+# fields are unset on any given cluster.
+#
+# IF THIS SEEMS TO BLOCK A LEGITIMATE SUSPEND, read the denial: it names the
+# group of fields that differed. The likeliest real cause is a client that
+# round-tripped the object through v1beta1.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agent-debug-garage-maintenance-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      # `garageclusters` only, not `garageclusters/*`: ./clusterrole.yaml grants
+      # no subresource, so RBAC already refuses those.
+      - apiGroups: ["garage.rajsingh.info"]
+        apiVersions: ["v1beta2"]
+        operations: ["UPDATE"]
+        resources: ["garageclusters"]
+  # Keep in step with every ClusterRoleBinding to `agent-debug`, exactly as in
+  # ./node-cordon-only.yaml:
+  #   ../agent-tools-servers/kubernetes.yaml  -> agents/toolhive-kubernetes
+  # A new binding of the role that is not added here gets the unnarrowed
+  # `update` on every GarageCluster.
+  matchConditions:
+    - name: is-agent-debug-identity
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:agents:toolhive-kubernetes"
+        ]
+  validations:
+    - expression: >
+        has(object.spec.storage) == has(oldObject.spec.storage)
+        && (!has(object.spec.storage) || object.spec.storage == oldObject.spec.storage)
+        && has(object.spec.replication) == has(oldObject.spec.replication)
+        && (!has(object.spec.replication) || object.spec.replication == oldObject.spec.replication)
+        && has(object.spec.layoutManagement) == has(oldObject.spec.layoutManagement)
+        && (!has(object.spec.layoutManagement) || object.spec.layoutManagement == oldObject.spec.layoutManagement)
+        && has(object.spec.layoutPolicy) == has(oldObject.spec.layoutPolicy)
+        && (!has(object.spec.layoutPolicy) || object.spec.layoutPolicy == oldObject.spec.layoutPolicy)
+        && has(object.spec.database) == has(oldObject.spec.database)
+        && (!has(object.spec.database) || object.spec.database == oldObject.spec.database)
+        && has(object.spec.blocks) == has(oldObject.spec.blocks)
+        && (!has(object.spec.blocks) || object.spec.blocks == oldObject.spec.blocks)
+        && has(object.spec.deletionPolicy) == has(oldObject.spec.deletionPolicy)
+        && (!has(object.spec.deletionPolicy) || object.spec.deletionPolicy == oldObject.spec.deletionPolicy)
+      message: >-
+        agent-debug may only change spec.maintenance on a GarageCluster:
+        spec storage and data placement (storage, replication, layoutManagement, layoutPolicy, database, blocks, deletionPolicy) must not change
+    - expression: >
+        has(object.spec.image) == has(oldObject.spec.image)
+        && (!has(object.spec.image) || object.spec.image == oldObject.spec.image)
+        && has(object.spec.imageRepository) == has(oldObject.spec.imageRepository)
+        && (!has(object.spec.imageRepository) || object.spec.imageRepository == oldObject.spec.imageRepository)
+        && has(object.spec.imagePullPolicy) == has(oldObject.spec.imagePullPolicy)
+        && (!has(object.spec.imagePullPolicy) || object.spec.imagePullPolicy == oldObject.spec.imagePullPolicy)
+        && has(object.spec.imagePullSecrets) == has(oldObject.spec.imagePullSecrets)
+        && (!has(object.spec.imagePullSecrets) || object.spec.imagePullSecrets == oldObject.spec.imagePullSecrets)
+        && has(object.spec.serviceAccountName) == has(oldObject.spec.serviceAccountName)
+        && (!has(object.spec.serviceAccountName) || object.spec.serviceAccountName == oldObject.spec.serviceAccountName)
+        && has(object.spec.security) == has(oldObject.spec.security)
+        && (!has(object.spec.security) || object.spec.security == oldObject.spec.security)
+        && has(object.spec.workers) == has(oldObject.spec.workers)
+        && (!has(object.spec.workers) || object.spec.workers == oldObject.spec.workers)
+        && has(object.spec.logging) == has(oldObject.spec.logging)
+        && (!has(object.spec.logging) || object.spec.logging == oldObject.spec.logging)
+        && has(object.spec.monitoring) == has(oldObject.spec.monitoring)
+        && (!has(object.spec.monitoring) || object.spec.monitoring == oldObject.spec.monitoring)
+      message: >-
+        agent-debug may only change spec.maintenance on a GarageCluster:
+        spec image, identity and workers (image, imageRepository, imagePullPolicy, imagePullSecrets, serviceAccountName, security, workers, logging, monitoring) must not change
+    - expression: >
+        has(object.spec.network) == has(oldObject.spec.network)
+        && (!has(object.spec.network) || object.spec.network == oldObject.spec.network)
+        && has(object.spec.s3Api) == has(oldObject.spec.s3Api)
+        && (!has(object.spec.s3Api) || object.spec.s3Api == oldObject.spec.s3Api)
+        && has(object.spec.webApi) == has(oldObject.spec.webApi)
+        && (!has(object.spec.webApi) || object.spec.webApi == oldObject.spec.webApi)
+        && has(object.spec.k2vApi) == has(oldObject.spec.k2vApi)
+        && (!has(object.spec.k2vApi) || object.spec.k2vApi == oldObject.spec.k2vApi)
+        && has(object.spec.admin) == has(oldObject.spec.admin)
+        && (!has(object.spec.admin) || object.spec.admin == oldObject.spec.admin)
+        && has(object.spec.gateway) == has(oldObject.spec.gateway)
+        && (!has(object.spec.gateway) || object.spec.gateway == oldObject.spec.gateway)
+        && has(object.spec.publicEndpoint) == has(oldObject.spec.publicEndpoint)
+        && (!has(object.spec.publicEndpoint) || object.spec.publicEndpoint == oldObject.spec.publicEndpoint)
+        && has(object.spec.connectTo) == has(oldObject.spec.connectTo)
+        && (!has(object.spec.connectTo) || object.spec.connectTo == oldObject.spec.connectTo)
+        && has(object.spec.remoteClusters) == has(oldObject.spec.remoteClusters)
+        && (!has(object.spec.remoteClusters) || object.spec.remoteClusters == oldObject.spec.remoteClusters)
+        && has(object.spec.discovery) == has(oldObject.spec.discovery)
+        && (!has(object.spec.discovery) || object.spec.discovery == oldObject.spec.discovery)
+        && has(object.spec.defaultNodeTags) == has(oldObject.spec.defaultNodeTags)
+        && (!has(object.spec.defaultNodeTags) || object.spec.defaultNodeTags == oldObject.spec.defaultNodeTags)
+        && has(object.spec.zone) == has(oldObject.spec.zone)
+        && (!has(object.spec.zone) || object.spec.zone == oldObject.spec.zone)
+        && has(object.spec.zoneFrom) == has(oldObject.spec.zoneFrom)
+        && (!has(object.spec.zoneFrom) || object.spec.zoneFrom == oldObject.spec.zoneFrom)
+      message: >-
+        agent-debug may only change spec.maintenance on a GarageCluster:
+        spec network, APIs and topology (network, s3Api, webApi, k2vApi, admin, gateway, publicEndpoint, connectTo, remoteClusters, discovery, defaultNodeTags, zone, zoneFrom) must not change
+    - expression: >
+        has(object.metadata.labels) == has(oldObject.metadata.labels)
+        && (!has(object.metadata.labels)
+            || object.metadata.labels == oldObject.metadata.labels)
+        && has(object.metadata.annotations) == has(oldObject.metadata.annotations)
+        && (!has(object.metadata.annotations)
+            || object.metadata.annotations == oldObject.metadata.annotations)
+      message: >-
+        agent-debug may only change spec.maintenance on a GarageCluster:
+        metadata.labels and metadata.annotations must not change
+    - expression: >
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)
+        && (!has(object.metadata.ownerReferences)
+            || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)
+        && has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)
+        && (!has(object.metadata.finalizers)
+            || object.metadata.finalizers == oldObject.metadata.finalizers)
+      message: >-
+        agent-debug may only change spec.maintenance on a GarageCluster:
+        metadata.ownerReferences and metadata.finalizers must not change
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agent-debug-garage-maintenance-only
+spec:
+  policyName: agent-debug-garage-maintenance-only
+  validationActions: ["Deny"]

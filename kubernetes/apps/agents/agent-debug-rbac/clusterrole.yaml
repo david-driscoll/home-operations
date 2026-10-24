@@ -122,6 +122,11 @@
 #       ./node-cordon-only.yaml's ValidatingAdmissionPolicy does. See the
 #       rule below.
 #
+#     - GarageClusters (garage.rajsingh.info): patch/update, narrowed by
+#       ./garage-maintenance-only.yaml to `spec.maintenance.suspended` --
+#       pausing the operator so a Garage StatefulSet can be scaled to 0 for
+#       metadata recovery. See the rule below.
+#
 #   Still NOT granted: Secret writes (every Secret in this estate is either
 #   ESO-managed from OpenBao or sops-encrypted in git -- a live write would
 #   be silently overwritten or bypass the whole provenance model), RBAC
@@ -377,4 +382,25 @@ rules:
   # was "rewrite any Node", not "cordon one".
   - apiGroups: [""]
     resources: ["nodes"]
+    verbs: ["patch", "update"]
+
+  # GarageClusters (garage.rajsingh.info): patch/update, narrowed by
+  # ./garage-maintenance-only.yaml to `spec.maintenance` -- whose one field,
+  # `suspended`, pauses the operator for that cluster. Same `update`-for-mkp
+  # reasoning as the Nodes rule above.
+  #
+  # WHAT IT IS FOR. Stopping a Garage cluster for metadata recovery. The
+  # StatefulSet is operator-owned (via GarageNode), so the `apps` grant above
+  # can scale it to 0 but the operator scales it straight back; suspending the
+  # cluster first is what makes the scale-down hold. 2026-10-24:
+  # forgejo-garage's LMDB took an I/O error from a faulting Longhorn volume and
+  # panicked on every start after, taking Forgejo down with it, and the agent
+  # had every step of the recovery except this one.
+  #
+  # NOT granted: GarageNodes, GarageBuckets, GarageKeys, the `scale` and
+  # `status` subresources, or any spec field but maintenance. The rest of a
+  # GarageCluster (storage claims, replication factor, layout policy) is what
+  # loses data when it changes, and stays exactly as Flux rendered it.
+  - apiGroups: ["garage.rajsingh.info"]
+    resources: ["garageclusters"]
     verbs: ["patch", "update"]
