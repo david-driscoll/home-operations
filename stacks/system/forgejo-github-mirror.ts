@@ -46,7 +46,9 @@
  *   github-mirror-sync   write, from a collaborator grant below; its token is
  *                        what the relay dispatches the sync workflow with,
  *                        and what that workflow pushes main with
- *   claude-code          read, from a team below: view, diff, comment, review
+ *   claude-code          read, from a team below: view, diff, comment, review;
+ *                        plus Actions write, to run and re-run this
+ *                        repository's workflows (see CLAUDE_CODE_MIRROR_UNITS)
  *   the forge's admins   as owners of the organization
  *
  * Until 2026-10 the repository was owned by a USER called `github-mirror`,
@@ -113,13 +115,32 @@ const REPOSITORY = "home-operations";
 /**
  * claude-code's units on the mirror: enough to read code, issues, pull
  * requests and Actions logs, and to comment on and review a pull request.
- * Nothing at `write`. See the header.
+ * `repo.code` stays `read` -- that is the line the header draws: write to
+ * main is publishing to GitHub.
+ *
+ *   repo.actions  write  dispatch, re-run and cancel workflow runs, the same
+ *                        unit claude-code's write teams elsewhere hold
+ *                        (CLAUDE_CODE_TEAM_UNITS in ./forgejo-renovate.ts).
+ *                        Forgejo gates /dispatches, /rerun and /cancel on
+ *                        reqRepoWriter(unit.TypeActions); Actions secrets and
+ *                        variables need reqOwner(unit.TypeActions), so they
+ *                        stay out of reach. A dispatch runs a workflow as it
+ *                        is on an existing ref, and claude-code cannot create
+ *                        or move one. Added 2026-10-24: pulumi-workspace-image
+ *                        had to rebuild a tag whose blobs the forgejo-garage
+ *                        metadata loss took, and claude-code could see it but
+ *                        not dispatch it.
+ *
+ * What this does NOT make safe on its own is github-sync's two hand-run
+ * inputs, discard_local (drop Forgejo-only commits) and prune_branches
+ * (delete every branch but main). .forgejo/workflows/github-sync.yml refuses
+ * both when the actor is claude-code; a plain sync dispatch stays allowed.
  */
 const CLAUDE_CODE_MIRROR_UNITS = {
   "repo.code": "read",
   "repo.issues": "read",
   "repo.pulls": "read",
-  "repo.actions": "read",
+  "repo.actions": "write",
 };
 
 /**
@@ -371,7 +392,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       {
         organization: organization.name,
         name: "claude-code",
-        description: "Claude Code (agentboard), read-only. Managed by stacks/system.",
+        description: "Claude Code (agentboard): read-only code, can run workflows. Managed by stacks/system.",
         permission: "read",
         includesAllRepositories: true,
         unitsMap: CLAUDE_CODE_MIRROR_UNITS,
