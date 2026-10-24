@@ -188,7 +188,7 @@ jobs:
       - uses: https://codeberg.org/git-pages/action@v2
         with:
           site: http://docs.pages.${ROOT_DOMAIN}/
-          server: git-pages.coder.svc.cluster.local:3000
+          server: git-pages.coder.svc.cluster.local
           token: ${{ forgejo.token }}
           source: public/
 ```
@@ -219,6 +219,11 @@ Notes on the non-obvious fields:
   containers.
 - **`server:` replaces only the host, not the scheme.** That is why `site:` is
   `http://` here. Readers still use `https://`.
+- **`server:` is a bare host, with no port.** `action@v2` pins git-pages-cli
+  1.11.2, which rejects `host:port` with
+  `--server must be used with a domain name`. With a bare host and an
+  `http://` site the upload goes to port 80, which the Service maps to 3000
+  (the `publish` port in the HelmRelease).
 - **`token: ${{ forgejo.token }}` is the whole authorization.**
   - git-pages asks Forgejo whose token it is, via the in-cluster
     `forgejo-http` Service configured as `clone-url` in

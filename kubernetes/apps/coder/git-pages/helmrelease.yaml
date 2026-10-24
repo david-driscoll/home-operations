@@ -112,7 +112,15 @@ spec:
         controller: *app
         ports:
           http:
+            primary: true
             port: 3000
+          # For the publish Action's `server:`, which must be a bare host since
+          # git-pages-cli 1.11.2 rejects `host:port` ("--server must be used with
+          # a domain name"). The CLI swaps only the host into the `http://` site
+          # URL, so a bare host means port 80. The routes keep using 3000.
+          publish:
+            port: 80
+            targetPort: 3000
           metrics:
             port: 3002
 
