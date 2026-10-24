@@ -72,7 +72,7 @@ spec:
               # this one runs as an arbitrary non-root UID, with no s6/chown
               # step that needs root.
               repository: docker.io/library/mariadb
-              tag: 12.3.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
+              tag: 13.0.2@sha256:0e4bb0f339feba125d1154fbacd36c16ec8518f52e44e1f82ecec7d6771caf39
               pullPolicy: IfNotPresent
             restartPolicy: Always
             args:
@@ -160,7 +160,7 @@ spec:
             dependsOn: mariadb
             image:
               repository: docker.io/library/mariadb
-              tag: 12.3.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
+              tag: 13.0.2@sha256:0e4bb0f339feba125d1154fbacd36c16ec8518f52e44e1f82ecec7d6771caf39
               pullPolicy: IfNotPresent
             command:
               - bash
