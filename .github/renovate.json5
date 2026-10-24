@@ -1666,6 +1666,50 @@
       ],
     },
     {
+      // The .NET SDK pin in .config/mise.toml (`dotnet = { version = ... }`).
+      // The mise manager extracts it and then drops it, silently: mise
+      // registers `dotnet` as `core:dotnet` (falling back to
+      // `asdf:mise-plugins/mise-dotnet`, `vfox:mise-plugins/vfox-dotnet`),
+      // and Renovate's own core-tool table (lib/modules/manager/mise/
+      // upgradeable-tooling.ts) has no `dotnet` entry, nor its asdf table
+      // anything under those plugin names -- it only knows asdf's
+      // `dotnet-core`. Every backend resolves to null, so the dep is created
+      // with skipReason `unsupported-datasource` and never looked up. The
+      // dashboard would say so, but the mise section sits in the part of
+      // issue #11 that GitHub truncates. The pin sat at 10.0.203 while
+      // 10.0.301 and 10.0.402 shipped.
+      //
+      // A packageRule cannot rescue it: `overrideDatasource` is applied in
+      // applyPackageRules, which fetch.ts never reaches for a dep that already
+      // carries a skipReason (only `unknown-registry` gets through). So the
+      // version is matched here instead, with the datasource the asdf manager
+      // uses for the same SDK.
+      //
+      // Default semver versioning: a feature-band bump (10.0.2xx -> 10.0.3xx)
+      // is a patch and arrives as an ordinary PR; 11.0.100 is a major, raised
+      // on its own `feat!` branch like every other major here
+      // (:separateMajorReleases), and never automerged -- the automerge rules
+      // only match docker/helm. Previews and RCs carry a prerelease suffix and
+      // are dropped by ignoreUnstable, whatever `prereleases = true` in
+      // mise.toml lets mise itself install.
+      //
+      // Renovate does not refresh .config/mise.lock for this dep -- lock file
+      // updates belong to the mise manager's artifacts step, and a custom
+      // manager has none. A lagging entry is harmless (mise resolves the
+      // version from mise.toml and the dotnet entry has no checksums), but
+      // run `mise lock dotnet` on Renovate's branch to keep it tidy.
+      description: ".NET SDK pinned in mise.toml (unsupported by the mise manager)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)\\.config/mise\\.toml$/",
+      ],
+      matchStrings: [
+        "\\ndotnet\\s*=\\s*(\\{\\s*version\\s*=\\s*)?\"(?<currentValue>\\d[^\"]*)\"",
+      ],
+      depNameTemplate: "dotnet-sdk",
+      datasourceTemplate: "dotnet-version",
+    },
+    {
       description: "Process annotated dependencies",
       customType: "regex",
       managerFilePatterns: [

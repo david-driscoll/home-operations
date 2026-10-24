@@ -61,7 +61,7 @@
 | `sops` 3.13.1 | Secrets encryption | `.mise.toml` |
 | `age` 1.3.1 | Key-based encryption (used with sops) | `.mise.toml` |
 | `apm` 0.14.1 | Agent Package Manager (skills/agents) | `.mise.toml` |
-| `dotnet` 10.0.203 | .NET SDK (used for backup playground script) | `.mise.toml` |
+| `dotnet` 10.0.402 | .NET SDK (used for backup playground script) | `.mise.toml` |
 | `yq` / `jq` | YAML/JSON processing in scripts | `.mise.toml` |
 | `openapi-typescript` | Generate TypeScript types from OpenAPI specs | `components/package.json` devDependencies |
 
