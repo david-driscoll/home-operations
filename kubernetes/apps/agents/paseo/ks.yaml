@@ -40,13 +40,14 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      # 40Gi, up from 10Gi. /home/paseo holds mise's tool installs, the
-      # npm/Go/flate caches AND the repo checkout with every agent's git
-      # worktree (~/.paseo/worktrees) -- /workspace sits empty. At 10Gi it hit
-      # 98% on 2026-10-17 and writes ran out of space mid-flight, leaving
-      # zero-byte git objects and cache files. Only ever raise this
+      # 60Gi, up from 40Gi (10Gi before that). /home/paseo holds mise's tool
+      # installs, the npm/Go/flate caches AND the repo checkout with every
+      # agent's git worktree (~/.paseo/worktrees) -- /workspace sits empty.
+      # At 10Gi it hit 98% on 2026-10-17 and writes ran out of space
+      # mid-flight, leaving zero-byte git objects and cache files; at 40Gi it
+      # was at 84% by 2026-10-23. Only ever raise this
       # (components/volsync/AGENTS.md).
-      VOLSYNC_CAPACITY: 40Gi
+      VOLSYNC_CAPACITY: 60Gi
       # The image's `paseo` user.
       VOLSYNC_PUID: "1000"
       VOLSYNC_PGID: "1000"
