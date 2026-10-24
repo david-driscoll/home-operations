@@ -149,7 +149,7 @@ spec:
               GIT_CONFIG_KEY_1: user.name
               GIT_CONFIG_VALUE_1: David Driscoll
               GIT_CONFIG_KEY_2: user.email
-              GIT_CONFIG_VALUE_2: david.driscoll@gmail.com
+              GIT_CONFIG_VALUE_2: ${OWNER_EMAIL}
               # SSH commit signing, from the `commit-signing` volume below
               # (./externalsecret.yaml has why the config is in the Secret).
               # A missing include is skipped, so a keyless pod commits
