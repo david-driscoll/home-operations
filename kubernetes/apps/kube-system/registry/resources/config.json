@@ -13,7 +13,13 @@
         {
           "repositories": ["**"],
           "deleteUntagged": true,
-          "keepTags": [{ "patterns": [".*"] }]
+          "keepTags": [
+            {
+              "patterns": [".*"],
+              "pulledWithin": "720h",
+              "pushedWithin": "720h"
+            }
+          ]
         }
       ]
     }

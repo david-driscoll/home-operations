@@ -20,6 +20,12 @@ metadata:
   name: alloy
 spec:
   interval: 1h
+  # Not the 5m default. A DaemonSet rolls one node at a time (maxUnavailable 1)
+  # and each pod costs an image pull plus readiness plus minReadySeconds, so
+  # seven nodes take ~5-6 minutes on a fresh tag. At 5m Helm gave up with 6/7
+  # updated, rolled back, and after the retries the release sat Stalled and
+  # blocked loki and talos-logs behind it (2026-10-23/24).
+  timeout: 15m
   chartRef:
     kind: OCIRepository
     name: alloy
