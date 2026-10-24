@@ -161,7 +161,7 @@ const CLAUDE_CODE_LOGIN = "claude-code";
  * (./forgejo-github-mirror.ts). It gets Renovate's team like every other
  * organization, but NOT claude-code's write team: write to that repository's
  * main is publishing to GitHub. ./forgejo-github-mirror.ts gives claude-code a
- * read-only team there instead.
+ * read-only team there instead, with Actions at write so it can run workflows.
  */
 export const GITHUB_MIRROR_ORG = "github-mirror";
 

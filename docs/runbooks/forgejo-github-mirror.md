@@ -41,7 +41,7 @@ Flux already had (`stacks/system/flux-webhooks.ts`).
 
 | Piece | Where | What it does |
 | --- | --- | --- |
-| the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` organization that owns it, the `github-mirror-sync` account whose token the relay dispatches with, claude-code's read-only team there, the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
+| the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` organization that owns it, the `github-mirror-sync` account whose token the relay dispatches with, claude-code's team there (read-only code, Actions write so it can run workflows), the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
 | the sync workflow | `.forgejo/workflows/github-sync.yml` | decides when to run and hands over credentials |
 | the sync | `scripts/forgejo-github-sync` | compares the two branches and moves whichever is behind |
 | the labels | `scripts/forgejo-github-labels` | copies GitHub's labels to the forge after each sync; Renovate there only attaches labels that already exist. It creates and updates, and never deletes |

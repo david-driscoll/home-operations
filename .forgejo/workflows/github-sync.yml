@@ -62,6 +62,22 @@ jobs:
     # A clone and at most two pushes. Anything longer is hung.
     timeout-minutes: 15
     steps:
+      # claude-code's team on this repository holds Actions write
+      # (stacks/system/forgejo-github-mirror.ts), so an agent can dispatch and
+      # re-run workflows here. That must not reach this workflow's two hand-run
+      # inputs: discard_local drops commits that exist only on Forgejo, and
+      # prune_branches deletes every branch but main, Renovate's open pull
+      # requests included. Both stay a person's call. A plain dispatch, which
+      # only syncs, is still allowed.
+      - name: Refuse destructive inputs from claude-code
+        if: >-
+          github.actor == 'claude-code'
+          && (github.event.inputs.discard_local == 'true'
+              || github.event.inputs.prune_branches == 'true')
+        run: |
+          echo "::error::discard_local and prune_branches are for a person to dispatch, not claude-code"
+          exit 1
+
       - name: Sync main with GitHub
         env:
           # `github.*` is Forgejo's own context under its compatibility name:
