@@ -142,7 +142,7 @@ spec:
               # kubelet leaves `$(...)` alone when it names no env var.
               # Identity matches agentboard (entrypoint.sh): commits are
               # David's, Claude is credited by a Co-Authored-By trailer.
-              GIT_CONFIG_COUNT: "3"
+              GIT_CONFIG_COUNT: "4"
               GIT_CONFIG_KEY_0: credential.https://github.com.helper
               GIT_CONFIG_VALUE_0: >-
                 !f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f
@@ -150,6 +150,12 @@ spec:
               GIT_CONFIG_VALUE_1: David Driscoll
               GIT_CONFIG_KEY_2: user.email
               GIT_CONFIG_VALUE_2: david.driscoll@gmail.com
+              # SSH commit signing, from the `commit-signing` volume below
+              # (./externalsecret.yaml has why the config is in the Secret).
+              # A missing include is skipped, so a keyless pod commits
+              # unsigned rather than not at all.
+              GIT_CONFIG_KEY_3: include.path
+              GIT_CONFIG_VALUE_3: /var/run/secrets/commit-signing/gitconfig
               # The estate's age identity, mounted below -- the same `sops-age`
               # Secret agentboard mounts, with the same weight (see the
               # SOPS_AGE_KEY_FILE comment in ../agentboard/helmrelease.yaml).
@@ -294,6 +300,22 @@ spec:
           *app :
             app:
               - path: /var/run/secrets/forgejo-ssh
+                readOnly: true
+      # Commit signing -- ./externalsecret.yaml (`${APP}-commit-signing`).
+      # `custom` for the same two fields as forgejo-ssh above, for the same
+      # reasons: a pod that beats the key to OpenBao still starts, and 0400
+      # under fsGroup is a key ssh-keygen accepts.
+      commit-signing:
+        type: custom
+        volumeSpec:
+          secret:
+            secretName: ${APP}-commit-signing
+            optional: true
+            defaultMode: 256
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/commit-signing
                 readOnly: true
       ssh-config:
         type: configMap

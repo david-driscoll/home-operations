@@ -95,6 +95,7 @@ import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo
 import { configureForgejoSigning } from "./forgejo-signing.ts";
 import { configureGarage } from "./garage.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
+import { configurePaseoCommitSigning } from "./paseo-commit-signing.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
 
 const globals = new GlobalResources({}, {});
@@ -155,6 +156,10 @@ configureAuthentikVip(globals);
 // Forgejo components further down it never calls Forgejo's API, so it cannot
 // fail on a forge outage. See forgejo-signing.ts.
 configureForgejoSigning(globals);
+
+// The SSH key paseo signs its GitHub commits with, into OpenBao only; the
+// public half goes on GitHub by hand. See paseo-commit-signing.ts.
+configurePaseoCommitSigning(globals);
 
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
