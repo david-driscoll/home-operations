@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/gateway.networking.k8s.io/tcproute_v1alpha2.json
+#
+# SSH into the `sshd` sidecar (./resources/sshd.sh), for the
+# paseo-remote-editor plugin's VS Code / Cursor / Zed links. Internal gateway
+# only, on its own `paseossh` listener at :223 -- :22 is Forgejo's `gitssh`,
+# and raw TCP has no SNI to share a port on. Members' tailnet grants stop at
+# web ports, so over the tailnet this is admins only; on the LAN it is anyone
+# who can reach the gateway, with key auth (./resources/authorized_keys) as
+# the gate.
+#
+# No hostname of its own: the listener is on the gateway's address, so
+# paseo.agents.<root domain> -- already pointing there for the web UI --
+# answers on :223 too.
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: ${APP}-ssh
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      sectionName: paseossh
+  rules:
+    - backendRefs:
+        - name: ${APP}
+          port: 2222

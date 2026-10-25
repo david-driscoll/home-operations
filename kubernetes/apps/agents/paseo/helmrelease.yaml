@@ -62,7 +62,7 @@ spec:
           # PASEO_PASSWORD Secret, which is read once through envFrom.
           # `github-token` and `${APP}-forgejo-ssh` are directory mounts that
           # update live, which is the whole reason they are mounted that way.
-          configmap.reloader.stakater.com/reload: ${APP}-ssh,paseo-tools
+          configmap.reloader.stakater.com/reload: ${APP}-ssh,paseo-tools,paseo-sshd
           secret.reloader.stakater.com/reload: ${APP}
           # Agents run for hours; a nightly scale-down would kill them mid-task.
           downscaler/exclude: "true"
@@ -122,7 +122,7 @@ spec:
         containers:
           app:
             image: *image
-            env:
+            env: &appEnv
               <<: *env
               # Host-header allowlist. IPs and localhost are always allowed,
               # which is what keeps the kubelet's probes working.
@@ -239,12 +239,46 @@ spec:
                 memory: 64Mi
               limits:
                 memory: 1Gi
+          # OpenSSH for editors' remote-SSH modes (the paseo-remote-editor
+          # plugin opens VS Code, Cursor or Zed on an agent's directory),
+          # reached on the internal gateway's :223 (./tcproute.yaml). The
+          # image has no sshd; ./resources/sshd.sh fetches bookworm's and runs
+          # it as `paseo`. Same image, env and mounts as the daemon, so an
+          # editor terminal sees what an agent sees.
+          sshd:
+            image: *image
+            command: ["/bin/bash", "/opt/paseo/sshd.sh"]
+            # The daemon's env -- the script writes it to
+            # ~/.ssh/environment for the sessions sshd starts.
+            env:
+              <<: *appEnv
+            # No probes on purpose: this container's readiness is the pod's,
+            # and the pod is also the web UI's Service endpoint. The script
+            # waits out a failed download instead of exiting.
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                # The editors' remote servers and their extensions run here.
+                memory: 4Gi
     service:
       app:
         controller: *app
         ports:
           http:
+            primary: true
             port: *port
+          ssh:
+            port: 2222
     persistence:
       home:
         existingClaim: ${APP}
@@ -271,6 +305,9 @@ spec:
             apm:
               - path: /var/run/secrets/github-token
                 readOnly: true
+            sshd:
+              - path: /var/run/secrets/github-token
+                readOnly: true
       sops-age:
         type: secret
         # The estate-wide reflected Secret, not `${APP}` -- see the
@@ -279,6 +316,9 @@ spec:
         advancedMounts:
           *app :
             app:
+              - path: /var/run/secrets/sops-age
+                readOnly: true
+            sshd:
               - path: /var/run/secrets/sops-age
                 readOnly: true
       # git over SSH to Forgejo as `claude-code` -- ./externalsecret.yaml
@@ -301,6 +341,9 @@ spec:
             app:
               - path: /var/run/secrets/forgejo-ssh
                 readOnly: true
+            sshd:
+              - path: /var/run/secrets/forgejo-ssh
+                readOnly: true
       # Commit signing -- ./externalsecret.yaml (`${APP}-commit-signing`).
       # `custom` for the same two fields as forgejo-ssh above, for the same
       # reasons: a pod that rolls before the generator has run still starts,
@@ -317,18 +360,22 @@ spec:
             app:
               - path: /var/run/secrets/commit-signing
                 readOnly: true
+            sshd:
+              - path: /var/run/secrets/commit-signing
+                readOnly: true
       ssh-config:
         type: configMap
         name: ${APP}-ssh
         advancedMounts:
           *app :
-            app:
+            app: &sshConfigMounts
               - path: /etc/ssh/ssh_config.d/forgejo.conf
                 subPath: forgejo.conf
                 readOnly: true
               - path: /etc/paseo/ssh/known_hosts
                 subPath: known_hosts
                 readOnly: true
+            sshd: *sshConfigMounts
       tools:
         type: configMap
         name: paseo-tools
@@ -356,6 +403,35 @@ spec:
               - path: /home/paseo/.config/mise/config.toml
                 subPath: mise.toml
                 readOnly: true
+            sshd:
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+      # ./resources/sshd.sh and the keys allowed in. Both by subPath:
+      # authorized_keys HAS to be -- sshd's StrictModes rejects it under a
+      # whole-volume mount's 1777 root, and accepts the root-owned 0755
+      # parent a subPath mount gets. So a key change rolls the pod (the
+      # reloader annotation above), agents included.
+      sshd-config:
+        type: configMap
+        name: paseo-sshd
+        advancedMounts:
+          *app :
+            sshd:
+              - path: /opt/paseo/sshd.sh
+                subPath: sshd.sh
+                readOnly: true
+              - path: /etc/paseo/sshd/authorized_keys
+                subPath: authorized_keys
+                readOnly: true
+      # The unpacked openssh-server and its generated config. Survives a
+      # container restart, so only a new pod downloads it again.
+      sshd:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            sshd:
+              - path: /opt/sshd
       tmp:
         type: emptyDir
         globalMounts:
