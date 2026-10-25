@@ -7,6 +7,7 @@ resources:
   - ./pvc.yaml
   - ./helmrelease.yaml
   - ./httproute.yaml
+  - ./tcproute.yaml
   - ./definition.yaml
 configMapGenerator:
   - name: ${APP}-ssh
@@ -24,6 +25,15 @@ configMapGenerator:
       - install-tools.sh=./resources/install-tools.sh
       - apm.yml=./resources/apm.yml
       - apm-refresh.sh=./resources/apm-refresh.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+  # Substitution off for the same reason as paseo-tools.
+  - name: paseo-sshd
+    files:
+      - sshd.sh=./resources/sshd.sh
+      - authorized_keys=./resources/authorized_keys
     options:
       disableNameSuffixHash: true
       annotations:

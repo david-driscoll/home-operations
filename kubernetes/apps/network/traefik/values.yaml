@@ -398,6 +398,20 @@ ports:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  # Paseo's `sshd` sidecar (kubernetes/apps/agents/paseo/tcproute.yaml), for
+  # editors' remote-SSH sessions into the agents' workspaces. Its own port
+  # because raw TCP cannot share :22 with gitssh. Privileged, and fine, for
+  # the reason gitssh gives. No readTimeout here either: an editor's session
+  # sits idle for hours between keystrokes.
+  paseossh:
+    expose:
+      default: true
+    port: 223
+    exposedPort: 223
+    protocol: TCP
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
 ingressClass:
   enabled: true
   isDefaultClass: false
@@ -657,5 +671,12 @@ gateway:
     gitssh:
       protocol: TCP
       port: 22
+      namespacePolicy:
+        from: All
+
+    # Moves together with the `paseossh` entrypoint above, like gitssh.
+    paseossh:
+      protocol: TCP
+      port: 223
       namespacePolicy:
         from: All
