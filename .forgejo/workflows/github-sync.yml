@@ -164,6 +164,10 @@ jobs:
           export SYNC_UPSTREAM_FETCH_URL="https://github.com/${UPSTREAM}.git"
           export SYNC_UPSTREAM_PUSH_URL="git@github.com:${UPSTREAM}.git"
           export SYNC_DEPLOY_KEY_FILE="$HOME/.ssh/github-mirror"
+          # For the two rewrites of this main, which have to lift its branch
+          # rule for one push (scripts/forgejo-github-sync, force_update).
+          export SYNC_FORGEJO_API="${server}/api/v1/repos/${REPOSITORY}"
+          export SYNC_FORGEJO_TOKEN="$TOKEN"
           exec bash scripts/forgejo-github-sync
 
       # Renovate here only attaches labels that already exist in this

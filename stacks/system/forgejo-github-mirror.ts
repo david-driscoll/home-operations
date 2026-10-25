@@ -371,7 +371,14 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         // The numeric id, as for Renovate's grants: it survives a rename.
         repositoryId: repository.repositoryId,
         user: syncBot.user.login,
-        permission: "write",
+        // `admin`, not `write`: Forgejo refuses a non-fast-forward push to a
+        // protected branch before it reads any allow-list, so the sync's two
+        // rewrites of main (the replay after a divergence, and discard_local)
+        // lift the rule below for one push and put it back
+        // (scripts/forgejo-github-sync, force_update). Deleting and creating a
+        // branch rule is repository admin. The cost, accepted on 2026-10-24: a
+        // leaked MIRROR_SYNC_TOKEN can now drop the rule as well as push.
+        permission: "admin",
       },
       { provider, parent: repository },
     );
@@ -433,12 +440,16 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // A required status gates merging a pull request, not a push, so neither
     // account waits for the window.
     //
-    // NEVER A FORCE PUSH. Forgejo refuses every non-fast-forward update of a
-    // protected branch before it reads any allow-list, admins included. The
+    // NEVER A FORCE PUSH WHILE THIS EXISTS. Forgejo refuses every
+    // non-fast-forward update of a protected branch before it reads any
+    // allow-list, admins included, and has no force-push allow-list. The
     // sync's two leased pushes to this main -- replaying Forgejo's commits
-    // after the two sides diverge, and `discard_local` -- are refused for as
-    // long as this rule exists. docs/runbooks/forgejo-merge-window.md says how
-    // to get through one.
+    // after the two sides diverge, and `discard_local` -- therefore lift this
+    // rule for that one push and recreate it from a snapshot
+    // (scripts/forgejo-github-sync, force_update; the admin grant above). The
+    // provider reads the rule by repository and branch name, so the recreated
+    // copy is still this resource. docs/runbooks/forgejo-merge-window.md has
+    // the manual way, for when the sync itself is broken.
     //
     // Every field the provider allows is set, defaults included. The provider
     // gives each one left out a default rather than reading the forge's value,

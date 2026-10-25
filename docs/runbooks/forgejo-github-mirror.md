@@ -280,9 +280,10 @@ It gives up, loudly, instead of guessing when:
 All of these are cleared the same way as a blocked run: **discard_local**.
 
 **The forge's `main` is a protected branch**, which takes the merge-window
-status. Forgejo never lets anyone force-push one, so the replay and
-**discard_local** both fail while the rule exists. Delete the rule, run the
-sync, and let the Pulumi operator recreate it:
+status. Forgejo never lets anyone force-push one, so for the replay and
+**discard_local** the sync lifts the rule for that one push and recreates it
+from a snapshot. If that fails, delete the rule by hand, run the sync, and let
+the Pulumi operator recreate it:
 [forgejo-merge-window.md](./forgejo-merge-window.md#the-sync-can-never-force-push-here).
 
 ## Verify
