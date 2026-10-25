@@ -1329,6 +1329,7 @@
         "ghcr.io/home-operations/charts-mirror/external-dns",
         // mise tools (.config/mise.toml, paseo's mise.toml)
         "mikefarah/yq",
+        "ghcr.io/man15h/holm",
         "pulumi/pulumi",
         "cli/cli",
         "jdx/hk",
