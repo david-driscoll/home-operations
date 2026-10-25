@@ -49,7 +49,7 @@ spec:
           *app :
             image:
               repository: ghcr.io/man15h/holm
-              tag: 0.10.1@sha256:60ac9b090a9f74b3da90ed8e7b8e0e238dd2473cb3623c4517ef0b6d48ed9807
+              tag: 0.11.0@sha256:8cfe413920f02df68ce42fc58b595c8302949b181dea5f133971b8cb3ff6d1d5
               pullPolicy: IfNotPresent
             envFrom:
               # OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET
