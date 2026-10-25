@@ -1330,6 +1330,8 @@
         // mise tools (.config/mise.toml, paseo's mise.toml)
         "mikefarah/yq",
         "ghcr.io/man15h/holm",
+        "codeberg.org/git-pages/git-pages",
+        "jdx/mise",
         "pulumi/pulumi",
         "cli/cli",
         "jdx/hk",
