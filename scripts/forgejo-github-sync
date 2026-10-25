@@ -20,6 +20,17 @@
 # the replay above, and SYNC_DISCARD_LOCAL. Both are leased to the commit this
 # pass started from, so neither can drop a commit it never saw.
 #
+# BOTH REWRITES LIFT FORGEJO'S BRANCH RULE FOR ONE PUSH. Forgejo refuses every
+# non-fast-forward update of a protected branch before it reads any allow-list
+# (routers/private/hook_pre_receive.go, "enforce absolutely"), and there is no
+# force-push allow-list to add the sync account to. So force_update() does the
+# runbook step itself: snapshot the rule over the API, delete it, make the one
+# leased push, and POST the snapshot back -- on an EXIT trap, so a failed push
+# or a killed run restores it too. The provider keys the rule by repository and
+# branch name, so the copy it finds afterwards is the one it made; and Pulumi
+# re-syncs the system stack every 5 minutes, which recreates the rule if even
+# the trap never ran.
+#
 # NOTHING REACHES GITHUB UNCHECKED. That repository is public and Forgejo is
 # not, and a commit made on Forgejo skipped every check a GitHub pull request
 # gets. scripts/private-domain-guard reads each one -- author, committer,
@@ -37,6 +48,10 @@
 #                             brings every branch GitHub had along with it
 #   SYNC_DEPLOY_KEY_FILE      the SSH key GitHub is pushed with; only used to
 #                             print its public half when GitHub turns it away
+#   SYNC_FORGEJO_API          this repository's Forgejo API base,
+#                             <server>/api/v1/repos/<owner>/<name>
+#   SYNC_FORGEJO_TOKEN        a token that is repository admin, to lift the
+#                             branch rule for a rewrite (see force_update)
 #   PRIVATE_DOMAIN_ROOT, PRIVATE_DOMAIN_TAILNET
 #                             the two names the guard looks for (required to
 #                             publish; never printed)
@@ -140,6 +155,49 @@ publish() {
   return "$RETRY"
 }
 
+forgejo_api() {
+  curl --fail --silent --show-error --max-time 30 \
+    -H "Authorization: token ${SYNC_FORGEJO_TOKEN}" -H 'Content-Type: application/json' "$@"
+}
+
+# Moves Forgejo's $branch from $1 to $2, leased to $1: a rewrite, never a plain
+# push. Returns RETRY if the lease no longer holds (Forgejo moved meanwhile).
+force_update() {
+  local from="$1" to="$2" log rule
+  log="$(mktemp)"
+  if git push --quiet --force-with-lease="refs/heads/$branch:$from" origin "$to:refs/heads/$branch" 2>"$log"; then
+    rm -f "$log"
+    return 0
+  fi
+  if ! grep -q 'protected from force push' "$log"; then
+    cat "$log" >&2
+    rm -f "$log"
+    return "$RETRY"
+  fi
+  rm -f "$log"
+
+  [[ -n "${SYNC_FORGEJO_API:-}" && -n "${SYNC_FORGEJO_TOKEN:-}" ]] ||
+    die "$branch is protected and SYNC_FORGEJO_API/SYNC_FORGEJO_TOKEN are not set, so the rule cannot be lifted -- docs/runbooks/forgejo-merge-window.md"
+
+  rule="$(mktemp)"
+  forgejo_api "$SYNC_FORGEJO_API/branch_protections/$branch" >"$rule" ||
+    die "could not read the $branch protection rule -- the sync account needs admin on this repository (stacks/system/forgejo-github-mirror.ts)"
+
+  # From the moment the DELETE is sent until the POST lands, $branch is
+  # unprotected. Restored on every exit from here, success or not.
+  # shellcheck disable=SC2064 # $rule is meant to expand now
+  trap "forgejo_api -X POST '$SYNC_FORGEJO_API/branch_protections' --data @'$rule' >/dev/null && say 'restored the $branch protection rule' || echo 'forgejo-github-sync: could NOT restore the $branch protection rule; Pulumi recreates it within 5 minutes' >&2; rm -f '$rule'" EXIT
+
+  forgejo_api -X DELETE "$SYNC_FORGEJO_API/branch_protections/$branch" >/dev/null ||
+    die "could not lift the $branch protection rule -- the sync account needs admin on this repository"
+  say "lifted the $branch protection rule for one leased push"
+
+  if git push --quiet --force-with-lease="refs/heads/$branch:$from" origin "$to:refs/heads/$branch"; then
+    return 0
+  fi
+  return "$RETRY"
+}
+
 reconcile() {
   local here there next count stopped
 
@@ -166,7 +224,7 @@ reconcile() {
 
   if [[ "$discard" == "true" ]]; then
     say "discarding $count commit(s) that exist only on Forgejo; $branch becomes $(short "$there")"
-    git push --quiet --force-with-lease="refs/heads/$branch:$here" origin "$there:refs/heads/$branch" || return "$RETRY"
+    force_update "$here" "$there" || return $?
     return 0
   fi
 
@@ -205,7 +263,7 @@ reconcile() {
     # Leased to the commit this pass read. If another pull request merged
     # meanwhile the push is refused, and the next pass replays that one too --
     # the commits just published are recognised as already applied.
-    git push --quiet --force-with-lease="refs/heads/$branch:$here" origin "$next:refs/heads/$branch" || return "$RETRY"
+    force_update "$here" "$next" || return $?
     say "Forgejo's $branch moved to the replayed history at $(short "$next")"
   fi
 }

@@ -215,8 +215,12 @@ push"). Two of the sync's pushes to the forge's `main` are leased force pushes:
   commit landed between two syncs), and
 - a **`discard_local`** dispatch.
 
-Both fail while the rule exists. The run fails, and the forge's `main` stays
-where it was. Fast-forwards in either direction keep working. To get past one:
+The sync now gets past both on its own: `scripts/forgejo-github-sync`
+(`force_update`) snapshots the rule over the API, deletes it, makes the one
+leased push, and recreates it from the snapshot, on an exit trap. That needs
+the sync account to be repository admin (`stacks/system/forgejo-github-mirror.ts`).
+The steps below are for when that fails -- the job log says `could not read`
+or `could not lift the main protection rule`:
 
 1. On the forge, *Settings → Branches*, delete the rule for `main`.
 2. *Actions → github-sync → Run workflow*, with **discard_local** ticked if
