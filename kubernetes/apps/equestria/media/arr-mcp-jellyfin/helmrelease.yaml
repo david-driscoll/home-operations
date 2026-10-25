@@ -89,7 +89,7 @@ spec:
           seed-config:
             image: &image
               repository: ghcr.io/bardesss/arr-mcp
-              tag: 1.44.4@sha256:17ce143a8297542da1227656197e21faa4ac5f32f2024d59f62b5560307ff6ec
+              tag: 1.45.0@sha256:9d76b2b267d41cb99bde7f952d274a07a30d33fe7ff652f086dfe21e075dcf1c
               pullPolicy: IfNotPresent
             command: ["/usr/bin/install"]
             args: ["-m", "0600", "/config-source/config.yaml", "/config/config.yaml"]
