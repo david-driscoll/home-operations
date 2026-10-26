@@ -12,9 +12,12 @@ spec:
           annotations:
             description: Speedtest Exporter has disappeared from Prometheus target discovery.
             summary: Speedtest Exporter is down.
+          # The ServiceMonitor scrapes every 60m, but an instant query only sees a
+          # sample for ~5m, so a bare absent(up == 1) is true for ~55m of every
+          # hour and the alert sits pending. Look back two scrape intervals.
           expr: |
-            absent(up{job=~".*speedtest-exporter.*"} == 1)
-          for: 75m
+            absent(last_over_time(up{job=~".*speedtest-exporter.*"}[2h]) == 1)
+          for: 15m
           labels:
             severity: critical
         - alert: SpeedtestSlowInternetDownload
