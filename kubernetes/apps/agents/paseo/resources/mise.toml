@@ -7,7 +7,7 @@
 # `node` below is for the `npm:` tools.
 [tools]
 node = "24.22.1"
-python = "3.15.1"
+python = "3.15.2"
 gh = "2.103.0"
 kubectl = "1.37.1"
 pulumi = "3.272.0"
