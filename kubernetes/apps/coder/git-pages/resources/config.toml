@@ -9,9 +9,6 @@ log-format = "text"
 
 [server]
 pages = "tcp/:3000"
-# The Caddy on-demand-TLS "ask" endpoint. Unused: TLS terminates at the
-# `internal` Gateway on the shared le-production wildcard certificate.
-caddy = "-"
 metrics = "tcp/:3002"
 
 # <org>.pages.<root domain>/        <- <org>/pages
