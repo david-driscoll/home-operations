@@ -79,7 +79,7 @@ spec:
           tools:
             image: &image
               repository: ghcr.io/getpaseo/paseo
-              tag: 0.13.0@sha256:9832cb6bcc904bb7fd6c0b22f1880cde38b592a26ecd38ba66c7fcc76fa0d43e
+              tag: 0.13.1@sha256:2561c8ead49091a0094b5179be1539f9698f567a9b28c0dbe59e475d199bf8fb
               pullPolicy: IfNotPresent
             command: ["/bin/bash", "/opt/paseo/install-tools.sh"]
             env: &env
