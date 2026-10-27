@@ -24,6 +24,21 @@ export interface AccountTimeouts {
     update?: pulumi.Input<string | undefined>;
 }
 
+export interface AccountTunnel {
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    configType?: pulumi.Input<string | undefined>;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
+     */
+    mediumType?: pulumi.Input<number | undefined>;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
+     */
+    type?: pulumi.Input<number | undefined>;
+}
+
 export interface ApGroupTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -100,6 +115,17 @@ export interface ClientQosRate {
     name?: pulumi.Input<string | undefined>;
 }
 
+export interface ClientQosRateQosRate {
+    /**
+     * The QOS maximum download rate.
+     */
+    maxDown?: pulumi.Input<number | undefined>;
+    /**
+     * The QOS maximum upload rate.
+     */
+    maxUp?: pulumi.Input<number | undefined>;
+}
+
 export interface ClientQosRateTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -173,6 +199,55 @@ export interface DeviceConfigNetwork {
     type?: pulumi.Input<string | undefined>;
 }
 
+export interface DeviceLcm {
+    /**
+     * LCM brightness (1-100).
+     */
+    brightness?: pulumi.Input<number | undefined>;
+    /**
+     * Override the site-wide LCM brightness with `brightness`.
+     */
+    brightnessOverride?: pulumi.Input<boolean | undefined>;
+    /**
+     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
+     */
+    idleTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * Override the site-wide LCM idle timeout with `idle_timeout`.
+     */
+    idleTimeoutOverride?: pulumi.Input<boolean | undefined>;
+    /**
+     * Window during which the display is dimmed.
+     */
+    nightMode?: pulumi.Input<inputs.DeviceLcmNightMode | undefined>;
+}
+
+export interface DeviceLcmNightMode {
+    /**
+     * Night mode start time, 24-hour `HH:MM`.
+     */
+    begins?: pulumi.Input<string | undefined>;
+    /**
+     * Night mode end time, 24-hour `HH:MM`.
+     */
+    ends?: pulumi.Input<string | undefined>;
+}
+
+export interface DeviceLed {
+    /**
+     * LED brightness (0-100).
+     */
+    brightness?: pulumi.Input<number | undefined>;
+    /**
+     * LED color override (hex color code).
+     */
+    color?: pulumi.Input<string | undefined>;
+    /**
+     * LED override setting; valid values are `default`, `on`, and `off`.
+     */
+    override?: pulumi.Input<string | undefined>;
+}
+
 export interface DeviceOutletOverride {
     /**
      * Enable power cycle.
@@ -202,21 +277,13 @@ export interface DevicePortOverride {
      */
     autoneg?: pulumi.Input<boolean | undefined>;
     /**
-     * 802.1X control mode.
+     * 802.1X port authentication settings.
      */
-    dot1xCtrl?: pulumi.Input<string | undefined>;
+    dot1x?: pulumi.Input<inputs.DevicePortOverrideDot1x | undefined>;
     /**
-     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     * Egress rate limiting.
      */
-    dot1xIdleTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * Egress rate limit in kbps.
-     */
-    egressRateLimitKbps?: pulumi.Input<number | undefined>;
-    /**
-     * Enable egress rate limiting.
-     */
-    egressRateLimitKbpsEnabled?: pulumi.Input<boolean | undefined>;
+    egressRateLimit?: pulumi.Input<inputs.DevicePortOverrideEgressRateLimit | undefined>;
     /**
      * List of network IDs to exclude from this port.
      */
@@ -246,13 +313,9 @@ export interface DevicePortOverride {
      */
     isolation?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable LLDP-MED.
+     * LLDP-MED settings.
      */
-    lldpmedEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable LLDP-MED notifications.
-     */
-    lldpmedNotifyEnabled?: pulumi.Input<boolean | undefined>;
+    lldpmed?: pulumi.Input<inputs.DevicePortOverrideLldpmed | undefined>;
     /**
      * Mirror port index.
      */
@@ -286,13 +349,9 @@ export interface DevicePortOverride {
      */
     portProfileId?: pulumi.Input<string | undefined>;
     /**
-     * Enable port security.
+     * Port security (MAC allow-list) settings.
      */
-    portSecurityEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * List of MAC addresses allowed when port security is enabled.
-     */
-    portSecurityMacAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    portSecurity?: pulumi.Input<inputs.DevicePortOverridePortSecurity | undefined>;
     /**
      * Priority queue 1 level.
      */
@@ -318,45 +377,9 @@ export interface DevicePortOverride {
      */
     speed?: pulumi.Input<number | undefined>;
     /**
-     * Enable broadcast storm control.
+     * Storm control settings.
      */
-    stormctrlBcastEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Broadcast storm control level.
-     */
-    stormctrlBcastLevel?: pulumi.Input<number | undefined>;
-    /**
-     * Broadcast storm control rate.
-     */
-    stormctrlBcastRate?: pulumi.Input<number | undefined>;
-    /**
-     * Enable multicast storm control.
-     */
-    stormctrlMcastEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Multicast storm control level.
-     */
-    stormctrlMcastLevel?: pulumi.Input<number | undefined>;
-    /**
-     * Multicast storm control rate.
-     */
-    stormctrlMcastRate?: pulumi.Input<number | undefined>;
-    /**
-     * Storm control type.
-     */
-    stormctrlType?: pulumi.Input<string | undefined>;
-    /**
-     * Enable unicast storm control.
-     */
-    stormctrlUcastEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Unicast storm control level.
-     */
-    stormctrlUcastLevel?: pulumi.Input<number | undefined>;
-    /**
-     * Unicast storm control rate.
-     */
-    stormctrlUcastRate?: pulumi.Input<number | undefined>;
+    stormctrl?: pulumi.Input<inputs.DevicePortOverrideStormctrl | undefined>;
     /**
      * STP port mode.
      */
@@ -375,6 +398,114 @@ export interface DevicePortOverride {
     voiceNetworkconfId?: pulumi.Input<string | undefined>;
 }
 
+export interface DevicePortOverrideDot1x {
+    /**
+     * 802.1X control mode.
+     */
+    ctrl?: pulumi.Input<string | undefined>;
+    /**
+     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     */
+    idleTimeout?: pulumi.Input<string | undefined>;
+}
+
+export interface DevicePortOverrideEgressRateLimit {
+    /**
+     * Enable egress rate limiting.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Egress rate limit in kbps.
+     */
+    kbps?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortOverrideLldpmed {
+    /**
+     * Enable LLDP-MED.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable LLDP-MED topology change notifications.
+     */
+    notifyEnabled?: pulumi.Input<boolean | undefined>;
+}
+
+export interface DevicePortOverridePortSecurity {
+    /**
+     * Enable port security.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * List of MAC addresses allowed when port security is enabled.
+     */
+    macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface DevicePortOverrideStormctrl {
+    /**
+     * Broadcast storm control.
+     */
+    bcast?: pulumi.Input<inputs.DevicePortOverrideStormctrlBcast | undefined>;
+    /**
+     * Multicast storm control.
+     */
+    mcast?: pulumi.Input<inputs.DevicePortOverrideStormctrlMcast | undefined>;
+    /**
+     * Storm control type; `level` or `rate`.
+     */
+    type?: pulumi.Input<string | undefined>;
+    /**
+     * Unknown unicast storm control.
+     */
+    ucast?: pulumi.Input<inputs.DevicePortOverrideStormctrlUcast | undefined>;
+}
+
+export interface DevicePortOverrideStormctrlBcast {
+    /**
+     * Enable Broadcast storm control.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Broadcast storm control level (percent), used when `type` is `level`.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * Broadcast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortOverrideStormctrlMcast {
+    /**
+     * Enable Multicast storm control.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Multicast storm control level (percent), used when `type` is `level`.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * Multicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortOverrideStormctrlUcast {
+    /**
+     * Enable Unknown unicast storm control.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Unknown unicast storm control level (percent), used when `type` is `level`.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
 export interface DeviceRadioTable {
     /**
      * Antenna gain.
@@ -385,13 +516,13 @@ export interface DeviceRadioTable {
      */
     antennaId?: pulumi.Input<number | undefined>;
     /**
-     * Deprecated and no longer applied. UniFi removed 802.11k assisted roaming from the radio table; the field is absent from the controller API and from the firmware's own field definitions as of Network 10.6, so the provider can neither read nor write it. Always null.
+     * **Moved to `unifi_wlan.roaming_assistant_na.enabled`** (and `roaming_assistant_6e.enabled` for 6 GHz). UniFi Network 10.x moved assisted roaming from the device's radio table onto the WLAN, so this attribute no longer reaches the controller. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
     assistedRoamingEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Deprecated and no longer applied. See `assisted_roaming_enabled`. Always null.
+     * **Moved to `unifi_wlan.roaming_assistant_na.rssi`** (and `roaming_assistant_6e.rssi` for 6 GHz). UniFi Network 10.x moved assisted roaming from the device's radio table onto the WLAN, so this attribute no longer reaches the controller. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -456,6 +587,17 @@ export interface DeviceRadioTable {
      * Enable virtual wire.
      */
     vwireEnabled?: pulumi.Input<boolean | undefined>;
+}
+
+export interface DeviceStp {
+    /**
+     * STP bridge priority.
+     */
+    priority?: pulumi.Input<number | undefined>;
+    /**
+     * STP version; valid values are `stp`, `rstp`, and `disabled`.
+     */
+    version?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceTimeouts {
@@ -601,6 +743,17 @@ export interface FirewallPolicyDestination {
     zoneId: pulumi.Input<string>;
 }
 
+export interface FirewallPolicyIcmp {
+    /**
+     * ICMP type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     */
+    typename?: pulumi.Input<string | undefined>;
+    /**
+     * ICMPv6 type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     */
+    v6Typename?: pulumi.Input<string | undefined>;
+}
+
 export interface FirewallPolicySchedule {
     /**
      * Date used by `ONE_TIME_ONLY`, in `YYYY-MM-DD` format.
@@ -627,17 +780,31 @@ export interface FirewallPolicySchedule {
      */
     repeatOnDays?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * Time of day during which a timed schedule is active.
+     */
+    time?: pulumi.Input<inputs.FirewallPolicyScheduleTime | undefined>;
+}
+
+export interface FirewallPolicyScheduleTime {
+    /**
      * Whether the policy is active all day.
      */
-    timeAllDay?: pulumi.Input<boolean | undefined>;
+    allDay?: pulumi.Input<boolean | undefined>;
+    /**
+     * Time range during which the policy is active when `all_day` is false.
+     */
+    range?: pulumi.Input<inputs.FirewallPolicyScheduleTimeRange | undefined>;
+}
+
+export interface FirewallPolicyScheduleTimeRange {
     /**
      * End time in 24-hour `HH:MM` format.
      */
-    timeRangeEnd?: pulumi.Input<string | undefined>;
+    end?: pulumi.Input<string | undefined>;
     /**
      * Start time in 24-hour `HH:MM` format.
      */
-    timeRangeStart?: pulumi.Input<string | undefined>;
+    start?: pulumi.Input<string | undefined>;
 }
 
 export interface FirewallPolicySource {
@@ -724,6 +891,94 @@ export interface FirewallPolicyTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: pulumi.Input<string | undefined>;
+}
+
+export interface FirewallRuleDestination {
+    /**
+     * The destination address of the firewall rule.
+     */
+    address?: pulumi.Input<string | undefined>;
+    /**
+     * The IPv6 destination address of the firewall rule.
+     */
+    addressIpv6?: pulumi.Input<string | undefined>;
+    /**
+     * The destination firewall group IDs of the firewall rule.
+     */
+    firewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * The destination network ID of the firewall rule.
+     */
+    networkId?: pulumi.Input<string | undefined>;
+    /**
+     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
+     */
+    networkType?: pulumi.Input<string | undefined>;
+    /**
+     * The destination port of the firewall rule.
+     */
+    port?: pulumi.Input<string | undefined>;
+}
+
+export interface FirewallRuleIcmp {
+    /**
+     * ICMP type name.
+     */
+    typename?: pulumi.Input<string | undefined>;
+    /**
+     * ICMPv6 type name.
+     */
+    v6Typename?: pulumi.Input<string | undefined>;
+}
+
+export interface FirewallRuleSource {
+    /**
+     * The source address for the firewall rule.
+     */
+    address?: pulumi.Input<string | undefined>;
+    /**
+     * The IPv6 source address for the firewall rule.
+     */
+    addressIpv6?: pulumi.Input<string | undefined>;
+    /**
+     * The source firewall group IDs for the firewall rule.
+     */
+    firewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * The source MAC address of the firewall rule.
+     */
+    mac?: pulumi.Input<string | undefined>;
+    /**
+     * The source network ID for the firewall rule.
+     */
+    networkId?: pulumi.Input<string | undefined>;
+    /**
+     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
+     */
+    networkType?: pulumi.Input<string | undefined>;
+    /**
+     * The source port of the firewall rule.
+     */
+    port?: pulumi.Input<string | undefined>;
+}
+
+export interface FirewallRuleState {
+    /**
+     * Match where the state is established.
+     */
+    established?: pulumi.Input<boolean | undefined>;
+    /**
+     * Match where the state is invalid.
+     */
+    invalid?: pulumi.Input<boolean | undefined>;
+    /**
+     * Match where the state is new.
+     */
+    new?: pulumi.Input<boolean | undefined>;
+    /**
+     * Match where the state is related.
+     */
+    related?: pulumi.Input<boolean | undefined>;
 }
 
 export interface FirewallRuleTimeouts {
@@ -978,13 +1233,9 @@ export interface NetworkDhcpServer {
      */
     conflictChecking?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether DHCP DNS is enabled.
+     * DNS servers handed out to DHCP clients.
      */
-    dnsEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * List of DNS server addresses for DHCP clients.
-     */
-    dnsServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    dns?: pulumi.Input<inputs.NetworkDhcpServerDns | undefined>;
     /**
      * Specifies whether DHCP server is enabled.
      */
@@ -998,13 +1249,9 @@ export interface NetworkDhcpServer {
      */
     leasetime?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether DHCP NTP is enabled.
+     * NTP servers handed out to DHCP clients.
      */
-    ntpEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * List of NTP server addresses for DHCP clients.
-     */
-    ntpServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    ntp?: pulumi.Input<inputs.NetworkDhcpServerNtp | undefined>;
     /**
      * The IPv4 address where the DHCP range starts.
      */
@@ -1050,6 +1297,28 @@ export interface NetworkDhcpServerBoot {
     server?: pulumi.Input<string | undefined>;
 }
 
+export interface NetworkDhcpServerDns {
+    /**
+     * Specifies whether DHCP DNS is enabled.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * List of DNS server addresses for DHCP clients.
+     */
+    servers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface NetworkDhcpServerNtp {
+    /**
+     * Specifies whether DHCP NTP is enabled.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * List of NTP server addresses for DHCP clients.
+     */
+    servers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
 export interface NetworkDhcpServerWins {
     /**
      * List of WINS server addresses (maximum 2).
@@ -1063,13 +1332,9 @@ export interface NetworkDhcpServerWins {
 
 export interface NetworkDhcpV6Server {
     /**
-     * Specifies whether DNS auto-discovery is enabled for DHCPv6.
+     * DNS servers handed out to DHCPv6 clients.
      */
-    dnsAuto?: pulumi.Input<boolean | undefined>;
-    /**
-     * List of DNS server addresses for DHCPv6 clients (maximum 4).
-     */
-    dnsServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    dns?: pulumi.Input<inputs.NetworkDhcpV6ServerDns | undefined>;
     /**
      * Specifies whether the DHCPv6 server is enabled.
      */
@@ -1086,6 +1351,86 @@ export interface NetworkDhcpV6Server {
      * The end of the DHCPv6 address range.
      */
     stop?: pulumi.Input<string | undefined>;
+}
+
+export interface NetworkDhcpV6ServerDns {
+    /**
+     * Specifies whether DNS auto-discovery is enabled for DHCPv6.
+     */
+    auto?: pulumi.Input<boolean | undefined>;
+    /**
+     * List of DNS server addresses for DHCPv6 clients (maximum 4).
+     */
+    servers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface NetworkIpv6 {
+    /**
+     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     */
+    aliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
+     */
+    clientAddressAssignment?: pulumi.Input<string | undefined>;
+    /**
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
+     */
+    interfaceType?: pulumi.Input<string | undefined>;
+    /**
+     * IPv6 Prefix Delegation (PD) settings, used when `interface_type` is `pd`.
+     */
+    pd?: pulumi.Input<inputs.NetworkIpv6Pd | undefined>;
+    /**
+     * IPv6 Router Advertisement (RA) settings.
+     */
+    ra?: pulumi.Input<inputs.NetworkIpv6Ra | undefined>;
+    /**
+     * The IPv6 static subnet of the network. Only used when `interface_type` is `static`.
+     */
+    staticSubnet?: pulumi.Input<string | undefined>;
+}
+
+export interface NetworkIpv6Pd {
+    /**
+     * Specifies whether automatic prefix ID assignment is enabled for IPv6 Prefix Delegation.
+     */
+    autoPrefixidEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The IPv6 Prefix Delegation WAN interface (e.g., `wan`, `wan2`).
+     */
+    interface?: pulumi.Input<string | undefined>;
+    /**
+     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., `0`, `1a`).
+     */
+    prefixid?: pulumi.Input<string | undefined>;
+    /**
+     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with `stop` when `ipv6.interface_type` is `pd`, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
+     */
+    start?: pulumi.Input<string | undefined>;
+    /**
+     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with `start` when `ipv6.interface_type` is `pd`.
+     */
+    stop?: pulumi.Input<string | undefined>;
+}
+
+export interface NetworkIpv6Ra {
+    /**
+     * Specifies whether IPv6 Router Advertisement (RA) is enabled.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. `14400s`, `4h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
+     */
+    preferredLifetime?: pulumi.Input<string | undefined>;
+    /**
+     * The IPv6 Router Advertisement priority. Must be one of `high`, `medium`, or `low`.
+     */
+    priority?: pulumi.Input<string | undefined>;
+    /**
+     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. `86400s`, `24h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
+     */
+    validLifetime?: pulumi.Input<string | undefined>;
 }
 
 export interface NetworkNatOutboundIpAddress {
@@ -1201,6 +1546,114 @@ export interface PortForwardWan {
     port?: pulumi.Input<string | undefined>;
 }
 
+export interface PortProfileDot1x {
+    /**
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`.
+     */
+    ctrl?: pulumi.Input<string | undefined>;
+    /**
+     * The idle timeout to use when using MAC Based 802.1X control, as a Go duration string (e.g. `5m`, `300s`). Defaults to `5m0s`.
+     */
+    idleTimeout?: pulumi.Input<string | undefined>;
+}
+
+export interface PortProfileEgressRateLimit {
+    /**
+     * Enable egress rate limiting for the port profile. Computed from the controller when not set.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The egress rate limit, in kbps, for the port profile. Can be between `64` and `9999999`.
+     */
+    kbps?: pulumi.Input<number | undefined>;
+}
+
+export interface PortProfileLldpmed {
+    /**
+     * Enable LLDP-MED for the port profile.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable LLDP-MED topology change notifications for the port profile.
+     */
+    notifyEnabled?: pulumi.Input<boolean | undefined>;
+}
+
+export interface PortProfilePortSecurity {
+    /**
+     * Enable port security for the port profile. Computed from the controller when not set.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The MAC addresses associated with the port security for the port profile.
+     */
+    macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface PortProfileStormctrl {
+    /**
+     * broadcast Storm Control for the port profile.
+     */
+    bcast?: pulumi.Input<inputs.PortProfileStormctrlBcast | undefined>;
+    /**
+     * multicast Storm Control for the port profile.
+     */
+    mcast?: pulumi.Input<inputs.PortProfileStormctrlMcast | undefined>;
+    /**
+     * The type of Storm Control to use for the port profile. Can be `level` or `rate`.
+     */
+    type?: pulumi.Input<string | undefined>;
+    /**
+     * unknown unicast Storm Control for the port profile.
+     */
+    ucast?: pulumi.Input<inputs.PortProfileStormctrlUcast | undefined>;
+}
+
+export interface PortProfileStormctrlBcast {
+    /**
+     * Enable broadcast Storm Control for the port profile. Computed from the controller when not set.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The broadcast Storm Control level for the port profile. Can be between 0 and 100.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * The broadcast Storm Control rate for the port profile. Can be between 0 and 14880000.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface PortProfileStormctrlMcast {
+    /**
+     * Enable multicast Storm Control for the port profile. Computed from the controller when not set.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The multicast Storm Control level for the port profile. Can be between 0 and 100.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * The multicast Storm Control rate for the port profile. Can be between 0 and 14880000.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface PortProfileStormctrlUcast {
+    /**
+     * Enable unknown unicast Storm Control for the port profile. Computed from the controller when not set.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The unknown unicast Storm Control level for the port profile. Can be between 0 and 100.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * The unknown unicast Storm Control rate for the port profile. Can be between 0 and 14880000.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
 export interface PortProfileTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1288,6 +1741,17 @@ export interface RadiusProfileAuthServer {
     secret: pulumi.Input<string>;
 }
 
+export interface RadiusProfileInterimUpdate {
+    /**
+     * Specifies whether to use interim_update.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
+     */
+    interval?: pulumi.Input<string | undefined>;
+}
+
 export interface RadiusProfileTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1307,6 +1771,17 @@ export interface RadiusProfileTimeouts {
     update?: pulumi.Input<string | undefined>;
 }
 
+export interface RadiusProfileVlan {
+    /**
+     * Specifies whether to use vlan on wired connections.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
+     */
+    wlanMode?: pulumi.Input<string | undefined>;
+}
+
 export interface RadiusUserTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1324,6 +1799,21 @@ export interface RadiusUserTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: pulumi.Input<string | undefined>;
+}
+
+export interface RadiusUserTunnel {
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    configType?: pulumi.Input<string | undefined>;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
+     */
+    mediumType?: pulumi.Input<number | undefined>;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
+     */
+    type?: pulumi.Input<number | undefined>;
 }
 
 export interface SettingAutoSpeedtest {
@@ -1476,13 +1966,9 @@ export interface SettingIps {
      */
     restrictTorrents?: pulumi.Input<boolean | undefined>;
     /**
-     * IPS signature alert suppression entries — silence specific signatures or categories.
+     * IPS suppression: signature alert suppression entries and whitelisted sources/destinations.
      */
-    suppressionAlerts?: pulumi.Input<pulumi.Input<inputs.SettingIpsSuppressionAlert>[] | undefined>;
-    /**
-     * IPS suppression whitelist entries — sources/destinations to exclude from inspection.
-     */
-    suppressionWhitelists?: pulumi.Input<pulumi.Input<inputs.SettingIpsSuppressionWhitelist>[] | undefined>;
+    suppression?: pulumi.Input<inputs.SettingIpsSuppression | undefined>;
 }
 
 export interface SettingIpsHoneypot {
@@ -1498,6 +1984,17 @@ export interface SettingIpsHoneypot {
      * IP version: v4 or v6.
      */
     version: pulumi.Input<string>;
+}
+
+export interface SettingIpsSuppression {
+    /**
+     * IPS signature alert suppression entries — silence specific signatures or categories.
+     */
+    alerts?: pulumi.Input<pulumi.Input<inputs.SettingIpsSuppressionAlert>[] | undefined>;
+    /**
+     * IPS suppression whitelist entries — sources/destinations to exclude from inspection.
+     */
+    whitelists?: pulumi.Input<pulumi.Input<inputs.SettingIpsSuppressionWhitelist>[] | undefined>;
 }
 
 export interface SettingIpsSuppressionAlert {
@@ -1586,13 +2083,9 @@ export interface SettingMgmt {
      */
     advancedFeatureEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Automatically upgrade device firmware.
+     * Automatic device firmware upgrade settings.
      */
-    autoUpgrade?: pulumi.Input<boolean | undefined>;
-    /**
-     * Hour of day (0-23) for automatic firmware upgrades.
-     */
-    autoUpgradeHour?: pulumi.Input<number | undefined>;
+    autoUpgrade?: pulumi.Input<inputs.SettingMgmtAutoUpgrade | undefined>;
     /**
      * Enable debug tools.
      */
@@ -1602,25 +2095,9 @@ export interface SettingMgmt {
      */
     directConnectEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Allow SSH password authentication (in addition to keys).
+     * Device SSH access settings.
      */
-    sshAuthPasswordEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable SSH authentication.
-     */
-    sshEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * SSH keys.
-     */
-    sshKeys?: pulumi.Input<pulumi.Input<inputs.SettingMgmtSshKey>[] | undefined>;
-    /**
-     * SSH password for device access. Sensitive — the controller stores only a hash, so this value is kept from configuration and not read back.
-     */
-    sshPassword?: pulumi.Input<string | undefined>;
-    /**
-     * SSH username for device access.
-     */
-    sshUsername?: pulumi.Input<string | undefined>;
+    ssh?: pulumi.Input<inputs.SettingMgmtSsh | undefined>;
     /**
      * Enable the UniFi Identity Provider.
      */
@@ -1629,6 +2106,40 @@ export interface SettingMgmt {
      * Enable WiFiman.
      */
     wifimanEnabled?: pulumi.Input<boolean | undefined>;
+}
+
+export interface SettingMgmtAutoUpgrade {
+    /**
+     * Automatically upgrade device firmware.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Hour of day (0-23) for automatic firmware upgrades.
+     */
+    hour?: pulumi.Input<number | undefined>;
+}
+
+export interface SettingMgmtSsh {
+    /**
+     * Allow SSH password authentication (in addition to keys).
+     */
+    authPasswordEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable SSH authentication.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * SSH keys.
+     */
+    keys?: pulumi.Input<pulumi.Input<inputs.SettingMgmtSshKey>[] | undefined>;
+    /**
+     * SSH password for device access. Sensitive — the controller stores only a hash, so this value is kept from configuration and not read back.
+     */
+    password?: pulumi.Input<string | undefined>;
+    /**
+     * SSH username for device access.
+     */
+    username?: pulumi.Input<string | undefined>;
 }
 
 export interface SettingMgmtSshKey {
@@ -1725,29 +2236,43 @@ export interface SettingSyslog {
      */
     logAllContents?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether netconsole logging is enabled.
+     * Netconsole logging settings.
      */
-    netconsoleEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Netconsole host.
-     */
-    netconsoleHost?: pulumi.Input<string | undefined>;
-    /**
-     * Netconsole port (1-65535).
-     */
-    netconsolePort?: pulumi.Input<number | undefined>;
+    netconsole?: pulumi.Input<inputs.SettingSyslogNetconsole | undefined>;
     /**
      * Remote syslog server port (1-65535).
      */
     port?: pulumi.Input<number | undefined>;
     /**
+     * Forwarding of this controller's own events to the remote syslog server.
+     */
+    thisController?: pulumi.Input<inputs.SettingSyslogThisController | undefined>;
+}
+
+export interface SettingSyslogNetconsole {
+    /**
+     * Whether netconsole logging is enabled. Defaults to `false` when `syslog` is configured and this is not set.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Netconsole host.
+     */
+    host?: pulumi.Input<string | undefined>;
+    /**
+     * Netconsole port (1-65535).
+     */
+    port?: pulumi.Input<number | undefined>;
+}
+
+export interface SettingSyslogThisController {
+    /**
      * Also log this controller's events.
      */
-    thisController?: pulumi.Input<boolean | undefined>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Only send this controller's logs over an encrypted channel.
      */
-    thisControllerEncryptedOnly?: pulumi.Input<boolean | undefined>;
+    encryptedOnly?: pulumi.Input<boolean | undefined>;
 }
 
 export interface SettingTimeouts {
@@ -1783,21 +2308,9 @@ export interface SettingUsg {
      */
     ftpModule?: pulumi.Input<boolean | undefined>;
     /**
-     * Geo IP filtering action: block or allow.
+     * Geo IP filtering (Region Blocking) settings.
      */
-    geoIpFilteringBlock?: pulumi.Input<string | undefined>;
-    /**
-     * Comma-separated list of country codes for geo IP filtering.
-     */
-    geoIpFilteringCountries?: pulumi.Input<string | undefined>;
-    /**
-     * Enable geo IP filtering.
-     */
-    geoIpFilteringEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Geo IP filtering traffic direction: both, ingress, or egress.
-     */
-    geoIpFilteringTrafficDirection?: pulumi.Input<string | undefined>;
+    geoIpFiltering?: pulumi.Input<inputs.SettingUsgGeoIpFiltering | undefined>;
     /**
      * Enable GRE module.
      */
@@ -1815,17 +2328,9 @@ export interface SettingUsg {
      */
     mssClamp?: pulumi.Input<string | undefined>;
     /**
-     * Enable hardware offload for accounting.
+     * Hardware offload settings.
      */
-    offloadAccounting?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable hardware offload for L2 blocking.
-     */
-    offloadL2Blocking?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable hardware offload for scheduling.
-     */
-    offloadSch?: pulumi.Input<boolean | undefined>;
+    offload?: pulumi.Input<inputs.SettingUsgOffload | undefined>;
     /**
      * Other connections timeout, as a Go duration string (e.g. `600s`, `10m`).
      */
@@ -1851,37 +2356,9 @@ export interface SettingUsg {
      */
     synCookies?: pulumi.Input<boolean | undefined>;
     /**
-     * TCP close timeout, as a Go duration string (e.g. `10s`).
+     * TCP connection tracking timeouts.
      */
-    tcpCloseTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP close wait timeout, as a Go duration string (e.g. `60s`, `1m`).
-     */
-    tcpCloseWaitTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP established connection timeout, as a Go duration string (e.g. `7440s`, `2h4m`).
-     */
-    tcpEstablishedTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP fin wait timeout, as a Go duration string (e.g. `120s`, `2m`).
-     */
-    tcpFinWaitTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP last ACK timeout, as a Go duration string (e.g. `30s`).
-     */
-    tcpLastAckTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP SYN received timeout, as a Go duration string (e.g. `60s`, `1m`).
-     */
-    tcpSynRecvTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP SYN sent timeout, as a Go duration string (e.g. `120s`, `2m`).
-     */
-    tcpSynSentTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * TCP time wait timeout, as a Go duration string (e.g. `120s`, `2m`).
-     */
-    tcpTimeWaitTimeout?: pulumi.Input<string | undefined>;
+    tcp?: pulumi.Input<inputs.SettingUsgTcp | undefined>;
     /**
      * Enable TFTP module.
      */
@@ -1891,33 +2368,17 @@ export interface SettingUsg {
      */
     timeoutSettingPreference?: pulumi.Input<string | undefined>;
     /**
-     * UDP other timeout, as a Go duration string (e.g. `30s`).
+     * UDP connection tracking timeouts.
      */
-    udpOtherTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * UDP stream timeout, as a Go duration string (e.g. `180s`, `3m`).
-     */
-    udpStreamTimeout?: pulumi.Input<string | undefined>;
+    udp?: pulumi.Input<inputs.SettingUsgUdp | undefined>;
     /**
      * Unbind WAN monitors.
      */
     unbindWanMonitors?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable UPnP.
+     * UPnP settings.
      */
-    upnpEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable UPnP NAT-PMP.
-     */
-    upnpNatPmpEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable UPnP secure mode.
-     */
-    upnpSecureMode?: pulumi.Input<boolean | undefined>;
-    /**
-     * UPnP WAN interface (e.g., WAN, WAN2).
-     */
-    upnpWanInterface?: pulumi.Input<string | undefined>;
+    upnp?: pulumi.Input<inputs.SettingUsgUpnp | undefined>;
 }
 
 export interface SettingUsgDnsVerification {
@@ -1939,6 +2400,105 @@ export interface SettingUsgDnsVerification {
     settingPreference?: pulumi.Input<string | undefined>;
 }
 
+export interface SettingUsgGeoIpFiltering {
+    /**
+     * Geo IP filtering action: block or allow.
+     */
+    block?: pulumi.Input<string | undefined>;
+    /**
+     * Comma-separated list of country codes for geo IP filtering.
+     */
+    countries?: pulumi.Input<string | undefined>;
+    /**
+     * Enable geo IP filtering.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Geo IP filtering traffic direction: both, ingress, or egress.
+     */
+    trafficDirection?: pulumi.Input<string | undefined>;
+}
+
+export interface SettingUsgOffload {
+    /**
+     * Enable hardware offload for accounting.
+     */
+    accounting?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable hardware offload for L2 blocking.
+     */
+    l2Blocking?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable hardware offload for scheduling.
+     */
+    sch?: pulumi.Input<boolean | undefined>;
+}
+
+export interface SettingUsgTcp {
+    /**
+     * TCP close timeout, as a Go duration string (e.g. `10s`).
+     */
+    closeTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP close wait timeout, as a Go duration string (e.g. `60s`, `1m`).
+     */
+    closeWaitTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP established connection timeout, as a Go duration string (e.g. `7440s`, `2h4m`).
+     */
+    establishedTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP fin wait timeout, as a Go duration string (e.g. `120s`, `2m`).
+     */
+    finWaitTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP last ACK timeout, as a Go duration string (e.g. `30s`).
+     */
+    lastAckTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP SYN received timeout, as a Go duration string (e.g. `60s`, `1m`).
+     */
+    synRecvTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP SYN sent timeout, as a Go duration string (e.g. `120s`, `2m`).
+     */
+    synSentTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * TCP time wait timeout, as a Go duration string (e.g. `120s`, `2m`).
+     */
+    timeWaitTimeout?: pulumi.Input<string | undefined>;
+}
+
+export interface SettingUsgUdp {
+    /**
+     * UDP other timeout, as a Go duration string (e.g. `30s`).
+     */
+    otherTimeout?: pulumi.Input<string | undefined>;
+    /**
+     * UDP stream timeout, as a Go duration string (e.g. `180s`, `3m`).
+     */
+    streamTimeout?: pulumi.Input<string | undefined>;
+}
+
+export interface SettingUsgUpnp {
+    /**
+     * Enable UPnP.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable UPnP NAT-PMP.
+     */
+    natPmpEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable UPnP secure mode.
+     */
+    secureMode?: pulumi.Input<boolean | undefined>;
+    /**
+     * UPnP WAN interface (e.g., WAN, WAN2).
+     */
+    wanInterface?: pulumi.Input<string | undefined>;
+}
+
 export interface SiteTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1958,6 +2518,44 @@ export interface SiteTimeouts {
     update?: pulumi.Input<string | undefined>;
 }
 
+export interface SiteToSiteVpnEsp {
+    /**
+     * ESP (phase 2) Diffie-Hellman group (PFS). Only used when `profile = customized`.
+     */
+    dhGroup?: pulumi.Input<number | undefined>;
+    /**
+     * ESP (phase 2) encryption. Only used when `profile = customized`.
+     */
+    encryption?: pulumi.Input<string | undefined>;
+    /**
+     * ESP (phase 2) hash. Only used when `profile = customized`.
+     */
+    hash?: pulumi.Input<string | undefined>;
+    /**
+     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. `1h`, `3600s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
+     */
+    lifetime?: pulumi.Input<string | undefined>;
+}
+
+export interface SiteToSiteVpnIke {
+    /**
+     * IKE (phase 1) Diffie-Hellman group. Only used when `profile = customized`.
+     */
+    dhGroup?: pulumi.Input<number | undefined>;
+    /**
+     * IKE (phase 1) encryption. Only used when `profile = customized`.
+     */
+    encryption?: pulumi.Input<string | undefined>;
+    /**
+     * IKE (phase 1) hash. Only used when `profile = customized`.
+     */
+    hash?: pulumi.Input<string | undefined>;
+    /**
+     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. `8h`, `28800s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
+     */
+    lifetime?: pulumi.Input<string | undefined>;
+}
+
 export interface SiteToSiteVpnTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1975,6 +2573,17 @@ export interface SiteToSiteVpnTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: pulumi.Input<string | undefined>;
+}
+
+export interface StaticRouteGateway {
+    /**
+     * The MAC address of the gateway device, used when `type` is `switch`.
+     */
+    device?: pulumi.Input<string | undefined>;
+    /**
+     * The type of gateway for the static route. Can be `default` or `switch`.
+     */
+    type?: pulumi.Input<string | undefined>;
 }
 
 export interface StaticRouteTimeouts {
@@ -2175,13 +2784,9 @@ export interface VpnServerOpenvpn {
      */
     authKey?: pulumi.Input<string | undefined>;
     /**
-     * CA certificate generated by the controller.
+     * CA certificate and private key generated by the controller.
      */
-    caCrt?: pulumi.Input<string | undefined>;
-    /**
-     * CA private key generated by the controller.
-     */
-    caKey?: pulumi.Input<string | undefined>;
+    ca?: pulumi.Input<inputs.VpnServerOpenvpnCa | undefined>;
     /**
      * Diffie-Hellman parameters generated by the controller.
      */
@@ -2199,21 +2804,46 @@ export interface VpnServerOpenvpn {
      */
     port?: pulumi.Input<number | undefined>;
     /**
+     * Server certificate and private key generated by the controller.
+     */
+    server?: pulumi.Input<inputs.VpnServerOpenvpnServer | undefined>;
+    /**
+     * Shared client certificate and private key generated by the controller.
+     */
+    sharedClient?: pulumi.Input<inputs.VpnServerOpenvpnSharedClient | undefined>;
+}
+
+export interface VpnServerOpenvpnCa {
+    /**
+     * CA certificate generated by the controller.
+     */
+    crt?: pulumi.Input<string | undefined>;
+    /**
+     * CA private key generated by the controller.
+     */
+    key?: pulumi.Input<string | undefined>;
+}
+
+export interface VpnServerOpenvpnServer {
+    /**
      * Server certificate generated by the controller.
      */
-    serverCrt?: pulumi.Input<string | undefined>;
+    crt?: pulumi.Input<string | undefined>;
     /**
      * Server private key generated by the controller.
      */
-    serverKey?: pulumi.Input<string | undefined>;
+    key?: pulumi.Input<string | undefined>;
+}
+
+export interface VpnServerOpenvpnSharedClient {
     /**
      * Shared client certificate generated by the controller.
      */
-    sharedClientCrt?: pulumi.Input<string | undefined>;
+    crt?: pulumi.Input<string | undefined>;
     /**
      * Shared client private key generated by the controller.
      */
-    sharedClientKey?: pulumi.Input<string | undefined>;
+    key?: pulumi.Input<string | undefined>;
 }
 
 export interface VpnServerTimeouts {
@@ -2293,13 +2923,9 @@ export interface WanDhcpv6 {
      */
     options?: pulumi.Input<pulumi.Input<inputs.WanDhcpv6Option>[] | undefined>;
     /**
-     * DHCPv6 prefix delegation size
+     * DHCPv6 prefix delegation configuration
      */
-    pdSize?: pulumi.Input<number | undefined>;
-    /**
-     * Whether DHCPv6 PD size is automatic
-     */
-    pdSizeAuto?: pulumi.Input<boolean | undefined>;
+    pd?: pulumi.Input<inputs.WanDhcpv6Pd | undefined>;
     /**
      * IPv6 WAN delegation type (pd, single_network, none)
      */
@@ -2317,19 +2943,22 @@ export interface WanDhcpv6Option {
     value: pulumi.Input<string>;
 }
 
+export interface WanDhcpv6Pd {
+    /**
+     * DHCPv6 prefix delegation size
+     */
+    size?: pulumi.Input<number | undefined>;
+    /**
+     * Whether DHCPv6 PD size is automatic
+     */
+    sizeAuto?: pulumi.Input<boolean | undefined>;
+}
+
 export interface WanDns {
     /**
-     * IPv6 DNS preference (auto, manual)
+     * IPv6 DNS configuration
      */
-    ipv6Preference?: pulumi.Input<string | undefined>;
-    /**
-     * Primary IPv6 DNS server
-     */
-    ipv6Primary?: pulumi.Input<string | undefined>;
-    /**
-     * Secondary IPv6 DNS server
-     */
-    ipv6Secondary?: pulumi.Input<string | undefined>;
+    ipv6?: pulumi.Input<inputs.WanDnsIpv6 | undefined>;
     /**
      * DNS preference (auto, manual)
      */
@@ -2342,6 +2971,32 @@ export interface WanDns {
      * Secondary DNS server
      */
     secondary?: pulumi.Input<string | undefined>;
+}
+
+export interface WanDnsIpv6 {
+    /**
+     * IPv6 DNS preference (auto, manual)
+     */
+    preference?: pulumi.Input<string | undefined>;
+    /**
+     * Primary IPv6 DNS server
+     */
+    primary?: pulumi.Input<string | undefined>;
+    /**
+     * Secondary IPv6 DNS server
+     */
+    secondary?: pulumi.Input<string | undefined>;
+}
+
+export interface WanDslite {
+    /**
+     * The DS-Lite AFTR remote host. Only used when `remote_host_auto` is disabled.
+     */
+    remoteHost?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the DS-Lite AFTR remote host is detected automatically.
+     */
+    remoteHostAuto?: pulumi.Input<boolean | undefined>;
 }
 
 export interface WanEgressQos {
@@ -2475,6 +3130,17 @@ export interface WireguardPeerTimeouts {
     update?: pulumi.Input<string | undefined>;
 }
 
+export interface WlanApGroup {
+    /**
+     * List of AP group IDs to apply this WLAN to.
+     */
+    ids?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Access point group mode.
+     */
+    mode?: pulumi.Input<string | undefined>;
+}
+
 export interface WlanMacFilter {
     /**
      * Indicates whether or not the MAC filter is turned on for the network.
@@ -2501,6 +3167,39 @@ export interface WlanPrivatePresharedKey {
     password: pulumi.Input<string>;
 }
 
+export interface WlanRadius {
+    /**
+     * Enable RADIUS MAC authentication. Defaults to `false` when not set.
+     */
+    macAuthEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
+     */
+    profileId?: pulumi.Input<string | undefined>;
+}
+
+export interface WlanRoamingAssistant6e {
+    /**
+     * Enable the 6 GHz roaming assistant.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Signal strength threshold in dBm, `-90` to `-70`. The controller supplies a value when unset.
+     */
+    rssi?: pulumi.Input<number | undefined>;
+}
+
+export interface WlanRoamingAssistantNa {
+    /**
+     * Enable the 5 GHz roaming assistant.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Signal strength threshold in dBm, `-80` to `-60`. The controller supplies a value when unset.
+     */
+    rssi?: pulumi.Input<number | undefined>;
+}
+
 export interface WlanSchedule {
     /**
      * Day of week for the block.
@@ -2515,13 +3214,20 @@ export interface WlanSchedule {
      */
     name?: pulumi.Input<string | undefined>;
     /**
+     * Start time of the block.
+     */
+    start: pulumi.Input<inputs.WlanScheduleStart>;
+}
+
+export interface WlanScheduleStart {
+    /**
      * Start hour for the block (0-23).
      */
-    startHour: pulumi.Input<number>;
+    hour: pulumi.Input<number>;
     /**
      * Start minute for the block (0-59).
      */
-    startMinute?: pulumi.Input<number | undefined>;
+    minute?: pulumi.Input<number | undefined>;
 }
 
 export interface WlanTimeouts {
@@ -2541,4 +3247,34 @@ export interface WlanTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: pulumi.Input<string | undefined>;
+}
+
+export interface WlanWpa {
+    /**
+     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
+     */
+    enc?: pulumi.Input<string | undefined>;
+    /**
+     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`.
+     */
+    mode?: pulumi.Input<string | undefined>;
+}
+
+export interface WlanWpa3 {
+    /**
+     * Enable WPA3 Enterprise 192-bit mode.
+     */
+    enhanced192?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable WPA3 fast roaming (802.11r).
+     */
+    fastRoaming?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
+     */
+    support?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3.support` must be true).
+     */
+    transition?: pulumi.Input<boolean | undefined>;
 }

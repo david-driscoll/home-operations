@@ -20,8 +20,7 @@ export interface GetAccountResult {
     readonly password: string;
     readonly site: string;
     readonly timeouts?: outputs.GetAccountTimeouts;
-    readonly tunnelMediumType: number;
-    readonly tunnelType: number;
+    readonly tunnel: outputs.GetAccountTunnel;
 }
 export declare function getAccountOutput(args: GetAccountOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetAccountResult>;
 /**

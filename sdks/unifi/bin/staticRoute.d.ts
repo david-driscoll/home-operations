@@ -26,13 +26,9 @@ export declare class StaticRoute extends pulumi.CustomResource {
      */
     readonly enabled: pulumi.Output<boolean>;
     /**
-     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     * The gateway that applies the static route.
      */
-    readonly gatewayDevice: pulumi.Output<string | undefined>;
-    /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
-     */
-    readonly gatewayType: pulumi.Output<string>;
+    readonly gateway: pulumi.Output<outputs.StaticRouteGateway>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
@@ -80,13 +76,9 @@ export interface StaticRouteState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     * The gateway that applies the static route.
      */
-    gatewayDevice?: pulumi.Input<string | undefined>;
-    /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
-     */
-    gatewayType?: pulumi.Input<string | undefined>;
+    gateway?: pulumi.Input<inputs.StaticRouteGateway | undefined>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
@@ -126,13 +118,9 @@ export interface StaticRouteArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     * The gateway that applies the static route.
      */
-    gatewayDevice?: pulumi.Input<string | undefined>;
-    /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
-     */
-    gatewayType?: pulumi.Input<string | undefined>;
+    gateway?: pulumi.Input<inputs.StaticRouteGateway | undefined>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */

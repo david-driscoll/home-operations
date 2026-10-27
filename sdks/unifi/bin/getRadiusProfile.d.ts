@@ -16,15 +16,13 @@ export interface GetRadiusProfileArgs {
 export interface GetRadiusProfileResult {
     readonly accountingEnabled: boolean;
     readonly id: string;
-    readonly interimUpdateEnabled: boolean;
-    readonly interimUpdateInterval: string;
+    readonly interimUpdate: outputs.GetRadiusProfileInterimUpdate;
     readonly name: string;
     readonly site: string;
     readonly timeouts?: outputs.GetRadiusProfileTimeouts;
     readonly useUsgAcctServer: boolean;
     readonly useUsgAuthServer: boolean;
-    readonly vlanEnabled: boolean;
-    readonly vlanWlanMode: string;
+    readonly vlan: outputs.GetRadiusProfileVlan;
 }
 export declare function getRadiusProfileOutput(args: GetRadiusProfileOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetRadiusProfileResult>;
 /**

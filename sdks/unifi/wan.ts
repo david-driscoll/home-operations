@@ -47,6 +47,10 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly dns: pulumi.Output<outputs.WanDns>;
     /**
+     * DS-Lite (AFTR) configuration.
+     */
+    declare public readonly dslite: pulumi.Output<outputs.WanDslite>;
+    /**
      * Egress QoS configuration
      */
     declare public readonly egressQos: pulumi.Output<outputs.WanEgressQos>;
@@ -132,14 +136,6 @@ export class Wan extends pulumi.CustomResource {
      * VLAN configuration
      */
     declare public readonly vlan: pulumi.Output<outputs.WanVlan>;
-    /**
-     * The DS-Lite AFTR remote host. Only used when `wan_dslite_remote_host_auto` is disabled.
-     */
-    declare public readonly wanDsliteRemoteHost: pulumi.Output<string>;
-    /**
-     * Whether the DS-Lite AFTR remote host is detected automatically.
-     */
-    declare public readonly wanDsliteRemoteHostAuto: pulumi.Output<boolean>;
 
     /**
      * Create a Wan resource with the given unique name, arguments, and options.
@@ -157,6 +153,7 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["dhcp"] = state?.dhcp;
             resourceInputs["dhcpv6"] = state?.dhcpv6;
             resourceInputs["dns"] = state?.dns;
+            resourceInputs["dslite"] = state?.dslite;
             resourceInputs["egressQos"] = state?.egressQos;
             resourceInputs["enabled"] = state?.enabled;
             resourceInputs["igmpProxy"] = state?.igmpProxy;
@@ -180,13 +177,12 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["upnp"] = state?.upnp;
             resourceInputs["username"] = state?.username;
             resourceInputs["vlan"] = state?.vlan;
-            resourceInputs["wanDsliteRemoteHost"] = state?.wanDsliteRemoteHost;
-            resourceInputs["wanDsliteRemoteHostAuto"] = state?.wanDsliteRemoteHostAuto;
         } else {
             const args = argsOrState as WanArgs | undefined;
             resourceInputs["dhcp"] = args?.dhcp;
             resourceInputs["dhcpv6"] = args?.dhcpv6;
             resourceInputs["dns"] = args?.dns;
+            resourceInputs["dslite"] = args?.dslite;
             resourceInputs["egressQos"] = args?.egressQos;
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["igmpProxy"] = args?.igmpProxy;
@@ -210,8 +206,6 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["upnp"] = args?.upnp;
             resourceInputs["username"] = args?.username;
             resourceInputs["vlan"] = args?.vlan;
-            resourceInputs["wanDsliteRemoteHost"] = args?.wanDsliteRemoteHost;
-            resourceInputs["wanDsliteRemoteHostAuto"] = args?.wanDsliteRemoteHostAuto;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         const secretOpts = { additionalSecretOutputs: ["password", "passwordWo"] };
@@ -237,6 +231,10 @@ export interface WanState {
      */
     dns?: pulumi.Input<inputs.WanDns | undefined>;
     /**
+     * DS-Lite (AFTR) configuration.
+     */
+    dslite?: pulumi.Input<inputs.WanDslite | undefined>;
+    /**
      * Egress QoS configuration
      */
     egressQos?: pulumi.Input<inputs.WanEgressQos | undefined>;
@@ -322,14 +320,6 @@ export interface WanState {
      * VLAN configuration
      */
     vlan?: pulumi.Input<inputs.WanVlan | undefined>;
-    /**
-     * The DS-Lite AFTR remote host. Only used when `wan_dslite_remote_host_auto` is disabled.
-     */
-    wanDsliteRemoteHost?: pulumi.Input<string | undefined>;
-    /**
-     * Whether the DS-Lite AFTR remote host is detected automatically.
-     */
-    wanDsliteRemoteHostAuto?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -349,6 +339,10 @@ export interface WanArgs {
      */
     dns?: pulumi.Input<inputs.WanDns | undefined>;
     /**
+     * DS-Lite (AFTR) configuration.
+     */
+    dslite?: pulumi.Input<inputs.WanDslite | undefined>;
+    /**
      * Egress QoS configuration
      */
     egressQos?: pulumi.Input<inputs.WanEgressQos | undefined>;
@@ -434,12 +428,4 @@ export interface WanArgs {
      * VLAN configuration
      */
     vlan?: pulumi.Input<inputs.WanVlan | undefined>;
-    /**
-     * The DS-Lite AFTR remote host. Only used when `wan_dslite_remote_host_auto` is disabled.
-     */
-    wanDsliteRemoteHost?: pulumi.Input<string | undefined>;
-    /**
-     * Whether the DS-Lite AFTR remote host is detected automatically.
-     */
-    wanDsliteRemoteHostAuto?: pulumi.Input<boolean | undefined>;
 }

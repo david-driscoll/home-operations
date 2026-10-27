@@ -22,41 +22,17 @@ export declare class FirewallRule extends pulumi.CustomResource {
      */
     readonly action: pulumi.Output<string>;
     /**
-     * The destination address of the firewall rule.
+     * The destination match criteria of the firewall rule.
      */
-    readonly dstAddress: pulumi.Output<string | undefined>;
-    /**
-     * The IPv6 destination address of the firewall rule.
-     */
-    readonly dstAddressIpv6: pulumi.Output<string | undefined>;
-    /**
-     * The destination firewall group IDs of the firewall rule.
-     */
-    readonly dstFirewallGroupIds: pulumi.Output<string[] | undefined>;
-    /**
-     * The destination network ID of the firewall rule.
-     */
-    readonly dstNetworkId: pulumi.Output<string | undefined>;
-    /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
-     */
-    readonly dstNetworkType: pulumi.Output<string>;
-    /**
-     * The destination port of the firewall rule.
-     */
-    readonly dstPort: pulumi.Output<string | undefined>;
+    readonly destination: pulumi.Output<outputs.FirewallRuleDestination>;
     /**
      * Specifies whether the rule should be enabled.
      */
     readonly enabled: pulumi.Output<boolean>;
     /**
-     * ICMP type name.
+     * ICMP type matching for the firewall rule.
      */
-    readonly icmpTypename: pulumi.Output<string | undefined>;
-    /**
-     * ICMPv6 type name.
-     */
-    readonly icmpV6Typename: pulumi.Output<string | undefined>;
+    readonly icmp: pulumi.Output<outputs.FirewallRuleIcmp | undefined>;
     /**
      * Specify whether the rule matches on IPsec packets. Can be one of `match-ipset` or `match-none`.
      */
@@ -98,49 +74,13 @@ export declare class FirewallRule extends pulumi.CustomResource {
      */
     readonly site: pulumi.Output<string>;
     /**
-     * The source address for the firewall rule.
+     * The source match criteria of the firewall rule.
      */
-    readonly srcAddress: pulumi.Output<string | undefined>;
+    readonly source: pulumi.Output<outputs.FirewallRuleSource>;
     /**
-     * The IPv6 source address for the firewall rule.
+     * Connection state matching for the firewall rule.
      */
-    readonly srcAddressIpv6: pulumi.Output<string | undefined>;
-    /**
-     * The source firewall group IDs for the firewall rule.
-     */
-    readonly srcFirewallGroupIds: pulumi.Output<string[] | undefined>;
-    /**
-     * The source MAC address of the firewall rule.
-     */
-    readonly srcMac: pulumi.Output<string | undefined>;
-    /**
-     * The source network ID for the firewall rule.
-     */
-    readonly srcNetworkId: pulumi.Output<string | undefined>;
-    /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
-     */
-    readonly srcNetworkType: pulumi.Output<string>;
-    /**
-     * The source port of the firewall rule.
-     */
-    readonly srcPort: pulumi.Output<string | undefined>;
-    /**
-     * Match where the state is established.
-     */
-    readonly stateEstablished: pulumi.Output<boolean>;
-    /**
-     * Match where the state is invalid.
-     */
-    readonly stateInvalid: pulumi.Output<boolean>;
-    /**
-     * Match where the state is new.
-     */
-    readonly stateNew: pulumi.Output<boolean>;
-    /**
-     * Match where the state is related.
-     */
-    readonly stateRelated: pulumi.Output<boolean>;
+    readonly state: pulumi.Output<outputs.FirewallRuleState>;
     readonly timeouts: pulumi.Output<outputs.FirewallRuleTimeouts | undefined>;
     /**
      * Create a FirewallRule resource with the given unique name, arguments, and options.
@@ -160,41 +100,17 @@ export interface FirewallRuleState {
      */
     action?: pulumi.Input<string | undefined>;
     /**
-     * The destination address of the firewall rule.
+     * The destination match criteria of the firewall rule.
      */
-    dstAddress?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 destination address of the firewall rule.
-     */
-    dstAddressIpv6?: pulumi.Input<string | undefined>;
-    /**
-     * The destination firewall group IDs of the firewall rule.
-     */
-    dstFirewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
-    /**
-     * The destination network ID of the firewall rule.
-     */
-    dstNetworkId?: pulumi.Input<string | undefined>;
-    /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
-     */
-    dstNetworkType?: pulumi.Input<string | undefined>;
-    /**
-     * The destination port of the firewall rule.
-     */
-    dstPort?: pulumi.Input<string | undefined>;
+    destination?: pulumi.Input<inputs.FirewallRuleDestination | undefined>;
     /**
      * Specifies whether the rule should be enabled.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ICMP type name.
+     * ICMP type matching for the firewall rule.
      */
-    icmpTypename?: pulumi.Input<string | undefined>;
-    /**
-     * ICMPv6 type name.
-     */
-    icmpV6Typename?: pulumi.Input<string | undefined>;
+    icmp?: pulumi.Input<inputs.FirewallRuleIcmp | undefined>;
     /**
      * Specify whether the rule matches on IPsec packets. Can be one of `match-ipset` or `match-none`.
      */
@@ -236,49 +152,13 @@ export interface FirewallRuleState {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The source address for the firewall rule.
+     * The source match criteria of the firewall rule.
      */
-    srcAddress?: pulumi.Input<string | undefined>;
+    source?: pulumi.Input<inputs.FirewallRuleSource | undefined>;
     /**
-     * The IPv6 source address for the firewall rule.
+     * Connection state matching for the firewall rule.
      */
-    srcAddressIpv6?: pulumi.Input<string | undefined>;
-    /**
-     * The source firewall group IDs for the firewall rule.
-     */
-    srcFirewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
-    /**
-     * The source MAC address of the firewall rule.
-     */
-    srcMac?: pulumi.Input<string | undefined>;
-    /**
-     * The source network ID for the firewall rule.
-     */
-    srcNetworkId?: pulumi.Input<string | undefined>;
-    /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
-     */
-    srcNetworkType?: pulumi.Input<string | undefined>;
-    /**
-     * The source port of the firewall rule.
-     */
-    srcPort?: pulumi.Input<string | undefined>;
-    /**
-     * Match where the state is established.
-     */
-    stateEstablished?: pulumi.Input<boolean | undefined>;
-    /**
-     * Match where the state is invalid.
-     */
-    stateInvalid?: pulumi.Input<boolean | undefined>;
-    /**
-     * Match where the state is new.
-     */
-    stateNew?: pulumi.Input<boolean | undefined>;
-    /**
-     * Match where the state is related.
-     */
-    stateRelated?: pulumi.Input<boolean | undefined>;
+    state?: pulumi.Input<inputs.FirewallRuleState | undefined>;
     timeouts?: pulumi.Input<inputs.FirewallRuleTimeouts | undefined>;
 }
 /**
@@ -290,41 +170,17 @@ export interface FirewallRuleArgs {
      */
     action: pulumi.Input<string>;
     /**
-     * The destination address of the firewall rule.
+     * The destination match criteria of the firewall rule.
      */
-    dstAddress?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 destination address of the firewall rule.
-     */
-    dstAddressIpv6?: pulumi.Input<string | undefined>;
-    /**
-     * The destination firewall group IDs of the firewall rule.
-     */
-    dstFirewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
-    /**
-     * The destination network ID of the firewall rule.
-     */
-    dstNetworkId?: pulumi.Input<string | undefined>;
-    /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
-     */
-    dstNetworkType?: pulumi.Input<string | undefined>;
-    /**
-     * The destination port of the firewall rule.
-     */
-    dstPort?: pulumi.Input<string | undefined>;
+    destination?: pulumi.Input<inputs.FirewallRuleDestination | undefined>;
     /**
      * Specifies whether the rule should be enabled.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ICMP type name.
+     * ICMP type matching for the firewall rule.
      */
-    icmpTypename?: pulumi.Input<string | undefined>;
-    /**
-     * ICMPv6 type name.
-     */
-    icmpV6Typename?: pulumi.Input<string | undefined>;
+    icmp?: pulumi.Input<inputs.FirewallRuleIcmp | undefined>;
     /**
      * Specify whether the rule matches on IPsec packets. Can be one of `match-ipset` or `match-none`.
      */
@@ -366,49 +222,13 @@ export interface FirewallRuleArgs {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The source address for the firewall rule.
+     * The source match criteria of the firewall rule.
      */
-    srcAddress?: pulumi.Input<string | undefined>;
+    source?: pulumi.Input<inputs.FirewallRuleSource | undefined>;
     /**
-     * The IPv6 source address for the firewall rule.
+     * Connection state matching for the firewall rule.
      */
-    srcAddressIpv6?: pulumi.Input<string | undefined>;
-    /**
-     * The source firewall group IDs for the firewall rule.
-     */
-    srcFirewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
-    /**
-     * The source MAC address of the firewall rule.
-     */
-    srcMac?: pulumi.Input<string | undefined>;
-    /**
-     * The source network ID for the firewall rule.
-     */
-    srcNetworkId?: pulumi.Input<string | undefined>;
-    /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
-     */
-    srcNetworkType?: pulumi.Input<string | undefined>;
-    /**
-     * The source port of the firewall rule.
-     */
-    srcPort?: pulumi.Input<string | undefined>;
-    /**
-     * Match where the state is established.
-     */
-    stateEstablished?: pulumi.Input<boolean | undefined>;
-    /**
-     * Match where the state is invalid.
-     */
-    stateInvalid?: pulumi.Input<boolean | undefined>;
-    /**
-     * Match where the state is new.
-     */
-    stateNew?: pulumi.Input<boolean | undefined>;
-    /**
-     * Match where the state is related.
-     */
-    stateRelated?: pulumi.Input<boolean | undefined>;
+    state?: pulumi.Input<inputs.FirewallRuleState | undefined>;
     timeouts?: pulumi.Input<inputs.FirewallRuleTimeouts | undefined>;
 }
 //# sourceMappingURL=firewallRule.d.ts.map

@@ -39,13 +39,9 @@ export class ClientQosRate extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The QOS maximum download rate.
+     * QoS rate limits applied to clients in this group, in kbps.
      */
-    declare public readonly qosRateMaxDown: pulumi.Output<number>;
-    /**
-     * The QOS maximum upload rate.
-     */
-    declare public readonly qosRateMaxUp: pulumi.Output<number>;
+    declare public readonly qosRate: pulumi.Output<outputs.ClientQosRateQosRate>;
     /**
      * The name of the site to associate the client QOS rate with.
      */
@@ -66,15 +62,13 @@ export class ClientQosRate extends pulumi.CustomResource {
         if (opts.id) {
             const state = argsOrState as ClientQosRateState | undefined;
             resourceInputs["name"] = state?.name;
-            resourceInputs["qosRateMaxDown"] = state?.qosRateMaxDown;
-            resourceInputs["qosRateMaxUp"] = state?.qosRateMaxUp;
+            resourceInputs["qosRate"] = state?.qosRate;
             resourceInputs["site"] = state?.site;
             resourceInputs["timeouts"] = state?.timeouts;
         } else {
             const args = argsOrState as ClientQosRateArgs | undefined;
             resourceInputs["name"] = args?.name;
-            resourceInputs["qosRateMaxDown"] = args?.qosRateMaxDown;
-            resourceInputs["qosRateMaxUp"] = args?.qosRateMaxUp;
+            resourceInputs["qosRate"] = args?.qosRate;
             resourceInputs["site"] = args?.site;
             resourceInputs["timeouts"] = args?.timeouts;
         }
@@ -92,13 +86,9 @@ export interface ClientQosRateState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The QOS maximum download rate.
+     * QoS rate limits applied to clients in this group, in kbps.
      */
-    qosRateMaxDown?: pulumi.Input<number | undefined>;
-    /**
-     * The QOS maximum upload rate.
-     */
-    qosRateMaxUp?: pulumi.Input<number | undefined>;
+    qosRate?: pulumi.Input<inputs.ClientQosRateQosRate | undefined>;
     /**
      * The name of the site to associate the client QOS rate with.
      */
@@ -115,13 +105,9 @@ export interface ClientQosRateArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The QOS maximum download rate.
+     * QoS rate limits applied to clients in this group, in kbps.
      */
-    qosRateMaxDown?: pulumi.Input<number | undefined>;
-    /**
-     * The QOS maximum upload rate.
-     */
-    qosRateMaxUp?: pulumi.Input<number | undefined>;
+    qosRate?: pulumi.Input<inputs.ClientQosRateQosRate | undefined>;
     /**
      * The name of the site to associate the client QOS rate with.
      */

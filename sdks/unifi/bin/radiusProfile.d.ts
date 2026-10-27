@@ -30,13 +30,9 @@ export declare class RadiusProfile extends pulumi.CustomResource {
      */
     readonly authServers: pulumi.Output<outputs.RadiusProfileAuthServer[] | undefined>;
     /**
-     * Specifies whether to use interim_update.
+     * RADIUS interim accounting update settings.
      */
-    readonly interimUpdateEnabled: pulumi.Output<boolean>;
-    /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
-     */
-    readonly interimUpdateInterval: pulumi.Output<string>;
+    readonly interimUpdate: pulumi.Output<outputs.RadiusProfileInterimUpdate>;
     /**
      * The name of the profile.
      */
@@ -55,13 +51,9 @@ export declare class RadiusProfile extends pulumi.CustomResource {
      */
     readonly useUsgAuthServer: pulumi.Output<boolean>;
     /**
-     * Specifies whether to use vlan on wired connections.
+     * Dynamic VLAN assignment settings.
      */
-    readonly vlanEnabled: pulumi.Output<boolean>;
-    /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
-     */
-    readonly vlanWlanMode: pulumi.Output<string>;
+    readonly vlan: pulumi.Output<outputs.RadiusProfileVlan>;
     /**
      * Create a RadiusProfile resource with the given unique name, arguments, and options.
      *
@@ -88,13 +80,9 @@ export interface RadiusProfileState {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
-     * Specifies whether to use interim_update.
+     * RADIUS interim accounting update settings.
      */
-    interimUpdateEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
-     */
-    interimUpdateInterval?: pulumi.Input<string | undefined>;
+    interimUpdate?: pulumi.Input<inputs.RadiusProfileInterimUpdate | undefined>;
     /**
      * The name of the profile.
      */
@@ -113,13 +101,9 @@ export interface RadiusProfileState {
      */
     useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether to use vlan on wired connections.
+     * Dynamic VLAN assignment settings.
      */
-    vlanEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
-     */
-    vlanWlanMode?: pulumi.Input<string | undefined>;
+    vlan?: pulumi.Input<inputs.RadiusProfileVlan | undefined>;
 }
 /**
  * The set of arguments for constructing a RadiusProfile resource.
@@ -138,13 +122,9 @@ export interface RadiusProfileArgs {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
-     * Specifies whether to use interim_update.
+     * RADIUS interim accounting update settings.
      */
-    interimUpdateEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
-     */
-    interimUpdateInterval?: pulumi.Input<string | undefined>;
+    interimUpdate?: pulumi.Input<inputs.RadiusProfileInterimUpdate | undefined>;
     /**
      * The name of the profile.
      */
@@ -163,12 +143,8 @@ export interface RadiusProfileArgs {
      */
     useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether to use vlan on wired connections.
+     * Dynamic VLAN assignment settings.
      */
-    vlanEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
-     */
-    vlanWlanMode?: pulumi.Input<string | undefined>;
+    vlan?: pulumi.Input<inputs.RadiusProfileVlan | undefined>;
 }
 //# sourceMappingURL=radiusProfile.d.ts.map

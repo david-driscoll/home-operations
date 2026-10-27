@@ -43,37 +43,13 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * ESP (phase 2) Diffie-Hellman group (PFS). Only used when `profile = customized`.
+     * ESP (phase 2) proposal. Only used when `profile = customized`.
      */
-    declare public readonly espDhGroup: pulumi.Output<number>;
+    declare public readonly esp: pulumi.Output<outputs.SiteToSiteVpnEsp>;
     /**
-     * ESP (phase 2) encryption. Only used when `profile = customized`.
+     * IKE (phase 1) proposal. Only used when `profile = customized`.
      */
-    declare public readonly espEncryption: pulumi.Output<string>;
-    /**
-     * ESP (phase 2) hash. Only used when `profile = customized`.
-     */
-    declare public readonly espHash: pulumi.Output<string>;
-    /**
-     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. `1h`, `3600s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
-     */
-    declare public readonly espLifetime: pulumi.Output<string>;
-    /**
-     * IKE (phase 1) Diffie-Hellman group. Only used when `profile = customized`.
-     */
-    declare public readonly ikeDhGroup: pulumi.Output<number>;
-    /**
-     * IKE (phase 1) encryption. Only used when `profile = customized`.
-     */
-    declare public readonly ikeEncryption: pulumi.Output<string>;
-    /**
-     * IKE (phase 1) hash. Only used when `profile = customized`.
-     */
-    declare public readonly ikeHash: pulumi.Output<string>;
-    /**
-     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. `8h`, `28800s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
-     */
-    declare public readonly ikeLifetime: pulumi.Output<string>;
+    declare public readonly ike: pulumi.Output<outputs.SiteToSiteVpnIke>;
     /**
      * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`).
      */
@@ -112,7 +88,7 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
     declare public readonly preSharedKey: pulumi.Output<string | undefined>;
     declare public readonly preSharedKeyWo: pulumi.Output<string | undefined>;
     /**
-     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the IKE/ESP attributes below; the controller may derive the ESP values from the IKE ones.
+     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the `ike`/`esp` objects; the controller may derive the ESP values from the IKE ones.
      */
     declare public readonly profile: pulumi.Output<string>;
     /**
@@ -152,14 +128,8 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             const state = argsOrState as SiteToSiteVpnState | undefined;
             resourceInputs["dynamicRouting"] = state?.dynamicRouting;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["espDhGroup"] = state?.espDhGroup;
-            resourceInputs["espEncryption"] = state?.espEncryption;
-            resourceInputs["espHash"] = state?.espHash;
-            resourceInputs["espLifetime"] = state?.espLifetime;
-            resourceInputs["ikeDhGroup"] = state?.ikeDhGroup;
-            resourceInputs["ikeEncryption"] = state?.ikeEncryption;
-            resourceInputs["ikeHash"] = state?.ikeHash;
-            resourceInputs["ikeLifetime"] = state?.ikeLifetime;
+            resourceInputs["esp"] = state?.esp;
+            resourceInputs["ike"] = state?.ike;
             resourceInputs["interface"] = state?.interface;
             resourceInputs["keyExchange"] = state?.keyExchange;
             resourceInputs["localIdentifier"] = state?.localIdentifier;
@@ -187,14 +157,8 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             }
             resourceInputs["dynamicRouting"] = args?.dynamicRouting;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["espDhGroup"] = args?.espDhGroup;
-            resourceInputs["espEncryption"] = args?.espEncryption;
-            resourceInputs["espHash"] = args?.espHash;
-            resourceInputs["espLifetime"] = args?.espLifetime;
-            resourceInputs["ikeDhGroup"] = args?.ikeDhGroup;
-            resourceInputs["ikeEncryption"] = args?.ikeEncryption;
-            resourceInputs["ikeHash"] = args?.ikeHash;
-            resourceInputs["ikeLifetime"] = args?.ikeLifetime;
+            resourceInputs["esp"] = args?.esp;
+            resourceInputs["ike"] = args?.ike;
             resourceInputs["interface"] = args?.interface;
             resourceInputs["keyExchange"] = args?.keyExchange;
             resourceInputs["localIdentifier"] = args?.localIdentifier;
@@ -233,37 +197,13 @@ export interface SiteToSiteVpnState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ESP (phase 2) Diffie-Hellman group (PFS). Only used when `profile = customized`.
+     * ESP (phase 2) proposal. Only used when `profile = customized`.
      */
-    espDhGroup?: pulumi.Input<number | undefined>;
+    esp?: pulumi.Input<inputs.SiteToSiteVpnEsp | undefined>;
     /**
-     * ESP (phase 2) encryption. Only used when `profile = customized`.
+     * IKE (phase 1) proposal. Only used when `profile = customized`.
      */
-    espEncryption?: pulumi.Input<string | undefined>;
-    /**
-     * ESP (phase 2) hash. Only used when `profile = customized`.
-     */
-    espHash?: pulumi.Input<string | undefined>;
-    /**
-     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. `1h`, `3600s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
-     */
-    espLifetime?: pulumi.Input<string | undefined>;
-    /**
-     * IKE (phase 1) Diffie-Hellman group. Only used when `profile = customized`.
-     */
-    ikeDhGroup?: pulumi.Input<number | undefined>;
-    /**
-     * IKE (phase 1) encryption. Only used when `profile = customized`.
-     */
-    ikeEncryption?: pulumi.Input<string | undefined>;
-    /**
-     * IKE (phase 1) hash. Only used when `profile = customized`.
-     */
-    ikeHash?: pulumi.Input<string | undefined>;
-    /**
-     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. `8h`, `28800s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
-     */
-    ikeLifetime?: pulumi.Input<string | undefined>;
+    ike?: pulumi.Input<inputs.SiteToSiteVpnIke | undefined>;
     /**
      * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`).
      */
@@ -302,7 +242,7 @@ export interface SiteToSiteVpnState {
     preSharedKey?: pulumi.Input<string | undefined>;
     preSharedKeyWo?: pulumi.Input<string | undefined>;
     /**
-     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the IKE/ESP attributes below; the controller may derive the ESP values from the IKE ones.
+     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the `ike`/`esp` objects; the controller may derive the ESP values from the IKE ones.
      */
     profile?: pulumi.Input<string | undefined>;
     /**
@@ -341,37 +281,13 @@ export interface SiteToSiteVpnArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ESP (phase 2) Diffie-Hellman group (PFS). Only used when `profile = customized`.
+     * ESP (phase 2) proposal. Only used when `profile = customized`.
      */
-    espDhGroup?: pulumi.Input<number | undefined>;
+    esp?: pulumi.Input<inputs.SiteToSiteVpnEsp | undefined>;
     /**
-     * ESP (phase 2) encryption. Only used when `profile = customized`.
+     * IKE (phase 1) proposal. Only used when `profile = customized`.
      */
-    espEncryption?: pulumi.Input<string | undefined>;
-    /**
-     * ESP (phase 2) hash. Only used when `profile = customized`.
-     */
-    espHash?: pulumi.Input<string | undefined>;
-    /**
-     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. `1h`, `3600s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
-     */
-    espLifetime?: pulumi.Input<string | undefined>;
-    /**
-     * IKE (phase 1) Diffie-Hellman group. Only used when `profile = customized`.
-     */
-    ikeDhGroup?: pulumi.Input<number | undefined>;
-    /**
-     * IKE (phase 1) encryption. Only used when `profile = customized`.
-     */
-    ikeEncryption?: pulumi.Input<string | undefined>;
-    /**
-     * IKE (phase 1) hash. Only used when `profile = customized`.
-     */
-    ikeHash?: pulumi.Input<string | undefined>;
-    /**
-     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. `8h`, `28800s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
-     */
-    ikeLifetime?: pulumi.Input<string | undefined>;
+    ike?: pulumi.Input<inputs.SiteToSiteVpnIke | undefined>;
     /**
      * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`).
      */
@@ -410,7 +326,7 @@ export interface SiteToSiteVpnArgs {
     preSharedKey?: pulumi.Input<string | undefined>;
     preSharedKeyWo?: pulumi.Input<string | undefined>;
     /**
-     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the IKE/ESP attributes below; the controller may derive the ESP values from the IKE ones.
+     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the `ike`/`esp` objects; the controller may derive the ESP values from the IKE ones.
      */
     profile?: pulumi.Input<string | undefined>;
     /**

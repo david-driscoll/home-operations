@@ -35,17 +35,9 @@ export declare class Account extends pulumi.CustomResource {
     readonly site: pulumi.Output<string>;
     readonly timeouts: pulumi.Output<outputs.AccountTimeouts | undefined>;
     /**
-     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment.
      */
-    readonly tunnelConfigType: pulumi.Output<string | undefined>;
-    /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
-     */
-    readonly tunnelMediumType: pulumi.Output<number>;
-    /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
-     */
-    readonly tunnelType: pulumi.Output<number>;
+    readonly tunnel: pulumi.Output<outputs.AccountTunnel>;
     /**
      * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
      */
@@ -81,17 +73,9 @@ export interface AccountState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.AccountTimeouts | undefined>;
     /**
-     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment.
      */
-    tunnelConfigType?: pulumi.Input<string | undefined>;
-    /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
-     */
-    tunnelMediumType?: pulumi.Input<number | undefined>;
-    /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
-     */
-    tunnelType?: pulumi.Input<number | undefined>;
+    tunnel?: pulumi.Input<inputs.AccountTunnel | undefined>;
     /**
      * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
      */
@@ -119,17 +103,9 @@ export interface AccountArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.AccountTimeouts | undefined>;
     /**
-     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment.
      */
-    tunnelConfigType?: pulumi.Input<string | undefined>;
-    /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
-     */
-    tunnelMediumType?: pulumi.Input<number | undefined>;
-    /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
-     */
-    tunnelType?: pulumi.Input<number | undefined>;
+    tunnel?: pulumi.Input<inputs.AccountTunnel | undefined>;
     /**
      * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
      */

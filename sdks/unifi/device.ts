@@ -67,41 +67,13 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly jumboframeEnabled: pulumi.Output<boolean>;
     /**
-     * LCM brightness (1-100).
+     * LCD/display (LCM) settings for devices with a screen.
      */
-    declare public readonly lcmBrightness: pulumi.Output<number>;
+    declare public readonly lcm: pulumi.Output<outputs.DeviceLcm>;
     /**
-     * Override LCM brightness.
+     * LED settings.
      */
-    declare public readonly lcmBrightnessOverride: pulumi.Output<boolean>;
-    /**
-     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
-     */
-    declare public readonly lcmIdleTimeout: pulumi.Output<string>;
-    /**
-     * Override LCM idle timeout.
-     */
-    declare public readonly lcmIdleTimeoutOverride: pulumi.Output<boolean>;
-    /**
-     * LCM night mode begin time (HH:MM format).
-     */
-    declare public readonly lcmNightModeBegins: pulumi.Output<string>;
-    /**
-     * LCM night mode end time (HH:MM format).
-     */
-    declare public readonly lcmNightModeEnds: pulumi.Output<string>;
-    /**
-     * LED override setting; valid values are `default`, `on`, and `off`.
-     */
-    declare public readonly ledOverride: pulumi.Output<string>;
-    /**
-     * LED color override (hex color code).
-     */
-    declare public readonly ledOverrideColor: pulumi.Output<string>;
-    /**
-     * LED brightness (0-100).
-     */
-    declare public readonly ledOverrideColorBrightness: pulumi.Output<number>;
+    declare public readonly led: pulumi.Output<outputs.DeviceLed>;
     /**
      * Specifies whether the device is locked.
      */
@@ -159,13 +131,9 @@ export class Device extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly state: pulumi.Output<number>;
     /**
-     * STP priority.
+     * Spanning Tree Protocol (STP) settings.
      */
-    declare public readonly stpPriority: pulumi.Output<number>;
-    /**
-     * STP version; valid values are `stp`, `rstp`, and `disabled`.
-     */
-    declare public readonly stpVersion: pulumi.Output<string>;
+    declare public readonly stp: pulumi.Output<outputs.DeviceStp>;
     /**
      * Enable VLAN support on the switch.
      */
@@ -205,15 +173,8 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["flowctrlEnabled"] = state?.flowctrlEnabled;
             resourceInputs["forgetOnDestroy"] = state?.forgetOnDestroy;
             resourceInputs["jumboframeEnabled"] = state?.jumboframeEnabled;
-            resourceInputs["lcmBrightness"] = state?.lcmBrightness;
-            resourceInputs["lcmBrightnessOverride"] = state?.lcmBrightnessOverride;
-            resourceInputs["lcmIdleTimeout"] = state?.lcmIdleTimeout;
-            resourceInputs["lcmIdleTimeoutOverride"] = state?.lcmIdleTimeoutOverride;
-            resourceInputs["lcmNightModeBegins"] = state?.lcmNightModeBegins;
-            resourceInputs["lcmNightModeEnds"] = state?.lcmNightModeEnds;
-            resourceInputs["ledOverride"] = state?.ledOverride;
-            resourceInputs["ledOverrideColor"] = state?.ledOverrideColor;
-            resourceInputs["ledOverrideColorBrightness"] = state?.ledOverrideColorBrightness;
+            resourceInputs["lcm"] = state?.lcm;
+            resourceInputs["led"] = state?.led;
             resourceInputs["locked"] = state?.locked;
             resourceInputs["mac"] = state?.mac;
             resourceInputs["meshStaVapEnabled"] = state?.meshStaVapEnabled;
@@ -228,8 +189,7 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["radioTables"] = state?.radioTables;
             resourceInputs["site"] = state?.site;
             resourceInputs["state"] = state?.state;
-            resourceInputs["stpPriority"] = state?.stpPriority;
-            resourceInputs["stpVersion"] = state?.stpVersion;
+            resourceInputs["stp"] = state?.stp;
             resourceInputs["switchVlanEnabled"] = state?.switchVlanEnabled;
             resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["type"] = state?.type;
@@ -244,15 +204,8 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["flowctrlEnabled"] = args?.flowctrlEnabled;
             resourceInputs["forgetOnDestroy"] = args?.forgetOnDestroy;
             resourceInputs["jumboframeEnabled"] = args?.jumboframeEnabled;
-            resourceInputs["lcmBrightness"] = args?.lcmBrightness;
-            resourceInputs["lcmBrightnessOverride"] = args?.lcmBrightnessOverride;
-            resourceInputs["lcmIdleTimeout"] = args?.lcmIdleTimeout;
-            resourceInputs["lcmIdleTimeoutOverride"] = args?.lcmIdleTimeoutOverride;
-            resourceInputs["lcmNightModeBegins"] = args?.lcmNightModeBegins;
-            resourceInputs["lcmNightModeEnds"] = args?.lcmNightModeEnds;
-            resourceInputs["ledOverride"] = args?.ledOverride;
-            resourceInputs["ledOverrideColor"] = args?.ledOverrideColor;
-            resourceInputs["ledOverrideColorBrightness"] = args?.ledOverrideColorBrightness;
+            resourceInputs["lcm"] = args?.lcm;
+            resourceInputs["led"] = args?.led;
             resourceInputs["locked"] = args?.locked;
             resourceInputs["mac"] = args?.mac;
             resourceInputs["meshStaVapEnabled"] = args?.meshStaVapEnabled;
@@ -265,8 +218,7 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["portOverrides"] = args?.portOverrides;
             resourceInputs["radioTables"] = args?.radioTables;
             resourceInputs["site"] = args?.site;
-            resourceInputs["stpPriority"] = args?.stpPriority;
-            resourceInputs["stpVersion"] = args?.stpVersion;
+            resourceInputs["stp"] = args?.stp;
             resourceInputs["switchVlanEnabled"] = args?.switchVlanEnabled;
             resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["volume"] = args?.volume;
@@ -320,41 +272,13 @@ export interface DeviceState {
      */
     jumboframeEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * LCM brightness (1-100).
+     * LCD/display (LCM) settings for devices with a screen.
      */
-    lcmBrightness?: pulumi.Input<number | undefined>;
+    lcm?: pulumi.Input<inputs.DeviceLcm | undefined>;
     /**
-     * Override LCM brightness.
+     * LED settings.
      */
-    lcmBrightnessOverride?: pulumi.Input<boolean | undefined>;
-    /**
-     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
-     */
-    lcmIdleTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * Override LCM idle timeout.
-     */
-    lcmIdleTimeoutOverride?: pulumi.Input<boolean | undefined>;
-    /**
-     * LCM night mode begin time (HH:MM format).
-     */
-    lcmNightModeBegins?: pulumi.Input<string | undefined>;
-    /**
-     * LCM night mode end time (HH:MM format).
-     */
-    lcmNightModeEnds?: pulumi.Input<string | undefined>;
-    /**
-     * LED override setting; valid values are `default`, `on`, and `off`.
-     */
-    ledOverride?: pulumi.Input<string | undefined>;
-    /**
-     * LED color override (hex color code).
-     */
-    ledOverrideColor?: pulumi.Input<string | undefined>;
-    /**
-     * LED brightness (0-100).
-     */
-    ledOverrideColorBrightness?: pulumi.Input<number | undefined>;
+    led?: pulumi.Input<inputs.DeviceLed | undefined>;
     /**
      * Specifies whether the device is locked.
      */
@@ -412,13 +336,9 @@ export interface DeviceState {
      */
     state?: pulumi.Input<number | undefined>;
     /**
-     * STP priority.
+     * Spanning Tree Protocol (STP) settings.
      */
-    stpPriority?: pulumi.Input<number | undefined>;
-    /**
-     * STP version; valid values are `stp`, `rstp`, and `disabled`.
-     */
-    stpVersion?: pulumi.Input<string | undefined>;
+    stp?: pulumi.Input<inputs.DeviceStp | undefined>;
     /**
      * Enable VLAN support on the switch.
      */
@@ -471,41 +391,13 @@ export interface DeviceArgs {
      */
     jumboframeEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * LCM brightness (1-100).
+     * LCD/display (LCM) settings for devices with a screen.
      */
-    lcmBrightness?: pulumi.Input<number | undefined>;
+    lcm?: pulumi.Input<inputs.DeviceLcm | undefined>;
     /**
-     * Override LCM brightness.
+     * LED settings.
      */
-    lcmBrightnessOverride?: pulumi.Input<boolean | undefined>;
-    /**
-     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
-     */
-    lcmIdleTimeout?: pulumi.Input<string | undefined>;
-    /**
-     * Override LCM idle timeout.
-     */
-    lcmIdleTimeoutOverride?: pulumi.Input<boolean | undefined>;
-    /**
-     * LCM night mode begin time (HH:MM format).
-     */
-    lcmNightModeBegins?: pulumi.Input<string | undefined>;
-    /**
-     * LCM night mode end time (HH:MM format).
-     */
-    lcmNightModeEnds?: pulumi.Input<string | undefined>;
-    /**
-     * LED override setting; valid values are `default`, `on`, and `off`.
-     */
-    ledOverride?: pulumi.Input<string | undefined>;
-    /**
-     * LED color override (hex color code).
-     */
-    ledOverrideColor?: pulumi.Input<string | undefined>;
-    /**
-     * LED brightness (0-100).
-     */
-    ledOverrideColorBrightness?: pulumi.Input<number | undefined>;
+    led?: pulumi.Input<inputs.DeviceLed | undefined>;
     /**
      * Specifies whether the device is locked.
      */
@@ -555,13 +447,9 @@ export interface DeviceArgs {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * STP priority.
+     * Spanning Tree Protocol (STP) settings.
      */
-    stpPriority?: pulumi.Input<number | undefined>;
-    /**
-     * STP version; valid values are `stp`, `rstp`, and `disabled`.
-     */
-    stpVersion?: pulumi.Input<string | undefined>;
+    stp?: pulumi.Input<inputs.DeviceStp | undefined>;
     /**
      * Enable VLAN support on the switch.
      */

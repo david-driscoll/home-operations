@@ -63,13 +63,9 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * ICMP type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     * ICMP type matching modes. Managed by the UniFi controller; the provider round-trips them so updates are accepted.
      */
-    declare public /*out*/ readonly icmpTypename: pulumi.Output<string>;
-    /**
-     * ICMPv6 type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
-     */
-    declare public /*out*/ readonly icmpV6Typename: pulumi.Output<string>;
+    declare public /*out*/ readonly icmp: pulumi.Output<outputs.FirewallPolicyIcmp>;
     /**
      * The ordering index of the policy within its zone-pair, assigned by the controller. **Read-only:** UniFi does not accept a client-supplied index on create or update (the policy is always appended to the end of its source/destination zone-pair), and the supported API exposes no reorder operation, so policy ordering cannot be managed through this provider. Reorder policies in the UniFi UI if needed.
      */
@@ -95,7 +91,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
-     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time_all_day`; when false, both time-range fields are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
      */
     declare public readonly schedule: pulumi.Output<outputs.FirewallPolicySchedule>;
     /**
@@ -128,8 +124,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["description"] = state?.description;
             resourceInputs["destination"] = state?.destination;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["icmpTypename"] = state?.icmpTypename;
-            resourceInputs["icmpV6Typename"] = state?.icmpV6Typename;
+            resourceInputs["icmp"] = state?.icmp;
             resourceInputs["index"] = state?.index;
             resourceInputs["ipVersion"] = state?.ipVersion;
             resourceInputs["logging"] = state?.logging;
@@ -167,8 +162,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["site"] = args?.site;
             resourceInputs["source"] = args?.source;
             resourceInputs["timeouts"] = args?.timeouts;
-            resourceInputs["icmpTypename"] = undefined /*out*/;
-            resourceInputs["icmpV6Typename"] = undefined /*out*/;
+            resourceInputs["icmp"] = undefined /*out*/;
             resourceInputs["index"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -209,13 +203,9 @@ export interface FirewallPolicyState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ICMP type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     * ICMP type matching modes. Managed by the UniFi controller; the provider round-trips them so updates are accepted.
      */
-    icmpTypename?: pulumi.Input<string | undefined>;
-    /**
-     * ICMPv6 type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
-     */
-    icmpV6Typename?: pulumi.Input<string | undefined>;
+    icmp?: pulumi.Input<inputs.FirewallPolicyIcmp | undefined>;
     /**
      * The ordering index of the policy within its zone-pair, assigned by the controller. **Read-only:** UniFi does not accept a client-supplied index on create or update (the policy is always appended to the end of its source/destination zone-pair), and the supported API exposes no reorder operation, so policy ordering cannot be managed through this provider. Reorder policies in the UniFi UI if needed.
      */
@@ -241,7 +231,7 @@ export interface FirewallPolicyState {
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time_all_day`; when false, both time-range fields are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
      */
     schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**
@@ -308,7 +298,7 @@ export interface FirewallPolicyArgs {
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time_all_day`; when false, both time-range fields are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
      */
     schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**

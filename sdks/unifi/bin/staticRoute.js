@@ -70,8 +70,7 @@ class StaticRoute extends pulumi.CustomResource {
             const state = argsOrState;
             resourceInputs["distance"] = state?.distance;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["gatewayDevice"] = state?.gatewayDevice;
-            resourceInputs["gatewayType"] = state?.gatewayType;
+            resourceInputs["gateway"] = state?.gateway;
             resourceInputs["interface"] = state?.interface;
             resourceInputs["name"] = state?.name;
             resourceInputs["network"] = state?.network;
@@ -93,8 +92,7 @@ class StaticRoute extends pulumi.CustomResource {
             }
             resourceInputs["distance"] = args?.distance;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["gatewayDevice"] = args?.gatewayDevice;
-            resourceInputs["gatewayType"] = args?.gatewayType;
+            resourceInputs["gateway"] = args?.gateway;
             resourceInputs["interface"] = args?.interface;
             resourceInputs["name"] = args?.name;
             resourceInputs["network"] = args?.network;
