@@ -391,7 +391,7 @@ spec:
               # It is the one the integration is written against and is what
               # upstream's radicale/radicale.yml pulls.
               repository: docker.io/opencloudeu/radicale
-              tag: v3.8.1@sha256:28c2c44cbf241755a5cfb80eea0521ef280993da20537e2d6980dae1254e552d
+              tag: v3.8.3@sha256:0c3fb9019410423639776285f830fd71e565935e7bdb3dc3b3252e4d99c2a29b
               pullPolicy: IfNotPresent
             resources:
               requests:
@@ -454,7 +454,7 @@ spec:
           fonts:
             image:
               repository: docker.io/library/debian
-              tag: trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+              tag: trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad
               pullPolicy: IfNotPresent
             command: ["/bin/sh", "-c"]
             args:
@@ -511,7 +511,7 @@ spec:
           app:
             image:
               repository: docker.io/collabora/code
-              tag: 26.04.5.1.1@sha256:bb8f3c9c5c9016045f25fccb5f0649be94469ebc7c7cc379f3576e470cccf33d
+              tag: 26.04.5.2.1@sha256:c7415b963e32eb0986a562583f154d36d3d7a461e1ddfb660a95e87094328acb
               pullPolicy: IfNotPresent
             # ⚠ NO `command`/`args` OVERRIDE, DELIBERATELY. Do not reintroduce
             # one from upstream's helm chart or compose file -- they are written

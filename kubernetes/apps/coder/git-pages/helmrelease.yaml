@@ -59,7 +59,7 @@ spec:
               # The image also bundles Caddy and supervisord for a standalone
               # deployment; only the git-pages binary is used here.
               repository: codeberg.org/git-pages/git-pages
-              tag: 0.9.1@sha256:bbcdd603ef3d3dc66aa254479b255674e51286921c02e9f6569dc188f8756594
+              tag: 0.10.0@sha256:f52b34373fbe41785a809a49c0506f1a9951da17815a3db79c652810eb0285fb
             command: ["git-pages"]
             args: ["-config", "/config/config.toml"]
             env:
@@ -112,7 +112,15 @@ spec:
         controller: *app
         ports:
           http:
+            primary: true
             port: 3000
+          # For the publish Action's `server:`, which must be a bare host since
+          # git-pages-cli 1.11.2 rejects `host:port` ("--server must be used with
+          # a domain name"). The CLI swaps only the host into the `http://` site
+          # URL, so a bare host means port 80. The routes keep using 3000.
+          publish:
+            port: 80
+            targetPort: 3000
           metrics:
             port: 3002
 

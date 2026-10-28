@@ -13,7 +13,13 @@
         {
           "repositories": ["**"],
           "deleteUntagged": true,
-          "keepTags": [{ "patterns": [".*"] }]
+          "keepTags": [
+            {
+              "patterns": [".*"],
+              "pulledWithin": "720h",
+              "pushedWithin": "720h"
+            }
+          ]
         }
       ]
     }
@@ -160,6 +166,20 @@
             {
               "prefix": "**",
               "destination": "/mcr.microsoft.com"
+            }
+          ]
+        },
+        {
+          "urls": ["https://data.forgejo.org"],
+          "tlsVerify": true,
+          "onDemand": true,
+          "maxRetries": 3,
+          "retryDelay": "15m",
+          "onlySigned": false,
+          "content": [
+            {
+              "prefix": "**",
+              "destination": "/data.forgejo.org"
             }
           ]
         }

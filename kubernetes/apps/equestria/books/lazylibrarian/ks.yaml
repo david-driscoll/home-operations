@@ -15,10 +15,14 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
+    # truenas-media, the shared RWX NFS claim the library and downloads live on.
+    - name: truenas-volumes
+      namespace: equestria
+    # The volsync component's restic ExternalSecret.
+    - name: external-secrets
+      namespace: kube-system
     - name: volsync
       namespace: volsync-system
-    - name: tailscale-operator
-      namespace: tailscale-system
   path: ./kubernetes/apps/equestria/books/lazylibrarian
   prune: true
   wait: true
@@ -30,9 +34,28 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
+    - ../../../../components/failover/fast-node-eviction
+    # NO components/postgres: LazyLibrarian is SQLite-only. lazylibrarian/database.py
+    # opens `sqlite3.connect(DIRS.get_dbfile())` unconditionally and no Postgres
+    # driver is in its requirements. The DB lives on the volsync PVC below, which
+    # is Longhorn block storage -- never put it on the NFS claim.
     - ../../../../components/tailscale
+    # NOT components/tailscale/api-key: that matches `?apikey` on EVERY path, and
+    # LazyLibrarian has no login of its own behind authentik, so the union would
+    # hand its whole UI to anyone on the tailnet who appends `?apikey=x`. The
+    # path-scoped tailnet carve-out is ./tailnet-api.yaml instead.
     - ../../../../components/volsync
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      # Browsers take the authentik chain, mirroring the internal HTTPRoute.
+      # Paired with `tailnetUrl` in ./definition.yaml; the two go together.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      # SQLite DB, cover/author image cache, logs and LL's own config backups.
+      # Only ever raise this -- see components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 5Gi
+      # Pinned rather than inherited: the movers default differently (2Gi on the
+      # ReplicationSource, 8Gi on the ReplicationDestination), so leaving it unset
+      # provisions an 8Gi cache to restore a 5Gi volume every night.
+      VOLSYNC_CACHE_CAPACITY: 2Gi

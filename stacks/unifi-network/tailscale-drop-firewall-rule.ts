@@ -63,6 +63,16 @@ function boundName(name: string): string {
  *
  * Keying on the device makes an address rotation an in-place update of a stable rule: the `ips` list
  * and the port group change, the rule id does not, and Home Assistant keeps one entity per rule.
+ *
+ * The device key is Tailscale's device `id`, NOT `hostname`. Every iOS client reports its hostname
+ * as `localhost` (eight of them on the tailnet on 2026-10-20), so as soon as two iPhones were on
+ * AT&T cellular in the same run, both claimed `att-tailscale-drop-ipv4-localhost` and the update
+ * failed with "Duplicate resource URN" until the Stack stalled. The id is unique and stays the same
+ * for the life of the node; it only changes if the device is removed and re-added to the tailnet.
+ *
+ * What this does not fix: a device only has a rule while it has AT&T endpoints in the current run.
+ * When a phone moves to Wi-Fi its rule is deleted, and when it is back on cellular UniFi mints a
+ * fresh rule id for the same name. That re-creation churn predates the id key and is accepted.
  */
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
   const matcher = new CIDRMatcher([Tailscale.subnets.home]);
@@ -140,8 +150,14 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
     const unionPorts = (targets: DropTarget[]) => [...new Set(targets.flatMap(t => t.ports))].sort((a, b) => a - b).map(String);
 
     for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
+      // Without an id there is nothing unique to name the resources by; falling back to the
+      // hostname would reintroduce the `localhost` collision above.
+      if (!device.id) {
+        pulumi.log.warn(`Tailscale device ${device.name?.split(".")[0] ?? device.hostname ?? "(unnamed)"} has no id; skipping its AT&T drop rules`, globals);
+        continue;
+      }
       if (ipv4IpsToDrop.length > 0) {
-        const name = `att-tailscale-drop-ipv4-${device.hostname}`;
+        const name = `att-tailscale-drop-ipv4-${device.id}`;
         const portGroup = new firewall.FirewallGroup(
           boundName(`${name}-ports`),
           {
@@ -186,7 +202,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
       }
 
       if (ipv6IpsToDrop.length > 0) {
-        const name = `att-tailscale-drop-ipv6-${device.hostname}`;
+        const name = `att-tailscale-drop-ipv6-${device.id}`;
         const portGroup = new firewall.FirewallGroup(
           boundName(`${name}-ports`),
           {

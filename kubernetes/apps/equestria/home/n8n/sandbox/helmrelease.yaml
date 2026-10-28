@@ -1,0 +1,91 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ${APP}-sandbox
+spec:
+  interval: 15m
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 0.11.2
+    digest: sha256:f691b0ee5cf76bf4ea8d42b80cac76c3337bbad78b2a53bc24b7b1e87e2918de
+  url: oci://ghcr.io/n8n-io/n8n-sandbox-service/n8n-sandbox-service
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${APP}-sandbox
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${APP}-sandbox
+  interval: 1h
+  values:
+    # Names every object: the API Service is `${APP}-sandbox-api`, which is
+    # what N8N_SANDBOX_SERVICE_URL in ../helmrelease.yaml points at.
+    fullnameOverride: ${APP}-sandbox
+
+    auth:
+      existingSecret: ${APP}-sandbox-auth
+
+    dataPlane:
+      mode: in-cluster
+
+    tls:
+      mode: certManager
+      certManager:
+        issuerRef:
+          name: ${APP}-sandbox-ca
+          kind: Issuer
+          group: cert-manager.io
+
+    # The API, runner and sandbox images ship as one release and are only
+    # supported together: keep all three tags on the chart's appVersion.
+    api:
+      image:
+        repository: ghcr.io/n8n-io/n8n-sandbox-service-api
+        tag: 1.11.0@sha256:7f55cb157292e7a98848c2d35a352932c0c5c967cbab39d87f9b44d3bb256303
+      # SQLite in an emptyDir. It only tracks live sandboxes, which are
+      # throwaway: losing it on a restart costs the in-flight ones, not data.
+      persistence:
+        enabled: false
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+
+    runner:
+      # Talos cannot install sysbox (immutable rootfs, machine-managed
+      # containerd), so the runner is a plain privileged Docker-in-Docker pod:
+      # an escape from it reaches the node. The cluster enforces no Pod Security
+      # Admission (talos/patches/controller/cluster.yaml deletes the
+      # PodSecurity admission config), so equestria needs no namespace label.
+      # Never route or expose this pod.
+      isolation: privileged
+      acknowledgePrivileged: true
+      image:
+        repository: ghcr.io/n8n-io/n8n-sandbox-service-runner-dind
+        tag: 1.11.0@sha256:69320f55ae52781b66efe3e34b1ad814a63fae4d3f85cb4aabcee1f650d20636
+      # Pulled by the runner's inner dockerd on first use, not by kubelet.
+      sandboxImage:
+        repository: ghcr.io/n8n-io/n8n-sandbox-service-sandbox
+        tag: 1.11.0@sha256:035c65acdf566d234b32c1f013d2ffe0668fdf2fe33ab7aad083ba5d12f3f1a0
+      dockerDataRoot:
+        emptyDir:
+          sizeLimit: 20Gi
+      config:
+        # Each sandbox gets defaultMemoryMb (512) inside this pod, so capacity
+        # and the memory limit move together: 6 x 512Mi plus dockerd.
+        capacityTotal: "6"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 4Gi

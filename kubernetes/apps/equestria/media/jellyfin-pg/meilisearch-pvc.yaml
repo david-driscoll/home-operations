@@ -5,9 +5,9 @@
 # (media/jellyfin/meilisearch-pvc.yaml): derived data, rewritten constantly,
 # so it lives outside the config volume rather than inside it.
 #
-# 5Gi rather than production's 10Gi. This instance indexes the same library,
-# but it is a throwaway -- if the index ever outgrows the claim the answer is
-# to delete it, not to grow it.
+# 20Gi, grown from 5Gi after the index filled the claim (2026-10-25).
+# Production's is 10Gi. This instance is a throwaway, so check what is
+# filling it before growing it again.
 #
 # ⚠️ NOT COVERED BY THE TEARDOWN IN §5 of docs/runbooks/jellyfin-postgres-migration.md,
 # which predates it. Tearing this instance down means this claim as well; it is
@@ -22,4 +22,4 @@ spec:
   storageClassName: longhorn
   resources:
     requests:
-      storage: 5Gi
+      storage: 20Gi

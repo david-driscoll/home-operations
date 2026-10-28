@@ -152,7 +152,39 @@ defaultSettings:
   # most on the remaining piece-19 rotations: kerfuffle holds ~80 replicas.
   # See docs/cluster-consolidation/19-rotate-equestria-control-planes.md
   # (Step 1b-bis) and 12-longhorn-critical-tier.md.
-  concurrentReplicaRebuildPerNodeLimit: 2
+  #
+  # 2 -> 1 on 2026-10-24. Two was still enough to feed the timeout cascade
+  # below: on 10-24 the rebuilds triggered by the 03:11 faults landed on the
+  # same three SATA control planes, took them to ~3.9 of 4 cores with iowait
+  # ~1 core, and faulted more replicas until ~03:36. Every longhorn-critical
+  # volume has a replica on each of those three nodes, so they take every
+  # rebuild there is.
+  concurrentReplicaRebuildPerNodeLimit: 1
+
+  # Chart default 8s (range 8-30). The engine marks a replica ERR when one I/O
+  # gets no answer within this window, and on the SATA control planes above a
+  # slow write can take longer than 8s without the replica being dead: on
+  # 2026-10-24 at 03:11 engines logged `R/W Timeout. No response received in
+  # 8s` against replicas on milky-way, othalla and pegasus at once, ~8 volumes
+  # faulted together, and when all of a volume's replicas went ERR Longhorn
+  # salvaged it and deleted its pod (autoDeletePodWhenVolumeDetachedUnexpectedly).
+  # That is how forgejo-garage restarted on 10-22 and again on 10-24. 20s rides
+  # out a disk stall. A replica that really is gone stalls I/O 12s longer before
+  # failover, which is cheaper than faulting healthy ones.
+  #
+  # A map, not a scalar: the live setting is data-engine-specific
+  # (`{"v1":"8","v2":"8"}`) and the chart's multiTypeSetting helper renders a
+  # map as that same JSON.
+  engineReplicaTimeout:
+    v1: "20"
+    v2: "20"
+
+  # Chart default 600s. How long Longhorn waits for a FAILED replica to come back
+  # so it can reuse its data before building a brand-new one. Replicas here fail
+  # from I/O stalls, not lost disks, and are usually back within minutes, while
+  # a full new replica is the expensive kind of rebuild the SATA control planes
+  # cannot absorb. It only applies while a volume has a failed replica.
+  replicaReplenishmentWaitInterval: 1200
 
   storageMinimalAvailablePercentage: 5
   storageReservedPercentageForDefaultDisk: 10

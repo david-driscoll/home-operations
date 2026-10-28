@@ -49,6 +49,10 @@ spec:
     # and in no manifest until this line. Manifests in ./postgres-roles/;
     # needs POSTGRES_APP_PATH below.
     - ../../../../components/postgres/roles
+    # Makes the `windmill` LOGIN role a member of both principals above, which
+    # Windmill needs to `SET LOCAL ROLE` into them. See the file for why this is
+    # a component and not `spec.patches` on this Kustomization.
+    - ./postgres-login-role
   postBuild:
     substitute:
       APP: *app

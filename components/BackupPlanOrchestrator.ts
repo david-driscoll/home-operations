@@ -60,7 +60,7 @@ export interface GarageRepository {
 }
 
 export interface BackupPlanItem {
-  source: "celestia" | "skystar" | "luna" | "alpha-site" | "volsync";
+  source: "celestia" | "skystar" | "luna" | "alpha-site";
   /**
    * Identity: the backrest repo id, plan id, and backup path all derive from
    * this. Must be id-safe and STABLE — renaming it re-roots the plan's restic

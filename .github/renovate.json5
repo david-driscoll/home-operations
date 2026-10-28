@@ -156,7 +156,8 @@
   //
   // PRs open whenever an update is found -- this used to be "every weekend".
   // What is allowed to MERGE unattended, and when, is governed separately by
-  // the automerge rules below (overnight window, docs/renovate-automerge.md),
+  // the automerge rules below and the forge's merge window
+  // (docs/renovate-automerge.md),
   // so a weekday PR is still reviewed or gated exactly like a weekend one.
   // This is also the house default the Forgejo bot inherits through
   // `globalExtends` (kubernetes/apps/coder/renovate/renovatejob.yaml).
@@ -252,14 +253,14 @@
   },
   packageRules: [
     {
-      // EVERY update on the Forgejo copy waits three days and carries the
+      // EVERY update on the Forgejo copy waits a day and carries the
       // `renovate/stability-days` status, not only the ones the automerge
       // rules below pick out. FIRST in the list on purpose: it is the default
       // for that repository, and any rule below that sets its own wait still
       // wins.
       //
       // What that means in practice, with Renovate's default
-      // `internalChecksFilter: strict`: an update younger than three days gets
+      // `internalChecksFilter: strict`: an update younger than a day gets
       // no branch and no pull request yet -- it waits under "Pending Status
       // Checks" on the Dependency Dashboard -- including the majors and the
       // others that are merged by hand. The dashboard's checkbox for it
@@ -270,8 +271,9 @@
       // The default, `timestamp-required`, would hold those for ever.
       //
       // GitHub's copy is unchanged.
-      description: "Forgejo copy: a three-day wait and a stability-days check on every update",
+      description: "Forgejo copy: a one-day wait and a stability-days check on every update",
       matchRepositories: [
+        "david-driscoll/home-operations",
         "github-mirror/home-operations"
       ],
       minimumReleaseAge: "1 days",
@@ -358,6 +360,22 @@
       versioning: "semver",
     },
     {
+      // Listenarr publishes ONLY `canary-X.Y.Z` tags -- every GitHub release is
+      // a prerelease and there is no `latest` or bare-version tag -- and the
+      // install docs say to pin one. `docker` versioning needs a tag that
+      // starts with a number, so it parses no version out of these and the pin
+      // would only ever get digest refreshes of the same tag. The regex takes
+      // the canary channel as the release line.
+      description: "Listenarr canary tags: canary-X.Y.Z is the release line",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/listenarrs/listenarr"
+      ],
+      versioning: "regex:^canary-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
       // lakker/pulsarr carries stray 1.x tags that are NOT the project's
       // current release line (that is 0.x), so Renovate kept raising them as a
       // major: "0.19.2 -> 1.1.6" (#1621). Excluding just 1.1.6 only moved it on
@@ -372,6 +390,26 @@
         "lakker/pulsarr"
       ],
       allowedVersions: "!/^v?1\\./",
+    },
+    {
+      // Paperless-ngx's Tika (kubernetes/apps/equestria/home/paperless) has to
+      // stay on 3.x. Tika 4.0 removed the /tika/form/* endpoints Paperless's
+      // bundled tika-client calls and renamed the metadata keys, so every
+      // Office/.eml parse fails (paperless-ngx/paperless-ngx#13755); upstream
+      // pinned 3.3.1.0 (#13758) and closed the 4.x bump (#13908). A regex
+      // rather than "<4" because docker versioning does not do ranges. Lift
+      // it when a Paperless release notes Tika 4 support, not before -- the
+      // 4.x tags look like any other major and the breakage only shows up on
+      // the first Office document.
+      description: "Tika: hold on 3.x until Paperless-ngx supports Tika 4",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "docker.io/apache/tika",
+        "apache/tika"
+      ],
+      allowedVersions: "/^3\\./",
     },
     {
       description: "CoreDNS Group",
@@ -805,20 +843,22 @@
       //      `image-check.yaml` proves every changed image exists (and, for
       //      the Docker hosts, ships linux/amd64) and every changed compose
       //      file still parses;
-      //   2. the merge itself -- Renovate merges only when ALL checks pass.
-      //      `platformAutomerge: false` because main has no branch protection:
-      //      GitHub's native auto-merge would merge straight away without it,
-      //      so Renovate does the check-then-merge itself;
+      //   2. the merge itself -- `platformAutomerge: true` hands it to
+      //      Forgejo, which merges once the REQUIRED statuses on the forge's
+      //      main are green: `merge-window` (00:00-08:00 New York), `flate*`
+      //      and `renovate/stability-days`. Image Check is not required, so
+      //      docker/** bumps do not wait for it;
       //   3. after merge -- a HelmRelease that fails its upgrade dispatches to
-      //      `renovate-watchdog.yaml`, which opens a revert of the automerged
-      //      PR and puts the app on the hold list at the bottom of this file.
+      //      `renovate-watchdog.yaml`, which would revert the automerged PR and
+      //      hold the app. DORMANT: it looks for a GitHub PR, and these merge
+      //      on the forge, which has none.
       //
       // `minimumReleaseAgeBehaviour: timestamp-optional` is load-bearing.
       // GHCR returns no release timestamps, and under the Renovate 42 default
       // (`timestamp-required`) an update with no timestamp never ages -- every
-      // ghcr.io bump would be held forever. So the 3-day soak is real for
-      // Docker Hub and absent for GHCR; the post-merge revert is what covers
-      // the difference.
+      // ghcr.io bump would be held forever. So the one-day soak is real for
+      // Docker Hub and for full X.Y.Z ghcr pins (dated by `custom.ghcr`, the
+      // last rule but one), and absent for other GHCR tags.
       //
       // The negated names are what must never merge unattended: databases and
       // anything that migrates its schema on start, identity, secrets,
@@ -872,18 +912,10 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
-      // shared-secrets). PRs still open and test at any hour; Renovate just
-      // leaves a green one waiting until a run lands in the window.
-      // `timezone` is set here, not at the top level, so nothing else in this
-      // repo or the Forgejo repos that inherit it changes timezone.
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
       timezone: "America/New_York",
       // Rebase only on conflict. With automerge on, `rebaseWhen: auto` means
       // behind-base-branch: every merge left the other green PRs behind main,
@@ -955,18 +987,11 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      // Merge only overnight, 00:00-06:59 estate time (TIMEZONE in
-      // shared-secrets). PRs still open and test at any hour; Renovate just
-      // leaves a green one waiting until a run lands in the window.
-      // `timezone` is set here, not at the top level, so nothing else in this
-      // repo or the Forgejo repos that inherit it changes timezone.
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
+
       timezone: "America/New_York",
       rebaseWhen: "conflicted",
       addLabels: [
@@ -1262,10 +1287,22 @@
       enabled: false,
     },
     {
+      // kubernetes/apps/agents/agent-tools-servers/openbao.yaml. Digest
+      // 8ecbddb (2026-10-18) pulled in agent-connector-sdk, which refuses to
+      // serve streamable-http without an auth provider, and nothing but code
+      // turns that off, so every later digest crashloops the backend. Held on
+      // 33ad5f9 until the backend gets real auth (see that file's header).
+      description: "Hold openbao-mcp: newer images require backend auth",
+      matchPackageNames: [
+        "knucklessg1/openbao-mcp"
+      ],
+      enabled: false,
+    },
+    {
       // Named dependencies outside the app-image scope of the automerge rules
-      // above, each opted in by hand. Same gate -- every check green, 3-day
-      // soak where the registry has timestamps, the overnight window, and the
-      // watchdog revert for kubernetes/** -- but matched by NAME, so it
+      // above, each opted in by hand. Same gate -- the forge's required
+      // statuses, a one-day soak where the release has a date, and the merge
+      // window -- but matched by NAME, so it
       // reaches other managers and paths (mise tools; the coder, network and
       // pulumi apps) and the 0.x minors the app rule refuses. Placed here,
       // after the baseline and before the hold list, so the hold list still
@@ -1292,8 +1329,11 @@
         // home-operations OCI mirror of it
         "external-dns",
         "ghcr.io/home-operations/charts-mirror/external-dns",
-        // mise tools (.config/mise.toml, agentboard's mise.toml)
+        // mise tools (.config/mise.toml, paseo's mise.toml)
         "mikefarah/yq",
+        "ghcr.io/man15h/holm",
+        "codeberg.org/git-pages/git-pages",
+        "jdx/mise",
         "pulumi/pulumi",
         "cli/cli",
         "jdx/hk",
@@ -1311,7 +1351,7 @@
         "ghcr.io/renovatebot/renovate",
         // kubernetes/apps/observability/unpoller
         "ghcr.io/unpoller/unpoller",
-        // agentboard's mise.toml (`npm:` tools keep their npm name)
+        // paseo's mise.toml (`npm:` tools keep their npm name)
         "@anthropic-ai/claude-code",
         // root package.json dev tooling
         "@biomejs/biome",
@@ -1385,13 +1425,10 @@
       ],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
+      platformAutomerge: true,
       ignoreTests: false,
       minimumReleaseAge: "1 days",
       minimumReleaseAgeBehaviour: "timestamp-optional",
-      automergeSchedule: [
-        "* 0-6 * * *"
-      ],
       timezone: "America/New_York",
       rebaseWhen: "conflicted",
       addLabels: [
@@ -1447,26 +1484,29 @@
       // that default is `rebase`: rebase onto main, then fast-forward. Same
       // result as GitHub's, and it still works when the branch is behind.
       automergeStrategy: "auto",
-
-      // WHEN. Between 00:00 and 07:59 Eastern, an hour longer than the
-      // 00:00-06:59 the rules above give GitHub's copy. From 2026-10-11 to
-      // 2026-10-12 this was "at any time", which had updates landing on main
-      // and deploying through the day.
-      //
-      // `timezone` is repeated here because a cron schedule is read in UTC
-      // without it; the rules above set the same value.
-      //
-      // It changes WHEN, not WHAT: `automerge` itself still comes from the
-      // rules above, and so do the holds and the minimum release age.
-      automergeSchedule: [
-        "* 0-7 * * *"
-      ],
       timezone: "America/New_York",
+
+      // HOW. Forgejo does the merge ("merge when checks succeed"), not
+      // Renovate. The automerge rules above say the same; it is repeated here
+      // so the forge copy keeps it whatever a rule above sets. The forge's
+      // main has branch protection to make that safe: branch
+      // protection in stacks/system/forgejo-github-mirror.ts requires
+      // `merge-window`, `flate*` and `renovate/stability-days`, and Forgejo
+      // re-checks a scheduled merge whenever a status lands -- so a pull
+      // request merges the moment its last required check goes green inside
+      // the window, instead of waiting for Renovate's next hourly run.
+      //
+      // Forgejo only waits for REQUIRED checks. `Image Check` is not one (it
+      // runs for docker/** only, and a required check that never posts blocks
+      // forever), so a docker/** update can merge with it red or pending. The
+      // rule that once gave those back to Renovate's own merge was removed on
+      // 2026-10-18.
+      platformAutomerge: true,
     },
     {
       // RELEASE DATES FOR GHCR IMAGES: look these up through
       // `customDatasources.ghcr` above, which knows when each tag was pushed.
-      // With a date, the three-day `minimumReleaseAge` in the automerge rules
+      // With a date, the one-day `minimumReleaseAge` in the automerge rules
       // actually counts for a ghcr image; without one, `timestamp-optional`
       // lets the update through the moment it appears. The digest comes back
       // with it, so a `tag@sha256:` pin stays pinned.
@@ -1648,6 +1688,50 @@
       matchStrings: [
         "renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[^\\n\"]*\"(?:[^\"\\n]*:)?(?<currentValue>[^\"\\n:]+)\"",
       ],
+    },
+    {
+      // The .NET SDK pin in .config/mise.toml (`dotnet = { version = ... }`).
+      // The mise manager extracts it and then drops it, silently: mise
+      // registers `dotnet` as `core:dotnet` (falling back to
+      // `asdf:mise-plugins/mise-dotnet`, `vfox:mise-plugins/vfox-dotnet`),
+      // and Renovate's own core-tool table (lib/modules/manager/mise/
+      // upgradeable-tooling.ts) has no `dotnet` entry, nor its asdf table
+      // anything under those plugin names -- it only knows asdf's
+      // `dotnet-core`. Every backend resolves to null, so the dep is created
+      // with skipReason `unsupported-datasource` and never looked up. The
+      // dashboard would say so, but the mise section sits in the part of
+      // issue #11 that GitHub truncates. The pin sat at 10.0.203 while
+      // 10.0.301 and 10.0.402 shipped.
+      //
+      // A packageRule cannot rescue it: `overrideDatasource` is applied in
+      // applyPackageRules, which fetch.ts never reaches for a dep that already
+      // carries a skipReason (only `unknown-registry` gets through). So the
+      // version is matched here instead, with the datasource the asdf manager
+      // uses for the same SDK.
+      //
+      // Default semver versioning: a feature-band bump (10.0.2xx -> 10.0.3xx)
+      // is a patch and arrives as an ordinary PR; 11.0.100 is a major, raised
+      // on its own `feat!` branch like every other major here
+      // (:separateMajorReleases), and never automerged -- the automerge rules
+      // only match docker/helm. Previews and RCs carry a prerelease suffix and
+      // are dropped by ignoreUnstable, whatever `prereleases = true` in
+      // mise.toml lets mise itself install.
+      //
+      // Renovate does not refresh .config/mise.lock for this dep -- lock file
+      // updates belong to the mise manager's artifacts step, and a custom
+      // manager has none. A lagging entry is harmless (mise resolves the
+      // version from mise.toml and the dotnet entry has no checksums), but
+      // run `mise lock dotnet` on Renovate's branch to keep it tidy.
+      description: ".NET SDK pinned in mise.toml (unsupported by the mise manager)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)\\.config/mise\\.toml$/",
+      ],
+      matchStrings: [
+        "\\ndotnet\\s*=\\s*(\\{\\s*version\\s*=\\s*)?\"(?<currentValue>\\d[^\"]*)\"",
+      ],
+      depNameTemplate: "dotnet-sdk",
+      datasourceTemplate: "dotnet-version",
     },
     {
       description: "Process annotated dependencies",

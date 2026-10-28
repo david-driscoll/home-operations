@@ -87,7 +87,7 @@ spec:
       # THIS LINE IS WHAT DECIDES WHICH SURE RUNS. Leave it out and the chart
       # falls back to its `appVersion`, which for a chart "updated" from a
       # hotfix to its base is the older build.
-      tag: stable@sha256:aa46be2d8e3f8b2182261dc05933a64b4a12543dd5f44ad12f08868caac1f997
+      tag: stable@sha256:9cbcc5a21654d95ff784da7f0425f2bd1c8363252d898a09e749772f666436ce
       pullPolicy: IfNotPresent
 
     # ---- Bundled dependencies: all off ------------------------------------
@@ -159,11 +159,12 @@ spec:
         # `secure`. /up is exempt either way.
 
         # ---- Redis / Valkey -----------------------------------------------
-        # The shared, passwordless Valkey in `database`. Index 13: 6, 8, 9,
-        # 10, 11 and 12 are taken, and 0 is where every host-only consumer
-        # lands. Sidekiq's queues and the Rails cache both live here. Setting
-        # the key in `extraEnv` is also what tells the chart not to compute a
-        # REDIS_URL -- or demand a `redis-password` key -- of its own.
+        # The shared, passwordless Valkey in `database`. Index 13, per the
+        # allocation table in database/valkey/helmrelease.yaml -- which did not
+        # exist when this was picked, and Nextcloud was on 13 too until
+        # 2026-10-18. Sidekiq's queues and the Rails cache both live here.
+        # Setting the key in `extraEnv` is also what tells the chart not to
+        # compute a REDIS_URL -- or demand a `redis-password` key -- of its own.
         REDIS_URL: "redis://valkey.database.svc.cluster.local:6379/13"
 
         # ---- Active Storage -> Garage -------------------------------------

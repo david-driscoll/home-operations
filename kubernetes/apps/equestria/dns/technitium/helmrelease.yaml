@@ -41,7 +41,7 @@ spec:
           *app :
             image:
               repository: technitium/dns-server
-              tag: 15.6.1@sha256:e5474007d142d509c7de0d855132e3f0469bd6d5d77abf23dff5dad4e2975d09
+              tag: 15.6.2@sha256:eb48ac5c135f4ab936b536f74f853d53e15ab39ef37fdbc9598a089b90d9f245
             env:
               # First-start only (ignored once /etc/dns config exists) — kept in
               # lockstep with docker/_common/technitium/.env in home-operations.
@@ -120,7 +120,7 @@ spec:
             # ever serve inbound.
             image:
               repository: tailscale/tailscale
-              tag: v1.104.1@sha256:87c55d6be56ad85b3d8bceca5f87f73de288c609131460dd1be1874c250cc41d
+              tag: v1.104.2@sha256:b11583ad2e93e4671128538c88cf11f460444a5d7e449311dd1933a400ab849d
             env:
               TS_STATE_DIR: /var/lib/tailscale
               # containerboot defaults to storing state in a kube Secret when it

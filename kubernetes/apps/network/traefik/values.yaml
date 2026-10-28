@@ -6,7 +6,7 @@ podDisruptionBudget:
 image:
   registry: ghcr.io
   repository: traefik/traefik
-  tag: v3.7.14@sha256:e849695bc5c317da0cec22bfee4794fd9e15871fe554f864d31b625983e883ff
+  tag: 3.7.16@sha256:1336e85aaed293bd63d005086e0dd013b04078b26aaeb1c18b26a2f928af7e65
 deployment:
   kind: Deployment
   replicas: 2
@@ -398,6 +398,20 @@ ports:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  # Paseo's `sshd` sidecar (kubernetes/apps/agents/paseo/tcproute.yaml), for
+  # editors' remote-SSH sessions into the agents' workspaces. Its own port
+  # because raw TCP cannot share :22 with gitssh. Privileged, and fine, for
+  # the reason gitssh gives. No readTimeout here either: an editor's session
+  # sits idle for hours between keystrokes.
+  paseossh:
+    expose:
+      default: true
+    port: 223
+    exposedPort: 223
+    protocol: TCP
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
 ingressClass:
   enabled: true
   isDefaultClass: false
@@ -657,5 +671,12 @@ gateway:
     gitssh:
       protocol: TCP
       port: 22
+      namespacePolicy:
+        from: All
+
+    # Moves together with the `paseossh` entrypoint above, like gitssh.
+    paseossh:
+      protocol: TCP
+      port: 223
       namespacePolicy:
         from: All

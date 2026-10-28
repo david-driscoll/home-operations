@@ -146,7 +146,7 @@ is not. Discard it at [step 7](#7-soak-then-clean-up).
 Already run, against the live cluster:
 
 ```bash
-mise run vals-run -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --apply
+fnox exec -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --apply
 ```
 
 `secrets/clusters/equestria/apps/homelable/keys` is at v1 with all five fields
@@ -372,7 +372,7 @@ exists to catch. Widening to the Home `/16` is a separate, deliberate decision
   anything, and reports `SAME` on the copy it already made.
 
   ```bash
-  mise run vals-run -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --move --apply
+  fnox exec -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --move --apply
   ```
 - **The first VolSync run** is the real exit gate, and it matters more here than
   it would after a data migration, not less: the canvas that needs protecting is

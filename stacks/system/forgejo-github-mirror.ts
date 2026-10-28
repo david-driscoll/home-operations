@@ -44,8 +44,11 @@
  *   renovate             admin, from the per-org team in ./forgejo-renovate.ts,
  *                        on the run after this one creates the organization
  *   github-mirror-sync   write, from a collaborator grant below; its token is
- *                        what the relay dispatches the sync workflow with
- *   claude-code          read, from a team below: view, diff, comment, review
+ *                        what the relay dispatches the sync workflow with,
+ *                        and what that workflow pushes main with
+ *   claude-code          read, from a team below: view, diff, comment, review;
+ *                        plus Actions write, to run and re-run this
+ *                        repository's workflows (see CLAUDE_CODE_MIRROR_UNITS)
  *   the forge's admins   as owners of the organization
  *
  * Until 2026-10 the repository was owned by a USER called `github-mirror`,
@@ -95,6 +98,14 @@ const MIRROR_ORG = GITHUB_MIRROR_ORG;
  */
 const SYNC_LOGIN = "github-mirror-sync";
 
+/**
+ * The account that owns the forge's container images. Part of every image
+ * reference (`git.<root domain>/estate-images/...`), and named in
+ * .forgejo/workflows/pulumi-workspace-image.yml (IMAGE_OWNER) and
+ * kubernetes/components/pulumi-workspace.
+ */
+const ESTATE_IMAGES_LOGIN = "estate-images";
+
 /** `owner/name` on GitHub. The workflow builds both of its GitHub URLs from this. */
 const UPSTREAM = "david-driscoll/home-operations";
 
@@ -104,14 +115,40 @@ const REPOSITORY = "home-operations";
 /**
  * claude-code's units on the mirror: enough to read code, issues, pull
  * requests and Actions logs, and to comment on and review a pull request.
- * Nothing at `write`. See the header.
+ * `repo.code` stays `read` -- that is the line the header draws: write to
+ * main is publishing to GitHub.
+ *
+ *   repo.actions  write  dispatch, re-run and cancel workflow runs, the same
+ *                        unit claude-code's write teams elsewhere hold
+ *                        (CLAUDE_CODE_TEAM_UNITS in ./forgejo-renovate.ts).
+ *                        Forgejo gates /dispatches, /rerun and /cancel on
+ *                        reqRepoWriter(unit.TypeActions); Actions secrets and
+ *                        variables need reqOwner(unit.TypeActions), so they
+ *                        stay out of reach. A dispatch runs a workflow as it
+ *                        is on an existing ref, and claude-code cannot create
+ *                        or move one. Added 2026-10-24: pulumi-workspace-image
+ *                        had to rebuild a tag whose blobs the forgejo-garage
+ *                        metadata loss took, and claude-code could see it but
+ *                        not dispatch it.
+ *
+ * What this does NOT make safe on its own is github-sync's two hand-run
+ * inputs, discard_local (drop Forgejo-only commits) and prune_branches
+ * (delete every branch but main). .forgejo/workflows/github-sync.yml refuses
+ * both when the actor is claude-code; a plain sync dispatch stays allowed.
  */
 const CLAUDE_CODE_MIRROR_UNITS = {
   "repo.code": "read",
   "repo.issues": "read",
   "repo.pulls": "read",
-  "repo.actions": "read",
+  "repo.actions": "write",
 };
+
+/**
+ * The status `main` requires before a pull request can merge, posted by
+ * .forgejo/workflows/merge-window.yml. It has to match that workflow's
+ * MERGE_WINDOW_CONTEXT letter for letter.
+ */
+const MERGE_WINDOW_CONTEXT = "merge-window";
 
 export interface ForgejoGithubMirrorArgs {
   globals: GlobalResources;
@@ -125,8 +162,9 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
 
     const provider = args.forgejo.forgejoProvider;
 
-    // `limited`, like the user it replaced: visible to signed-in accounts, and
-    // the instance is REQUIRE_SIGNIN_VIEW anyway. Owned by whoever the
+    // `public`. The instance is REQUIRE_SIGNIN_VIEW, so in practice that is
+    // signed-in accounts only, as `limited` was; the repository itself stays
+    // private either way. Owned by whoever the
     // provider authenticates as -- the forge's admin -- and nobody else.
     const organization = new forgejo.Organization(
       "forgejo-github-mirror-organization",
@@ -135,7 +173,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         fullName: "GitHub Mirror",
         description: "The forge's copy of GitHub's home-operations. Managed by stacks/system; see docs/runbooks/forgejo-github-mirror.md.",
         location: "Equestria",
-        visibility: "limited",
+        visibility: "public",
         // Only the org's owners decide who can reach the repository.
         repoAdminChangeTeamAccess: false,
       },
@@ -163,13 +201,84 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         maxRepoCreation: 0,
         restricted: true,
       },
-      // The token's one use is dispatching the sync workflow, which Forgejo
-      // files under repository write. The workflow itself pushes with its job
-      // token, not with this.
+      // Two uses: the relay dispatches the sync workflow with it, which
+      // Forgejo files under repository write, and the workflow clones and
+      // pushes this repository with it (MIRROR_SYNC_TOKEN), because the job
+      // token cannot push to the protected main.
       ["write:repository"] as TOKEN_SCOPES[],
       args.globals,
       provider,
       { resourcePrefix: "forgejo-github-mirror-sync", tokenName: "Sync dispatch", versionTokenName: true },
+    );
+
+    // The account that OWNS the images .forgejo/workflows/pulumi-workspace-image.yml
+    // builds: `git.<root domain>/estate-images/pulumi-workspace`. A user rather
+    // than this organization, because a user can always write its own packages
+    // with a `write:package` token; pushing to an organization's would take a
+    // team with the packages unit, and every team here is a grant on this
+    // repository too. docs/kubernetes/pulumi-workspace-image.md.
+    //
+    // Two tokens, so each holder gets only its half:
+    //
+    //   push  write:package, an Actions secret on THIS repository
+    //         (ESTATE_IMAGES_TOKEN below), read by that workflow only. Never
+    //         given to a pull_request workflow -- see its header.
+    //   pull  read:package, into OpenBao for the image pull secret in namespace
+    //         `pulumi` (kubernetes/apps/pulumi/workspace-image). The instance is
+    //         REQUIRE_SIGNIN_VIEW, so an anonymous pull is refused.
+    const imagesBot = args.forgejo.createUser(
+      {
+        fullName: "Estate images",
+        login: ESTATE_IMAGES_LOGIN,
+        description: "Owns the container images built by github-mirror/home-operations' workflows. Managed by stacks/system; see docs/kubernetes/pulumi-workspace-image.md.",
+        active: true,
+        admin: false,
+        mustChangePassword: false,
+        // Its packages are as visible as it is: `limited` is every signed-in
+        // account, which on this forge is everyone who can see anything.
+        visibility: "limited",
+        deactivateOnDestroy: true,
+        location: "Equestria",
+        // Forgejo applies this flag to token authentication too.
+        prohibitLogin: false,
+        allowGitHook: false,
+        maxRepoCreation: 0,
+        restricted: true,
+      },
+      ["write:package"] as TOKEN_SCOPES[],
+      args.globals,
+      provider,
+      { resourcePrefix: "forgejo-estate-images", tokenName: "Image push", versionTokenName: true },
+    );
+    const imagesPullToken = new forgejo.PersonalAccessToken(
+      "forgejo-estate-images-pull-token",
+      {
+        user: imagesBot.user.login,
+        name: "Image pull (read:package)",
+        scopes: ["read:package"] as TOKEN_SCOPES[],
+      },
+      // Create the replacement before deleting the old one, as createUser's
+      // tokens do; the ExternalSecret's refresh closes the gap.
+      { provider, parent: imagesBot.user, deleteBeforeReplace: false },
+    );
+    // Read by kubernetes/apps/pulumi/workspace-image/externalsecret.yaml
+    // (`username`, `token`); field names are load-bearing there.
+    baoKvSecret(
+      "forgejo-estate-images-pull",
+      {
+        mount: "secrets",
+        path: "clusters/equestria/apps/pulumi/workspace-image-pull",
+        data: {
+          username: imagesBot.user.login,
+          token: imagesPullToken.token,
+        },
+        concealedFields: ["token"],
+        customMetadata: baoProvenance({
+          source_title: "Forgejo estate-images pull token",
+          source_tags: "forgejo,pulumi",
+        }),
+      },
+      { provider: args.globals.baoProvider, parent: this },
     );
 
     const repository = new forgejo.Repository(
@@ -183,7 +292,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         description: `GitHub's ${UPSTREAM}; main is kept in step by .forgejo/workflows/github-sync.yml. Managed by stacks/system.`,
         // GitHub's copy is public. This one holds pull requests and Actions
         // logs that are not.
-        private: true,
+        private: false,
 
         // A one-time import, NOT a mirror: `mirror: true` makes the repository
         // read-only, and Renovate could then open nothing against it. From
@@ -229,6 +338,13 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         allowRebaseUpdate: true,
         defaultUpdateStyle: "rebase",
         defaultDeleteBranchAfterMerge: true,
+        defaultAllowMaintainerEdit: true,
+        defaultBranch: "main",
+        internalTracker: {
+          allowOnlyContributorsToTrackTime: true,
+          enableTimeTracker: false,
+          enableIssueDependencies: false,
+        },
 
         // Destroying this resource archives the repository rather than
         // deleting its pull requests along with it.
@@ -249,13 +365,20 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // whoever owns the repository -- it is what kept the relay working across
     // the hand-run transfer into the organization. The user that owned the
     // repository before had owner rights here; this is less.
-    new forgejo.Collaborator(
+    const syncCollaborator = new forgejo.Collaborator(
       "forgejo-github-mirror-collaborator-sync",
       {
         // The numeric id, as for Renovate's grants: it survives a rename.
         repositoryId: repository.repositoryId,
         user: syncBot.user.login,
-        permission: "write",
+        // `admin`, not `write`: Forgejo refuses a non-fast-forward push to a
+        // protected branch before it reads any allow-list, so the sync's two
+        // rewrites of main (the replay after a divergence, and discard_local)
+        // lift the rule below for one push and put it back
+        // (scripts/forgejo-github-sync, force_update). Deleting and creating a
+        // branch rule is repository admin. The cost, accepted on 2026-10-24: a
+        // leaked MIRROR_SYNC_TOKEN can now drop the rule as well as push.
+        permission: "admin",
       },
       { provider, parent: repository },
     );
@@ -276,7 +399,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       {
         organization: organization.name,
         name: "claude-code",
-        description: "Claude Code (agentboard), read-only. Managed by stacks/system.",
+        description: "Claude Code (agentboard): read-only code, can run workflows. Managed by stacks/system.",
         permission: "read",
         includesAllRepositories: true,
         unitsMap: CLAUDE_CODE_MIRROR_UNITS,
@@ -292,6 +415,100 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
         user: args.forgejo.claudeCode.user.login,
       },
       { provider, parent: claudeCodeTeam },
+    );
+
+    // `main` merges only inside the merge window: a pull request needs the
+    // `merge-window` status green, which .forgejo/workflows/merge-window.yml
+    // posts only while the window is open. "Merge when checks succeed" then
+    // waits for it. docs/runbooks/forgejo-merge-window.md is the long version.
+    //
+    // PUSH IS ALLOWED TO TWO ACCOUNTS, and they are the only things that push
+    // to this main without a pull request:
+    //
+    //   github-mirror-sync  .forgejo/workflows/github-sync.yml fast-forwards
+    //                       this main to GitHub's, with this account's token
+    //                       (MIRROR_SYNC_TOKEN below)
+    //   renovate            its branch automerge for GitHub Actions updates
+    //
+    // NOT THE JOB TOKEN. A protected branch makes Forgejo's pre-receive hook
+    // look the pusher up by id (routers/private/hook_pre_receive.go,
+    // preReceiveBranch), and the job token pushes as the Actions user, -2,
+    // which is not in the user table: every push fails with a 500, "Unable to
+    // GetUserByID ... user does not exist [uid: -2]", whatever this rule says.
+    // That froze the sync from 2026-10-17 18:47, when the rule first landed.
+    //
+    // A required status gates merging a pull request, not a push, so neither
+    // account waits for the window.
+    //
+    // NEVER A FORCE PUSH WHILE THIS EXISTS. Forgejo refuses every
+    // non-fast-forward update of a protected branch before it reads any
+    // allow-list, admins included, and has no force-push allow-list. The
+    // sync's two leased pushes to this main -- replaying Forgejo's commits
+    // after the two sides diverge, and `discard_local` -- therefore lift this
+    // rule for that one push and recreate it from a snapshot
+    // (scripts/forgejo-github-sync, force_update; the admin grant above). The
+    // provider reads the rule by repository and branch name, so the recreated
+    // copy is still this resource. docs/runbooks/forgejo-merge-window.md has
+    // the manual way, for when the sync itself is broken.
+    //
+    // Every field the provider allows is set, defaults included. The provider
+    // gives each one left out a default rather than reading the forge's value,
+    // so a box ticked in the UI still shows up as drift. The allow-lists are
+    // the exception: the provider refuses `*WhitelistUsernames`, `*Teams` and
+    // `pushWhitelistDeployKeys` outright, even empty or false, unless their
+    // `enable*Whitelist` is true. Left out, they default to empty.
+    new forgejo.BranchProtection(
+      "forgejo-github-mirror-branch-protection-main",
+      {
+        repositoryId: repository.repositoryId,
+        branchName: "main",
+
+        enablePush: true,
+        enablePushWhitelist: true,
+        // Forgejo drops an allow-listed user who has no write on the
+        // repository, silently: the sync bot's comes from the collaborator
+        // grant above, Renovate's from its team in ./forgejo-renovate.ts.
+        pushWhitelistUsernames: [syncBot.user.login, args.forgejo.renovateBot.user.login],
+        pushWhitelistTeams: [],
+        pushWhitelistDeployKeys: false,
+
+        // A required pattern that matches no status on a pull request counts
+        // as pending (services/pull/commit_status.go), so every one here must
+        // be posted on EVERY pull request, or that pull request never merges:
+        //
+        //   merge-window             .forgejo/workflows/merge-window.yml
+        //   flate*                   .forgejo/workflows/flate.yml, both jobs;
+        //                            several matches, the worst one counts
+        //   renovate/stability-days  every Renovate update here (the first
+        //                            mirror rule in .github/renovate.json5).
+        //                            A pull request Renovate did not open never
+        //                            gets it, so on this copy only Renovate's
+        //                            pull requests can merge.
+        //
+        // Not `Image Check*`: .forgejo/workflows/image-check.yml runs only for
+        // docker/**, so requiring it would block every other pull request.
+        // Renovate still waits for it where it runs, since it waits for every
+        // status.
+        enableStatusCheck: true,
+        statusCheckContexts: [MERGE_WINDOW_CONTEXT, "flate*", "renovate/stability-days"],
+
+        // Renovate's pull requests merge unreviewed, and rebase only when they
+        // conflict (`rebaseWhen: conflicted`), so neither reviews nor an
+        // up-to-date branch can be required here.
+        requiredApprovals: 0,
+        enableApprovalsWhitelist: false,
+        dismissStaleApprovals: false,
+        blockOnRejectedReviews: true,
+        blockOnOfficialReviewRequests: true,
+        blockOnOutdatedBranch: false,
+
+        enableMergeWhitelist: false,
+
+        requireSignedCommits: false,
+        protectedFilePatterns: "",
+        unprotectedFilePatterns: "",
+      },
+      { provider, parent: repository, dependsOn: [syncCollaborator] },
     );
 
     // What the workflow pushes to GitHub with. ed25519, as for claude-code's
@@ -332,6 +549,13 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // token the operator already writes onto every repository's webhook,
       // and all it can do is start a run.
       MIRROR_RENOVATE_TOKEN: args.forgejo.webhookToken,
+      // What the sync clones and pushes this repository with: the sync bot's
+      // own token, the one the relay already dispatches with. It has to be a
+      // real account to push to the protected main (see the branch rule).
+      MIRROR_SYNC_TOKEN: syncBot.token.token,
+      // What .forgejo/workflows/pulumi-workspace-image.yml pushes the
+      // workspace image with (write:package, estate-images' own packages).
+      ESTATE_IMAGES_TOKEN: imagesBot.token.token,
     };
     for (const [name, data] of Object.entries(secrets)) {
       new forgejo.RepositoryActionSecret(`forgejo-github-mirror-secret-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });

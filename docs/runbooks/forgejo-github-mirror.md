@@ -37,15 +37,16 @@ overnight window moves one step an hour. A failed request is a warning in the
 job log, never a failed run.
 
 Nothing new is reachable from outside. GitHub's side of this is the webhook
-Flux already had (`stacks/vault/KubernetesFluxWebhooks.ts`).
+Flux already had (`stacks/system/flux-webhooks.ts`).
 
 | Piece | Where | What it does |
 | --- | --- | --- |
-| the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` organization that owns it, the `github-mirror-sync` account whose token the relay dispatches with, claude-code's read-only team there, the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
+| the repository, its owner, the keys | `stacks/system/forgejo-github-mirror.ts` | creates `github-mirror/home-operations` as a one-time import, the `github-mirror` organization that owns it, the `github-mirror-sync` account whose token the relay dispatches with, claude-code's team there (read-only code, Actions write so it can run workflows), the repository's Actions secrets and variables, and a deploy key pair — the private half into those secrets, the public half onto GitHub |
 | the sync workflow | `.forgejo/workflows/github-sync.yml` | decides when to run and hands over credentials |
 | the sync | `scripts/forgejo-github-sync` | compares the two branches and moves whichever is behind |
 | the labels | `scripts/forgejo-github-labels` | copies GitHub's labels to the forge after each sync; Renovate there only attaches labels that already exist. It creates and updates, and never deletes |
 | the pull request checks | `.forgejo/workflows/flate.yml`, `image-check.yml` | the forge's copies of GitHub's two checks; see [Checks](#checks-on-a-forge-pull-request) |
+| the merge window | `.forgejo/workflows/merge-window.yml` | a `merge-window` status that is green only inside a time window, so a merge waits for it; forge-only, no GitHub copy. See [forgejo-merge-window.md](./forgejo-merge-window.md) |
 | the source | `kubernetes/apps/coder/forgejo-github-sync/gitrepository.yaml` | a view of GitHub's `main` that changes on every commit |
 | the relay | `kubernetes/apps/coder/forgejo-github-sync` | turns that source's "new artifact" event into a workflow dispatch |
 
@@ -275,6 +276,13 @@ It gives up, loudly, instead of guessing when:
 
 All of these are cleared the same way as a blocked run: **discard_local**.
 
+**The forge's `main` is a protected branch**, which takes the merge-window
+status. Forgejo never lets anyone force-push one, so for the replay and
+**discard_local** the sync lifts the rule for that one push and recreates it
+from a snapshot. If that fails, delete the rule by hand, run the sync, and let
+the Pulumi operator recreate it:
+[forgejo-merge-window.md](./forgejo-merge-window.md#the-sync-can-never-force-push-here).
+
 ## Verify
 
 ```bash
@@ -336,11 +344,20 @@ container was killed for memory; `kubectl -n coder describe pod forgejo-runner-0
 shows `OOMKilled` on `dind`. Several cold `flate` renders at the same moment
 are the usual cause.
 
-**A pull request on the forge never merges itself.** Renovate needs every
-status on the branch green and at least one status to exist. A job that failed
-stays red until the branch is pushed again. Otherwise check the rule that
-should match names `github-mirror/home-operations`, and that a run happened
-inside its `automergeSchedule`.
+**A pull request on the forge never merges itself.** Forgejo merges it once
+every required status is green: `merge-window`, `flate*` and
+`renovate/stability-days`. A job that failed stays red until the branch is
+pushed again. Otherwise check that the rule that should match names
+`github-mirror/home-operations`, that the pull request has the
+`renovate/automerge` label, and that it is set to merge when checks succeed
+([forgejo-merge-window.md](./forgejo-merge-window.md#renovate)).
+
+**The sync fails and the forge's `main` stops moving.** If Forgejo's log has
+`Unable to GetUserByID ... [uid: -2]` from `preReceiveBranch`, something pushed
+to the protected `main` with the job token: the sync has to use
+`MIRROR_SYNC_TOKEN`. If the job says `protected from force push`, it was a
+replay or a **discard_local**; see
+[the force-push note](./forgejo-merge-window.md#the-sync-can-never-force-push-here).
 
 **Every GitHub workflow starts running on the forge.** `.forgejo/workflows` has
 gone missing from `main`. Forgejo falls back to `.github/workflows` only when

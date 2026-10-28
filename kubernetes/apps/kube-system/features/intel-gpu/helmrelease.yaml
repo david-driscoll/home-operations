@@ -272,7 +272,7 @@ spec:
     monitoringMode: single
     # Three containers per GPU. Currently claimed on these nodes: jellyfin and
     # dispatcharr on fluttershy, plex on kerfuffle.
-    sharedDevNum: 3
+    sharedDevNum: 4
     allocationPolicy: balanced # Spread workloads evenly across available GPUs
     # 46a6 is the worker iGPU (Iris Xe). Disjoint from the control planes' 46d4.
     nodeSelector:

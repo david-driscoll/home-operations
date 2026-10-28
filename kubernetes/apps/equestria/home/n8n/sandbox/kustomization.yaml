@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# The n8n Sandbox Service: where n8n Assistant (and the agents' knowledge base)
+# runs the code it generates. Setup 2 of
+# https://docs.n8n.io/deploy/host-n8n/configure-n8n/set-up-n8n-assistant
+# -- self-hosted rather than Daytona -- deployed with n8n's own chart instead of
+# the Docker Compose stack the docs describe.
+#
+#   n8n -> ${APP}-sandbox-api:8080 (HTTP, SANDBOX_API_KEYS)
+#       -> runner StatefulSet (gRPC + HTTPS, mTLS) -> one container per sandbox
+#
+# Lives inside the n8n app rather than beside it because n8n reads the
+# generated API key out of ${APP}-sandbox-auth; one Flux Kustomization means
+# the key and both of its consumers always apply together.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./issuer.yaml
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml

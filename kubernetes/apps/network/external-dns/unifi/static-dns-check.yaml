@@ -1,0 +1,112 @@
+---
+# Read-only check of the UCG-Max's static DNS, every 15 minutes.
+#
+# A duplicate static-DNS name breaks the gateway's dnsmasq config, so every
+# later gateway config commit fails, and nothing in the cluster shows it. On
+# 2026-10-19 that lasted 12 hours, and wifi clients could not join while it
+# did. ./prometheusrule.yaml's UnifiDnsMultipleWriters catches the one known
+# cause (two unifi-dns pods). This catches the RESULT, whatever wrote it: a
+# manual entry, a webhook bug, or a cause nobody has found yet.
+#
+# It fails the Job when a non-TXT name is stored more than once
+# (case-insensitive), or when the gateway logged DEVICE_COMMIT_ERROR in the
+# last 35 minutes. The logic is in ./resources/check.jq, and its output names
+# each duplicate's record `_id`. UnifiStaticDnsCheckFailing in
+# ./prometheusrule.yaml alerts on it.
+#
+# Two containers because no image the estate pins has both curl and jq. The
+# init container fetches into an emptyDir, and the jq image (FROM scratch, no
+# shell) judges what it fetched.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: unifi-static-dns-check
+  annotations:
+    # The nightly 01:00-07:00 shed suspends CronJobs too. The 2026-10-19
+    # breakage started at 01:15 UTC, so this check runs all night.
+    downscaler/exclude: "true"
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # One retry so a single network blip does not page. A real duplicate
+      # fails both attempts.
+      backoffLimit: 1
+      activeDeadlineSeconds: 300
+      # A failed Job keeps KubeJobFailed firing until it is deleted. 4h leaves
+      # time to read it, and the logs stay in Loki after that. A real problem
+      # fails every run, so UnifiStaticDnsCheckFailing does not depend on this.
+      ttlSecondsAfterFinished: 14400
+      template:
+        spec:
+          restartPolicy: Never
+          # Tier 1, like the unifi-dns HelmRelease: keep checking through a
+          # Battery window, when only the control planes are up.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile: { type: RuntimeDefault }
+          initContainers:
+            - name: fetch
+              image: curlimages/curl:8.23.0@sha256:11e64e28c5f58c8d93ee95fcf22ac055f48b0bc440e0ce7d8013bbb5ad6aa8ac
+              command: ["/bin/sh", "/scripts/fetch.sh"]
+              env:
+                - name: UNIFI_HOST
+                  value: "https://${DISCORD_DOMAIN}"
+                - name: UNIFI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: unifi-dns-secret
+                      key: credential
+                # Wider than the 15m schedule, so a late start misses nothing.
+                # An event fails up to two runs in a row, which is fine.
+                - name: WINDOW_MINUTES
+                  value: "35"
+              securityContext: &securityContext
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              resources: &resources
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 64Mi
+              volumeMounts:
+                - { name: scripts, mountPath: /scripts, readOnly: true }
+                - { name: work, mountPath: /work }
+          containers:
+            - name: check
+              image: ghcr.io/jqlang/jq:1.8.2@sha256:b9c68867e5766576263a222e91db3de422d802069c7af70440e667a95344e486
+              args:
+                - -n
+                - -r
+                - -f
+                - /scripts/check.jq
+                - --slurpfile
+                - dns
+                - /work/static-dns.json
+                - --slurpfile
+                - log
+                - /work/commit-errors.json
+              securityContext: *securityContext
+              resources: *resources
+              volumeMounts:
+                - { name: scripts, mountPath: /scripts, readOnly: true }
+                - { name: work, mountPath: /work, readOnly: true }
+          volumes:
+            - name: scripts
+              configMap:
+                name: unifi-static-dns-check
+            - name: work
+              emptyDir:
+                sizeLimit: 16Mi

@@ -62,7 +62,7 @@ spec:
           register-watcher:
             image:
               repository: curlimages/curl
-              tag: 8.23.0@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06
+              tag: 8.23.0@sha256:11e64e28c5f58c8d93ee95fcf22ac055f48b0bc440e0ce7d8013bbb5ad6aa8ac
               pullPolicy: IfNotPresent
             env:
               LAPI_URL: http://crowdsec-service.network.svc.cluster.local:8080
@@ -112,7 +112,7 @@ spec:
               # old, single-maintainer, and ships multiple releases per week;
               # a floating tag would mean unreviewed code in a console that can
               # issue and revoke bans. Renovate proposes bumps.
-              tag: 2026.10.6@sha256:58d8c344c9375f268cbf88a55f5f7f1e4fdd3e0a0a9e2e56ec91ad8b4bcccf31
+              tag: 2026.10.10@sha256:f57568d27b2c7798155a638b9cb76302777a9dcf43d8026f344c17767589d694
               pullPolicy: IfNotPresent
             envFrom:
               - secretRef:

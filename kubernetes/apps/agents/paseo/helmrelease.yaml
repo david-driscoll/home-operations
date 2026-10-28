@@ -48,7 +48,22 @@ spec:
     controllers:
       *app :
         annotations:
-          reloader.stakater.com/auto: "true"
+          # NOT `reloader.stakater.com/auto: "true"`, which this was and which
+          # restarted the pod EVERY 30 MINUTES: `auto` watches every Secret
+          # the pod references, including `github-token`, whose ExternalSecret
+          # re-mints on `refreshInterval: 30m`. Reloader's log, 2026-10-17:
+          # "Changes detected in 'github-token' ... updated 'paseo'" at :07
+          # and :37 past every hour. Each roll kills running agents, and with
+          # Recreate plus RWO volumes it takes minutes to come back. Same trap
+          # as ../agentboard/helmrelease.yaml, fixed the same way.
+          #
+          # Only what a restart actually helps: the two ConfigMaps, which are
+          # mounted by subPath and so never update in place, and the
+          # PASEO_PASSWORD Secret, which is read once through envFrom.
+          # `github-token` and `${APP}-forgejo-ssh` are directory mounts that
+          # update live, which is the whole reason they are mounted that way.
+          configmap.reloader.stakater.com/reload: ${APP}-ssh,paseo-tools,paseo-sshd
+          secret.reloader.stakater.com/reload: ${APP}
           # Agents run for hours; a nightly scale-down would kill them mid-task.
           downscaler/exclude: "true"
         strategy: Recreate
@@ -64,7 +79,7 @@ spec:
           tools:
             image: &image
               repository: ghcr.io/getpaseo/paseo
-              tag: 0.11.4@sha256:0e64b56fa1f99808623f4de70321cdd292e85b6db151636c13b0e6786b0e1ba5
+              tag: 0.13.1@sha256:2561c8ead49091a0094b5179be1539f9698f567a9b28c0dbe59e475d199bf8fb
               pullPolicy: IfNotPresent
             command: ["/bin/bash", "/opt/paseo/install-tools.sh"]
             env: &env
@@ -75,7 +90,7 @@ spec:
               MISE_INSTALL_PATH: /home/paseo/.local/bin/mise
               # The mise binary itself, read by ./resources/install-tools.sh.
               # renovate: datasource=github-releases depName=jdx/mise
-              MISE_VERSION: "v2026.10.12"
+              MISE_VERSION: "v2026.10.19"
               # The system dirs FIRST: the daemon must keep running on the
               # image's node (its native modules are built for it), not on
               # the newer node mise installs for the `npm:` tools. Everything
@@ -90,6 +105,10 @@ spec:
               # that happened. DISABLE_UPDATES also makes `claude update`
               # refuse.
               DISABLE_UPDATES: "1"
+              # microsoft/azure-skills (./resources/apm.yml) deploys Claude
+              # hooks that run a telemetry reporter on every session start and
+              # tool call; this is the opt-out its track-telemetry.sh checks.
+              AZURE_MCP_COLLECT_TELEMETRY: "false"
             securityContext: &securityContext
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
@@ -103,7 +122,7 @@ spec:
         containers:
           app:
             image: *image
-            env:
+            env: &appEnv
               <<: *env
               # Host-header allowlist. IPs and localhost are always allowed,
               # which is what keeps the kubelet's probes working.
@@ -123,14 +142,41 @@ spec:
               # kubelet leaves `$(...)` alone when it names no env var.
               # Identity matches agentboard (entrypoint.sh): commits are
               # David's, Claude is credited by a Co-Authored-By trailer.
-              GIT_CONFIG_COUNT: "3"
+              GIT_CONFIG_COUNT: "4"
               GIT_CONFIG_KEY_0: credential.https://github.com.helper
               GIT_CONFIG_VALUE_0: >-
                 !f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f
               GIT_CONFIG_KEY_1: user.name
               GIT_CONFIG_VALUE_1: David Driscoll
               GIT_CONFIG_KEY_2: user.email
-              GIT_CONFIG_VALUE_2: david.driscoll@gmail.com
+              GIT_CONFIG_VALUE_2: ${OWNER_EMAIL}
+              # SSH commit signing, from the `commit-signing` volume below
+              # (./externalsecret.yaml has why the config is in the Secret).
+              # A missing include is skipped, so a keyless pod commits
+              # unsigned rather than not at all.
+              GIT_CONFIG_KEY_3: include.path
+              GIT_CONFIG_VALUE_3: /var/run/secrets/commit-signing/gitconfig
+              # The estate's age identity, mounted below -- the same `sops-age`
+              # Secret agentboard mounts, with the same weight (see the
+              # SOPS_AGE_KEY_FILE comment in ../agentboard/helmrelease.yaml).
+              # The repo's .config/mise.toml decrypts .config/domains.sops.yaml
+              # with it, which is the only thing that gives ROOT_DOMAIN and
+              # TAILSCALE_DOMAIN a value here; without it both are empty.
+              SOPS_AGE_KEY_FILE: /var/run/secrets/sops-age/age.agekey
+              # Each toolport profile's in-cluster remote proxy, which holds the
+              # profile's bearer itself. The repo-root .mcp.json reads these;
+              # unset, Claude Code gets the template literally and every
+              # toolport-* server fails with ENOTFOUND. mise's [env] does not
+              # cover it: the daemon starts agents without a mise-activated
+              # shell. Admission is ../toolport-mcp/networkpolicy.yaml, which
+              # names this pod. Why env vars and not a mounted .mcp.json:
+              # ../agentboard/helmrelease.yaml, beside the same six.
+              TOOLPORT_POSTGRES_URL: http://mcp-toolport-postgres-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_INFRASTRUCTURE_URL: http://mcp-toolport-infrastructure-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_NETWORKING_URL: http://mcp-toolport-networking-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_HOME_URL: http://mcp-toolport-home-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_MEDIA_URL: http://mcp-toolport-media-remote-proxy.agents.svc.cluster.local:8080/mcp
+              TOOLPORT_RESEARCH_URL: http://mcp-toolport-research-remote-proxy.agents.svc.cluster.local:8080/mcp
             envFrom:
               - secretRef:
                   name: ${APP}
@@ -167,12 +213,72 @@ spec:
               limits:
                 # Headroom for several agent CLIs running side by side.
                 memory: 8Gi
+          # Installs and refreshes the user-scope agent packages in
+          # ./resources/apm.yml (./resources/apm-refresh.sh): once at start,
+          # then daily. Beside the daemon rather than in `tools` so a start
+          # never waits on ~180 GitHub fetches; agents pick packages up as
+          # they land. apm itself comes from `tools`, through mise.
+          apm:
+            image: *image
+            command: ["/bin/bash", "/opt/paseo/apm-refresh.sh"]
+            env:
+              <<: *env
+            # Nothing to probe: a failed pass only logs, and the loop is the
+            # process.
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 1Gi
+          # OpenSSH for editors' remote-SSH modes (the paseo-remote-editor
+          # plugin opens VS Code, Cursor or Zed on an agent's directory),
+          # reached on the internal gateway's :223 (./tcproute.yaml). The
+          # image has no sshd; ./resources/sshd.sh fetches bookworm's and runs
+          # it as `paseo`. Same image, env and mounts as the daemon, so an
+          # editor terminal sees what an agent sees.
+          sshd:
+            image: *image
+            command: ["/bin/bash", "/opt/paseo/sshd.sh"]
+            # The daemon's env -- the script writes it to
+            # ~/.ssh/environment for the sessions sshd starts.
+            env:
+              <<: *appEnv
+            # No probes on purpose: this container's readiness is the pod's,
+            # and the pod is also the web UI's Service endpoint. The script
+            # waits out a failed download instead of exiting.
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                # The editors' remote servers and their extensions run here.
+                memory: 4Gi
     service:
       app:
         controller: *app
         ports:
           http:
+            primary: true
             port: *port
+          ssh:
+            port: 2222
     persistence:
       home:
         existingClaim: ${APP}
@@ -194,6 +300,27 @@ spec:
             app:
               - path: /var/run/secrets/github-token
                 readOnly: true
+            # `apm install` fetches ~180 packages from GitHub; anonymous, the
+            # 60/hour API limit would fail it partway.
+            apm:
+              - path: /var/run/secrets/github-token
+                readOnly: true
+            sshd:
+              - path: /var/run/secrets/github-token
+                readOnly: true
+      sops-age:
+        type: secret
+        # The estate-wide reflected Secret, not `${APP}` -- see the
+        # SOPS_AGE_KEY_FILE comment in the `env` block for what it grants.
+        name: sops-age
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/sops-age
+                readOnly: true
+            sshd:
+              - path: /var/run/secrets/sops-age
+                readOnly: true
       # git over SSH to Forgejo as `claude-code` -- ./externalsecret.yaml
       # (`${APP}-forgejo-ssh`) and ./resources/ssh_config. `custom` because
       # app-template's secret type passes neither field through:
@@ -214,18 +341,41 @@ spec:
             app:
               - path: /var/run/secrets/forgejo-ssh
                 readOnly: true
+            sshd:
+              - path: /var/run/secrets/forgejo-ssh
+                readOnly: true
+      # Commit signing -- ./externalsecret.yaml (`${APP}-commit-signing`).
+      # `custom` for the same two fields as forgejo-ssh above, for the same
+      # reasons: a pod that rolls before the generator has run still starts,
+      # and 0400 under fsGroup is a key ssh-keygen accepts.
+      commit-signing:
+        type: custom
+        volumeSpec:
+          secret:
+            secretName: ${APP}-commit-signing
+            optional: true
+            defaultMode: 256
+        advancedMounts:
+          *app :
+            app:
+              - path: /var/run/secrets/commit-signing
+                readOnly: true
+            sshd:
+              - path: /var/run/secrets/commit-signing
+                readOnly: true
       ssh-config:
         type: configMap
         name: ${APP}-ssh
         advancedMounts:
           *app :
-            app:
+            app: &sshConfigMounts
               - path: /etc/ssh/ssh_config.d/forgejo.conf
                 subPath: forgejo.conf
                 readOnly: true
               - path: /etc/paseo/ssh/known_hosts
                 subPath: known_hosts
                 readOnly: true
+            sshd: *sshConfigMounts
       tools:
         type: configMap
         name: paseo-tools
@@ -243,6 +393,45 @@ spec:
               - path: /home/paseo/.config/mise/config.toml
                 subPath: mise.toml
                 readOnly: true
+            apm:
+              - path: /opt/paseo/apm-refresh.sh
+                subPath: apm-refresh.sh
+                readOnly: true
+              - path: /opt/paseo/apm.yml
+                subPath: apm.yml
+                readOnly: true
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+            sshd:
+              - path: /home/paseo/.config/mise/config.toml
+                subPath: mise.toml
+                readOnly: true
+      # ./resources/sshd.sh and the keys allowed in. Both by subPath:
+      # authorized_keys HAS to be -- sshd's StrictModes rejects it under a
+      # whole-volume mount's 1777 root, and accepts the root-owned 0755
+      # parent a subPath mount gets. So a key change rolls the pod (the
+      # reloader annotation above), agents included.
+      sshd-config:
+        type: configMap
+        name: paseo-sshd
+        advancedMounts:
+          *app :
+            sshd:
+              - path: /opt/paseo/sshd.sh
+                subPath: sshd.sh
+                readOnly: true
+              - path: /etc/paseo/sshd/authorized_keys
+                subPath: authorized_keys
+                readOnly: true
+      # The unpacked openssh-server and its generated config. Survives a
+      # container restart, so only a new pod downloads it again.
+      sshd:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            sshd:
+              - path: /opt/sshd
       tmp:
         type: emptyDir
         globalMounts:

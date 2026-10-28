@@ -79,7 +79,7 @@ spec:
           main:
             image: &baoImage
               repository: ghcr.io/openbao/openbao
-              tag: 2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf
+              tag: 2.7.2@sha256:5046911075e137e154ce49ab051502f4ec7cf367d484ae4a4dce665d9b90561f
               pullPolicy: IfNotPresent
             # Root: apk needs it. kube-system is a privileged-PSS namespace.
             securityContext: &rootCtx
@@ -196,7 +196,7 @@ spec:
               # moving on its own, and it carries the actual fix — PGDATA below.
               # Leave the renovate guard in place; it is doing its job.
               repository: docker.io/library/postgres
-              tag: 18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+              tag: 18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
               pullPolicy: IfNotPresent
             restartPolicy: Always
             env:

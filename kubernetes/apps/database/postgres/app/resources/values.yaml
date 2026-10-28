@@ -263,7 +263,7 @@ cluster:
   #
   # `versioning` for this tag shape lives in .github/renovate.json5.
   # renovate: datasource=docker depName=ghcr.io/imusmanmalik/timescaledb-postgis
-  imageName: ghcr.io/imusmanmalik/timescaledb-postgis:18.6-3.6.4-202610121022-system-bookworm
+  imageName: ghcr.io/imusmanmalik/timescaledb-postgis:18.6-3.6.4-202610261019-system-bookworm
   priorityClassName: system-node-critical
   storage:
     size: ${POSTGRES_STORAGE:=10Gi}

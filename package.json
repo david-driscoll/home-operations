@@ -24,7 +24,8 @@
     "sdks/*"
   ],
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "^26.6.5",
     "@types/ssh2": "^1.15.6",
     "json-schema-to-typescript": "^16.0.0",
     "tsx": "^4.23.15",
@@ -36,7 +37,7 @@
     "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/forgejo": "file:sdks/forgejo",
     "@pulumi/github": "^6.15.0",
-    "@pulumi/http": "^0.3.4",
+    "@pulumi/http": "^0.3.5",
     "@pulumi/kubernetes": "^4.34.2",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/tailscale": "file:sdks/tailscale",
@@ -62,5 +63,9 @@
     "file:sdks/technitium": true,
     "file:sdks/terrifi": true,
     "file:sdks/unifi": true
+  },
+  "overrides": {
+    "typescript": "$typescript",
+    "@types/node": "$@types/node"
   }
 }

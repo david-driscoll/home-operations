@@ -1,0 +1,189 @@
+---
+# Builds the Pulumi operator workspace image (images/pulumi-workspace) and
+# pushes it to this forge's container registry. Forge-only: there is no GitHub
+# twin, unlike ./flate.yml, because the image lives here and nowhere else.
+# docs/kubernetes/pulumi-workspace-image.md is the long version.
+#
+# TRUSTED TRIGGERS ONLY. Never `pull_request`: the push token below can
+# overwrite any tag of this image, and the image runs inside every Pulumi
+# workspace with the estate's OpenBao AppRole and state passphrase in its
+# environment. A tag overwrite alone gets nowhere -- the workspace pins the
+# image by DIGEST (kubernetes/components/pulumi-workspace) -- but there is no
+# reason to hand the token to a branch's workflow in the first place.
+#
+# NO DOCKER DAEMON. The job container IS the base image; bake.sh fills it and
+# append-layer.sh pushes base + one layer with crane. That is why this needs no
+# runner change: the forge's job containers get no Docker socket
+# (kubernetes/apps/coder/forgejo-runner/resources/config.yml), and handing them
+# the privileged dind sidecar's would make every job root on its node. See the
+# header of images/pulumi-workspace/append-layer.sh.
+name: pulumi-workspace-image
+
+on:
+  push:
+    branches: [main]
+    # What images/pulumi-workspace/inputs.sh lists, plus this file. Anything
+    # else leaves the image as it is.
+    paths:
+      - package.json
+      - package-lock.json
+      - .config/mise.lock
+      - components/package.json
+      - dynamic/package.json
+      - stacks/*/package.json
+      - sdks/*/package.json
+      - images/pulumi-workspace/**
+      - .forgejo/workflows/pulumi-workspace-image.yml
+  # The backstop. The first push after this lands runs before stacks/system has
+  # created the push token, and any run can lose to api.github.com's anonymous
+  # rate limit; an existing tag makes this a two-request no-op.
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch: {}
+
+# The newest main wins: its tag covers whatever an older run would have pushed.
+concurrency:
+  group: pulumi-workspace-image
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # MUST be the version in images/pulumi-workspace/Dockerfile's FROM line,
+    # which the first step checks. Renovate bumps both in one branch.
+    container:
+      image: ghcr.io/pulumi/pulumi-nodejs:3.272.0@sha256:70e6f0561efb5870381aab7d20e095d067c7d90491beff9f1351942fc71398a0
+    env:
+      PULUMI_SKIP_UPDATE_CHECK: "true"
+      # The account that owns the image (stacks/system/forgejo-github-mirror.ts).
+      IMAGE_OWNER: estate-images
+      IMAGE_NAME: pulumi-workspace
+      # The forge's PUBLIC host is git.<root domain>: the name nodes pull the
+      # image by, served by Traefik on the LAN. NOT `github.server_url`, which
+      # in these jobs is the runner's own connection, the in-cluster
+      # http://forgejo-http...:3000 -- crane talks HTTPS to a registry, so a
+      # push there dies in the TLS handshake (the 2026-10-19 04:41Z run: every
+      # registry call failed and Forgejo logged none of them). The root domain
+      # comes from the secret stacks/system already sets for
+      # scripts/private-domain-guard, which also keeps it masked in the log.
+      ROOT_DOMAIN: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Work out the tag
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="$(images/pulumi-workspace/tag.sh "$PWD")"
+          # bake.sh fills THIS container, so it has to be the base the tag names.
+          running="$(pulumi version)"
+          if [ "${running#v}" != "${tag%%-*}" ]; then
+            echo "::error::job container runs pulumi ${running} but the Dockerfile says ${tag%%-*}; bump both"
+            exit 1
+          fi
+          if [ -z "$ROOT_DOMAIN" ]; then
+            echo "::error::PRIVATE_DOMAIN_ROOT is not set on this repository (stacks/system sets it)"
+            exit 1
+          fi
+          # Only the host-free half leaves this step: an output holding a
+          # secret's value is not something to rely on. Every step that needs
+          # the full reference rebuilds it from ROOT_DOMAIN.
+          {
+            echo "tag=${tag}"
+            echo "base_version=${tag%%-*}"
+            echo "path=${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Image: git.${ROOT_DOMAIN}/${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
+
+      - name: Setup crane
+        env:
+          # The same pin as ./image-check.yml; bump both together. The checksum
+          # is go-containerregistry's own checksums.txt line for
+          # go-containerregistry_Linux_x86_64.tar.gz.
+          CRANE_VERSION: "0.22.1"
+          CRANE_SHA256: "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0"
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/crane.tgz" "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+          echo "${CRANE_SHA256}  $RUNNER_TEMP/crane.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/crane.tgz" -C "$RUNNER_TEMP/bin" crane
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Log in and check for the tag
+        id: exists
+        env:
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
+          # write:package for IMAGE_OWNER, minted by stacks/system. Empty until
+          # that stack has run once after this file landed.
+          TOKEN: ${{ secrets.ESTATE_IMAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            echo "::error::ESTATE_IMAGES_TOKEN is not set on this repository yet (stacks/system creates it)"
+            exit 1
+          fi
+          REGISTRY="git.${ROOT_DOMAIN}"
+          REF="${REGISTRY}/${IMAGE_PATH}"
+          printf '%s' "$TOKEN" | crane auth login "$REGISTRY" --username "$IMAGE_OWNER" --password-stdin
+          # Only the registry saying "no such tag" means build. Anything else --
+          # an unreachable host, a refused token -- fails here, with crane's own
+          # message, instead of quietly baking for a push that cannot happen.
+          if digest="$(crane digest "$REF" 2>"$RUNNER_TEMP/digest.err")"; then
+            echo "Already built: ${REF}@${digest}"
+            echo "built=true" >> "$GITHUB_OUTPUT"
+            echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          elif grep -qE 'MANIFEST_UNKNOWN|NAME_UNKNOWN|404 Not Found' "$RUNNER_TEMP/digest.err"; then
+            echo "Not built yet: ${REF}"
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::could not check ${REF} in the registry"
+            cat "$RUNNER_TEMP/digest.err"
+            exit 1
+          fi
+
+      - name: Bake
+        if: ${{ steps.exists.outputs.built != 'true' }}
+        run: images/pulumi-workspace/bake.sh "$PWD"
+
+      - name: Push
+        id: push
+        if: ${{ steps.exists.outputs.built != 'true' }}
+        env:
+          BASE_VERSION: ${{ steps.tag.outputs.base_version }}
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
+        run: |
+          set -euo pipefail
+          REF="git.${ROOT_DOMAIN}/${IMAGE_PATH}"
+          # The digest of the base this container was started from, resolved
+          # now rather than trusted to the tag, so the layer is appended to the
+          # filesystem it was baked against.
+          base="ghcr.io/pulumi/pulumi-nodejs:${BASE_VERSION}"
+          base="${base}@$(crane digest --platform linux/amd64 "$base")"
+          images/pulumi-workspace/append-layer.sh "$base" "$REF"
+          echo "digest=$(crane digest "$REF")" >> "$GITHUB_OUTPUT"
+
+      # The workspace pins tag AND digest, so a new image goes live only when
+      # someone bumps kubernetes/components/pulumi-workspace -- a one-line
+      # change this prints. A stale pin is not an outage: the old image's
+      # plugins and npm cache still cover everything that did not change, and
+      # the workspace downloads the rest as it always did.
+      - name: Report
+        if: ${{ always() && steps.tag.outputs.path != '' }}
+        env:
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
+          DIGEST: ${{ steps.push.outputs.digest || steps.exists.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [ -n "$DIGEST" ] || exit 0
+          # Written with ${ROOT_DOMAIN} in place of the host, the way the
+          # component spells it.
+          wanted="${IMAGE_PATH}@${DIGEST}"
+          pinned="$(sed -nE 's#.*image: git\.\$\{ROOT_DOMAIN\}/(estate-images/pulumi-workspace:[^[:space:]]+).*#\1#p' kubernetes/components/pulumi-workspace/kustomization.yaml | head -n1)"
+          echo "built:  ${wanted}"
+          echo "pinned: ${pinned:-<none>}"
+          if [ "$pinned" != "$wanted" ]; then
+            echo "::notice::kubernetes/components/pulumi-workspace pins ${pinned:-nothing}; to roll this image out set image: git.\${ROOT_DOMAIN}/${wanted}"
+          fi

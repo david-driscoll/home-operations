@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Makes the `windmill` LOGIN role a member of windmill_user and windmill_admin.
+#
+# Every user_db transaction starts with `SET LOCAL ROLE windmill_admin` (or
+# windmill_user) inside set_session_context(), and PostgreSQL only allows
+# SET ROLE into a role you are a member of. Upstream grants this itself --
+# migration 20241127171723_apply_windmill_roles runs
+#   GRANT windmill_user TO CURRENT_USER; GRANT windmill_admin TO CURRENT_USER;
+# -- but components/postgres renders DatabaseRole/windmill with no `inRoles`,
+# and CNPG enforces that empty list, so the membership could be revoked and
+# nothing in git would put it back. That happened on 2026-10-21: every
+# workspace/script/folder API call failed with 42501
+# `permission denied to set role "windmill_admin"`.
+#
+# Two levels of patch, the same route as components/postgres/superuser: this
+# component patches the nested `${APP}-postgres` Kustomization, which then
+# patches the DatabaseRole it renders. JSON6902 append, so it composes with any
+# sibling component that also adds to that list.
+#
+# ⚠️ A COMPONENT, NOT `spec.patches` IN ../ks.yaml. That was the first attempt
+# (#2830) and it never reached the cluster: kubernetes/apps/equestria/
+# kustomization.yaml strategic-merges its own `spec.patches` into every child
+# Kustomization, and on a CRD that list REPLACES rather than merges, so the
+# umbrella's HelmRelease patch silently won. `spec.components` is not touched
+# by the umbrella. `flux build` against ../ks.yaml alone cannot show this --
+# it never passes through the umbrella.
+#
+# Not listed in ../kustomization.yaml (it is a Component, not a resource), and
+# referenced from ../ks.yaml `spec.components` as ./postgres-login-role.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  # A regex, as in components/postgres/superuser: components are built BEFORE
+  # postBuild substitution, so the object is still `${APP}-postgres` here, and
+  # the `$` keeps `${APP}-postgres-roles` out of it.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: DatabaseRole
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: DatabaseRole
+            metadata:
+              name: not-used
+            spec:
+              inRoles:
+                - windmill_user
+                - windmill_admin

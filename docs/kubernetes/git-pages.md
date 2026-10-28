@@ -70,6 +70,11 @@ Requirements on the site:
 (`setup-guide`) gives the guide a Gatus check and a family tile in authentik.
 The check fails until `docs/setup` has been published.
 
+**Holm mirrors this guide.** The family home page at `apps.<root domain>` has
+one tile per guide page, with the guide's store links and a condensed copy of
+each page's steps. When a page, address or store link changes here, update
+Holm's config too: [holm.md](holm.md).
+
 ### My apps: the guide's API (`setup-status`)
 
 The guide's **My apps** page (its landing page, `/setup/`) shows each family
@@ -183,7 +188,7 @@ jobs:
       - uses: https://codeberg.org/git-pages/action@v2
         with:
           site: http://docs.pages.${ROOT_DOMAIN}/
-          server: git-pages.coder.svc.cluster.local:3000
+          server: git-pages.coder.svc.cluster.local
           token: ${{ forgejo.token }}
           source: public/
 ```
@@ -214,6 +219,11 @@ Notes on the non-obvious fields:
   containers.
 - **`server:` replaces only the host, not the scheme.** That is why `site:` is
   `http://` here. Readers still use `https://`.
+- **`server:` is a bare host, with no port.** `action@v2` pins git-pages-cli
+  1.11.2, which rejects `host:port` with
+  `--server must be used with a domain name`. With a bare host and an
+  `http://` site the upload goes to port 80, which the Service maps to 3000
+  (the `publish` port in the HelmRelease).
 - **`token: ${{ forgejo.token }}` is the whole authorization.**
   - git-pages asks Forgejo whose token it is, via the in-cluster
     `forgejo-http` Service configured as `clone-url` in

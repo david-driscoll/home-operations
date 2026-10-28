@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Chaptarr
+  category: Media Management
+  description: Chaptarr is an audiobook and eBook collection manager
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # The same app under its tailnet name, so authentik has a provider for that
+  # hostname too. Paired with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/chaptarr.svg
+  access_policy:
+    groups:
+      - media-managers
+  # Forward auth, exactly like sonarr. Chaptarr DOES ship a native OIDC login,
+  # but its authority / client ID / client secret are read only from
+  # config.xml (ConfigFileProvider.OidcAuthority et al.), with no environment
+  # override -- so the authentik credential could not be handed to it from an
+  # ExternalSecret. The app runs with AUTH__METHOD External instead.
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/ping
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # The estate-default downscaler window scales this to 0 between 02:00 and
+      # 09:00, so a failed check in that window is expected, not an incident.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

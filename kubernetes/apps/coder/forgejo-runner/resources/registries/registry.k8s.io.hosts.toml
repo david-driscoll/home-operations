@@ -1,0 +1,7 @@
+# registry.k8s.io through the cluster's zot, falling back to https://registry.k8s.io.
+# See ./ghcr.io.hosts.toml for how the runner's dind reads this.
+server = "https://registry.k8s.io"
+
+[host."http://registry.kube-system.svc.cluster.local:8080/v2/registry.k8s.io"]
+  capabilities = ["pull", "resolve"]
+  override_path = true

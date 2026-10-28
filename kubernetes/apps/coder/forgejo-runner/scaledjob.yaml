@@ -48,10 +48,15 @@ spec:
   # with N jobs in hand it wants N + 2 pods, so when a waiting pod takes a
   # job, the next poll starts another to wait in its place.
   minReplicaCount: 2
-  # EIGHT HERE MEANS TEN PODS. KEDA caps the reported job count at this
-  # number and then adds the two spares above, so the most that ever run is
-  # maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
+  # SIXTEEN HERE MEANS EIGHTEEN PODS. KEDA caps the reported job count at
+  # this number and then adds the two spares above, so the most that ever run
+  # is maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
   # raise this with that in mind, not by itself.
+  #
+  # Raised from 8 on 2026-10-18: every burst sat at that ceiling (a queue of
+  # 113 took about two hours to drain), and the four worker nodes the pods
+  # can land on had the room. The spread constraint in the pod template keeps
+  # eighteen of them from piling onto two nodes.
   maxReplicaCount: 8
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
@@ -109,6 +114,20 @@ spec:
         # after SIGTERM, so the kubelet has to wait about that long before
         # it sends SIGKILL.
         terminationGracePeriodSeconds: 1860
+        # ONE RUNNER PER NODE BEFORE A SECOND ON ANY OF THEM. Without this the
+        # scheduler packed every pod onto the two emptiest workers, and each
+        # burst started five Docker daemons on one node at once. It is a
+        # preference (ScheduleAnyway), not a rule: a job must never sit
+        # Pending because one node is full or out of rotation, and the
+        # finished pods kept for ttlSecondsAfterFinished can count towards
+        # the skew.
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: ${APP}
         securityContext:
           fsGroup: 1000
           fsGroupChangePolicy: OnRootMismatch
@@ -132,7 +151,7 @@ spec:
           # container has.
           - name: dind
             restartPolicy: Always
-            image: data.forgejo.org/oci/docker:29-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+            image: data.forgejo.org/oci/docker:29-dind@sha256:9e79b879b177fbd72c34376a3dd3d91747da5db49e1f560f76aea59561471977
             env:
               - name: DOCKER_TLS_CERTDIR
                 value: /certs
@@ -171,6 +190,23 @@ spec:
                 mountPath: /var/lib/docker
               - name: docker-certs
                 mountPath: /certs
+              # Pulls from every registry zot covers go through the cluster's
+              # zot, with the image references unchanged
+              # (./resources/registries/ghcr.io.hosts.toml). Docker 29's
+              # containerd image store reads containerd hosts.toml files under
+              # this directory for EVERY registry; the older
+              # `registry-mirrors` setting only ever covered Docker Hub.
+              # Tested 2026-10-18 in throwaway pods on this image: `docker
+              # pull ghcr.io/catthehacker/ubuntu:act-24.04` made all ten
+              # requests to zot and finished in 30s, against about five
+              # minutes per pod straight from ghcr.io during a burst;
+              # docker.io (library/), quay.io and mcr.microsoft.com came from
+              # zot too, and data.forgejo.org -- a prefix zot did not have
+              # yet -- got a 404 from zot and fell back to upstream. Read-only,
+              # and not /certs: that is where dind writes its own TLS material.
+              - name: registries
+                mountPath: /etc/docker/certs.d
+                readOnly: true
         containers:
           - name: app
             image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
@@ -231,7 +267,7 @@ spec:
           # its docker CLI. It always exits 0: a failed pull only means the
           # runner pulls the image itself, as it always did.
           - name: prepull
-            image: data.forgejo.org/oci/docker:29-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+            image: data.forgejo.org/oci/docker:29-dind@sha256:9e79b879b177fbd72c34376a3dd3d91747da5db49e1f560f76aea59561471977
             command: ["sh", "/scripts/prepull.sh"]
             env:
               # What `ubuntu-latest`, `ubuntu-24.04` and `docker` resolve to
@@ -271,6 +307,21 @@ spec:
           - name: scripts
             configMap:
               name: forgejo-runner-scripts
+          - name: registries
+            configMap:
+              name: forgejo-runner-registries
+              # One per key in ../kustomization.yaml's
+              # forgejo-runner-registries, i.e. every registry zot covers.
+              items:
+                - { key: docker.io, path: docker.io/hosts.toml }
+                - { key: ghcr.io, path: ghcr.io/hosts.toml }
+                - { key: quay.io, path: quay.io/hosts.toml }
+                - { key: gcr.io, path: gcr.io/hosts.toml }
+                - { key: registry.k8s.io, path: registry.k8s.io/hosts.toml }
+                - { key: public.ecr.aws, path: public.ecr.aws/hosts.toml }
+                - { key: cgr.dev, path: cgr.dev/hosts.toml }
+                - { key: mcr.microsoft.com, path: mcr.microsoft.com/hosts.toml }
+                - { key: data.forgejo.org, path: data.forgejo.org/hosts.toml }
           - name: data
             emptyDir:
               sizeLimit: 6Gi

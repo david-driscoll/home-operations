@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.54.0
-    digest: sha256:3a670fe24aa51150ed7edec6de13228cd21db777d786520fc99a5f2c60ab5149
+    tag: 0.57.0
+    digest: sha256:a9f8af0cf80e04c9a807a94910f17b9b84df211630e1a963185ad7ef07829fbe
   url: oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds
   # NO `verify:` BLOCK. Checked at 0.44.0 before writing this: the chart
   # repository carries 41 cosign `sha256-<digest>.sig` tags, but NONE of them

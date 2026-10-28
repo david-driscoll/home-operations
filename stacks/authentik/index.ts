@@ -7,6 +7,12 @@ import * as pulumi from "@pulumi/pulumi";
 import { FlowsManager } from "../../components/authentik/flows.ts";
 import { AuthentikGroups } from "../../components/authentik/groups.ts";
 
+// The operator does not run this program from the repo checkout. Its source is
+// an ExternalArtifact cut down to the files listed in
+// kubernetes/apps/pulumi/authentik/artifactgenerator.yaml, so a new runtime
+// read of a repo path outside stacks/, components/, dynamic/, sdks/, types/ or
+// clusters/ must be added there too, or edits to it will never trigger a run
+// (docs/kubernetes/pulumi-stack-artifacts.md).
 const globals = new GlobalResources({}, {});
 const authentikGroups = new AuthentikGroups(globals);
 const flowsManager = new FlowsManager(globals, {});

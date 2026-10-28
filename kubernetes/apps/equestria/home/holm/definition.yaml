@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Holm"
+  category: Applications
+  description: "The family's home page: each person's own apps, bookmarks and search"
+  url: &url https://apps.${ROOT_DOMAIN}
+  icon: https://raw.githubusercontent.com/man15h/holm/main/static/icon-512.png
+  # The same audience as the setup guide it mirrors (coder/git-pages
+  # definition.yaml, `setup-guide`).
+  access_policy:
+    groups:
+      - family
+  authentik:
+    oauth2:
+      clientType: confidential
+      # One URI, on the apps host. Holm builds its callback from
+      # `auth.oidc.redirect_base` in resources/config.yml, never from the host
+      # the visitor used, so a sign-in started on the tailnet name still
+      # returns here. holm.<root domain> only redirects (helmrelease.yaml).
+      allowedRedirectUris:
+        - url: https://apps.${ROOT_DOMAIN}/auth/callback
+      # `profile` is authentik's built-in mapping, which already carries the
+      # `groups` claim Holm reads; no `groups` scope is needed.
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      # Holm reads name, username and groups from the ID token first and only
+      # falls back to userinfo for what is missing.
+      includeClaimsInIdToken: true
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        # Signed out, `/` renders the sign-in page with a 200. A config Holm
+        # cannot load answers every request with an error instead.
+        - "[STATUS] == 200"

@@ -57,7 +57,7 @@ spec:
           *app :
             image:
               repository: docker.io/library/nextcloud
-              tag: 35.0.2-apache@sha256:a588aa5353703b44106a6129adaaf7bf22521b7a4754f9f529b3228d6aa390c5
+              tag: 35.0.2-apache@sha256:89af7ee7a96ff5e9668280566209268ae6b2d02327f6ef6d56f6d68228cf9431
               pullPolicy: IfNotPresent
             env:
               # Read by ./resources/zz-app.config.php (Flux substitution is off
@@ -144,7 +144,7 @@ spec:
           cron:
             image:
               repository: docker.io/library/nextcloud
-              tag: 35.0.2-apache@sha256:a588aa5353703b44106a6129adaaf7bf22521b7a4754f9f529b3228d6aa390c5
+              tag: 35.0.2-apache@sha256:89af7ee7a96ff5e9668280566209268ae6b2d02327f6ef6d56f6d68228cf9431
               pullPolicy: IfNotPresent
             command: ["/bin/sh", "-c"]
             args:
@@ -196,7 +196,7 @@ spec:
           exporter:
             image:
               repository: ghcr.io/xperimental/nextcloud-exporter
-              tag: 0.9.1@sha256:3e90a38976516444d05f5f6758e5d572ca559b69ad3005ec4029786e9daf9129
+              tag: 0.9.2@sha256:512ddd1f1e1ea0ea7b4f0821c9740bcefa5fc15deb57fb9cd05dfb68e7e8390d
               pullPolicy: IfNotPresent
             env:
               NEXTCLOUD_SERVER: http://localhost
@@ -241,7 +241,7 @@ spec:
           fonts:
             image:
               repository: docker.io/library/debian
-              tag: trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+              tag: trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad
               pullPolicy: IfNotPresent
             command: ["/bin/sh", "-c"]
             args:
@@ -274,7 +274,7 @@ spec:
           app:
             image:
               repository: docker.io/collabora/code
-              tag: 26.04.5.1.1@sha256:bb8f3c9c5c9016045f25fccb5f0649be94469ebc7c7cc379f3576e470cccf33d
+              tag: 26.04.5.2.1@sha256:c7415b963e32eb0986a562583f154d36d3d7a461e1ddfb660a95e87094328acb
               pullPolicy: IfNotPresent
             envFrom:
               # `username` / `password` for the admin console.

@@ -41,7 +41,7 @@ spec:
         # kubernetes-auth security fixes (GHSA-7m59-mp95-w6ph,
         # GHSA-gf3j-hm38-jhh5). Renovate tracks the tag from here on.
         # renovate: datasource=docker depName=quay.io/openbao/openbao
-        tag: "2.7.1"
+        tag: "2.7.2"
       # The whole config below is delivered as a ConfigMap, and OpenBao reads it
       # once at process start. A config-only change therefore leaves the
       # StatefulSet's pod template untouched, so nothing rolls and the running

@@ -23,7 +23,7 @@ spec:
       namespace: volsync-system
     - name: postgres
       namespace: database
-    # File locking and the distributed cache live in the shared Valkey (db 13,
+    # File locking and the distributed cache live in the shared Valkey (db 4,
     # ./resources/zz-redis.config.php).
     - name: valkey
       namespace: database

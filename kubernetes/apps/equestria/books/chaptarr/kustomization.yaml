@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# ./postgres-databases/ is DELIBERATELY not listed: it is rendered into the
+# `database` namespace by the `chaptarr-postgres-databases` Kustomization that
+# components/postgres/databases emits.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml

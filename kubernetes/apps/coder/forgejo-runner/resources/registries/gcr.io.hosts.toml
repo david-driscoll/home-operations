@@ -1,0 +1,7 @@
+# gcr.io through the cluster's zot, falling back to https://gcr.io.
+# See ./ghcr.io.hosts.toml for how the runner's dind reads this.
+server = "https://gcr.io"
+
+[host."http://registry.kube-system.svc.cluster.local:8080/v2/gcr.io"]
+  capabilities = ["pull", "resolve"]
+  override_path = true

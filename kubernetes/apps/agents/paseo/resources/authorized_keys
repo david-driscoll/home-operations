@@ -1,0 +1,10 @@
+# Public keys allowed to SSH in as `paseo` (the `sshd` sidecar,
+# ./sshd.sh), one per line. Editing this rolls the pod -- every running agent
+# with it -- because it is mounted by subPath (../helmrelease.yaml).
+#
+# Copied from https://github.com/david-driscoll.keys; refresh by replacing
+# everything below with that URL's output.
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFEZpmeANLSx9Worwn0REmiWKLEkDvGaaz5ZlCVuRc67
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCn3BkjNBE4Ju2/Ze9LrEVMHRrOfD/RkNoHWnE4i1Gek96Z5S1UN/oaoMFdlRjrWr26wy4xaznAso8vhK40ayOVB1XK1+XwcPogjp7zhtQn1iF83Pz0h9/DsuYBvL2LrGT9j5GhSW11QEL2TnHtOjoKVhYu0Q+m5+nqkTeOUv4kycQj/Frwy5SK/Vr6Gsfl+bWA9pxx/eg3yHDxHsPDxj4yzK0LHDTx7jKUDT6WEKUuGKkl46yy70s1CheoXDaC/+am0MnMOSxT1IOInvKkPeloUTb6ycucUGYqlBcp2ScSPhUpeQIHXItsJBbsDjpdtG5jOgMro5yjTgHNh3D+t3xsEKVCs6qqFq8zMCFHN2RFUFFG/ByiAUclxhZjdNZCzODma7ZvXoXRmKGxvHHS3zoCJspwa0Fi2RrGydnbssuNVl+mrdebg9j2aGzvCzu5KsXw0YrIsS1iRtT6Jp+MdG9RvQSoLsXDgNRG6/jOdL79HR0r4vgX0nN07kawPfsYoSBqY0KfwmEeTgukX7WqV8oIVr8saqP2hen541dr3qo83cKjjD5YLgfwDndiLz2W0itSTEtnECf7yLIpIgWfQozff32PkUDOvXqOcGRF0pZe4nyBLqaSZNzkA4X+/6hGYJ6NRAsaIuYynF3k5veq8KbADaVuZJUoGteEOA7fBYMKtw==
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBef/oLvC9SFWX65y74T4H3TKhezFcRlg43hOkhk4iIo
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEyDnnkwp8EWZBpa22YXIdw8g6X/PltN/aQVYFSbtbTi

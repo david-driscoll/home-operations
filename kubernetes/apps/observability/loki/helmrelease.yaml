@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 7.3.0
-    digest: sha256:ba8b6b3ee954c9d6eeee713d148a22e6f73eb440189e11acd3112a06acdfd2f8
+    tag: 7.5.0
+    digest: sha256:6006cfff9edd0d5c70449cb89510c1c3c2142c11caacf66d6aac83fc0517f07d
   url: oci://ghcr.io/grafana/helm-charts/loki
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json

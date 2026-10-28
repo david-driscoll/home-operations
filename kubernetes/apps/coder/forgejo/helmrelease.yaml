@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 17.3.1
-    digest: sha256:38d6d9ea57512808754d310bd6c0fe717d697b5f67ea4e34bdb8500ab49b0343
+    tag: 17.3.2
+    digest: sha256:73accaef0604d6e701a7b141e71a8b9a007c1475807240403d8bca0aeda24b74
   # data.forgejo.org, not code.forgejo.org (the chart's own default), for the
   # same reason docker/celestia/forgejo used it: code.forgejo.org is itself a
   # Forgejo instance and answers /v2/ with a Bearer challenge that Renovate
@@ -88,7 +88,7 @@ spec:
       # anonymously with zero warnings. Nothing in this repo fixes that; bump
       # the tag by hand until Mend can reach the host.
       # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
-      fullOverride: data.forgejo.org/forgejo/forgejo:16.0.6-rootless
+      fullOverride: data.forgejo.org/forgejo/forgejo:17.0.1-rootless
       pullPolicy: IfNotPresent
 
     # Forgejo is explicitly not HA -- the chart refuses to be useful above one
@@ -127,6 +127,15 @@ spec:
       # First boot runs the full schema migration; the default 60s is enough for
       # shutdown but a long migration should not be interrupted by a rollout.
       terminationGracePeriodSeconds: 60
+      env:
+        # The estate's zone, as every other app has it (the timezone sweep):
+        # Forgejo's own scheduled tasks (`[cron.*]` in app.ini) and its log
+        # timestamps follow the process's local time. NOT what Actions
+        # `schedule:` crons use -- those default to UTC whatever this says,
+        # and take a per-entry `timezone:` in the workflow instead
+        # (.forgejo/workflows/merge-window.yml).
+        - name: TZ
+          value: "${TIMEZONE}"
 
     resources:
       requests:
@@ -153,9 +162,39 @@ spec:
       mount: true
       claimName: *app
 
+    # The commit-signing key pair (`[repository.signing]` below). Mounted into
+    # the init containers as well as the main one, and that is not optional:
+    # Forgejo reads SIGNING_KEY while it loads its settings and log.Fatal()s
+    # when the file is missing, and configure-gitea runs `forgejo migrate` and
+    # the admin commands, which load the same settings -- so an init-only gap
+    # would crash-loop the pod before the main container ever started.
+    #
+    # The files land as root:1000 0440 (fsGroup below adds the group). That is
+    # readable by the git user, and it is also why ssh-keygen accepts the key:
+    # its "UNPROTECTED PRIVATE KEY FILE" refusal only applies to a key file the
+    # CALLING user owns, and these are owned by root.
+    #
+    # Not the chart's own `signing.ssh.existingSecret`, which does the same job
+    # with one less key: its configure-ssh-signing init container COPIES the
+    # private key onto the data PVC (/data/git/.ssh-signing/), which puts it
+    # into every nightly volsync restic snapshot and leaves it behind there if
+    # signing is ever turned off. Mounted like this it only ever exists in the
+    # pod's tmpfs and in OpenBao.
+    extraVolumes:
+      - name: signing-key
+        secret:
+          secretName: ${APP}-signing
+          defaultMode: 0440
+    extraContainerVolumeMounts: &signingMounts
+      - name: signing-key
+        mountPath: /etc/forgejo-signing
+        readOnly: true
+    extraInitVolumeMounts: *signingMounts
+
     podSecurityContext:
       fsGroup: 1000
       fsGroupChangePolicy: OnRootMismatch
+
     containerSecurityContext:
       runAsNonRoot: true
       runAsUser: 1000
@@ -288,8 +327,42 @@ spec:
               key: secret-access-key
 
       config:
-        APP_NAME: Forgejo
         RUN_MODE: prod
+        # APP_NAME: "${CLUSTER_TITLE} - Coding for ourselves"
+        repository:
+          # No DISABLE_HTTP_GIT. Everything in the cluster talks git to the
+          # forge over HTTP (forgejo-http:3000): Renovate, the runners'
+          # actions/checkout, github-sync's pushes, git-pages. With it set,
+          # every one of them gets `Interacting with repositories by HTTP
+          # protocol is not allowed` (403), as on 2026-10-18.
+          DISABLE_HTTP_GIT: false
+          ENABLE_PUSH_CREATE_USER: true
+          ENABLE_PUSH_CREATE_ORG: true
+          # Pinned to the upstream default so a chart or image bump cannot
+          # quietly change what the clone box tells people to paste: true keeps
+          # the `ssh://` form. It belongs here, not under `server:` with the
+          # other SSH keys -- Forgejo reads it from the [repository] section.
+          USE_COMPAT_SSH_URI: true
+
+        repository.pull-request:
+          DEFAULT_MERGE_STYLE: squash
+
+        repository.issue:
+          MAX_PINNED: "6"
+
+        repository.release:
+          DEFAULT_PAGING_NUM: "20"
+
+        ui:
+          DIFF_PAGING_NUM: "50"
+          EXPLORE_PAGING_NUM: "50"
+          ISSUE_PAGING_NUM: "50"
+          MEMBERS_PAGING_NUM: "50"
+          FEED_MAX_COMMIT_NUM: "10"
+          FEED_PAGING_NUM: "50"
+          SITEMAP_PAGING_NUM: "50"
+          GRAPH_MAX_COMMIT_NUM: "200"
+          DEFAULT_THEME: forgejo-auto
 
         server:
           DOMAIN: git.${ROOT_DOMAIN}
@@ -338,19 +411,59 @@ spec:
           # on the PVC; Forgejo has no S3 backend for those.
           LFS_START_SERVER: true
 
-        repository:
-          # Pinned to the upstream default so a chart or image bump cannot
-          # quietly change what the clone box tells people to paste. true keeps
-          # the `ssh://` form; false would switch every SSH clone URL to the
-          # scp-style `git@git.<root domain>:<owner>/<repo>.git`. The two are
-          # equivalent to git -- this is a display choice, not a routing one.
-          #
-          # It belongs HERE and not under `server:` next to the other SSH keys,
-          # which is where it looks like it should go: Forgejo reads it from
-          # `rootCfg.Section("repository")` (modules/setting/repository.go), so
-          # in [server] it would be silently ignored and the default would keep
-          # applying with nothing to show for the line.
-          USE_COMPAT_SSH_URI: true
+        # Signs the commits Forgejo writes itself: web-editor and API file
+        # edits, wiki edits, a new repository's first commit, and the commit a
+        # pull-request merge COMPOSES -- the `merge`, `rebase-merge` and
+        # `squash` styles. NOT the plain `rebase` style: Forgejo replays the
+        # pull request's commits with git-replay/git-rebase and no `-S`, so
+        # they land unsigned, and `fast-forward-only` writes no commit at all.
+        # Those are the only two styles github-mirror/home-operations allows
+        # (stacks/system/forgejo-github-mirror.ts), so on that repository this
+        # signs web edits but not merges. The key is mounted from the
+        # `-signing` Secret above; the runbook
+        # (docs/runbooks/forgejo-commit-signing.md) has how it was made and
+        # where its public half lives.
+        #
+        # SSH rather than OpenPGP because it is one file pair and nothing else:
+        # no keyring to import into a GNUPGHOME on the PVC, no gpg-agent, no
+        # trustdb. Git 2.34+ and ssh-keygen are both already in the image.
+        #
+        # Nothing has to be registered on any account for the UI to say
+        # Verified. Forgejo checks a signature against the committer's own
+        # keys first, then against THIS key, and an instance-key signature is
+        # "trusted" under the `collaborator` trust model every repository has
+        # by default (CalculateTrustStatus, models/asymkey). Do NOT add the
+        # public key to a user as an SSH key: that makes it a login key for
+        # that account over the git SSH server, so whoever holds this Secret
+        # could push as them.
+        repository.signing:
+          FORMAT: ssh
+          SIGNING_KEY: /etc/forgejo-signing/signing_key.pub
+          # Shown as the signer on the commit page; never written into a
+          # commit while the trust model is `collaborator` (the committer
+          # stays the person who pressed the button). The `.invalid` address
+          # for the same reason as NO_REPLY_ADDRESS below: a commit made here
+          # is published to GitHub, and the sync refuses one that names the
+          # domain.
+          SIGNING_NAME: Forgejo
+          SIGNING_EMAIL: forgejo@noreply.forgejo.invalid
+          # `always` everywhere, and deliberately so. Each conditional rule
+          # would quietly turn signing off for this forge:
+          #   twofa         -- accounts sign in through authentik, which owns
+          #                    MFA; Forgejo has no 2FA record for any of them.
+          #   pubkey        -- Renovate and the bot accounts hold no keys.
+          #   basesigned /  -- `main` arrives from GitHub, whose merge commits
+          #   parentsigned     carry GitHub's web-flow signature, which this
+          #                    forge cannot verify.
+          #   commitssigned -- Renovate's and most agents' commits are unsigned.
+          #   approved      -- one human; nobody can approve their own PR.
+          # A signature from this key therefore means "Forgejo wrote this
+          # commit", not "the content was vetted" -- which is all an instance
+          # key can honestly say anyway.
+          INITIAL_COMMIT: always
+          CRUD_ACTIONS: always
+          WIKI: always
+          MERGES: always
 
         database:
           DB_TYPE: postgres
@@ -479,7 +592,30 @@ spec:
         metrics:
           ENABLED: true
 
+        time:
+          # The zone dates are shown in on the web UI, for every viewer.
+          # Forgejo's default is the server's, which in a container without
+          # TZ was UTC.
+          DEFAULT_UI_LOCATION: "${TIMEZONE}"
+
         cron.update_checker:
           # Nothing here should be phoning home for release announcements; the
           # image tag is Renovate's job.
           ENABLED: false
+
+        # Written by Forgejo into the gitconfig under its git home on every
+        # start (syncGitConfig), so it covers every git process the forge
+        # spawns -- receive-pack for each push, the merges, the hooks.
+        git.config:
+          # fsync loose objects and refs before a push is acknowledged. Git's
+          # default fsyncs packs only, so an unclean loss of the volume can
+          # keep a ref while dropping the commit it names, or leave the ref
+          # file empty. That happened on 2026-10-20: Longhorn moved this volume
+          # off a hung node while it was still mounted there, a 0-byte
+          # refs/pull/338/head survived, and from then on every git command
+          # that walks all refs failed -- the Actions page, pull request
+          # creation, and the `git update-server-info` that post-receive runs
+          # first, so pushes stopped updating the database or starting
+          # workflows. `committed` is objects plus refs; on a forge this size
+          # the extra fsyncs per push cost nothing noticeable.
+          core.fsync: committed

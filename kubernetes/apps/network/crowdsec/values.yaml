@@ -33,6 +33,15 @@ config:
       db_name:  $${CROWDSEC_DB_NAME}
       host:     $${CROWDSEC_DB_HOST}
       port:     $${CROWDSEC_DB_PORT}
+      # Ages out machine rows nothing logs in as any more: one per replaced
+      # pod, and one per re-registration (helmrelease.yaml, "re-registration
+      # guard"). A running agent heartbeats constantly, so only a LAPI outage
+      # longer than 7d could age out a live one (it would then fail to log in
+      # until its pod is replaced).
+      # Merges into the image's own `flush:` (max_items/max_age stay).
+      flush:
+        agents_autodelete:
+          login_password: 7d
     api:
       server:
         auto_registration: # Activate if not using TLS for authentication
@@ -394,14 +403,14 @@ agent:
 # machine and crash-loop until the pod is deleted. Each replaced pod leaves one
 # stale machine row instead; `cscli machines prune` clears them.
 #
-# KNOWN TRAP, NOT FIXED HERE: the init container is not idempotent either. If
-# the node reboots without a drain, the pod keeps its name, its init container
-# runs again, and `cscli lapi register` meets the machine it registered the
-# first time: the LAPI answers 403 and the init crash-loops until the pod is
-# deleted (chart templates/appsec-deployment.yaml; seen live on
-# crowdsec-agent-7kk77 after pegasus rebooted, 2026-09-12). The door fails
-# open meanwhile and CrowdsecAppsecAbsent fires after 15m. Relief: delete the
-# pod. The agents' DaemonSet has the same shape.
+# The init container is not idempotent either: after a node reboots without a
+# drain, the pod keeps its name and `cscli lapi register` meets the machine it
+# registered the first time, so the LAPI answers 403 (seen on
+# crowdsec-agent-7kk77 after pegasus rebooted, 2026-09-12, and on two agents
+# after the 2026-10-17..19 reboots). helmrelease.yaml's "re-registration
+# guard" postRenderer now retries under a fresh name, for this pod and the
+# agents alike, and `flush.agents_autodelete` above ages out the rows left
+# behind. Those rows are also why `cscli machines prune` is no longer needed.
 appsec:
   enabled: true
   # Surge the new pod before the old one stops. The chart default, Recreate,

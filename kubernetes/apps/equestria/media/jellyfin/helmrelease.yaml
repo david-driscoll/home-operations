@@ -105,7 +105,7 @@ spec:
               # release candidates behind while the dashboard rendered it as
               # tracked. Do not drop the digest -- every other image in this
               # namespace carries one, and jellyfin was the sole exception.
-              tag: 12.2@sha256:c3efa69a22f2691fc88d6bb035e87a8560e395a6047f062fb381c61c3185e8f5
+              tag: 12.4@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
             env:
               JELLYFIN_CACHE_DIR: /cache
               JELLYFIN_CONFIG_DIR: /config/config
@@ -241,7 +241,7 @@ spec:
           meilisearch:
             image:
               repository: docker.io/getmeili/meilisearch
-              tag: v1.55.0@sha256:ff546679970126f8822e15d1b6a06bfbff1f2ce2e43f810cfb5258012f92de5c
+              tag: v1.56.0@sha256:1f578fa865f8251894b3bf38d6668d6209a3f451f8f65ab953e129d4c1db5ef4
               pullPolicy: IfNotPresent
             env:
               # 127.0.0.1, NOT the image's 0.0.0.0 default. Containers in a pod

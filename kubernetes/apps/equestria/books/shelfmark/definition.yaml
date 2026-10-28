@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Shelfmark
+  category: Media Management
+  description: Search and download books and audiobooks from Prowlarr indexers and direct sources, with per-user requests
+  url: https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/shelfmark.png
+  access_policy:
+    # Shelfmark is multi-user with a request queue (docs/users-and-requests.md):
+    # family can search and request, admins approve. Who is an admin inside
+    # Shelfmark is decided by OIDC_ADMIN_GROUP in ./helmrelease.yaml, not here.
+    groups:
+      - media-managers
+      - family
+  authentik:
+    oauth2:
+      clientType: confidential
+      # Shelfmark builds its callback from the request (oidc_routes.py:
+      # `request.url_root + "/api/auth/oidc/callback"`), so each hostname it is
+      # served on needs its own entry. That only comes out as https:// because
+      # gunicorn is told to trust Traefik's X-Forwarded-Proto
+      # (FORWARDED_ALLOW_IPS in ./helmrelease.yaml).
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/api/auth/oidc/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/api/auth/oidc/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # Shelfmark appends a `groups` scope on its own once OIDC_ADMIN_GROUP is
+        # set (oidc_routes.py, _get_oidc_client), and this mapping answers it:
+        # the `groups` claim for the admin check, plus email_verified=True,
+        # without which Shelfmark skips linking a login to an existing account
+        # by email. See components/authentik/property-mappings.ts.
+        - groups
+      # Shelfmark reads claims from the ID token first and only falls back to
+      # userinfo when username and email are both missing, so groups have to
+      # be in the ID token.
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      # Unauthenticated by design (main.py exempts it from both the session and
+      # the API-key checks), so this reports the app rather than the login page.
+      url: https://${APP}.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

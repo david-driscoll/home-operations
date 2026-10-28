@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app holm
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/holm
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    - ../../../../components/tailscale
+    # The SQLite database (each person's layout, bookmarks and theme, and their
+    # encrypted integration logins) lives in /app/data. Holm has no Postgres
+    # option, so this volume is the only copy.
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # One SQLite file of per-person preferences. VOLSYNC_CAPACITY only ever
+      # goes up (components/volsync/AGENTS.md), so start small.
+      VOLSYNC_CAPACITY: 1Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # Pinned so the ReplicationDestination does not default to an 8Gi cache
+      # for a 1Gi volume -- the same pin dynacat carries.
+      VOLSYNC_CACHE_CAPACITY: 1Gi
+      # The image runs as `node` (uid 1000), not the estate's usual 568.
+      VOLSYNC_PUID: "1000"
+      VOLSYNC_PGID: "1000"
+      # The app is `holm`; the address is `apps` (holm only redirects, see
+      # helmrelease.yaml). This names the tailnet device, which the component
+      # otherwise defaults to the app name. Same split as degoog/`search`.
+      TAILSCALE_HOST: apps

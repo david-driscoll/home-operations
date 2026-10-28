@@ -1,0 +1,406 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app grimmory
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # RWO volume shared by both containers; never two pods at once.
+        strategy: Recreate
+        pod:
+          # MariaDB is a native sidecar, so it is stopped only after Grimmory
+          # has exited; give it room for a clean InnoDB shutdown inside that.
+          terminationGracePeriodSeconds: 60
+        initContainers:
+          # MARIADB AS A NATIVE SIDECAR OF THIS POD, NOT A SECOND CONTROLLER.
+          #
+          # Grimmory is MariaDB-only (see ./ks.yaml) and the estate has no
+          # MariaDB service, so this one is private to the app:
+          #
+          #   - ONE volsync PVC, two subPaths. components/volsync renders exactly
+          #     one claim per Kustomization, and a second controller would need
+          #     either a second Kustomization or hand-written restic wiring like
+          #     network/crowdsec/volsync.yaml. Sharing the claim also means one
+          #     Longhorn snapshot catches /app/data and the datadir at the same
+          #     instant, so a restore never pairs covers with a database from a
+          #     different night. InnoDB recovers from that crash-consistent
+          #     snapshot the way it would from a power cut.
+          #   - Bound to 127.0.0.1 only: no Service, no port reachable from any
+          #     other pod, so the database is exactly as exposed as Grimmory.
+          #   - Ordering for free: `restartPolicy: Always` plus a startup probe
+          #     means kubelet starts the next container only once MariaDB is
+          #     accepting TCP, so Grimmory never boots into a refused
+          #     connection. It also scales to 0 with the app in the nightly shed.
+          #
+          # Same layout two other home-ops repos run Grimmory with (drag0n141,
+          # blackjid), minus their `seccompProfile: Unconfined` -- see args.
+          mariadb:
+            image:
+              # LTS line (`lts` on Docker Hub points here). The official image
+              # rather than the linuxserver build in upstream's compose file:
+              # this one runs as an arbitrary non-root UID, with no s6/chown
+              # step that needs root.
+              repository: docker.io/library/mariadb
+              tag: 12.3.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
+              pullPolicy: IfNotPresent
+            restartPolicy: Always
+            args:
+              # Loopback only; Grimmory dials 127.0.0.1 from the same pod.
+              - --bind-address=127.0.0.1
+              # No io_uring/libaio. containerd 2's RuntimeDefault seccomp profile
+              # blocks io_uring, which is why other deployments of this exact
+              # pairing run MariaDB Unconfined. Simulated AIO costs nothing
+              # measurable at a book library's write rate and keeps the default
+              # profile.
+              - --innodb-use-native-aio=0
+            env:
+              TZ: ${TIMEZONE}
+              MARIADB_DATABASE: &dbName grimmory
+              MARIADB_USER: &dbUser grimmory
+              MARIADB_PASSWORD: &dbPassword
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}-mariadb
+                    key: MARIADB_PASSWORD
+              MARIADB_ROOT_PASSWORD: &rootPassword
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}-mariadb
+                    key: MARIADB_ROOT_PASSWORD
+              # root@localhost only; no root@'%' account at all.
+              MARIADB_ROOT_HOST: localhost
+              # Run mariadb-upgrade on a major/minor image bump (Renovate).
+              # Patch bumps do not trigger it.
+              MARIADB_AUTO_UPGRADE: "1"
+              # The image writes a healthcheck@localhost credential into
+              # <datadir>/.my-healthcheck.cnf at init. CREATE USER on top of the
+              # default USAGE is what lets the `mariadb-passwords` init container
+              # below re-apply the Secret's passwords on every boot. It widens
+              # nothing: that file is 0600 to UID 568, which already owns every
+              # data file beside it, and the account is loopback-only.
+              MARIADB_HEALTHCHECK_GRANTS: CREATE USER
+            probes:
+              # healthcheck.sh ships in the image. --connect refuses the
+              # entrypoint's --skip-networking bootstrap server, so this passes
+              # only on the real one, after any first-boot init or upgrade.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+                  periodSeconds: 5
+                  timeoutSeconds: 5
+                  # 5 minutes: a first-boot init, or an upgrade, takes seconds,
+                  # but this is the only gate in front of Grimmory.
+                  failureThreshold: 60
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["healthcheck.sh", "--connect"]
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+            securityContext: &securityContext
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 1Gi
+
+          # Makes ${APP}-mariadb authoritative over what the datadir remembers
+          # (the full reasoning is in ./externalsecret.yaml). Runs after the
+          # sidecar's startup probe and before Grimmory, every pod start.
+          #
+          # FATAL on purpose for the app account: if it cannot be set, Grimmory
+          # would only crash-loop on "Access denied" anyway, and this container's
+          # log says why. root is best-effort -- only a human ever uses it.
+          #
+          # Passwords go in on stdin (printf is a bash builtin), never argv. No
+          # brace-form shell expansions in the script: Flux's postBuild would
+          # read them as its own variables. Only APP is meant for Flux.
+          mariadb-passwords:
+            dependsOn: mariadb
+            image:
+              repository: docker.io/library/mariadb
+              tag: 12.3.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
+              pullPolicy: IfNotPresent
+            command:
+              - bash
+              - -c
+              - |
+                set -euo pipefail
+                sql() { mariadb --defaults-extra-file=/var/lib/mysql/.my-healthcheck.cnf --protocol=socket; }
+                printf "ALTER USER IF EXISTS '%s'@'%%' IDENTIFIED BY '%s';\n" "$MARIADB_USER" "$MARIADB_PASSWORD" | sql
+                echo "mariadb-passwords: '$MARIADB_USER' matches ${APP}-mariadb"
+                if printf "ALTER USER IF EXISTS 'root'@'localhost' IDENTIFIED BY '%s';\n" "$MARIADB_ROOT_PASSWORD" | sql; then
+                  echo "mariadb-passwords: root@localhost matches ${APP}-mariadb"
+                else
+                  echo "mariadb-passwords: WARNING could not set root@localhost; Grimmory is unaffected" >&2
+                fi
+            env:
+              MARIADB_USER: *dbUser
+              MARIADB_PASSWORD: *dbPassword
+              MARIADB_ROOT_PASSWORD: *rootPassword
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+
+        containers:
+          app:
+            image:
+              repository: ghcr.io/grimmory-tools/grimmory
+              tag: v3.5.0@sha256:bf6fe21c6e247597f7869664a440b5a34242e2d2940575cae39c17bfaa66dc0b
+              pullPolicy: IfNotPresent
+            # The image's CMD, run WITHOUT its entrypoint. packaging/docker/
+            # entrypoint.sh adduser's a runtime user, chowns the mounts and
+            # su-exec's to USER_ID:GROUP_ID, which needs root plus SETUID/SETGID/
+            # CHOWN. The pod already runs as 568, so all of that is moot, and as
+            # non-root its `addgroup` would fail under `set -e`.
+            # JAVA_TOOL_OPTIONS from the image still applies (heap is 60% of the
+            # memory limit).
+            command:
+              - java
+              - --enable-native-access=ALL-UNNAMED
+              - --enable-preview
+              - -jar
+              - /app/app.jar
+            env:
+              TZ: ${TIMEZONE}
+              SERVER_PORT: &port 6060
+              # Discrete fields rather than DATABASE_URL, so application.yaml's
+              # own URL template still adds connectionTimeZone=UTC and
+              # forceConnectionTimeZoneToSession=true. 127.0.0.1, not
+              # `localhost`, which could resolve to ::1 and miss the bind.
+              DATABASE_HOST: 127.0.0.1
+              DATABASE_PORT: "3306"
+              DATABASE_NAME: *dbName
+              DATABASE_USERNAME: *dbUser
+              DATABASE_PASSWORD: *dbPassword
+              # Shelfmark's ebook output (../shelfmark): finished
+              # downloads land here as .tmp-then-rename, and BookDrop offers
+              # them for review and import into a library. Grimmory creates the
+              # directory itself if Shelfmark has not yet (BookdropMonitoring-
+              # Service), as 568 inside the group-writable `downloads` tree.
+              # Its inotify watch cannot see writes from another NFS client,
+              # though -- enable the BOOKDROP_PERIODIC_SCANNING task in the UI
+              # (Settings -> Tasks; off by default, every 10 minutes when on).
+              APP_BOOKDROP_FOLDER: /media/downloads/shelfmark/ebooks
+              # The libraries are on NFS and are OWNED by LazyLibrarian and
+              # Chaptarr. NETWORK makes Grimmory treat book files as read-only:
+              # no move/rename/reorganise, no metadata or cover written back
+              # into the files -- metadata stays in the database. Reading,
+              # OPDS, KOReader/Kobo sync, uploads and BookDrop imports still
+              # work.
+              DISK_TYPE: NETWORK
+              # The default is `*` WITH credentials, i.e. any origin, for both
+              # CORS and the /ws websocket. Only the two hostnames serve the UI;
+              # OPDS, KOReader and Kobo clients are not browsers and never send
+              # an Origin.
+              ALLOWED_ORIGINS: https://${APP}.${ROOT_DOMAIN},https://${APP}.${TAILSCALE_DOMAIN}
+              # Grimmory's outbound SSRF filter drops every RFC 1918 and CGNAT
+              # address, and authentik's hostname resolves to one in-cluster
+              # (split-horizon), so OIDC discovery and the token exchange would
+              # be refused. This switch exempts ONLY the OIDC client
+              # (RestClientConfig.oidcRestTemplate); metadata fetchers and other
+              # outbound calls keep the filter. The issuer it dials is set in
+              # the admin UI, i.e. by an admin.
+              OIDC_ALLOW_UNSAFE_HOSTS: "true"
+              # UID 568 has no passwd entry, and JDK 19+ falls back to $HOME for
+              # user.home. The root filesystem is read-only, so point it at the
+              # tmpfs for PDFBox's font cache and anything else that wants one.
+              HOME: /tmp
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v1/healthcheck
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v1/healthcheck
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              # First boot runs ~150 Flyway migrations and Grimmory's own data
+              # migrations before the endpoint answers; 5 minutes of headroom.
+              # Startup suppresses liveness/readiness until it passes.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v1/healthcheck
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+
+    defaultPodOptions:
+      securityContext:
+        # 568:568 owns truenas-media (and LazyLibrarian writes the library as
+        # it), and is the volsync mover's default UID -- which matters here,
+        # because MariaDB creates its directories 0700: the mover can back the
+        # datadir up only because it runs as the same UID that wrote it.
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        # Makes the fresh Longhorn volume's root group-568 and group-writable,
+        # so the `data` and `mariadb` subPath directories kubelet creates in it
+        # are writable by both containers.
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      # components/volsync's claim, named ${APP}.
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          app:
+            app:
+              - path: /app/data
+                subPath: data
+            mariadb:
+              - path: /var/lib/mysql
+                subPath: mariadb
+            mariadb-passwords:
+              - path: /var/lib/mysql
+                subPath: mariadb
+                readOnly: true
+      # The shared RWX NFS claim. Same mount paths as LazyLibrarian, so a path
+      # read in one app means the same thing in the other. Libraries are created
+      # in the UI; nothing is scanned until one points at a path.
+      media:
+        existingClaim: truenas-media
+        advancedMounts:
+          app:
+            app:
+              # The ebook library LazyLibrarian and Chaptarr file into.
+              - path: /media/ebooks
+                subPath: ebooks
+              # Optional libraries -- Grimmory reads CBZ/CBR/CB7 and audiobooks
+              # too. Kapowarr owns `comics`, LazyLibrarian `audiobooks`.
+              - path: /media/comics
+                subPath: comics
+              - path: /media/audiobooks
+                subPath: audiobooks
+              # The whole tree, not a subPath of shelfmark/ebooks: that folder
+              # may not exist yet, and kubelet would create a missing subPath
+              # as root.
+              - path: /media/downloads
+                subPath: downloads
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          app:
+            app:
+              - path: /tmp
+                subPath: app
+            mariadb:
+              - path: /tmp
+                subPath: mariadb
+      # mysqld.sock and the pid file. Shared with mariadb-passwords, which
+      # talks to the server over this socket.
+      mysqld-run:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 16Mi
+        advancedMounts:
+          app:
+            mariadb:
+              - path: /run/mysqld
+            mariadb-passwords:
+              - path: /run/mysqld
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # local-user only, no authentik outpost -- and so no carve-outs.
+          # Grimmory authenticates every request itself (local users or OIDC),
+          # and the non-browser clients bring their own credentials, which a
+          # forward-auth hop would reject:
+          #   /api/v1/opds/...      OPDS readers, HTTP Basic (per-user OPDS users)
+          #   /api/koreader/...     KOReader progress sync (KOReader users)
+          #   /api/kobo/<token>/... Kobo sync, token in the path
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

@@ -41,7 +41,7 @@ spec:
           server:
             image:
               repository: stremio/server
-              tag: v4.22.1@sha256:29c1a1373526b64feaf27c8011073c8245391ab1a9a01cacd0b93a993a5c81fb
+              tag: v4.22.4@sha256:bfce9268487bcf4b7baebc79e3504e14c2fac5a19aab2dbd722b151276f9db22
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}
@@ -70,7 +70,7 @@ spec:
           web:
             image:
               repository: tsaridas/stremio-docker
-              tag: v1.3.13@sha256:f93826539d0607a662b7cfdeeb56a364abdb6cbc02e32b14f0e3179c7674ac31
+              tag: v1.3.14@sha256:283d35e905a1a0a90db0ec36d667af3203980afb80790feed3e5e2bff5e3e6af
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}

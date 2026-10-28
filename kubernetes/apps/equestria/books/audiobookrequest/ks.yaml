@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app audiobookrequest
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # No truenas-volumes: ABR never touches a file. A request is handed to
+    # Prowlarr, Prowlarr hands it to its own download client, and nothing in
+    # ABR moves, renames or imports what lands (README, "Out of Scope").
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
+  path: ./kubernetes/apps/equestria/books/audiobookrequest
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # Postgres is first-class upstream, not a community patch: ABR_DB__USE_POSTGRES
+    # and the ABR_DB__POSTGRES_* settings are in app/internal/env_settings.py,
+    # and upstream CI runs every Alembic migration up, down and up again
+    # against a real Postgres (.github/workflows/build.yaml, "Check PSQL
+    # Alembic Migrations"). The migrations need no extension and create no
+    # role -- only tables and enum types in `public`, which the app's own role
+    # owns -- so the plain login role this component makes is enough.
+    #
+    # BRAND-NEW DATABASE, so the new-app ordering trap in
+    # components/postgres/ks.yaml applies: `stacks/system` can try to create
+    # `database/static-roles/audiobookrequest` before CNPG has applied the
+    # DatabaseRole and stall once on `role "audiobookrequest" does not exist`.
+    # Recovery is that file's ORDER OF OPERATIONS block, and
+    # docs/runbooks/media-stack-postgres-migration.md section 4.1.
+    #
+    # Rotation gates (components/postgres/AGENTS.md): reloader is on the
+    # Deployment, the ABR_DB__* values arrive from ${APP}-env via envFrom and
+    # are read once at import (app/util/db.py), and a cold boot is one
+    # `alembic upgrade heads` plus uvicorn, well inside the startup probe.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    # No components/volsync, deliberately. With Postgres on, EVERYTHING ABR
+    # keeps is in the database: users, the session-signing secret, the OIDC
+    # client, the Prowlarr and Audiobookshelf credentials, notification
+    # targets, requests and the Audible cache all live in its `config` and
+    # model tables (app/util/cache.py StringConfigCache -> models.Config).
+    # Nothing else in the code writes under ABR_APP__CONFIG_DIR, so /config is
+    # an emptyDir and the nightly pg_dump is the backup.
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # No TAILSCALE_MIDDLEWARE override: login is ABR's own OIDC, so the
+      # tailnet takes the default tailscale-local chain, the same posture as
+      # the internal route's local-user. Putting the authentik outpost in front
+      # as well would be a second login for nothing -- and would break ABR's
+      # API-key REST endpoints for scripts.

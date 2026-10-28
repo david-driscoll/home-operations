@@ -30,7 +30,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: update-pruner
-              image: bitnami/kubectl@sha256:26837860fa038ce221416ee0fd211a0ee300f67e24e88faecca0423088400b99
+              image: bitnami/kubectl@sha256:6d9e8ad566a6d2dcb4a7a6120d030bd65bddbcc952246f4b31022834d9be7e02
               command: ["/bin/bash", "-c"]
               args:
                 - |
@@ -43,8 +43,8 @@ spec:
                   echo "$(date -u): Pruning auto.pulumi.com/Update older than ${KEEP_DAYS}d"
 
                   # Every Stack's CURRENT update is protected regardless of age.
-                  # This matters for the once-a-day stacks: home-operations,
-                  # ocracoke and vault run on resyncFrequencySeconds=86400, so a
+                  # This matters for the once-a-day stacks: home-operations
+                  # and ocracoke run on resyncFrequencySeconds=86400, so a
                   # stack that has not changed in a while can legitimately have
                   # its newest Update be older than the cutoff. Deleting that one
                   # would strip the object `status.lastUpdate` points at.

@@ -1,3 +1,9 @@
+# Line endings: LF everywhere, whatever the machine's core.autocrlf says.
+# The eol attribute outranks core.autocrlf, so a checkout made under a stale
+# `autocrlf = true` (or by a tool carrying its own git config) still writes LF.
+* text=auto eol=lf
+.DS_Store binary
+
 # Crew: union merge for append-only team state files
 .crew/decisions.md merge=union
 .crew/agents/*/history.md merge=union

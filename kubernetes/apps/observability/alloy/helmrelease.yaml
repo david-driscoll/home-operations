@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 1.13.1
-    digest: sha256:24dfae9bf6ede987fac311dea1700c992c4c93a0e62ab0b3f9114433fd617b56
+    tag: 1.14.3
+    digest: sha256:3b3e363aef36d105bf6365febeac148cd36093fae98aff8d963d0687fceacbe5
   url: oci://ghcr.io/home-operations/charts-mirror/alloy
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -20,6 +20,12 @@ metadata:
   name: alloy
 spec:
   interval: 1h
+  # Not the 5m default. A DaemonSet rolls one node at a time (maxUnavailable 1)
+  # and each pod costs an image pull plus readiness plus minReadySeconds, so
+  # seven nodes take ~5-6 minutes on a fresh tag. At 5m Helm gave up with 6/7
+  # updated, rolled back, and after the retries the release sat Stalled and
+  # blocked loki and talos-logs behind it (2026-10-23/24).
+  timeout: 15m
   chartRef:
     kind: OCIRepository
     name: alloy

@@ -47,7 +47,7 @@ const OUTPOST_NAMESPACE = "stargate-command";
 
 export type KubernetesCluster = KubernetesClusterDefinition & { kubeConfig: string };
 
-function equestriaDefinition(): KubernetesClusterDefinition {
+export function equestriaDefinition(): KubernetesClusterDefinition {
   const entry = CLUSTERS.find(c => c.key === "equestria");
   if (entry?.type !== "kubernetes") throw new Error("clusters/equestria.yaml is missing or is not `type: kubernetes`");
   // Loader bookkeeping, not part of the definition the store used to return.

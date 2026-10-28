@@ -51,7 +51,7 @@ spec:
           *app :
             image:
               repository: ghcr.io/btsouth/toolport-gateway
-              tag: v2.1.0@sha256:5fd45d7e270e433961fbba37e94ae7e4cec3cac4017d3708def77b4a8341bd5c
+              tag: v2.3.0@sha256:75b6ac30e7417d912a18bf8d9dbf2d2fc4d93c19ab1a4d2fb5c6d5fabd741ce6
             # No command/args: the image's ENTRYPOINT is already
             # `docker-entrypoint.sh toolport-gateway --http 8765` (the script
             # only warns when /data is not writable, then execs). Use the
@@ -166,7 +166,7 @@ spec:
             image:
               # The same pin as agent-tools-servers/tdarr.yaml's MCPServer.
               repository: oven/bun
-              tag: 1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373
+              tag: 1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a
             command: ["bun", "/watchdog/watchdog.mjs"]
             env:
               HOME: /tmp
