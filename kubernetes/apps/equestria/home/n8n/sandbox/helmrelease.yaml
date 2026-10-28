@@ -75,7 +75,7 @@ spec:
       # Pulled by the runner's inner dockerd on first use, not by kubelet.
       sandboxImage:
         repository: ghcr.io/n8n-io/n8n-sandbox-service-sandbox
-        tag: 1.11.0@sha256:035c65acdf566d234b32c1f013d2ffe0668fdf2fe33ab7aad083ba5d12f3f1a0
+        tag: 1.12.0@sha256:2a310837fb48562801325217ff26dbae05b68ea9b9a8d1b66704131a53908f58
       dockerDataRoot:
         emptyDir:
           sizeLimit: 20Gi
