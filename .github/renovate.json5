@@ -1308,10 +1308,12 @@
       // after the baseline and before the hold list, so the hold list still
       // wins. Add a name to opt one more dependency in.
       //
-      // NOT here, deliberately: the Pulumi.yaml provider pins
-      // (ubiquiti-community/unifi and friends). A bump there is half a change
-      // until the SDK is regenerated -- see that customManager below -- and
-      // an automerge would land exactly the half that silently does nothing.
+      // The Pulumi.yaml provider pins are opted in one at a time, not as a
+      // class: a bump there is half a change until the SDK is regenerated
+      // (see that customManager below), which `pulumi-sdk-regen` now does on
+      // both copies -- .github/workflows and .forgejo/workflows -- before the
+      // `pulumi-sdk-regen` status goes green. Only ubiquiti-community/unifi is
+      // in; the rest still wait for a human.
       description: "Automerge named dependencies (minor/patch/digest) once CI is green",
       matchRepositories: [
         "david-driscoll/home-operations",
@@ -1400,7 +1402,26 @@
         // regenerate -- but a bump IS applied to live infrastructure by the
         // next Stack run, with no watchdog revert outside kubernetes/**.
         "@axnic/pulumi-garage",
-        "@pulumi/cloudflare"
+        "@pulumi/cloudflare",
+        // kubernetes/apps/observability/thanos: outside the app rules' scope
+        "quay.io/thanos/thanos",
+        // mise tools: .config/mise.toml (fnox) and agentboard's/paseo's
+        // mise.toml (uv), by upstream repo
+        "jdx/fnox",
+        "astral-sh/uv",
+        // kubernetes/apps/equestria/home/meilisearch: the Helm chart only. On
+        // the app rules' never-unattended list because the server migrates its
+        // data on start; opted in by hand, like immich.
+        "meilisearch",
+        // kubernetes/apps/kube-system/reflector: the Helm chart
+        "reflector",
+        // kubernetes/apps/tailscale-system/golink: tracks `main` by digest
+        "ghcr.io/tailscale/golink",
+        // Pulumi.yaml `packages:` pin of the bridged unifi provider. Merges
+        // only with the SDK regenerated onto the branch; like the npm
+        // providers above it is applied to live infrastructure by the next
+        // stack run, with no watchdog revert outside kubernetes/**.
+        "ubiquiti-community/unifi"
       ],
       automerge: true,
       automergeType: "pr",
@@ -1443,8 +1464,7 @@
       // EVERYTHING THAT IS DIFFERENT ON THE FORGE'S COPY, in one rule. No
       // matcher but the repository, so it covers every update there, and last
       // in the list so that each value below wins over the same setting in
-      // any rule above. (The rule just before this one is the other
-      // mirror-only rule; it stays separate because it matches one file.)
+      // any rule above.
       description: "Settings for the Forgejo copy of this repository",
       matchRepositories: [
         "github-mirror/home-operations"
@@ -1561,9 +1581,10 @@
       // while the diff reads like an upgrade. Nothing fails; `pulumi up` simply
       // keeps running the old version.
       //
-      // .github/workflows/pulumi-sdk-regen.yaml now completes it: on Renovate's
-      // PR it runs `pulumi install` (which regenerates sdks/ from this file
-      // and leaves the flow-style `parameters` alone), commits the result back
+      // .github/workflows/pulumi-sdk-regen.yaml (and its copy for the forge,
+      // .forgejo/workflows/pulumi-sdk-regen.yml) now completes it: on
+      // Renovate's PR it runs `pulumi install` (which regenerates sdks/ from
+      // this file and leaves the flow-style `parameters` alone), commits the result back
       // to the branch, and fails the `pulumi-sdk-regen` status if the new SDK
       // breaks a type in components/ or stacks/. Wait for that commit before
       // merging one of these. By hand, `pulumi install` does the same; avoid
