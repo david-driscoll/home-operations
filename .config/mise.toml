@@ -84,7 +84,7 @@ fnox = "v1.43.0"
 # `python` above is also required (pipx builds the venv with it) and was
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
-pipx = "1.18.4"
+pipx = "1.18.5"
 "pipx:graphifyy" = "0.9.96"
 
 [tasks.codegen]
