@@ -22,7 +22,7 @@
   "dependencies": {
     "@axnic/pulumi-garage": "^1.1.2",
     "@kubernetes/client-node": "^2.0.1",
-    "@llamaduck/forgejo-ts": "^15.0.10",
+    "@llamaduck/forgejo-ts": "^15.0.11",
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
     "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/command": "^1.2.1",
