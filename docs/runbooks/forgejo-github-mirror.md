@@ -172,6 +172,7 @@ copies instead, on the estate's runner:
 | --- | --- | --- |
 | `.github/workflows/flux-local.yaml` | `.forgejo/workflows/flate.yml` | `flate test`, `flate diff` (posted as a comment), `scripts/image-check flate` on the rendered diff, and `eso-values-lint` |
 | `.github/workflows/image-check.yaml` | `.forgejo/workflows/image-check.yml` | `scripts/image-check compose` for `docker/**` |
+| `.github/workflows/pulumi-sdk-regen.yaml` | `.forgejo/workflows/pulumi-sdk-regen.yml` | on a Renovate bump of a provider in the root `Pulumi.yaml`: `pulumi install`, commit the regenerated `sdks/` onto the branch as `renovate[bot]`, and post the `pulumi-sdk-regen` status once the type-check passes |
 
 Same commands, same scripts, same pinned actions. They are still two files per
 check, kept in step by hand — Forgejo reads `.forgejo/workflows` and GitHub
@@ -179,7 +180,7 @@ reads `.github/workflows`, and neither reads the other's. A check added on one
 side only is a check half the pull requests skip. The header of `flate.yml`
 lists where the forge copy differs and why.
 
-Two GitHub workflows have **no** copy on the forge:
+One GitHub workflow has **no** copy on the forge:
 
 - **`renovate-watchdog`**, the post-merge half of the automerge gate
   (`docs/renovate-automerge.md`). It finds the pull request to revert by
@@ -187,10 +188,6 @@ Two GitHub workflows have **no** copy on the forge:
   that fails after a forge automerge still raises the usual Flux alert, but
   nothing reverts it or puts the app on the hold list. The hold list itself
   applies to both copies.
-- **`pulumi-sdk-regen`**, which completes a provider bump in the root
-  `Pulumi.yaml`. Rather than raise half a change, the forge's Renovate does not
-  raise those at all (the last rule in `.github/renovate.json5`); Mend's pull
-  request on GitHub for the same bump is completed as before.
 
 The runner's Docker-in-Docker container is allowed 16Gi for this
 (`kubernetes/apps/coder/forgejo-runner/helmrelease.yaml`): a cold `flate`
