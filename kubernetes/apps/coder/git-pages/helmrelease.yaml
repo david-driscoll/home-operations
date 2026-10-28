@@ -59,7 +59,7 @@ spec:
               # The image also bundles Caddy and supervisord for a standalone
               # deployment; only the git-pages binary is used here.
               repository: codeberg.org/git-pages/git-pages
-              tag: 0.10.0@sha256:f52b34373fbe41785a809a49c0506f1a9951da17815a3db79c652810eb0285fb
+              tag: 0.10.1@sha256:882733e3fc4b5cde8cb3f83b786f8b85854c9ad951662b64fca23cbd34f79dc9
             command: ["git-pages"]
             args: ["-config", "/config/config.toml"]
             env:
