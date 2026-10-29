@@ -4,8 +4,15 @@ module.exports = {
             async function ({ app }, config) {
                 const { dirname, resolve } = require("node:path");
                 const { randomBytes } = require("node:crypto");
-                const { hash } = require("bcryptjs");
-                const { issueCookie } = require(resolve(dirname(require.resolve("n8n")), "auth/jwt"));
+                const n8nDir = dirname(require.resolve("n8n"));
+                // n8n's own dependencies, resolved from n8n rather than /hooks so
+                // the hook shares n8n's module instances -- above all the DI
+                // Container, whose registry is per module instance.
+                const fromN8n = id => require(require.resolve(id, { paths: [n8nDir] }));
+                const { hash } = fromN8n("bcryptjs");
+                const { Container } = fromN8n("@n8n/di");
+                const { UserRepository } = fromN8n("@n8n/db");
+                const { issueCookie } = require(resolve(n8nDir, "auth/jwt"));
 
                 // Trust the proxy for correct X-Forwarded-* handling and rate limiting
                 app.set("trust proxy", 1);
@@ -13,8 +20,12 @@ module.exports = {
                 const ignoreAuth = /^\/(assets|healthz|webhook|rest\/oauth2-credential|health)/;
                 const cookieName = "n8n-auth";
 
-                const UserRepo = this.dbCollections.User;
-                const RoleRepo = this.dbCollections.Role;
+                // NOT this.dbCollections.User: since n8n 3.0 (n8n-io/n8n#42122) that
+                // is a plain Repository<Person> with no createUserWithProject, so a
+                // first SSO login threw. The real UserRepository is what n8n's own
+                // SAML login uses (sso-saml/saml-helpers.ts). dbCollections.Role is
+                // gone too.
+                const UserRepo = Container.get(UserRepository);
 
                 const { stack } = app.router;
                 const idx = stack.findIndex(l => l?.name === "cookieParser");
@@ -78,7 +89,8 @@ module.exports = {
 
                             const userData = {
                                 email: userEmail,
-                                role: "global:member", // string-based role is valid for createUserWithProject
+                                // role is a relation keyed by slug (User.roleSlug)
+                                role: { slug: "global:member" },
                                 password: hashed,
                                 firstName: firstName,
                                 lastName: lastName,
@@ -107,19 +119,13 @@ module.exports = {
                             }
                         }
 
-                        // 4) Ensure 'user.role' exists (critical in 1.112.6, which dereferences role.slug)
+                        // 4) Ensure 'user.role' exists (cookie issuance dereferences role.slug)
                         if (!user.role) {
-                            // Try to load by roleId
-                            if (user.roleId && RoleRepo) {
-                                user.role = await RoleRepo.findOneBy({ id: user.roleId });
-                            } else {
-                                // As a last resort, reload the user with relations
-                                const reloaded = await UserRepo.findOne({
-                                    where: { id: user.id },
-                                    relations: ["role"],
-                                });
-                                if (reloaded) user = reloaded;
-                            }
+                            const reloaded = await UserRepo.findOne({
+                                where: { id: user.id },
+                                relations: ["role"],
+                            });
+                            if (reloaded) user = reloaded;
                         }
 
                         if (!user.role?.slug) {
