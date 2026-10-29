@@ -1,7 +1,7 @@
 #!/bin/sh
-# The `prepull` container's command (../scaledjob.yaml): pull the job images
-# into this pod's Docker daemon while the runner waits for a job, so the job
-# does not start with a 1.5 GB download.
+# Run in the background by the janitor sidecar (./janitor.sh): pull the job
+# images into this pod's Docker daemon while the runner waits for a job, so
+# the job does not start with a 1.5 GB download.
 #
 # ONLY FOR A POD THAT IS STILL WAITING. It first gives the runner
 # PREPULL_DELAY_SECONDS to take a job, watching the log run-job.sh writes to
@@ -16,9 +16,10 @@
 # PREPULL_IMAGES is a space-separated list. Docker is already up when this
 # starts: the dind sidecar's startup probe gates every other container.
 #
-# ALWAYS EXITS 0. In a Job pod a container that fails fails the pod, and a
-# pull that did not work only means the runner pulls the image itself. If a
-# job arrives mid-pull, Docker serves both from the one download.
+# ALWAYS EXITS 0: a pull that did not work only means the runner pulls the
+# image itself. If a job arrives mid-pull, Docker serves both from the one
+# download. A pod reused for later jobs keeps what was pulled
+# (./run-job.sh), so this matters only for a pod's first job.
 set -u
 
 log=/data/one-job.log

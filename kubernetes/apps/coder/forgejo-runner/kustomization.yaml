@@ -37,6 +37,7 @@ configMapGenerator:
   # ScaledJob names it literally, and each pod is new anyway.
   - name: forgejo-runner-scripts
     files:
+      - janitor.sh=./resources/janitor.sh
       - prepull.sh=./resources/prepull.sh
       - run-job.sh=./resources/run-job.sh
     options:
