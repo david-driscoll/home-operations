@@ -34,6 +34,6 @@ spec:
       # This service is scaled to 0 overnight, so a failed check in that window
       # is expected rather than an incident.
       maintenance-windows:
-        - start: "02:00"
-          duration: 7h
+        - start: "01:00"
+          duration: 6h
           timezone: ${TIMEZONE}

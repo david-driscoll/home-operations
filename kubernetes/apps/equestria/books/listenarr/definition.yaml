@@ -43,9 +43,9 @@ spec:
       conditions:
         - "[STATUS] == 200"
       # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
-      # The estate-default downscaler window scales this to 0 between 02:00 and
-      # 09:00, so a failed check in that window is expected, not an incident.
+      # The estate-default downscaler window scales this to 0 between 01:00 and
+      # 07:00, so a failed check in that window is expected, not an incident.
       maintenance-windows:
-        - start: "02:00"
-          duration: 7h
+        - start: "01:00"
+          duration: 6h
           timezone: ${TIMEZONE}

@@ -32,7 +32,7 @@ spec:
     #
     # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md):
     # `equestria` is the shed-list namespace, so this workload is scaled to 0
-    # between 02:00 and 09:00. That window was not a factor on the Dockge host,
+    # between 01:00 and 07:00. That window was not a factor on the Dockge host,
     # and is new with this migration.
     - group: Applications
       url: *url
@@ -40,8 +40,8 @@ spec:
       conditions:
         - "[STATUS] == 200"
       maintenance-windows: &shed
-        - start: "02:00"
-          duration: 7h
+        - start: "01:00"
+          duration: 6h
           timezone: ${TIMEZONE}
     # Deeper: /api/v1/health has no auth dependency and is proxied by nginx to
     # the backend, so this covers frontend -> nginx -> backend in one check.

@@ -5,7 +5,7 @@
 # Give ONE app a scheduled window that differs from the estate default.
 #
 # MOST APPS DO NOT NEED THIS. go-kube-downscaler is opt-OUT with a global
-# `DEFAULT_DOWNTIME` of `Mon-Sun 02:00-09:00 ${TIMEZONE}`, so every workload in
+# `DEFAULT_DOWNTIME` of `Mon-Sun 01:00-07:00 ${TIMEZONE}`, so every workload in
 # every non-excluded namespace already sheds nightly with no annotation at all.
 # Reach for one of these components only when an app needs a DIFFERENT window --
 # not to opt an app in, which is already the default.

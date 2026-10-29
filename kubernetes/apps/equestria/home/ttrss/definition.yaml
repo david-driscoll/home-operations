@@ -47,3 +47,11 @@ spec:
         # that sends no Accept header, and nothing in this pod does that.
         - "[STATUS] == 200"
         - "[BODY] == pat(*<title>Tiny Tiny RSS : Login</title>*)"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 01:00 and 07:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "01:00"
+          duration: 6h
+          timezone: ${TIMEZONE}
