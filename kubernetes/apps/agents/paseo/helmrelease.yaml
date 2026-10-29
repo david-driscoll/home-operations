@@ -98,6 +98,9 @@ spec:
               # through to the shims. The npm prefix is last, for anything an
               # agent `npm install -g`s itself.
               PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/paseo/.local/share/mise/shims:/home/paseo/.local/bin:/home/paseo/.local/npm/bin
+              # libatomic.so.1 for mise's node >= 25, which the image lacks;
+              # ./resources/install-tools.sh puts it there.
+              LD_LIBRARY_PATH: /home/paseo/.local/lib/libatomic
               NPM_CONFIG_PREFIX: /home/paseo/.local/npm
               # The Claude Code version ./resources/mise.toml pins is the one
               # that runs. Its updater would `npm install -g` a newer copy

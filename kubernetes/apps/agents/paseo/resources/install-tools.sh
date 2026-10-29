@@ -17,6 +17,30 @@ if [ "$have" != "$want" ]; then
   curl -fsSL https://mise.run | MISE_VERSION="v$want" sh
 fi
 
+# Node >= 25's official Linux builds -- what mise installs -- link
+# libatomic.so.1, which this bookworm image lacks: without it `node` fails to
+# load, and with it every `npm:` tool below. There is no root for apt-get
+# install, so take the .deb the way ./sshd.sh takes openssh-server: apt as 1000
+# into private state (signatures still checked), unpacked onto the home volume.
+# LD_LIBRARY_PATH (../helmrelease.yaml) points at it. Kept until a newer one
+# lands, so a failed refresh never takes node away.
+libatomic_dir=/home/paseo/.local/lib/libatomic
+if [ ! -e "$libatomic_dir/libatomic.so.1" ]; then
+  echo "==> installing libatomic1 into $libatomic_dir"
+  apt_state="$(mktemp -d)"
+  mkdir -p "$apt_state/lists/partial" "$apt_state/cache/archives/partial" "$apt_state/debs"
+  apt_private() {
+    apt-get -o Dir::State::Lists="$apt_state/lists" -o Dir::Cache="$apt_state/cache" \
+      -o Debug::NoLocking=1 -o APT::Sandbox::User="$(id -un)" "$@"
+  }
+  apt_private -qq update
+  (cd "$apt_state/debs" && apt_private -qq download libatomic1)
+  dpkg-deb -x "$apt_state"/debs/libatomic1_*.deb "$apt_state/root"
+  mkdir -p "$libatomic_dir"
+  cp -a "$apt_state"/root/usr/lib/x86_64-linux-gnu/libatomic.so.1* "$libatomic_dir/"
+  rm -rf "$apt_state"
+fi
+
 # Shims FIRST, for the install only. `npm.shell_out` runs whichever `npm` is
 # on PATH, and the pod's PATH puts the image's node 22 / npm 10 ahead of the
 # shims. mise honours `allow_builds` only with npm >= 11.16; given npm 10 it
