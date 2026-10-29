@@ -90,7 +90,7 @@ spec:
               MISE_INSTALL_PATH: /home/paseo/.local/bin/mise
               # The mise binary itself, read by ./resources/install-tools.sh.
               # renovate: datasource=github-releases depName=jdx/mise
-              MISE_VERSION: "v2026.10.21"
+              MISE_VERSION: "v2026.10.22"
               # The system dirs FIRST: the daemon must keep running on the
               # image's node (its native modules are built for it), not on
               # the newer node mise installs for the `npm:` tools. Everything
