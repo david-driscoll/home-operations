@@ -68,8 +68,7 @@ class Wlan extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState;
-            resourceInputs["apGroupIds"] = state?.apGroupIds;
-            resourceInputs["apGroupMode"] = state?.apGroupMode;
+            resourceInputs["apGroup"] = state?.apGroup;
             resourceInputs["bandsteeringMode"] = state?.bandsteeringMode;
             resourceInputs["bcFilterLists"] = state?.bcFilterLists;
             resourceInputs["bssTransition"] = state?.bssTransition;
@@ -102,8 +101,9 @@ class Wlan extends pulumi.CustomResource {
             resourceInputs["privatePresharedKeys"] = state?.privatePresharedKeys;
             resourceInputs["privatePresharedKeysEnabled"] = state?.privatePresharedKeysEnabled;
             resourceInputs["proxyArp"] = state?.proxyArp;
-            resourceInputs["radiusMacAuthEnabled"] = state?.radiusMacAuthEnabled;
-            resourceInputs["radiusProfileId"] = state?.radiusProfileId;
+            resourceInputs["radius"] = state?.radius;
+            resourceInputs["roamingAssistant6e"] = state?.roamingAssistant6e;
+            resourceInputs["roamingAssistantNa"] = state?.roamingAssistantNa;
             resourceInputs["schedules"] = state?.schedules;
             resourceInputs["security"] = state?.security;
             resourceInputs["site"] = state?.site;
@@ -114,12 +114,8 @@ class Wlan extends pulumi.CustomResource {
             resourceInputs["vlanEnabled"] = state?.vlanEnabled;
             resourceInputs["wlanBand"] = state?.wlanBand;
             resourceInputs["wlanBands"] = state?.wlanBands;
-            resourceInputs["wpa3Enhanced192"] = state?.wpa3Enhanced192;
-            resourceInputs["wpa3FastRoaming"] = state?.wpa3FastRoaming;
-            resourceInputs["wpa3Support"] = state?.wpa3Support;
-            resourceInputs["wpa3Transition"] = state?.wpa3Transition;
-            resourceInputs["wpaEnc"] = state?.wpaEnc;
-            resourceInputs["wpaMode"] = state?.wpaMode;
+            resourceInputs["wpa"] = state?.wpa;
+            resourceInputs["wpa3"] = state?.wpa3;
         }
         else {
             const args = argsOrState;
@@ -129,8 +125,7 @@ class Wlan extends pulumi.CustomResource {
             if (args?.userGroupId === undefined && !opts.urn) {
                 throw new Error("Missing required property 'userGroupId'");
             }
-            resourceInputs["apGroupIds"] = args?.apGroupIds;
-            resourceInputs["apGroupMode"] = args?.apGroupMode;
+            resourceInputs["apGroup"] = args?.apGroup;
             resourceInputs["bandsteeringMode"] = args?.bandsteeringMode;
             resourceInputs["bcFilterLists"] = args?.bcFilterLists;
             resourceInputs["bssTransition"] = args?.bssTransition;
@@ -163,8 +158,9 @@ class Wlan extends pulumi.CustomResource {
             resourceInputs["privatePresharedKeys"] = args?.privatePresharedKeys;
             resourceInputs["privatePresharedKeysEnabled"] = args?.privatePresharedKeysEnabled;
             resourceInputs["proxyArp"] = args?.proxyArp;
-            resourceInputs["radiusMacAuthEnabled"] = args?.radiusMacAuthEnabled;
-            resourceInputs["radiusProfileId"] = args?.radiusProfileId;
+            resourceInputs["radius"] = args?.radius;
+            resourceInputs["roamingAssistant6e"] = args?.roamingAssistant6e;
+            resourceInputs["roamingAssistantNa"] = args?.roamingAssistantNa;
             resourceInputs["schedules"] = args?.schedules;
             resourceInputs["security"] = args?.security;
             resourceInputs["site"] = args?.site;
@@ -175,12 +171,8 @@ class Wlan extends pulumi.CustomResource {
             resourceInputs["vlanEnabled"] = args?.vlanEnabled;
             resourceInputs["wlanBand"] = args?.wlanBand;
             resourceInputs["wlanBands"] = args?.wlanBands;
-            resourceInputs["wpa3Enhanced192"] = args?.wpa3Enhanced192;
-            resourceInputs["wpa3FastRoaming"] = args?.wpa3FastRoaming;
-            resourceInputs["wpa3Support"] = args?.wpa3Support;
-            resourceInputs["wpa3Transition"] = args?.wpa3Transition;
-            resourceInputs["wpaEnc"] = args?.wpaEnc;
-            resourceInputs["wpaMode"] = args?.wpaMode;
+            resourceInputs["wpa"] = args?.wpa;
+            resourceInputs["wpa3"] = args?.wpa3;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         const secretOpts = { additionalSecretOutputs: ["passphrase", "passphraseWo"] };

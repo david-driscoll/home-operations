@@ -47,13 +47,9 @@ export class RadiusProfile extends pulumi.CustomResource {
      */
     declare public readonly authServers: pulumi.Output<outputs.RadiusProfileAuthServer[] | undefined>;
     /**
-     * Specifies whether to use interim_update.
+     * RADIUS interim accounting update settings.
      */
-    declare public readonly interimUpdateEnabled: pulumi.Output<boolean>;
-    /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
-     */
-    declare public readonly interimUpdateInterval: pulumi.Output<string>;
+    declare public readonly interimUpdate: pulumi.Output<outputs.RadiusProfileInterimUpdate>;
     /**
      * The name of the profile.
      */
@@ -72,13 +68,9 @@ export class RadiusProfile extends pulumi.CustomResource {
      */
     declare public readonly useUsgAuthServer: pulumi.Output<boolean>;
     /**
-     * Specifies whether to use vlan on wired connections.
+     * Dynamic VLAN assignment settings.
      */
-    declare public readonly vlanEnabled: pulumi.Output<boolean>;
-    /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
-     */
-    declare public readonly vlanWlanMode: pulumi.Output<string>;
+    declare public readonly vlan: pulumi.Output<outputs.RadiusProfileVlan>;
 
     /**
      * Create a RadiusProfile resource with the given unique name, arguments, and options.
@@ -96,29 +88,25 @@ export class RadiusProfile extends pulumi.CustomResource {
             resourceInputs["accountingEnabled"] = state?.accountingEnabled;
             resourceInputs["acctServers"] = state?.acctServers;
             resourceInputs["authServers"] = state?.authServers;
-            resourceInputs["interimUpdateEnabled"] = state?.interimUpdateEnabled;
-            resourceInputs["interimUpdateInterval"] = state?.interimUpdateInterval;
+            resourceInputs["interimUpdate"] = state?.interimUpdate;
             resourceInputs["name"] = state?.name;
             resourceInputs["site"] = state?.site;
             resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["useUsgAcctServer"] = state?.useUsgAcctServer;
             resourceInputs["useUsgAuthServer"] = state?.useUsgAuthServer;
-            resourceInputs["vlanEnabled"] = state?.vlanEnabled;
-            resourceInputs["vlanWlanMode"] = state?.vlanWlanMode;
+            resourceInputs["vlan"] = state?.vlan;
         } else {
             const args = argsOrState as RadiusProfileArgs | undefined;
             resourceInputs["accountingEnabled"] = args?.accountingEnabled;
             resourceInputs["acctServers"] = args?.acctServers;
             resourceInputs["authServers"] = args?.authServers;
-            resourceInputs["interimUpdateEnabled"] = args?.interimUpdateEnabled;
-            resourceInputs["interimUpdateInterval"] = args?.interimUpdateInterval;
+            resourceInputs["interimUpdate"] = args?.interimUpdate;
             resourceInputs["name"] = args?.name;
             resourceInputs["site"] = args?.site;
             resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["useUsgAcctServer"] = args?.useUsgAcctServer;
             resourceInputs["useUsgAuthServer"] = args?.useUsgAuthServer;
-            resourceInputs["vlanEnabled"] = args?.vlanEnabled;
-            resourceInputs["vlanWlanMode"] = args?.vlanWlanMode;
+            resourceInputs["vlan"] = args?.vlan;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(RadiusProfile.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -142,13 +130,9 @@ export interface RadiusProfileState {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
-     * Specifies whether to use interim_update.
+     * RADIUS interim accounting update settings.
      */
-    interimUpdateEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
-     */
-    interimUpdateInterval?: pulumi.Input<string | undefined>;
+    interimUpdate?: pulumi.Input<inputs.RadiusProfileInterimUpdate | undefined>;
     /**
      * The name of the profile.
      */
@@ -167,13 +151,9 @@ export interface RadiusProfileState {
      */
     useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether to use vlan on wired connections.
+     * Dynamic VLAN assignment settings.
      */
-    vlanEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
-     */
-    vlanWlanMode?: pulumi.Input<string | undefined>;
+    vlan?: pulumi.Input<inputs.RadiusProfileVlan | undefined>;
 }
 
 /**
@@ -193,13 +173,9 @@ export interface RadiusProfileArgs {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
-     * Specifies whether to use interim_update.
+     * RADIUS interim accounting update settings.
      */
-    interimUpdateEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
-     */
-    interimUpdateInterval?: pulumi.Input<string | undefined>;
+    interimUpdate?: pulumi.Input<inputs.RadiusProfileInterimUpdate | undefined>;
     /**
      * The name of the profile.
      */
@@ -218,11 +194,7 @@ export interface RadiusProfileArgs {
      */
     useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether to use vlan on wired connections.
+     * Dynamic VLAN assignment settings.
      */
-    vlanEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
-     */
-    vlanWlanMode?: pulumi.Input<string | undefined>;
+    vlan?: pulumi.Input<inputs.RadiusProfileVlan | undefined>;
 }

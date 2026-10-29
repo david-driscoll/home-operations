@@ -18,15 +18,11 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is Wlan;
     /**
-     * List of AP group IDs to apply this WLAN to.
+     * Access point group assignment.
      */
-    readonly apGroupIds: pulumi.Output<string[] | undefined>;
+    readonly apGroup: pulumi.Output<outputs.WlanApGroup>;
     /**
-     * Access point group mode.
-     */
-    readonly apGroupMode: pulumi.Output<string>;
-    /**
-     * Deprecated and no longer applied. UniFi moved band steering off the WLAN object: `bandsteering_mode` is absent from the controller's WLAN field definitions as of Network 10.6, while it is still present on the device, so the setting now lives on `unifi.Device`'s `bandsteering_mode` instead. This attribute is neither read nor written and always reads back null.
+     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (`off`, `equal`, `prefer_5g`), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set `bandsteering_mode` on the `unifi.Device` resource for the AP instead. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -60,7 +56,7 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly enabled: pulumi.Output<boolean>;
     /**
-     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3_support = false`, `wpa3_transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
+     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3.support = false`, `wpa3.transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
      */
     readonly enhancedIot: pulumi.Output<boolean>;
     /**
@@ -153,13 +149,17 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly proxyArp: pulumi.Output<boolean>;
     /**
-     * Enable RADIUS MAC authentication.
+     * RADIUS settings.
      */
-    readonly radiusMacAuthEnabled: pulumi.Output<boolean>;
+    readonly radius: pulumi.Output<outputs.WlanRadius>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
+     * 6 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP.
      */
-    readonly radiusProfileId: pulumi.Output<string>;
+    readonly roamingAssistant6e: pulumi.Output<outputs.WlanRoamingAssistant6e>;
+    /**
+     * 5 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
+     */
+    readonly roamingAssistantNa: pulumi.Output<outputs.WlanRoamingAssistantNa>;
     /**
      * Start and stop schedules for the WLAN
      */
@@ -198,29 +198,13 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly wlanBands: pulumi.Output<string[]>;
     /**
-     * Enable WPA3 Enterprise 192-bit mode.
+     * WPA mode and encryption settings.
      */
-    readonly wpa3Enhanced192: pulumi.Output<boolean>;
+    readonly wpa: pulumi.Output<outputs.WlanWpa>;
     /**
-     * Enable WPA3 fast roaming (802.11r).
+     * WPA3 settings.
      */
-    readonly wpa3FastRoaming: pulumi.Output<boolean>;
-    /**
-     * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
-     */
-    readonly wpa3Support: pulumi.Output<boolean>;
-    /**
-     * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3_support` must be true).
-     */
-    readonly wpa3Transition: pulumi.Output<boolean>;
-    /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
-     */
-    readonly wpaEnc: pulumi.Output<string>;
-    /**
-     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`.
-     */
-    readonly wpaMode: pulumi.Output<string>;
+    readonly wpa3: pulumi.Output<outputs.WlanWpa3>;
     /**
      * Create a Wlan resource with the given unique name, arguments, and options.
      *
@@ -235,15 +219,11 @@ export declare class Wlan extends pulumi.CustomResource {
  */
 export interface WlanState {
     /**
-     * List of AP group IDs to apply this WLAN to.
+     * Access point group assignment.
      */
-    apGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    apGroup?: pulumi.Input<inputs.WlanApGroup | undefined>;
     /**
-     * Access point group mode.
-     */
-    apGroupMode?: pulumi.Input<string | undefined>;
-    /**
-     * Deprecated and no longer applied. UniFi moved band steering off the WLAN object: `bandsteering_mode` is absent from the controller's WLAN field definitions as of Network 10.6, while it is still present on the device, so the setting now lives on `unifi.Device`'s `bandsteering_mode` instead. This attribute is neither read nor written and always reads back null.
+     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (`off`, `equal`, `prefer_5g`), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set `bandsteering_mode` on the `unifi.Device` resource for the AP instead. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -277,7 +257,7 @@ export interface WlanState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3_support = false`, `wpa3_transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
+     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3.support = false`, `wpa3.transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
      */
     enhancedIot?: pulumi.Input<boolean | undefined>;
     /**
@@ -370,13 +350,17 @@ export interface WlanState {
      */
     proxyArp?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable RADIUS MAC authentication.
+     * RADIUS settings.
      */
-    radiusMacAuthEnabled?: pulumi.Input<boolean | undefined>;
+    radius?: pulumi.Input<inputs.WlanRadius | undefined>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
+     * 6 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP.
      */
-    radiusProfileId?: pulumi.Input<string | undefined>;
+    roamingAssistant6e?: pulumi.Input<inputs.WlanRoamingAssistant6e | undefined>;
+    /**
+     * 5 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
+     */
+    roamingAssistantNa?: pulumi.Input<inputs.WlanRoamingAssistantNa | undefined>;
     /**
      * Start and stop schedules for the WLAN
      */
@@ -415,44 +399,24 @@ export interface WlanState {
      */
     wlanBands?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Enable WPA3 Enterprise 192-bit mode.
+     * WPA mode and encryption settings.
      */
-    wpa3Enhanced192?: pulumi.Input<boolean | undefined>;
+    wpa?: pulumi.Input<inputs.WlanWpa | undefined>;
     /**
-     * Enable WPA3 fast roaming (802.11r).
+     * WPA3 settings.
      */
-    wpa3FastRoaming?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
-     */
-    wpa3Support?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3_support` must be true).
-     */
-    wpa3Transition?: pulumi.Input<boolean | undefined>;
-    /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
-     */
-    wpaEnc?: pulumi.Input<string | undefined>;
-    /**
-     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`.
-     */
-    wpaMode?: pulumi.Input<string | undefined>;
+    wpa3?: pulumi.Input<inputs.WlanWpa3 | undefined>;
 }
 /**
  * The set of arguments for constructing a Wlan resource.
  */
 export interface WlanArgs {
     /**
-     * List of AP group IDs to apply this WLAN to.
+     * Access point group assignment.
      */
-    apGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    apGroup?: pulumi.Input<inputs.WlanApGroup | undefined>;
     /**
-     * Access point group mode.
-     */
-    apGroupMode?: pulumi.Input<string | undefined>;
-    /**
-     * Deprecated and no longer applied. UniFi moved band steering off the WLAN object: `bandsteering_mode` is absent from the controller's WLAN field definitions as of Network 10.6, while it is still present on the device, so the setting now lives on `unifi.Device`'s `bandsteering_mode` instead. This attribute is neither read nor written and always reads back null.
+     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (`off`, `equal`, `prefer_5g`), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set `bandsteering_mode` on the `unifi.Device` resource for the AP instead. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -486,7 +450,7 @@ export interface WlanArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3_support = false`, `wpa3_transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
+     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3.support = false`, `wpa3.transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
      */
     enhancedIot?: pulumi.Input<boolean | undefined>;
     /**
@@ -579,13 +543,17 @@ export interface WlanArgs {
      */
     proxyArp?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable RADIUS MAC authentication.
+     * RADIUS settings.
      */
-    radiusMacAuthEnabled?: pulumi.Input<boolean | undefined>;
+    radius?: pulumi.Input<inputs.WlanRadius | undefined>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
+     * 6 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP.
      */
-    radiusProfileId?: pulumi.Input<string | undefined>;
+    roamingAssistant6e?: pulumi.Input<inputs.WlanRoamingAssistant6e | undefined>;
+    /**
+     * 5 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
+     */
+    roamingAssistantNa?: pulumi.Input<inputs.WlanRoamingAssistantNa | undefined>;
     /**
      * Start and stop schedules for the WLAN
      */
@@ -624,28 +592,12 @@ export interface WlanArgs {
      */
     wlanBands?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Enable WPA3 Enterprise 192-bit mode.
+     * WPA mode and encryption settings.
      */
-    wpa3Enhanced192?: pulumi.Input<boolean | undefined>;
+    wpa?: pulumi.Input<inputs.WlanWpa | undefined>;
     /**
-     * Enable WPA3 fast roaming (802.11r).
+     * WPA3 settings.
      */
-    wpa3FastRoaming?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
-     */
-    wpa3Support?: pulumi.Input<boolean | undefined>;
-    /**
-     * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3_support` must be true).
-     */
-    wpa3Transition?: pulumi.Input<boolean | undefined>;
-    /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
-     */
-    wpaEnc?: pulumi.Input<string | undefined>;
-    /**
-     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`.
-     */
-    wpaMode?: pulumi.Input<string | undefined>;
+    wpa3?: pulumi.Input<inputs.WlanWpa3 | undefined>;
 }
 //# sourceMappingURL=wlan.d.ts.map

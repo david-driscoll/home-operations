@@ -73,9 +73,7 @@ class Account extends pulumi.CustomResource {
             resourceInputs["password"] = state?.password;
             resourceInputs["site"] = state?.site;
             resourceInputs["timeouts"] = state?.timeouts;
-            resourceInputs["tunnelConfigType"] = state?.tunnelConfigType;
-            resourceInputs["tunnelMediumType"] = state?.tunnelMediumType;
-            resourceInputs["tunnelType"] = state?.tunnelType;
+            resourceInputs["tunnel"] = state?.tunnel;
             resourceInputs["vlan"] = state?.vlan;
         }
         else {
@@ -88,9 +86,7 @@ class Account extends pulumi.CustomResource {
             resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
             resourceInputs["site"] = args?.site;
             resourceInputs["timeouts"] = args?.timeouts;
-            resourceInputs["tunnelConfigType"] = args?.tunnelConfigType;
-            resourceInputs["tunnelMediumType"] = args?.tunnelMediumType;
-            resourceInputs["tunnelType"] = args?.tunnelType;
+            resourceInputs["tunnel"] = args?.tunnel;
             resourceInputs["vlan"] = args?.vlan;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

@@ -43,17 +43,7 @@ export interface GetNetworkResult {
     readonly igmpSnooping: boolean;
     readonly internetAccess: boolean;
     readonly ipAliases: string[];
-    readonly ipv6Aliases: string[];
-    readonly ipv6InterfaceType: string;
-    readonly ipv6PdInterface: string;
-    readonly ipv6PdPrefixid: string;
-    readonly ipv6PdStart: string;
-    readonly ipv6PdStop: string;
-    readonly ipv6Ra: boolean;
-    readonly ipv6RaPreferredLifetime: string;
-    readonly ipv6RaPriority: string;
-    readonly ipv6RaValidLifetime: string;
-    readonly ipv6StaticSubnet: string;
+    readonly ipv6: outputs.GetNetworkIpv6;
     readonly lteLan: boolean;
     readonly multicastDns: boolean;
     readonly name: string;
@@ -67,16 +57,7 @@ export interface GetNetworkResult {
     readonly thirdPartyGateway: boolean;
     readonly timeouts?: outputs.GetNetworkTimeouts;
     readonly vlan: number;
-    readonly wanDns: string[];
-    readonly wanEgressQos: number;
-    readonly wanGateway: string;
-    readonly wanGatewayV6: string;
-    readonly wanIp: string;
-    readonly wanNetmask: string;
-    readonly wanNetworkGroup: string;
-    readonly wanType: string;
-    readonly wanTypeV6: string;
-    readonly wanUsername: string;
+    readonly wan: outputs.GetNetworkWan;
 }
 export function getNetworkOutput(args?: GetNetworkOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetNetworkResult> {
     args = args || {};

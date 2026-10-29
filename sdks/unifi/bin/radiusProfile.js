@@ -71,30 +71,26 @@ class RadiusProfile extends pulumi.CustomResource {
             resourceInputs["accountingEnabled"] = state?.accountingEnabled;
             resourceInputs["acctServers"] = state?.acctServers;
             resourceInputs["authServers"] = state?.authServers;
-            resourceInputs["interimUpdateEnabled"] = state?.interimUpdateEnabled;
-            resourceInputs["interimUpdateInterval"] = state?.interimUpdateInterval;
+            resourceInputs["interimUpdate"] = state?.interimUpdate;
             resourceInputs["name"] = state?.name;
             resourceInputs["site"] = state?.site;
             resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["useUsgAcctServer"] = state?.useUsgAcctServer;
             resourceInputs["useUsgAuthServer"] = state?.useUsgAuthServer;
-            resourceInputs["vlanEnabled"] = state?.vlanEnabled;
-            resourceInputs["vlanWlanMode"] = state?.vlanWlanMode;
+            resourceInputs["vlan"] = state?.vlan;
         }
         else {
             const args = argsOrState;
             resourceInputs["accountingEnabled"] = args?.accountingEnabled;
             resourceInputs["acctServers"] = args?.acctServers;
             resourceInputs["authServers"] = args?.authServers;
-            resourceInputs["interimUpdateEnabled"] = args?.interimUpdateEnabled;
-            resourceInputs["interimUpdateInterval"] = args?.interimUpdateInterval;
+            resourceInputs["interimUpdate"] = args?.interimUpdate;
             resourceInputs["name"] = args?.name;
             resourceInputs["site"] = args?.site;
             resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["useUsgAcctServer"] = args?.useUsgAcctServer;
             resourceInputs["useUsgAuthServer"] = args?.useUsgAuthServer;
-            resourceInputs["vlanEnabled"] = args?.vlanEnabled;
-            resourceInputs["vlanWlanMode"] = args?.vlanWlanMode;
+            resourceInputs["vlan"] = args?.vlan;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(RadiusProfile.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());

@@ -43,13 +43,9 @@ export class StaticRoute extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     * The gateway that applies the static route.
      */
-    declare public readonly gatewayDevice: pulumi.Output<string | undefined>;
-    /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
-     */
-    declare public readonly gatewayType: pulumi.Output<string>;
+    declare public readonly gateway: pulumi.Output<outputs.StaticRouteGateway>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
@@ -91,8 +87,7 @@ export class StaticRoute extends pulumi.CustomResource {
             const state = argsOrState as StaticRouteState | undefined;
             resourceInputs["distance"] = state?.distance;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["gatewayDevice"] = state?.gatewayDevice;
-            resourceInputs["gatewayType"] = state?.gatewayType;
+            resourceInputs["gateway"] = state?.gateway;
             resourceInputs["interface"] = state?.interface;
             resourceInputs["name"] = state?.name;
             resourceInputs["network"] = state?.network;
@@ -113,8 +108,7 @@ export class StaticRoute extends pulumi.CustomResource {
             }
             resourceInputs["distance"] = args?.distance;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["gatewayDevice"] = args?.gatewayDevice;
-            resourceInputs["gatewayType"] = args?.gatewayType;
+            resourceInputs["gateway"] = args?.gateway;
             resourceInputs["interface"] = args?.interface;
             resourceInputs["name"] = args?.name;
             resourceInputs["network"] = args?.network;
@@ -141,13 +135,9 @@ export interface StaticRouteState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     * The gateway that applies the static route.
      */
-    gatewayDevice?: pulumi.Input<string | undefined>;
-    /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
-     */
-    gatewayType?: pulumi.Input<string | undefined>;
+    gateway?: pulumi.Input<inputs.StaticRouteGateway | undefined>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
@@ -188,13 +178,9 @@ export interface StaticRouteArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     * The gateway that applies the static route.
      */
-    gatewayDevice?: pulumi.Input<string | undefined>;
-    /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
-     */
-    gatewayType?: pulumi.Input<string | undefined>;
+    gateway?: pulumi.Input<inputs.StaticRouteGateway | undefined>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */

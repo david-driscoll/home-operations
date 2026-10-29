@@ -30,8 +30,7 @@ export interface GetClientQosRateArgs {
 export interface GetClientQosRateResult {
     readonly id: string;
     readonly name: string;
-    readonly qosRateMaxDown: number;
-    readonly qosRateMaxUp: number;
+    readonly qosRate: outputs.GetClientQosRateQosRate;
     readonly site: string;
     readonly timeouts?: outputs.GetClientQosRateTimeouts;
 }

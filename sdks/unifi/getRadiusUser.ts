@@ -34,8 +34,7 @@ export interface GetRadiusUserResult {
     readonly password: string;
     readonly site: string;
     readonly timeouts?: outputs.GetRadiusUserTimeouts;
-    readonly tunnelMediumType: number;
-    readonly tunnelType: number;
+    readonly tunnel: outputs.GetRadiusUserTunnel;
 }
 export function getRadiusUserOutput(args: GetRadiusUserOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetRadiusUserResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});

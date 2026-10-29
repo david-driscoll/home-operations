@@ -24,6 +24,21 @@ export interface AccountTimeouts {
     update?: string;
 }
 
+export interface AccountTunnel {
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    configType?: string;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
+     */
+    mediumType: number;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
+     */
+    type: number;
+}
+
 export interface ApGroupTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -100,6 +115,17 @@ export interface ClientQosRate {
     name: string;
 }
 
+export interface ClientQosRateQosRate {
+    /**
+     * The QOS maximum download rate.
+     */
+    maxDown: number;
+    /**
+     * The QOS maximum upload rate.
+     */
+    maxUp: number;
+}
+
 export interface ClientQosRateTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -173,6 +199,55 @@ export interface DeviceConfigNetwork {
     type: string;
 }
 
+export interface DeviceLcm {
+    /**
+     * LCM brightness (1-100).
+     */
+    brightness: number;
+    /**
+     * Override the site-wide LCM brightness with `brightness`.
+     */
+    brightnessOverride: boolean;
+    /**
+     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
+     */
+    idleTimeout: string;
+    /**
+     * Override the site-wide LCM idle timeout with `idle_timeout`.
+     */
+    idleTimeoutOverride: boolean;
+    /**
+     * Window during which the display is dimmed.
+     */
+    nightMode: outputs.DeviceLcmNightMode;
+}
+
+export interface DeviceLcmNightMode {
+    /**
+     * Night mode start time, 24-hour `HH:MM`.
+     */
+    begins: string;
+    /**
+     * Night mode end time, 24-hour `HH:MM`.
+     */
+    ends: string;
+}
+
+export interface DeviceLed {
+    /**
+     * LED brightness (0-100).
+     */
+    brightness: number;
+    /**
+     * LED color override (hex color code).
+     */
+    color: string;
+    /**
+     * LED override setting; valid values are `default`, `on`, and `off`.
+     */
+    override: string;
+}
+
 export interface DeviceOutletOverride {
     /**
      * Enable power cycle.
@@ -202,21 +277,13 @@ export interface DevicePortOverride {
      */
     autoneg: boolean;
     /**
-     * 802.1X control mode.
+     * 802.1X port authentication settings.
      */
-    dot1xCtrl?: string;
+    dot1x: outputs.DevicePortOverrideDot1x;
     /**
-     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     * Egress rate limiting.
      */
-    dot1xIdleTimeout?: string;
-    /**
-     * Egress rate limit in kbps.
-     */
-    egressRateLimitKbps?: number;
-    /**
-     * Enable egress rate limiting.
-     */
-    egressRateLimitKbpsEnabled: boolean;
+    egressRateLimit: outputs.DevicePortOverrideEgressRateLimit;
     /**
      * List of network IDs to exclude from this port.
      */
@@ -246,13 +313,9 @@ export interface DevicePortOverride {
      */
     isolation: boolean;
     /**
-     * Enable LLDP-MED.
+     * LLDP-MED settings.
      */
-    lldpmedEnabled: boolean;
-    /**
-     * Enable LLDP-MED notifications.
-     */
-    lldpmedNotifyEnabled: boolean;
+    lldpmed: outputs.DevicePortOverrideLldpmed;
     /**
      * Mirror port index.
      */
@@ -286,13 +349,9 @@ export interface DevicePortOverride {
      */
     portProfileId?: string;
     /**
-     * Enable port security.
+     * Port security (MAC allow-list) settings.
      */
-    portSecurityEnabled: boolean;
-    /**
-     * List of MAC addresses allowed when port security is enabled.
-     */
-    portSecurityMacAddresses?: string[];
+    portSecurity: outputs.DevicePortOverridePortSecurity;
     /**
      * Priority queue 1 level.
      */
@@ -318,45 +377,9 @@ export interface DevicePortOverride {
      */
     speed?: number;
     /**
-     * Enable broadcast storm control.
+     * Storm control settings.
      */
-    stormctrlBcastEnabled: boolean;
-    /**
-     * Broadcast storm control level.
-     */
-    stormctrlBcastLevel?: number;
-    /**
-     * Broadcast storm control rate.
-     */
-    stormctrlBcastRate?: number;
-    /**
-     * Enable multicast storm control.
-     */
-    stormctrlMcastEnabled: boolean;
-    /**
-     * Multicast storm control level.
-     */
-    stormctrlMcastLevel?: number;
-    /**
-     * Multicast storm control rate.
-     */
-    stormctrlMcastRate?: number;
-    /**
-     * Storm control type.
-     */
-    stormctrlType?: string;
-    /**
-     * Enable unicast storm control.
-     */
-    stormctrlUcastEnabled: boolean;
-    /**
-     * Unicast storm control level.
-     */
-    stormctrlUcastLevel?: number;
-    /**
-     * Unicast storm control rate.
-     */
-    stormctrlUcastRate?: number;
+    stormctrl: outputs.DevicePortOverrideStormctrl;
     /**
      * STP port mode.
      */
@@ -375,6 +398,114 @@ export interface DevicePortOverride {
     voiceNetworkconfId?: string;
 }
 
+export interface DevicePortOverrideDot1x {
+    /**
+     * 802.1X control mode.
+     */
+    ctrl: string;
+    /**
+     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     */
+    idleTimeout: string;
+}
+
+export interface DevicePortOverrideEgressRateLimit {
+    /**
+     * Enable egress rate limiting.
+     */
+    enabled: boolean;
+    /**
+     * Egress rate limit in kbps.
+     */
+    kbps: number;
+}
+
+export interface DevicePortOverrideLldpmed {
+    /**
+     * Enable LLDP-MED.
+     */
+    enabled: boolean;
+    /**
+     * Enable LLDP-MED topology change notifications.
+     */
+    notifyEnabled: boolean;
+}
+
+export interface DevicePortOverridePortSecurity {
+    /**
+     * Enable port security.
+     */
+    enabled: boolean;
+    /**
+     * List of MAC addresses allowed when port security is enabled.
+     */
+    macAddresses: string[];
+}
+
+export interface DevicePortOverrideStormctrl {
+    /**
+     * Broadcast storm control.
+     */
+    bcast: outputs.DevicePortOverrideStormctrlBcast;
+    /**
+     * Multicast storm control.
+     */
+    mcast: outputs.DevicePortOverrideStormctrlMcast;
+    /**
+     * Storm control type; `level` or `rate`.
+     */
+    type: string;
+    /**
+     * Unknown unicast storm control.
+     */
+    ucast: outputs.DevicePortOverrideStormctrlUcast;
+}
+
+export interface DevicePortOverrideStormctrlBcast {
+    /**
+     * Enable Broadcast storm control.
+     */
+    enabled: boolean;
+    /**
+     * Broadcast storm control level (percent), used when `type` is `level`.
+     */
+    level: number;
+    /**
+     * Broadcast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate: number;
+}
+
+export interface DevicePortOverrideStormctrlMcast {
+    /**
+     * Enable Multicast storm control.
+     */
+    enabled: boolean;
+    /**
+     * Multicast storm control level (percent), used when `type` is `level`.
+     */
+    level: number;
+    /**
+     * Multicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate: number;
+}
+
+export interface DevicePortOverrideStormctrlUcast {
+    /**
+     * Enable Unknown unicast storm control.
+     */
+    enabled: boolean;
+    /**
+     * Unknown unicast storm control level (percent), used when `type` is `level`.
+     */
+    level: number;
+    /**
+     * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate: number;
+}
+
 export interface DeviceRadioTable {
     /**
      * Antenna gain.
@@ -385,17 +516,17 @@ export interface DeviceRadioTable {
      */
     antennaId: number;
     /**
-     * Deprecated and no longer applied. UniFi removed 802.11k assisted roaming from the radio table; the field is absent from the controller API and from the firmware's own field definitions as of Network 10.6, so the provider can neither read nor write it. Always null.
+     * **Moved to `unifi_wlan.roaming_assistant_na.enabled`** (and `roaming_assistant_6e.enabled` for 6 GHz). UniFi Network 10.x moved assisted roaming from the device's radio table onto the WLAN, so this attribute no longer reaches the controller. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
-    assistedRoamingEnabled: boolean;
+    assistedRoamingEnabled?: boolean;
     /**
-     * Deprecated and no longer applied. See `assisted_roaming_enabled`. Always null.
+     * **Moved to `unifi_wlan.roaming_assistant_na.rssi`** (and `roaming_assistant_6e.rssi` for 6 GHz). UniFi Network 10.x moved assisted roaming from the device's radio table onto the WLAN, so this attribute no longer reaches the controller. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
-    assistedRoamingRssi: number;
+    assistedRoamingRssi?: number;
     /**
      * Channel number or 'auto'.
      */
@@ -456,6 +587,17 @@ export interface DeviceRadioTable {
      * Enable virtual wire.
      */
     vwireEnabled: boolean;
+}
+
+export interface DeviceStp {
+    /**
+     * STP bridge priority.
+     */
+    priority: number;
+    /**
+     * STP version; valid values are `stp`, `rstp`, and `disabled`.
+     */
+    version: string;
 }
 
 export interface DeviceTimeouts {
@@ -601,6 +743,17 @@ export interface FirewallPolicyDestination {
     zoneId: string;
 }
 
+export interface FirewallPolicyIcmp {
+    /**
+     * ICMP type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     */
+    typename: string;
+    /**
+     * ICMPv6 type matching mode. Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     */
+    v6Typename: string;
+}
+
 export interface FirewallPolicySchedule {
     /**
      * Date used by `ONE_TIME_ONLY`, in `YYYY-MM-DD` format.
@@ -627,17 +780,31 @@ export interface FirewallPolicySchedule {
      */
     repeatOnDays: string[];
     /**
+     * Time of day during which a timed schedule is active.
+     */
+    time: outputs.FirewallPolicyScheduleTime;
+}
+
+export interface FirewallPolicyScheduleTime {
+    /**
      * Whether the policy is active all day.
      */
-    timeAllDay: boolean;
+    allDay: boolean;
+    /**
+     * Time range during which the policy is active when `all_day` is false.
+     */
+    range: outputs.FirewallPolicyScheduleTimeRange;
+}
+
+export interface FirewallPolicyScheduleTimeRange {
     /**
      * End time in 24-hour `HH:MM` format.
      */
-    timeRangeEnd: string;
+    end: string;
     /**
      * Start time in 24-hour `HH:MM` format.
      */
-    timeRangeStart: string;
+    start: string;
 }
 
 export interface FirewallPolicySource {
@@ -726,6 +893,94 @@ export interface FirewallPolicyTimeouts {
     update?: string;
 }
 
+export interface FirewallRuleDestination {
+    /**
+     * The destination address of the firewall rule.
+     */
+    address?: string;
+    /**
+     * The IPv6 destination address of the firewall rule.
+     */
+    addressIpv6?: string;
+    /**
+     * The destination firewall group IDs of the firewall rule.
+     */
+    firewallGroupIds?: string[];
+    /**
+     * The destination network ID of the firewall rule.
+     */
+    networkId?: string;
+    /**
+     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
+     */
+    networkType: string;
+    /**
+     * The destination port of the firewall rule.
+     */
+    port?: string;
+}
+
+export interface FirewallRuleIcmp {
+    /**
+     * ICMP type name.
+     */
+    typename?: string;
+    /**
+     * ICMPv6 type name.
+     */
+    v6Typename?: string;
+}
+
+export interface FirewallRuleSource {
+    /**
+     * The source address for the firewall rule.
+     */
+    address?: string;
+    /**
+     * The IPv6 source address for the firewall rule.
+     */
+    addressIpv6?: string;
+    /**
+     * The source firewall group IDs for the firewall rule.
+     */
+    firewallGroupIds?: string[];
+    /**
+     * The source MAC address of the firewall rule.
+     */
+    mac?: string;
+    /**
+     * The source network ID for the firewall rule.
+     */
+    networkId?: string;
+    /**
+     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
+     */
+    networkType: string;
+    /**
+     * The source port of the firewall rule.
+     */
+    port?: string;
+}
+
+export interface FirewallRuleState {
+    /**
+     * Match where the state is established.
+     */
+    established: boolean;
+    /**
+     * Match where the state is invalid.
+     */
+    invalid: boolean;
+    /**
+     * Match where the state is new.
+     */
+    new: boolean;
+    /**
+     * Match where the state is related.
+     */
+    related: boolean;
+}
+
 export interface FirewallRuleTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -771,11 +1026,48 @@ export interface GetAccountTimeouts {
     read?: string;
 }
 
+export interface GetAccountTunnel {
+    /**
+     * See RFC2868 section 3.2.
+     */
+    mediumType: number;
+    /**
+     * See RFC2868 section 3.1.
+     */
+    type: number;
+}
+
 export interface GetApGroupTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     read?: string;
+}
+
+export interface GetClientInfoLastConnectionNetwork {
+    /**
+     * The network ID of the last connection.
+     */
+    id: string;
+    /**
+     * The network name of the last connection.
+     */
+    name: string;
+}
+
+export interface GetClientInfoLastUplink {
+    /**
+     * The MAC address of the last uplink device.
+     */
+    mac: string;
+    /**
+     * The name of the last uplink device.
+     */
+    name: string;
+    /**
+     * The remote port of the last uplink device.
+     */
+    remotePort: number;
 }
 
 export interface GetClientInfoListClient {
@@ -836,29 +1128,17 @@ export interface GetClientInfoListClient {
      */
     isWired: boolean;
     /**
-     * The network ID of the last connection.
+     * The network of the client's last connection.
      */
-    lastConnectionNetworkId: string;
-    /**
-     * The network name of the last connection.
-     */
-    lastConnectionNetworkName: string;
+    lastConnectionNetwork: outputs.GetClientInfoListClientLastConnectionNetwork;
     /**
      * Unix timestamp when the client was last seen.
      */
     lastSeen: number;
     /**
-     * The MAC address of the last uplink device.
+     * The last uplink device the client was seen on.
      */
-    lastUplinkMac: string;
-    /**
-     * The name of the last uplink device.
-     */
-    lastUplinkName: string;
-    /**
-     * The remote port of the last uplink device.
-     */
-    lastUplinkRemotePort: number;
+    lastUplink: outputs.GetClientInfoListClientLastUplink;
     /**
      * The local DNS record for this client.
      */
@@ -876,13 +1156,9 @@ export interface GetClientInfoListClient {
      */
     name: string;
     /**
-     * The network ID for this client.
+     * The network this client is on.
      */
-    networkId: string;
-    /**
-     * The network name for this client.
-     */
-    networkName: string;
+    network: outputs.GetClientInfoListClientNetwork;
     /**
      * The noise level in dBm.
      */
@@ -904,13 +1180,9 @@ export interface GetClientInfoListClient {
      */
     rssi: number;
     /**
-     * Total bytes received.
+     * Receive statistics for the client.
      */
-    rxBytes: number;
-    /**
-     * The receive rate in kbps.
-     */
-    rxRate: number;
+    rx: outputs.GetClientInfoListClientRx;
     /**
      * The signal strength in dBm.
      */
@@ -924,13 +1196,9 @@ export interface GetClientInfoListClient {
      */
     swPort: number;
     /**
-     * Total bytes transmitted.
+     * Transmit statistics for the client.
      */
-    txBytes: number;
-    /**
-     * The transmit rate in kbps.
-     */
-    txRate: number;
+    tx: outputs.GetClientInfoListClientTx;
     /**
      * The uptime of the client, as a Go duration string.
      */
@@ -949,6 +1217,65 @@ export interface GetClientInfoListClient {
     wiredRateMbps: number;
 }
 
+export interface GetClientInfoListClientLastConnectionNetwork {
+    /**
+     * The network ID of the last connection.
+     */
+    id: string;
+    /**
+     * The network name of the last connection.
+     */
+    name: string;
+}
+
+export interface GetClientInfoListClientLastUplink {
+    /**
+     * The MAC address of the last uplink device.
+     */
+    mac: string;
+    /**
+     * The name of the last uplink device.
+     */
+    name: string;
+    /**
+     * The remote port of the last uplink device.
+     */
+    remotePort: number;
+}
+
+export interface GetClientInfoListClientNetwork {
+    /**
+     * The network ID for this client.
+     */
+    id: string;
+    /**
+     * The network name for this client.
+     */
+    name: string;
+}
+
+export interface GetClientInfoListClientRx {
+    /**
+     * Total bytes received.
+     */
+    bytes: number;
+    /**
+     * The receive rate in kbps.
+     */
+    rate: number;
+}
+
+export interface GetClientInfoListClientTx {
+    /**
+     * Total bytes transmitted.
+     */
+    bytes: number;
+    /**
+     * The transmit rate in kbps.
+     */
+    rate: number;
+}
+
 export interface GetClientInfoListTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -956,11 +1283,44 @@ export interface GetClientInfoListTimeouts {
     read?: string;
 }
 
+export interface GetClientInfoNetwork {
+    /**
+     * The network ID for this client.
+     */
+    id: string;
+    /**
+     * The network name for this client.
+     */
+    name: string;
+}
+
+export interface GetClientInfoRx {
+    /**
+     * Total bytes received.
+     */
+    bytes: number;
+    /**
+     * The receive rate in kbps.
+     */
+    rate: number;
+}
+
 export interface GetClientInfoTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     read?: string;
+}
+
+export interface GetClientInfoTx {
+    /**
+     * Total bytes transmitted.
+     */
+    bytes: number;
+    /**
+     * The transmit rate in kbps.
+     */
+    rate: number;
 }
 
 export interface GetClientListClient {
@@ -1029,25 +1389,17 @@ export interface GetClientListClient {
      */
     isWired: boolean;
     /**
-     * The network ID of the last connection.
+     * The network of the client's last connection.
      */
-    lastConnectionNetworkId: string;
-    /**
-     * The network name of the last connection.
-     */
-    lastConnectionNetworkName: string;
+    lastConnectionNetwork: outputs.GetClientListClientLastConnectionNetwork;
     /**
      * Unix timestamp when the client was last seen.
      */
     lastSeen: number;
     /**
-     * The MAC address of the last uplink device.
+     * The last uplink device the client was seen on.
      */
-    lastUplinkMac: string;
-    /**
-     * The name of the last uplink device.
-     */
-    lastUplinkName: string;
+    lastUplink: outputs.GetClientListClientLastUplink;
     /**
      * The local DNS record for this client.
      */
@@ -1061,17 +1413,13 @@ export interface GetClientListClient {
      */
     name: string;
     /**
-     * The network ID for this client.
+     * The network this client is on.
      */
-    networkId: string;
+    network: outputs.GetClientListClientNetwork;
     /**
      * List of network member group IDs for this client.
      */
     networkMembersGroupIds: string[];
-    /**
-     * The network name for this client.
-     */
-    networkName: string;
     /**
      * The noise level in dBm.
      */
@@ -1097,13 +1445,9 @@ export interface GetClientListClient {
      */
     rssi: number;
     /**
-     * Total bytes received.
+     * Receive statistics for the client.
      */
-    rxBytes: number;
-    /**
-     * The receive rate in kbps.
-     */
-    rxRate: number;
+    rx: outputs.GetClientListClientRx;
     /**
      * The signal strength in dBm.
      */
@@ -1117,13 +1461,9 @@ export interface GetClientListClient {
      */
     swPort: number;
     /**
-     * Total bytes transmitted.
+     * Transmit statistics for the client.
      */
-    txBytes: number;
-    /**
-     * The transmit rate in kbps.
-     */
-    txRate: number;
+    tx: outputs.GetClientListClientTx;
     /**
      * The uptime of the client in seconds.
      */
@@ -1132,6 +1472,61 @@ export interface GetClientListClient {
      * The wired connection rate in Mbps.
      */
     wiredRateMbps: number;
+}
+
+export interface GetClientListClientLastConnectionNetwork {
+    /**
+     * The network ID of the last connection.
+     */
+    id: string;
+    /**
+     * The network name of the last connection.
+     */
+    name: string;
+}
+
+export interface GetClientListClientLastUplink {
+    /**
+     * The MAC address of the last uplink device.
+     */
+    mac: string;
+    /**
+     * The name of the last uplink device.
+     */
+    name: string;
+}
+
+export interface GetClientListClientNetwork {
+    /**
+     * The network ID for this client.
+     */
+    id: string;
+    /**
+     * The network name for this client.
+     */
+    name: string;
+}
+
+export interface GetClientListClientRx {
+    /**
+     * Total bytes received.
+     */
+    bytes: number;
+    /**
+     * The receive rate in kbps.
+     */
+    rate: number;
+}
+
+export interface GetClientListClientTx {
+    /**
+     * Total bytes transmitted.
+     */
+    bytes: number;
+    /**
+     * The transmit rate in kbps.
+     */
+    rate: number;
 }
 
 export interface GetClientListTimeouts {
@@ -1158,6 +1553,17 @@ export interface GetClientQosRate {
      * The name of the client group.
      */
     name: string;
+}
+
+export interface GetClientQosRateQosRate {
+    /**
+     * The maximum download rate.
+     */
+    maxDown: number;
+    /**
+     * The maximum upload rate.
+     */
+    maxUp: number;
 }
 
 export interface GetClientQosRateTimeouts {
@@ -1220,13 +1626,9 @@ export interface GetNetworkDhcpServer {
      */
     conflictChecking: boolean;
     /**
-     * Specifies whether DHCP DNS is enabled.
+     * DNS servers handed out to DHCP clients.
      */
-    dnsEnabled: boolean;
-    /**
-     * List of DNS server addresses for DHCP clients.
-     */
-    dnsServers: string[];
+    dns: outputs.GetNetworkDhcpServerDns;
     /**
      * Specifies whether DHCP server is enabled.
      */
@@ -1240,13 +1642,9 @@ export interface GetNetworkDhcpServer {
      */
     leasetime: string;
     /**
-     * Specifies whether DHCP NTP is enabled.
+     * NTP servers handed out to DHCP clients.
      */
-    ntpEnabled: boolean;
-    /**
-     * List of NTP server addresses for DHCP clients.
-     */
-    ntpServers: string[];
+    ntp: outputs.GetNetworkDhcpServerNtp;
     /**
      * The IPv4 address where the DHCP range starts.
      */
@@ -1292,6 +1690,28 @@ export interface GetNetworkDhcpServerBoot {
     server: string;
 }
 
+export interface GetNetworkDhcpServerDns {
+    /**
+     * Specifies whether DHCP DNS is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of DNS server addresses for DHCP clients.
+     */
+    servers: string[];
+}
+
+export interface GetNetworkDhcpServerNtp {
+    /**
+     * Specifies whether DHCP NTP is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of NTP server addresses for DHCP clients.
+     */
+    servers: string[];
+}
+
 export interface GetNetworkDhcpServerWins {
     /**
      * List of WINS server addresses.
@@ -1305,13 +1725,9 @@ export interface GetNetworkDhcpServerWins {
 
 export interface GetNetworkDhcpV6Server {
     /**
-     * When true, upstream DNS entries are propagated. When false, `dns_servers` are used.
+     * DNS servers handed out to DHCPv6 clients.
      */
-    dnsAuto: boolean;
-    /**
-     * IPv6 DNS server addresses for DHCPv6 clients.
-     */
-    dnsServers: string[];
+    dns: outputs.GetNetworkDhcpV6ServerDns;
     /**
      * Specifies whether stateful DHCPv6 is enabled.
      */
@@ -1328,6 +1744,78 @@ export interface GetNetworkDhcpV6Server {
      * End address of the DHCPv6 range.
      */
     stop: string;
+}
+
+export interface GetNetworkDhcpV6ServerDns {
+    /**
+     * When true, upstream DNS entries are propagated. When false, `servers` are used.
+     */
+    auto: boolean;
+    /**
+     * IPv6 DNS server addresses for DHCPv6 clients.
+     */
+    servers: string[];
+}
+
+export interface GetNetworkIpv6 {
+    /**
+     * List of IPv6 aliases for the network.
+     */
+    aliases: string[];
+    /**
+     * Specifies which type of IPv6 connection to use.
+     */
+    interfaceType: string;
+    /**
+     * IPv6 Prefix Delegation (PD) settings.
+     */
+    pd: outputs.GetNetworkIpv6Pd;
+    /**
+     * IPv6 Router Advertisement (RA) settings.
+     */
+    ra: outputs.GetNetworkIpv6Ra;
+    /**
+     * The static IPv6 subnet (when `interface_type` is `static`).
+     */
+    staticSubnet: string;
+}
+
+export interface GetNetworkIpv6Pd {
+    /**
+     * Specifies which WAN interface to use for IPv6 PD. One of `wan` or `wan2`.
+     */
+    interface: string;
+    /**
+     * Specifies the IPv6 Prefix ID.
+     */
+    prefixid: string;
+    /**
+     * Start address of the DHCPv6 range when `ipv6.interface_type` is `pd`.
+     */
+    start: string;
+    /**
+     * End address of the DHCPv6 range when `ipv6.interface_type` is `pd`.
+     */
+    stop: string;
+}
+
+export interface GetNetworkIpv6Ra {
+    /**
+     * Specifies whether to enable IPv6 router advertisements.
+     */
+    enabled: boolean;
+    /**
+     * Preferred lifetime for IPv6 RA, as a Go duration string.
+     */
+    preferredLifetime: string;
+    /**
+     * IPv6 router advertisement priority. One of `high`, `medium`, or `low`.
+     */
+    priority: string;
+    /**
+     * Total lifetime for the IPv6 RA address, as a Go duration string.
+     */
+    validLifetime: string;
 }
 
 export interface GetNetworkNatOutboundIpAddress {
@@ -1356,11 +1844,65 @@ export interface GetNetworkTimeouts {
     read?: string;
 }
 
+export interface GetNetworkWan {
+    /**
+     * DNS server IPs of the WAN.
+     */
+    dns: string[];
+    /**
+     * Specifies the WAN egress quality of service.
+     */
+    egressQos: number;
+    /**
+     * The IPv4 gateway of the WAN.
+     */
+    gateway: string;
+    /**
+     * The IPv6 gateway of the WAN.
+     */
+    gatewayV6: string;
+    /**
+     * The IPv4 address of the WAN.
+     */
+    ip: string;
+    /**
+     * The IPv4 netmask of the WAN.
+     */
+    netmask: string;
+    /**
+     * Specifies the WAN network group. One of `WAN`, `WAN2` or `WAN_LTE_FAILOVER`.
+     */
+    networkGroup: string;
+    /**
+     * Specifies the IPv4 WAN connection type. One of `disabled`, `static`, `dhcp`, or `pppoe`.
+     */
+    type: string;
+    /**
+     * Specifies the IPv6 WAN connection type. One of `disabled`, `static`, or `dhcpv6`.
+     */
+    typeV6: string;
+    /**
+     * Specifies the IPv4 WAN username.
+     */
+    username: string;
+}
+
 export interface GetPortProfileTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     read?: string;
+}
+
+export interface GetRadiusProfileInterimUpdate {
+    /**
+     * Whether interim updates are enabled.
+     */
+    enabled: boolean;
+    /**
+     * The interim update interval, as a Go duration string.
+     */
+    interval: string;
 }
 
 export interface GetRadiusProfileTimeouts {
@@ -1370,11 +1912,33 @@ export interface GetRadiusProfileTimeouts {
     read?: string;
 }
 
+export interface GetRadiusProfileVlan {
+    /**
+     * Whether VLAN is enabled.
+     */
+    enabled: boolean;
+    /**
+     * The VLAN WLAN mode.
+     */
+    wlanMode: string;
+}
+
 export interface GetRadiusUserTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     read?: string;
+}
+
+export interface GetRadiusUserTunnel {
+    /**
+     * See RFC2868 section 3.2.
+     */
+    mediumType: number;
+    /**
+     * See RFC2868 section 3.1.
+     */
+    type: number;
 }
 
 export interface NetworkDhcpGuarding {
@@ -1409,13 +1973,9 @@ export interface NetworkDhcpServer {
      */
     conflictChecking: boolean;
     /**
-     * Specifies whether DHCP DNS is enabled.
+     * DNS servers handed out to DHCP clients.
      */
-    dnsEnabled: boolean;
-    /**
-     * List of DNS server addresses for DHCP clients.
-     */
-    dnsServers?: string[];
+    dns: outputs.NetworkDhcpServerDns;
     /**
      * Specifies whether DHCP server is enabled.
      */
@@ -1429,13 +1989,9 @@ export interface NetworkDhcpServer {
      */
     leasetime: string;
     /**
-     * Specifies whether DHCP NTP is enabled.
+     * NTP servers handed out to DHCP clients.
      */
-    ntpEnabled: boolean;
-    /**
-     * List of NTP server addresses for DHCP clients.
-     */
-    ntpServers?: string[];
+    ntp: outputs.NetworkDhcpServerNtp;
     /**
      * The IPv4 address where the DHCP range starts.
      */
@@ -1481,6 +2037,28 @@ export interface NetworkDhcpServerBoot {
     server: string;
 }
 
+export interface NetworkDhcpServerDns {
+    /**
+     * Specifies whether DHCP DNS is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of DNS server addresses for DHCP clients.
+     */
+    servers?: string[];
+}
+
+export interface NetworkDhcpServerNtp {
+    /**
+     * Specifies whether DHCP NTP is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of NTP server addresses for DHCP clients.
+     */
+    servers?: string[];
+}
+
 export interface NetworkDhcpServerWins {
     /**
      * List of WINS server addresses (maximum 2).
@@ -1494,13 +2072,9 @@ export interface NetworkDhcpServerWins {
 
 export interface NetworkDhcpV6Server {
     /**
-     * Specifies whether DNS auto-discovery is enabled for DHCPv6.
+     * DNS servers handed out to DHCPv6 clients.
      */
-    dnsAuto: boolean;
-    /**
-     * List of DNS server addresses for DHCPv6 clients (maximum 4).
-     */
-    dnsServers?: string[];
+    dns: outputs.NetworkDhcpV6ServerDns;
     /**
      * Specifies whether the DHCPv6 server is enabled.
      */
@@ -1517,6 +2091,86 @@ export interface NetworkDhcpV6Server {
      * The end of the DHCPv6 address range.
      */
     stop?: string;
+}
+
+export interface NetworkDhcpV6ServerDns {
+    /**
+     * Specifies whether DNS auto-discovery is enabled for DHCPv6.
+     */
+    auto: boolean;
+    /**
+     * List of DNS server addresses for DHCPv6 clients (maximum 4).
+     */
+    servers?: string[];
+}
+
+export interface NetworkIpv6 {
+    /**
+     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     */
+    aliases?: string[];
+    /**
+     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
+     */
+    clientAddressAssignment: string;
+    /**
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
+     */
+    interfaceType: string;
+    /**
+     * IPv6 Prefix Delegation (PD) settings, used when `interface_type` is `pd`.
+     */
+    pd: outputs.NetworkIpv6Pd;
+    /**
+     * IPv6 Router Advertisement (RA) settings.
+     */
+    ra: outputs.NetworkIpv6Ra;
+    /**
+     * The IPv6 static subnet of the network. Only used when `interface_type` is `static`.
+     */
+    staticSubnet?: string;
+}
+
+export interface NetworkIpv6Pd {
+    /**
+     * Specifies whether automatic prefix ID assignment is enabled for IPv6 Prefix Delegation.
+     */
+    autoPrefixidEnabled: boolean;
+    /**
+     * The IPv6 Prefix Delegation WAN interface (e.g., `wan`, `wan2`).
+     */
+    interface?: string;
+    /**
+     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., `0`, `1a`).
+     */
+    prefixid?: string;
+    /**
+     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with `stop` when `ipv6.interface_type` is `pd`, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
+     */
+    start: string;
+    /**
+     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with `start` when `ipv6.interface_type` is `pd`.
+     */
+    stop: string;
+}
+
+export interface NetworkIpv6Ra {
+    /**
+     * Specifies whether IPv6 Router Advertisement (RA) is enabled.
+     */
+    enabled: boolean;
+    /**
+     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. `14400s`, `4h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
+     */
+    preferredLifetime: string;
+    /**
+     * The IPv6 Router Advertisement priority. Must be one of `high`, `medium`, or `low`.
+     */
+    priority: string;
+    /**
+     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. `86400s`, `24h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
+     */
+    validLifetime: string;
 }
 
 export interface NetworkNatOutboundIpAddress {
@@ -1632,6 +2286,114 @@ export interface PortForwardWan {
     port?: string;
 }
 
+export interface PortProfileDot1x {
+    /**
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`.
+     */
+    ctrl: string;
+    /**
+     * The idle timeout to use when using MAC Based 802.1X control, as a Go duration string (e.g. `5m`, `300s`). Defaults to `5m0s`.
+     */
+    idleTimeout: string;
+}
+
+export interface PortProfileEgressRateLimit {
+    /**
+     * Enable egress rate limiting for the port profile. Computed from the controller when not set.
+     */
+    enabled: boolean;
+    /**
+     * The egress rate limit, in kbps, for the port profile. Can be between `64` and `9999999`.
+     */
+    kbps: number;
+}
+
+export interface PortProfileLldpmed {
+    /**
+     * Enable LLDP-MED for the port profile.
+     */
+    enabled: boolean;
+    /**
+     * Enable LLDP-MED topology change notifications for the port profile.
+     */
+    notifyEnabled?: boolean;
+}
+
+export interface PortProfilePortSecurity {
+    /**
+     * Enable port security for the port profile. Computed from the controller when not set.
+     */
+    enabled: boolean;
+    /**
+     * The MAC addresses associated with the port security for the port profile.
+     */
+    macAddresses: string[];
+}
+
+export interface PortProfileStormctrl {
+    /**
+     * broadcast Storm Control for the port profile.
+     */
+    bcast: outputs.PortProfileStormctrlBcast;
+    /**
+     * multicast Storm Control for the port profile.
+     */
+    mcast: outputs.PortProfileStormctrlMcast;
+    /**
+     * The type of Storm Control to use for the port profile. Can be `level` or `rate`.
+     */
+    type: string;
+    /**
+     * unknown unicast Storm Control for the port profile.
+     */
+    ucast: outputs.PortProfileStormctrlUcast;
+}
+
+export interface PortProfileStormctrlBcast {
+    /**
+     * Enable broadcast Storm Control for the port profile. Computed from the controller when not set.
+     */
+    enabled: boolean;
+    /**
+     * The broadcast Storm Control level for the port profile. Can be between 0 and 100.
+     */
+    level: number;
+    /**
+     * The broadcast Storm Control rate for the port profile. Can be between 0 and 14880000.
+     */
+    rate: number;
+}
+
+export interface PortProfileStormctrlMcast {
+    /**
+     * Enable multicast Storm Control for the port profile. Computed from the controller when not set.
+     */
+    enabled: boolean;
+    /**
+     * The multicast Storm Control level for the port profile. Can be between 0 and 100.
+     */
+    level: number;
+    /**
+     * The multicast Storm Control rate for the port profile. Can be between 0 and 14880000.
+     */
+    rate: number;
+}
+
+export interface PortProfileStormctrlUcast {
+    /**
+     * Enable unknown unicast Storm Control for the port profile. Computed from the controller when not set.
+     */
+    enabled: boolean;
+    /**
+     * The unknown unicast Storm Control level for the port profile. Can be between 0 and 100.
+     */
+    level: number;
+    /**
+     * The unknown unicast Storm Control rate for the port profile. Can be between 0 and 14880000.
+     */
+    rate: number;
+}
+
 export interface PortProfileTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1719,6 +2481,17 @@ export interface RadiusProfileAuthServer {
     secret: string;
 }
 
+export interface RadiusProfileInterimUpdate {
+    /**
+     * Specifies whether to use interim_update.
+     */
+    enabled: boolean;
+    /**
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
+     */
+    interval: string;
+}
+
 export interface RadiusProfileTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1738,6 +2511,17 @@ export interface RadiusProfileTimeouts {
     update?: string;
 }
 
+export interface RadiusProfileVlan {
+    /**
+     * Specifies whether to use vlan on wired connections.
+     */
+    enabled: boolean;
+    /**
+     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
+     */
+    wlanMode: string;
+}
+
 export interface RadiusUserTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -1755,6 +2539,21 @@ export interface RadiusUserTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: string;
+}
+
+export interface RadiusUserTunnel {
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    configType?: string;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
+     */
+    mediumType: number;
+    /**
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
+     */
+    type: number;
 }
 
 export interface SettingAutoSpeedtest {
@@ -1907,13 +2706,9 @@ export interface SettingIps {
      */
     restrictTorrents: boolean;
     /**
-     * IPS signature alert suppression entries — silence specific signatures or categories.
+     * IPS suppression: signature alert suppression entries and whitelisted sources/destinations.
      */
-    suppressionAlerts: outputs.SettingIpsSuppressionAlert[];
-    /**
-     * IPS suppression whitelist entries — sources/destinations to exclude from inspection.
-     */
-    suppressionWhitelists: outputs.SettingIpsSuppressionWhitelist[];
+    suppression: outputs.SettingIpsSuppression;
 }
 
 export interface SettingIpsHoneypot {
@@ -1929,6 +2724,17 @@ export interface SettingIpsHoneypot {
      * IP version: v4 or v6.
      */
     version: string;
+}
+
+export interface SettingIpsSuppression {
+    /**
+     * IPS signature alert suppression entries — silence specific signatures or categories.
+     */
+    alerts: outputs.SettingIpsSuppressionAlert[];
+    /**
+     * IPS suppression whitelist entries — sources/destinations to exclude from inspection.
+     */
+    whitelists: outputs.SettingIpsSuppressionWhitelist[];
 }
 
 export interface SettingIpsSuppressionAlert {
@@ -2017,13 +2823,9 @@ export interface SettingMgmt {
      */
     advancedFeatureEnabled: boolean;
     /**
-     * Automatically upgrade device firmware.
+     * Automatic device firmware upgrade settings.
      */
-    autoUpgrade: boolean;
-    /**
-     * Hour of day (0-23) for automatic firmware upgrades.
-     */
-    autoUpgradeHour: number;
+    autoUpgrade: outputs.SettingMgmtAutoUpgrade;
     /**
      * Enable debug tools.
      */
@@ -2033,25 +2835,9 @@ export interface SettingMgmt {
      */
     directConnectEnabled: boolean;
     /**
-     * Allow SSH password authentication (in addition to keys).
+     * Device SSH access settings.
      */
-    sshAuthPasswordEnabled: boolean;
-    /**
-     * Enable SSH authentication.
-     */
-    sshEnabled: boolean;
-    /**
-     * SSH keys.
-     */
-    sshKeys: outputs.SettingMgmtSshKey[];
-    /**
-     * SSH password for device access. Sensitive — the controller stores only a hash, so this value is kept from configuration and not read back.
-     */
-    sshPassword?: string;
-    /**
-     * SSH username for device access.
-     */
-    sshUsername: string;
+    ssh: outputs.SettingMgmtSsh;
     /**
      * Enable the UniFi Identity Provider.
      */
@@ -2060,6 +2846,40 @@ export interface SettingMgmt {
      * Enable WiFiman.
      */
     wifimanEnabled: boolean;
+}
+
+export interface SettingMgmtAutoUpgrade {
+    /**
+     * Automatically upgrade device firmware.
+     */
+    enabled: boolean;
+    /**
+     * Hour of day (0-23) for automatic firmware upgrades.
+     */
+    hour: number;
+}
+
+export interface SettingMgmtSsh {
+    /**
+     * Allow SSH password authentication (in addition to keys).
+     */
+    authPasswordEnabled: boolean;
+    /**
+     * Enable SSH authentication.
+     */
+    enabled: boolean;
+    /**
+     * SSH keys.
+     */
+    keys: outputs.SettingMgmtSshKey[];
+    /**
+     * SSH password for device access. Sensitive — the controller stores only a hash, so this value is kept from configuration and not read back.
+     */
+    password?: string;
+    /**
+     * SSH username for device access.
+     */
+    username: string;
 }
 
 export interface SettingMgmtSshKey {
@@ -2156,29 +2976,43 @@ export interface SettingSyslog {
      */
     logAllContents: boolean;
     /**
-     * Whether netconsole logging is enabled.
+     * Netconsole logging settings.
      */
-    netconsoleEnabled: boolean;
-    /**
-     * Netconsole host.
-     */
-    netconsoleHost: string;
-    /**
-     * Netconsole port (1-65535).
-     */
-    netconsolePort: number;
+    netconsole: outputs.SettingSyslogNetconsole;
     /**
      * Remote syslog server port (1-65535).
      */
     port: number;
     /**
+     * Forwarding of this controller's own events to the remote syslog server.
+     */
+    thisController: outputs.SettingSyslogThisController;
+}
+
+export interface SettingSyslogNetconsole {
+    /**
+     * Whether netconsole logging is enabled. Defaults to `false` when `syslog` is configured and this is not set.
+     */
+    enabled: boolean;
+    /**
+     * Netconsole host.
+     */
+    host: string;
+    /**
+     * Netconsole port (1-65535).
+     */
+    port: number;
+}
+
+export interface SettingSyslogThisController {
+    /**
      * Also log this controller's events.
      */
-    thisController: boolean;
+    enabled: boolean;
     /**
      * Only send this controller's logs over an encrypted channel.
      */
-    thisControllerEncryptedOnly: boolean;
+    encryptedOnly: boolean;
 }
 
 export interface SettingTimeouts {
@@ -2214,21 +3048,9 @@ export interface SettingUsg {
      */
     ftpModule: boolean;
     /**
-     * Geo IP filtering action: block or allow.
+     * Geo IP filtering (Region Blocking) settings.
      */
-    geoIpFilteringBlock: string;
-    /**
-     * Comma-separated list of country codes for geo IP filtering.
-     */
-    geoIpFilteringCountries: string;
-    /**
-     * Enable geo IP filtering.
-     */
-    geoIpFilteringEnabled: boolean;
-    /**
-     * Geo IP filtering traffic direction: both, ingress, or egress.
-     */
-    geoIpFilteringTrafficDirection: string;
+    geoIpFiltering: outputs.SettingUsgGeoIpFiltering;
     /**
      * Enable GRE module.
      */
@@ -2246,17 +3068,9 @@ export interface SettingUsg {
      */
     mssClamp: string;
     /**
-     * Enable hardware offload for accounting.
+     * Hardware offload settings.
      */
-    offloadAccounting: boolean;
-    /**
-     * Enable hardware offload for L2 blocking.
-     */
-    offloadL2Blocking: boolean;
-    /**
-     * Enable hardware offload for scheduling.
-     */
-    offloadSch: boolean;
+    offload: outputs.SettingUsgOffload;
     /**
      * Other connections timeout, as a Go duration string (e.g. `600s`, `10m`).
      */
@@ -2282,37 +3096,9 @@ export interface SettingUsg {
      */
     synCookies: boolean;
     /**
-     * TCP close timeout, as a Go duration string (e.g. `10s`).
+     * TCP connection tracking timeouts.
      */
-    tcpCloseTimeout: string;
-    /**
-     * TCP close wait timeout, as a Go duration string (e.g. `60s`, `1m`).
-     */
-    tcpCloseWaitTimeout: string;
-    /**
-     * TCP established connection timeout, as a Go duration string (e.g. `7440s`, `2h4m`).
-     */
-    tcpEstablishedTimeout: string;
-    /**
-     * TCP fin wait timeout, as a Go duration string (e.g. `120s`, `2m`).
-     */
-    tcpFinWaitTimeout: string;
-    /**
-     * TCP last ACK timeout, as a Go duration string (e.g. `30s`).
-     */
-    tcpLastAckTimeout: string;
-    /**
-     * TCP SYN received timeout, as a Go duration string (e.g. `60s`, `1m`).
-     */
-    tcpSynRecvTimeout: string;
-    /**
-     * TCP SYN sent timeout, as a Go duration string (e.g. `120s`, `2m`).
-     */
-    tcpSynSentTimeout: string;
-    /**
-     * TCP time wait timeout, as a Go duration string (e.g. `120s`, `2m`).
-     */
-    tcpTimeWaitTimeout: string;
+    tcp: outputs.SettingUsgTcp;
     /**
      * Enable TFTP module.
      */
@@ -2322,33 +3108,17 @@ export interface SettingUsg {
      */
     timeoutSettingPreference: string;
     /**
-     * UDP other timeout, as a Go duration string (e.g. `30s`).
+     * UDP connection tracking timeouts.
      */
-    udpOtherTimeout: string;
-    /**
-     * UDP stream timeout, as a Go duration string (e.g. `180s`, `3m`).
-     */
-    udpStreamTimeout: string;
+    udp: outputs.SettingUsgUdp;
     /**
      * Unbind WAN monitors.
      */
     unbindWanMonitors: boolean;
     /**
-     * Enable UPnP.
+     * UPnP settings.
      */
-    upnpEnabled: boolean;
-    /**
-     * Enable UPnP NAT-PMP.
-     */
-    upnpNatPmpEnabled: boolean;
-    /**
-     * Enable UPnP secure mode.
-     */
-    upnpSecureMode: boolean;
-    /**
-     * UPnP WAN interface (e.g., WAN, WAN2).
-     */
-    upnpWanInterface: string;
+    upnp: outputs.SettingUsgUpnp;
 }
 
 export interface SettingUsgDnsVerification {
@@ -2370,6 +3140,105 @@ export interface SettingUsgDnsVerification {
     settingPreference: string;
 }
 
+export interface SettingUsgGeoIpFiltering {
+    /**
+     * Geo IP filtering action: block or allow.
+     */
+    block: string;
+    /**
+     * Comma-separated list of country codes for geo IP filtering.
+     */
+    countries: string;
+    /**
+     * Enable geo IP filtering.
+     */
+    enabled: boolean;
+    /**
+     * Geo IP filtering traffic direction: both, ingress, or egress.
+     */
+    trafficDirection: string;
+}
+
+export interface SettingUsgOffload {
+    /**
+     * Enable hardware offload for accounting.
+     */
+    accounting: boolean;
+    /**
+     * Enable hardware offload for L2 blocking.
+     */
+    l2Blocking: boolean;
+    /**
+     * Enable hardware offload for scheduling.
+     */
+    sch: boolean;
+}
+
+export interface SettingUsgTcp {
+    /**
+     * TCP close timeout, as a Go duration string (e.g. `10s`).
+     */
+    closeTimeout: string;
+    /**
+     * TCP close wait timeout, as a Go duration string (e.g. `60s`, `1m`).
+     */
+    closeWaitTimeout: string;
+    /**
+     * TCP established connection timeout, as a Go duration string (e.g. `7440s`, `2h4m`).
+     */
+    establishedTimeout: string;
+    /**
+     * TCP fin wait timeout, as a Go duration string (e.g. `120s`, `2m`).
+     */
+    finWaitTimeout: string;
+    /**
+     * TCP last ACK timeout, as a Go duration string (e.g. `30s`).
+     */
+    lastAckTimeout: string;
+    /**
+     * TCP SYN received timeout, as a Go duration string (e.g. `60s`, `1m`).
+     */
+    synRecvTimeout: string;
+    /**
+     * TCP SYN sent timeout, as a Go duration string (e.g. `120s`, `2m`).
+     */
+    synSentTimeout: string;
+    /**
+     * TCP time wait timeout, as a Go duration string (e.g. `120s`, `2m`).
+     */
+    timeWaitTimeout: string;
+}
+
+export interface SettingUsgUdp {
+    /**
+     * UDP other timeout, as a Go duration string (e.g. `30s`).
+     */
+    otherTimeout: string;
+    /**
+     * UDP stream timeout, as a Go duration string (e.g. `180s`, `3m`).
+     */
+    streamTimeout: string;
+}
+
+export interface SettingUsgUpnp {
+    /**
+     * Enable UPnP.
+     */
+    enabled: boolean;
+    /**
+     * Enable UPnP NAT-PMP.
+     */
+    natPmpEnabled: boolean;
+    /**
+     * Enable UPnP secure mode.
+     */
+    secureMode: boolean;
+    /**
+     * UPnP WAN interface (e.g., WAN, WAN2).
+     */
+    wanInterface: string;
+}
+
 export interface SiteTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -2389,6 +3258,44 @@ export interface SiteTimeouts {
     update?: string;
 }
 
+export interface SiteToSiteVpnEsp {
+    /**
+     * ESP (phase 2) Diffie-Hellman group (PFS). Only used when `profile = customized`.
+     */
+    dhGroup: number;
+    /**
+     * ESP (phase 2) encryption. Only used when `profile = customized`.
+     */
+    encryption: string;
+    /**
+     * ESP (phase 2) hash. Only used when `profile = customized`.
+     */
+    hash: string;
+    /**
+     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. `1h`, `3600s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
+     */
+    lifetime: string;
+}
+
+export interface SiteToSiteVpnIke {
+    /**
+     * IKE (phase 1) Diffie-Hellman group. Only used when `profile = customized`.
+     */
+    dhGroup: number;
+    /**
+     * IKE (phase 1) encryption. Only used when `profile = customized`.
+     */
+    encryption: string;
+    /**
+     * IKE (phase 1) hash. Only used when `profile = customized`.
+     */
+    hash: string;
+    /**
+     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. `8h`, `28800s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
+     */
+    lifetime: string;
+}
+
 export interface SiteToSiteVpnTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
@@ -2406,6 +3313,17 @@ export interface SiteToSiteVpnTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: string;
+}
+
+export interface StaticRouteGateway {
+    /**
+     * The MAC address of the gateway device, used when `type` is `switch`.
+     */
+    device?: string;
+    /**
+     * The type of gateway for the static route. Can be `default` or `switch`.
+     */
+    type: string;
 }
 
 export interface StaticRouteTimeouts {
@@ -2606,13 +3524,9 @@ export interface VpnServerOpenvpn {
      */
     authKey: string;
     /**
-     * CA certificate generated by the controller.
+     * CA certificate and private key generated by the controller.
      */
-    caCrt: string;
-    /**
-     * CA private key generated by the controller.
-     */
-    caKey: string;
+    ca: outputs.VpnServerOpenvpnCa;
     /**
      * Diffie-Hellman parameters generated by the controller.
      */
@@ -2630,21 +3544,46 @@ export interface VpnServerOpenvpn {
      */
     port: number;
     /**
+     * Server certificate and private key generated by the controller.
+     */
+    server: outputs.VpnServerOpenvpnServer;
+    /**
+     * Shared client certificate and private key generated by the controller.
+     */
+    sharedClient: outputs.VpnServerOpenvpnSharedClient;
+}
+
+export interface VpnServerOpenvpnCa {
+    /**
+     * CA certificate generated by the controller.
+     */
+    crt: string;
+    /**
+     * CA private key generated by the controller.
+     */
+    key: string;
+}
+
+export interface VpnServerOpenvpnServer {
+    /**
      * Server certificate generated by the controller.
      */
-    serverCrt: string;
+    crt: string;
     /**
      * Server private key generated by the controller.
      */
-    serverKey: string;
+    key: string;
+}
+
+export interface VpnServerOpenvpnSharedClient {
     /**
      * Shared client certificate generated by the controller.
      */
-    sharedClientCrt: string;
+    crt: string;
     /**
      * Shared client private key generated by the controller.
      */
-    sharedClientKey: string;
+    key: string;
 }
 
 export interface VpnServerTimeouts {
@@ -2724,13 +3663,9 @@ export interface WanDhcpv6 {
      */
     options?: outputs.WanDhcpv6Option[];
     /**
-     * DHCPv6 prefix delegation size
+     * DHCPv6 prefix delegation configuration
      */
-    pdSize: number;
-    /**
-     * Whether DHCPv6 PD size is automatic
-     */
-    pdSizeAuto: boolean;
+    pd: outputs.WanDhcpv6Pd;
     /**
      * IPv6 WAN delegation type (pd, single_network, none)
      */
@@ -2748,19 +3683,22 @@ export interface WanDhcpv6Option {
     value: string;
 }
 
+export interface WanDhcpv6Pd {
+    /**
+     * DHCPv6 prefix delegation size
+     */
+    size: number;
+    /**
+     * Whether DHCPv6 PD size is automatic
+     */
+    sizeAuto: boolean;
+}
+
 export interface WanDns {
     /**
-     * IPv6 DNS preference (auto, manual)
+     * IPv6 DNS configuration
      */
-    ipv6Preference: string;
-    /**
-     * Primary IPv6 DNS server
-     */
-    ipv6Primary?: string;
-    /**
-     * Secondary IPv6 DNS server
-     */
-    ipv6Secondary?: string;
+    ipv6: outputs.WanDnsIpv6;
     /**
      * DNS preference (auto, manual)
      */
@@ -2773,6 +3711,32 @@ export interface WanDns {
      * Secondary DNS server
      */
     secondary?: string;
+}
+
+export interface WanDnsIpv6 {
+    /**
+     * IPv6 DNS preference (auto, manual)
+     */
+    preference: string;
+    /**
+     * Primary IPv6 DNS server
+     */
+    primary?: string;
+    /**
+     * Secondary IPv6 DNS server
+     */
+    secondary?: string;
+}
+
+export interface WanDslite {
+    /**
+     * The DS-Lite AFTR remote host. Only used when `remote_host_auto` is disabled.
+     */
+    remoteHost: string;
+    /**
+     * Whether the DS-Lite AFTR remote host is detected automatically.
+     */
+    remoteHostAuto: boolean;
 }
 
 export interface WanEgressQos {
@@ -2906,6 +3870,17 @@ export interface WireguardPeerTimeouts {
     update?: string;
 }
 
+export interface WlanApGroup {
+    /**
+     * List of AP group IDs to apply this WLAN to.
+     */
+    ids?: string[];
+    /**
+     * Access point group mode.
+     */
+    mode: string;
+}
+
 export interface WlanMacFilter {
     /**
      * Indicates whether or not the MAC filter is turned on for the network.
@@ -2932,6 +3907,39 @@ export interface WlanPrivatePresharedKey {
     password: string;
 }
 
+export interface WlanRadius {
+    /**
+     * Enable RADIUS MAC authentication. Defaults to `false` when not set.
+     */
+    macAuthEnabled: boolean;
+    /**
+     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
+     */
+    profileId: string;
+}
+
+export interface WlanRoamingAssistant6e {
+    /**
+     * Enable the 6 GHz roaming assistant.
+     */
+    enabled: boolean;
+    /**
+     * Signal strength threshold in dBm, `-90` to `-70`. The controller supplies a value when unset.
+     */
+    rssi: number;
+}
+
+export interface WlanRoamingAssistantNa {
+    /**
+     * Enable the 5 GHz roaming assistant.
+     */
+    enabled: boolean;
+    /**
+     * Signal strength threshold in dBm, `-80` to `-60`. The controller supplies a value when unset.
+     */
+    rssi: number;
+}
+
 export interface WlanSchedule {
     /**
      * Day of week for the block.
@@ -2946,13 +3954,20 @@ export interface WlanSchedule {
      */
     name?: string;
     /**
+     * Start time of the block.
+     */
+    start: outputs.WlanScheduleStart;
+}
+
+export interface WlanScheduleStart {
+    /**
      * Start hour for the block (0-23).
      */
-    startHour: number;
+    hour: number;
     /**
      * Start minute for the block (0-59).
      */
-    startMinute: number;
+    minute: number;
 }
 
 export interface WlanTimeouts {
@@ -2972,5 +3987,35 @@ export interface WlanTimeouts {
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
     update?: string;
+}
+
+export interface WlanWpa {
+    /**
+     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
+     */
+    enc: string;
+    /**
+     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`.
+     */
+    mode: string;
+}
+
+export interface WlanWpa3 {
+    /**
+     * Enable WPA3 Enterprise 192-bit mode.
+     */
+    enhanced192: boolean;
+    /**
+     * Enable WPA3 fast roaming (802.11r).
+     */
+    fastRoaming: boolean;
+    /**
+     * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
+     */
+    support: boolean;
+    /**
+     * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3.support` must be true).
+     */
+    transition: boolean;
 }
 

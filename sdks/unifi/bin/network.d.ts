@@ -66,57 +66,9 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
-     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     * IPv6 settings for the network. When omitted, `interface_type` is taken from the controller and the remaining values are read from the controller.
      */
-    readonly ipv6Aliases: pulumi.Output<string[] | undefined>;
-    /**
-     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
-     */
-    readonly ipv6ClientAddressAssignment: pulumi.Output<string>;
-    /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
-     */
-    readonly ipv6InterfaceType: pulumi.Output<string>;
-    /**
-     * Specifies whether automatic prefix ID assignment is enabled for IPv6 Prefix Delegation.
-     */
-    readonly ipv6PdAutoPrefixidEnabled: pulumi.Output<boolean>;
-    /**
-     * The IPv6 Prefix Delegation WAN interface (e.g., `wan`, `wan2`).
-     */
-    readonly ipv6PdInterface: pulumi.Output<string | undefined>;
-    /**
-     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., `0`, `1a`).
-     */
-    readonly ipv6PdPrefixid: pulumi.Output<string | undefined>;
-    /**
-     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with `ipv6_pd_stop` when `ipv6_interface_type` is `pd`, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
-     */
-    readonly ipv6PdStart: pulumi.Output<string>;
-    /**
-     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with `ipv6_pd_start` when `ipv6_interface_type` is `pd`.
-     */
-    readonly ipv6PdStop: pulumi.Output<string>;
-    /**
-     * Specifies whether IPv6 Router Advertisement (RA) is enabled.
-     */
-    readonly ipv6Ra: pulumi.Output<boolean>;
-    /**
-     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. `14400s`, `4h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
-     */
-    readonly ipv6RaPreferredLifetime: pulumi.Output<string>;
-    /**
-     * The IPv6 Router Advertisement priority. Must be one of `high`, `medium`, or `low`.
-     */
-    readonly ipv6RaPriority: pulumi.Output<string>;
-    /**
-     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. `86400s`, `24h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
-     */
-    readonly ipv6RaValidLifetime: pulumi.Output<string>;
-    /**
-     * The IPv6 static subnet of the network. Only used when `ipv6_interface_type` is `static`.
-     */
-    readonly ipv6StaticSubnet: pulumi.Output<string | undefined>;
+    readonly ipv6: pulumi.Output<outputs.NetworkIpv6>;
     /**
      * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
@@ -224,57 +176,9 @@ export interface NetworkState {
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     * IPv6 settings for the network. When omitted, `interface_type` is taken from the controller and the remaining values are read from the controller.
      */
-    ipv6Aliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
-    /**
-     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
-     */
-    ipv6ClientAddressAssignment?: pulumi.Input<string | undefined>;
-    /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
-     */
-    ipv6InterfaceType?: pulumi.Input<string | undefined>;
-    /**
-     * Specifies whether automatic prefix ID assignment is enabled for IPv6 Prefix Delegation.
-     */
-    ipv6PdAutoPrefixidEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * The IPv6 Prefix Delegation WAN interface (e.g., `wan`, `wan2`).
-     */
-    ipv6PdInterface?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., `0`, `1a`).
-     */
-    ipv6PdPrefixid?: pulumi.Input<string | undefined>;
-    /**
-     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with `ipv6_pd_stop` when `ipv6_interface_type` is `pd`, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
-     */
-    ipv6PdStart?: pulumi.Input<string | undefined>;
-    /**
-     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with `ipv6_pd_start` when `ipv6_interface_type` is `pd`.
-     */
-    ipv6PdStop?: pulumi.Input<string | undefined>;
-    /**
-     * Specifies whether IPv6 Router Advertisement (RA) is enabled.
-     */
-    ipv6Ra?: pulumi.Input<boolean | undefined>;
-    /**
-     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. `14400s`, `4h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
-     */
-    ipv6RaPreferredLifetime?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 Router Advertisement priority. Must be one of `high`, `medium`, or `low`.
-     */
-    ipv6RaPriority?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. `86400s`, `24h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
-     */
-    ipv6RaValidLifetime?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 static subnet of the network. Only used when `ipv6_interface_type` is `static`.
-     */
-    ipv6StaticSubnet?: pulumi.Input<string | undefined>;
+    ipv6?: pulumi.Input<inputs.NetworkIpv6 | undefined>;
     /**
      * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
@@ -374,57 +278,9 @@ export interface NetworkArgs {
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     * IPv6 settings for the network. When omitted, `interface_type` is taken from the controller and the remaining values are read from the controller.
      */
-    ipv6Aliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
-    /**
-     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
-     */
-    ipv6ClientAddressAssignment?: pulumi.Input<string | undefined>;
-    /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
-     */
-    ipv6InterfaceType?: pulumi.Input<string | undefined>;
-    /**
-     * Specifies whether automatic prefix ID assignment is enabled for IPv6 Prefix Delegation.
-     */
-    ipv6PdAutoPrefixidEnabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * The IPv6 Prefix Delegation WAN interface (e.g., `wan`, `wan2`).
-     */
-    ipv6PdInterface?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., `0`, `1a`).
-     */
-    ipv6PdPrefixid?: pulumi.Input<string | undefined>;
-    /**
-     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with `ipv6_pd_stop` when `ipv6_interface_type` is `pd`, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
-     */
-    ipv6PdStart?: pulumi.Input<string | undefined>;
-    /**
-     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with `ipv6_pd_start` when `ipv6_interface_type` is `pd`.
-     */
-    ipv6PdStop?: pulumi.Input<string | undefined>;
-    /**
-     * Specifies whether IPv6 Router Advertisement (RA) is enabled.
-     */
-    ipv6Ra?: pulumi.Input<boolean | undefined>;
-    /**
-     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. `14400s`, `4h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
-     */
-    ipv6RaPreferredLifetime?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 Router Advertisement priority. Must be one of `high`, `medium`, or `low`.
-     */
-    ipv6RaPriority?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. `86400s`, `24h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
-     */
-    ipv6RaValidLifetime?: pulumi.Input<string | undefined>;
-    /**
-     * The IPv6 static subnet of the network. Only used when `ipv6_interface_type` is `static`.
-     */
-    ipv6StaticSubnet?: pulumi.Input<string | undefined>;
+    ipv6?: pulumi.Input<inputs.NetworkIpv6 | undefined>;
     /**
      * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */

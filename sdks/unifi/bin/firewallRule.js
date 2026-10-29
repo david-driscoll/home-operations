@@ -69,15 +69,9 @@ class FirewallRule extends pulumi.CustomResource {
         if (opts.id) {
             const state = argsOrState;
             resourceInputs["action"] = state?.action;
-            resourceInputs["dstAddress"] = state?.dstAddress;
-            resourceInputs["dstAddressIpv6"] = state?.dstAddressIpv6;
-            resourceInputs["dstFirewallGroupIds"] = state?.dstFirewallGroupIds;
-            resourceInputs["dstNetworkId"] = state?.dstNetworkId;
-            resourceInputs["dstNetworkType"] = state?.dstNetworkType;
-            resourceInputs["dstPort"] = state?.dstPort;
+            resourceInputs["destination"] = state?.destination;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["icmpTypename"] = state?.icmpTypename;
-            resourceInputs["icmpV6Typename"] = state?.icmpV6Typename;
+            resourceInputs["icmp"] = state?.icmp;
             resourceInputs["ipSec"] = state?.ipSec;
             resourceInputs["logging"] = state?.logging;
             resourceInputs["name"] = state?.name;
@@ -88,17 +82,8 @@ class FirewallRule extends pulumi.CustomResource {
             resourceInputs["ruleset"] = state?.ruleset;
             resourceInputs["settingPreference"] = state?.settingPreference;
             resourceInputs["site"] = state?.site;
-            resourceInputs["srcAddress"] = state?.srcAddress;
-            resourceInputs["srcAddressIpv6"] = state?.srcAddressIpv6;
-            resourceInputs["srcFirewallGroupIds"] = state?.srcFirewallGroupIds;
-            resourceInputs["srcMac"] = state?.srcMac;
-            resourceInputs["srcNetworkId"] = state?.srcNetworkId;
-            resourceInputs["srcNetworkType"] = state?.srcNetworkType;
-            resourceInputs["srcPort"] = state?.srcPort;
-            resourceInputs["stateEstablished"] = state?.stateEstablished;
-            resourceInputs["stateInvalid"] = state?.stateInvalid;
-            resourceInputs["stateNew"] = state?.stateNew;
-            resourceInputs["stateRelated"] = state?.stateRelated;
+            resourceInputs["source"] = state?.source;
+            resourceInputs["state"] = state?.state;
             resourceInputs["timeouts"] = state?.timeouts;
         }
         else {
@@ -113,15 +98,9 @@ class FirewallRule extends pulumi.CustomResource {
                 throw new Error("Missing required property 'ruleset'");
             }
             resourceInputs["action"] = args?.action;
-            resourceInputs["dstAddress"] = args?.dstAddress;
-            resourceInputs["dstAddressIpv6"] = args?.dstAddressIpv6;
-            resourceInputs["dstFirewallGroupIds"] = args?.dstFirewallGroupIds;
-            resourceInputs["dstNetworkId"] = args?.dstNetworkId;
-            resourceInputs["dstNetworkType"] = args?.dstNetworkType;
-            resourceInputs["dstPort"] = args?.dstPort;
+            resourceInputs["destination"] = args?.destination;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["icmpTypename"] = args?.icmpTypename;
-            resourceInputs["icmpV6Typename"] = args?.icmpV6Typename;
+            resourceInputs["icmp"] = args?.icmp;
             resourceInputs["ipSec"] = args?.ipSec;
             resourceInputs["logging"] = args?.logging;
             resourceInputs["name"] = args?.name;
@@ -132,17 +111,8 @@ class FirewallRule extends pulumi.CustomResource {
             resourceInputs["ruleset"] = args?.ruleset;
             resourceInputs["settingPreference"] = args?.settingPreference;
             resourceInputs["site"] = args?.site;
-            resourceInputs["srcAddress"] = args?.srcAddress;
-            resourceInputs["srcAddressIpv6"] = args?.srcAddressIpv6;
-            resourceInputs["srcFirewallGroupIds"] = args?.srcFirewallGroupIds;
-            resourceInputs["srcMac"] = args?.srcMac;
-            resourceInputs["srcNetworkId"] = args?.srcNetworkId;
-            resourceInputs["srcNetworkType"] = args?.srcNetworkType;
-            resourceInputs["srcPort"] = args?.srcPort;
-            resourceInputs["stateEstablished"] = args?.stateEstablished;
-            resourceInputs["stateInvalid"] = args?.stateInvalid;
-            resourceInputs["stateNew"] = args?.stateNew;
-            resourceInputs["stateRelated"] = args?.stateRelated;
+            resourceInputs["source"] = args?.source;
+            resourceInputs["state"] = args?.state;
             resourceInputs["timeouts"] = args?.timeouts;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
