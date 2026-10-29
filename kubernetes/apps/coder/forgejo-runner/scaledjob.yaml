@@ -48,15 +48,16 @@ spec:
   # with N jobs in hand it wants N + 2 pods, so when a waiting pod takes a
   # job, the next poll starts another to wait in its place.
   minReplicaCount: 2
-  # SIXTEEN HERE MEANS EIGHTEEN PODS. KEDA caps the reported job count at
-  # this number and then adds the two spares above, so the most that ever run
-  # is maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
-  # raise this with that in mind, not by itself.
+  # EIGHT HERE MEANS TEN PODS. KEDA caps the reported job count at this
+  # number and then adds the two spares above, so the most that ever run is
+  # maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below) and
+  # pulls a ~1.5 GB job image on start; raise this with that in mind, not by
+  # itself.
   #
-  # Raised from 8 on 2026-10-18: every burst sat at that ceiling (a queue of
-  # 113 took about two hours to drain), and the four worker nodes the pods
-  # can land on had the room. The spread constraint in the pod template keeps
-  # eighteen of them from piling onto two nodes.
+  # Briefly 16 on 2026-10-18 (every burst sat at 8; a queue of 113 took about
+  # two hours to drain) and lowered back the same day. Since 2026-10-28 the
+  # pods may only land on hard-hat and shining-armor (the node affinity in
+  # the pod template), so ten pods is up to five Docker daemons per node.
   maxReplicaCount: 8
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
@@ -114,6 +115,30 @@ spec:
         # after SIGTERM, so the kubelet has to wait about that long before
         # it sends SIGKILL.
         terminationGracePeriodSeconds: 1860
+        # NEVER ON A NODE LABELLED `driscoll.dev/ephemeral-disk: sata`
+        # (fluttershy, kerfuffle; talos/talconfig.yaml nodeLabels). Their /var
+        # -- containerd's image store and every emptyDir here, docker-storage
+        # included -- is a DRAM-less SATA SSD that saturates around 40 MiB/s.
+        # On 2026-10-28 a Renovate automerge burst started 24 runners in ten
+        # minutes, 12 of them on those two nodes, each pulling ~1.5 GB of job
+        # image into dind. Both nodes' CRI wedged, Longhorn replicas timed out
+        # cluster-wide, and both had to be force-rebooted. The same rule, for
+        # the same reason, is in kubernetes/components/pulumi-workspace.
+        #
+        # Required, not preferred, and this is the one exception to "a job
+        # must never sit Pending" below: a job waiting for hard-hat or
+        # shining-armor is cheaper than a wedged node. NotIn also matches a
+        # node WITHOUT the label, so until fluttershy and kerfuffle have had
+        # `mise run talos:apply-node` this rule is a no-op, not a scheduling
+        # failure.
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: driscoll.dev/ephemeral-disk
+                      operator: NotIn
+                      values: ["sata"]
         # ONE RUNNER PER NODE BEFORE A SECOND ON ANY OF THEM. Without this the
         # scheduler packed every pod onto the two emptiest workers, and each
         # burst started five Docker daemons on one node at once. It is a
