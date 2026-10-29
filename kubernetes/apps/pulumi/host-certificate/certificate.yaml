@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/cert-manager.io/certificate_v1.json
+#
+# The web-UI certificate for every Proxmox host: `<name>.host.${ROOT_DOMAIN}`.
+#
+# Issued here, once, and read by the host Pulumi stacks (components/ProxmoxHost.ts) from the
+# Secret below, which they push to each host with `pvenode cert set`. Proxmox's built-in ACME
+# client was the alternative; it was rejected because five hosts ordering the identical wildcard
+# exhaust Let's Encrypt's 5-per-week limit for one identifier set, and because it would put the
+# Cloudflare token on every hypervisor.
+#
+# Not covered by le-production's `*.${ROOT_DOMAIN}`: a wildcard matches exactly ONE label, and
+# `<name>.host.${ROOT_DOMAIN}` has two below the root.
+#
+# One private key is shared by every host, so it is rotated at every renewal (`Always`), which
+# bounds how long a key lifted from a single hypervisor stays useful. Duration and renewBefore
+# are cert-manager's defaults (90d, renewing at 30d), which leaves a month for the stacks'
+# resync (1h-24h) to carry a renewed certificate to the hosts.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: host-wildcard
+spec:
+  secretName: host-wildcard-tls
+  issuerRef:
+    name: letsencrypt-production
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.host.${ROOT_DOMAIN}"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
