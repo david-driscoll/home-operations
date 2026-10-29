@@ -18,7 +18,6 @@ import { all, ComponentResource, type Input, interpolate, jsonStringify, log, me
 import { RandomPassword } from "@pulumi/random";
 import * as tailscale from "@pulumi/tailscale";
 import { TailnetKey } from "@pulumi/tailscale";
-import { glob } from "glob";
 import { unique } from "moderndash";
 import * as yaml from "yaml";
 import type { AuthentikApplicationManager } from "./authentik.ts";
@@ -959,27 +958,17 @@ export class DockgeLxc extends ComponentResource {
   }
 
   private async getStackFiles(_stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
-    const commonFiles = await glob("**/*", {
-      cwd: commonPath,
-      absolute: true,
-      nodir: true,
-      dot: true,
-    });
-    const files = await glob("**/*", {
-      cwd: path,
-      absolute: true,
-      nodir: true,
-      dot: true,
-    });
+    const commonFiles = await listFilesRecursive(commonPath);
+    const files = await listFilesRecursive(path);
 
     if (commonFiles.some(z => z.endsWith(".ignore")) || files.some(z => z.endsWith(".ignore"))) {
       return null;
     }
 
-    // glob() gives NO ordering guarantee — it walks directories concurrently and yields
-    // entries in completion order, so a deeply nested stack (prometheus, with config/,
-    // config/rules/ and config/alloy/) comes back in a different order from run to run
-    // once several stacks are globbing at once. That order flows into this Map, into the
+    // The directory walk gives NO ordering guarantee — readdir yields entries in whatever
+    // order the filesystem hands them back, and the old `glob` package walked directories
+    // concurrently, so a deeply nested stack (prometheus, with config/, config/rules/ and
+    // config/alloy/) came back in a different order from run to run. That order flows into this Map, into the
     // per-file resource list in createStack(), and finally into the compose Command's
     // positional `triggers` array — where a pure reshuffle showed up as a diff on
     // `triggers[6]`…`triggers[9]` with inputDiff:false and replaced the Command, i.e.
@@ -1663,6 +1652,20 @@ export class DockgeLxc extends ComponentResource {
       path,
       applications,
     }));
+  }
+}
+
+/**
+ * Every regular file under `dir`, as absolute paths, dotfiles and dot-directories
+ * included. A missing directory (most stacks have no `_common/<stack>`) is empty.
+ */
+async function listFilesRecursive(dir: string): Promise<string[]> {
+  try {
+    const entries = await readdir(dir, { recursive: true, withFileTypes: true });
+    return entries.filter(entry => entry.isFile()).map(entry => resolve(entry.parentPath, entry.name));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
   }
 }
 
