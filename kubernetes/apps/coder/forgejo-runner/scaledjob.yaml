@@ -15,7 +15,8 @@
 # replaced at the next poll.
 #
 # WHAT A WAITING POD HAS READY: it is scheduled, its Docker daemon is up, and
-# the `prepull` container has already pulled the job image. What it does NOT
+# once it has waited a minute without a job, the `prepull` container has
+# pulled the job image (./resources/prepull.sh). What it does NOT
 # have is anything from an earlier job: each pod serves one job, so the
 # actions cache starts empty every time and every `flate` render is cold.
 #
@@ -101,7 +102,12 @@ spec:
     # than that is not doing either. It has to stay ABOVE that sum, because
     # it is counted from pod start and would kill a job that began late.
     activeDeadlineSeconds: 36000
-    ttlSecondsAfterFinished: 600
+    # Two minutes, down from ten. Nothing reads a finished pod: its log is in
+    # Loki and the job's own log is on the forge, and KEDA counts only Jobs
+    # that have not finished. Every minute one is kept is a minute its
+    # emptyDirs (or volumes) stay allocated and it counts towards the spread
+    # skew below.
+    ttlSecondsAfterFinished: 120
     template:
       metadata:
         labels:
@@ -263,7 +269,10 @@ spec:
                 readOnly: true
           # Pulls the job image into this pod's Docker daemon while the runner
           # waits (./resources/prepull.sh), then exits. Without it the first
-          # thing a job did was download about 1.5 GB. The dind image, for
+          # thing a job did was download about 1.5 GB. Only once the pod has
+          # waited PREPULL_DELAY_SECONDS without a job, read from the runner's
+          # log in /data: a pod that takes a job at once leaves the pull to the
+          # job, which may not want this image at all. The dind image, for
           # its docker CLI. It always exits 0: a failed pull only means the
           # runner pulls the image itself, as it always did.
           - name: prepull
@@ -275,6 +284,11 @@ spec:
               # warms an image no job uses.
               - name: PREPULL_IMAGES
                 value: ghcr.io/catthehacker/ubuntu:act-24.04
+              # The runner fetches a waiting job within a few seconds of
+              # starting (fetch_interval 2s), so a minute separates a pod
+              # started for a job from a spare.
+              - name: PREPULL_DELAY_SECONDS
+                value: "60"
               - name: DOCKER_HOST
                 value: tcp://127.0.0.1:2376
               - name: DOCKER_TLS_VERIFY
@@ -302,6 +316,11 @@ spec:
                 readOnly: true
               - name: scripts
                 mountPath: /scripts
+                readOnly: true
+              # For /data/one-job.log (./resources/run-job.sh), and nothing
+              # else.
+              - name: data
+                mountPath: /data
                 readOnly: true
         volumes:
           - name: scripts
