@@ -235,7 +235,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         opts,
       );
 
-      const providerConfig = authentik.getProviderOauth2ConfigOutput({ name: provider.name }, { parent: provider });
+      // dependsOn, not just the name: `provider.name` is known before the
+      // provider exists, so on the run that CREATES it the lookup raced the
+      // create, failed with an empty invoke error, and failed the whole
+      // stacks/system update -- every new OIDC app needed a second run
+      // (seen 2026-10-29 for sonarr/radarr).
+      const providerConfig = authentik.getProviderOauth2ConfigOutput({ name: provider.name }, { parent: provider, dependsOn: [provider] });
 
       const oidcCredentials = new OnePasswordItem(
         `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
