@@ -12,7 +12,11 @@ spec:
   interval: 1h
   driftDetection:
     mode: enabled
-  timeout: 10m
+  # TEMPORARY, for the 4 → 5 upgrade (#2629); restore 10m once v5 has settled.
+  # Sonarr 5 runs ~19 one-way migrations at startup, before /ping answers --
+  # 225 rewrites MediaInfo for every EpisodeFiles row -- so the first boot
+  # can take far longer than a normal one.
+  timeout: 30m
   install:
     createNamespace: true
     replace: true
@@ -21,9 +25,13 @@ spec:
   upgrade:
     crds: CreateReplace
     cleanupOnFail: true
+    # TEMPORARY, for the 4 → 5 upgrade (#2629); restore `retries: -1` +
+    # `strategy: rollback` once v5 has settled. A rollback here would put the
+    # 4.0.20 image back on a database already migrated to v5, which v4 cannot
+    # read -- the only real rollback is restoring the pre-upgrade pg_dump. A
+    # failed upgrade must stay failed for a human to look at.
     remediation:
-      retries: -1
-      strategy: rollback
+      retries: 0
   rollback:
     force: true
     cleanupOnFail: true
@@ -41,7 +49,7 @@ spec:
           app:
             image:
               repository: ghcr.io/home-operations/sonarr
-              tag: 4.0.20@sha256:1f19eb5e0f421418c1a956bbe01310a0141423afe28bd9a4b1dcb8629ff2bce2
+              tag: 5.0.0@sha256:5d4f89a36a06fe44039e7533e743b4c7bf0e0d82868c86ea8ed8178abd1cbe4b
               pullPolicy: IfNotPresent
             # -- environment variables.
             # See [image docs](https://github.com/dani-garcia/vaultwarden/blob/main/.env.template) for more details.
@@ -51,8 +59,21 @@ spec:
               UMASK: 002
               SONARR__APP__INSTANCENAME: Sonarr
               SONARR__APP__THEME: dark
-              SONARR__AUTH__METHOD: External
-              SONARR__AUTH__REQUIRED: DisabledForLocalAddresses
+              # Native OIDC through authentik (./definition.yaml). AUTHORITY,
+              # CLIENTID and CLIENTSECRET come from ${APP}-oidc below; if any
+              # is missing Sonarr silently falls back to Forms with the form
+              # hidden -- the UI stays locked, API keys keep working.
+              SONARR__AUTH__METHOD: Oidc
+              # Enabled, not DisabledForLocalAddresses: TRUSTEDNETWORKS makes
+              # Sonarr see the real client IP, and every LAN address would then
+              # skip the login.
+              SONARR__AUTH__REQUIRED: Enabled
+              # The one identity native OIDC accepts; `servarr_identity` sends
+              # it, verified, for every media-managers member. Changing it here
+              # AND in that mapping ends every session (7-day sliding cookies
+              # otherwise outlive removal from the group).
+              SONARR__AUTH__OIDCUSERIDENTIFIER: media-managers
+              SONARR__AUTH__OIDCSCOPES: openid servarr_identity
               SONARR__AUTH__APIKEY:
                 valueFrom:
                   secretKeyRef:
@@ -68,6 +89,11 @@ spec:
               SONARR__LOG__LEVEL: info
               SONARR__PORT: &port 8989
               SONARR__SERVER__ALLOWEDHOSTS: "*"
+              # The pod CIDR (talos/talconfig.yaml clusterPodNets), i.e. Traefik.
+              # Without it only loopback is trusted, the X-Forwarded-Proto/Host
+              # are ignored, and the OIDC redirect_uri goes out as http://<pod>
+              # -- which authentik's exact match rejects.
+              SONARR__SERVER__TRUSTEDNETWORKS: 10.206.0.0/16
               TZ: ${TIMEZONE}
             # SONARR__POSTGRES__{HOST,PORT,USER,PASSWORD,MAINDB}, from the
             # ExternalSecret next door. envFrom rather than five secretKeyRefs
@@ -78,6 +104,12 @@ spec:
             envFrom:
               - secretRef:
                   name: ${APP}-env
+              # SONARR__AUTH__OIDC{AUTHORITY,CLIENTID,CLIENTSECRET}. Optional:
+              # it cannot exist before stacks/system has read ./definition.yaml,
+              # and reloader restarts the pod when it lands.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
             probes:
               liveness: &probes
                 enabled: true
@@ -99,6 +131,9 @@ spec:
               # startup probe suspends liveness AND readiness until it passes, so
               # 60 x 10s buys ten minutes and costs nothing on a normal boot, which
               # answers /ping on the first or second check.
+              #
+              # TEMPORARY 180 (30 min, matching the HelmRelease timeout) for the
+              # 4 → 5 upgrade (#2629); back to 60 once v5 has settled.
               startup:
                 enabled: true
                 custom: true
@@ -109,7 +144,7 @@ spec:
                   initialDelaySeconds: 10
                   periodSeconds: 10
                   timeoutSeconds: 10
-                  failureThreshold: 60
+                  failureThreshold: 180
             securityContext:
               runAsNonRoot: true
               runAsUser: 568
@@ -168,5 +203,6 @@ spec:
                 extensionRef:
                   group: traefik.io
                   kind: Middleware
-                  name: authenticated-user
+                  # Network gate only; Sonarr does the SSO itself.
+                  name: local-user
 ---

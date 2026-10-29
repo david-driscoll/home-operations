@@ -9,21 +9,30 @@ spec:
   category: Media Management
   description: Sonarr is a TV series collection manager
   url: &url https://${APP}.${ROOT_DOMAIN}
-  # The same app under its tailnet name. authentik's ProxyProvider.external_host
-  # holds ONE hostname, so without this the outpost has no application for
-  # ${APP}.${TAILSCALE_DOMAIN} and answers 400 "no app for hostname" -- which is
-  # what the Dockge hosts' authentik-gated tailnet routes did until now. Paired
-  # with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml; the two go together.
-  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sonarr.svg
   access_policy:
     groups:
       - media-managers
   authentik:
-    proxy:
-      mode: "forward_single"
-      externalHost: *url
-  #     skipPathRegex: "^/api([/?].*)?$"
+    # oauth2, NOT proxy: Sonarr 5's native OIDC (SONARR__AUTH__METHOD: Oidc in
+    # ./helmrelease.yaml), so the route takes `local-user`, not the forward-auth
+    # chain -- same as aurral. Native OIDC is single-user: it accepts one
+    # identity, AUTH__OIDCUSERIDENTIFIER, so the `servarr_identity` scope
+    # (components/authentik/property-mappings.ts) gives every media-managers
+    # member that same verified email. access_policy above stays the gate.
+    oauth2:
+      clientType: confidential
+      # Both hostnames: Sonarr builds redirect_uri from the request's own host
+      # (forwarded headers, trusted via SERVER__TRUSTEDNETWORKS), so a login
+      # started on either name comes back to the same one.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/signin-oidc"
+        - url: "https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}/signin-oidc"
+      # NOT `email`: authentik's built-in mapping sends the real address with
+      # email_verified False, which Sonarr ignores.
+      propertyMappings:
+        - openid
+        - servarr_identity
   gatus:
     - group: "Applications"
       url: https://${APP}.${ROOT_DOMAIN}/ping
