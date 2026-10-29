@@ -34,6 +34,9 @@
 #     a NotReady node as an empty domain and hold every later workspace
 #     Pending. A spread preference must never block a Pulumi run.
 #
+# And /share on a Longhorn scratch volume instead of the node's /var, in the
+# last patch below.
+#
 # And the workspace IMAGE, in a patch of its own below: upstream pulumi-nodejs
 # with every plugin, the Terraform providers behind sdks/, a warm npm cache,
 # npm 11 and vals baked in, so a run stops writing ~2.5 GB to /var
@@ -109,24 +112,69 @@ patches:
                 # read:package token. The forge refuses anonymous pulls.
                 imagePullSecrets:
                   - name: pulumi-workspace-image-pull
-  # Explicitly empty, not absent, and a JSON patch because a strategic merge
-  # drops an empty list. a0662905 removed the vals init container, its volumes
-  # and its mounts from every stack.yaml, but kustomize-controller still owns
-  # those fields on the live Stacks: dropping the last item makes server-side
-  # apply write `null`, which the CRD rejects ("initContainers: Invalid value:
-  # "null" ... must be of type array") and fails the whole Kustomization. An
-  # empty list is what the apply should own instead. No stack.yaml sets these
-  # (see the rule above), and the pulumi container is the only one, at index 0.
+  # /share ON A LONGHORN SCRATCH VOLUME, not the operator's emptyDir. /share
+  # holds the fetched program and everything a run installs into it, and the
+  # operator mounts it from an emptyDir named `share`, i.e. the node's /var --
+  # the disk that wedged fluttershy on 2026-10-19 and fluttershy and kerfuffle
+  # on 2026-10-28. `scratch` is a generic ephemeral volume on `longhorn-scratch`
+  # (kubernetes/apps/longhorn-system/storageclass/scratch.yaml): node-local on
+  # the NVMe, out of the recurring snapshot jobs, created and deleted with the
+  # workspace pod. Trialled on gulf-of-mexico from 2026-10-29: its run
+  # succeeded with /share at about 1 GiB of the 20Gi.
+  #
+  # A NEW VOLUME AND A REMOUNT, not a replacement of `share`. The operator
+  # (v2.10.0) strategic-merges podTemplate into the pod it builds, so an
+  # `ephemeral:` on a volume named `share` would sit next to its `emptyDir: {}`
+  # and the API server rejects a volume with two sources; an `emptyDir: null` to
+  # delete it is pruned by the CRD schema long before that merge. Mounts,
+  # though, merge on mountPath: a mount of `scratch` at /share in bootstrap,
+  # fetch and pulumi takes the place of the operator's. `share` stays defined
+  # and unused. (operator/internal/controller/auto/workspace_controller.go,
+  # mergePodTemplateSpec; k8s.io/api core/v1 VolumeMounts patchMergeKey.)
+  # bootstrap and fetch are the operator's init containers; every Stack here
+  # uses a Flux source, so fetch always exists. fsGroup 1000: the workspace
+  # runs as uid/gid 1000 under the operator's restricted profile, and a fresh
+  # ext4 volume's root belongs to root.
+  #
+  # A JSON patch, and these lists must never be DROPPED, only emptied.
+  # a0662905 removed the vals init container, its volumes and its mounts from
+  # every stack.yaml, but kustomize-controller still owns those fields on the
+  # live Stacks: dropping the last item makes server-side apply write `null`,
+  # which the CRD rejects ("initContainers: Invalid value: "null" ... must be
+  # of type array") and fails the whole Kustomization. To take scratch out
+  # again, set each of the three back to `[]`. No stack.yaml sets these (see
+  # the rule above), and the pulumi container is the only one, at index 0.
   - target:
       group: pulumi.com
       kind: Stack
     patch: |-
       - op: add
-        path: /spec/workspaceTemplate/spec/podTemplate/spec/initContainers
-        value: []
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/securityContext
+        value:
+          fsGroup: 1000
+          fsGroupChangePolicy: OnRootMismatch
       - op: add
         path: /spec/workspaceTemplate/spec/podTemplate/spec/volumes
-        value: []
+        value:
+          - name: scratch
+            ephemeral:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  storageClassName: longhorn-scratch
+                  resources:
+                    requests:
+                      storage: 20Gi
+      - op: add
+        path: /spec/workspaceTemplate/spec/podTemplate/spec/initContainers
+        value:
+          - name: bootstrap
+            volumeMounts:
+              - {name: scratch, mountPath: /share}
+          - name: fetch
+            volumeMounts:
+              - {name: scratch, mountPath: /share}
       - op: add
         path: /spec/workspaceTemplate/spec/podTemplate/spec/containers/0/volumeMounts
-        value: []
+        value:
+          - {name: scratch, mountPath: /share}
