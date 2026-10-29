@@ -10,7 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.20.0
+    tag: 0.21.1
+    digest: sha256:30f75fa360835f439284b52f7d506ebb0f57cab6cbe4569d2a336787370561dd
   # Repointed off ghcr.io/home-operations/charts-mirror, which stopped serving
   # silence-operator on 2026-10-28 (anonymous pulls DENIED). Same pattern as the
   # intel charts; the upstream artifact has the same helm layer mediaType.
