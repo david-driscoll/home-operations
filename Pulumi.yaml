@@ -30,7 +30,7 @@ packages:
   tailscale:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/tailscale/tailscale, 0.29.2]
+    parameters: [registry.terraform.io/tailscale/tailscale, 0.29.3]
   technitium:
     source: terraform-provider
     version: 0.14.0
