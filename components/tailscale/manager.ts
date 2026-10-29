@@ -337,6 +337,12 @@ function setGroup({ acls, policy }: TailscaleAclContext, group: TailscaleGroups,
 function setGrant({ acls, policy }: TailscaleAclContext, name: string | undefined, grant: TailscaleGrant, tests: TailscaleTestFactory<TailscaleGrant, TailscaleTest>) {
   name ??= getGrantName(grant);
 
+  // Port sets are composed from overlapping constants (e.g. `proxmox` and `proxmoxManagement`
+  // both carry tcp:443), so collapse repeats rather than emit them into the policy.
+  if (Array.isArray(grant.ip)) {
+    grant.ip = Array.from(new Set(grant.ip));
+  }
+
   const current = policy.grants ?? [];
   const autoGroupInternetDoesNotAllowAppScopes = grant.dst?.includes(autogroups.internet);
 
