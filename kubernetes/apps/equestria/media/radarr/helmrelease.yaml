@@ -51,8 +51,21 @@ spec:
               UMASK: 002
               RADARR__APP__INSTANCENAME: Radarr
               RADARR__APP__THEME: dark
-              RADARR__AUTH__METHOD: External
-              RADARR__AUTH__REQUIRED: DisabledForLocalAddresses
+              # Native OIDC through authentik (./definition.yaml). AUTHORITY,
+              # CLIENTID and CLIENTSECRET come from ${APP}-oidc below; if any
+              # is missing Radarr silently falls back to Forms with the form
+              # hidden -- the UI stays locked, API keys keep working.
+              RADARR__AUTH__METHOD: Oidc
+              # Enabled, not DisabledForLocalAddresses: TRUSTEDNETWORKS makes
+              # Radarr see the real client IP, and every LAN address would then
+              # skip the login.
+              RADARR__AUTH__REQUIRED: Enabled
+              # The one identity native OIDC accepts; `servarr_identity` sends
+              # it, verified, for every media-managers member. Changing it here
+              # AND in that mapping ends every session (7-day sliding cookies
+              # otherwise outlive removal from the group).
+              RADARR__AUTH__OIDCUSERIDENTIFIER: media-managers
+              RADARR__AUTH__OIDCSCOPES: openid servarr_identity
               RADARR__AUTH__APIKEY:
                 valueFrom:
                   secretKeyRef:
@@ -68,6 +81,11 @@ spec:
               RADARR__LOG__LEVEL: info
               RADARR__PORT: &port 7878
               RADARR__SERVER__ALLOWEDHOSTS: "*"
+              # The pod CIDR (talos/talconfig.yaml clusterPodNets), i.e. Traefik.
+              # Without it only loopback is trusted, the X-Forwarded-Proto/Host
+              # are ignored, and the OIDC redirect_uri goes out as http://<pod>
+              # -- which authentik's exact match rejects.
+              RADARR__SERVER__TRUSTEDNETWORKS: 10.206.0.0/16
               TZ: ${TIMEZONE}
             # RADARR__POSTGRES__{HOST,PORT,USER,PASSWORD,MAINDB}, from the
             # ExternalSecret next door. envFrom rather than five secretKeyRefs
@@ -78,6 +96,12 @@ spec:
             envFrom:
               - secretRef:
                   name: ${APP}-env
+              # RADARR__AUTH__OIDC{AUTHORITY,CLIENTID,CLIENTSECRET}. Optional:
+              # it cannot exist before stacks/system has read ./definition.yaml,
+              # and reloader restarts the pod when it lands.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
             probes:
               liveness: &probes
                 enabled: true
@@ -169,5 +193,6 @@ spec:
                 extensionRef:
                   group: traefik.io
                   kind: Middleware
-                  name: authenticated-user
+                  # Network gate only; Radarr does the SSO itself.
+                  name: local-user
 ---
