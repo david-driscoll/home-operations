@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { FullItem } from "@1password/connect";
 import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
@@ -111,6 +112,11 @@ export class ProxmoxHost extends ComponentResource {
     const cro = { parent: this };
     args.installTailscale ??= true;
 
+    // pveproxy serves one certificate and has no SNI, so the two names are split: :8006 carries
+    // the root-domain name (the wildcard installed below) and :443 carries the tailnet name, via
+    // `tailscale serve` with Tailscale's own certificate.
+    const tailscaleUrl = interpolate`https://${this.tailscaleHostname}/`;
+
     const apiCredential = output(args.proxmox);
     this.arch = apiCredential.apply(z => z.arch);
 
@@ -128,7 +134,7 @@ export class ProxmoxHost extends ComponentResource {
       `${name}-pve-provider`,
       {
         ...this.vmIdRange,
-        endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
+        endpoint: tailscaleUrl,
         apiToken: interpolate`${apiCredential.apply(z => z.username)}=${apiCredential.apply(z => z.credential)}`,
         ssh: {
           username: "root",
@@ -218,30 +224,6 @@ export class ProxmoxHost extends ComponentResource {
         mergeOptions(cro, { dependsOn: [] }),
       );
 
-      // Copy Tailscale cron script
-      const tailscaleCron = copyFileToRemote(`${name}-tailscale-cron`, {
-        connection: connection,
-        remotePath: "/etc/cron.weekly/tailscale",
-        content: interpolate`#!/bin/bash
-tailscale cert --cert-file="/etc/ssl/private/${this.tailscaleHostname}.crt" --key-file="/etc/ssl/private/${this.tailscaleHostname}.key" "${this.tailscaleHostname}"
-
-# for PVE
-pvenode cert set "/etc/ssl/private/${this.tailscaleHostname}.crt" "/etc/ssl/private/${this.tailscaleHostname}.key" --force --restart
-`,
-        dependsOn: [installJq],
-      });
-
-      // Set executable permissions and run cron script
-      const tailscaleSetCert = new remote.Command(
-        `${name}-install-set`,
-        {
-          connection: connection,
-          create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
-          triggers: [this.tailscaleName, tailscaleCron.triggers],
-        },
-        mergeOptions(cro, { dependsOn: [tailscaleCron] }),
-      );
-
       // Install Alloy on this Proxmox host for metrics and log forwarding
       const installAlloy = new remote.Command(
         `${name}-install-alloy`,
@@ -255,7 +237,7 @@ pvenode cert set "/etc/ssl/private/${this.tailscaleHostname}.crt" "/etc/ssl/priv
             "apt-get install -y alloy",
           ].join(" && "),
         },
-        mergeOptions(cro, { dependsOn: [tailscaleSetCert] }),
+        mergeOptions(cro, { dependsOn: [installJq] }),
       );
 
       const alloyConfig = interpolate`logging {
@@ -324,11 +306,10 @@ prometheus.remote_write "thanos" {
         mergeOptions(cro, { dependsOn: [copyAlloyConfig] }),
       );
     }
-    // Tailnet name on :443 -> pveproxy. pveproxy serves ONE certificate and has no SNI, so the
-    // two names are split: this listener carries the tailnet name with Tailscale's certificate,
-    // and :8006 carries the root-domain name. `https+insecure` because pveproxy's certificate
-    // does not match the loopback address it is dialled on.
-    new remote.Command(
+
+    // Tailnet name on :443 -> pveproxy. `https+insecure` because pveproxy's certificate (the
+    // root-domain wildcard, below) does not match the loopback address it is dialled on.
+    const tailscaleServe = new remote.Command(
       `${name}-tailscale-serve`,
       {
         connection,
@@ -339,6 +320,40 @@ prometheus.remote_write "thanos" {
       cro,
     );
 
+    // The `*.host.<root domain>` wildcard for pveproxy (:8006), issued by cert-manager and read
+    // from the cluster (globals.hostWildcardCertificate). Re-pushed whenever the certificate
+    // changes: the trigger is a hash of the public half, so a renewal reaches the host on the
+    // stack's next resync without the private key ever sitting in `triggers`.
+    //
+    // `--restart` restarts pveproxy, which drops open consoles for a moment. The old weekly
+    // `tailscale cert` job would overwrite this certificate, so it is removed AFTER the new one
+    // is installed: a failed install then leaves the old certificate and its renewal intact.
+    args.globals.hostWildcardCertificate.apply(certificate => {
+      if (!certificate) return undefined;
+      return new remote.Command(
+        `${name}-host-certificate`,
+        {
+          connection,
+          // Inside an apply the certificate is already plaintext, so the script is re-marked
+          // secret here; otherwise the private key would be stored unencrypted in the state.
+          create: pulumi.secret(interpolate`set -euo pipefail
+dir="$(mktemp -d)"
+trap 'rm -rf "$dir"' EXIT
+umask 077
+cat >"$dir/fullchain.pem" <<'__CERTIFICATE__'
+${certificate.certificate}
+__CERTIFICATE__
+cat >"$dir/privkey.pem" <<'__PRIVATE_KEY__'
+${certificate.key}
+__PRIVATE_KEY__
+pvenode cert set "$dir/fullchain.pem" "$dir/privkey.pem" --force --restart
+rm -f /etc/cron.weekly/tailscale "/etc/ssl/private/${this.tailscaleHostname}.crt" "/etc/ssl/private/${this.tailscaleHostname}.key"
+`),
+          triggers: [createHash("sha256").update(certificate.certificate).digest("hex")],
+        },
+        mergeOptions(cro, { dependsOn: [tailscaleServe] }),
+      );
+    });
     const _proxmoxInfo = new OnePasswordItem(
       `${this.name}-proxmox`,
       {
@@ -390,7 +405,10 @@ prometheus.remote_write "thanos" {
     cluster.apply(clusterDefinition => {
       // Register Proxmox VE as a native Authentik OAuth2 OIDC application.
       // This replaces the previous forward-proxy registration.
-      const pveRedirectUri = interpolate`https://${this.tailscaleHostname}:8006/`;
+      const pveRedirectUri = tailscaleUrl;
+      // The tailnet :8006 URL stays a valid redirect target while bookmarks move over; drop it in
+      // a follow-up once nothing uses it (browsers will warn there anyway after the wildcard lands).
+      const pveLegacyTailnetUri = interpolate`https://${this.tailscaleHostname}:8006/`;
       // PVE sends whatever URL the user accessed it from as redirect_uri (no override possible).
       // Include both the Tailscale direct URL and the external Traefik-proxied URL.
       const pveExternalUri = interpolate`https://${this.hostname}:8006/`;
@@ -404,7 +422,7 @@ prometheus.remote_write "thanos" {
             name: interpolate`${this.title} Proxmox VE`,
             category: "Infrastructure",
             description: interpolate`Proxmox Virtual Environment for ${clusterDefinition.title}`,
-            url: interpolate`https://${this.tailscaleHostname}:8006/`,
+            url: tailscaleUrl,
             icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
             authentik: {
               oauth2: {
@@ -412,6 +430,7 @@ prometheus.remote_write "thanos" {
                 allowedRedirectUris: [
                   { matching_mode: "strict", url: pveRedirectUri },
                   { matching_mode: "strict", url: pveExternalUri },
+                  { matching_mode: "strict", url: pveLegacyTailnetUri },
                 ],
                 includeClaimsInIdToken: true,
                 propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
@@ -420,7 +439,7 @@ prometheus.remote_write "thanos" {
             gatus: [
               {
                 name: interpolate`${this.title} Proxmox VE (Tailscale)`,
-                url: interpolate`https://${this.tailscaleHostname}:8006/`,
+                url: tailscaleUrl,
                 method: "GET",
                 conditions: ["[STATUS] == 200"],
               },
@@ -453,7 +472,7 @@ prometheus.remote_write "thanos" {
             client_name: `Proxmox VE (${clusterDefinition.title})`,
             client_id: tsidpClient.clientId,
             client_secret: tsidpClient.clientSecret,
-            redirect_uris: [pveRedirectUri, pveExternalUri],
+            redirect_uris: [pveRedirectUri, pveExternalUri, pveLegacyTailnetUri],
           }),
           headers: { "Content-Type": "application/json" },
         },
