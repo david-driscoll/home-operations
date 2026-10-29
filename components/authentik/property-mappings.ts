@@ -96,6 +96,25 @@ if ak_is_group_member(request.user, name="media-managers"):
     return {"abr_groups": ["trusted"]}
 return {"abr_groups": ["untrusted"]}`,
     },
+    // Sonarr (v5) and Radarr (v7) native OIDC is single-user: the login is
+    // accepted only when the verified `email` (or failing that `sub`) equals
+    // the one configured AUTH__OIDCUSERIDENTIFIER (AuthenticationBuilderExtensions
+    // GetIdentifiers; `email_verified` must be true in userinfo). So every
+    // media-managers member gets the same constant identity here, and the
+    // application's access_policy keeps everyone else out. Non-members get
+    // nothing, a second gate behind the policy binding.
+    //
+    // Named to sort after `email` (order_by("scope_name"), deep-merged), so the
+    // built-in mapping's real address and `email_verified: False` can never win
+    // if `email` is ever attached as well. Changing the value here together
+    // with AUTH__OIDCUSERIDENTIFIER invalidates every session at once -- the
+    // apps' 7-day sliding cookies otherwise outlive removal from the group.
+    servarr_identity: {
+      description: "Sonarr/Radarr single-user OIDC: one shared verified identity for every media-managers member",
+      expression: `if not ak_is_group_member(request.user, name="media-managers"):
+    return {}
+return {"email": "media-managers", "email_verified": True}`,
+    },
     remote_user: {
       description: "Set remote-user based on the username",
       expression: `return {
