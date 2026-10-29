@@ -136,13 +136,19 @@ spec:
         terminationGracePeriodSeconds: 1860
         # NEVER ON A NODE LABELLED `driscoll.dev/ephemeral-disk: sata`
         # (fluttershy, kerfuffle; talos/talconfig.yaml nodeLabels). Their /var
-        # -- containerd's image store and every emptyDir here, docker-storage
-        # included -- is a DRAM-less SATA SSD that saturates around 40 MiB/s.
-        # On 2026-10-28 a Renovate automerge burst started 24 runners in ten
+        # is a DRAM-less SATA SSD that saturates around 40 MiB/s. On
+        # 2026-10-28 a Renovate automerge burst started 24 runners in ten
         # minutes, 12 of them on those two nodes, each pulling ~1.5 GB of job
-        # image into dind. Both nodes' CRI wedged, Longhorn replicas timed out
-        # cluster-wide, and both had to be force-rebooted. The same rule, for
-        # the same reason, is in kubernetes/components/pulumi-workspace.
+        # image into dind storage that was then an emptyDir on that /var. Both
+        # nodes' CRI wedged, Longhorn replicas timed out cluster-wide, and both
+        # had to be force-rebooted. The same rule, for the same reason, is in
+        # kubernetes/components/pulumi-workspace.
+        #
+        # Kept now that dind storage is on the `scratch` volume (NVMe): /var
+        # there still takes containerd's pulls of the dind and runner images,
+        # the container logs, and every Longhorn iSCSI attach is handled by a
+        # node that already struggled once. Drop it if those two nodes get
+        # their CRI and kubelet volumes moved to the NVMe.
         #
         # Required, not preferred, and this is the one exception to "a job
         # must never sit Pending" below: a job waiting for hard-hat or

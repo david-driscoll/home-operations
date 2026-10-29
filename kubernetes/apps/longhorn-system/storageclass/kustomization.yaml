@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # ./ks.yaml IS LISTED ON PURPOSE, unlike the other app directories. This
+  # directory had no kustomization.yaml until 2026-10-29, so Flux generated one
+  # from every YAML file in it, ks.yaml included, and the `storageclass`
+  # Kustomization is in its own inventory. Leaving it out here would make it a
+  # stale object of itself, and prune: true would delete it -- taking every
+  # StorageClass below with it until the parent re-created it.
+  - ./ks.yaml
+  - ./critical.yaml
+  - ./snapshot.yaml
+  - ./scratch.yaml
