@@ -201,7 +201,7 @@ url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_win
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609573"
 
 [[tools.fnox]]
-version = "1.43.0"
+version = "1.44.0"
 backend = "packslip:github.com/jdx/fnox"
 specifiers = ["v1.43.0"]
 
