@@ -72,13 +72,12 @@
  * resolves in-cluster exactly as it does locally.
  */
 
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { GlobalResources } from "@components/globals.ts";
 import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
 import * as vault from "@pulumi/vault";
-import { globSync } from "glob";
 import { parseAllDocuments } from "yaml";
 
 /** Repository root, two levels up from `stacks/system`. */
