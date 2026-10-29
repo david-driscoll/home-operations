@@ -80,12 +80,12 @@ chmod 700 "$SSH_DIR"
 chmod 600 "$HOST_KEY"
 
 # sshd starts sessions with a scrubbed environment, so hand them the
-# container's own -- the daemon's, see ../helmrelease.yaml: the mise PATH, git
-# identity and credential helper, gh's token dir, the age key, the toolport
-# URLs. An allowlist, so Kubernetes' service-link variables stay out.
+# container's own -- the daemon's, see ../helmrelease.yaml: the mise PATH,
+# node's libatomic, git identity and credential helper, gh's token dir, the age
+# key, the toolport URLs. An allowlist, so Kubernetes' service-link variables stay out.
 # PermitUserEnvironment reads this file verbatim -- no quoting -- which keeps
 # the `$(cat ...)` in the git credential helper intact.
-env | grep -E '^(PATH|TZ|MISE_[A-Z_]+|NPM_CONFIG_PREFIX|DISABLE_UPDATES|AZURE_MCP_COLLECT_TELEMETRY|GH_CONFIG_DIR|GIT_CONFIG_[A-Z0-9_]+|SOPS_AGE_KEY_FILE|TOOLPORT_[A-Z_]+_URL)=' \
+env | grep -E '^(PATH|LD_LIBRARY_PATH|TZ|MISE_[A-Z_]+|NPM_CONFIG_PREFIX|DISABLE_UPDATES|AZURE_MCP_COLLECT_TELEMETRY|GH_CONFIG_DIR|GIT_CONFIG_[A-Z0-9_]+|SOPS_AGE_KEY_FILE|TOOLPORT_[A-Z_]+_URL)=' \
   > "$SSH_DIR/environment"
 
 # AuthorizedKeysFile is a single-file ConfigMap mount on purpose: StrictModes
