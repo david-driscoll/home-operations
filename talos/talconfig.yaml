@@ -233,11 +233,8 @@ nodes:
       # 500GB SATA SSD that saturates around 40 MiB/s. The Samsung NVMe holds only
       # u-longhorn. Pulumi workspace pods keep off nodes carrying this label
       # (kubernetes/components/pulumi-workspace), after the 2026-10-19 outage
-      # where six cold workspaces on fluttershy's /var wedged its CRI, and so do
-      # Forgejo runner pods (kubernetes/apps/coder/forgejo-runner/scaledjob.yaml),
-      # after the 2026-10-28 one where a burst of dind image pulls did the same
-      # to both nodes. It has no effect until applied per node:
-      # `mise run talos:apply-node <ip>`.
+      # where six cold workspaces on fluttershy's /var wedged its CRI. It has no
+      # effect until applied per node: `mise run talos:apply-node <ip>`.
       driscoll.dev/ephemeral-disk: "sata"
     nodeAnnotations: &intel_un1290_annotations
       node.longhorn.io/default-node-tags: '["bulk"]'
