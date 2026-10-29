@@ -65,11 +65,11 @@ export function getHostnames(name: string, globals: GlobalResources) {
   return { hostname, tailscaleHostname };
 }
 
-export function getContainerHostnames(name: string, host: ProxmoxHost, globals: GlobalResources) {
+export function getContainerHostnames(name: string, host: ProxmoxHost, globals: GlobalResources, internalLabel: string = name) {
   const tailscaleName = interpolate`${name}-${host.shortName ?? host.name}`;
-  const hostname = interpolate`${tailscaleName}.${globals.searchDomain}`;
+  const internalHostname = interpolate`${internalLabel}.${host.shortName ?? host.name}.${globals.searchDomain}`;
   const tailscaleHostname = interpolate`${tailscaleName}.${globals.tailscaleDomain}`;
-  return { hostname, tailscaleName, tailscaleHostname };
+  return { internalHostname, tailscaleName, tailscaleHostname };
 }
 
 export function writeTempFile(fileName: Input<string>, content: Input<string>) {

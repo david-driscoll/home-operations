@@ -47,6 +47,13 @@ export class ProxmoxHost extends ComponentResource {
   public readonly name: string;
   public readonly internalIpAddress: TailscaleIp;
   public readonly tailscaleIpAddress: TailscaleIp;
+  /**
+   * True when the tailscale IP is this host's only usable address: a remote host, or a local one
+   * that has no `internalIpAddress` (tailnet-primary, e.g. luna while staged for an off-site move).
+   * Containers on the host publish their DNS records on the tailnet IP when this is set, so they
+   * can never disagree with the host's own record.
+   */
+  public readonly tailnetPrimary: boolean;
   public readonly pveProvider: ProxmoxVEProvider;
   public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;
   public readonly tailscaleHostname: Output<string>;
@@ -92,6 +99,7 @@ export class ProxmoxHost extends ComponentResource {
       this.internalIpAddress = args.internalIpAddress ?? args.tailscaleIpAddress;
     }
     this.tailscaleIpAddress = args.tailscaleIpAddress;
+    this.tailnetPrimary = this.internalIpAddress === this.tailscaleIpAddress;
     this.remote = args.remote;
     this.shortName = args.shortName;
 

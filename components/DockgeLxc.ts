@@ -122,7 +122,13 @@ export class DockgeLxc extends ComponentResource {
   public readonly device?: ReturnType<typeof installTailscaleLxc>;
   public readonly dns: Output<StandardDns>;
   public readonly ipAddress: Output<TailscaleIp>;
-  /** LAN IP of the LXC (first `hostname -I` address), regardless of remote flag */
+  /**
+   * The address this LXC's DNS records point at: the tailscale IP when the host is tailnet-primary,
+   * otherwise `ipAddress` (the 10.10.x.x LAN address). Kept apart from `ipAddress`, which is also the
+   * `${ipAddress}` compose variable and must keep meaning "the address on the LAN" for local hosts.
+   */
+  public readonly dnsIpAddress: Output<TailscaleIp>;
+  /** LAN IP of the LXC (source address of its default route), regardless of remote flag */
   public readonly localIpAddress: Output<TailscaleIp>;
   /** LXC vNIC MAC (net0 hwaddr, lowercase) — for DHCP reservations */
   public readonly macAddress: Output<string>;
@@ -152,8 +158,8 @@ export class DockgeLxc extends ComponentResource {
     this.shortName = args.host.shortName ?? name;
     this.name = name;
 
-    const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
-    this.hostname = hostname;
+    const { tailscaleHostname, tailscaleName, internalHostname } = getContainerHostnames("dockge", args.host, args.globals, "docker");
+    this.hostname = internalHostname;
     this.tailscaleHostname = tailscaleHostname;
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
@@ -236,17 +242,20 @@ export class DockgeLxc extends ComponentResource {
     );
 
     // LAN-side identity of the LXC, read from the Proxmox host: the vNIC MAC from
-    // `pct config` and the first address of `hostname -I`. Exported to 1Password so
+    // `pct config` and the source address of the default route. Exported to 1Password so
     // consumers (e.g. UniFi DHCP reservations in stacks/unifi-network/local-dns.ts)
     // never need these hardcoded.
     this.localIpAddress = new remote.Command(
       `${name}-ip-address`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- hostname -I`,
+        // `hostname -I` also lists docker0 and tailscale0, and which comes first is only convention.
+        // The default route's source address is always the one the LXC uses to reach the LAN, and
+        // `grep` turns "no route" into a failed command rather than an empty DNS record.
+        create: interpolate`pct exec ${args.vmId} -- sh -c "ip -4 route get 1.1.1.1 | sed -n 's/.* src \\([0-9.]*\\).*/\\1/p' | grep -E '^[0-9.]+$'"`,
       },
       mergeOptions(cro, { dependsOn: [setHostname] }),
-    ).stdout.apply(z => z.split(" ")[0].trim()) as Output<TailscaleIp>;
+    ).stdout.apply(z => z.trim()) as Output<TailscaleIp>;
 
     this.macAddress = new remote.Command(
       `${name}-mac-address`,
@@ -257,7 +266,10 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: [lxcExists] }),
     ).stdout.apply(z => z.trim().toLowerCase());
 
-    this.ipAddress = args.ipAddress ? output(args.ipAddress) : args.host.remote ? this.tailscaleIpAddress : this.localIpAddress;
+    // A remote host is only reachable over the tailnet, so its address is the tailscale IP even if
+    // a LAN `ipAddress` was passed; a local host uses its 10.10.x.x LAN address.
+    this.ipAddress = args.host.remote ? this.tailscaleIpAddress : args.ipAddress ? output(args.ipAddress) : this.localIpAddress;
+    this.dnsIpAddress = args.host.tailnetPrimary ? this.tailscaleIpAddress : this.ipAddress;
 
     this.credential = output(args.credential);
     const _connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
@@ -271,7 +283,7 @@ export class DockgeLxc extends ComponentResource {
         name,
         {
           hostname: g,
-          ipAddress: args.ipAddress ?? this.tailscaleIpAddress,
+          ipAddress: this.dnsIpAddress,
           type: "A",
         },
         args.globals,
@@ -643,7 +655,7 @@ export class DockgeLxc extends ComponentResource {
         `${opts.name}-dns-service`,
         {
           hostname: opts.hostname,
-          ipAddress: this.tailscaleIpAddress,
+          ipAddress: this.dnsIpAddress,
           type: "A",
         },
         this.args.globals,
@@ -1536,6 +1548,9 @@ export class DockgeLxc extends ComponentResource {
                 this.args.globals,
                 {
                   parent: this.dockerParent,
+                  // The CNAME target is `this.hostname`; make sure its A record exists
+                  // first so a rename never leaves apps pointing at an NXDOMAIN.
+                  dependsOn: [this.dns],
                   // protect: stackName === "adguard",
                 },
               ),
