@@ -13,7 +13,10 @@ spec:
             summary:
               Mounted drive {{ $labels.device }} on device {{ $labels.instance }}
               has a temperature higher than 90°C.
-          expr: smartctl_device_temperature > 90
+          # `current` only. smartctl-exporter v0.15.0 also exports each drive's
+          # fixed limits under the same metric (`op_limit_max`, `critical_limit_max`
+          # = 95 on these NVMe), and an unfiltered `> 90` fires on the constant.
+          expr: smartctl_device_temperature{temperature_type="current"} > 90
           for: 15m
           labels:
             severity: critical

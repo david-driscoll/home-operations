@@ -160,7 +160,11 @@ spec:
     # ${TIMEZONE} comes from the `shared-secrets` Secret and is the estate's single
     # source of truth for local time (America/New_York today). It is substituted here
     # rather than hardcoded so this window and the Gatus maintenance windows that
-    # mirror it can never drift apart.
+    # mirror it share a timezone. The HOURS are not shared: every `definition.yaml`
+    # with a `maintenance-windows` block hardcodes `start: "01:00"` / `duration: 6h`,
+    # so changing the window here means changing all of them in the same commit.
+    # They drifted once (this moved to 01:00-07:00 on 2026-09-24, the windows stayed
+    # at 02:00 +7h), and every shed app paged from 01:00 to 02:00 nightly.
     #
     # This resolves because components/common patches child Kustomizations to add
     # `shared-secrets` to substituteFrom. A postBuild variable that does not resolve

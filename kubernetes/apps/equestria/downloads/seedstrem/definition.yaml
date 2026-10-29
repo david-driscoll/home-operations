@@ -29,6 +29,6 @@ spec:
         - "[STATUS] == 200"
       # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
       maintenance-windows:
-        - start: "02:00"
-          duration: 7h
+        - start: "01:00"
+          duration: 6h
           timezone: ${TIMEZONE}

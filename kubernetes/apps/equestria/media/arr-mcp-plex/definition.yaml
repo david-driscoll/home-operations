@@ -32,6 +32,6 @@ spec:
       # (kubernetes/apps/agents/toolport) stays up through the window and
       # cannot reach this; that is expected.
       maintenance-windows:
-        - start: "02:00"
-          duration: 7h
+        - start: "01:00"
+          duration: 6h
           timezone: ${TIMEZONE}
