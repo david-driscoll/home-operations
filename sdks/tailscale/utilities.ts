@@ -101,7 +101,7 @@ export async function getPackage(): Promise<string | undefined> {
 		baseProviderVersion: "0.14.0",
 		baseProviderDownloadUrl: "",
 		packageName: "tailscale",
-		packageVersion: "0.29.2",
-		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3RhaWxzY2FsZS90YWlsc2NhbGUiLCJ2ZXJzaW9uIjoiMC4yOS4yIn19",
+		packageVersion: "0.29.3",
+		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3RhaWxzY2FsZS90YWlsc2NhbGUiLCJ2ZXJzaW9uIjoiMC4yOS4zIn19",
 	});
 }
