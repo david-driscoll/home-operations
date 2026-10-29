@@ -10,7 +10,7 @@
 services:
   sablier:
     container_name: sablier
-    image: sablierapp/sablier:1.18.0@sha256:c00c8a01c8c809dd258a8b362ad8ba9a9227753fc9857ae7506fd427175e038c
+    image: sablierapp/sablier:1.19.0@sha256:c69538f8a1cb8e57aabcead1de387edf31e0ef60645e2345cbff19a7c868db87
     restart: unless-stopped
     dns:
       - 100.100.100.100
