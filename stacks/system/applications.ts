@@ -37,6 +37,7 @@ import { kebabCase } from "moderndash";
 import { concatMap, from, lastValueFrom, map, toArray } from "rxjs";
 import * as yaml from "yaml";
 import { kubernetesBackups } from "./application-backups.ts";
+import { configureJellyfinSso } from "./jellyfin-sso.ts";
 
 /**
  * Where the cluster's authentik proxy outpost runs, and where the
@@ -197,6 +198,12 @@ async function kubernetesApplications(globals: GlobalResources, outputs: Authent
                 dependsOn: [res.provider],
               },
             );
+
+            // Jellyfin's side of its OIDC client: the SSO-Auth plugin, login
+            // button and QR script, configured over Jellyfin's API.
+            if (app.metadata.name === "jellyfin" && (app.metadata.namespace ?? clusterDefinition.key) === "equestria") {
+              configureJellyfinSso(globals, { clientId: res.clientId, clientSecret: res.clientSecret, issuer: res.config.issuerUrl }, { parent: applicationManager, dependsOn: [res.provider] });
+            }
           }
           return res;
         }),
