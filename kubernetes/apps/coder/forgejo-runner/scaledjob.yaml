@@ -7,17 +7,31 @@
 # opened about sixty pull requests at once, each with a `flate` check, and the
 # job that publishes merges to GitHub sat in the same queue behind them.
 #
-# How it works (https://keda.sh/docs/2.21/scalers/forgejo/): every pod runs
-# `forgejo-runner one-job --wait`. It waits for a job, runs that one job and
-# exits. KEDA asks Forgejo every 30 seconds how many jobs it has in hand and
-# keeps (that many + 2) pods alive, so two are always idle and ready. A job
-# therefore starts within a couple of seconds, and the pod that took it is
-# replaced at the next poll.
+# How it works (https://keda.sh/docs/2.21/scalers/forgejo/): KEDA asks
+# Forgejo every 30 seconds how many jobs it has in hand (waiting AND running)
+# and keeps (that many + 2) pods alive, so two are always idle and ready. A
+# job therefore starts within a couple of seconds.
 #
-# WHAT A WAITING POD HAS READY: it is scheduled, its Docker daemon is up, and
-# the `prepull` container has already pulled the job image. What it does NOT
-# have is anything from an earlier job: each pod serves one job, so the
-# actions cache starts empty every time and every `flate` render is cold.
+# A POD RUNS JOB AFTER JOB UNTIL THE QUEUE RUNS DRY (./resources/run-job.sh):
+# after each job it waits up to REUSE_IDLE_SECONDS for another and leaves if
+# none comes. KEDA counts a pod waiting between jobs as an unfinished Job, so
+# during a burst the pool grows to what the queue needs (up to the cap below)
+# and the same pods work through it; once the queue empties they drain back
+# to the two spares. Until 2026-10-28 every pod ran one job and exited, and a
+# merge streak started 38 pods in twenty minutes, each pulling the 1.5 GB
+# job image.
+#
+# WHAT A POD HAS READY: it is scheduled, its Docker daemon is up, and once it
+# has waited a minute without a job the janitor has pulled the job image
+# (./resources/prepull.sh). A reused pod also keeps every image an earlier
+# job pulled and the actions cache in /data; the janitor
+# (./resources/janitor.sh) clears containers, networks and volumes between
+# jobs.
+#
+# ITS DISK IS A LONGHORN SCRATCH VOLUME, not an emptyDir: the `scratch`
+# generic ephemeral volume below, on `longhorn-scratch`
+# (kubernetes/apps/longhorn-system/storageclass/scratch.yaml), created with
+# the pod and deleted with it. Docker storage and /data are subPaths of it.
 #
 # EVERY POD IS THE SAME RUNNER AS FAR AS FORGEJO IS CONCERNED. They all mount
 # the one registration in `forgejo-runner-config` (./externalsecret.yaml),
@@ -48,15 +62,16 @@ spec:
   # with N jobs in hand it wants N + 2 pods, so when a waiting pod takes a
   # job, the next poll starts another to wait in its place.
   minReplicaCount: 2
-  # SIXTEEN HERE MEANS EIGHTEEN PODS. KEDA caps the reported job count at
-  # this number and then adds the two spares above, so the most that ever run
-  # is maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below);
-  # raise this with that in mind, not by itself.
+  # EIGHT HERE MEANS TEN PODS. KEDA caps the reported job count at this
+  # number and then adds the two spares above, so the most that ever run is
+  # maxReplicaCount + minReplicaCount. Each pod may use up to 6Gi (below) and
+  # pulls a ~1.5 GB job image on start; raise this with that in mind, not by
+  # itself.
   #
-  # Raised from 8 on 2026-10-18: every burst sat at that ceiling (a queue of
-  # 113 took about two hours to drain), and the four worker nodes the pods
-  # can land on had the room. The spread constraint in the pod template keeps
-  # eighteen of them from piling onto two nodes.
+  # Briefly 16 on 2026-10-18 (every burst sat at 8; a queue of 113 took about
+  # two hours to drain) and lowered back the same day. Since 2026-10-28 a
+  # pod runs job after job (./resources/run-job.sh), so these ten are reused
+  # through a burst rather than replaced after every job.
   maxReplicaCount: 8
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
@@ -95,13 +110,18 @@ spec:
     # A runner pod that fails did not necessarily fail its job: Forgejo has
     # the job's own result. Never re-run the pod.
     backoffLimit: 0
-    # A backstop for a pod that is stuck, not the idle limit: a pod may
-    # wait up to 6h (./resources/run-job.sh) and then run a job for up to 3h
-    # (`runner.timeout` in the config), with 30m to shut down. Anything older
+    # A backstop for a pod that is stuck, not the idle limit: a pod takes no
+    # new job past 6h of age (./resources/run-job.sh), and the last one may
+    # run for up to 3h (`runner.timeout` in the config), with 30m to shut down. Anything older
     # than that is not doing either. It has to stay ABOVE that sum, because
     # it is counted from pod start and would kill a job that began late.
     activeDeadlineSeconds: 36000
-    ttlSecondsAfterFinished: 600
+    # Two minutes, down from ten. Nothing reads a finished pod: its log is in
+    # Loki and the job's own log is on the forge, and KEDA counts only Jobs
+    # that have not finished. Every minute one is kept is a minute its
+    # scratch volume stays allocated and it counts towards the spread skew
+    # below.
+    ttlSecondsAfterFinished: 120
     template:
       metadata:
         labels:
@@ -166,11 +186,13 @@ spec:
                 # about 3.7 GB; the request is what the scheduler should plan
                 # around, so six of these do not all land on one node.
                 memory: 2Gi
-                ephemeral-storage: 4Gi
+                # Only the container's own layer and logs: images and job
+                # containers are on the scratch volume, not on the node's /var.
+                ephemeral-storage: 512Mi
               limits:
-                # One job per pod, so this is the ceiling for one job.
+                # One job at a time, so this is the ceiling for one job.
                 memory: 6Gi
-                ephemeral-storage: 24Gi
+                ephemeral-storage: 4Gi
             startupProbe:
               exec:
                 command:
@@ -186,8 +208,9 @@ spec:
               periodSeconds: 2
               failureThreshold: 32
             volumeMounts:
-              - name: docker-storage
+              - name: scratch
                 mountPath: /var/lib/docker
+                subPath: docker
               - name: docker-certs
                 mountPath: /certs
               # Pulls from every registry zot covers go through the cluster's
@@ -207,74 +230,34 @@ spec:
               - name: registries
                 mountPath: /etc/docker/certs.d
                 readOnly: true
-        containers:
-          - name: app
-            image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
-            # ./resources/run-job.sh: `forgejo-runner one-job --wait`, with a
-            # limit on how long a pod waits before making way for a fresh one.
-            # Under dumb-init, as the image's own entrypoint is, so SIGTERM
-            # reaches the runner and its 30-minute shutdown grace applies.
-            command: ["/usr/bin/dumb-init", "--", "bash", "/scripts/run-job.sh"]
-            env:
-              - name: TZ
-                value: "${TIMEZONE}"
-              # How long a pod may wait for a job before it exits and KEDA
-              # starts a new one in its place. This is what moves a waiting
-              # pod onto a changed image, config or registration.
-              - name: IDLE_MAX_SECONDS
-                value: "21600"
-              - name: DOCKER_HOST
-                value: tcp://127.0.0.1:2376
-              - name: DOCKER_TLS_VERIFY
-                value: "1"
-              - name: DOCKER_CERT_PATH
-                value: /certs/client
-              - name: HOME
-                value: /data
-              - name: XDG_CACHE_HOME
-                value: /data/.cache
-            securityContext:
-              runAsNonRoot: true
-              runAsUser: 1000
-              runAsGroup: 1000
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: false
-              capabilities:
-                drop: ["ALL"]
-            resources:
-              requests:
-                cpu: 100m
-                memory: 128Mi
-                ephemeral-storage: 1Gi
-              limits:
-                memory: 1Gi
-                ephemeral-storage: 8Gi
-            volumeMounts:
-              - name: data
-                mountPath: /data
-              - name: docker-certs
-                mountPath: /certs
-                readOnly: true
-              - name: config
-                mountPath: /config
-                readOnly: true
-              - name: scripts
-                mountPath: /scripts
-                readOnly: true
-          # Pulls the job image into this pod's Docker daemon while the runner
-          # waits (./resources/prepull.sh), then exits. Without it the first
-          # thing a job did was download about 1.5 GB. The dind image, for
-          # its docker CLI. It always exits 0: a failed pull only means the
-          # runner pulls the image itself, as it always did.
-          - name: prepull
+          # Prepulls the job image on a pod that is still waiting, and clears
+          # Docker between jobs on a reused one (./resources/janitor.sh,
+          # ./resources/prepull.sh). The dind image, for its docker CLI: the
+          # runner image has none. A native sidecar like dind, so it starts
+          # after dind is up and is stopped once the runner exits; its exit
+          # status never fails the Job.
+          - name: janitor
+            restartPolicy: Always
             image: data.forgejo.org/oci/docker:29-dind@sha256:9e79b879b177fbd72c34376a3dd3d91747da5db49e1f560f76aea59561471977
-            command: ["sh", "/scripts/prepull.sh"]
+            command: ["sh", "/scripts/janitor.sh"]
             env:
               # What `ubuntu-latest`, `ubuntu-24.04` and `docker` resolve to
               # in ./resources/config.yml. Keep the two in step, or this
               # warms an image no job uses.
               - name: PREPULL_IMAGES
                 value: ghcr.io/catthehacker/ubuntu:act-24.04
+              # The runner fetches a waiting job within a few seconds of
+              # starting (fetch_interval 2s), so a minute separates a pod
+              # started for a job from a spare.
+              - name: PREPULL_DELAY_SECONDS
+                value: "60"
+              # Scratch volume use after a job's leftovers are pruned: above
+              # the first, the pulled images go too; above the second even
+              # then, the pod leaves for a fresh one.
+              - name: SCRATCH_PRUNE_PERCENT
+                value: "60"
+              - name: SCRATCH_FULL_PERCENT
+                value: "85"
               - name: DOCKER_HOST
                 value: tcp://127.0.0.1:2376
               - name: DOCKER_TLS_VERIFY
@@ -303,6 +286,77 @@ spec:
               - name: scripts
                 mountPath: /scripts
                 readOnly: true
+              # The runner's log and the done/clean markers
+              # (./resources/run-job.sh), and the filesystem whose use it
+              # checks.
+              - name: scratch
+                mountPath: /data
+                subPath: data
+        containers:
+          - name: app
+            image: data.forgejo.org/forgejo/runner:13.2.0@sha256:ca3d5eea46004789a175d1369eec6829d3ea9bfbe2011a06625b4bdaa55f7552
+            # ./resources/run-job.sh: `forgejo-runner one-job --wait` in a loop,
+            # one job at a time, until no job comes for REUSE_IDLE_SECONDS.
+            # Under dumb-init, as the image's own entrypoint is, so SIGTERM
+            # reaches the runner and its 30-minute shutdown grace applies.
+            command: ["/usr/bin/dumb-init", "--", "bash", "/scripts/run-job.sh"]
+            env:
+              - name: TZ
+                value: "${TIMEZONE}"
+              # How long a pod may wait for a job before it exits and KEDA
+              # starts a new one in its place. This is what moves a waiting
+              # pod onto a changed image, config or registration.
+              - name: IDLE_MAX_SECONDS
+                value: "21600"
+              # How long a pod that has run a job waits for the next before it
+              # leaves. This is what shrinks the pool after a burst.
+              - name: REUSE_IDLE_SECONDS
+                value: "300"
+              # How long it waits for the janitor to clear Docker after a job
+              # before giving up on reuse and leaving.
+              - name: JANITOR_WAIT_SECONDS
+                value: "180"
+              - name: DOCKER_HOST
+                value: tcp://127.0.0.1:2376
+              - name: DOCKER_TLS_VERIFY
+                value: "1"
+              - name: DOCKER_CERT_PATH
+                value: /certs/client
+              - name: HOME
+                value: /data
+              - name: XDG_CACHE_HOME
+                value: /data/.cache
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+                # /data is on the scratch volume; this is the container's own
+                # layer and its logs.
+                ephemeral-storage: 256Mi
+              limits:
+                memory: 1Gi
+                ephemeral-storage: 2Gi
+            volumeMounts:
+              - name: scratch
+                mountPath: /data
+                subPath: data
+              - name: docker-certs
+                mountPath: /certs
+                readOnly: true
+              - name: config
+                mountPath: /config
+                readOnly: true
+              - name: scripts
+                mountPath: /scripts
+                readOnly: true
         volumes:
           - name: scripts
             configMap:
@@ -322,12 +376,23 @@ spec:
                 - { key: cgr.dev, path: cgr.dev/hosts.toml }
                 - { key: mcr.microsoft.com, path: mcr.microsoft.com/hosts.toml }
                 - { key: data.forgejo.org, path: data.forgejo.org/hosts.toml }
-          - name: data
-            emptyDir:
-              sizeLimit: 6Gi
-          - name: docker-storage
-            emptyDir:
-              sizeLimit: 20Gi
+          # Docker storage (subPath docker) and the runner's /data (subPath
+          # data) in one volume, so a pod costs one Longhorn attach. Sized for
+          # the act image plus a cold `flate` render with room to spare
+          # across reused jobs; the janitor prunes down from 60% used.
+          # fsGroup above makes the subPaths writable by uid 1000.
+          - name: scratch
+            ephemeral:
+              volumeClaimTemplate:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: ${APP}
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  storageClassName: longhorn-scratch
+                  resources:
+                    requests:
+                      storage: 30Gi
           - name: docker-certs
             emptyDir: {}
           - name: config

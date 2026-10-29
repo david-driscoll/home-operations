@@ -1,0 +1,44 @@
+---
+# Node-local scratch for pods that would otherwise write gigabytes into an
+# emptyDir on /var: the Forgejo runners' Docker storage and cache
+# (kubernetes/apps/coder/forgejo-runner/scaledjob.yaml). Use it through a
+# generic ephemeral volume (`volumes[].ephemeral.volumeClaimTemplate`), so the
+# PVC and the Longhorn volume are created with the pod and deleted with it,
+# like the emptyDir they replace.
+#
+# WHY NOT THE emptyDir. A pod's emptyDirs live on the node's /var, and on
+# fluttershy and kerfuffle that is a DRAM-less SATA SSD that saturates around
+# 40 MiB/s. On 2026-10-28 runner pods unpacking a 1.5 GB image into dind
+# storage there wedged both nodes' CRI. Longhorn's disk on every worker is the
+# Samsung NVMe (/var/mnt/longhorn), so this puts the same bytes on the fast
+# disk without a Talos reprovision.
+#
+# Same shape as `longhorn-local` (snapshot.yaml): one replica, `strict-local`,
+# no nodeSelector, so the replica is created on whichever node the pod was
+# scheduled to and engine-to-replica traffic stays on a local socket. The
+# frontend is still a local iSCSI target, which is why the runners now reuse
+# a pod for job after job: one attach per pod, not one per job.
+#
+# NOTHING HERE IS WORTH KEEPING, so:
+#  - reclaimPolicy Delete and no expansion: a volume lives one pod.
+#  - recurringJobSelector names a group with no jobs. Longhorn puts a volume
+#    with NO recurring-job label into `default` (snapshot-cleanup,
+#    snapshot-delete, filesystem-trim); any label at all opts it out
+#    (longhorn-manager v1.13.0 datastore/longhorn.go, the jobLabelCount == 0
+#    check). Backups are VolSync's, per app, and never touch these.
+#  - unmapMarkSnapChainRemoved lets a trim inside the pod hand space back.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-scratch
+reclaimPolicy: Delete
+provisioner: driver.longhorn.io
+parameters:
+  dataLocality: strict-local
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "30"
+  fsType: ext4
+  recurringJobSelector: '[{"name":"none","isGroup":true}]'
+  unmapMarkSnapChainRemoved: enabled
+allowVolumeExpansion: false
+volumeBindingMode: WaitForFirstConsumer
