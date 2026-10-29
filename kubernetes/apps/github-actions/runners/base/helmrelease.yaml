@@ -33,15 +33,15 @@ spec:
       namespace: github-actions
     containerMode:
       type: kubernetes
-    kubernetesModeWorkVolumeClaim:
-      accessModes: ["ReadWriteOnce"]
-      storageClassName: longhorn-local
-      resources:
-        requests:
-          storage: 2Gi
     kubernetesModeAdditionalRoleRules: []
     template:
       spec:
+        # The runner user (uid 1001, in group 123) has to write to a fresh
+        # ext4 volume whose root belongs to root; the emptyDir it replaced
+        # was world-writable. 123 is the group ARC's kubernetes-mode docs use.
+        securityContext:
+          fsGroup: 123
+          fsGroupChangePolicy: OnRootMismatch
         containers:
           - name: runner
             image: daviddriscoll/github-arc-runner-az-dotnet:latest@sha256:d50f9927ac4b41733e8ab25277a7266c37b4375b8f7b5668309590065cbe68b4
@@ -64,5 +64,29 @@ spec:
             volumeMounts:
               - name: work
                 mountPath: /home/runner/_work
+        # THE WORK VOLUME IS DEFINED HERE, IN FULL. The chart builds a `work`
+        # ephemeral volume from `containerMode.kubernetesModeWorkVolumeClaim`
+        # only when the template has no `work` volume of its own
+        # (gha-runner-scale-set 0.15.1 _helpers.tpl,
+        # "kubernetes-mode-work-volume"). Until 2026-10-29 this file had a
+        # bare `- name: work` -- which the API server defaults to an emptyDir
+        # on the node's /var -- and the claim at the top level of `values`,
+        # where the chart never reads it, so no runner here ever had a
+        # Longhorn volume.
+        #
+        # A generic ephemeral volume, created and deleted with the runner pod,
+        # on `longhorn-scratch` (kubernetes/apps/longhorn-system/storageclass/
+        # scratch.yaml): node-local NVMe, out of the recurring snapshot jobs,
+        # the same as the Forgejo runners' storage. 20Gi because the emptyDir
+        # had no limit and a .NET build with its NuGet cache is not small;
+        # Longhorn allocates only what is written.
         volumes:
           - name: work
+            ephemeral:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  storageClassName: longhorn-scratch
+                  resources:
+                    requests:
+                      storage: 20Gi
