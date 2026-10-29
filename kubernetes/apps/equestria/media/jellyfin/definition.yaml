@@ -14,6 +14,30 @@ spec:
     groups:
       - friends
       - family
+  # Consumed by the SSO-Auth plugin (MaxRink/jellyfin-plugin-sso), which is
+  # installed and configured out of band -- docs/kubernetes/jellyfin-sso.md.
+  # The access policy above is the only gate on who may sign in: the plugin's
+  # `Roles` is empty. The plugin does read `groups` (from `profile`) for admin
+  # (`admins`) and Live TV management (`media-managers`) on every login.
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # The last path segment is the plugin's provider name ("authentik"),
+        # case-sensitive. Change one, change both. Only the /redirect/ form is
+        # registered because logins start at /sso/OID/start/<provider>; the
+        # legacy /sso/OID/p/ entry point calls back to /sso/OID/r/ instead.
+        - url: "https://${APP}.${ROOT_DOMAIN}/sso/OID/redirect/authentik"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/sso/OID/redirect/authentik"
+      propertyMappings:
+        - email
+        - openid
+        # Carries `preferred_username`, which the plugin matches against
+        # existing Jellyfin usernames (case-insensitively) to adopt them on
+        # first login, and `groups`, its RoleClaim.
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
   gatus:
     - url: https://${APP}.${ROOT_DOMAIN}
       method: GET

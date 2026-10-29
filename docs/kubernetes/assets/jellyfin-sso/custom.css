@@ -1,0 +1,4 @@
+/* Shows the login disclaimer, which holds the "Sign in with authentik" button, as a full-width block. */
+.disclaimerContainer {
+  display: block;
+}
