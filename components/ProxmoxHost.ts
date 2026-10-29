@@ -324,6 +324,21 @@ prometheus.remote_write "thanos" {
         mergeOptions(cro, { dependsOn: [copyAlloyConfig] }),
       );
     }
+    // Tailnet name on :443 -> pveproxy. pveproxy serves ONE certificate and has no SNI, so the
+    // two names are split: this listener carries the tailnet name with Tailscale's certificate,
+    // and :8006 carries the root-domain name. `https+insecure` because pveproxy's certificate
+    // does not match the loopback address it is dialled on.
+    new remote.Command(
+      `${name}-tailscale-serve`,
+      {
+        connection,
+        create: "tailscale serve --bg --https=443 https+insecure://127.0.0.1:8006",
+        update: "tailscale serve --bg --https=443 https+insecure://127.0.0.1:8006",
+        delete: "tailscale serve --https=443 off",
+      },
+      cro,
+    );
+
     const _proxmoxInfo = new OnePasswordItem(
       `${this.name}-proxmox`,
       {
