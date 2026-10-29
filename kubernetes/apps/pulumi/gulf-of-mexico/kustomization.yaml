@@ -8,6 +8,10 @@ resources:
 components:
   # Workspace pod placement: off the SATA-/var nodes, spread across the rest.
   - ../../../components/pulumi-workspace
+  # /share on a Longhorn scratch volume, not the node's /var. After
+  # pulumi-workspace, whose empty lists it replaces. Trialled on this Stack
+  # first; the others follow once a run here has worked.
+  - ../../../components/pulumi-workspace-scratch
   # This Stack's own source: an ArtifactGenerator holding what every Stack
   # reads, and the ExternalArtifact that stack.yaml's fluxSource points at.
   - ../../../components/pulumi-stack-artifact
