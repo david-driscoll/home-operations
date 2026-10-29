@@ -578,6 +578,17 @@ ingressRoute:
     tls:
       secretName: "le-production-tls"
 experimental:
+  # ENABLED 2026-10-28. With the chart default (false), a plugin that fails to
+  # DOWNLOAD at startup -- a GitHub timeout, nothing wrong with the version --
+  # disables EVERY plugin on that one pod, which still goes Ready. It then takes
+  # half the traffic and 404s every route carrying a sablier or crowdsec-bouncer
+  # middleware: on 2026-10-28 one replica did this for ~20h, and Gatus saw it as
+  # intermittent 404s on SearXNG, LibreSpeed, whoami and the funnel routes.
+  # Aborting turns that into a CrashLoop that retries the download, and the
+  # chart's rolling update (maxUnavailable 0, maxSurge 1) never swaps a healthy
+  # pod for one that is not Ready, so a bad plugin version stalls the rollout
+  # instead of reaching traffic.
+  abortOnPluginFailure: true
   plugins:
     traefik-plugin-query-modification:
       moduleName: "github.com/kingjan1999/traefik-plugin-query-modification"
@@ -596,12 +607,10 @@ experimental:
     #
     # https://plugins.traefik.io/plugins/69104ac3b7d4dd76110a1a09/sablier
     #
-    # BLAST RADIUS OF A BAD VERSION: `experimental.abortOnPluginFailure` defaults
-    # to false (chart values.yaml), so Traefik still starts. The `sablier` plugin
-    # simply never registers, and every route carrying a middleware that
-    # references it is dropped -- those hostnames 404. Loud, and scoped to the
-    # opted-in apps rather than the whole ingress. Rollback is removing this
-    # block plus the components/sablier references.
+    # BLAST RADIUS OF A BAD VERSION: `abortOnPluginFailure` is on (above), so a
+    # version that will not load stops the new pod from starting and the rollout
+    # stalls on the old ReplicaSet; nothing reaches traffic. Rollback is reverting
+    # the version, or removing this block plus the components/sablier references.
     #
     # The BLOCKING strategy is unsupported on Kubernetes (see the plugin's own
     # README), so every middleware here uses `dynamic`. That is also why the
