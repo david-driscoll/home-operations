@@ -1,10 +1,11 @@
 // Jellyfin web: send Quick Connect QR scans through authentik, and keep deep
 // links across the "Sign in with authentik" button.
 //
-// Reviewed copy. The live one is pasted into Dashboard -> JavaScript Injector as
-// a script with "Requires Authentication" UNCHECKED, so it is served from
-// public.js and also runs for signed-out visitors -- the only visitors it acts
-// on. See docs/kubernetes/jellyfin-sso.md.
+// Installed into JavaScript Injector by stacks/system/jellyfin-sso.ts, as the
+// script "SSO return (managed by Pulumi)" with "Requires Authentication" off, so
+// it is served from public.js and also runs for signed-out visitors -- the only
+// visitors it acts on. Edit it here; changes made in Jellyfin's UI are put back
+// on the stack's next run. See docs/kubernetes/jellyfin-sso.md.
 //
 // jellyfin-web 12.4 sends a signed-out visitor from any page to
 //   #/login?serverid=...&url=<encoded original path and query>
@@ -18,8 +19,9 @@
 //      where the visitor was going instead of on the home page.
 // A signed-in visitor never reaches #/login, so nothing here runs for them.
 (() => {
-    // The plugin's provider name, case-sensitive. Must match login-disclaimer.html
-    // and the redirect URIs in kubernetes/apps/equestria/media/jellyfin/definition.yaml.
+    // The plugin's provider name, case-sensitive. Must match SSO_PROVIDER_NAME in
+    // stacks/system/jellyfin-sso.ts, login-disclaimer.html and the redirect URIs in
+    // ../definition.yaml.
     const START_PATH = "/sso/OID/start/authentik";
 
     // One automatic redirect per code per tab. Pressing Back on authentik's page --

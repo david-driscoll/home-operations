@@ -9,12 +9,11 @@ Jellyfin 12.4 and SSO-Auth 6.1.0.0.
 
 | Piece | Where | What it does |
 | --- | --- | --- |
-| authentik provider + application | [`jellyfin/definition.yaml`](../../kubernetes/apps/equestria/media/jellyfin/definition.yaml) `authentik.oauth2`, applied by the `system` Pulumi stack | Confidential client, slug `jellyfin`. The definition's `access_policy` (`family`, `friends`) is the only thing deciding who may sign in. Client id, secret and issuer are written to OpenBao at `secrets/clusters/equestria/apps/jellyfin/oidc`. |
-| SSO-Auth plugin | Jellyfin's plugin directory on the `jellyfin` PVC, **not in git** | [MaxRink/jellyfin-plugin-sso](https://github.com/MaxRink/jellyfin-plugin-sso). Installed and updated through Jellyfin's plugin UI, like Meilisearch. |
-| Plugin config | `/config/plugins/configurations/SSO-Auth.xml`, **not in git** | The provider named `authentik`, plus the plugin-wide SSO-only setting. The plugin rewrites this file itself whenever it links an account, so it cannot be a read-only mount or a ConfigMap. |
-| Reviewed copies | [`assets/jellyfin-sso/`](assets/jellyfin-sso/) | `provider.json` (no secret), `login-disclaimer.html`, `custom.css`, `sso-return.js`. Whatever is in Jellyfin is what runs; these are what was reviewed, and the setup below pastes from them. |
-| Login button | Dashboard → Branding, **not in git** | "Sign in with authentik" in the login disclaimer. Web UI only: other clients show the disclaimer as plain text, or not at all. |
-| QR / deep-link script | Dashboard → JavaScript Injector, **not in git** | [`sso-return.js`](assets/jellyfin-sso/sso-return.js). Sends Moonfin's Quick Connect QR through authentik, and keeps deep links across the login button. |
+| authentik provider + application | [`jellyfin/definition.yaml`](../../kubernetes/apps/equestria/media/jellyfin/definition.yaml) `authentik.oauth2`, applied by the `system` Pulumi stack | Confidential client, slug `jellyfin`. The definition's `access_policy` (`family`, `friends`) alone decides who may sign in. Client id, secret and issuer also go to OpenBao at `secrets/clusters/equestria/apps/jellyfin/oidc`. |
+| SSO-Auth and JavaScript Injector plugins | Jellyfin's plugin directory on the `jellyfin` PVC, **installed by hand** | [MaxRink/jellyfin-plugin-sso](https://github.com/MaxRink/jellyfin-plugin-sso) and JavaScript Injector. Installed and updated through Jellyfin's plugin UI, like Meilisearch. |
+| Plugin settings, login button, QR script | [`stacks/system/jellyfin-sso.ts`](../../stacks/system/jellyfin-sso.ts), applied in the same run as the authentik client | Writes the SSO-Auth provider and plugin-wide settings, the branding login disclaimer and CSS, and one JavaScript Injector script, through Jellyfin's API. |
+| Button and script sources | [`jellyfin/resources/`](../../kubernetes/apps/equestria/media/jellyfin/resources/) | `login-disclaimer.html`, `custom.css` and `sso-return.js`, read by the stack at run time. |
+| Read-modify-write resource | [`dynamic/jellyfin/JellyfinConfiguration.ts`](../../dynamic/jellyfin/JellyfinConfiguration.ts) | A dynamic provider for any Jellyfin JSON configuration document. See [How the stack writes it](#how-the-stack-writes-it). |
 
 ### Why this fork
 
@@ -36,52 +35,51 @@ with `AmbiguousMatchException`.
 
 ## Setup
 
-These steps run once, after the definition change has merged and the `system`
-stack has run. Do them in this order. SSO-only is on from day one (see
-[Accounts](#accounts)), so tell Abbie, Nat and Tami about Quick Connect before
-step 7.
-
-1. **Check the client exists.** `secrets/clusters/equestria/apps/jellyfin/oidc`
-   in OpenBao should hold `client_id`, `client_secret` and `issuer`.
-2. **Install the plugin.** Dashboard → Plugins → Repositories → add
-   `https://raw.githubusercontent.com/MaxRink/jellyfin-plugin-sso/manifest-release/manifest.json`,
-   install **SSO Authentication**, then restart Jellyfin.
-3. **Add the provider** from [`provider.json`](assets/jellyfin-sso/provider.json)
-   with the three OpenBao values filled in. You need an admin API key
-   (Dashboard → API Keys). Jellyfin 12 rejects `?api_key=`, so send the key as
-   a header:
-
-   ```bash
-   oidc=$(bao kv get -format=json secrets/clusters/equestria/apps/jellyfin/oidc | jq '.data.data')
-   jq --argjson o "$oidc" \
-     '.OidEndpoint = $o.issuer | .OidClientId = $o.client_id | .OidSecret = $o.client_secret' \
-     docs/kubernetes/assets/jellyfin-sso/provider.json |
-   curl -fsS -X POST "https://jellyfin.<root domain>/sso/OID/Add/authentik" \
-     -H 'Authorization: MediaBrowser Token="<api key>"' \
-     -H 'Content-Type: application/json' --data-binary @-
-   ```
-
-   ⚠️ **`OID/Add` replaces the whole provider object, its saved account links
-   (`CanonicalLinks`) included.** Use it to create the provider, never to edit
-   it once people have signed in. For later changes, use the plugin's settings
-   page.
-4. **Check sign-in before anyone else uses it.** Open
+1. **Install the plugins before merging.** Without them, the `system` stack's
+   run fails (see below). It is safe to install the SSO plugin early: with no
+   provider configured, it does nothing.
+   - Dashboard → Plugins → Repositories → add
+     `https://raw.githubusercontent.com/MaxRink/jellyfin-plugin-sso/manifest-release/manifest.json`,
+     then install **SSO Authentication**.
+   - JavaScript Injector is already installed.
+   - Restart Jellyfin.
+2. **Merge.** Flux applies the definition. On its next run, the `system` stack
+   creates the authentik client and writes Jellyfin's settings from it.
+3. **Check sign-in before anyone else uses it.** Open
    `https://jellyfin.<root domain>/sso/OID/start/authentik` as `david`. You
-   should land on the existing `david` account, still an admin.
-   Dashboard → Users → david should still show administrator, all libraries and
-   Live TV. If admin is gone, the `groups` claim is not arriving: see
+   should land on the existing `david` account, still an admin. Dashboard →
+   Users → david should still show administrator, all libraries and Live TV. If
+   admin is gone, the `groups` claim is not arriving: see
    [Permissions](#permissions).
-5. **Add the button.** Dashboard → Branding:
-   - Login disclaimer: [`login-disclaimer.html`](assets/jellyfin-sso/login-disclaimer.html).
-     It uses a `<form>` rather than a link because jellyfin-web opens disclaimer
-     links in a new tab.
-   - Custom CSS: [`custom.css`](assets/jellyfin-sso/custom.css).
-6. **Add the script.** Dashboard → JavaScript Injector → add a script, paste
-   [`sso-return.js`](assets/jellyfin-sso/sso-return.js), and leave **Requires
-   Authentication unchecked**. Scripts that require authentication are served
-   only after login, and this one only does anything before login.
-7. **Turn on SSO-only.** SSO-Auth settings page → **Enforce SSO only**: on,
-   exempt usernames: `david`.
+
+There is nothing to paste. The settings page, Branding and JavaScript Injector
+all show what the stack wrote.
+
+### How the stack writes it
+
+Every one of these Jellyfin endpoints takes the whole document on POST. The
+SSO plugin's document also holds state the plugin writes itself (the account
+links saved at every first login), and JavaScript Injector holds other people's
+scripts. So `JellyfinConfiguration` never posts blind. It reads the live
+document, lays the owned fields over it, and posts only when something
+differs:
+
+- Objects merge key by key. Owning `OidConfigs.authentik.AdminRoles` leaves
+  `OidConfigs.authentik.CanonicalLinks` and `UsernameMappings` as they are.
+- Arrays and scalars replace.
+- The script is matched by its name, "SSO return (managed by Pulumi)". Other
+  scripts are not touched.
+- **Owned fields edited in Jellyfin's UI are put back on the next run**, about
+  every 10 minutes. Change them in `jellyfin-sso.ts` or `resources/` instead.
+  That includes the **whole** Branding CSS (Dashboard → Branding → Custom CSS):
+  to add CSS, add it to `resources/custom.css`.
+- **The run fails** if Jellyfin is down, a plugin is missing, or the API key is
+  rejected. That is deliberate: those are faults worth seeing.
+- Removing a resource from the stack leaves the settings in Jellyfin.
+
+The admin API key is the one at `clusters/equestria/apps/jellyfin/api-key`,
+also used by the dashboard and setup-status. The stack calls Jellyfin at
+`jellyfin.equestria.svc.cluster.local:8096`, so Traefik and DNS play no part.
 
 ## Permissions
 
@@ -107,8 +105,7 @@ stays as set in Jellyfin.
   next SSO login removes admin from `david`. `PreserveAdminPermissions` is off
   on purpose: with it on, taking someone out of `admins` would never remove
   their admin. Recover by fixing the mapping and signing in through SSO again.
-  `david`'s password still works throughout, because the account is exempt from
-  SSO-only.
+  Password sign-in keeps working throughout.
 - **Turning `EnableAllFolders` off** means the libraries come from
   `EnabledFolders` and `FolderRoleMapping` (per-group libraries). With both
   empty, every SSO user loses every library at their next login.
@@ -121,59 +118,62 @@ stays as set in Jellyfin.
 On a first login, the plugin looks up the Jellyfin account named by
 `preferred_username` (the authentik username) and adopts it. The lookup is
 case-insensitive: Jellyfin 12 matches on `NormalizedUsername`. The plugin then
-stores a link keyed by the authentik `sub`. Adopted accounts keep their watch
-history.
-
-**SSO-only** (`EnforceSsoOnly`, on from day one, `david` exempt) moves every
-linked account to an authentication provider that rejects all passwords. It
-does not revoke existing sessions. Apps that are already signed in keep
-working until they log out or have to sign in again; from then on, the only
-ways in are SSO in a browser and Quick Connect.
+stores a link keyed by the authentik `sub`. Adopted accounts keep their
+password, watch history and every permission the plugin does not manage.
 
 Accounts on 2026-10-29:
 
 | Jellyfin | authentik | After their first SSO login |
 | --- | --- | --- |
-| `david` | `david` | Linked, still admin, password still works (exempt) |
-| `Abbie` | `Abbie` | Linked, password locked |
-| `Nat` | `nat` | Linked (case-insensitive match), password locked |
-| `Tami` | `tami` | Linked (case-insensitive match), password locked |
-| `Maddie` | none | Never linked, password only, unaffected |
-| `Deborah` | none | Never linked, password only, unaffected |
-
-What the locked accounts use:
-
-| App | Under SSO-only |
-| --- | --- |
-| Jellyfin web | "Sign in with authentik" |
-| Moonfin (iOS, iPadOS, tvOS) | Quick Connect: scan its QR (see below) |
-| Neptune (Apple TV) | Quick Connect ([docs](https://docs.neptuneplayer.com/getting-started/setup/authentication)) |
-| Jellyfin Android TV | Quick Connect (since 0.14) |
-| Seerr (3.4.0 and later; 3.5.1 here) | The Jellyfin **Quick Connect** option on Seerr's login page. Its Jellyfin password login fails. |
-| Moonfin's Seerr tab (Moonbase) | Its Quick Connect bridge, which needs Quick Connect on in Jellyfin and Moonbase 2.0.1 or later (2.4.0 here) |
-| **Infuse** | **Not supported.** Jellyfin login in Infuse is username and password only, and Firecore has not answered the [Quick Connect request](https://community.firecore.com/t/add-jellyfin-quickconnect-login-feature/49024) since 2024. A signed-in Infuse keeps working until it has to sign in again. Abbie has Infuse on the Apple TV (last used 2026-07-14) and moves to Neptune or Moonfin. |
+| `david` | `david` | Linked, still admin |
+| `Abbie` | `Abbie` | Linked |
+| `Nat` | `nat` | Linked (case-insensitive match) |
+| `Tami` | `tami` | Linked (case-insensitive match) |
+| `Maddie` | none | Never linked, password only |
+| `Deborah` | none | Never linked, password only |
 
 If an authentik username differs from the Jellyfin one by more than case, add a
 `UsernameMappings` entry on the provider (`"<authentik username>": "<jellyfin
-username>"`) **before** that person's first SSO login. Otherwise they get a new
-empty account. A signed-in user can also link their own account at
+username>"`) in the plugin's settings page **before** that person's first SSO
+login. Otherwise they get a new, empty account. The stack does not own this
+field, so the entry stays. A signed-in user can also link their own account at
 `/SSOViews/linking`.
 
 To give Maddie or Deborah SSO, create their authentik account under the same
-username and put them in `family` or `friends`. Their password stops working
-at their first SSO login.
+username and put them in `family` or `friends`.
+
+### SSO-only: off for now
+
+`EnforceSsoOnly` is `false`. Linked accounts keep their passwords, so password-only
+apps keep working. The main one is Infuse: Jellyfin sign-in there is username
+and password only, and Firecore has not answered the
+[Quick Connect request](https://community.firecore.com/t/add-jellyfin-quickconnect-login-feature/49024)
+since 2024.
+
+`SsoOnlyExemptUsernames: ["david"]` is already set. Turning SSO-only on is a
+one-line change in `jellyfin-sso.ts`. When it is on:
+
+- Every linked account's password stops working. Existing app sessions are not
+  revoked, but any app that has to sign in again fails if it uses a password.
+- Apps that keep working, through Quick Connect: Jellyfin web (SSO button),
+  Moonfin, Neptune, Jellyfin Android TV, Seerr 3.4+ (its Quick Connect option)
+  and Moonfin's Seerr tab (Moonbase's Quick Connect bridge).
+- Apps that stop working: Infuse.
+- Turning it on applies at once to accounts that are already linked. The plugin
+  runs its enforcement whenever the setting changes.
 
 ## Quick Connect and the QR code
 
-Quick Connect is on (`QuickConnectAvailable` in `system.xml`). Do not turn it
-off: for every locked account it is the only way into a TV or phone app.
+Quick Connect is on (`QuickConnectAvailable` in `system.xml`). Keep it on: it is
+how SSO users get into TV and phone apps without a password, and the only way
+once SSO-only is enabled.
 
 Moonfin's login screen shows a code and a QR code linking to
 `<server>/web/#/quickconnect?code=<code>`. That URL is hard-coded in Moonfin
 (`lib/util/server_url.dart`) and cannot be changed. The code is after the `#`,
 so it never reaches the server and Traefik cannot redirect it.
-[`sso-return.js`](assets/jellyfin-sso/sso-return.js) handles it in the
-browser:
+[`sso-return.js`](../../kubernetes/apps/equestria/media/jellyfin/resources/sso-return.js)
+handles it in the browser:
 
 1. The phone opens the QR link. jellyfin-web sees nobody is signed in and
    bounces to `#/login?…&url=/quickconnect?code=<code>`.
@@ -203,12 +203,12 @@ too: user menu → Quick Connect.
 
 ## Changing things later
 
-- **Provider settings:** the SSO-Auth settings page. Never re-post
-  `provider.json` to `OID/Add` once people have signed in: it would erase their
-  links. Update `provider.json` in the repo to match.
-- **The provider name** (`authentik`) is in four places that must change
-  together: the redirect URIs in `definition.yaml`, the `OID/Add` URL,
-  `login-disclaimer.html` and `START_PATH` in `sso-return.js`. It is
-  case-sensitive.
-- **Plugin updates:** through Jellyfin's plugin UI. The config file survives
+- **Plugin settings, button, CSS, script:** edit `stacks/system/jellyfin-sso.ts`
+  or `kubernetes/apps/equestria/media/jellyfin/resources/`, then merge. Edits in
+  Jellyfin's UI to fields the stack owns are reverted.
+- **The provider name** (`authentik`) must change in four places together:
+  `SSO_PROVIDER_NAME` in `jellyfin-sso.ts`, the redirect URIs in
+  `definition.yaml`, `login-disclaimer.html`, and `START_PATH` in
+  `sso-return.js`. It is case-sensitive.
+- **Plugin updates:** through Jellyfin's plugin UI. The settings survive
   updates.

@@ -14,8 +14,9 @@ spec:
     groups:
       - friends
       - family
-  # Consumed by the SSO-Auth plugin (MaxRink/jellyfin-plugin-sso), which is
-  # installed and configured out of band -- docs/kubernetes/jellyfin-sso.md.
+  # Consumed by the SSO-Auth plugin (MaxRink/jellyfin-plugin-sso). The plugin is
+  # installed by hand; stacks/system/jellyfin-sso.ts configures it from this
+  # client in the same run -- docs/kubernetes/jellyfin-sso.md.
   # The access policy above is the only gate on who may sign in: the plugin's
   # `Roles` is empty. The plugin does read `groups` (from `profile`) for admin
   # (`admins`) and Live TV management (`media-managers`) on every login.
