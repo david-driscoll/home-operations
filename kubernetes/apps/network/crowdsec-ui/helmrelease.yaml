@@ -112,7 +112,7 @@ spec:
               # old, single-maintainer, and ships multiple releases per week;
               # a floating tag would mean unreviewed code in a console that can
               # issue and revoke bans. Renovate proposes bumps.
-              tag: 2026.10.11@sha256:20333d6bc218f274a4cdaabc2e79716d7e203c0a23446c75f6aa6ccfc59a1431
+              tag: 2026.10.12@sha256:c653e0411627ef92d57108129c30bbeac21a421eff272d0e2aa4f8dcb5743e2d
               pullPolicy: IfNotPresent
             envFrom:
               - secretRef:
