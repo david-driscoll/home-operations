@@ -30,9 +30,7 @@ spec:
   wait: true
   interval: 1h
   retryInterval: 2m
-  # TEMPORARY 30m to wait out the Sonarr 5 first-boot migrations (#2629),
-  # with the HelmRelease; back to 10m after.
-  timeout: 30m
+  timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
