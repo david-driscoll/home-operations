@@ -50,7 +50,7 @@
       "args": ["run", "--", "uvx", "unifi-access-mcp"],
       "tools": ["*"],
       "env": {
-        "UNIFI_ACCESS_HOST": "unifi.${ROOT_DOMAIN}",
+        "UNIFI_ACCESS_HOST": "discord.${ROOT_DOMAIN}",
         "UNIFI_ACCESS_PORT": "443",
         "UNIFI_ACCESS_VERIFY_SSL": "false",
         "UNIFI_ACCESS_USERNAME": "op://Eris/unifipoller/username",
@@ -63,7 +63,7 @@
       "args": ["run", "--", "uvx", "unifi-network-mcp"],
       "tools": ["*"],
       "env": {
-        "UNIFI_NETWORK_HOST": "unifi.${ROOT_DOMAIN}",
+        "UNIFI_NETWORK_HOST": "discord.${ROOT_DOMAIN}",
         "UNIFI_NETWORK_PORT": "443",
         "UNIFI_NETWORK_SITE": "default",
         "UNIFI_NETWORK_VERIFY_SSL": "false",
@@ -77,7 +77,7 @@
       "args": ["run", "--", "uvx", "unifi-protect-mcp"],
       "tools": ["*"],
       "env": {
-        "UNIFI_PROTECT_HOST": "unifi.${ROOT_DOMAIN}",
+        "UNIFI_PROTECT_HOST": "discord.${ROOT_DOMAIN}",
         "UNIFI_PROTECT_PORT": "443",
         "UNIFI_PROTECT_VERIFY_SSL": "false",
         "UNIFI_PROTECT_USERNAME": "op://Eris/unifipoller/username",

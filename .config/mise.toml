@@ -319,7 +319,7 @@ BAO_AUTH_METHOD = "approle"
 # follow the ambient context — check `kubectl config current-context` first.
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 
-# UNIFI_HOST = "unifi.<root domain>"
+# UNIFI_HOST = "discord.<root domain>"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"
 # UNIFI_PASSWORD = "op://Eris/unifipoller/password"
 # UNIFI_API_KEY = "op://Eris/Unifi Api Key Eris Cluster/credential"
