@@ -47,8 +47,12 @@ cookie stops working as soon as the pods restart.
    `stacks/authentik` on merge).
 2. Flux applies the app's `definition.yaml`. `stacks/system` (10-minute
    resync) then creates the OAuth2 provider and `<app>-oidc-credentials`.
-3. The `<app>-oidc` ExternalSecret syncs, and reloader restarts the pod. To
-   skip the wait:
+3. The `<app>-oidc` ExternalSecret syncs and **creates** the Secret. Reloader
+   restarts the pod because it runs with `reloadOnCreate`
+   (`kubernetes/apps/kube-system/reloader/helmrelease.yaml`). Before that
+   flag, a created Secret never triggered a restart, and the first rollout
+   needed `kubectl -n equestria rollout restart deploy/<app>` by hand. To skip
+   the ExternalSecret's retry wait:
 
    ```bash
    kubectl -n equestria annotate externalsecret sonarr-oidc force-sync=$(date +%s) --overwrite
