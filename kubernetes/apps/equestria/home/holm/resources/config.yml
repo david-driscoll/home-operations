@@ -297,11 +297,11 @@ apps:
         - label: "Add the server"
           desc: "Tap Add Server, type https://jellyfin.${ROOT_DOMAIN} in Server Address and tap Connect."
         - label: "Pick your name"
-          desc: "On Who's watching?, tap your own name. If it's missing, message David."
-        - label: "Sign in with password"
-          desc: "Tap Password (you don't need the Quick Connect code on a phone) and type the Jellyfin password David sent you. It is not your family account."
+          desc: "On Who's watching?, tap your own name. Missing? Sign in once at jellyfin.${ROOT_DOMAIN} with Sign in with authentik, then try again."
+        - label: "Approve the code"
+          desc: "Moonfin shows a 6-digit code. In your browser, open jellyfin.${ROOT_DOMAIN}, tap Sign in with authentik, then your user icon, Quick Connect. Type the code and tap Authorize."
         - label: "On a TV"
-          desc: "Pick your name on the TV to get a 6-digit code. Approve it at jellyfin.${ROOT_DOMAIN} under your user icon, Quick Connect."
+          desc: "Pick your name to get a code and a QR code. Scan the QR code with your phone, sign in with your family account if asked, check the code matches and tap Authorize."
         - label: "Full guide"
           desc: "Step-by-step help with pictures: setup.${ROOT_DOMAIN}/setup/movies-tv/"
 
@@ -320,7 +320,7 @@ apps:
         - label: "Add to Home Screen"
           desc: "Do this before signing in. iPhone: Share, then Add to Home Screen. Android: the three-dot menu, then Install."
         - label: "Sign in"
-          desc: "Open it from the new icon. Under Login with Jellyfin, use your Movies & TV username and password, not your family account."
+          desc: "Open it from the new icon. Under Login with Jellyfin, tap Quick Connect, then approve the code in Movies & TV: Sign in with authentik, your user icon, Quick Connect. A Jellyfin password from David works too."
         - label: "Request a title"
           desc: "Search for it, tap the poster, then tap Request. Check Requests to see when it's ready."
         - label: "Full guide"
@@ -544,11 +544,15 @@ integrations:
     surfaces:
       search: true
       widgets: false
-  # Quick Connect, no key to copy. Jellyfin accounts are local, not authentik.
+  # Quick Connect, no key to copy. Holm shows a code and links to Jellyfin's
+  # Quick Connect page without it; a signed-out visitor is sent through
+  # "Sign in with authentik" and lands back on that page
+  # (docs/kubernetes/jellyfin-sso.md, sso-return.js), so the code is typed in.
   jellyfin:
     enabled: true
     name: "Movies & TV"
     default_url: "https://jellyfin.${ROOT_DOMAIN}"
+    tip: "Tap the link and use Sign in with authentik if Jellyfin asks. You land on Quick Connect: type the code and tap Authorize."
     surfaces:
       search: true
       widgets: false
