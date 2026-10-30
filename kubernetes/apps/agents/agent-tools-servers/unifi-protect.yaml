@@ -20,7 +20,7 @@ spec:
 
   env:
     - name: UNIFI_PROTECT_HOST
-      value: unifi.${ROOT_DOMAIN}
+      value: ${DISCORD_DOMAIN}
     - name: UNIFI_PROTECT_PORT
       value: "443"
     - name: UNIFI_PROTECT_VERIFY_SSL
