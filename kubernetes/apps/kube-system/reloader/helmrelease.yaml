@@ -63,3 +63,14 @@ spec:
         enabled: true
         namespace: "{{ .Release.Namespace }}"
       # reloadStrategy: annotations
+      # Also restart on a referenced Secret/ConfigMap being CREATED, not only
+      # updated. Bootstrap secrets otherwise never reach the pod: an app that
+      # mounts `${APP}-oidc` with `optional: true` (media/sonarr, media/radarr,
+      # media/aurral) starts before stacks/system has created the provider, the
+      # ExternalSecret then CREATES the Secret, and with create events ignored
+      # the running pod kept its OIDC-less env until restarted by hand
+      # (2026-10-29, Sonarr 5 / Radarr 7). Startup is safe: create events are
+      # dropped until both informers have synced, so a reloader restart does not
+      # restart every workload -- that is what `syncAfterRestart` (left false)
+      # would change.
+      reloadOnCreate: true
