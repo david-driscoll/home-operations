@@ -11,7 +11,7 @@ kind: MCPServer
 metadata:
   name: toolhive-unifi-protect
 spec:
-  image: ghcr.io/sirkirby/unifi-protect-mcp:0.10.0@sha256:ff54189b5e3b611dd2000c38c507898b17363ca3c1f897320a518b50be470993
+  image: ghcr.io/sirkirby/unifi-protect-mcp:0.11.0@sha256:88d734dadc76ad5aa0797f1a160cfa5d6914dd4becaeb7fa97e54860ba3aec70
   transport: streamable-http
   proxyPort: 8080
   mcpPort: 8000
