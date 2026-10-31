@@ -71,7 +71,7 @@ spec:
       acknowledgePrivileged: true
       image:
         repository: ghcr.io/n8n-io/n8n-sandbox-service-runner-dind
-        tag: 1.12.0@sha256:2bed57501269157325a50cdb99400d85225ca29adbe4bc73bf0a699e97c77f02
+        tag: 1.13.0@sha256:c3f06048fe1df2a0eb879fc8391dea2bcb068a63b99e9156ff32ed932df39ee0
       # Pulled by the runner's inner dockerd on first use, not by kubelet.
       sandboxImage:
         repository: ghcr.io/n8n-io/n8n-sandbox-service-sandbox
