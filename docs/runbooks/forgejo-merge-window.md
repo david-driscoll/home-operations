@@ -179,8 +179,18 @@ branch (`automergeType: branch`): the `renovate` account pushes straight to
 The gate takes effect because the forge's `main` **requires** `merge-window`.
 That rule is a `forgejo.BranchProtection` in
 `stacks/system/forgejo-github-mirror.ts`, applied with the `system` stack. It
-sets every field, so a change made in the forge's UI shows up as drift on the
-next `pulumi preview` and is put back by the next `pulumi up`.
+sets every field, so a change made in the forge's UI shows up as drift in a
+`pulumi preview --refresh` and is put back by a `pulumi up --refresh`.
+
+**The operator's resyncs do not refresh** (`refresh` is off in
+`kubernetes/apps/pulumi/system/stack.yaml`), so they compare the code with
+Pulumi's saved state, never with the forge. A rule edited in the UI stays
+edited until someone runs with `--refresh`. A rule **deleted** on the forge is
+worse: this provider fails a refresh of a rule that no longer exists instead
+of dropping it, so not even `--refresh` gets past it. That is why the stack
+also publishes the rule as the repository variable `MIRROR_MAIN_PROTECTION`,
+and every `github-sync` run recreates the rule from it when the forge has
+none ([below](#when-the-rule-is-gone)).
 
 What it holds, and why:
 
@@ -219,15 +229,48 @@ The sync now gets past both on its own: `scripts/forgejo-github-sync`
 (`force_update`) snapshots the rule over the API, deletes it, makes the one
 leased push, and recreates it from the snapshot, on an exit trap. That needs
 the sync account to be repository admin (`stacks/system/forgejo-github-mirror.ts`).
-The steps below are for when that fails -- the job log says `could not read`
-or `could not lift the main protection rule`:
+
+**A cancelled run never reaches that trap.** The runner removes a cancelled
+job's container outright. And the leased push is exactly what gets a run
+cancelled: it is a push to `main`, which starts a new `github-sync` run, which
+cancels the one that pushed. So every run starts with `ensure_protection`,
+which recreates a missing rule from `MIRROR_MAIN_PROTECTION` before it pushes
+anything. Its log says `the main protection rule was missing; recreated it`.
+Before 2026-10-31 nothing did, and `main` sat unprotected until it was put
+back by hand.
+
+The steps below are for when the lift itself fails -- the job log says
+`could not read` or `could not lift the main protection rule`:
 
 1. On the forge, *Settings → Branches*, delete the rule for `main`.
 2. *Actions → github-sync → Run workflow*, with **discard_local** ticked if
    that is the case, and wait for it to report what it did.
-3. Nothing more. The Pulumi operator re-syncs the `system` stack every 5
-   minutes and recreates the rule. If the sync has not finished by then,
-   delete the rule again.
+3. Put the rule back ([below](#when-the-rule-is-gone)). Neither the Pulumi
+   operator nor this sync will: these steps are only needed when the sync
+   account has lost its admin grant, which `ensure_protection` needs as well.
+
+### When the rule is gone
+
+A `github-sync` run that fails with `the main protection rule is MISSING and
+could not be recreated`, or `could not check the main protection rule`, means
+the rule is not on the forge and the sync could not POST it. Usually the sync
+account has lost its admin grant (the `Collaborator` in
+`stacks/system/forgejo-github-mirror.ts`); once that is fixed, the next run
+recreates the rule.
+
+Without the sync, recreate it through Pulumi. First drop the stale entry from
+state, since the provider cannot read a rule that is gone:
+
+```bash
+cd stacks/system
+URN="$(fnox exec -- pulumi stack -s system --show-urns 2>/dev/null | awk '/URN: .*branch-protection-main/ { print $2 }')"
+fnox exec -- pulumi state delete -s system --yes "$URN"
+```
+
+The operator's next resync, within 10 minutes, then creates the rule again.
+Waiting for that is safer than a local `pulumi up --target`: a checkout behind
+`main`, or a laptop's environment, makes even a targeted run want to change
+the stack's providers.
 
 After an apply, check two things:
 

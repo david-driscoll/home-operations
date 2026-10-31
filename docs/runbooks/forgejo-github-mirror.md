@@ -279,8 +279,10 @@ All of these are cleared the same way as a blocked run: **discard_local**.
 **The forge's `main` is a protected branch**, which takes the merge-window
 status. Forgejo never lets anyone force-push one, so for the replay and
 **discard_local** the sync lifts the rule for that one push and recreates it
-from a snapshot. If that fails, delete the rule by hand, run the sync, and let
-the Pulumi operator recreate it:
+from a snapshot. A run cancelled in between never restores it, so every run
+first recreates a missing rule from `MIRROR_MAIN_PROTECTION`. The Pulumi
+operator does not put a deleted rule back. If the lift fails, or the rule is
+gone and the sync cannot recreate it:
 [forgejo-merge-window.md](./forgejo-merge-window.md#the-sync-can-never-force-push-here).
 
 ## Verify

@@ -26,10 +26,15 @@
 # force-push allow-list to add the sync account to. So force_update() does the
 # runbook step itself: snapshot the rule over the API, delete it, make the one
 # leased push, and POST the snapshot back -- on an EXIT trap, so a failed push
-# or a killed run restores it too. The provider keys the rule by repository and
-# branch name, so the copy it finds afterwards is the one it made; and Pulumi
-# re-syncs the system stack every 5 minutes, which recreates the rule if even
-# the trap never ran.
+# restores it too. The provider keys the rule by repository and branch name, so
+# the copy it finds afterwards is the one it made.
+#
+# A CANCELLED RUN NEVER REACHES THAT TRAP: the runner tears its container down.
+# And the leased push is what gets runs cancelled -- its `push` event starts the
+# run that replaces this one. Pulumi does not put a deleted rule back either
+# (stacks/system/forgejo-github-mirror.ts, MIRROR_MAIN_PROTECTION), so every
+# pass starts with ensure_protection, which recreates a missing rule from the
+# copy Pulumi publishes.
 #
 # NOTHING REACHES GITHUB UNCHECKED. That repository is public and Forgejo is
 # not, and a commit made on Forgejo skipped every check a GitHub pull request
@@ -52,6 +57,8 @@
 #                             <server>/api/v1/repos/<owner>/<name>
 #   SYNC_FORGEJO_TOKEN        a token that is repository admin, to lift the
 #                             branch rule for a rewrite (see force_update)
+#   SYNC_PROTECTION_RULE      the branch rule Pulumi declares, as the JSON body
+#                             of a create call (see ensure_protection)
 #   PRIVATE_DOMAIN_ROOT, PRIVATE_DOMAIN_TAILNET
 #                             the two names the guard looks for (required to
 #                             publish; never printed)
@@ -160,6 +167,56 @@ forgejo_api() {
     -H "Authorization: token ${SYNC_FORGEJO_TOKEN}" -H 'Content-Type: application/json' "$@"
 }
 
+# Recreates $branch's rule from SYNC_PROTECTION_RULE if the forge has none.
+#
+# What puts back a rule that a cancelled run lifted and never restored. The
+# run that cancelled it is usually the next one through here, a few seconds
+# later. A run still mid-rewrite elsewhere (a hand-run dispatch has its own
+# concurrency group) just loses its leased push to the rule and lifts it again
+# on its next attempt.
+#
+# Returns non-zero only if the rule is, or may be, missing and was not put back.
+ensure_protection() {
+  local code
+  if [[ -z "${SYNC_FORGEJO_API:-}" || -z "${SYNC_FORGEJO_TOKEN:-}" || -z "${SYNC_PROTECTION_RULE:-}" ]]; then
+    say "MIRROR_MAIN_PROTECTION is not set; not checking the $branch protection rule"
+    return 0
+  fi
+
+  code="$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' \
+    -H "Authorization: token ${SYNC_FORGEJO_TOKEN}" "$SYNC_FORGEJO_API/branch_protections/$branch")" || true
+  case "$code" in
+    200) return 0 ;;
+    404) ;;
+    *)
+      echo "forgejo-github-sync: could not check the $branch protection rule (HTTP ${code:-none})" >&2
+      return 1
+      ;;
+  esac
+
+  if forgejo_api -X POST "$SYNC_FORGEJO_API/branch_protections" --data "$SYNC_PROTECTION_RULE" >/dev/null; then
+    say "the $branch protection rule was missing; recreated it from MIRROR_MAIN_PROTECTION"
+    return 0
+  fi
+  echo "forgejo-github-sync: the $branch protection rule is MISSING and could not be recreated -- docs/runbooks/forgejo-merge-window.md" >&2
+  return 1
+}
+
+# force_update's EXIT trap: POSTs back the rule snapshot in $1. A rule that is
+# already there is not a failure -- another run's ensure_protection put it back
+# first.
+restore_protection() {
+  local rule="$1"
+  if forgejo_api -X POST "$SYNC_FORGEJO_API/branch_protections" --data @"$rule" >/dev/null; then
+    say "restored the $branch protection rule"
+  elif forgejo_api "$SYNC_FORGEJO_API/branch_protections/$branch" >/dev/null 2>&1; then
+    say "the $branch protection rule is already back"
+  else
+    echo "forgejo-github-sync: could NOT restore the $branch protection rule; the next github-sync run recreates it (ensure_protection)" >&2
+  fi
+  rm -f "$rule"
+}
+
 # Moves Forgejo's $branch from $1 to $2, leased to $1: a rewrite, never a plain
 # push. Returns RETRY if the lease no longer holds (Forgejo moved meanwhile).
 force_update() {
@@ -184,9 +241,10 @@ force_update() {
     die "could not read the $branch protection rule -- the sync account needs admin on this repository (stacks/system/forgejo-github-mirror.ts)"
 
   # From the moment the DELETE is sent until the POST lands, $branch is
-  # unprotected. Restored on every exit from here, success or not.
+  # unprotected. Restored on every exit from here, success or not -- but not
+  # on a cancel, which kills the run outright (see ensure_protection).
   # shellcheck disable=SC2064 # $rule is meant to expand now
-  trap "forgejo_api -X POST '$SYNC_FORGEJO_API/branch_protections' --data @'$rule' >/dev/null && say 'restored the $branch protection rule' || echo 'forgejo-github-sync: could NOT restore the $branch protection rule; Pulumi recreates it within 5 minutes' >&2; rm -f '$rule'" EXIT
+  trap "restore_protection '$rule'" EXIT
 
   forgejo_api -X DELETE "$SYNC_FORGEJO_API/branch_protections/$branch" >/dev/null ||
     die "could not lift the $branch protection rule -- the sync account needs admin on this repository"
@@ -293,6 +351,11 @@ git remote remove github 2>/dev/null || true
 git remote add github "$fetch_url"
 git remote set-url --push github "$push_url"
 
+# Before anything is pushed. A rule that cannot be put back does not hold up
+# the sync, which needs no rule; it fails the run once the sync is done.
+protection_status=0
+ensure_protection || protection_status=1
+
 if [[ "$prune" == "true" ]]; then prune_branches; fi
 
 for ((try = 1; try <= attempts; try++)); do
@@ -306,6 +369,7 @@ for ((try = 1; try <= attempts; try++)); do
   )
   status=$?
   set -e
+  if ((status == 0)); then exit "$protection_status"; fi
   ((status == RETRY)) || exit "$status"
   say "a branch moved underneath this pass (attempt $try of $attempts)"
   sleep "$try"

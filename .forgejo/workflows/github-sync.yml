@@ -42,6 +42,11 @@ on:
 # Cancelling mid-run is safe. Each push the script makes is atomic and is a
 # fast-forward or leased, so a run stopped between its two pushes leaves the
 # sides one step apart, which is what the run that replaced it starts from.
+# The one thing a cancel can leave behind is main's branch rule, lifted for a
+# leased push and never restored: the runner removes a cancelled job's
+# container, so the script's EXIT trap does not run. The replacing run puts the
+# rule back before it pushes anything (scripts/forgejo-github-sync,
+# ensure_protection).
 #
 # A hand-run dispatch with `discard_local` or `prune_branches` set is the
 # exception, because no later run carries its inputs. It cancels nothing, and
@@ -137,6 +142,9 @@ jobs:
           # two names stay out of this file and out of the log.
           PRIVATE_DOMAIN_ROOT: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
           PRIVATE_DOMAIN_TAILNET: ${{ secrets.PRIVATE_DOMAIN_TAILNET }}
+          # main's branch rule as stacks/system declares it, recreated by the
+          # script whenever the forge has none (ensure_protection).
+          SYNC_PROTECTION_RULE: ${{ vars.MIRROR_MAIN_PROTECTION }}
           # Both empty on every trigger but a hand-run dispatch.
           SYNC_DISCARD_LOCAL: ${{ github.event.inputs.discard_local }}
           SYNC_PRUNE_BRANCHES: ${{ github.event.inputs.prune_branches }}

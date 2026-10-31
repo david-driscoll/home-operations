@@ -81,7 +81,7 @@ import type { GlobalResources } from "@components/globals.ts";
 import * as forgejo from "@pulumi/forgejo";
 import * as github from "@pulumi/github";
 import type * as pulumi from "@pulumi/pulumi";
-import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, output } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import { type ForgejoConfigurationComponent, GITHUB_MIRROR_ORG, type TOKEN_SCOPES } from "./forgejo-renovate.ts";
 
@@ -457,59 +457,64 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
     // the exception: the provider refuses `*WhitelistUsernames`, `*Teams` and
     // `pushWhitelistDeployKeys` outright, even empty or false, unless their
     // `enable*Whitelist` is true. Left out, they default to empty.
-    new forgejo.BranchProtection(
-      "forgejo-github-mirror-branch-protection-main",
-      {
-        repositoryId: repository.repositoryId,
-        branchName: "main",
+    //
+    // THE SAME FIELDS ARE PUBLISHED AS MIRROR_MAIN_PROTECTION (below), because
+    // Pulumi alone cannot put this rule back. The Stack does not refresh, and
+    // this provider fails a refresh of a rule that is gone rather than drop it
+    // from state, so a rule deleted on the forge stays "unchanged" here for
+    // good. A sync run killed between lifting the rule and restoring it (a
+    // cancel tears the job's container down, so its EXIT trap never runs) left
+    // main unprotected until 2026-10-31. Every github-sync run now recreates
+    // the rule from that variable when it finds none.
+    const mainProtectionRule: Omit<forgejo.BranchProtectionArgs, "repositoryId"> = {
+      branchName: "main",
 
-        enablePush: true,
-        enablePushWhitelist: true,
-        // Forgejo drops an allow-listed user who has no write on the
-        // repository, silently: the sync bot's comes from the collaborator
-        // grant above, Renovate's from its team in ./forgejo-renovate.ts.
-        pushWhitelistUsernames: [syncBot.user.login, args.forgejo.renovateBot.user.login],
-        pushWhitelistTeams: [],
-        pushWhitelistDeployKeys: false,
+      enablePush: true,
+      enablePushWhitelist: true,
+      // Forgejo drops an allow-listed user who has no write on the
+      // repository, silently: the sync bot's comes from the collaborator
+      // grant above, Renovate's from its team in ./forgejo-renovate.ts.
+      pushWhitelistUsernames: [syncBot.user.login, args.forgejo.renovateBot.user.login],
+      pushWhitelistTeams: [],
+      pushWhitelistDeployKeys: false,
 
-        // A required pattern that matches no status on a pull request counts
-        // as pending (services/pull/commit_status.go), so every one here must
-        // be posted on EVERY pull request, or that pull request never merges:
-        //
-        //   merge-window             .forgejo/workflows/merge-window.yml
-        //   flate*                   .forgejo/workflows/flate.yml, both jobs;
-        //                            several matches, the worst one counts
-        //   renovate/stability-days  every Renovate update here (the first
-        //                            mirror rule in .github/renovate.json5).
-        //                            A pull request Renovate did not open never
-        //                            gets it, so on this copy only Renovate's
-        //                            pull requests can merge.
-        //
-        // Not `Image Check*`: .forgejo/workflows/image-check.yml runs only for
-        // docker/**, so requiring it would block every other pull request.
-        // Renovate still waits for it where it runs, since it waits for every
-        // status.
-        enableStatusCheck: true,
-        statusCheckContexts: [MERGE_WINDOW_CONTEXT, "flate*", "renovate/stability-days"],
+      // A required pattern that matches no status on a pull request counts
+      // as pending (services/pull/commit_status.go), so every one here must
+      // be posted on EVERY pull request, or that pull request never merges:
+      //
+      //   merge-window             .forgejo/workflows/merge-window.yml
+      //   flate*                   .forgejo/workflows/flate.yml, both jobs;
+      //                            several matches, the worst one counts
+      //   renovate/stability-days  every Renovate update here (the first
+      //                            mirror rule in .github/renovate.json5).
+      //                            A pull request Renovate did not open never
+      //                            gets it, so on this copy only Renovate's
+      //                            pull requests can merge.
+      //
+      // Not `Image Check*`: .forgejo/workflows/image-check.yml runs only for
+      // docker/**, so requiring it would block every other pull request.
+      // Renovate still waits for it where it runs, since it waits for every
+      // status.
+      enableStatusCheck: true,
+      statusCheckContexts: [MERGE_WINDOW_CONTEXT, "flate*", "renovate/stability-days"],
 
-        // Renovate's pull requests merge unreviewed, and rebase only when they
-        // conflict (`rebaseWhen: conflicted`), so neither reviews nor an
-        // up-to-date branch can be required here.
-        requiredApprovals: 0,
-        enableApprovalsWhitelist: false,
-        dismissStaleApprovals: false,
-        blockOnRejectedReviews: true,
-        blockOnOfficialReviewRequests: true,
-        blockOnOutdatedBranch: false,
+      // Renovate's pull requests merge unreviewed, and rebase only when they
+      // conflict (`rebaseWhen: conflicted`), so neither reviews nor an
+      // up-to-date branch can be required here.
+      requiredApprovals: 0,
+      enableApprovalsWhitelist: false,
+      dismissStaleApprovals: false,
+      blockOnRejectedReviews: true,
+      blockOnOfficialReviewRequests: true,
+      blockOnOutdatedBranch: false,
 
-        enableMergeWhitelist: false,
+      enableMergeWhitelist: false,
 
-        requireSignedCommits: false,
-        protectedFilePatterns: "",
-        unprotectedFilePatterns: "",
-      },
-      { provider, parent: repository, dependsOn: [syncCollaborator] },
-    );
+      requireSignedCommits: false,
+      protectedFilePatterns: "",
+      unprotectedFilePatterns: "",
+    };
+    new forgejo.BranchProtection("forgejo-github-mirror-branch-protection-main", { repositoryId: repository.repositoryId, ...mainProtectionRule }, { provider, parent: repository, dependsOn: [syncCollaborator] });
 
     // What the workflow pushes to GitHub with. ed25519, as for claude-code's
     // key. To rotate: `pulumi up --replace` this resource. The Actions secret
@@ -561,7 +566,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       new forgejo.RepositoryActionSecret(`forgejo-github-mirror-secret-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });
     }
 
-    const variables: Record<string, string> = {
+    const variables: Record<string, pulumi.Input<string>> = {
       // Its presence is also what tells the workflow this copy IS the mirror;
       // anywhere else the job exits without doing anything.
       MIRROR_UPSTREAM: UPSTREAM,
@@ -572,6 +577,14 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // RenovateJob in kubernetes/apps/coder/renovate. The workflow appends
       // `&project=<this repository>`. Without it the step does nothing.
       MIRROR_RENOVATE_URL: "http://renovate-operator.coder.svc.cluster.local:8082/webhook/v1/schedule?job=renovate&namespace=coder",
+      // The branch rule above as the body of Forgejo's create-branch-protection
+      // call, for scripts/forgejo-github-sync (ensure_protection) to POST when
+      // the rule is missing. snake_case is the API's spelling of every field
+      // set there; approvalsWhitelistUsernames, which is not, would be
+      // `approvals_whitelist_username` and need spelling out here.
+      MIRROR_MAIN_PROTECTION: output(mainProtectionRule).apply(rule =>
+        JSON.stringify(Object.fromEntries(Object.entries(rule).map(([key, value]) => [key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`), value]))),
+      ),
     };
     for (const [name, data] of Object.entries(variables)) {
       new forgejo.RepositoryActionVariable(`forgejo-github-mirror-variable-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });
