@@ -3,9 +3,22 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - ./replicationdestination.yaml
   - ./pvc.yaml
   - ./meilisearch-pvc.yaml
   - ./externalsecret.yaml
   - ./meilisearch-secret.yaml
   - ./helmrelease.yaml
   - ./definition.yaml
+configMapGenerator:
+  # The init container's script, kept in a real file so shellcheck sees it.
+  # Same two options as volsync-system/lock-canceller, for the same reasons:
+  # the HelmRelease mounts it by literal name, and the script's shell `${...}`
+  # must not go through Flux's strict-mode envsubst.
+  - name: jellyfin-pg-scripts
+    files:
+      - ./resources/prepare.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

@@ -12,8 +12,8 @@ resources:
   - ./aurral/ks.yaml
   - ./bazarr/ks.yaml
   - ./jellyfin/ks.yaml
-  # Throwaway PostgreSQL test instance -- see ./jellyfin-pg/ks.yaml and
-  # docs/runbooks/jellyfin-postgres-migration.md. Remove this line to tear it down.
+  # Clone of jellyfin on PostgreSQL -- see ./jellyfin-pg/ks.yaml and
+  # docs/runbooks/jellyfin-postgres-migration.md (Teardown) before removing this.
   - ./jellyfin-pg/ks.yaml
   - ./jellyseerr/ks.yaml
   - ./radarr/ks.yaml

@@ -167,14 +167,14 @@ Menu names below are approximate; AIOStreams' UI changes often.
 
 ### 5. Gelato: test on `jellyfin-pg` first, then production
 
-`jellyfin-pg` (`https://jellyfin-pg.<domain>`) is the trial Jellyfin 12.0
-instance holding a copy of production's library. Gelato writes items into
-Jellyfin's database, so prove it there first.
+`jellyfin-pg` (`https://jellyfin-pg.<domain>`) is a clone of production Jellyfin
+on PostgreSQL, on the same Jellyfin version. Gelato writes items into Jellyfin's
+database, so prove it there first.
 
 1. **Dashboard → Plugins → Repositories → +**:
    `https://raw.githubusercontent.com/lostb1t/Gelato/refs/heads/gh-pages/repository.json`
-2. **Catalog → Gelato → install 0.26.18.0**. 0.26.19.0 and later target
-   Jellyfin 12.1 and will not load on 12.0. Restart Jellyfin.
+2. **Catalog → Gelato → install** the latest version whose target ABI is not
+   newer than the server's. Restart Jellyfin.
 3. **Plugins → Gelato → settings**:
    - URL: the AIOStreams manifest URL from step 4.
    - Movie path: `/config/gelato/movies`. Series path: `/config/gelato/series`.

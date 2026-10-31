@@ -6,13 +6,9 @@
 # so it lives outside the config volume rather than inside it.
 #
 # 20Gi, grown from 5Gi after the index filled the claim (2026-10-25).
-# Production's is 10Gi. This instance is a throwaway, so check what is
-# filling it before growing it again.
-#
-# ⚠️ NOT COVERED BY THE TEARDOWN IN §5 of docs/runbooks/jellyfin-postgres-migration.md,
-# which predates it. Tearing this instance down means this claim as well; it is
-# pruned with the rest of the Kustomization, but a manual `kubectl delete` of
-# the Deployment alone would leave it behind.
+# Production's is 10Gi. This instance is a test, so check what is filling it
+# before growing it again. Derived data: the plugin rebuilds the index from
+# Jellyfin's database, so it needs no clearing when the instance is re-cloned.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

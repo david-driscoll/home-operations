@@ -1,591 +1,285 @@
-# Jellyfin: SQLite → PostgreSQL trial (`jellyfin-pg`)
+# Jellyfin on PostgreSQL (`jellyfin-pg`)
 
-A **throwaway** Jellyfin instance on PostgreSQL, carrying a converted **copy** of
-production's SQLite library, to find out whether the real migration is viable.
+A **clone of production Jellyfin** that runs on PostgreSQL, to find out whether
+production can follow. It is not a second production server.
 
-**It is viable — but the fork's documented procedure does not work as written.**
-Followed literally it produces a server that starts, logs no errors, and is
-silently missing every registered device and all keyframe data. §3.3 is the part
-that is not in their README and without which the result is quietly wrong.
+- **Same image as production**, tag and digest
+  (`kubernetes/apps/equestria/media/jellyfin-pg/helmrelease.yaml`). Renovate bumps
+  both HelmReleases in one PR, so the clone always runs the Jellyfin version
+  production does.
+- **Production's data**: the config volume is restored from production's latest
+  volsync snapshot when it is created (`pvc.yaml` + `replicationdestination.yaml`).
+- **PostgreSQL through a plugin**: the
+  [BORNIOS PostgreSQL Database Provider](https://github.com/BORNIOS/Jellyfin-Database-Providers-Postgres),
+  installed from its plugin repository like any other plugin. Its own Migration
+  tab copies the SQLite database into PostgreSQL and switches the server over.
 
-Production `jellyfin` was not modified at any point. Everything below reads the
-volsync restic repository (mounted **read-only**, `--no-lock`) and writes only to
-`jellyfin-pg`'s own database and volume.
+It replaced the Nichols-HomeLab `jellyfin.pgsql` fork on 2026-10-31. That fork
+was a patched 12.0 server image that never caught up with production's 12.1, and
+its pgloader procedure lived here. Both are in git history before that date if
+you need the lessons; the two that still apply are repeated below.
 
-That describes the migration. The **running instance** is a different matter
-since 2026-10-08: it shares production's NFS metadata, subtitles and trickplay
-directories, writably — read "Metadata, subtitles and trickplay are
-production's" below before deleting anything from inside the pod.
+> **Be skeptical of a green result.** A provider plugin replaces Jellyfin's whole
+> data layer, and upstream labels that API experimental. The fork trial's two
+> worst defects passed "the pod is Ready and the UI loads". Row counts are the
+> check that matters (§4).
 
-> **Be skeptical of a green result.** This is an unofficial fork
-> ([`Nichols-HomeLab/Jellyfin.Pgsql`](https://git.nicholstech.org/Nichols-HomeLab/Jellyfin.Pgsql))
-> of an unofficial provider, and Jellyfin's plugin database-provider API is
-> labelled highly experimental upstream. "The pod is Ready and the UI loads" is
-> worth very little here: both defects found on 2026-09-16 passed that test.
-
-## Result, 2026-09-16
-
-| Check | Result |
-| --- | --- |
-| pgloader | **zero errors**, 1,489,934 rows, 259.9 MB, 1m12s |
-| Row counts, every table | match source exactly |
-| `Devices` | 84 / 84 — **only after §3.3** |
-| `KeyframeData` | 3,863 / 3,863, 2,382,026 tick values — **only after §3.3** |
-| Users | 5 visible accounts, passwords and policy intact |
-| Libraries | all resolve; LibraryMonitor watches every path |
-| Items | 29,050 episodes, 2,999 movies, 335 series, 724 box sets, 340 books |
-| Play state | 9,439 played / 69 resumable |
-| API read | `GET /Items/{id}` 200 |
-| Playback | `GET /Videos/{id}/stream` 206, 2 MiB @ 17.5 MB/s |
-| Write path | `POST /UserPlayedItems` 200 → row in PostgreSQL |
-| Persistence | play state survived a pod restart unchanged |
-| Database size | **518 MB in PostgreSQL vs 637 MB as SQLite** |
-
-## The pinned build
+## The plugin
 
 | | |
 | --- | --- |
-| Image | `git.nicholstech.org/nichols-homelab/jellyfin.pgsql` |
-| Tag | `12.0-nichols.68` |
-| Index digest | `sha256:cd825748c2ea6f5dc1242d3e1326db26ca6de31bfe22447d7f8f59d50d8da96c` |
-| amd64 manifest | `sha256:8db41e422f1ed3694356e6b80228e3233cc2278ffd5801478c37c444efd760f3` |
-| Built | 2026-09-10 |
-| Contents | Jellyfin server `12.0.0` (patched), `Jellyfin.Plugin.Pgsql.dll`, Npgsql `10.0.3` |
-| Fork sources | repo commit `460d74ac`, `jellyfin` submodule `d20f97d3` |
+| Repository | `https://raw.githubusercontent.com/BORNIOS/Jellyfin-Database-Providers-Postgres/main/manifest.json` |
+| Catalogue name | PostgreSQL Database Provider |
+| GUID | `a2b5f3e8-4c1d-4f7a-9e6b-8d0c2f1a3b5e` |
+| Version at adoption | 3.1.0.0 (2026-10-19), `targetAbi` 12.1.0.0 |
+| PostgreSQL | 16+; the CNPG cluster is 18 |
 
-Tag **and** digest, because the project says not to track `latest`. At pinning
-time `latest` resolved to the same digest and `main` was a different, newer
-build. **The provider and the server move as a unit** — never mix this image
-with a stock Jellyfin 12 image or a stock plugin.
+**It documents Jellyfin 12.1.x only, and production is on 12.4.** The 12.1 → 12.4
+diff was read on 2026-10-31: `IJellyfinDatabaseProvider` gained one method
+(`RefreshStatistics`) *with a default body*, so the plugin still binds; the one
+new schema migration, `MakeOwnerIdIndexesPartial`, only rebuilds two indexes
+as partial. Nothing in it should fail on the plugin. Re-check that diff when a
+Jellyfin bump touches `src/Jellyfin.Database/`. The clone is where a break
+should surface first, and that is why it tracks production.
 
-⚠️ **git.nicholstech.org rate-limits.** After roughly 120 requests across three
-runs it returned HTTP 403 to everything from this cluster's egress IP — raw
-files and API, curl and Python alike — for long enough to break a run mid-flight.
-**Fetch and cache their scripts before a cutover**, never at cutover time. The
-`render.py` approach in §3.1 carries the load template in a ConfigMap and
-verifies it by checksum instead of fetching it.
+## How the pod is put together
 
-## How the container is configured
+An init container (`resources/prepare.sh`, in the `postgres:18-trixie` image)
+runs before Jellyfin on every start:
 
-- **`POSTGRES_CONNECTION_STRING` only.** It outranks the alias
-  `JELLYFIN_POSTGRES_CONNECTION_STRING`, and both outrank the legacy
-  `POSTGRES_HOST`/`PORT`/`DB`/`USER`/`PASSWORD` set, which the entrypoint
-  concatenates itself when the first two are empty.
-- **`POSTGRES_COMMAND_TIMEOUT: "30"`** — seconds, `0` means unlimited. Read by
-  the provider, not the entrypoint. Do not also set `Command Timeout` in the
-  connection string.
-- ⚠️ **`Maximum Pool Size=20` is too low.** The idle instance held **17 of 20**
-  connections. A library scan will saturate it, and Npgsql queues rather than
-  failing, so the symptom is latency rather than an error. Use 50–100 for a real
-  cutover and check it against the CNPG cluster's `max_connections` — that
-  cluster serves ~30 other databases.
-- **`database.xml` is never hand-written.** The entrypoint copies its template in
-  if absent, then rewrites `<ConnectionString>` on **every** start, which is what
-  makes the 30-day password rotation survivable.
-- ⚠️ **That file holds the password in clear text on the config volume.** It is
-  the image's design, and it is why this app uses a plain PVC rather than
-  `components/volsync` — a ReplicationSource would copy it into restic.
-  Do not `cat` it in a shared terminal.
-- **The container does not import SQLite.** Its entrypoint has a migration
-  block, but it is commented out and the tools it references are not in the
-  image.
+1. **A PostgreSQL client for the plugin.** Before any Jellyfin migration that
+   asks for a backup (in practice, a version bump), the plugin runs `pg_dump`
+   inside the Jellyfin container, and a missing client is a **fatal startup
+   error** ([#5](https://github.com/BORNIOS/Jellyfin-Database-Providers-Postgres/issues/5)).
+   The stock image has none. The script copies `pg_dump`, `pg_dumpall`,
+   `pg_restore` and `psql` plus their libraries into an emptyDir, which Jellyfin
+   mounts at `/usr/lib/postgresql`. The plugin auto-detects that path, so
+   leave **PostgreSQL bin directory** empty.
+2. **One-time fix-ups on a fresh clone.** The copy names production. Its
+   `network.xml` publishes `all=https://jellyfin.<root domain>/`, and Webhook,
+   Moonfin and Jellyfin Enhanced carry production URLs. Whole hostnames are
+   rewritten to `jellyfin-pg` once, and `/config/.jellyfin-pg-seed-fixups-done`
+   marks that the rewrite ran.
+3. **The rotating password.** The plugin reads its connection from
+   `config/database.xml` and the dashboard reads it from
+   `plugins/configurations/Jellyfin.Database.Providers.Postgres.xml`. Both
+   `<ConnectionString>` elements are rewritten from the `jellyfin-pg-env`
+   Secret, and Reloader restarts the pod when OpenBao rotates the password. The
+   script never switches a server to PostgreSQL itself: it rewrites
+   `database.xml` only once that file already names `PLUGIN_PROVIDER`.
 
-## 1. Stand up the empty instance
+⚠️ **`database.xml` holds the password in clear text** once the provider is
+active, and so do `database.xml.bak` and the plugin's settings XML. That is why
+the config volume is a plain PVC with no volsync backup.
 
-Merging `kubernetes/apps/equestria/media/jellyfin-pg/` is the whole of this phase.
+## 1. Bring the clone up
 
-**Expect `stacks/system` to stall on that merge** — Pulumi creates
-`database/static-roles/jellyfin-pg` and beats Flux to the role. Recovery is in
-[`kubernetes/components/postgres/ks.yaml`](../../kubernetes/components/postgres/ks.yaml).
-On 2026-09-16 it in fact did **not** stall for that reason; it was already failing
-for an unrelated reason (a retired dockge host, fixed in #1763), which blocked the
-credential for 20 minutes. Check `stacks/system` is green **before** blaming the
-new app.
+Merging the app directory does it. Flux restores production's snapshot into
+`jellyfin-pg-config`, and the pod starts **on SQLite**, as a copy of production
+at the time of that snapshot.
 
-Confirm the instance is up and **empty** (54 migrations, 32 tables, 0 users), then
-stop it — everything below needs the target idle:
+Check it is a copy before going further: the same users, the same libraries,
+and play state on a title you know. Then read the init container's log for the
+`rewrote hosts in` lines:
 
 ```bash
-kubectl -n equestria scale deploy/jellyfin-pg --replicas=0
+kubectl -n equestria logs deploy/jellyfin-pg -c prepare
 ```
 
-## 2. Take a copy of production's database
+**SSO does not work on the clone.** The SSO-Auth plugin's settings came across
+naming production's Authentik client, whose redirect URIs are production's.
+Sign in with a local Jellyfin password.
 
-Production's config PVC is Longhorn RWO and attached to a running pod. **Do not
-mount it.** Read the volsync restic repository instead — it is an NFS export
-(`10.10.10.10:/mnt/stash/backup/equestria/volsync`, repo `/repository/jellyfin`),
-mounted **read-only** with credentials from the `jellyfin-volsync-secret` Secret.
+## 2. Empty the database
 
-`restic dump` rather than `restore`, so nothing can write to the repository:
+`jellyfin-pg` in CNPG still holds the retired fork's tables, and plugin 3.x does
+not adopt a schema it did not create. As the superuser, against the
+`jellyfin-pg` database, one statement per `-c`:
 
-```sh
-restic --no-lock dump latest /data/jellyfin.db     > /work/jellyfin.db
-restic --no-lock dump latest /data/jellyfin.db-wal > /work/jellyfin.db-wal
+```sql
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public AUTHORIZATION "jellyfin-pg";
 ```
 
-Sizes on 2026-09-16: `jellyfin.db` 637 MiB, WAL 36 MiB, whole snapshot 3.03 GiB.
-The dump took 18 seconds. **The 637 MiB fits in an emptyDir** — no PVC and no
-`ReplicationDestination` are needed, which also means no extra RBAC.
+This is the whole database of a test instance. **Check the database name
+before running it.**
 
-⚠️ **Take the WAL too, and checkpoint it.** The snapshot is a HOT copy — volsync
-backed it up while Jellyfin was running. `render.py` runs
-`PRAGMA wal_checkpoint(TRUNCATE)` to fold committed pages into the main file.
-Skip that and pgloader silently reads the pre-WAL state.
+## 3. Install, migrate, activate
 
-**Gates, all fail-closed** (`render.py`): `quick_check` must be `ok`,
-`foreign_key_check` must be empty, and `__EFMigrationsHistory` must contain
-`20260815063607_RemoveOrphanedUserPermissionsAndPreferences` — the fork's
-export script refuses without it, and it is the final SQLite migration in stock
-`v12.0-rc7`.
+1. **Dashboard → Plugins → Repositories → +**, paste the manifest URL above.
+   **Catalog → PostgreSQL Database Provider → Install**, then restart the
+   server.
+2. **Plugin → Configuration.** Paste the connection string:
 
-**On 2026-09-16 the hot copy passed every gate**, so production never had to be
-stopped. If `quick_check` fails, stop production Jellyfin briefly, trigger a
-manual volsync sync, restart it, and use that snapshot.
+   ```bash
+   kubectl -n equestria get secret jellyfin-pg-env \
+     -o jsonpath='{.data.POSTGRES_CONNECTION_STRING}' | base64 -d
+   ```
 
-## 3. Convert
+   Press **Test connection**; it must answer OK. Then **Save**. Leave
+   **PostgreSQL bin directory** empty. Set **backup retention** to a number of
+   days, or turn the daily backup task off: the default `0` keeps every daily
+   `pg_dump` on the config volume forever, and the CNPG cluster's nightly dump
+   already covers this database.
+3. **Plugin → Migration → Migrate data from SQLite to PostgreSQL.** Leave
+   *Truncate tables before insert* off, because §2 left the database empty.
+   Start it and wait for 100%.
+4. **Activate PostgreSQL and restart Jellyfin.** The plugin writes
+   `database.xml` and the server restarts onto PostgreSQL. From that start on,
+   the init container keeps the password in it current.
 
-With `jellyfin-pg` at 0 replicas. Stage order matters; each stage fails the pod
-rather than continuing.
-
-### 3.1 Render the load file (offline)
-
-Run [`assets/jellyfin-pg/render.py`](assets/jellyfin-pg/render.py). It carries the
-integrity gates from §2 and renders
-[`assets/jellyfin-pg/jellyfindb.load`](assets/jellyfin-pg/jellyfindb.load) — the
-fork's `docker/jellyfindb.load` at `460d74ac`, committed here byte for byte and
-asserted to be `sha256:8e06bfa5bb5c3665f12f80659140cea824792c45e6b3c30f14d29865aa7c6973`
-before use. Mount both from a ConfigMap at `/load`, or point `LOAD_TEMPLATE` at
-the file. No network access is needed.
-
-Only the two endpoints are rewritten — `create no tables`, `truncate`, the
-excluded migration tables and the identity-sequence reset stay the fork's own
-file.
-
-[`assets/jellyfin-pg/prepare.py`](assets/jellyfin-pg/prepare.py) is the online
-variant: the same gates plus fetching the fork's scripts and the pinned server
-sources, which §3.5 needs. Run it **once, ahead of time**, not at cutover — it is
-the script that hit the Gitea rate limit.
-
-**Percent-encode the password** into the pgloader target URI; an OpenBao password
-containing `/`, `@`, `:` or `#` otherwise re-parses the URI silently.
-
-### 3.2 Dump the target schema
-
-```sh
-psql -At -F'|' -c "select table_name, column_name, data_type,
-  coalesce(character_maximum_length::text,'')
-  from information_schema.columns where table_schema='public'
-  order by table_name, ordinal_position;" > /work/target-schema.tsv
-```
-
-### 3.3 Pre-clean — THE STEP THE FORK'S README DOES NOT HAVE
-
-Run [`assets/jellyfin-pg/preclean.py`](assets/jellyfin-pg/preclean.py) against the
-**restored copy**. Without it, pgloader reports 2 errors and loads zero rows into
-two tables:
+The log line that proves the switch:
 
 ```
-ERROR 22001: value too long for type character varying(32)
-CONTEXT: COPY Devices, line 10, column AppVersion:
-         "develop-e53c2a34dc521598dec4055089f863fa2d03a3bb"
-
-ERROR 22P02: malformed array literal: "[0,83420000,166830000,...]"
-DETAIL: Missing "]" after array dimensions.
-CONTEXT: COPY KeyframeData, line 1, column KeyframeTicks
+[ENGINE] Modo activo: PostgreSQL. Connection: Host=...;Password=*****
 ```
-
-- **`varchar(n)`** — SQLite does not enforce declared lengths; PostgreSQL does. A
-  48-character `AppVersion` from a dev-build client cost all **84** device rows.
-  This is not specific to this estate: anyone with a long client version string
-  hits it.
-- **`ARRAY`** — EF stores the tick list as JSON text in SQLite; the provider
-  declares `bigint[]`. Cost all **3,863** keyframe rows.
-
-pgloader *warns* about both up front (`is casted to type "text" which is not the
-same as "bigint[]"`) and proceeds anyway.
-
-⚠️ **The varchar fix is lossy** — the value is truncated to fit. The alternative
-is widening the column, which diverges from the fork's schema and fights its EF
-migrations. The script prints every value it changes.
-
-Actual output on the production dataset — **two problems in the entire schema**:
-
-```
-VARCHAR Devices.AppVersion varchar(32): truncated 1 rows (longest was 48)
-ARRAY   KeyframeData.KeyframeTicks: converted 3863 JSON literals
-```
-
-### 3.4 Load
-
-```
-ghcr.io/roxedus/pgloader@sha256:1a7a86ad56623c00ee714ee4969913ed5c6f59ac9785073e2ffd1bea9cc54d31
-```
-
-The same digest-pinned loader [`media-stack-postgres-migration.md`](media-stack-postgres-migration.md)
-uses. `backoffLimit: 0` / `restartPolicy: Never` — a half-loaded database must
-never be loaded into twice.
-
-**Require `Total import time  ✓` — a literal check mark, meaning zero errors.**
-Not "it finished": the failing run also finished, and reported `2` in that column
-while two tables sat empty.
-
-### 3.5 Carry the code-migration state across
-
-`docker/export-code-migrations.py` needs `Jellyfin.Server/Migrations/**/*.cs`
-from the pinned submodule commit to tell server **code** migrations from provider
-**schema** migrations. It emitted 8,325 bytes / 45 history rows.
-
-```sh
-python3 export-code-migrations.py /work/jellyfin.db --server-source ./jellyfin > code-migrations.sql
-psql -v ON_ERROR_STOP=1 -f code-migrations.sql
-```
-
-**This survives a re-load** — pgloader excludes `__EFMigrationsHistory` — so a
-second attempt at §3.4 does not need it repeated.
-
-### 3.6 Bring the config across
-
-Restore `/config` and `/root` from the same snapshot onto the target's PVC.
-
-⚠️ **Skip `database.xml`.** Production's copy names the SQLite provider, and the
-entrypoint hard-aborts (`exit 2`) if that file does not say `PostgreSQL`.
-
-⚠️ **Skip `/config/plugins`** — those were built against stock rc7, and the
-entrypoint manages the `PostgreSQL` plugin directory itself.
-
-⚠️ **Rewrite absolute paths that do not exist in the target pod.** Production's
-`system.xml` carries `<MetadataPath>/metadata</MetadataPath>` because prod mounts
-NFS there. In a test pod without that mount Jellyfin dies before serving anything:
-
-```
-Unhandled exception. System.UnauthorizedAccessException: Access to the path '/metadata' is denied.
-  at ServerConfigurationManager.UpdateMetadataPath()
-```
-
-Repoint it at `/config/metadata`. Not an issue for an in-place cutover, where the
-mounts are identical. Note that **image paths are stored as absolute paths in the
-database**, so changing MetadataPath orphans existing artwork — posters 404 until
-a metadata refresh.
 
 ## 4. Verify
 
-**Row counts per table, source against target. This is the check that matters** —
-it is the only thing that caught either defect in §3.3.
+**Row counts, every table, SQLite against PostgreSQL.** `data/jellyfin.db` is
+still on the volume after activation. A table that
+silently loaded nothing is exactly what the fork trial produced. It lost all 84
+`Devices` rows to a 48-character `AppVersion` in a `varchar(32)`, and all 3,863
+`KeyframeData` rows to a JSON-vs-`bigint[]` mismatch. Both runs reported
+success.
+
+```bash
+# PostgreSQL, from the CNPG primary.
+kubectl -n database exec -i \
+  "$(kubectl -n database get pod -l cnpg.io/cluster=postgres,cnpg.io/instanceRole=primary -o name)" \
+  -c postgres -- psql -d jellyfin-pg -Atc \
+  "select relname, n_live_tup from pg_stat_user_tables order by 1"
+```
+
+For SQLite, the Jellyfin image has no `sqlite3`. An ephemeral container that
+shares the app's process namespace can read the file through `/proc/1/root`.
+It runs as the pod's UID, which is what makes that path readable:
+
+```bash
+kubectl -n equestria debug -it deploy/jellyfin-pg --target=app \
+  --image=docker.io/keinos/sqlite3 -- \
+  sh -c 'sqlite3 /proc/1/root/config/data/jellyfin.db \
+    "select name from sqlite_master where type=\"table\" order by 1" |
+    while read t; do echo "$t $(sqlite3 /proc/1/root/config/data/jellyfin.db "select count(*) from \"$t\"")"; done'
+```
+
+`n_live_tup` is an estimate until `ANALYZE` runs; run the plugin's **Apply
+optimizations** (Health) first, or use `count(*)` for the tables that differ.
+Pay particular attention to `Devices`, `KeyframeData` and `UserData`.
 
 Then, in order of what each proves:
 
-- `Devices` and `KeyframeData` specifically, plus
-  `sum(array_length("KeyframeTicks",1))` — a present-but-empty array passes a
-  naive row count.
-- Sequences: every identity column at or past `max(id)`.
-- `__EFMigrationsHistory`: provider schema migrations plus the source's completed
-  code migrations, and **no SQLite schema migration IDs**.
+- **Plugin → Health** reads Ok, and `pg_trgm` is available.
 - Users log in; libraries resolve; `GET /Items/{id}` returns real metadata.
 - `GET /Videos/{id}/stream?static=true` with a Range header returns 206.
-- `POST /UserPlayedItems/{id}` returns 200 **and** the row changes in PostgreSQL —
-  this is the write path, and reads alone will not exercise it.
+- Mark something played: the row changes in PostgreSQL. That is the write path,
+  and reads alone do not exercise it.
 - Restart the pod and re-read that row.
 
-For an authenticated check, mint a throwaway key directly in the target database
-and delete it afterwards, rather than using one of the production API keys the
-migration carries across:
+## When Renovate bumps Jellyfin
 
-```sql
-insert into "ApiKeys" ("DateCreated","DateLastActivity","Name","AccessToken")
-values (now(), now(), 'migration-verify', '<random>');
--- ... verify ...
-delete from "ApiKeys" where "Name" = 'migration-verify';
-```
+Both servers get the new image in the same PR. On the clone, a bump that
+carries migrations runs this sequence:
 
-Note `UserData` holds **more than one row per (ItemId, UserId)** — three, for the
-item tested. All were updated consistently; it is not a migration artifact, but
-do not write queries assuming uniqueness.
+1. The plugin's `pg_dump` writes to `/config/data/postgres-migration-backups`.
+   This is uncompressed and about the size of the database.
+2. The migrations run against PostgreSQL.
+3. The backup is deleted when they succeed.
 
-## 5. Teardown
+The startup probe allows ten minutes for all of it.
 
-In this order. Steps 3 and 4 are one unit — never leave a live database with no
+If the clone fails and production does not, that is the result this instance
+exists to produce. Read the log, then either wait for a plugin release or pin
+the clone's tag back by hand until there is one. Pinning back is a deliberate
+divergence: put it in the PR.
+
+## Re-clone from production
+
+When the copy has drifted, or to rerun the migration from a fresh snapshot:
+
+1. Change `spec.trigger.manual` in `replicationdestination.yaml` to any new
+   value, e.g. `clone-<date>`, and merge.
+2. Scale to zero and delete the claim; Flux recreates it from the new restore:
+
+   ```bash
+   kubectl -n equestria scale deploy/jellyfin-pg --replicas=0
+   kubectl -n equestria delete pvc jellyfin-pg-config
+   flux -n equestria reconcile kustomization jellyfin-pg
+   ```
+
+3. Repeat §2 and §3. The new volume is on SQLite, so the init container leaves
+   the database alone until you activate again.
+
+**Never `restore-once` as the trigger value.** The `volsync-restore-cleanup`
+CronJob deletes completed `restore-once` destinations and Flux recreates them,
+which would re-restore 60Gi of production every night.
+
+## Back to SQLite
+
+Delete `config/database.xml` and restart. Jellyfin falls back to
+`data/jellyfin.db`, which is the clone as it stood at migration time; anything
+written to PostgreSQL since is not in it. The plugin has an export
+(PostgreSQL → SQLite) if that matters.
+
+## ⚠️ What it shares with production
+
+| | Production | Clone |
+| --- | --- | --- |
+| `truenas-media` (the library) | `/media` | `/media`, **writable** |
+| `/mnt/stash/data/jellyfin` | `/metadata` | same |
+| `…/subtitles` | `/config/data/subtitles` | same |
+| `…/trickplay` | `/config/data/trickplay` | same |
+
+The cloned database stores absolute paths, so these must resolve identically.
+The price is isolation. A metadata refresh, a prune or a deleted item on the
+clone changes what production serves, and **library options decide whether a
+scan writes `.nfo` files and artwork into `/media`**. **Never clear those paths
+from inside the clone's pod.**
+
+Also inherited from the copy, and worth a look after each re-clone:
+
+- **Plugins with outside side effects.** Webhook destinations (Discord, the
+  \*arr apps), Trakt scrobbling and Tracearr SSE run on the clone too. The host
+  rewrite only repoints links *to Jellyfin*, not where notifications go.
+  Disable whatever should not fire twice.
+- **The same server ID** as production. Clients that remember servers by ID can
+  confuse the two. The clone has no LAN interface, so LAN discovery answers
+  only for production.
+- **Plugin SQLite databases** (`playback_reporting.db`, `infuse_sync.db`, …)
+  stay SQLite files on the volume; the provider never sees them.
+
+## Teardown
+
+In this order. Steps 3 and 4 are one unit: never leave a live database with no
 `Database` CR, because the nightly backup CronJob treats that as a hard failure.
 
-**1. Remove the app.** PR deleting `kubernetes/apps/equestria/media/jellyfin-pg/`
-and its line in `kubernetes/apps/equestria/media/kustomization.yaml`. Flux prunes
-the HelmRelease, Service, HTTPRoute, `jellyfin-pg-env` and the config PVC. Confirm
-the Longhorn volume is gone.
+1. **Remove the app.** Delete `kubernetes/apps/equestria/media/jellyfin-pg/`
+   and its line in `kubernetes/apps/equestria/media/kustomization.yaml`. Flux
+   prunes the HelmRelease, both PVCs, the seed `ReplicationDestination` (and its
+   staging volumes), the scripts ConfigMap and both ExternalSecrets.
+2. **Let Pulumi drop the OpenBao role** before step 4. A static role whose
+   PostgreSQL role was dropped fails on its next rotation:
 
-**2. Let Pulumi drop the OpenBao role**, before step 4 — a static role whose
-PostgreSQL role was dropped fails on its next rotation:
+   ```bash
+   kubectl annotate stack -n pulumi system pulumi.com/reconciliation-request=$(date +%s) --overwrite
+   ```
 
-```bash
-kubectl annotate stack -n pulumi system pulumi.com/reconciliation-request=$(date +%s) --overwrite
-```
+3. **Delete the retained CNPG objects.** `components/postgres` renders them with
+   `deletionPolicy: Orphan`, `retain` and prune disabled:
 
-**3. Delete the retained CNPG objects.** `components/postgres` renders everything
-with `deletionPolicy: Orphan`, `retain` reclaim policies and
-`kustomize.toolkit.fluxcd.io/prune: disabled`, so none of this goes on its own:
+   ```bash
+   kubectl -n database delete database jellyfin-pg
+   kubectl -n database delete databaserole jellyfin-pg
+   kubectl -n database delete externalsecret jellyfin-pg-postgres
+   kubectl -n database delete secret jellyfin-pg-postgres jellyfin-pg-postgres-conn
+   kubectl delete clustergenerator jellyfin-pg-postgres-rotation
+   ```
 
-```bash
-kubectl -n database delete database jellyfin-pg
-kubectl -n database delete databaserole jellyfin-pg
-kubectl -n database delete externalsecret jellyfin-pg-postgres
-kubectl -n database delete secret jellyfin-pg-postgres jellyfin-pg-postgres-conn
-kubectl delete clustergenerator jellyfin-pg-postgres-rotation
-```
+4. **Drop the database and role**, one statement per `-c`:
 
-**4. Drop the database and role.** `retain` means step 3 dropped nothing.
-`DROP DATABASE` cannot run inside a transaction block, so one statement per `-c`:
+   ```sql
+   DROP DATABASE "jellyfin-pg";
+   DROP ROLE "jellyfin-pg";
+   ```
 
-```sql
-DROP DATABASE "jellyfin-pg";
-DROP ROLE "jellyfin-pg";
-```
-
-**5. Clean up the leftovers.** Any nightly `pg_dump` output for `jellyfin-pg`;
-the one-off ConfigMaps (`jellyfin-pg-migrate`, `jellyfin-pg-preclean`,
-`jellyfin-pg-load`) and any `driscoll.dev/oneshot=jellyfin-pg-migration` pods.
-
-Production `jellyfin` needs no teardown step — and **leave
-`/mnt/stash/data/jellyfin` on the NAS alone**. Since 2026-10-08 this instance
-mounts it, but it is production's: removing the app unmounts it and nothing more
-is wanted.
-
-## What a real cutover would need beyond this
-
-1. **The `varchar` truncation is a data decision, not a technical one.** Decide
-   whether to truncate or widen the column before the maintenance window.
-2. **Raise `Maximum Pool Size`** (§"How the container is configured").
-3. **Cache the fork's scripts and the pinned server sources in advance** — their
-   Gitea rate-limits.
-4. **Stop production for the copy** if you want a cold source. The hot copy
-   passed its integrity gates here, but that is evidence about one snapshot, not
-   a guarantee.
-5. **Plan for artwork.** Image paths are absolute in the database; anything that
-   moves the metadata directory needs a refresh afterwards.
-6. **Decide what happens to plugin databases.** `infuse_sync.db`,
-   `playback_reporting.db` and `streamyfin_plugin.db` are separate SQLite files
-   under `/config/data` and are outside both this procedure and the provider's
-   scope.
-
----
-
-# The 2026-09-21 re-run: plugins, repositories and settings included
-
-§1–§5 above describe the 2026-09-16 trial, which deliberately skipped
-`/config/plugins`. This section is the re-run that does not, and it replaces
-§3.1–§3.6 as the procedure to follow. Everything else above still holds.
-
-## ⛔ It does not run today, and the reason is not a bug
-
-| | Server | Image |
-| --- | --- | --- |
-| `jellyfin` | **12.1.0** | `ghcr.io/jellyfin/jellyfin:12.1` |
-| `jellyfin-pg` | **12.0.0** | `git.nicholstech.org/.../jellyfin.pgsql:12.0-nichols.68` |
-
-Both read off `/System/Info/Public` on the live servers. Production moved to
-12.1 in #1727; the fork's pinned build is still the 12.0 one the trial used.
-
-**The source's schema is therefore ahead of the target's.** Every EF migration
-12.1 added exists in production's SQLite and in none of the fork's PostgreSQL
-tables. pgloader is told `create no tables`, so it loads into whatever columns
-are already there and fails the tables where they do not match — which is the
-same shape as the `Devices` and `KeyframeData` losses in §3.3: a run that
-finishes, reports success, and leaves tables empty.
-
-`gate.py` refuses the load for exactly this and prints which columns differ.
-**Do not work around it by adding the columns by hand** — the provider's next
-EF migration will fight them.
-
-The way through is to bring `jellyfin-pg` to a fork build that matches
-production's Jellyfin version, let it run its migrations against an **empty**
-database, and then run this job. That build may not exist yet:
-`git.nicholstech.org` browsing is behind authentik SSO from here and its
-registry API could not be reached to list tags, so **check for a 12.1 tag
-yourself before planning a window**. If there is none, the options are to hold
-the re-run until there is, or to pin production back to 12.0 — a decision about
-production, not about this instance.
-
-## What it carries, and what the trial did not
-
-`config-sync.py` replaces §3.6. It carries the whole config volume rather than
-the XMLs alone:
-
-| | |
-| --- | --- |
-| `config/` | every server setting. **`system.xml` is also where `<PluginRepositories>` lives** — the repository list is a server setting, not a per-plugin one, so it travels with that file. The script prints the repositories it found so "they came across" is visible rather than discovered later in an empty catalogue. |
-| `plugins/` | the plugin assemblies **and** `plugins/configurations/`, which is where each plugin's own settings XML lives |
-| `root/` | the **library definitions** — `root/default/<Library>/options.xml` and the `.mblink` files. Without these the loaded `BaseItems` rows belong to libraries the server does not know it has. |
-| `data/ScheduledTasks/`, `data/collections/`, `data/playlists/` | task triggers, collections, playlists |
-| `data/*.db` | the plugins' **own SQLite databases** — `playback_reporting.db`, `infuse_sync.db`, `streamyfin_plugin.db`. They stay SQLite files on the volume; the provider never sees them. This closes item 6 of "what a real cutover would need". **Each one's WAL is checkpointed into the copy before it is carried**: they are hot copies too, and on 2026-09-21 `infuse_sync.db` had a 3.9 MB WAL beside it that copying the `.db` alone would have dropped. `--no-plugin-data` leaves them behind. |
-
-Refused, each for a reason that would otherwise break something:
-
-- **`config/database.xml`** — production's names the SQLite provider and the
-  entrypoint hard-aborts (`exit 2`) on it. The target's own copy is **held aside
-  across the replace and put back**; declining to copy the source's is not
-  enough, because a carried directory is wiped first.
-- **the provider's plugin directory** — the entrypoint manages it, and it is
-  likewise preserved across the wipe.
-- `data/jellyfin.db` (the thing being converted), `data/library.db`,
-  `metadata/`, `cache/`, `log/`, `transcodes/`.
-
-Nothing outside that carry list is touched.
-
-## ⚠️ Three settings that name paths this pod does not have
-
-A setting pointing at a path the pod cannot write is not a degraded feature; it
-is a server that dies before it serves anything (§3.6 has the stack trace).
-
-- **`MetadataPath`** — production mounts NFS at `/metadata`; `jellyfin-pg`
-  mounted nothing there when this was written, which is why `--metadata-path`
-  is **required** and `/config/metadata` is the value for this instance. Since
-  2026-10-08 the same export is mounted at **both** paths, so that value still
-  works and now lands on production's directory. Image paths are stored
-  absolute in the database, so on a pod WITHOUT those mounts **artwork 404s
-  until a metadata refresh**.
-- **`network.xml` → `LocalNetworkAddresses`** — production's pod carries an
-  ipvlan interface on the Home LAN (`jellyfin-lan-net`, 10.10.206.20).
-  `jellyfin-pg` has no such interface and cannot bind that address. The script
-  reports the list and `--clear-bind-addresses` empties it.
-- **plugin `targetAbi`** — a plugin declares the server ABI it was built
-  against and the server silently declines to load one built for a newer
-  server. Carrying production's plugins onto an older `jellyfin-pg` is the
-  normal way to hit this. Every plugin is listed with its ABI and flagged;
-  `--strict-abi` makes it fatal.
-
-## Plugin settings are repointed at this instance
-
-A carried plugin configuration still names **production** — a webhook's server
-URL, a sync plugin's callback, the address Streamyfin hands to clients. Left
-alone, `jellyfin-pg`'s plugins would talk to production and send clients there.
-`job.yaml` passes two rewrites to `config-sync.py`:
-
-| From | To |
-| --- | --- |
-| `jellyfin.equestria.svc.cluster.local` | `jellyfin-pg.equestria.svc.cluster.local` |
-| `jellyfin.<root domain>` | `jellyfin-pg.<root domain>` |
-
-- **Only the text files under `plugins/`** are rewritten: settings XML and
-  JSON. Assemblies are never touched.
-- Only **whole hostnames** match, ignoring case: `myjellyfin.<root domain>`,
-  `jellyfin.<root domain>.example.com` and the already-correct
-  `jellyfin-pg.<root domain>` are left alone. Ports and paths are kept.
-- Files are rewritten as bytes, so the BOM .NET writes survives.
-- The same hostnames under `config/` and inside the plugins' **SQLite
-  databases** are **reported, not rewritten**. A URL stored in a plugin's own
-  database is data that plugin owns, and rewriting it would need that plugin's
-  schema. Read the `warn:` lines and decide.
-- Short forms such as `jellyfin.equestria.svc`, `jellyfin:8096` or a bare IP do
-  not match. Add another `--rewrite-host=OLD=NEW` for any the run turns up.
-
-## ⚠️ Metadata, subtitles and trickplay are production's
-
-Since 2026-10-08 `jellyfin-pg` mounts the three NFS exports production does:
-
-| Export on the NAS | In `jellyfin` | In `jellyfin-pg` |
-| --- | --- | --- |
-| `/mnt/stash/data/jellyfin` | `/metadata` | `/metadata` **and** `/config/metadata` |
-| `/mnt/stash/data/jellyfin/subtitles` | `/config/data/subtitles` | same |
-| `/mnt/stash/data/jellyfin/trickplay` | `/config/data/trickplay` | same |
-
-**Why.** Keeping its own copy of these is what filled the config volume — 40Gi
-by 2026-10-02, then 68 GB of 80Gi by 2026-10-07, while production's `/config`
-sat near 3 GB. It was not a fault in the fork: both servers log the same
-`File changed, pruning extracted data` and each re-extracts about 1,600 subtitle
-streams a day as the library is rewritten underneath them. Production writes
-the result to NFS; this instance wrote it to Longhorn, where growth tracked
-subtitle extraction hour for hour.
-
-**Why two paths for metadata.** `config-sync.py` set this instance's
-`MetadataPath` to `/config/metadata`. Mounting the export there as well as at
-`/metadata` makes the setting right whichever value it holds, with no hand edit
-of `system.xml` — and image rows carried over from production resolve too.
-
-**What it costs.** The instance is no longer isolated. Two servers on different
-Jellyfin versions write, replace and prune the same files. All of it is
-regenerable, but a metadata refresh or a removed item here changes what
-production serves.
-
-⚠️ **Never clear those paths from inside the `jellyfin-pg` pod.** `rm -rf
-/config/metadata/*` there deletes production's artwork.
-
-**Reclaiming the volume.** What the instance wrote before the mounts existed is
-still on the PVC, hidden underneath them, so the volume stays as full as it was
-until that is deleted — from a pod that mounts the PVC alone:
-
-```bash
-kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/reclaim-pvc.yaml
-kubectl -n equestria logs -f job/jellyfin-pg-reclaim
-```
-
-Read the header of [`reclaim-pvc.yaml`](assets/jellyfin-pg/reclaim-pvc.yaml)
-first: it must run **after** the rollout, and it is a separate pod on purpose.
-
-## ⚠️ `truenas-media` is no longer read-only
-
-The mount lost `readOnly: true` in 6b8d281c (2026-09-17). The comments in
-`helmrelease.yaml` and §3.6 above still say it is read-only and are **stale**.
-This matters more for this run than for the trial, because this one carries
-production's **library options** — and those are what decide whether Jellyfin
-writes `.nfo` files and artwork back into the media folders. Inherited options
-mean scans have not written into `/media` so far, but nothing structural stops
-them now, and a delete from this instance deletes real shared media. Decide
-whether that mount should be read-only again **before** scaling the instance
-back up with production's library settings on it.
-
-## Running it
-
-Assets, all under [`assets/jellyfin-pg/`](assets/jellyfin-pg/):
-
-| File | Stage |
-| --- | --- |
-| `restore.sh` | dumps the database and config tree out of restic, read-only, `--no-lock`. **The snapshot's root is the volume's root**: VolSync backs up with `restic backup .` from inside `/data`, so production's `/config/data/jellyfin.db` is `/data/jellyfin.db` in the snapshot and `/config/config/system.xml` is `/config/system.xml`. §2's path was right; it only looks like a mount path. Each database comes with its `-wal` but **not** its `-shm`: a hot copy of the shared-memory index can disagree with its WAL, and SQLite rebuilds it. The script **fails closed if `config/system.xml`, `plugins/` or `root/` did not restore**, because restic treats an include that matches nothing as success. |
-| `render.py` | integrity gates, WAL checkpoint, source row counts, rendered load file (unchanged) |
-| `gate.py` | **new** — refuses a source schema the target does not cover |
-| `preclean.py` | varchar truncation and JSON→PostgreSQL array conversion (unchanged) |
-| `jellyfindb.load` | the fork's load file, checksum-verified (unchanged) |
-| `verify.py` | **new** — per-table source-vs-target counts, plus the KeyframeData tick total |
-| `config-sync.py` | **new** — plugins, repositories, settings, libraries |
-| `job.yaml` | **new** — all of it as one staged Job |
-
-```bash
-kubectl -n equestria scale deploy/jellyfin-pg --replicas=0
-kubectl -n equestria wait --for=delete pod \
-  -l app.kubernetes.io/instance=jellyfin-pg --timeout=5m
-
-kubectl -n equestria create configmap jellyfin-pg-migrate \
-  --from-file=docs/runbooks/assets/jellyfin-pg/ \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-# job.yaml takes the root domain from SOPS; substitute only that variable.
-ROOT_DOMAIN="$(sops -d --extract '["stringData"]["ROOT_DOMAIN"]' kubernetes/flux/meta/shared-secrets.sops.yaml)"
-sed "s/\${ROOT_DOMAIN}/$ROOT_DOMAIN/g" docs/runbooks/assets/jellyfin-pg/job.yaml | kubectl -n equestria apply -f -
-kubectl -n equestria logs -f job/jellyfin-pg-migrate --all-containers --prefix
-```
-
-The instance must be at **zero replicas**: the config PVC is RWO Longhorn, so
-the pod cannot schedule while the app holds it. That is the good failure; the
-bad one would be two writers on one config directory.
-
-`backoffLimit: 0` and `restartPolicy: Never`, as in §3.4 — a half-loaded
-database must never be loaded into twice. A failed stage means read the log, fix
-the cause, and re-create the Job deliberately.
-
-**§3.5 is not in the Job.** pgloader excludes `__EFMigrationsHistory`, so the
-code-migration history the trial imported survives a re-load and does not need
-repeating. It *does* need repeating if the database is rebuilt empty — which is
-exactly what the version fix above requires — and it needs the fork's
-`export-code-migrations.py` plus the pinned server's `Migrations/**/*.cs`.
-**Cache both before the window**; that fetch is what hit the Gitea rate limit.
-
-## Afterwards
-
-§4's verification still applies, and `verify.py` does its first and most
-important part automatically. Beyond that, the things this run adds:
-
-- Plugins appear in the dashboard **and are enabled** — an ABI-blocked plugin
-  is absent, not broken, and says so only in the log.
-- The plugin catalogue lists the repositories `config-sync.py` printed.
-- Each plugin's settings page shows production's values, not defaults, and
-  any URL on it names `jellyfin-pg`, not `jellyfin`.
-- Libraries resolve and their paths point at `/media`.
-- `MEILI_URL` / `MEILI_MASTER_KEY` still come from the environment and outrank
-  the carried Meilisearch config, so that plugin points at this pod's own
-  sidecar rather than production's. Confirm the index is this instance's.
+Leave `/mnt/stash/data/jellyfin` on the NAS alone. It is production's.

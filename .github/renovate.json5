@@ -982,8 +982,7 @@
         "!/backrest/",
         "!/rclone/",
         "!/getarcaneapp/",
-        "!/toolport/",
-        "!/jellyfin\\.pgsql/"
+        "!/toolport/"
       ],
       automerge: true,
       automergeType: "pr",
