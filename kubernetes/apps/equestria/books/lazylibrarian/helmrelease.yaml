@@ -46,7 +46,7 @@ spec:
               # A digest-pinned `latest` is the form Renovate tracks, the same
               # one ersatztv and kptv-fast use. Today all three tags resolve to
               # this digest (upstream commit 16ce29fe, build ls373).
-              tag: latest@sha256:e167d819d7fc29d6210d9f9d6b5dae08fa4ebc49de27b184b47c287d8bc0047e
+              tag: latest@sha256:f54ea53c69c603241ce13f2164971a357ac94fc6081f9c805ca25808266f7d68
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}
