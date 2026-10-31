@@ -20,6 +20,7 @@ resources:
   - ./unifi-network/ks.yaml
   - ./backups/ks.yaml
   - ./authentik/ks.yaml
+  - ./host-certificate/ks.yaml
   - ./home-operations/ks.yaml
   - ./gulf-of-mexico/ks.yaml
   # disabled due to ocracoke being offline

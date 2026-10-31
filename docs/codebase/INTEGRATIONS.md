@@ -72,8 +72,8 @@ All SSH management connections use `${name}.<tailnet>` — no direct IPs are use
 | `ssh` | 22 |
 | `dockgeManagement` | 5001, 9595, 2375, 8082 |
 | `observability` | 9093, 9090, 3100, 8266, 1883 |
-| `proxmoxManagement` | 8006 |
-| `proxmoxBackupServer` | 8007 |
+| `proxmoxManagement` | 8006, 443 |
+| `proxmoxBackupServer` | 8007, 443 |
 
 ### 7) Alertmanager
 

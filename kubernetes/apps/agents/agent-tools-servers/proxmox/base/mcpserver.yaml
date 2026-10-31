@@ -84,10 +84,12 @@ spec:
       value: STREAMABLE
     - name: PROXMOX_HOST
       value: "REPLACE-ME.invalid"
+    # 443, not 8006: pveproxy presents the root-domain cert, so the tailnet name
+    # is served by `tailscale serve` on 443 (ProxmoxHost.ts).
     - name: PROXMOX_PORT
-      value: "8006"
-    # true, and it costs nothing: every hypervisor already presents a valid
-    # Let's Encrypt cert for its `*.<tailnet>` name (verified live
+      value: "443"
+    # true, and it costs nothing: every hypervisor presents a valid
+    # Let's Encrypt cert for its `*.<tailnet>` name on 443 (verified live
     # 2026-09-04 -- issuers YE1/YE2, and curl from inside this namespace
     # reports ssl_verify_result=0 against all four reachable hosts). So the
     # overlays address hosts by that HOSTNAME rather than by IP: the certs
