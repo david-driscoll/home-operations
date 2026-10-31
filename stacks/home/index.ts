@@ -337,6 +337,22 @@ await awaitOutput(
     spikeVm,
   ),
 );
+// The UniFi gateway (discord) renews its own web certificate too, outside this
+// repo, and both UniFi providers verify it, so a lapse fails unifi-network the
+// same way. It was nine days from expiry, with no https check on it, before it
+// renewed alongside TrueNAS's.
+await awaitOutput(
+  addUptimeGatus(
+    "unifi-gateway",
+    globals,
+    {
+      endpoints: globals.searchDomain.apply((searchDomain): GatusDefinition[] => [
+        { name: "UniFi Gateway", group: "Infrastructure", url: `https://discord.${searchDomain}/`, method: "GET", conditions: ["[STATUS] == 200"] },
+      ]),
+    },
+    globals,
+  ),
+);
 await awaitOutput(createGatusDnsUptime(globals, { parent: alphaSiteHost }));
 await awaitOutput(
   backupDirector.createPlans(
