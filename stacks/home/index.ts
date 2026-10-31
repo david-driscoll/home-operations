@@ -323,18 +323,24 @@ await awaitOutput(
 await awaitOutput(celestiaHost.addUptimeGatus());
 
 await awaitOutput(twilightSparkleHost.addUptimeGatus());
-// TrueNAS renews its web certificate itself (ACME on spike), and this stack's
-// TrueNAS client cannot connect without it: when that renewal stopped, the
-// certificate lapsed and every run failed on a bare "Connection timed out".
-// The certificate check addUptimeGatus adds to https endpoints is the point.
+// TrueNAS (spike) and the UniFi gateway (discord) renew their own web
+// certificates, outside this repo, and the Pulumi clients for both verify them:
+// a lapsed one fails this stack or unifi-network outright. TrueNAS's renewal
+// stopped and its certificate expired with every check green, so this stack
+// failed on a bare "Connection timed out"; the gateway's was nine days from
+// expiry before it renewed. The certificate check addUptimeGatus adds to https
+// endpoints is the point of both.
 await awaitOutput(
   addUptimeGatus(
-    "truenas-spike",
+    "self-renewed-certificates",
     globals,
     {
-      endpoints: spikeVm.hostname.apply((hostname): GatusDefinition[] => [{ name: "TrueNAS", group: "Infrastructure", url: `https://${hostname}/ui/`, method: "GET", conditions: ["[STATUS] == 200"] }]),
+      endpoints: pulumi.all([spikeVm.hostname, globals.searchDomain]).apply(([spikeHostname, searchDomain]): GatusDefinition[] => [
+        { name: "TrueNAS", group: "Infrastructure", url: `https://${spikeHostname}/ui/`, method: "GET", conditions: ["[STATUS] == 200"] },
+        { name: "UniFi Gateway", group: "Infrastructure", url: `https://discord.${searchDomain}/`, method: "GET", conditions: ["[STATUS] == 200"] },
+      ]),
     },
-    spikeVm,
+    globals,
   ),
 );
 await awaitOutput(createGatusDnsUptime(globals, { parent: alphaSiteHost }));
