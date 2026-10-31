@@ -11,6 +11,7 @@ import { RandomPassword, RandomString } from "@pulumi/random";
 import type { GetDeviceResult } from "@pulumi/tailscale";
 import { unique } from "moderndash";
 import * as yaml from "yaml";
+import { withCertificateExpiration } from "./gatusCertificateExpiration.ts";
 import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxHost } from "./ProxmoxHost.ts";
 
@@ -213,10 +214,10 @@ export function addUptimeGatus(
             // time it reaches here sorts and dedupes as "".
             .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
             .map(e => {
-              return {
+              return withCertificateExpiration({
                 interval: "2m",
                 ...e,
-              };
+              });
             }),
           (a, b) => a.name === b.name,
         ),

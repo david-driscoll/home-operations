@@ -2,10 +2,11 @@ import type { AuthentikOutputs } from "@components/authentik.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
-import { awaitOutput } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
 import { TailscaleMonitor } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import type { GatusDefinition } from "@openapi/application-definition.js";
 import * as minio from "@pulumi/minio";
 import * as pulumi from "@pulumi/pulumi";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
@@ -322,6 +323,20 @@ await awaitOutput(
 await awaitOutput(celestiaHost.addUptimeGatus());
 
 await awaitOutput(twilightSparkleHost.addUptimeGatus());
+// TrueNAS renews its web certificate itself (ACME on spike), and this stack's
+// TrueNAS client cannot connect without it: when that renewal stopped, the
+// certificate lapsed and every run failed on a bare "Connection timed out".
+// The certificate check addUptimeGatus adds to https endpoints is the point.
+await awaitOutput(
+  addUptimeGatus(
+    "truenas-spike",
+    globals,
+    {
+      endpoints: spikeVm.hostname.apply((hostname): GatusDefinition[] => [{ name: "TrueNAS", group: "Infrastructure", url: `https://${hostname}/ui/`, method: "GET", conditions: ["[STATUS] == 200"] }]),
+    },
+    spikeVm,
+  ),
+);
 await awaitOutput(createGatusDnsUptime(globals, { parent: alphaSiteHost }));
 await awaitOutput(
   backupDirector.createPlans(
