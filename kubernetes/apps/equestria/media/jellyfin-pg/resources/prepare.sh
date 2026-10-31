@@ -31,7 +31,15 @@ set -eu
 : "${HOST_REWRITES:?missing -- see helmrelease.yaml}"
 
 CONFIG=/config
-SEED_MARKER="$CONFIG/.jellyfin-pg-seed-fixups-done"
+# ⚠️ NEVER NAME IT `.jellyfin-*`. Jellyfin globs that pattern in its data
+# directory (/config) as its own directory markers, and refuses to start on any
+# it did not write: "Expected to find only .jellyfin-data but found marker for
+# ...". That is exactly what the first name for this file did.
+SEED_MARKER="$CONFIG/.clone-seed-fixups-done"
+LEGACY_MARKER="$CONFIG/.jellyfin-pg-seed-fixups-done"
+if [ -e "$LEGACY_MARKER" ]; then
+  mv "$LEGACY_MARKER" "$SEED_MARKER"
+fi
 
 # ---------------------------------------------------------------------------
 # 1. PostgreSQL client
