@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/volsync.backube/replicationdestination_v1alpha1.json
+#
+# Restores PRODUCTION jellyfin's latest snapshot into ./pvc.yaml. Hand-written
+# rather than `components/volsync`, whose destination always reads the app's
+# OWN repository (${APP}-volsync-secret); this one reads production's,
+# through the `jellyfin-volsync-secret` that production's component renders
+# into this same namespace. Read-only: a restic restore never writes to the
+# repository, and production's backups carry on unaffected.
+#
+# Values mirror kubernetes/components/volsync/replicationdestination.yaml as
+# production renders it (garage backend, 60Gi).
+#
+# ⚠️ THE TRIGGER IS NOT `restore-once`, deliberately. The volsync-restore-cleanup
+# CronJob deletes every destination whose trigger is `restore-once` and has
+# fired, and Flux puts it straight back -- so a `restore-once` here would
+# re-restore 60Gi of production every night for nothing. Any other value is
+# left alone. Changing it re-runs the restore; see ./pvc.yaml to re-clone.
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: ${APP}-seed
+spec:
+  trigger:
+    manual: clone-2026-10-31
+  restic:
+    repository: jellyfin-volsync-secret
+    copyMethod: Snapshot
+    volumeSnapshotClassName: longhorn-snapclass
+    cacheStorageClassName: longhorn-cache
+    cacheAccessModes: ["ReadWriteOnce"]
+    cacheCapacity: 8Gi
+    storageClassName: longhorn-snapshot
+    accessModes: ["ReadWriteOnce"]
+    capacity: 60Gi
+    moverSecurityContext:
+      runAsUser: 568
+      runAsGroup: 568
+      fsGroup: 568
+    # The repository is on Garage; the NFS mover policy skips pods with this
+    # label, exactly as for production's own movers.
+    moverPodLabels:
+      driscoll.dev/volsync-backend: garage
