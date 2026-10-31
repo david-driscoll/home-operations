@@ -58,7 +58,7 @@ runs before Jellyfin on every start:
 2. **One-time fix-ups on a fresh clone.** The copy names production. Its
    `network.xml` publishes `all=https://jellyfin.<root domain>/`, and Webhook,
    Moonfin and Jellyfin Enhanced carry production URLs. Whole hostnames are
-   rewritten to `jellyfin-pg` once, and `/config/.jellyfin-pg-seed-fixups-done`
+   rewritten to `jellyfin-pg` once, and `/config/.clone-seed-fixups-done`
    marks that the rewrite ran.
 3. **The rotating password.** The plugin reads its connection from
    `config/database.xml` and the dashboard reads it from
