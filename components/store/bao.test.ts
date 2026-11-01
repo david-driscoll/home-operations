@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/store/bao.test.ts
+ * node --test components/store/bao.test.ts
  *
  * Covers the Phase 8 read path: KV v2 result -> the object shape stacks
  * already consume. No Pulumi engine and no network — `shapeItem` is pure, and

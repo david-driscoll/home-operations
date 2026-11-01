@@ -1,5 +1,5 @@
 /**
- * npx tsx --test dynamic/1password/OnePasswordItem.test.ts
+ * node --test dynamic/1password/OnePasswordItem.test.ts
  *
  * The unknown-value guard. `pulumi.runtime.unknownValue` is an ordinary
  * 36-character string, so a diff that does not look for it will happily treat

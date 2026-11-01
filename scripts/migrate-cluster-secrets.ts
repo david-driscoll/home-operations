@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 /**
  * One-time: move the cluster definitions' CREDENTIAL fields into OpenBao.
  *
@@ -27,9 +27,9 @@
  * consumer contract, not a leftover.
  */
 
-import { BaoClient, baoProvenance } from "@components/bao.ts";
-import { OPClient } from "@components/op.ts";
-import { CLUSTER_SECRET_FIELDS, CLUSTERS, clusterBySourceTitle, clusterSecretPath } from "@components/store/clusters.ts";
+import { BaoClient, baoProvenance } from "components/bao.ts";
+import { OPClient } from "components/op.ts";
+import { CLUSTER_SECRET_FIELDS, CLUSTERS, clusterBySourceTitle, clusterSecretPath } from "components/store/clusters.ts";
 
 const apply = process.argv.includes("--apply");
 const op = new OPClient();

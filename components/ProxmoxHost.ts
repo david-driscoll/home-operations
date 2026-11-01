@@ -1,8 +1,4 @@
 import { FullItem } from "@1password/connect";
-import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
-import { Tailscale } from "@components/constants.ts";
-import { addUptimeGatus, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
 import type { GatusDefinition } from "@openapi/application-definition.js";
 import type { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
@@ -12,6 +8,10 @@ import * as pulumi from "@pulumi/pulumi";
 import { ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import * as purrl from "@pulumiverse/purrl";
+import { AuthentikApplicationManager, type AuthentikOutputs } from "components/authentik.ts";
+import { Tailscale } from "components/constants.ts";
+import { addUptimeGatus, copyFileToRemote, getTailscaleSection } from "components/helpers.ts";
+import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import * as yaml from "yaml";
 import type { GlobalResources } from "./globals.ts";
 import { clientIdPair, getHostnames } from "./helpers.ts";
@@ -69,12 +69,11 @@ export class ProxmoxHost extends ComponentResource {
     randomVmIdStart: number;
     randomVmIdEnd: number;
   };
-  constructor(
-    name: string,
-    private args: ProxmoxHostArgs,
-    opts?: ComponentResourceOptions,
-  ) {
+  private args: ProxmoxHostArgs;
+
+  constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxHost", name, opts);
+    this.args = args;
 
     this.name = name;
     const cluster = output(args.cluster);

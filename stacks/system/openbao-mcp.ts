@@ -42,9 +42,9 @@
  * it in front of a real secrets estate.
  */
 
-import type { GlobalResources } from "@components/globals.ts";
 import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
 import * as vault from "@pulumi/vault";
+import type { GlobalResources } from "components/globals.ts";
 
 /**
  * ON since the `pulumi` OpenBao policy was widened by hand via the OIDC

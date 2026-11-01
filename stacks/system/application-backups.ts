@@ -1,7 +1,7 @@
-import type { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
-import type { GlobalResources } from "@components/globals.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import * as pulumi from "@pulumi/pulumi";
+import type { BackupPlanOrchestrator } from "components/BackupPlanOrchestrator.ts";
+import type { GlobalResources } from "components/globals.ts";
 import type { KubernetesCluster } from "./applications.ts";
 
 export async function kubernetesBackups(_globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesCluster) {

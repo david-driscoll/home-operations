@@ -114,10 +114,13 @@ export class SecretRefResolver {
   /** One vals run per distinct document per process, however often it recurs. */
   private readonly resolved = new Map<string, Promise<string>>();
 
-  constructor(
-    private readonly exec: ValsExec = execVals,
-    private readonly makeClient: () => BaoClient = () => new BaoClient(),
-  ) {}
+  private readonly exec: ValsExec;
+  private readonly makeClient: () => BaoClient;
+
+  constructor(exec: ValsExec = execVals, makeClient: () => BaoClient = () => new BaoClient()) {
+    this.exec = exec;
+    this.makeClient = makeClient;
+  }
 
   /**
    * Replace every `ref+openbao://` reference in `value` with its secret value.

@@ -1,7 +1,7 @@
 import * as authentik from "@pulumi/authentik";
 import type * as pulumi from "@pulumi/pulumi";
 import { authenticatorStaticSetup, authenticatorTotpSetup, authenticatorWebauthnSetup } from "./default-flows.ts";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class AuthenticatorStages extends SharedComponentResource {
   private _backupCodes?: authentik.StageAuthenticatorStatic;

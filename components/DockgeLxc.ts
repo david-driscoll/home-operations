@@ -3,12 +3,6 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
-import { baoKvSecret, baoProvenance, dockgeBaoPath, postgresBaoPath } from "@components/bao.ts";
-import { Tailscale } from "@components/constants.ts";
-import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
-import type { OPClient } from "@components/op.ts";
-import { installTailscaleLxc, type TailscaleMonitor } from "@components/tailscale.ts";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as authentikApi from "@goauthentik/api/dist/esm/index.js";
 import type { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 import type { TailscaleIp } from "@openapi/tailscale-grants.js";
@@ -18,6 +12,12 @@ import { all, ComponentResource, type Input, interpolate, jsonStringify, log, me
 import { RandomPassword } from "@pulumi/random";
 import * as tailscale from "@pulumi/tailscale";
 import { TailnetKey } from "@pulumi/tailscale";
+import { baoKvSecret, baoProvenance, dockgeBaoPath, postgresBaoPath } from "components/bao.ts";
+import { Tailscale } from "components/constants.ts";
+import { awaitOutput, copyFileToRemote, getTailscaleSection } from "components/helpers.ts";
+import type { OPClient } from "components/op.ts";
+import { installTailscaleLxc, type TailscaleMonitor } from "components/tailscale.ts";
+import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import { unique } from "moderndash";
 import * as yaml from "yaml";
 import type { AuthentikApplicationManager } from "./authentik.ts";
@@ -137,11 +137,11 @@ export class DockgeLxc extends ComponentResource {
   private readonly monitor: TailscaleMonitor;
   private readonly name: string;
 
-  constructor(
-    name: string,
-    private readonly args: DockgeLxcArgs,
-  ) {
+  private readonly args: DockgeLxcArgs;
+
+  constructor(name: string, args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
+    this.args = args;
 
     const cro = { parent: this };
     this.monitor = args.monitor;

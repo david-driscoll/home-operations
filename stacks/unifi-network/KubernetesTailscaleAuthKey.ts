@@ -1,9 +1,9 @@
-import { Tailscale } from "@components/constants.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import type { KubernetesClusterDefinition } from "@components/store/interfaces.ts";
 import kubernetes from "@pulumi/kubernetes";
 import { ComponentResource, type ComponentResourceOptions, type Input, interpolate, output } from "@pulumi/pulumi";
 import { TailnetKey, Provider as TailscaleProvider } from "@pulumi/tailscale";
+import { Tailscale } from "components/constants.ts";
+import type { GlobalResources } from "components/globals.ts";
+import type { KubernetesClusterDefinition } from "components/store/interfaces.ts";
 
 export interface KubernetesTailscaleAuthKeysArgs {
   cluster: KubernetesClusterDefinition;

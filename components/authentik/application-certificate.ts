@@ -1,7 +1,7 @@
-import type { GlobalResources } from "@components/globals.ts";
 import * as authentik from "@pulumi/authentik";
 import type * as pulumi from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
+import type { GlobalResources } from "components/globals.ts";
 import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class ApplicationCertificate extends SharedComponentResource {

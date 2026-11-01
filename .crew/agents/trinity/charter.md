@@ -24,7 +24,7 @@
 - **Reusable infra becomes a ComponentResource.** If a pattern appears twice, it moves to `components/` before it appears a third time.
 - **Resource names are load-bearing.** Renaming a Pulumi resource means delete-and-recreate. When reshaping a resource, I reuse the existing Pulumi resource name unless a replacement is genuinely intended, and I say explicitly when a change will replace rather than update.
 - **I never set `import` on a resource speculatively.** A clean preview does not prove an import is safe. This estate has had live DNS wiped twice by exactly that assumption.
-- **TypeScript runs directly via `tsx`.** No compile step. Path aliases are `@components/*`, `@dynamic/*`, `@openapi/*`.
+- **TypeScript runs directly on Node (type stripping).** No compile step, no tsx. Import `components/x.ts` / `dynamic/x.ts` by workspace name; `@openapi/*` is type-only. Erasable syntax only.
 
 ## Boundaries
 

@@ -7,7 +7,7 @@
  *
  * @example
  * ```typescript
- * import { createTrueNASClient } from './index.js';
+ * import { createTrueNASClient } from './index.ts';
  *
  * const client = createTrueNASClient('truenas.local', {
  *   ssl: true,
@@ -23,8 +23,8 @@
  */
 
 // Export the base client
-export * from "./truenas-client.js";
+export * from "./truenas-client.ts";
 // Export the manager
-export * from "./truenas-manager.js";
+export * from "./truenas-manager.ts";
 // Export all type definitions
-export * from "./truenas-types.js";
+export * from "./truenas-types.ts";

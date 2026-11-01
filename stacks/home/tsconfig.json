@@ -4,6 +4,10 @@
     "rootDir": "../..",
     "outDir": "../../bin",
     "allowImportingTsExtensions": true,
+    // Node runs these files by stripping types (no tsx): only erasable
+    // syntax, and type-only imports spelled `import type`.
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
     "noEmit": true,
     "target": "es2024",
     "module": "nodenext",
@@ -15,10 +19,11 @@
     "noImplicitReturns": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    // Type-only: every @openapi import is `import type` from a .d.ts, erased
+    // before Node resolves anything. components/ and dynamic/ are imported by
+    // their npm-workspace names (`components/x.ts`), which Node resolves itself.
     "paths": {
-      "@components/*": ["../../components/*"],
-      "@openapi/*": ["../../types/*"],
-      "@dynamic/*": ["../../dynamic/*"]
+      "@openapi/*": ["../../types/*"]
     }
   },
   "include": ["./*.ts", "../../components/**/*.ts", "../../dynamic/**/*.ts", "../../types/**/*.ts"]

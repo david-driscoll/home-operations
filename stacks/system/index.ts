@@ -82,9 +82,9 @@
  * preview-only.
  */
 
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import { GlobalResources } from "@components/globals.ts";
-import { CLUSTERS } from "@components/store/clusters.ts";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import { GlobalResources } from "components/globals.ts";
+import { CLUSTERS } from "components/store/clusters.ts";
 import { configureApplications } from "./applications.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";

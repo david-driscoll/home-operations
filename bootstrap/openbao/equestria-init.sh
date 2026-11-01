@@ -919,7 +919,7 @@ Done. Next:
      their own once pod 0 is ready.
   3. Phase 3 verification: bao status (3 nodes, 1 active, unsealed) and the
      Gatus check on /v1/sys/health going green.
-  4. Phase 4: npx tsx scripts/op-to-bao --plan   (in home-operations), review
+  4. Phase 4: node scripts/op-to-bao/index.ts --plan   (in home-operations), review
      mapping.yaml, then --apply with the pulumi approle.
 NEXT
 }

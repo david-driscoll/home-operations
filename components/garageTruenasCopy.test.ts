@@ -1,4 +1,4 @@
-// npx tsx --test components/garageTruenasCopy.test.ts
+// node --test components/garageTruenasCopy.test.ts
 //
 // Pure-function tests for the TrueNAS copy of the geo Garage -- no Pulumi
 // runtime, no TrueNAS. The calls that create these on spike live in

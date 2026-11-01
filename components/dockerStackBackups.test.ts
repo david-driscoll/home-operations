@@ -1,4 +1,4 @@
-// npx tsx --test components/dockerStackBackups.test.ts
+// node --test components/dockerStackBackups.test.ts
 //
 // Pure-function tests for the exclude translation used by host-owned backrest
 // plans. listStackBackupTargets reads the repo's docker/ tree and is exercised

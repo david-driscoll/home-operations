@@ -47,9 +47,6 @@
  */
 
 import { createHash } from "node:crypto";
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import { awaitOutput } from "@components/helpers.ts";
 import { adminGetAllOrgs, repoSearch } from "@llamaduck/forgejo-ts";
 import { createClient, createConfig } from "@llamaduck/forgejo-ts/client";
 import * as forgejo from "@pulumi/forgejo";
@@ -58,6 +55,9 @@ import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi
 import * as random from "@pulumi/random";
 import * as tls from "@pulumi/tls";
 import * as vault from "@pulumi/vault";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
+import { awaitOutput } from "components/helpers.ts";
 
 /**
  * The token's scopes, and what each one is for. Renovate's Forgejo platform

@@ -1,4 +1,4 @@
-// npx tsx --test components/dockerStackPostgres.test.ts
+// node --test components/dockerStackPostgres.test.ts
 //
 // Pure-function tests for the x-postgres declaration pipeline — no Pulumi
 // runtime, no mocks. The Output-carrying half (password minting, .env-local

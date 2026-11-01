@@ -1,11 +1,11 @@
-import type { AuthentikOutputs } from "@components/authentik.ts";
-import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
-import { Tailscale } from "@components/constants.ts";
-import { awaitOutput } from "@components/helpers.ts";
-import { createGatusDnsUptime } from "@components/StandardDns.ts";
-import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
-import { TailscaleMonitor } from "@components/tailscale.ts";
 import * as random from "@pulumi/random";
+import type { AuthentikOutputs } from "components/authentik.ts";
+import { BackupPlanDirector } from "components/BackupPlanDirector.ts";
+import { Tailscale } from "components/constants.ts";
+import { awaitOutput } from "components/helpers.ts";
+import { createGatusDnsUptime } from "components/StandardDns.ts";
+import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "components/store/index.ts";
+import { TailscaleMonitor } from "components/tailscale.ts";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
