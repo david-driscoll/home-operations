@@ -60,7 +60,7 @@ pulumi = "3.273.0"
 "github:microsoft/apm" = { version = "v0.35.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
 "github:home-operations/flate" = "v0.6.5"
-dotnet = { version = "10.0.402" }
+dotnet = { version = "10.0.403" }
 # Secret-reference resolver for ref+openbao:// inside documents
 # (components/store/refs.ts, PLAN §D.1). Keep this version in step with the
 # vals initContainer in kubernetes/apps/pulumi/*/stack.yaml — the workspace
