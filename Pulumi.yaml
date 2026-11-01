@@ -26,7 +26,7 @@ packages:
   terrifi:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.opentofu.org/alexklibisz/terrifi, 0.10.0]
+    parameters: [registry.opentofu.org/alexklibisz/terrifi, 0.11.0]
   tailscale:
     source: terraform-provider
     version: 0.14.0
