@@ -190,28 +190,22 @@ const extraPorts: Record<string, Partial<Record<ServiceKind, PortDef[]>>> = {
  * drops it while it is still up and healthy, so the removal is a no-op against
  * live metrics. Remove the entry once the device is actually gone.
  *
- * `skystar` added 2026-09-15, the opposite way round: it was already dark. Its
- * host went unreachable on 2026-09-13 23:42 and eight probes -- pve, pbs, dns
- * (53/853/DoH), ssh x3 -- have paged as `BlackboxProbeFailingCriticalRemote`
- * ever since, for a cluster whose `clusters/skystar.yaml` is `.disabled` and
- * whose MCP servers are already commented out of
- * kubernetes/apps/agents/agent-tools-servers/kustomization.yaml. Gatus dropped
- * its 20 endpoints on its own once the applications stack next ran; these
- * probes are Pulumi-built and had no such path. Moving it here is what stops
- * them. It leaves `remoteServers` empty -- see below.
+ * A host that is only temporarily dark can be parked here too: skystar was,
+ * from 2026-09-15 to 2026-11-01, while its host was unreachable and its
+ * `clusters/skystar.yaml` was `.disabled`. Parking it is what stopped its eight
+ * probes paging; Gatus drops a disabled cluster's endpoints on its own.
  */
-const decommissionedServers = new Set(["sgc", "skystar"]);
+const decommissionedServers = new Set(["sgc"]);
 
 /**
  * Off-site. Their probes get `remote: "true"`, which the generic
  * BlackboxProbeFailing rules exclude, and their own alerts wait 2h not 10m.
  *
- * EMPTY since 2026-09-15, when skystar moved to the set above. Kept rather than
- * deleted: it is the mechanism any future off-site host needs, and the 2h
- * `forDuration` below is the only thing that makes such a host's flapping link
- * survivable. Nothing else reads it, so an empty set is inert.
+ * skystar stays here even while it is physically on the home network: its
+ * cluster is still `location: remote` and its ProxmoxHost still `remote: true`,
+ * and it is expected to go back off-site.
  */
-const remoteServers = new Set<string>([]);
+const remoteServers = new Set(["skystar"]);
 
 /** Services this stack must NOT create. Written as the service NAME so a rename
  *  cannot silently un-carve one. See the header for why each is here. */

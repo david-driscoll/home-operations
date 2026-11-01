@@ -117,7 +117,7 @@ profile lists its servers and their tool counts.
 
 | Profile | Servers |
 |---|---|
-| `infrastructure` | `kubernetes`, `proxmox-{twilight-sparkle,celestia,luna,alpha-site}`, `docker-{celestia,luna,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao` |
+| `infrastructure` | `kubernetes`, `proxmox-{twilight-sparkle,celestia,luna,skystar,alpha-site}`, `docker-{celestia,luna,skystar,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao` |
 | `networking` | `unifi-{network,protect,access}`, `tailscale`, `homelable` |
 | `home` | `home-assistant`, `ha-mcp` |
 | `media` | `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr` |
