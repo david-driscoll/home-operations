@@ -1,7 +1,7 @@
 /**
  * Regenerates `types/application-definition.d.ts` from `schemas/`.
  *
- * Run it with `mise run codegen` (or `npx tsx scripts/generate-types.ts`).
+ * Run it with `mise run codegen` (or `node scripts/generate-types.ts`).
  * `mise run update` depends on this task, so a full codegen pass picks it up.
  *
  * WHY THIS EXISTS
@@ -72,7 +72,7 @@ const banner = `/* eslint-disable */
  * schemas/ and run \`mise run codegen\`.
  */
 
-import type { Roles } from "@components/constants.ts";
+import type { Roles } from "components/constants.ts";
 
 type RolesKeys = keyof typeof Roles;
 type RolesValues = (typeof Roles)[RolesKeys];

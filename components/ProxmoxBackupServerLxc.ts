@@ -1,11 +1,4 @@
 import { FullItem } from "@1password/connect";
-import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
-import type { AuthentikOutputs } from "@components/authentik.ts";
-import { baoKvSecret, baoProvenance, pbsBaoPath } from "@components/bao.ts";
-import { Tailscale } from "@components/constants.ts";
-import { rootDomain } from "@components/domains.ts";
-import { installTailscaleLxc } from "@components/tailscale.ts";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { remote, type types } from "@pulumi/command";
 import * as pbs from "@pulumi/pbs";
@@ -15,6 +8,13 @@ import * as random from "@pulumi/random";
 import { getUsersOutput as getTailscaleUsersOutput } from "@pulumi/tailscale";
 import { PrivateKey } from "@pulumi/tls";
 import * as purrl from "@pulumiverse/purrl";
+import { ApplicationCertificate } from "components/authentik/application-certificate.ts";
+import type { AuthentikOutputs } from "components/authentik.ts";
+import { baoKvSecret, baoProvenance, pbsBaoPath } from "components/bao.ts";
+import { Tailscale } from "components/constants.ts";
+import { rootDomain } from "components/domains.ts";
+import { installTailscaleLxc } from "components/tailscale.ts";
+import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import type { DockgeLxc } from "./DockgeLxc.ts";
 import type { GlobalResources } from "./globals.ts";
 import { copyFileToRemote, getContainerHostnames } from "./helpers.ts";
@@ -56,12 +56,11 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   private readonly lxcName: string;
   public readonly provider: pbs.Provider;
 
-  constructor(
-    name: string,
-    private readonly args: ProxmoxBackupServerLxcArgs,
-    opts?: ComponentResourceOptions,
-  ) {
+  private readonly args: ProxmoxBackupServerLxcArgs;
+
+  constructor(name: string, args: ProxmoxBackupServerLxcArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxBackupServerLxc", name, {}, mergeOptions(opts, { parent: args.host }));
+    this.args = args;
 
     this.lxcName = name;
 

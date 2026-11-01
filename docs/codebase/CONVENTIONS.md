@@ -35,12 +35,10 @@
 
 ### 3) Import and Module Conventions
 
-- **Explicit `.ts` extensions** in all imports (required by NodeNext module resolution + tsx): `import { OPClient } from "./op.ts"`
-- **Path aliases** (from `tsconfig.json`):
-  - `@components/*` → `./components/*` (preferred for cross-directory imports into components)
-  - `@dynamic/*` → `./dynamic/*`
-  - `@openapi/*` → `./types/*`
-- **Relative imports** used within a stack (`../../components/globals.ts`) or alongside aliases interchangeably
+- **Explicit `.ts` extensions** in all imports (required by NodeNext module resolution and by Node type stripping, which never rewrites `.js` to `.ts`): `import { OPClient } from "./op.ts"`
+- **Workspace imports:** `components/globals.ts`, `dynamic/1password/OnePasswordItem.ts`. These are npm-workspace package names, resolved by Node through `node_modules/` symlinks. There are no tsconfig aliases for them.
+- **`@openapi/*`** → `./types/*` stays a tsconfig alias, valid only in `import type` (the `.d.ts` files have no runtime half).
+- **Relative imports** used within a directory (`./op.ts`, `../../components/globals.ts` also works)
 - **No barrel `index.ts` pattern** in components — each file is imported directly by name
 - **Standard library imports** via Node.js built-in prefixes: `import { readFile } from "node:fs/promises"`
 

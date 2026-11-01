@@ -1,11 +1,11 @@
-import { type BackupPlanItem, BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
-import { backrestGarageBucket, backrestGarageEndpoint } from "@components/backrestGarage.ts";
-import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets, resticExcludesFor, STACKS_DATA_ROOT } from "@components/dockerStackBackups.ts";
-import { GARAGE_COPY_BUCKETS, TRUENAS_GARAGE_COPY_GROUP } from "@components/garageTruenasCopy.ts";
-import { GlobalResources } from "@components/globals.ts";
-import { addUptimeGatus, toGatusKey } from "@components/helpers.ts";
 import type { ExternalEndpoint } from "@openapi/application-definition.js";
 import * as pulumi from "@pulumi/pulumi";
+import { type BackupPlanItem, BackupPlanOrchestrator } from "components/BackupPlanOrchestrator.ts";
+import { backrestGarageBucket, backrestGarageEndpoint } from "components/backrestGarage.ts";
+import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets, resticExcludesFor, STACKS_DATA_ROOT } from "components/dockerStackBackups.ts";
+import { GARAGE_COPY_BUCKETS, TRUENAS_GARAGE_COPY_GROUP } from "components/garageTruenasCopy.ts";
+import { GlobalResources } from "components/globals.ts";
+import { addUptimeGatus, toGatusKey } from "components/helpers.ts";
 
 // Gatus group for the per-node Postgres dumps produced by
 // docker/_common/postgres. `docker/_common/postgres/.env` restates

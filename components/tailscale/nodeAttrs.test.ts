@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/tailscale/nodeAttrs.test.ts
+ * node --test components/tailscale/nodeAttrs.test.ts
  *
  * `withoutNodeAttr` decides which devices may publish to the public internet
  * (the `funnel` attribute), and it runs against the LIVE policy, which carries

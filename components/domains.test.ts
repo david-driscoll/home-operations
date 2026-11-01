@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/domains.test.ts
+ * node --test components/domains.test.ts
  *
  * The one door the root domain comes through into the Pulumi code. What
  * matters is that it fails closed: an unset value must stop the run, not

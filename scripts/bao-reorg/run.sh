@@ -69,4 +69,4 @@ BAO_ROLE_ID="$(sops --decrypt --extract '["role_id"]' "${APPROLE}")"
 BAO_SECRET_ID="$(sops --decrypt --extract '["secret_id"]' "${APPROLE}")"
 export BAO_ROLE_ID BAO_SECRET_ID
 
-exec npx tsx "${REPO_ROOT}/scripts/bao-reorg" "$@"
+exec node "${REPO_ROOT}/scripts/bao-reorg/index.ts" "$@"

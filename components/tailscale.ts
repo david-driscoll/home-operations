@@ -1,14 +1,14 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
-import { baoKvSecret, baoProvenance, baoSlug } from "@components/bao.ts";
-import { OnePasswordItem, type OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
 import type { TailscaleCidr, TailscaleIp } from "@openapi/tailscale-grants.js";
 import { remote, type types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import { DeviceTags, getDevice, getDeviceOutput, TailnetKey } from "@pulumi/tailscale";
 import * as unifi from "@pulumiverse/unifi";
+import { baoKvSecret, baoProvenance, baoSlug } from "components/bao.ts";
+import { OnePasswordItem, type OnePasswordItemSectionInput } from "dynamic/1password/OnePasswordItem.ts";
 import createClient, { type Client } from "openapi-fetch";
 import { ClientCredentials } from "simple-oauth2";
 import type { paths } from "../types/tailscale.ts";
@@ -105,13 +105,17 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
 
 export class TailscaleMonitor {
   private readonly services: string[] = [];
+  private readonly globals: GlobalResources;
+
   /**
    * `globals` is here for `baoProvider`/`baoDualWriteEnabled` only — the
    * monitor itself needs nothing else from it. Threading it through the
    * construction sites is what PLAN §G-8 costs: the export is cross-stack
    * inventory, and the producing side owns the OpenBao write.
    */
-  constructor(private readonly globals: GlobalResources) {}
+  constructor(globals: GlobalResources) {
+    this.globals = globals;
+  }
   public addService(name: string) {
     this.services.push(name);
   }

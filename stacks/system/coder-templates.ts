@@ -65,17 +65,17 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { baoKvSecret, baoProvenance, oidcBaoPath } from "@components/bao.ts";
-import { stageCoderTemplate } from "@components/coderTemplates.ts";
-import { rootDomain } from "@components/domains.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import { generateTailscaleKubeConfig } from "@components/store/index.ts";
 import * as coderd from "@pulumi/coderd";
 import * as pk8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import * as vault from "@pulumi/vault";
+import { baoKvSecret, baoProvenance, oidcBaoPath } from "components/bao.ts";
+import { stageCoderTemplate } from "components/coderTemplates.ts";
+import { rootDomain } from "components/domains.ts";
+import type { GlobalResources } from "components/globals.ts";
+import { generateTailscaleKubeConfig } from "components/store/index.ts";
 import * as yaml from "yaml";
 
 /** Mint the token and publish the templates -- see the header. */

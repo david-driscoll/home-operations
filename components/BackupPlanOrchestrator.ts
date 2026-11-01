@@ -1,7 +1,7 @@
 import { FullItem } from "@1password/connect";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, jsonStringify, log, type Output, output } from "@pulumi/pulumi";
+import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import { baoKvSecret, baoProvenance, baoSlug } from "./bao.ts";
 import type { GlobalResources } from "./globals.ts";
 /**
@@ -82,17 +82,16 @@ export class BackupPlanOrchestrator extends ComponentResource {
   plans: Output<BackupPlanItem[]> = output([]);
   // sync?:; // what was this for?
 
+  private readonly globals: GlobalResources;
+
   /**
    * `globals` is here for `baoProvider`/`baoDualWriteEnabled` only — the plan
    * is cross-stack inventory (PLAN §G-8), and the producing side owns the
    * OpenBao write.
    */
-  constructor(
-    name: string,
-    private readonly globals: GlobalResources,
-    opts?: ComponentResourceOptions,
-  ) {
+  constructor(name: string, globals: GlobalResources, opts?: ComponentResourceOptions) {
     super("home:backups:BackupPlanOrchestrator", name, {}, opts);
+    this.globals = globals;
   }
 
   public addBackupPlan(plan: Input<BackupPlanItem>) {

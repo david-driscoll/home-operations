@@ -5,7 +5,7 @@
  * with your existing Pulumi infrastructure code.
  */
 
-import type { TrueNASClient } from "./truenas-client.js";
+import type { TrueNASClient } from "./truenas-client.ts";
 import {
   type CloudCredential,
   CloudCredentialCreateRequest,
@@ -42,7 +42,7 @@ import {
   SnapshotTaskQueryRequest,
   SnapshotTaskUpdateRequest,
   SystemInfoRequest,
-} from "./truenas-types.js";
+} from "./truenas-types.ts";
 
 // ── Matchers ────────────────────────────────────────────────────────────────
 // The ensure/reconcile methods below write only when one of these says the
@@ -120,7 +120,9 @@ export function snapshotTaskMatches(existing: SnapshotTask, desired: SnapshotTas
  * resources that can be used in Pulumi dynamic providers.
  */
 export class TrueNASResourceManager {
-  constructor(private client: TrueNASClient) {
+  private client: TrueNASClient;
+
+  constructor(client: TrueNASClient) {
     this.client = client;
   }
 

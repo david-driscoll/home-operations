@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/store/refs.test.ts
+ * node --test components/store/refs.test.ts
  *
  * Covers ref+openbao:// resolution: the wrapped-document contract with vals,
  * per-document memoization, the secret() marker, and the fail-loud paths. No

@@ -1,9 +1,9 @@
 import { FullItem } from "@1password/connect";
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import { GlobalResources } from "@components/globals.ts";
-import { OnePasswordItem, type OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { Brand } from "@pulumi/authentik";
 import * as pulumi from "@pulumi/pulumi";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import { GlobalResources } from "components/globals.ts";
+import { OnePasswordItem, type OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import { FlowsManager } from "../../components/authentik/flows.ts";
 import { AuthentikGroups } from "../../components/authentik/groups.ts";
 

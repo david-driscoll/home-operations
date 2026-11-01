@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/patchmon.test.ts
+ * node --test components/patchmon.test.ts
  *
  * The enrollment script is a TypeScript template rendering POSIX sh, so the
  * failure worth catching is an escape that renders wrong: a `\${` that

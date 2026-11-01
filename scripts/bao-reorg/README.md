@@ -4,11 +4,11 @@ Executes the `secrets/shared/*` reorganisation decided in
 [`docs/openbao-shared-secrets-reorg.md`](../../docs/openbao-shared-secrets-reorg.md).
 
 ```sh
-npx tsx scripts/bao-reorg --preflight             # what the ACLs need. No credentials required.
+node scripts/bao-reorg/index.ts --preflight             # what the ACLs need. No credentials required.
 scripts/bao-reorg/run.sh --phase 1                # plan
 scripts/bao-reorg/run.sh --phase 1 --apply --copy # write destinations, keep sources
-npx tsx scripts/bao-reorg/rewrite.ts              # what the repo edits would be
-npx tsx scripts/bao-reorg/rewrite.ts --apply
+node scripts/bao-reorg/rewrite.ts              # what the repo edits would be
+node scripts/bao-reorg/rewrite.ts --apply
 scripts/bao-reorg/run.sh --verify --copy          # destinations present?
 scripts/bao-reorg/run.sh --phase 1 --apply        # ... after the merge: reap the sources
 ```

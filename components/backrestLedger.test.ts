@@ -1,4 +1,4 @@
-// npx tsx --test components/backrestLedger.test.ts
+// node --test components/backrestLedger.test.ts
 //
 // Pure-function tests for the Backrest ledger -- no Pulumi runtime, no host.
 // The SSH read and the ordered writes live in BackupPlanDirector and are

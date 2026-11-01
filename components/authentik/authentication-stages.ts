@@ -1,6 +1,6 @@
 import * as authentik from "@pulumi/authentik";
 import type * as pulumi from "@pulumi/pulumi";
-import type { AuthenticatorStages } from "./authenticator-stages.js";
+import type { AuthenticatorStages } from "./authenticator-stages.ts";
 import { passwordChange } from "./default-flows.ts";
 import { SharedComponentResource } from "./shared-component-resource.ts";
 
@@ -10,11 +10,11 @@ export class AuthenticationStages extends SharedComponentResource {
   private _sourceLogin?: authentik.StageUserLogin;
   private _password?: authentik.StagePassword;
 
-  constructor(
-    private authenticatorStages: AuthenticatorStages,
-    opts?: pulumi.ComponentResourceOptions,
-  ) {
+  private authenticatorStages: AuthenticatorStages;
+
+  constructor(authenticatorStages: AuthenticatorStages, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthenticationStages", "stages-authentication", opts);
+    this.authenticatorStages = authenticatorStages;
   }
 
   public get mfa(): authentik.StageAuthenticatorValidate {

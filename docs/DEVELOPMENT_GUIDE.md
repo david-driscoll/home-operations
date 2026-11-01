@@ -425,7 +425,7 @@ systemctl status tailscaled
 ### 5. Check Pulumi Program Execution
 
 ```bash
-# Pulumi runs TypeScript directly via tsx
+# Node runs the TypeScript directly (type stripping)
 # Check for syntax errors
 npx tsc --noEmit stacks/home/index.ts
 
