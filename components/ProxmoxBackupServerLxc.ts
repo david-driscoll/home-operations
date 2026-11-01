@@ -47,7 +47,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly tailscaleName: Output<string>;
   public readonly tailscaleIpAddress: Output<string>;
-  /** LAN IP of the LXC (first `hostname -I` address) */
+  /** LAN IP of the LXC (source address of its default route) */
   public readonly localIpAddress: Output<string>;
   /** LXC vNIC MAC (net0 hwaddr, lowercase) — for DHCP reservations */
   public readonly macAddress: Output<string>;
@@ -66,8 +66,8 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
     this.lxcName = name;
 
     const cro = { parent: this };
-    const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("pbs", args.host, args.globals);
-    this.hostname = hostname;
+    const { internalHostname, tailscaleHostname, tailscaleName } = getContainerHostnames("pbs", args.host, args.globals);
+    this.hostname = internalHostname;
     this.tailscaleHostname = tailscaleHostname;
     this.tailscaleName = tailscaleName;
 
@@ -245,10 +245,10 @@ echo "PBS post-install complete"`;
       `${name}-local-ip-address`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- hostname -I`,
+        create: interpolate`pct exec ${args.vmId} -- sh -c "ip -4 route get 1.1.1.1 | sed -n 's/.* src \\([0-9.]*\\).*/\\1/p' | grep -E '^[0-9.]+$'"`,
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc] }),
-    ).stdout.apply(z => z.split(" ")[0].trim());
+    ).stdout.apply(z => z.trim());
 
     this.macAddress = new remote.Command(
       `${name}-mac-address`,

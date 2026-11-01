@@ -1,0 +1,37 @@
+---
+# The host stacks read the certificate straight from the cluster, over the pod's own service
+# account (components/kubernetes-secret.ts). Those service accounts otherwise hold no Kubernetes API access
+# beyond system:auth-delegator, so this is the entire grant: `get` on ONE Secret, by name.
+# `resourceNames` cannot be combined with list or watch, which is why the stacks `get` it.
+#
+# ocracoke is bound too even though its Stack is commented out of ../kustomization.yaml while the
+# site is offline: a RoleBinding may name a service account that does not exist yet, and it means
+# the stack can read the certificate the moment it is re-enabled and starts managing skystar.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: host-wildcard-reader
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [host-wildcard-tls]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: host-wildcard-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: host-wildcard-reader
+subjects:
+  - kind: ServiceAccount
+    name: home-operations
+    namespace: pulumi
+  - kind: ServiceAccount
+    name: gulf-of-mexico
+    namespace: pulumi
+  - kind: ServiceAccount
+    name: ocracoke
+    namespace: pulumi

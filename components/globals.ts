@@ -2,7 +2,7 @@ import { Provider as GarageProvider } from "@axnic/pulumi-garage";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, log, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
@@ -10,6 +10,7 @@ import { Provider as VaultProvider } from "@pulumi/vault";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { BAO_CREDENTIAL_HINT, baoEnv, baoEnvUnresolved } from "./bao.ts";
 import { rootDomain } from "./domains.ts";
+import { readClusterTlsSecret, type TlsSecret } from "./kubernetes-secret.ts";
 import { BaoStore } from "./store/bao.ts";
 import type { VaultStore } from "./store/index.ts";
 
@@ -37,6 +38,7 @@ export class GlobalResources extends ComponentResource {
   public readonly store: VaultStore;
   private _baoProvider?: VaultProvider;
   private _garageProvider?: GarageProvider;
+  private _hostWildcardCertificate?: Output<TlsSecret | undefined>;
   private _githubCredential?: Output<GithubAppCredential>;
   private _githubProvider?: GithubProvider;
 
@@ -171,6 +173,25 @@ export class GlobalResources extends ComponentResource {
     // such a run and fail at the API instead of here.
     const haveApprole = !!baoEnv("BAO_ROLE_ID") && !!baoEnv("BAO_SECRET_ID");
     return !!baoEnv("BAO_TOKEN") || haveApprole || runtime.isDryRun();
+  }
+
+  /**
+   * The `*.host.<root domain>` certificate cert-manager issues for the Proxmox hosts' web UIs
+   * (kubernetes/apps/pulumi/host-certificate), read from the Secret it lands in.
+   *
+   * `undefined` — never a thrown error — when it cannot be read: a preview from a laptop, a Secret
+   * not issued yet, an API blip. A certificate must not be able to stall host management, so
+   * ProxmoxHost skips installing it and says so here. Lazy for the same reason as `baoProvider`:
+   * stacks that have no Proxmox host never touch the cluster API.
+   */
+  public get hostWildcardCertificate(): Output<TlsSecret | undefined> {
+    this._hostWildcardCertificate ??= secret(
+      readClusterTlsSecret("host-wildcard-tls").catch((error: unknown) => {
+        log.warn(`Not installing the Proxmox host wildcard certificate: ${error instanceof Error ? error.message : String(error)}. Hosts keep the certificate they have.`);
+        return undefined;
+      }),
+    );
+    return this._hostWildcardCertificate;
   }
 
   /**

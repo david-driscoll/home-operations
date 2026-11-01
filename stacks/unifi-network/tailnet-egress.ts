@@ -135,11 +135,13 @@ const defaultPorts: Record<ServiceKind, PortDef[]> = {
     { name: "docker-proxy", port: grantedPort("dockerSocketProxy", Tailscale.ports.dockerSocketProxy, 2375) },
   ],
   proxmox: [
-    { name: "pve", port: grantedPort("proxmoxManagement", Tailscale.ports.proxmoxManagement, 8006), probe: "http_2xx" },
+    // 443 is `tailscale serve` with the tailnet name's own certificate; pveproxy on 8006 now
+    // presents the root-domain certificate, which a probe of the tailnet name cannot verify.
+    { name: "pve", port: grantedPort("proxmoxManagement", Tailscale.ports.proxmoxManagement, 443), probe: "http_2xx" },
     { name: "ssh", port: grantedPort("ssh", Tailscale.ports.ssh, 22), probe: "ssh_banner" },
   ],
   pbs: [
-    { name: "pbs", port: grantedPort("proxmoxBackupServer", Tailscale.ports.proxmoxBackupServer, 8007), probe: "http_2xx" },
+    { name: "pbs", port: grantedPort("proxmoxBackupServer", Tailscale.ports.proxmoxBackupServer, 443), probe: "http_2xx" },
     { name: "ssh", port: grantedPort("ssh", Tailscale.ports.ssh, 22), probe: "ssh_banner" },
   ],
   dns: [

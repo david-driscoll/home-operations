@@ -107,9 +107,12 @@ export const Tailscale = {
     observability: ["tcp:9093", "tcp:19291", "tcp:10902", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883", "tcp:8080", "udp:8080", "tcp:443", "udp:443"] as TailscaleNetworkCapability[],
     nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
     proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
-    proxmoxManagement: ["tcp:8006"] as TailscaleNetworkCapability[],
+    // 443 is the tailnet name's `tailscale serve` listener (Tailscale certificate); 8006 is
+    // pveproxy itself, which now presents the root-domain certificate.
+    proxmoxManagement: ["tcp:8006", "tcp:443"] as TailscaleNetworkCapability[],
     technitiumManagement: ["tcp:53443"] as TailscaleNetworkCapability[],
-    proxmoxBackupServer: ["tcp:8007"] as TailscaleNetworkCapability[],
+    // Same split as proxmoxManagement: 443 is `tailscale serve`, 8007 is proxmox-backup-proxy.
+    proxmoxBackupServer: ["tcp:8007", "tcp:443"] as TailscaleNetworkCapability[],
     wyoming: ["tcp:8080", "tcp:10300", "tcp:10200"] as TailscaleNetworkCapability[],
     // bao-transit on dockge-as — the seal root that auto-unseals the equestria
     // OpenBao cluster. Deliberately its own entry rather than folded into
