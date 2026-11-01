@@ -88,8 +88,8 @@ the only MCP front door: the old `agent-tools` aggregated server is retired. So:
   profile will not list another's. A capability missing from one profile is
   usually just in a different one:
   - `toolport-infrastructure`: `kubernetes`,
-    `proxmox-{twilight-sparkle,celestia,luna,alpha-site}`,
-    `docker-{celestia,luna,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao`
+    `proxmox-{twilight-sparkle,celestia,luna,skystar,alpha-site}`,
+    `docker-{celestia,luna,skystar,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao`
   - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`,
     `homelable` (network map, inventory, racks and documentation)
   - `toolport-home`: `home-assistant` (Assist: control the exposed entities)
