@@ -29,6 +29,15 @@ const dockgeId = new random.RandomInteger("skystar-dockge-id", {
   keepers: { clusterId: cluster.key },
 });
 
+// skystar is physically on the home LAN again. While it is, tailscale must not
+// accept subnet routes: the advertised 10.10.0.0/16 lands in table 52, which is
+// consulted before main, so LAN traffic leaves through tailscale0 instead of
+// vmbr0 (the same failure luna hit, see stacks/gulf-of-mexico/index.ts). Flip
+// this back to false when it goes off-site again. `remote` (and the cluster's
+// `location: remote`) stay as they are: they also pick the dockge LXC's address
+// and authentik domain, which this change deliberately leaves alone.
+const skystarOnHomeLan = true;
+
 const host = new ProxmoxHost("skystar", {
   globals: globals,
   authentikOutputs: outputs,
@@ -38,7 +47,7 @@ const host = new ProxmoxHost("skystar", {
   cluster: cluster,
   tailscaleArgs: {
     acceptDns: true,
-    acceptRoutes: true,
+    acceptRoutes: !skystarOnHomeLan,
     advertiseExitNode: true,
   },
   peerRelay: true,
@@ -54,7 +63,7 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   cluster: cluster,
   tailscaleArgs: {
     acceptDns: true,
-    acceptRoutes: host.remote,
+    acceptRoutes: !skystarOnHomeLan,
   },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
