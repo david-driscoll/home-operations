@@ -196,6 +196,13 @@ spec:
               limits:
                 memory: 512Mi
           tailscale:
+            # Known, deliberately unfixed: with the Multus LAN interface beside
+            # Cilium eth0, peers inside the cluster get two direct paths here and
+            # magicsock flips between them, losing the odd UDP packet. Harmless
+            # for a scanner. The fix, once proven, is the `tailscale-routing` init
+            # container plus fixed --port in
+            # kubernetes/apps/equestria/dns/technitium/helmrelease.yaml.
+            #
             # The daemon the copied CLI talks to. The two containers share one
             # network namespace and one socket directory (`tailscale-run`
             # below), so from the app's point of view this is "Tailscale is

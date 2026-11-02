@@ -80,6 +80,16 @@ spec:
             query_name: "dns.${ROOT_DOMAIN}"
             query_type: "SOA"
             preferred_ip_protocol: ip4
+        # The same query over TCP: the twin of dns_soa. A UDP-only failure
+        # (dns_soa red, this green) then reads differently from a dead server.
+        dns_soa_tcp:
+          prober: dns
+          timeout: 5s
+          dns:
+            transport_protocol: tcp
+            query_name: "dns.${ROOT_DOMAIN}"
+            query_type: "SOA"
+            preferred_ip_protocol: ip4
         ssh_banner:
           prober: tcp
           timeout: 5s

@@ -37,6 +37,69 @@ spec:
         pod:
           annotations:
             k8s.v1.cni.cncf.io/networks: technitium-dns-net
+        initContainers:
+          # Gives the tailscale sidecar ONE path to peers inside the cluster.
+          #
+          # This pod has two interfaces: Cilium eth0 and the ipvlan net1 on
+          # the LAN. tailscaled advertised and used both, so a peer such as
+          # tailnet-inbound-0 had two direct paths here (pod IP to pod IP, and
+          # net1 to that peer's masqueraded node IP). With near-equal latency,
+          # magicsock flipped between them hundreds of times a day, and a UDP
+          # query sent during a flip was lost: the ~1-in-100 dns-equestria
+          # Do53 probe failure, with DoT/DoH unaffected because TCP retransmits.
+          #
+          # 1. tailscaled marks its own sockets with 0x80000/0xff0000 and
+          #    installs its rules from priority 5210 up
+          #    (wgengine/router/osrouter/router_linux.go). Rule 5200 sends those
+          #    packets through table 100, which holds only eth0's routes, so
+          #    tailscale traffic never leaves via net1. LAN peers then reach
+          #    this node through the node IP (Cilium masquerade) and stay direct.
+          # 2. The DROP stops peers using the net1 address at all. Without it, a
+          #    peer pinging the net1 address gets its pong back via eth0, and
+          #    magicsock still credits the net1 address as a working path
+          #    (wgengine/magicsock/endpoint.go handlePongConnLocked), so the
+          #    second path would survive. It needs the fixed --port set on the
+          #    sidecar below.
+          #
+          # Fails open on purpose: every step logs and continues. A crashing
+          # init container would keep the pod down and take LAN DNS with it,
+          # which is far worse than the flap. The script avoids shell dollar
+          # signs because Flux post-build substitution would rewrite them.
+          tailscale-routing:
+            image:
+              repository: tailscale/tailscale
+              tag: v1.104.4@sha256:ed6480b33c6eb67c9cbd203ed42b9fb57e361986725b6856def71b7a3d9e276c
+            command:
+              - /bin/sh
+              - -c
+              - |
+                # Twice: the default route is listed before the link route to
+                # its gateway, and cannot be added until that route exists.
+                ip -4 route show table main dev eth0 | xargs -I{} sh -c 'ip route replace {} dev eth0 table 100 2>/dev/null'
+                ip -4 route show table main dev eth0 | xargs -I{} sh -c 'ip route replace {} dev eth0 table 100' || echo "WARN: copying eth0 routes into table 100 failed"
+                ip rule del priority 5200 2>/dev/null
+                ip rule add priority 5200 fwmark 0x80000/0xff0000 lookup 100 || echo "WARN: ip rule 5200 failed"
+                iptables -C INPUT -i net1 -p udp --dport 41641 -j DROP 2>/dev/null || iptables -I INPUT 1 -i net1 -p udp --dport 41641 -j DROP || echo "WARN: net1 tailscale DROP failed"
+                echo "table 100:"; ip -4 route show table 100
+                echo "rules:"; ip rule show
+                echo "INPUT:"; iptables -S INPUT
+                exit 0
+            securityContext:
+              allowPrivilegeEscalation: false
+              # iptables takes its lock in /run.
+              readOnlyRootFilesystem: false
+              capabilities:
+                add:
+                  - NET_ADMIN
+                  - NET_RAW
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
         containers:
           *app :
             image:
@@ -133,6 +196,9 @@ spec:
               # the cluster resolver must stay intact for everything else
               TS_ACCEPT_DNS: "false"
               TS_HOSTNAME: dns-${CLUSTER_CNAME}
+              # Fixed so the tailscale-routing init container can DROP this
+              # port on net1. Change both together.
+              TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
               TS_AUTHKEY:
                 valueFrom:
                   secretKeyRef:
