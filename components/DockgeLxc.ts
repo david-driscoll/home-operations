@@ -68,6 +68,11 @@ export interface DockgeLxcArgs {
    * community script created the LXC with or someone set by hand.
    */
   memory?: Input<number>;
+  /**
+   * The LXC's CPU core count, applied with `pct set -cores` on every run. Like
+   * `memory`, it takes effect live, and left unset nothing manages it.
+   */
+  cores?: Input<number>;
   ipAddress?: TailscaleIp;
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
@@ -250,6 +255,17 @@ export class DockgeLxc extends ComponentResource {
           connection: args.host.remoteConnection,
           create: interpolate`pct set ${args.vmId} -memory ${args.memory}`,
           update: interpolate`pct set ${args.vmId} -memory ${args.memory}`,
+        },
+        mergeOptions(cro, { dependsOn: [lxcExists, ...depends] }),
+      );
+    }
+    if (args.cores !== undefined) {
+      new remote.Command(
+        `${name}-set-cores`,
+        {
+          connection: args.host.remoteConnection,
+          create: interpolate`pct set ${args.vmId} -cores ${args.cores}`,
+          update: interpolate`pct set ${args.vmId} -cores ${args.cores}`,
         },
         mergeOptions(cro, { dependsOn: [lxcExists, ...depends] }),
       );
