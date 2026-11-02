@@ -35,17 +35,22 @@ const pbsId = new random.RandomInteger("luna-pbs-id", {
   keepers: { clusterId: cluster.key },
 });
 
+// Once luna ships to the new location, flip this to true so tailscale accepts routes from the LAN.
+const lunaIsRemote = false;
+
 const host = new ProxmoxHost("luna", {
   globals: globals,
   authentikOutputs: outputs,
   tailscaleIpAddress: "100.111.10.104",
   proxmox: mainProxmoxCredentials,
-  remote: false, // once this gets shipped to the new location, flip this to true so that tailscale accepts routes from the LAN
+  remote: lunaIsRemote,
   cluster: cluster,
   tailscaleArgs: {
     advertiseExitNode: true,
     acceptDns: true,
-    acceptRoutes: true,
+    // Never on the home LAN: the advertised 10.10.0.0/16 route wins over vmbr0
+    // and the tailnet ACL drops luna's NFS to the NAS (pvestatd hangs, node goes grey).
+    acceptRoutes: lunaIsRemote,
   },
   tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
