@@ -13,7 +13,7 @@ trusting memory.
 | Name | Type | Role |
 |---|---|---|
 | **Equestria** | Kubernetes | The Kubernetes cluster (`clusters/equestria.yaml`) |
-| **Celestia** | Dockge/Docker | Docker host; Forgejo, Arcane, zot |
+| **Celestia** | Dockge/Docker | Docker host; Forgejo, zot |
 | **Luna** | Dockge/Docker | Docker host; voice/Wyoming workloads |
 | **Skystar** | Dockge/Docker | Off-site Docker host (`location: remote`) |
 | **Alpha Site** | Dockge/Docker | Docker host; Authentik, OpenBao — also the non-production target for risky changes |

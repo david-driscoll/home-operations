@@ -1,0 +1,225 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app arcane
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+          # Low Power keep-list. Every Dockge host's agent holds an edge tunnel
+          # to this pod; a 7-hour nightly shed would show all four as offline
+          # each morning and stop auto-heal for the night.
+          # docs/cluster-consolidation/24-power-states.md
+          downscaler/exclude: "true"
+        replicas: 1
+        # SQLite on an RWO volume: never two pods.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # The same digest celestia ran under `latest`.
+              repository: ghcr.io/getarcaneapp/manager
+              tag: v2.17.2@sha256:ec8417998df367cc2eb6efdfbe9b9607a42ad04b78d1c185ccc5f9f7d943019e
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            env:
+              TZ: "${TIMEZONE}"
+              PORT: &port 3552
+              # Read by the image's entrypoint. The pod already runs as this
+              # uid (defaultPodOptions), so it has nothing to drop.
+              PUID: "1000"
+              PGID: "1000"
+              APP_URL: "https://${APP}.${ROOT_DOMAIN}"
+              # What the edge agents dial (docker/_common/arcane-agent/.env
+              # sets the same URL on their side).
+              MANAGER_API_URL: "https://${APP}.${ROOT_DOMAIN}"
+              # No DOCKER_HOST: there is no Docker daemon in this pod. The
+              # built-in local environment (id 0) was celestia's own Docker;
+              # celestia is now an edge environment like the other three, and
+              # environment 0 is disabled in the migrated database.
+              ANALYTICS_DISABLED: "true"
+
+              # --- oidc --------------------------------------------------
+              OIDC_ENABLED: "true"
+              OIDC_AUTO_REDIRECT_TO_PROVIDER: "true"
+              OIDC_SCOPES: "openid email profile arcane_groups"
+              OIDC_GROUPS_CLAIM: groups
+              OIDC_PROVIDER_NAME: Authentik
+              # celestia's stack substituted its own cluster icon here; Flux has
+              # no such variable, so it is authentik's logo, as coder uses.
+              OIDC_PROVIDER_LOGO_URL: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
+              OIDC_ROLE_MAPPINGS_FILE: /app/oidc-mapping.json
+              AUTH_LOCAL_ENABLED: "false"
+              AUTH_PASSWORD_POLICY: default
+              AUTH_SESSION_TIMEOUT: "3600"
+
+              # --- behaviour, carried over from celestia's .env ------------
+              AUTO_HEAL_ENABLED: "true"
+              AUTO_UPDATE: "false"
+              ENVIRONMENT_HEALTH_INTERVAL: "*/5 * * * *"
+              EVENT_CLEANUP_INTERVAL: "*/5 * * * *"
+              EXPIRED_SESSIONS_CLEANUP_INTERVAL: "*/5 * * * *"
+              ACTIVITY_HISTORY_MAX_ENTRIES: "0"
+              ACTIVITY_HISTORY_RETENTION_DAYS: "0"
+              MAX_CONCURRENT_ACTIVITIES: "0"
+              GPU_MONITORING_ENABLED: "true"
+              GPU_TYPE: auto
+              VULNERABILITY_SCAN_ENABLED: "true"
+              ENABLE_GRAVATAR: "true"
+              ICON_CATALOG: arcane
+              ANIMATIONS_ENABLED: "true"
+              APPLICATION_THEME: dark
+              GLASS_EFFECTS_ENABLED: "true"
+              KEYBOARD_SHORTCUTS_ENABLED: "true"
+              MOBILE_NAVIGATION_MODE: docked
+              MOBILE_NAVIGATION_SHOW_LABELS: "true"
+              SIDEBAR_HOVER_EXPANSION: "true"
+            probes:
+              # `custom: true` is load-bearing: a handler-bearing spec without
+              # it is silently swapped for a tcpSocket, and `enabled: true`
+              # omitted means no probe at all.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &health
+                    path: /api/health
+                    port: *port
+                  # Goose migrations run before the listener opens.
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 15
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 20m
+                memory: 192Mi
+              limits:
+                # ~145 MiB RSS on celestia with four environments.
+                memory: 768Mi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    configMaps:
+      oidc:
+        enabled: true
+        data:
+          # authentik group -> Arcane role. Only `admins` get through authentik
+          # at all (./definition.yaml); the other two rows are inert until the
+          # access policy is widened.
+          oidc-mapping.json: |
+            [
+              { "claimValue": "admins", "roleId": "role_admin" },
+              { "claimValue": "editors", "roleId": "role_editor" },
+              { "claimValue": "users", "roleId": "role_monitor" }
+            ]
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /app/data
+      oidc-mapping:
+        type: configMap
+        identifier: oidc
+        globalMounts:
+          - path: /app/oidc-mapping.json
+            subPath: oidc-mapping.json
+            readOnly: true
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *port
+            filters:
+              # Native OIDC -- `local-user`, the network gate without the
+              # authentik outpost hop. Every Dockge host's edge agent arrives
+              # from a 10.x or 100.64/10 address, both inside the allow-list.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
