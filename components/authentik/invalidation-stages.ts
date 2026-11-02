@@ -1,6 +1,6 @@
 import * as authentik from "@pulumi/authentik";
 import type * as pulumi from "@pulumi/pulumi";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class InvalidationStages extends SharedComponentResource {
   private _logout?: authentik.StageUserLogout;

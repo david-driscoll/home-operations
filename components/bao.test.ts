@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/bao.test.ts
+ * node --test components/bao.test.ts
  *
  * The pure path-derivation helpers — no Pulumi engine, no network.
  *

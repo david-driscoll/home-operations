@@ -76,13 +76,13 @@
  * the cluster deploys from without a pull request.
  */
 
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
 import * as forgejo from "@pulumi/forgejo";
 import * as github from "@pulumi/github";
 import type * as pulumi from "@pulumi/pulumi";
 import { ComponentResource, type ComponentResourceOptions, output } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
 import { type ForgejoConfigurationComponent, GITHUB_MIRROR_ORG, type TOKEN_SCOPES } from "./forgejo-renovate.ts";
 
 /**

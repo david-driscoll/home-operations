@@ -1,6 +1,6 @@
-import type { GlobalResources } from "@components/globals.ts";
 import * as authentik from "@pulumi/authentik";
 import * as pulumi from "@pulumi/pulumi";
+import type { GlobalResources } from "components/globals.ts";
 import { Roles } from "../constants.ts";
 
 interface GroupDef {
@@ -30,11 +30,11 @@ export class AuthentikGroups extends pulumi.ComponentResource {
     { groupName: Roles.MediaManagers, parentName: Roles.Users },
   ];
 
-  constructor(
-    private readonly globals: GlobalResources,
-    opts?: pulumi.ComponentResourceOptions,
-  ) {
+  private readonly globals: GlobalResources;
+
+  constructor(globals: GlobalResources, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikGroups", "authentik-groups", {}, opts);
+    this.globals = globals;
 
     for (const group of this.initialGroups) {
       const roleResource = new authentik.RbacRole(

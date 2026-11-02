@@ -1,7 +1,7 @@
 import * as authentik from "@pulumi/authentik";
 import type * as pulumi from "@pulumi/pulumi";
 import { Roles } from "../constants.ts";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class Policies extends SharedComponentResource {
   private _passwordComplexity?: authentik.PolicyPassword;

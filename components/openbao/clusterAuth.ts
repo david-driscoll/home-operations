@@ -50,7 +50,7 @@
  *      `secrets/docker/*` (things every Dockge host runs). None of those three
  *      is covered by a `secrets/data/shared/*` or `secrets/data/clusters/*`
  *      glob, so every `eso-*` policy needs all three added — an admin write,
- *      therefore a root ceremony. `npx tsx scripts/bao-reorg --preflight`
+ *      therefore a root ceremony. `node scripts/bao-reorg/index.ts --preflight`
  *      prints the exact HCL.
  *
  * REACHABILITY IS A PRECONDITION, not an assumption. OpenBao dials the API

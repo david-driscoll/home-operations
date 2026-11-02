@@ -1,16 +1,16 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 /**
  * Execute the `secrets/shared/*` reorganisation described in
  * `docs/openbao-shared-secrets-reorg.md` and encoded in `./plan.ts`.
  *
- *   npx tsx scripts/bao-reorg --phase 1            # plan only, no mutation
- *   npx tsx scripts/bao-reorg --phase 1 --apply
- *   npx tsx scripts/bao-reorg --verify             # post-run drift check
- *   npx tsx scripts/bao-reorg --preflight          # can the destinations be read?
+ *   node scripts/bao-reorg/index.ts --phase 1            # plan only, no mutation
+ *   node scripts/bao-reorg/index.ts --phase 1 --apply
+ *   node scripts/bao-reorg/index.ts --verify             # post-run drift check
+ *   node scripts/bao-reorg/index.ts --preflight          # can the destinations be read?
  *
  * Needs the `pulumi` AppRole, so run it through `mise run vals-run`:
  *
- *   mise run vals-run -- npx tsx scripts/bao-reorg --phase 2 --apply
+ *   mise run vals-run -- node scripts/bao-reorg/index.ts --phase 2 --apply
  *
  * ## Why phases, and why 3 is gated
  *
@@ -35,7 +35,7 @@
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BaoClient } from "@components/bao.ts";
+import { BaoClient } from "components/bao.ts";
 import { type Entry, type Phase, PLAN, RETIRED_PREFIX, retiredPath, type SplitEntry } from "./plan.ts";
 
 const MOUNT = "secrets";
@@ -159,7 +159,7 @@ function move(from: string, to: string): boolean {
   const args = [BAO_MOVE, from, to, "--mount", MOUNT];
   if (!copyOnly) args.push("--move");
   if (apply) args.push("--apply");
-  const result = spawnSync("npx", ["tsx", ...args], { stdio: "inherit", env: process.env });
+  const result = spawnSync(process.execPath, [...args], { stdio: "inherit", env: process.env });
   return result.status === 0;
 }
 

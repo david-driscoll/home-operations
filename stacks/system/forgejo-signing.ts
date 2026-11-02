@@ -16,10 +16,11 @@
  * instance key, so every commit signed with the old one stops showing as
  * Verified.
  */
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
+
 import * as pulumi from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
 
 export function configureForgejoSigning(globals: GlobalResources): void {
   // ed25519, unencrypted: Forgejo runs `ssh-keygen -Y sign` non-interactively.

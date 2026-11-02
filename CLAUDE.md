@@ -82,8 +82,8 @@ docker/         # Docker/Dockge stack configs per cluster
 - **Provider centralization:** All providers are constructed in `components/globals.ts` and consumed by stacks — never create duplicate providers in a stack.
 - **ComponentResource pattern:** Reusable infra goes in `components/` as a `ComponentResource` (e.g., `ProxmoxHost`, `DockgeLxc`), then wired into stacks.
 - **1Password integration:** Use `OPClient` from `components/op.ts` for reading/writing secrets. Outputs are stored as `OnePasswordItem` objects (see `stacks/authentik/index.ts` for the canonical pattern).
-- **TypeScript execution:** Pulumi runs TS directly via `tsx` ESM loader — no separate compile step needed.
-- **Path aliases:** `@components/*`, `@dynamic/*`, `@openapi/*` (configured in `tsconfig.json`).
+- **TypeScript execution:** Node runs the `.ts` files directly by stripping types (no tsx, no compile step). Only erasable syntax works: no enums, namespaces, parameter properties or `<T>x` casts, and type-only imports must be `import type`. tsc enforces this with `erasableSyntaxOnly` + `verbatimModuleSyntax`.
+- **Imports:** `components/x.ts` and `dynamic/x.ts` by their npm-workspace names (Node resolves them; no tsconfig aliases). `@openapi/*` (`types/*.d.ts`) remains a tsconfig alias, for `import type` only. Write the real `.ts` extension, never `.js`.
 
 ## Key Files
 

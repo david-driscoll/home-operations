@@ -88,8 +88,8 @@ whole run on one unresolvable `ref+openbao://`. So all three writes land **befor
 the merge.
 
 ```bash
-fnox exec -- npx tsx scripts/bao-move.ts clusters/celestia/apps/arcane/credentials clusters/equestria/apps/arcane/credentials --apply
-fnox exec -- npx tsx scripts/bao-move.ts clusters/celestia/apps/pdm/root clusters/equestria/apps/pdm/root --apply
+fnox exec -- node scripts/bao-move.ts clusters/celestia/apps/arcane/credentials clusters/equestria/apps/arcane/credentials --apply
+fnox exec -- node scripts/bao-move.ts clusters/celestia/apps/pdm/root clusters/equestria/apps/pdm/root --apply
 ```
 
 Copies, not moves, so the celestia stacks keep working until step 2. The celestia
@@ -299,8 +299,8 @@ Once `stacks/home` has run, `svc:arcane` and `svc:pdm` no longer exist, and
   re-verifies the destination before deleting:
 
   ```bash
-  fnox exec -- npx tsx scripts/bao-move.ts clusters/celestia/apps/arcane/credentials clusters/equestria/apps/arcane/credentials --move --apply
-  fnox exec -- npx tsx scripts/bao-move.ts clusters/celestia/apps/pdm/root clusters/equestria/apps/pdm/root --move --apply
+  fnox exec -- node scripts/bao-move.ts clusters/celestia/apps/arcane/credentials clusters/equestria/apps/arcane/credentials --move --apply
+  fnox exec -- node scripts/bao-move.ts clusters/celestia/apps/pdm/root clusters/equestria/apps/pdm/root --move --apply
   ```
 - The agents' Traefik routers in `docker/_common/arcane-agent/compose.yaml` are
   inert now. Removing them deletes the `arcane-agent.*` StandardDns records; read

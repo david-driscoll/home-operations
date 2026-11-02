@@ -43,7 +43,7 @@
 
 - **Per-stack entry:** `stacks/<stack-name>/index.ts` — each stack is independently deployed via `cd stacks/<name> && pulumi up`
 - **No single monolithic entry point** — Pulumi treats each stack directory as its own program
-- **How entry is selected:** The `Pulumi.yaml` in each stack directory names the runtime as `nodejs` with `nodeargs: [--loader=tsx]`; Pulumi resolves `index.ts` as the entry point
+- **How entry is selected:** The `Pulumi.yaml` in each stack directory names the runtime as `nodejs` (no loader `nodeargs` — Node strips types itself); Pulumi resolves `index.ts` as the entry point
 
 ### 3) Module Boundaries
 
@@ -60,12 +60,9 @@
 
 - **File naming:** PascalCase for ComponentResource class files (`ProxmoxHost.ts`, `DockgeLxc.ts`, `TruenasVm.ts`); camelCase for utility/helper files (`globals.ts`, `helpers.ts`, `constants.ts`, `op.ts`)
 - **Directory organization:** Feature/domain-based at the top level (`components/authentik/`, `components/tailscale/`, `components/truenas/`); flat within a domain
-- **Import path aliases** (configured in root `tsconfig.json`):
-  - `@components/*` → `./components/*`
-  - `@dynamic/*` → `./dynamic/*`
-  - `@openapi/*` → `./types/*`
-- **Relative imports within stacks:** stacks use relative paths (`../../components/globals.ts`) or path aliases (`@components/globals.ts`) interchangeably
-- **TypeScript file extensions in imports:** `.ts` extensions are explicit in import statements (required by NodeNext module resolution + tsx)
+- **Imports across directories:** `components/*` and `dynamic/*` by npm-workspace name (resolved by Node via `node_modules/` symlinks). `@openapi/*` → `./types/*` remains a tsconfig alias for `import type` only.
+- **Relative imports within stacks:** stacks use relative paths (`../../components/globals.ts`) or the workspace name (`components/globals.ts`) interchangeably
+- **TypeScript file extensions in imports:** `.ts` extensions are explicit in import statements (required by NodeNext module resolution and Node type stripping)
 
 ## Component Hierarchy
 

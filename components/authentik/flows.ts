@@ -1,18 +1,18 @@
-import type { GlobalResources } from "@components/globals.ts";
-import { clientIdPair } from "@components/helpers.ts";
-import type { VaultStore } from "@components/store/index.ts";
 import * as authentik from "@pulumi/authentik";
 import * as pulumi from "@pulumi/pulumi";
 import * as purrl from "@pulumiverse/purrl";
-import { AuthenticationStages } from "./authentication-stages.js";
-import { AuthenticatorStages } from "./authenticator-stages.js";
-import { ConsentStages } from "./consent-stages.js";
-import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.js";
-import { Fields } from "./fields.js";
-import { InvalidationStages } from "./invalidation-stages.js";
-import { Policies } from "./policies.js";
-import { PropertyMappings } from "./property-mappings.js";
-import { StagePrompts } from "./stage-prompts.js";
+import type { GlobalResources } from "components/globals.ts";
+import { clientIdPair } from "components/helpers.ts";
+import type { VaultStore } from "components/store/index.ts";
+import { AuthenticationStages } from "./authentication-stages.ts";
+import { AuthenticatorStages } from "./authenticator-stages.ts";
+import { ConsentStages } from "./consent-stages.ts";
+import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.ts";
+import { Fields } from "./fields.ts";
+import { InvalidationStages } from "./invalidation-stages.ts";
+import { Policies } from "./policies.ts";
+import { PropertyMappings } from "./property-mappings.ts";
+import { StagePrompts } from "./stage-prompts.ts";
 
 export interface CustomFlows {
   logoutFlow: authentik.Flow;
@@ -42,11 +42,11 @@ export class FlowsManager extends pulumi.ComponentResource {
   public readonly authenticationStages: AuthenticationStages;
   private readonly vault: VaultStore;
 
-  constructor(
-    private readonly globals: GlobalResources,
-    opts?: pulumi.ComponentResourceOptions,
-  ) {
+  private readonly globals: GlobalResources;
+
+  constructor(globals: GlobalResources, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:FlowsManager", "flows-manager", {}, opts);
+    this.globals = globals;
 
     this.vault = globals.store;
 

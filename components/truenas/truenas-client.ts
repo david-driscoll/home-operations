@@ -24,7 +24,7 @@ import {
   type SystemInfo,
   // System Request Types
   SystemInfoRequest,
-} from "./truenas-types.js";
+} from "./truenas-types.ts";
 
 /**
  * TrueNAS JSON-RPC 2.0 WebSocket Client
@@ -89,15 +89,25 @@ export class TrueNASClient {
     return this.connection.then(func);
   }
 
+  private host: string;
+  private options: {
+    port?: number;
+    ssl?: boolean;
+    reconnectOnClose?: boolean;
+    maxReconnectAttempts?: number;
+  };
+
   constructor(
-    private host: string,
-    private options: {
+    host: string,
+    options: {
       port?: number;
       ssl?: boolean;
       reconnectOnClose?: boolean;
       maxReconnectAttempts?: number;
     } = {},
   ) {
+    this.host = host;
+    this.options = options;
     const protocol = this.options.ssl ? "wss" : "ws";
     const port = this.options.port || (this.options.ssl ? 443 : 80);
     const webSocket = (this.socket = new WebSocket(`${protocol}://${this.host}:${port}/api/current`));

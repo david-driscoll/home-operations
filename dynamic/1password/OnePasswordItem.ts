@@ -1,9 +1,9 @@
 import { FullItem, type GeneratorRecipe } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import type { ItemUrls } from "@1password/connect/dist/model/itemUrls.js";
-import { awaitOutput } from "@components/helpers.ts";
-import { getSecretItem } from "@components/store/index.ts";
 import * as pulumi from "@pulumi/pulumi";
+import { awaitOutput } from "components/helpers.ts";
+import { getSecretItem } from "components/store/index.ts";
 import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 import { OPClient, type OPClientItemInput } from "../../components/op.ts";

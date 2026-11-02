@@ -1,7 +1,7 @@
 import * as authentik from "@pulumi/authentik";
 import type * as pulumi from "@pulumi/pulumi";
 import type { Fields } from "./fields.ts";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class StagePrompts extends SharedComponentResource {
   private _userSettings?: authentik.StagePrompt;
@@ -10,11 +10,11 @@ export class StagePrompts extends SharedComponentResource {
   private _externalEnrollmentWrite?: authentik.StageUserWrite;
   private _sourceAuthenticationUpdate?: authentik.StageUserWrite;
 
-  constructor(
-    private fields: Fields,
-    opts?: pulumi.ComponentResourceOptions,
-  ) {
+  private fields: Fields;
+
+  constructor(fields: Fields, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikStagePrompts", "authentik-stage-prompts", opts);
+    this.fields = fields;
   }
 
   public get userSettings(): authentik.StagePrompt {

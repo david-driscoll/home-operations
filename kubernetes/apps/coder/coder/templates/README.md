@@ -92,7 +92,7 @@ For a template that is **shaped differently**, add a directory here with a `main
 ## Checking a change
 
 ```bash
-npx tsx scripts/coder-templates /tmp/staged     # prints one staged directory per template
+node scripts/coder-templates/index.ts /tmp/staged     # prints one staged directory per template
 cd /tmp/staged/repository
 terraform init -backend=false && terraform validate
 terraform plan                                  # read-only; the Coder provider plans outside Coder

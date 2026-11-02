@@ -101,7 +101,7 @@ description = 'Regenerate types/application-definition.d.ts from schemas/'
 # `--no-install` keeps this honest: json-schema-to-typescript and yaml are
 # devDependencies, so a missing `npm ci` fails loudly here instead of silently
 # resolving a different version off the network.
-run = ['npx --no-install tsx scripts/generate-types.ts']
+run = ['node scripts/generate-types.ts']
 
 [tasks.update]
 description = 'Update all apps that have an update script'

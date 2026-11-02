@@ -1,9 +1,9 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 /**
  * Rewrite every repo reference to a moved `secrets/shared/*` path.
  *
- *   npx tsx scripts/bao-reorg/rewrite.ts            # report, change nothing
- *   npx tsx scripts/bao-reorg/rewrite.ts --apply
+ *   node scripts/bao-reorg/rewrite.ts            # report, change nothing
+ *   node scripts/bao-reorg/rewrite.ts --apply
  *
  * Driven by the same `./plan.ts` the KV move is driven by, because a rewrite
  * that disagrees with the move is either a 404 or a stale read, and both are

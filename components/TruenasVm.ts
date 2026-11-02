@@ -3,10 +3,10 @@ import * as pulumi from "@pulumi/pulumi";
 export type { CustomResourceOptions } from "@pulumi/pulumi";
 
 import { FullItem } from "@1password/connect";
-import type { Dataset } from "@components/truenas/index.ts";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { remote, type types } from "@pulumi/command";
+import type { Dataset } from "components/truenas/index.ts";
+import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxHost } from "./ProxmoxHost.ts";
 import TrueNASResourceManager from "./truenas/truenas-manager.ts";

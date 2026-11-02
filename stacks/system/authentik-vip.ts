@@ -14,10 +14,11 @@
  * truncated differently, and then the two sides would stop hearing each other
  * and both claim the VIP.
  */
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
+
 import * as pulumi from "@pulumi/pulumi";
 import { RandomPassword } from "@pulumi/random";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
 
 const VRRP_PASSWORD_VERSION = "1";
 

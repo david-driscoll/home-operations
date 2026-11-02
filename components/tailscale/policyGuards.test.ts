@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/tailscale/policyGuards.test.ts
+ * node --test components/tailscale/policyGuards.test.ts
  *
  * assertGrantPath is what stops stacks/unifi-network from writing a tailnet
  * policy that cuts the cluster off from the garage-s3 VIP -- the path Pulumi

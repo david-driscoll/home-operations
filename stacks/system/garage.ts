@@ -24,17 +24,17 @@
  * order of operations making itself known.
  */
 import * as garage from "@axnic/pulumi-garage";
-import { BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE, backrestGarageBucket, backrestGarageEndpoint } from "@components/backrestGarage.ts";
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import { Tailscale } from "@components/constants.ts";
-import { GARAGE_COPY_BUCKETS, GARAGE_COPY_KEYS, garageCopyEndpoint } from "@components/garageTruenasCopy.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import { copyFileToRemote } from "@components/helpers.ts";
-import type { DockgeLxcDefinition } from "@components/store/index.ts";
-import { configureGarageCopy } from "@components/truenas.ts";
 import { remote } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
+import { BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE, backrestGarageBucket, backrestGarageEndpoint } from "components/backrestGarage.ts";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import { Tailscale } from "components/constants.ts";
+import { GARAGE_COPY_BUCKETS, GARAGE_COPY_KEYS, garageCopyEndpoint } from "components/garageTruenasCopy.ts";
+import type { GlobalResources } from "components/globals.ts";
+import { copyFileToRemote } from "components/helpers.ts";
+import type { DockgeLxcDefinition } from "components/store/index.ts";
+import { configureGarageCopy } from "components/truenas.ts";
 
 // The garage cluster membership. A layout fact, not a derivable one: every
 // dockge host EXCEPT alpha-site runs a node (docker/alpha-site/garage/.ignore

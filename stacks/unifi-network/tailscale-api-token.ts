@@ -34,9 +34,9 @@
  * changed input, and writes it. No forced-update trick needed.
  */
 
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import { getTailscaleAccessToken } from "@components/tailscale.ts";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
+import { getTailscaleAccessToken } from "components/tailscale.ts";
 
 export async function configureTailscaleApiToken(globals: GlobalResources) {
   const token = await getTailscaleAccessToken(globals);

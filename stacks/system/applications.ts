@@ -21,18 +21,19 @@
  * loop uses), and the kubeconfig is built by the same function the store used,
  * so the `equestria-provider` input is byte-identical to what state holds.
  */
-import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
-import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
-import { rootDomain } from "@components/domains.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
-import { CLUSTERS } from "@components/store/clusters.ts";
-import { generateTailscaleKubeConfig, type KubernetesClusterDefinition } from "@components/store/index.ts";
+
 import * as kubernetes from "@kubernetes/client-node";
 import type { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as authentik from "@pulumi/authentik";
 import * as pk8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
+import { AuthentikApplicationManager, type AuthentikOutputs } from "components/authentik.ts";
+import { BackupPlanOrchestrator } from "components/BackupPlanOrchestrator.ts";
+import { rootDomain } from "components/domains.ts";
+import type { GlobalResources } from "components/globals.ts";
+import { addUptimeGatus, awaitOutput } from "components/helpers.ts";
+import { CLUSTERS } from "components/store/clusters.ts";
+import { generateTailscaleKubeConfig, type KubernetesClusterDefinition } from "components/store/index.ts";
 import { kebabCase } from "moderndash";
 import { concatMap, from, lastValueFrom, map, toArray } from "rxjs";
 import * as yaml from "yaml";
@@ -374,7 +375,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
       [V in keyof NonNullable<AuthentikDefinition["proxy"]>]: string;
     };
 
-    return (<NonNullable<AuthentikDefinition["proxy"]>>{
+    return {
       externalHost: proxyResource.externalHost,
       internalHost: proxyResource.internalHost,
       internalHostSslValidation: proxyResource.internalHostSslValidation === "true",
@@ -395,7 +396,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
       name: proxyResource.name,
       propertyMappings: proxyResource.propertyMappings ? proxyResource.propertyMappings.split(",") : undefined,
       skipPathRegex: proxyResource.skipPathRegex,
-    }) as any;
+    } as NonNullable<AuthentikDefinition["proxy"]> as any;
   }
 
   if (type === "oauth2") {
@@ -403,7 +404,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
       [V in keyof NonNullable<AuthentikDefinition["oauth2"]>]: string;
     };
 
-    return (<NonNullable<AuthentikDefinition["oauth2"]>>{
+    return {
       authorizationFlow: oauth2Resource.authorizationFlow,
       authenticationFlow: oauth2Resource.authenticationFlow,
       invalidationFlow: oauth2Resource.invalidationFlow,
@@ -433,7 +434,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
           })
         : undefined,
       propertyMappings: oauth2Resource.propertyMappings ? oauth2Resource.propertyMappings.split(",") : undefined,
-    }) as any;
+    } as NonNullable<AuthentikDefinition["oauth2"]> as any;
   }
 
   throw new Error(`Unknown authentik resource type ${type}`);

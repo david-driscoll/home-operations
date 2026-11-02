@@ -1,5 +1,5 @@
 /**
- * ROOT_DOMAIN=example.com npx tsx --test components/store/clusters.test.ts
+ * ROOT_DOMAIN=example.com node --test components/store/clusters.test.ts
  *
  * The loader appends ROOT_DOMAIN at import and fails without it
  * (components/domains.ts). The assertions read it back, so any value passes.

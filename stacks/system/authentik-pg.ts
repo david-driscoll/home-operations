@@ -27,10 +27,11 @@
  * picks it up on the next stacks/home run — until then its authentik (app) or
  * standby (replication) fails auth, so rotate with both stacks in one sitting.
  */
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
+
 import * as pulumi from "@pulumi/pulumi";
 import { RandomPassword } from "@pulumi/random";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
 
 const APP_PASSWORD_VERSION = "1";
 const REPLICATION_PASSWORD_VERSION = "1";

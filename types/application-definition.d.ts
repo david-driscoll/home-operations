@@ -5,7 +5,7 @@
  * schemas/ and run `mise run codegen`.
  */
 
-import type { Roles } from "@components/constants.ts";
+import type { Roles } from "components/constants.ts";
 
 type RolesKeys = keyof typeof Roles;
 type RolesValues = (typeof Roles)[RolesKeys];

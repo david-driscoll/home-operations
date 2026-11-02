@@ -1,5 +1,5 @@
 /**
- * npx tsx --test components/gatusCertificateExpiration.test.ts
+ * node --test components/gatusCertificateExpiration.test.ts
  *
  * addUptimeGatus runs every endpoint it writes through withCertificateExpiration,
  * so these cases are the whole estate's certificate coverage: which endpoints

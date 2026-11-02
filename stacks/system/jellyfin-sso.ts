@@ -16,10 +16,10 @@
 import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { GlobalResources } from "@components/globals.ts";
-import { JellyfinConfiguration } from "@dynamic/jellyfin/JellyfinConfiguration.ts";
 import * as pulumi from "@pulumi/pulumi";
 import * as vault from "@pulumi/vault";
+import type { GlobalResources } from "components/globals.ts";
+import { JellyfinConfiguration } from "dynamic/jellyfin/JellyfinConfiguration.ts";
 
 const JELLYFIN_APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../kubernetes/apps/equestria/media/jellyfin");
 

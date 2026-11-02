@@ -9,7 +9,7 @@
 | Primary language | TypeScript | `tsconfig.json`, `package.json` |
 | Runtime + version | Node.js 24.15.0 | `.mise.toml` |
 | Package manager | npm (workspaces) | `package-lock.json` (lockfileVersion 3) |
-| Module/build system | ESM (`"type": "module"`); Pulumi runs TS via `tsx` — no separate compile step | `package.json`, `Pulumi.yaml` |
+| Module/build system | ESM (`"type": "module"`); Node runs TS via built-in type stripping — no separate compile step | `package.json`, `Pulumi.yaml` |
 | TypeScript version | 5.9.3 | `.mise.toml` |
 
 ### 2) Production Frameworks and Dependencies
@@ -51,7 +51,6 @@
 
 | Tool | Purpose | Evidence |
 |------|---------|----------|
-| `tsx` | Run TypeScript directly (ESM, no compile step) | `.mise.toml`, `Pulumi.yaml` |
 | `typescript` 5.9.3 | Type checking | `.mise.toml`, `tsconfig.json` |
 | `pulumi` 3.242.0 | IaC CLI (preview/up/destroy) | `.mise.toml` |
 | `mise` | Tool version manager + env var injection via `op://` | `.mise.toml` |
@@ -97,7 +96,7 @@ mise run pulumi-refresh # .config/mise/tasks/pulumi-refresh
   - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — Minio S3 credentials
   - `AWS_REGION` — Set to `home`
   - `AUTHENTIK_TOKEN` / `AUTHENTIK_URL` — Authentik API access
-- Deployment constraint: Pulumi stacks must be run from within the stack directory; `tsx` ESM loader is required (configured in `Pulumi.yaml` via `nodeargs: [--loader=tsx]`)
+- Deployment constraint: Pulumi stacks must be run from within the stack directory; Node runs the `.ts` entry point natively (type stripping), so `Pulumi.yaml` carries no loader `nodeargs`
 
 ### 6) Evidence
 

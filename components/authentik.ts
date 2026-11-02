@@ -77,11 +77,13 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     return this._applications;
   }
 
-  constructor(
-    private readonly args: AuthentikResourcesArgs,
-    readonly opts?: pulumi.ComponentResourceOptions,
-  ) {
+  private readonly args: AuthentikResourcesArgs;
+  readonly opts?: pulumi.ComponentResourceOptions;
+
+  constructor(args: AuthentikResourcesArgs, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikResourceManager", `${args.clusterKey}-authentik-resource-manager`, {}, opts);
+    this.args = args;
+    this.opts = opts;
 
     this.authentik = pulumi.output(args.outputs);
     this.cluster = pulumi.output(args.cluster);

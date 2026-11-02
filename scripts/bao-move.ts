@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 /**
  * Copy or move a secret (or a whole subtree) between OpenBao KV v2 paths.
  *
@@ -10,10 +10,10 @@
  * source is destroyed only after the destination has been read back and
  * compared.
  *
- *   npx tsx scripts/bao-move.ts <src> <dst>                # plan a copy
- *   npx tsx scripts/bao-move.ts <src> <dst> --apply        # copy
- *   npx tsx scripts/bao-move.ts <src> <dst> --move --apply # copy, verify, destroy source
- *   npx tsx scripts/bao-move.ts <srcPrefix>/ <dstPrefix>/ --recursive --move --apply
+ *   node scripts/bao-move.ts <src> <dst>                # plan a copy
+ *   node scripts/bao-move.ts <src> <dst> --apply        # copy
+ *   node scripts/bao-move.ts <src> <dst> --move --apply # copy, verify, destroy source
+ *   node scripts/bao-move.ts <srcPrefix>/ <dstPrefix>/ --recursive --move --apply
  *
  * Options:
  *   --apply             perform writes (default is plan only, no mutation)
@@ -32,7 +32,7 @@
  * (the default), cut consumers over, then delete the source in a second pass.
  */
 
-import { BaoClient, type KvReadResult } from "@components/bao.ts";
+import { BaoClient, type KvReadResult } from "components/bao.ts";
 
 // ---------------------------------------------------------------------------
 // Arguments

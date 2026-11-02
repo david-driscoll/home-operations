@@ -1,5 +1,5 @@
 /**
- * npx tsx --test dynamic/jellyfin/JellyfinConfiguration.test.ts
+ * node --test dynamic/jellyfin/JellyfinConfiguration.test.ts
  *
  * The read-modify-write merge. Every Jellyfin configuration POST replaces the
  * whole document, so anything this resource does not own -- the SSO plugin's

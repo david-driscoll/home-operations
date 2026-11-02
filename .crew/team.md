@@ -51,7 +51,7 @@ repositories may still exist as history — they are not live sources for anythi
 
 ### Stack
 
-- **IaC:** Pulumi (TypeScript, run via `tsx` ESM loader — no compile step)
+- **IaC:** Pulumi (TypeScript, run by Node type stripping — no compile step)
 - **GitOps:** Flux CD on Talos Kubernetes
 - **Clusters:** Equestria (Kubernetes — the only one; SGC folded into it); Celestia, Luna, Skystar, Alpha Site (Dockge/Docker)
 - **Secrets:** 1Password Connect (`OPClient`), sops/age, Authentik for identity

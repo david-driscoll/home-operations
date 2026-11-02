@@ -21,14 +21,15 @@
  * kubeproxy. It does that with the Kubernetes client, not a Pulumi provider,
  * so nothing here is a Kubernetes resource.
  */
-import type { GlobalResources } from "@components/globals.ts";
-import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
-import { generateTailscaleKubeConfig } from "@components/store/index.ts";
-import type { KubernetesClusterDefinition } from "@components/store/interfaces.ts";
+
 import * as k8s from "@kubernetes/client-node";
 import type { GatusDefinition } from "@openapi/application-definition.js";
 import * as github from "@pulumi/github";
 import { ComponentResource, type ComponentResourceOptions, interpolate, output } from "@pulumi/pulumi";
+import type { GlobalResources } from "components/globals.ts";
+import { addUptimeGatus, awaitOutput } from "components/helpers.ts";
+import { generateTailscaleKubeConfig } from "components/store/index.ts";
+import type { KubernetesClusterDefinition } from "components/store/interfaces.ts";
 import { equestriaDefinition } from "./applications.ts";
 
 /**

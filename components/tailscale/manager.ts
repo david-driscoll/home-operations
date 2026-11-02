@@ -1,4 +1,3 @@
-import { awaitOutput } from "@components/helpers.ts";
 import type {
   PolicyFile,
   TailscaleCidr,
@@ -17,6 +16,7 @@ import type {
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
 import { getAclOutput } from "@pulumi/tailscale";
+import { awaitOutput } from "components/helpers.ts";
 import * as parser from "jsonc-parser";
 import { Tailscale } from "../constants.ts";
 

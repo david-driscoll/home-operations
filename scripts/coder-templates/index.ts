@@ -1,7 +1,7 @@
 /**
  * Stage the Coder templates the way Pulumi does, for checking them by hand.
  *
- *   npx tsx scripts/coder-templates [out-dir]
+ *   node scripts/coder-templates/index.ts [out-dir]
  *
  * Prints one staged directory per line. Each is a complete template: run
  * `terraform init -backend=false && terraform validate` in it, or

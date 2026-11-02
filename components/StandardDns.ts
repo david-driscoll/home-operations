@@ -1,12 +1,12 @@
-import { dns } from "@components/constants.ts";
-import { rootDomain } from "@components/domains.ts";
-import type { GlobalResources } from "@components/globals.ts";
-import { type OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { GatusDefinition } from "@openapi/application-definition.js";
 import * as cloudflare from "@pulumi/cloudflare";
 import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, log, mergeOptions, type Output, output } from "@pulumi/pulumi";
 import * as technitium from "@pulumi/technitium";
 import * as unifi from "@pulumiverse/unifi";
+import { dns } from "components/constants.ts";
+import { rootDomain } from "components/domains.ts";
+import type { GlobalResources } from "components/globals.ts";
+import { type OnePasswordItemSectionInput, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import { addUptimeGatus } from "./helpers.ts";
 
 export class StandardDns extends ComponentResource {
