@@ -15,6 +15,7 @@ import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { createGatusDnsUptime, StandardDns } from "../../components/StandardDns.ts";
+import { TalosVm } from "../../components/TalosVm.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
 
 const globals = new GlobalResources({}, {});
@@ -215,7 +216,37 @@ const celestiaHost = new ProxmoxHost("celestia", {
   },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: { start: 302, end: 399 },
+  // 15 GiB host carrying celestia-dockge plus the milky-way control plane;
+  // ZFS's default of half of RAM left no room for the VM.
+  zfsArcMaxBytes: 1.5 * 1024 ** 3,
 });
+
+// Replacement for milky-way, an equestria control plane whose board died
+// 2026-11-01. Same hostname and IP; its Talos config is the `milky-way` entry in
+// talos/talconfig.yaml. VM id 210 sits outside vmIdRange so the provider's
+// random ids can never collide with it.
+const _milkyWayVm = new TalosVm(
+  "milky-way",
+  {
+    host: celestiaHost,
+    vmId: 210,
+    cores: 4,
+    memoryMiB: 7 * 1024,
+    diskGiB: 64,
+    storage: "local-lvm",
+    bridge: "vmbr0",
+    macAddress: "bc:24:11:20:91:10",
+    // Install media only: talhelper's schematic for the milky-way entry
+    // (`talhelper genurl image -n milky-way`). Later upgrades go through tuppr.
+    isoUrl: "https://factory.talos.dev/image/847c39de8e6eda418acf32739379b76b06f1f82f8fcae9fa64bd78bb3e19b3e5/v1.14.4/metal-amd64.iso",
+    // The spare Samsung 990 EVO Plus, alone in IOMMU group 16. Longhorn's disk.
+    pciDevices: ["0000:05:00.0"],
+    // Off until celestia-dockge drops to ~5 GiB / 12 cores and the PBS LXC is
+    // gone; 7 GiB does not fit before that.
+    start: false,
+  },
+  { dependsOn: [celestiaHost] },
+);
 const celestiaBackupMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/backup/");
 const celestiaDataMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/data/");
 
