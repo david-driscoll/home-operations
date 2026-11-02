@@ -26,7 +26,9 @@ spec:
             summary: "Blackbox probe critically failing"
           expr: |
             avg_over_time(probe_success{remote!="true"}[10m]) < 0.5
-          for: 2m
+          # 5m rather than 2m: spans more than two probe intervals (2m), so a
+          # short multi-probe glitch has to persist before it pages critical.
+          for: 5m
           labels:
             severity: critical
         - alert: BlackboxProbeFailingRemote

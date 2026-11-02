@@ -258,6 +258,23 @@ spec:
       static:
         - dns-celestia.${TAILSCALE_DOMAIN}:53
 ---
+# The TCP twin of dns-celestia, as `twinProbe` generates for the other dns-*
+# nodes in tailnet-egress.ts: dns-celestia red with this green is a UDP-only
+# problem, both red is the server.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dns-celestia-tcp
+spec:
+  interval: 2m
+  module: dns_soa_tcp
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - dns-celestia.${TAILSCALE_DOMAIN}:53
+---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:

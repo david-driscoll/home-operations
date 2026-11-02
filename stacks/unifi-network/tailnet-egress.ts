@@ -83,13 +83,23 @@ const NAMESPACE = "tailscale-system";
 /** The kinds of machine that get an egress Service, keyed off the device's tag. */
 export type ServiceKind = "dockge" | "proxmox" | "pbs" | "dns";
 
+type ProbeModule = "http_2xx" | "ssh_banner" | "tcp_connect" | "dns_soa" | "dns_soa_tcp";
+
 export interface PortDef {
   name: string;
   port: number;
   /** UDP entries ride alongside the TCP one of the same name/port. */
   protocol?: "UDP";
   /** blackbox_exporter module. Absent means "forward it, do not probe it". */
-  probe?: "http_2xx" | "ssh_banner" | "tcp_connect" | "dns_soa";
+  probe?: ProbeModule;
+  /**
+   * A second probe of the same port with another module, named
+   * `<service>-<suffix>`. It exists for Do53, which the primary probe tests
+   * over UDP: the TCP twin tells a UDP-only failure apart from a dead server.
+   * A probe rather than a port, because a second PortDef for 53/TCP would
+   * duplicate the Service port.
+   */
+  twinProbe?: { suffix: string; probe: ProbeModule };
   /**
    * Probe a different hostname than the tailnet FQDN, as `<server>.<this>.<root>`.
    * Only DoH needs it: Technitium serves a certificate whose only SAN is
@@ -144,7 +154,7 @@ const defaultPorts: Record<ServiceKind, PortDef[]> = {
   ],
   dns: [
     // Do53 (53), DoT (853), DoQ (853/udp), DoH (443), admin/API (53443).
-    { name: "dns-tcp", port: grantedPort("dns", Tailscale.ports.dns, 53), probe: "dns_soa" },
+    { name: "dns-tcp", port: grantedPort("dns", Tailscale.ports.dns, 53), probe: "dns_soa", twinProbe: { suffix: "tcp", probe: "dns_soa_tcp" } },
     { name: "dns-udp", port: 53, protocol: "UDP" },
     { name: "dot", port: grantedPort("dns", Tailscale.ports.dns, 853), probe: "tcp_connect" },
     { name: "doq", port: 853, protocol: "UDP" },
@@ -329,7 +339,7 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
         // 443 is implicit in the scheme; anything else has to be spelled out.
         return port.port === 443 ? pulumi.interpolate`https://${probeFqdn(server, kind, port)}${port.probePath ?? ""}` : pulumi.interpolate`https://${probeFqdn(server, kind, port)}:${port.port}${port.probePath ?? ""}`;
       default:
-        // tcp_connect and dns_soa take a bare host:port.
+        // tcp_connect, dns_soa and dns_soa_tcp take a bare host:port.
         return pulumi.interpolate`${probeFqdn(server, kind, port)}:${port.port}`;
     }
   };
@@ -464,6 +474,9 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
         // naming is load-bearing, not cosmetic.
         const isPrimary = port.name === "pve" || port.name === "pbs" || port.name === "dns-tcp";
         created.push(probe(isPrimary ? name : `${name}-${port.name}`, port.probe!, probeTarget(server, kind, port), isRemote, service));
+        if (port.twinProbe) {
+          created.push(probe(`${name}-${port.twinProbe.suffix}`, port.twinProbe.probe, probeTarget(server, kind, { ...port, probe: port.twinProbe.probe }), isRemote, service));
+        }
       }
 
       switch (kind) {
