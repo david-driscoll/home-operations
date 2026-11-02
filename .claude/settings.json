@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "mcp__toolport-infrastructure__toolport_call_tool",
-      "mcp__toolport-infrastructure__toolport_run_script"
+      "mcp__toolport-infrastructure__toolport_run_script",
+      "Bash(kubectl delete pvc -n tailscale-system volsync-tsiam-dst-dest volsync-dst-tsiam-dst-cache)",
+      "Bash(kubectl delete pvc -n stargate-command volsync-home-assistant-dst-dest volsync-dst-home-assistant-dst-cache volsync-matter-dst-dest)",
+      "Bash(kubectl delete pvc -n network volsync-technitium-dst-dest)",
+      "Bash(kubectl cnpg destroy authentik-pg 3 -n stargate-command)"
     ]
   },
   "hooks": {
