@@ -270,6 +270,11 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   credential: dockgeCredential,
   host: celestiaHost,
   vmId: 300,
+  // celestia (16 threads, 15 GB) also hosts the 4 vCPU milky-way
+  // control-plane VM, so this LXC gets the other 12. The containers here use
+  // ~3 GB RSS since hermes and neo4j left (2026-11-01).
+  memory: 5120,
+  cores: 12,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
