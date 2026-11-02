@@ -3,11 +3,18 @@ services:
     image: ghcr.io/getarcaneapp/agent:latest@sha256:6f18b6dc08b529a2df818b1f94df79cb23e5c06bb1b0625e5df065599009c80f
     container_name: arcane-agent
     environment:
-      # Direct mode: the manager connects inbound to :3553 via the Traefik
-      # router below. The port is deliberately not published on the host —
-      # Traefik reaches it over dockge_default and terminates TLS.
-      - AGENT_MODE=true
-      - EDGE_TRANSPORT=auto
+      # Edge mode: the agent dials OUT to the manager at MANAGER_API_URL
+      # (.env) and the manager drives it over that tunnel. The manager runs in
+      # the equestria cluster (kubernetes/apps/equestria/utils/arcane), whose
+      # pods have no route to the tailnet names the old direct mode dialled
+      # (arcane-agent-<host>.<tailnet>), while every Dockge host can reach the
+      # cluster's internal gateway.
+      #
+      # websocket, not `auto`: through Traefik the gRPC tunnel is accepted at
+      # TLS and then never answered, so `auto` spends 10s on it before falling
+      # back to websocket on every (re)connect.
+      - EDGE_AGENT=true
+      - EDGE_TRANSPORT=websocket
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
     env_file:
       - .env
@@ -21,6 +28,11 @@ services:
     networks:
       - dockge_default
     labels:
+      # Nothing dials these routers since the move to edge mode. Edge agents
+      # still serve :3553 (the healthcheck below uses it), so they are inert
+      # rather than broken. They stay for now because dropping them deletes
+      # the arcane-agent.* StandardDns records -- see the warning in
+      # components/StandardDns.ts before doing it.
       # Enable Traefik
       traefik.enable: true
 

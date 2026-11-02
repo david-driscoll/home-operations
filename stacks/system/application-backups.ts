@@ -154,7 +154,7 @@ async function garageBucketBackups(coreApi: kubernetes.CoreV1Api, customObjectAp
       pulumi.output({
         // `celestia`, not a new source kind. Bucket plans are ordinary
         // celestia-sourced backrest plans: the snapshot runs where the staging
-        // tree is, and every other Proxmox Backup Server picks up the copy job
+        // tree is, and every other host with local repos picks up the copy job
         // for free from the existing destinationPlans branch in
         // BackupPlanDirector.
         source: "celestia" as const,

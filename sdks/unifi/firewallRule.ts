@@ -20,6 +20,17 @@ export class FirewallRule extends pulumi.CustomResource {
         return new FirewallRule(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing FirewallRule resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: FirewallRuleState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/firewallRule:FirewallRule", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/firewallRule:FirewallRule';
 
@@ -43,7 +54,7 @@ export class FirewallRule extends pulumi.CustomResource {
      */
     declare public readonly destination: pulumi.Output<outputs.FirewallRuleDestination>;
     /**
-     * Specifies whether the rule should be enabled.
+     * Specifies whether the rule should be enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -55,7 +66,7 @@ export class FirewallRule extends pulumi.CustomResource {
      */
     declare public readonly ipSec: pulumi.Output<string | undefined>;
     /**
-     * Enable logging for the firewall rule.
+     * Enable logging for the firewall rule. Taken from the controller when not set; a new rule is created with logging off (#544).
      */
     declare public readonly logging: pulumi.Output<boolean>;
     /**
@@ -67,7 +78,7 @@ export class FirewallRule extends pulumi.CustomResource {
      */
     declare public readonly protocol: pulumi.Output<string | undefined>;
     /**
-     * Match packets that do NOT match the specified protocol (protocol negation).
+     * Match packets that do NOT match the specified protocol (protocol negation). Taken from the controller when not set; a new rule is created with it off (#544).
      */
     declare public readonly protocolMatchExcepted: pulumi.Output<boolean>;
     /**
@@ -177,7 +188,7 @@ export interface FirewallRuleState {
      */
     destination?: pulumi.Input<inputs.FirewallRuleDestination | undefined>;
     /**
-     * Specifies whether the rule should be enabled.
+     * Specifies whether the rule should be enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -189,7 +200,7 @@ export interface FirewallRuleState {
      */
     ipSec?: pulumi.Input<string | undefined>;
     /**
-     * Enable logging for the firewall rule.
+     * Enable logging for the firewall rule. Taken from the controller when not set; a new rule is created with logging off (#544).
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
@@ -201,7 +212,7 @@ export interface FirewallRuleState {
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * Match packets that do NOT match the specified protocol (protocol negation).
+     * Match packets that do NOT match the specified protocol (protocol negation). Taken from the controller when not set; a new rule is created with it off (#544).
      */
     protocolMatchExcepted?: pulumi.Input<boolean | undefined>;
     /**
@@ -248,7 +259,7 @@ export interface FirewallRuleArgs {
      */
     destination?: pulumi.Input<inputs.FirewallRuleDestination | undefined>;
     /**
-     * Specifies whether the rule should be enabled.
+     * Specifies whether the rule should be enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -260,7 +271,7 @@ export interface FirewallRuleArgs {
      */
     ipSec?: pulumi.Input<string | undefined>;
     /**
-     * Enable logging for the firewall rule.
+     * Enable logging for the firewall rule. Taken from the controller when not set; a new rule is created with logging off (#544).
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
@@ -272,7 +283,7 @@ export interface FirewallRuleArgs {
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * Match packets that do NOT match the specified protocol (protocol negation).
+     * Match packets that do NOT match the specified protocol (protocol negation). Taken from the controller when not set; a new rule is created with it off (#544).
      */
     protocolMatchExcepted?: pulumi.Input<boolean | undefined>;
     /**

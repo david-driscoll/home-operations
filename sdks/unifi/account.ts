@@ -20,6 +20,17 @@ export class Account extends pulumi.CustomResource {
         return new Account(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Account resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: AccountState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/account:Account", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/account:Account';
 
@@ -52,7 +63,7 @@ export class Account extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.AccountTimeouts | undefined>;
     /**
-     * RFC 2868 tunnel attributes used for dynamic VLAN assignment.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, `medium_type = 6`; an existing account keeps the controller's values, which may be none.
      */
     declare public readonly tunnel: pulumi.Output<outputs.AccountTunnel>;
     /**
@@ -122,7 +133,7 @@ export interface AccountState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.AccountTimeouts | undefined>;
     /**
-     * RFC 2868 tunnel attributes used for dynamic VLAN assignment.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, `medium_type = 6`; an existing account keeps the controller's values, which may be none.
      */
     tunnel?: pulumi.Input<inputs.AccountTunnel | undefined>;
     /**
@@ -153,7 +164,7 @@ export interface AccountArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.AccountTimeouts | undefined>;
     /**
-     * RFC 2868 tunnel attributes used for dynamic VLAN assignment.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, `medium_type = 6`; an existing account keeps the controller's values, which may be none.
      */
     tunnel?: pulumi.Input<inputs.AccountTunnel | undefined>;
     /**

@@ -14,7 +14,6 @@ docker/
 │   ├── docker-socket-proxy/    # Secure Docker socket proxy
 │   ├── dockge/                 # Dockge manager UI
 │   ├── librespeed/             # Speed test service
-│   ├── neo4j/                  # Graph database
 │   ├── openspeedtest/          # Speed test (alternative)
 │   ├── prometheus/             # Monitoring & metrics
 │   ├── rclone-sftp/            # SFTP backup client
@@ -84,12 +83,6 @@ Network speed test service. Measures upload/download speed and latency with hist
 
 ---
 
-### Neo4j (`neo4j/`)
-
-Graph database for knowledge base and relationship data. Includes APOC procedures and Neo4j Browser UI. Used by llm-graph-builder for knowledge graph queries and network relationship mapping.
-
----
-
 ### OpenSpeedTest (`openspeedtest/`)
 
 Lightweight HTML5-based speed test. Alternative to LibreSpeed with no database requirement.
@@ -148,7 +141,6 @@ backrest/             # Backup orchestration
 backups/              # Backup services
 librespeed/           # Speed test
 lmstudio/             # LM Studio local LLM
-neo4j/                # Graph database
 netbootxyz/           # Network boot service
 nut/                  # UPS monitoring
 openspeedtest/        # Speed test (alt)

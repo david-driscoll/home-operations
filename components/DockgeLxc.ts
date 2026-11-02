@@ -59,6 +59,20 @@ export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: Input<number>;
+  /**
+   * The LXC's memory limit in MiB, applied with `pct set -memory` on every run.
+   * It takes effect live: lowering it makes the kernel reclaim the container's
+   * page cache, and only an over-limit RSS OOM-kills anything.
+   *
+   * Left unset, nothing manages the limit, and it stays at whatever the
+   * community script created the LXC with or someone set by hand.
+   */
+  memory?: Input<number>;
+  /**
+   * The LXC's CPU core count, applied with `pct set -cores` on every run. Like
+   * `memory`, it takes effect live, and left unset nothing manages it.
+   */
+  cores?: Input<number>;
   ipAddress?: TailscaleIp;
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
@@ -233,6 +247,29 @@ export class DockgeLxc extends ComponentResource {
         dependsOn: [...depends],
       }),
     );
+
+    if (args.memory !== undefined) {
+      new remote.Command(
+        `${name}-set-memory`,
+        {
+          connection: args.host.remoteConnection,
+          create: interpolate`pct set ${args.vmId} -memory ${args.memory}`,
+          update: interpolate`pct set ${args.vmId} -memory ${args.memory}`,
+        },
+        mergeOptions(cro, { dependsOn: [lxcExists, ...depends] }),
+      );
+    }
+    if (args.cores !== undefined) {
+      new remote.Command(
+        `${name}-set-cores`,
+        {
+          connection: args.host.remoteConnection,
+          create: interpolate`pct set ${args.vmId} -cores ${args.cores}`,
+          update: interpolate`pct set ${args.vmId} -cores ${args.cores}`,
+        },
+        mergeOptions(cro, { dependsOn: [lxcExists, ...depends] }),
+      );
+    }
 
     // LAN-side identity of the LXC, read from the Proxmox host: the vNIC MAC from
     // `pct config` and the first address of `hostname -I`. Exported to 1Password so

@@ -346,8 +346,8 @@ backupPlanOrchestrator.addBackupPlan(
 // Every stack's Pulumi state: the dockge Garage cluster's `pulumi-state`
 // bucket (bootstrap/RUNBOOK.md). Garage has no object versioning, so THIS is
 // what provides point-in-time copies -- rclone mirrors the bucket into
-// backrest's staging tree and restic snapshots it, copied to the other PBS
-// hosts nightly. (The pre-Garage copy on the TrueNAS Minio, and its plan,
+// backrest's staging tree and restic snapshots it, copied to the other
+// Docker hosts nightly. (The pre-Garage copy on the TrueNAS Minio, and its plan,
 // were retired once the rollback window closed.) The off-site copy on alpha-site (docker/alpha-site/
 // garage-backup) is a separate, independent path.
 //

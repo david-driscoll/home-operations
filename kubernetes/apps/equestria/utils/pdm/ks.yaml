@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app pdm
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/utils/pdm
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # pdm.<tailnet>, for people on the tailnet.
+    - ../../../../components/tailscale
+    # /etc/proxmox-datacenter-manager: remotes.cfg/.shadow (the API tokens for
+    # every PVE cluster), realms, the API certificate. Moved from celestia's
+    # /opt/stacks-data/pdm, not recreated.
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # PDM serves HTTPS only, with its own self-signed certificate.
+      TAILSCALE_PORT: https
+      VOLSYNC_CAPACITY: 1Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # The config is root:www-data with root-only files in it
+      # (auth/authkey.key), so the mover reads it as root.
+      VOLSYNC_PUID: "0"
+      VOLSYNC_PGID: "0"

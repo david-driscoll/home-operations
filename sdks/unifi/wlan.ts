@@ -20,6 +20,17 @@ export class Wlan extends pulumi.CustomResource {
         return new Wlan(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Wlan resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: WlanState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/wlan:Wlan", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/wlan:Wlan';
 
@@ -57,7 +68,7 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly dtim6e: pulumi.Output<number>;
     /**
-     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`.
+     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`. Defaults to `default` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     declare public readonly dtimMode: pulumi.Output<string>;
     /**
@@ -69,7 +80,7 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly dtimNg: pulumi.Output<number>;
     /**
-     * Enable or disable the WLAN.
+     * Enable or disable the WLAN. Defaults to `true` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -117,7 +128,7 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly minimumDataRate5gKbps: pulumi.Output<number>;
     /**
-     * Minimum rate setting preference.
+     * Minimum rate setting preference. Defaults to `auto` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     declare public readonly minrateSettingPreference: pulumi.Output<string>;
     /**
@@ -149,6 +160,10 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly passphrase: pulumi.Output<string | undefined>;
     declare public readonly passphraseWo: pulumi.Output<string | undefined>;
+    /**
+     * Version counter for `passphrase_wo`. Increment this value to send the current `passphrase_wo` to the controller on the next apply.
+     */
+    declare public readonly passphraseWoVersion: pulumi.Output<number | undefined>;
     /**
      * Enable Protected Management Frames. This cannot be disabled if using WPA 3.
      */
@@ -265,6 +280,7 @@ export class Wlan extends pulumi.CustomResource {
             resourceInputs["no2ghzOui"] = state?.no2ghzOui;
             resourceInputs["passphrase"] = state?.passphrase;
             resourceInputs["passphraseWo"] = state?.passphraseWo;
+            resourceInputs["passphraseWoVersion"] = state?.passphraseWoVersion;
             resourceInputs["pmfMode"] = state?.pmfMode;
             resourceInputs["privatePresharedKeys"] = state?.privatePresharedKeys;
             resourceInputs["privatePresharedKeysEnabled"] = state?.privatePresharedKeysEnabled;
@@ -321,6 +337,7 @@ export class Wlan extends pulumi.CustomResource {
             resourceInputs["no2ghzOui"] = args?.no2ghzOui;
             resourceInputs["passphrase"] = args?.passphrase ? pulumi.secret(args.passphrase) : undefined;
             resourceInputs["passphraseWo"] = args?.passphraseWo ? pulumi.secret(args.passphraseWo) : undefined;
+            resourceInputs["passphraseWoVersion"] = args?.passphraseWoVersion;
             resourceInputs["pmfMode"] = args?.pmfMode;
             resourceInputs["privatePresharedKeys"] = args?.privatePresharedKeys;
             resourceInputs["privatePresharedKeysEnabled"] = args?.privatePresharedKeysEnabled;
@@ -375,7 +392,7 @@ export interface WlanState {
      */
     dtim6e?: pulumi.Input<number | undefined>;
     /**
-     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`.
+     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`. Defaults to `default` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     dtimMode?: pulumi.Input<string | undefined>;
     /**
@@ -387,7 +404,7 @@ export interface WlanState {
      */
     dtimNg?: pulumi.Input<number | undefined>;
     /**
-     * Enable or disable the WLAN.
+     * Enable or disable the WLAN. Defaults to `true` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -435,7 +452,7 @@ export interface WlanState {
      */
     minimumDataRate5gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum rate setting preference.
+     * Minimum rate setting preference. Defaults to `auto` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     minrateSettingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -467,6 +484,10 @@ export interface WlanState {
      */
     passphrase?: pulumi.Input<string | undefined>;
     passphraseWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version counter for `passphrase_wo`. Increment this value to send the current `passphrase_wo` to the controller on the next apply.
+     */
+    passphraseWoVersion?: pulumi.Input<number | undefined>;
     /**
      * Enable Protected Management Frames. This cannot be disabled if using WPA 3.
      */
@@ -569,7 +590,7 @@ export interface WlanArgs {
      */
     dtim6e?: pulumi.Input<number | undefined>;
     /**
-     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`.
+     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`. Defaults to `default` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     dtimMode?: pulumi.Input<string | undefined>;
     /**
@@ -581,7 +602,7 @@ export interface WlanArgs {
      */
     dtimNg?: pulumi.Input<number | undefined>;
     /**
-     * Enable or disable the WLAN.
+     * Enable or disable the WLAN. Defaults to `true` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -629,7 +650,7 @@ export interface WlanArgs {
      */
     minimumDataRate5gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum rate setting preference.
+     * Minimum rate setting preference. Defaults to `auto` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     minrateSettingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -661,6 +682,10 @@ export interface WlanArgs {
      */
     passphrase?: pulumi.Input<string | undefined>;
     passphraseWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version counter for `passphrase_wo`. Increment this value to send the current `passphrase_wo` to the controller on the next apply.
+     */
+    passphraseWoVersion?: pulumi.Input<number | undefined>;
     /**
      * Enable Protected Management Frames. This cannot be disabled if using WPA 3.
      */

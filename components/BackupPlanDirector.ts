@@ -8,10 +8,10 @@ import { NodeSSH } from "node-ssh";
 import type { BackupPlanItem, S3PreSyncArgs } from "./BackupPlanOrchestrator.ts";
 import { BACKREST_GARAGE_REPO_ENV, BACKREST_GARAGE_REPO_FLAGS, backrestGarageRepoUri } from "./backrestGarage.ts";
 import { BACKREST_LEDGER_PATH, type BackrestLedger, type LedgerRemovals, parseBackrestLedger, planLedgerRemovals, renderBackrestLedger } from "./backrestLedger.ts";
+import { dockgeBaoPath } from "./bao.ts";
 import type { DockgeLxc } from "./DockgeLxc.ts";
 import type { GlobalResources } from "./globals.ts";
-import type { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
-import type { ClusterDefinition, ProxmoxBackupServerLxcDefinition } from "./store/interfaces.ts";
+import type { ClusterDefinition } from "./store/interfaces.ts";
 
 /**
  * Plan ids that must be REMOVED from every backrest config, while their repos
@@ -59,7 +59,7 @@ const BACKREST_PLAN_SCHEDULE: BackrestPlan["schedule"] = { cron: "0 1 * * *", cl
  * Copy-job schedule, in UTC: NCronJob's default, and the backups container
  * sets no TZ. A host's Backrest queue starts at 01:00 local, 05:00 or 06:00
  * UTC, and the longest night in the 2026-09-27 → 09-29 logs ran about six and
- * a half hours, so every plan is done well before 21:00, when the other PBS
+ * a half hours, so every plan is done well before 21:00, when the other
  * hosts pull it over SFTP.
  */
 const REMOTE_COPY_SCHEDULE = "0 21 * * *";
@@ -84,30 +84,49 @@ export class BackupPlanDirector extends ComponentResource {
   /**
    * Configure one host's backrest and copy jobs from the plan inventory.
    *
-   * `pbs` is optional: a host without a Proxmox Backup Server has no /data
-   * (alpha-site). It takes no copies, and every plan it runs must keep its
-   * repo in Garage.
+   * `localRepos` says the host's Docker LXC mounts the host's /data, where
+   * local repos and the copies of other hosts' repos live. A host without it
+   * (alpha-site) takes no copies, and every plan it runs must keep its repo in
+   * Garage.
    */
   public createPlans(
     source: {
       dockge: DockgeLxc;
-      pbs?: ProxmoxBackupServerLxc;
+      localRepos?: boolean;
       cluster: Input<ClusterDefinition>;
     },
     depends: Input<Resource[]>,
   ) {
-    return all([source.cluster, source.dockge.remoteConnection, this.globals.store.proxmoxBackupServers(), this.globals.store.getBackupPlans<BackupPlanItem>(), this.uptimeUrl, this.volsyncPassword]).apply(
-      ([cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword]) =>
-        output(this._createPlans(source.dockge, source.pbs, cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword, depends)),
+    return all([source.cluster, source.dockge.remoteConnection, this.copySourceHosts(), this.globals.store.getBackupPlans<BackupPlanItem>(), this.uptimeUrl, this.volsyncPassword]).apply(
+      ([cluster, dockgeConnection, copySourceHosts, plans, uptimeUrl, volsyncPassword]) =>
+        output(this._createPlans(source.dockge, source.localRepos ?? false, cluster, dockgeConnection, copySourceHosts, plans, uptimeUrl, volsyncPassword, depends)),
+    );
+  }
+
+  /**
+   * The SSH hostname of each Docker host's LXC, by cluster key: where a copy
+   * job pulls another host's repo from. Read from the `DockgeLxc: <title>`
+   * items rather than the Proxmox Backup Server items that used to carry the
+   * same hostname, which went when the PBS LXCs were removed.
+   */
+  private copySourceHosts(): Output<Record<string, string>> {
+    return all([this.globals.store.getDockerClusters(), this.globals.store.getDockgeInstances()]).apply(([clusters, instances]) =>
+      Object.fromEntries(
+        clusters.flatMap(cluster => {
+          // By OpenBao path, the same match the PBS items' `dockge` field made.
+          const instance = instances.find(i => dockgeBaoPath(i.meta.title) === dockgeBaoPath(`DockgeLxc: ${cluster.title}`));
+          return instance ? [[cluster.key, instance.ssh.hostname]] : [];
+        }),
+      ),
     );
   }
 
   public _createPlans(
     _dockge: DockgeLxc,
-    pbs: ProxmoxBackupServerLxc | undefined,
+    hasLocalRepos: boolean,
     cluster: ClusterDefinition,
     dockgeConnection: Unwrap<DockgeLxc["remoteConnection"]>,
-    backupServers: UnwrappedArray<ProxmoxBackupServerLxcDefinition>,
+    copySourceHosts: Record<string, string>,
     plans: UnwrappedArray<BackupPlanItem>,
     uptimeUrl: string,
     volsyncPassword: string,
@@ -116,8 +135,6 @@ export class BackupPlanDirector extends ComponentResource {
     const clusterKey = cluster.key;
     const sourceGroupTitle = `Backups: ${cluster.title}`;
     const destinationGroupTitle = `Backups: ${cluster.title}`;
-    // No backup server, no /data: nowhere to keep a copy.
-    const hasLocalRepos = pbs !== undefined;
     const sourcePlans = plans.filter(p => p.source === clusterKey);
     // A Garage-backed repo is never copied: Garage replicates it, and TrueNAS
     // pulls the bucket (components/garageTruenasCopy.ts).
@@ -125,19 +142,16 @@ export class BackupPlanDirector extends ComponentResource {
 
     const stranded = sourcePlans.filter(p => !p.garage);
     if (!hasLocalRepos && stranded.length > 0) {
-      throw new Error(
-        `${clusterKey} has no backup server, so no /data for local repos, but plan(s) ${stranded.map(p => p.name).join(", ")} keep their repo on the host. Give them a Garage repo in stacks/backups (\`garage\` on the plan).`,
-      );
+      throw new Error(`${clusterKey} has no /data for local repos, but plan(s) ${stranded.map(p => p.name).join(", ")} keep their repo on the host. Give them a Garage repo in stacks/backups (\`garage\` on the plan).`);
     }
 
     const destinationJobTasks = destinationPlans.map(plan => {
-      const planServer = backupServers.find(s => s.cluster.key === plan.source);
       const copyToken = toGatusKey(destinationGroupTitle, plan.name);
       return {
         name: plan.name,
         schedule: REMOTE_COPY_SCHEDULE,
         sourceType: "sftp" as const,
-        source: `${planServer?.dockge.ssh.hostname}/backup/${plan.name}/`,
+        source: `${copySourceHosts[plan.source]}/backup/${plan.name}/`,
         destinationType: "local" as const,
         destination: `/data/backup/${plan.name}/`,
         token: copyToken,

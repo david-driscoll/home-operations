@@ -83,13 +83,23 @@ const NAMESPACE = "tailscale-system";
 /** The kinds of machine that get an egress Service, keyed off the device's tag. */
 export type ServiceKind = "dockge" | "proxmox" | "pbs" | "dns";
 
+type ProbeModule = "http_2xx" | "ssh_banner" | "tcp_connect" | "dns_soa" | "dns_soa_tcp";
+
 export interface PortDef {
   name: string;
   port: number;
   /** UDP entries ride alongside the TCP one of the same name/port. */
   protocol?: "UDP";
   /** blackbox_exporter module. Absent means "forward it, do not probe it". */
-  probe?: "http_2xx" | "ssh_banner" | "tcp_connect" | "dns_soa";
+  probe?: ProbeModule;
+  /**
+   * A second probe of the same port with another module, named
+   * `<service>-<suffix>`. It exists for Do53, which the primary probe tests
+   * over UDP: the TCP twin tells a UDP-only failure apart from a dead server.
+   * A probe rather than a port, because a second PortDef for 53/TCP would
+   * duplicate the Service port.
+   */
+  twinProbe?: { suffix: string; probe: ProbeModule };
   /**
    * Probe a different hostname than the tailnet FQDN, as `<server>.<this>.<root>`.
    * Only DoH needs it: Technitium serves a certificate whose only SAN is
@@ -144,7 +154,7 @@ const defaultPorts: Record<ServiceKind, PortDef[]> = {
   ],
   dns: [
     // Do53 (53), DoT (853), DoQ (853/udp), DoH (443), admin/API (53443).
-    { name: "dns-tcp", port: grantedPort("dns", Tailscale.ports.dns, 53), probe: "dns_soa" },
+    { name: "dns-tcp", port: grantedPort("dns", Tailscale.ports.dns, 53), probe: "dns_soa", twinProbe: { suffix: "tcp", probe: "dns_soa_tcp" } },
     { name: "dns-udp", port: 53, protocol: "UDP" },
     { name: "dot", port: grantedPort("dns", Tailscale.ports.dns, 853), probe: "tcp_connect" },
     { name: "doq", port: 853, protocol: "UDP" },
@@ -190,28 +200,22 @@ const extraPorts: Record<string, Partial<Record<ServiceKind, PortDef[]>>> = {
  * drops it while it is still up and healthy, so the removal is a no-op against
  * live metrics. Remove the entry once the device is actually gone.
  *
- * `skystar` added 2026-09-15, the opposite way round: it was already dark. Its
- * host went unreachable on 2026-09-13 23:42 and eight probes -- pve, pbs, dns
- * (53/853/DoH), ssh x3 -- have paged as `BlackboxProbeFailingCriticalRemote`
- * ever since, for a cluster whose `clusters/skystar.yaml` is `.disabled` and
- * whose MCP servers are already commented out of
- * kubernetes/apps/agents/agent-tools-servers/kustomization.yaml. Gatus dropped
- * its 20 endpoints on its own once the applications stack next ran; these
- * probes are Pulumi-built and had no such path. Moving it here is what stops
- * them. It leaves `remoteServers` empty -- see below.
+ * A host that is only temporarily dark can be parked here too: skystar was,
+ * from 2026-09-15 to 2026-11-01, while its host was unreachable and its
+ * `clusters/skystar.yaml` was `.disabled`. Parking it is what stopped its eight
+ * probes paging; Gatus drops a disabled cluster's endpoints on its own.
  */
-const decommissionedServers = new Set(["sgc", "skystar"]);
+const decommissionedServers = new Set(["sgc"]);
 
 /**
  * Off-site. Their probes get `remote: "true"`, which the generic
  * BlackboxProbeFailing rules exclude, and their own alerts wait 2h not 10m.
  *
- * EMPTY since 2026-09-15, when skystar moved to the set above. Kept rather than
- * deleted: it is the mechanism any future off-site host needs, and the 2h
- * `forDuration` below is the only thing that makes such a host's flapping link
- * survivable. Nothing else reads it, so an empty set is inert.
+ * skystar stays here even while it is physically on the home network: its
+ * cluster is still `location: remote` and its ProxmoxHost still `remote: true`,
+ * and it is expected to go back off-site.
  */
-const remoteServers = new Set<string>([]);
+const remoteServers = new Set(["skystar"]);
 
 /** Services this stack must NOT create. Written as the service NAME so a rename
  *  cannot silently un-carve one. See the header for why each is here. */
@@ -335,7 +339,7 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
         // 443 is implicit in the scheme; anything else has to be spelled out.
         return port.port === 443 ? pulumi.interpolate`https://${probeFqdn(server, kind, port)}${port.probePath ?? ""}` : pulumi.interpolate`https://${probeFqdn(server, kind, port)}:${port.port}${port.probePath ?? ""}`;
       default:
-        // tcp_connect and dns_soa take a bare host:port.
+        // tcp_connect, dns_soa and dns_soa_tcp take a bare host:port.
         return pulumi.interpolate`${probeFqdn(server, kind, port)}:${port.port}`;
     }
   };
@@ -470,6 +474,9 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
         // naming is load-bearing, not cosmetic.
         const isPrimary = port.name === "pve" || port.name === "pbs" || port.name === "dns-tcp";
         created.push(probe(isPrimary ? name : `${name}-${port.name}`, port.probe!, probeTarget(server, kind, port), isRemote, service));
+        if (port.twinProbe) {
+          created.push(probe(`${name}-${port.twinProbe.suffix}`, port.twinProbe.probe, probeTarget(server, kind, { ...port, probe: port.twinProbe.probe }), isRemote, service));
+        }
       }
 
       switch (kind) {

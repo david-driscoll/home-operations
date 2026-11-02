@@ -100,9 +100,8 @@ Proxmox-owning stack enrolls its hosts. `pulumi preview` shows them as updates:
 | `ocracoke` | skystar |
 | `gulf-of-mexico` | luna |
 
-`home-operations` and `gulf-of-mexico` are operator-managed. `ocracoke` is
-commented out of `kubernetes/apps/pulumi/kustomization.yaml` while that site is
-offline, so skystar enrolls only once it is re-enabled or run locally. Nudge
+All three are operator-managed. (`ocracoke` is commented out of
+`kubernetes/apps/pulumi/kustomization.yaml` whenever skystar is offline.) Nudge
 each one with
 `kubectl annotate stack -n pulumi <stack> pulumi.com/reconciliation-request=$(date +%s) --overwrite`,
 or run `pulumi up` locally. Each command logs `patchmon: enrolled <host>`, and

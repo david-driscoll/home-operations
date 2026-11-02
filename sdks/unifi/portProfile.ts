@@ -20,6 +20,17 @@ export class PortProfile extends pulumi.CustomResource {
         return new PortProfile(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing PortProfile resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: PortProfileState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/portProfile:PortProfile", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/portProfile:PortProfile';
 
@@ -35,11 +46,11 @@ export class PortProfile extends pulumi.CustomResource {
     }
 
     /**
-     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true` for a newly created profile; an existing profile keeps the controller's value.
      */
     declare public readonly autoneg: pulumi.Output<boolean>;
     /**
-     * 802.1X port authentication settings for the port profile.
+     * 802.1X port authentication settings for the port profile. Taken from the controller when not set.
      */
     declare public readonly dot1x: pulumi.Output<outputs.PortProfileDot1x>;
     /**
@@ -55,19 +66,19 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly fecMode: pulumi.Output<string | undefined>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. `customize` requires a native network that carries a VLAN id: the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. When unset it follows `tagged_vlan_mgmt`, which is what the controller stores for that mode: `all` for `auto`, `native` for `block_all`, `customize` for `custom`. `customize` requires a native network that carries a VLAN id, unless `tagged_vlan_mgmt` is `custom`: otherwise the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
      */
     declare public readonly forward: pulumi.Output<string>;
     /**
-     * Enable full duplex for the port profile.
+     * Enable full duplex for the port profile. Taken from the controller when not set.
      */
     declare public readonly fullDuplex: pulumi.Output<boolean>;
     /**
-     * Enable port isolation for the port profile.
+     * Enable port isolation for the port profile. Taken from the controller when not set.
      */
     declare public readonly isolation: pulumi.Output<boolean>;
     /**
-     * LLDP-MED settings for the port profile.
+     * LLDP-MED settings for the port profile. Taken from the controller when not set.
      */
     declare public readonly lldpmed: pulumi.Output<outputs.PortProfileLldpmed>;
     /**
@@ -91,7 +102,7 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly poeMode: pulumi.Output<string | undefined>;
     /**
-     * Enable port keepalive for the port profile.
+     * Enable port keepalive for the port profile. Taken from the controller when not set.
      */
     declare public readonly portKeepaliveEnabled: pulumi.Output<boolean>;
     /**
@@ -232,11 +243,11 @@ export class PortProfile extends pulumi.CustomResource {
  */
 export interface PortProfileState {
     /**
-     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true` for a newly created profile; an existing profile keeps the controller's value.
      */
     autoneg?: pulumi.Input<boolean | undefined>;
     /**
-     * 802.1X port authentication settings for the port profile.
+     * 802.1X port authentication settings for the port profile. Taken from the controller when not set.
      */
     dot1x?: pulumi.Input<inputs.PortProfileDot1x | undefined>;
     /**
@@ -252,19 +263,19 @@ export interface PortProfileState {
      */
     fecMode?: pulumi.Input<string | undefined>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. `customize` requires a native network that carries a VLAN id: the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. When unset it follows `tagged_vlan_mgmt`, which is what the controller stores for that mode: `all` for `auto`, `native` for `block_all`, `customize` for `custom`. `customize` requires a native network that carries a VLAN id, unless `tagged_vlan_mgmt` is `custom`: otherwise the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
      */
     forward?: pulumi.Input<string | undefined>;
     /**
-     * Enable full duplex for the port profile.
+     * Enable full duplex for the port profile. Taken from the controller when not set.
      */
     fullDuplex?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable port isolation for the port profile.
+     * Enable port isolation for the port profile. Taken from the controller when not set.
      */
     isolation?: pulumi.Input<boolean | undefined>;
     /**
-     * LLDP-MED settings for the port profile.
+     * LLDP-MED settings for the port profile. Taken from the controller when not set.
      */
     lldpmed?: pulumi.Input<inputs.PortProfileLldpmed | undefined>;
     /**
@@ -288,7 +299,7 @@ export interface PortProfileState {
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Enable port keepalive for the port profile.
+     * Enable port keepalive for the port profile. Taken from the controller when not set.
      */
     portKeepaliveEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -351,11 +362,11 @@ export interface PortProfileState {
  */
 export interface PortProfileArgs {
     /**
-     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true` for a newly created profile; an existing profile keeps the controller's value.
      */
     autoneg?: pulumi.Input<boolean | undefined>;
     /**
-     * 802.1X port authentication settings for the port profile.
+     * 802.1X port authentication settings for the port profile. Taken from the controller when not set.
      */
     dot1x?: pulumi.Input<inputs.PortProfileDot1x | undefined>;
     /**
@@ -371,19 +382,19 @@ export interface PortProfileArgs {
      */
     fecMode?: pulumi.Input<string | undefined>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. `customize` requires a native network that carries a VLAN id: the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. When unset it follows `tagged_vlan_mgmt`, which is what the controller stores for that mode: `all` for `auto`, `native` for `block_all`, `customize` for `custom`. `customize` requires a native network that carries a VLAN id, unless `tagged_vlan_mgmt` is `custom`: otherwise the controller silently stores `all` for a profile whose native network is untagged, which the provider rejects at plan time rather than letting the apply leave the resource tainted.
      */
     forward?: pulumi.Input<string | undefined>;
     /**
-     * Enable full duplex for the port profile.
+     * Enable full duplex for the port profile. Taken from the controller when not set.
      */
     fullDuplex?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable port isolation for the port profile.
+     * Enable port isolation for the port profile. Taken from the controller when not set.
      */
     isolation?: pulumi.Input<boolean | undefined>;
     /**
-     * LLDP-MED settings for the port profile.
+     * LLDP-MED settings for the port profile. Taken from the controller when not set.
      */
     lldpmed?: pulumi.Input<inputs.PortProfileLldpmed | undefined>;
     /**
@@ -407,7 +418,7 @@ export interface PortProfileArgs {
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Enable port keepalive for the port profile.
+     * Enable port keepalive for the port profile. Taken from the controller when not set.
      */
     portKeepaliveEnabled?: pulumi.Input<boolean | undefined>;
     /**

@@ -149,7 +149,7 @@ in the component. In the component it would re-run Stacks that never read it.
 | backups | 49 | `docker/` (`components/dockerStackBackups.ts`: compose files, `.ignore` markers) | 86400s, no continue |
 | home-operations (`stacks/home`) | 55 | `docker/` (`components/DockgeLxc.ts` uploads every file under `docker/_common/` and `docker/<host>/`) | 86400s, continue |
 | gulf-of-mexico | 54 | `docker/` (`DockgeLxc`) | 3600s, continue |
-| ocracoke | 54 | `docker/` (`DockgeLxc`) | 86400s, continue. Its Kustomization is commented out of `kubernetes/apps/pulumi/kustomization.yaml`, so this is wired but has never run. |
+| ocracoke | 54 | `docker/` (`DockgeLxc`) | 86400s, continue. Re-enabled 2026-11-01 after skystar came back online; its first run on content-addressed sources. |
 | unifi-network | 55 | none | 300s, continue |
 | system | 61 | all of `kubernetes/apps/`. `coder-templates.ts` and `components/coderTemplates.ts` read `kubernetes/apps/coder/coder/`, and `postgres-rotation.ts` globs every `kubernetes/apps/**/ks.yaml` (243 files at two depths). It is copied whole so that no depth can drop out of postgres-rotation's view, which would remove that app's OpenBao role. | 600s, continue |
 

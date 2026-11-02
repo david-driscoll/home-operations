@@ -562,3 +562,36 @@ export function getDnsMachines(globals: GlobalResources) {
       .sort((a, b) => a.key.localeCompare(b.key)),
   );
 }
+
+/**
+ * Puts the tailnet's global nameservers back to `desired` when the live list
+ * has drifted from it, and returns the list that is live afterwards.
+ *
+ * The DnsConfiguration resource alone cannot do this. The unifi-network Stack
+ * does not refresh (a full refresh read-404s on the UniFi provider), so a hand
+ * edit in the admin console, such as dropping a flaky node, leaves Pulumi's
+ * state equal to its inputs and no run ever writes the list again. Preview only
+ * warns; `up` re-posts the list.
+ */
+export function reconcileTailnetNameservers(globals: GlobalResources, desired: pulumi.Input<string[]>) {
+  return pulumi.all([getTailscaleClient(globals), desired]).apply(async ([client, wanted]) => {
+    const live = await client.GET("/tailnet/{tailnet}/dns/nameservers", { params: { path: { tailnet: "-" } } });
+    if (live.error || !live.data) {
+      throw new Error(`tailnet nameservers: could not read the live list: ${JSON.stringify(live.error)}`);
+    }
+    const liveDns = live.data.dns ?? [];
+    if (liveDns.join(",") === wanted.join(",")) {
+      return liveDns;
+    }
+    if (pulumi.runtime.isDryRun()) {
+      pulumi.log.warn(`tailnet nameservers have drifted: live [${liveDns.join(", ")}], desired [${wanted.join(", ")}]. The next up puts them back.`);
+      return liveDns;
+    }
+    pulumi.log.warn(`tailnet nameservers have drifted: live [${liveDns.join(", ")}], putting back [${wanted.join(", ")}]`);
+    const updated = await client.POST("/tailnet/{tailnet}/dns/nameservers", { params: { path: { tailnet: "-" } }, body: { dns: wanted } });
+    if (updated.error) {
+      throw new Error(`tailnet nameservers: could not write [${wanted.join(", ")}]: ${JSON.stringify(updated.error)}`);
+    }
+    return updated.data?.dns ?? wanted;
+  });
+}

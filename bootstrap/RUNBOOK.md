@@ -237,7 +237,7 @@ exists for celestia.
    `pulumi-state-backup`: `mirror/` (hourly, the current checkpoints) and
    `snapshots/<YYYY-MM-DD>/` (daily, 30 days). Copy the prefix you need back with
    `rclone copy`, or point a read-only `pulumi stack export` at it directly.
-2. **backrest** — plan `pulumi-state` on celestia (restic, copied to the other PBS hosts).
+2. **backrest** — plan `pulumi-state` on celestia (restic, copied to luna and skystar).
    Restore the snapshot into a directory, then `rclone copy` it into the bucket.
 
 Neither holds `.pulumi/history/`. `.pulumi/meta.yaml` plus `.pulumi/stacks/**` is

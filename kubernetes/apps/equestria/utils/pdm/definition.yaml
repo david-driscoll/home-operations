@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Proxmox Datacenter Manager
+  category: Observability
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    # Carried over from celestia unchanged. The client exists, but PDM has no
+    # OpenID realm configured (access/domains.cfg holds only `pam` and `pdm`),
+    # so login is still root@pam -- exactly as it was on celestia.
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/oidc-callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/oidc-callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: Applications
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # The pod sits in the nightly Low Power shed (equestria namespace,
+      # no downscaler/exclude), as homelable does.
+      maintenance-windows:
+        - start: "01:00"
+          duration: 6h
+          timezone: ${TIMEZONE}

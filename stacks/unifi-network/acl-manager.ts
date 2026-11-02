@@ -13,7 +13,7 @@ import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
 import { assertGrantPath } from "../../components/tailscale/policyGuards.ts";
-import { getDnsMachines, getTailscaleIp } from "../../components/tailscale.ts";
+import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../../components/tailscale.ts";
 
 interface KubernetesCluster {
   tag: TailscaleTags;
@@ -683,6 +683,21 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       cro,
     );
 
+    // Tailnet DNS follows online state, like DHCP DNS in local-dns.ts: only the
+    // Technitium nodes connected to control right now are handed out, so the
+    // 5-minute resync is the failover lag. If none are online (a real outage,
+    // or an API answer missing the field) every node stays in, so clients are
+    // never left with no nameservers at all. Unlike the ACL hosts above, this
+    // list is meant to change when a node blips.
+    if (dnsNodes.length === 0) {
+      throw new Error("tailnet nameservers: no tag:dns devices found, refusing to blank tailnet DNS");
+    }
+    const onlineDnsNodes = dnsNodes.filter(node => node.online);
+    if (onlineDnsNodes.length === 0) {
+      pulumi.log.warn(`tailnet nameservers: no tag:dns node is online, keeping all ${dnsNodes.length}`);
+    }
+    const tailnetNameservers = (onlineDnsNodes.length > 0 ? onlineDnsNodes : dnsNodes).map(node => node.ip as string);
+
     new tailscale.DnsConfiguration(
       "dns-nameservers",
       {
@@ -706,15 +721,17 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         // Technitium cluster nodes only — AdGuard (primary-dns / dockge-as) is
         // retired from tailnet resolution; its host entries and grants remain
         // until decommission.
-        nameservers: dnsNodes.map(node => ({
-          address: node.ip,
+        nameservers: tailnetNameservers.map(address => ({
+          address,
           useWithExitNode: false,
         })),
       },
       cro,
     );
+    // Catches what the resource cannot: a hand edit to the live list.
+    const liveNameservers = reconcileTailnetNameservers(globals, tailnetNameservers);
 
-    return { acl, manager };
+    return { acl, manager, liveNameservers };
   });
 }
 

@@ -20,6 +20,17 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
         return new SiteToSiteVpn(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing SiteToSiteVpn resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: SiteToSiteVpnState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/siteToSiteVpn:SiteToSiteVpn", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/siteToSiteVpn:SiteToSiteVpn';
 
@@ -39,7 +50,7 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly dynamicRouting: pulumi.Output<boolean>;
     /**
-     * Whether the tunnel is enabled.
+     * Whether the tunnel is enabled. A new tunnel is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -51,11 +62,11 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly ike: pulumi.Output<outputs.SiteToSiteVpnIke>;
     /**
-     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`).
+     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`). Defaults to `wan` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
      */
     declare public readonly interface: pulumi.Output<string>;
     /**
-     * IKE key-exchange version. One of `ikev1` or `ikev2`.
+     * IKE key-exchange version. One of `ikev1` or `ikev2`. Defaults to `ikev2` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
      */
     declare public readonly keyExchange: pulumi.Output<string>;
     /**
@@ -104,6 +115,10 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly remoteSubnets: pulumi.Output<string[]>;
     /**
+     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when `dynamic_routing` is enabled and `remote_subnets` is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
+     */
+    declare public readonly remoteVpnDynamicSubnetsEnabled: pulumi.Output<boolean>;
+    /**
      * The route distance (administrative metric) for tunnel routes (1-255).
      */
     declare public readonly routeDistance: pulumi.Output<number>;
@@ -112,6 +127,14 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.SiteToSiteVpnTimeouts | undefined>;
+    /**
+     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set `tunnel_ip_enabled = false` to stop using it.
+     */
+    declare public readonly tunnelIp: pulumi.Output<string>;
+    /**
+     * Whether the tunnel IP is used. Set automatically when `tunnel_ip` is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to `false` to disable it.
+     */
+    declare public readonly tunnelIpEnabled: pulumi.Output<boolean>;
 
     /**
      * Create a SiteToSiteVpn resource with the given unique name, arguments, and options.
@@ -144,9 +167,12 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             resourceInputs["remoteIdentifier"] = state?.remoteIdentifier;
             resourceInputs["remoteIdentifierEnabled"] = state?.remoteIdentifierEnabled;
             resourceInputs["remoteSubnets"] = state?.remoteSubnets;
+            resourceInputs["remoteVpnDynamicSubnetsEnabled"] = state?.remoteVpnDynamicSubnetsEnabled;
             resourceInputs["routeDistance"] = state?.routeDistance;
             resourceInputs["site"] = state?.site;
             resourceInputs["timeouts"] = state?.timeouts;
+            resourceInputs["tunnelIp"] = state?.tunnelIp;
+            resourceInputs["tunnelIpEnabled"] = state?.tunnelIpEnabled;
         } else {
             const args = argsOrState as SiteToSiteVpnArgs | undefined;
             if (args?.peerIp === undefined && !opts.urn) {
@@ -173,9 +199,12 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
             resourceInputs["remoteIdentifier"] = args?.remoteIdentifier;
             resourceInputs["remoteIdentifierEnabled"] = args?.remoteIdentifierEnabled;
             resourceInputs["remoteSubnets"] = args?.remoteSubnets;
+            resourceInputs["remoteVpnDynamicSubnetsEnabled"] = args?.remoteVpnDynamicSubnetsEnabled;
             resourceInputs["routeDistance"] = args?.routeDistance;
             resourceInputs["site"] = args?.site;
             resourceInputs["timeouts"] = args?.timeouts;
+            resourceInputs["tunnelIp"] = args?.tunnelIp;
+            resourceInputs["tunnelIpEnabled"] = args?.tunnelIpEnabled;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         const secretOpts = { additionalSecretOutputs: ["preSharedKey", "preSharedKeyWo"] };
@@ -193,7 +222,7 @@ export interface SiteToSiteVpnState {
      */
     dynamicRouting?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the tunnel is enabled.
+     * Whether the tunnel is enabled. A new tunnel is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -205,11 +234,11 @@ export interface SiteToSiteVpnState {
      */
     ike?: pulumi.Input<inputs.SiteToSiteVpnIke | undefined>;
     /**
-     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`).
+     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`). Defaults to `wan` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
-     * IKE key-exchange version. One of `ikev1` or `ikev2`.
+     * IKE key-exchange version. One of `ikev1` or `ikev2`. Defaults to `ikev2` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
      */
     keyExchange?: pulumi.Input<string | undefined>;
     /**
@@ -258,6 +287,10 @@ export interface SiteToSiteVpnState {
      */
     remoteSubnets?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when `dynamic_routing` is enabled and `remote_subnets` is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
+     */
+    remoteVpnDynamicSubnetsEnabled?: pulumi.Input<boolean | undefined>;
+    /**
      * The route distance (administrative metric) for tunnel routes (1-255).
      */
     routeDistance?: pulumi.Input<number | undefined>;
@@ -266,6 +299,14 @@ export interface SiteToSiteVpnState {
      */
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.SiteToSiteVpnTimeouts | undefined>;
+    /**
+     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set `tunnel_ip_enabled = false` to stop using it.
+     */
+    tunnelIp?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the tunnel IP is used. Set automatically when `tunnel_ip` is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to `false` to disable it.
+     */
+    tunnelIpEnabled?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -277,7 +318,7 @@ export interface SiteToSiteVpnArgs {
      */
     dynamicRouting?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the tunnel is enabled.
+     * Whether the tunnel is enabled. A new tunnel is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -289,11 +330,11 @@ export interface SiteToSiteVpnArgs {
      */
     ike?: pulumi.Input<inputs.SiteToSiteVpnIke | undefined>;
     /**
-     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`).
+     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`). Defaults to `wan` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
-     * IKE key-exchange version. One of `ikev1` or `ikev2`.
+     * IKE key-exchange version. One of `ikev1` or `ikev2`. Defaults to `ikev2` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
      */
     keyExchange?: pulumi.Input<string | undefined>;
     /**
@@ -342,6 +383,10 @@ export interface SiteToSiteVpnArgs {
      */
     remoteSubnets: pulumi.Input<pulumi.Input<string>[]>;
     /**
+     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when `dynamic_routing` is enabled and `remote_subnets` is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
+     */
+    remoteVpnDynamicSubnetsEnabled?: pulumi.Input<boolean | undefined>;
+    /**
      * The route distance (administrative metric) for tunnel routes (1-255).
      */
     routeDistance?: pulumi.Input<number | undefined>;
@@ -350,4 +395,12 @@ export interface SiteToSiteVpnArgs {
      */
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.SiteToSiteVpnTimeouts | undefined>;
+    /**
+     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set `tunnel_ip_enabled = false` to stop using it.
+     */
+    tunnelIp?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the tunnel IP is used. Set automatically when `tunnel_ip` is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to `false` to disable it.
+     */
+    tunnelIpEnabled?: pulumi.Input<boolean | undefined>;
 }

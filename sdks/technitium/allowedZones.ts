@@ -18,6 +18,17 @@ export class AllowedZones extends pulumi.CustomResource {
         return new AllowedZones(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing AllowedZones resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: AllowedZonesState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("technitium:index/allowedZones:AllowedZones", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'technitium:index/allowedZones:AllowedZones';
 

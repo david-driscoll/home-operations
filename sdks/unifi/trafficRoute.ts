@@ -20,6 +20,17 @@ export class TrafficRoute extends pulumi.CustomResource {
         return new TrafficRoute(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing TrafficRoute resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: TrafficRouteState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/trafficRoute:TrafficRoute", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/trafficRoute:TrafficRoute';
 
@@ -43,11 +54,11 @@ export class TrafficRoute extends pulumi.CustomResource {
      */
     declare public readonly destination: pulumi.Output<outputs.TrafficRouteDestination | undefined>;
     /**
-     * Whether the traffic route is enabled.
+     * Whether the traffic route is enabled. A new route is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled route does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable.
+     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets `false`), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
      */
     declare public readonly killSwitchEnabled: pulumi.Output<boolean>;
     /**
@@ -120,11 +131,11 @@ export interface TrafficRouteState {
      */
     destination?: pulumi.Input<inputs.TrafficRouteDestination | undefined>;
     /**
-     * Whether the traffic route is enabled.
+     * Whether the traffic route is enabled. A new route is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled route does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable.
+     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets `false`), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
      */
     killSwitchEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -159,11 +170,11 @@ export interface TrafficRouteArgs {
      */
     destination?: pulumi.Input<inputs.TrafficRouteDestination | undefined>;
     /**
-     * Whether the traffic route is enabled.
+     * Whether the traffic route is enabled. A new route is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled route does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable.
+     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets `false`), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
      */
     killSwitchEnabled?: pulumi.Input<boolean | undefined>;
     /**

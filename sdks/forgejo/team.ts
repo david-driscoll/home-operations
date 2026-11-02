@@ -18,6 +18,17 @@ export class Team extends pulumi.CustomResource {
         return new Team(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Team resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: TeamState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("forgejo:index/team:Team", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'forgejo:index/team:Team';
 

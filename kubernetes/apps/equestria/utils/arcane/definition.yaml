@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Arcane
+  category: Observability
+  description: Docker management for every Dockge host, through an edge agent on each
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/arcane.png
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    # oauth2, NOT proxy. Arcane speaks OIDC itself, and the edge agents dial
+    # this same hostname with their own tokens -- a forward-auth outpost in
+    # front would turn every agent tunnel into a login redirect.
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/auth/oidc/callback"
+        # components/tailscale serves arcane.<tailnet>, so a login started
+        # there comes back to the tailnet callback.
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/oidc/callback"
+        - url: "arcane-mobile://oidc-callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # The `groups` claim OIDC_ROLE_MAPPINGS_FILE matches on
+        # (components/authentik/property-mappings.ts).
+        - arcane_groups
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # No maintenance window: the controller is excluded from the nightly Low
+    # Power shed (./helmrelease.yaml).
+    - group: Applications
+      url: https://${APP}.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

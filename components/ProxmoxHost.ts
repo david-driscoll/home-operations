@@ -41,6 +41,13 @@ export interface ProxmoxHostArgs {
   tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
   authentikOutputs: Input<AuthentikOutputs>;
   vmIdRange: { start: number; end: number };
+  /**
+   * Cap the ZFS ARC, in bytes. Unset leaves ZFS's default (half of RAM), which
+   * on a small host takes memory the guests need. Written to
+   * /etc/modprobe.d/zfs.conf for the next boot and to the live module
+   * parameter, so it takes effect without a reboot.
+   */
+  zfsArcMaxBytes?: number;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -163,6 +170,25 @@ export class ProxmoxHost extends ComponentResource {
     // block and still gets an agent. A no-op until the enrollment token is in
     // OpenBao — see components/patchmon.ts.
     installPatchmonAgent(`${name}-patchmon-agent`, { globals: args.globals, connection, friendlyName: name }, cro);
+
+    if (args.zfsArcMaxBytes !== undefined) {
+      // The live write only lowers the target; ZFS shrinks the ARC down to it
+      // over the next few seconds. Root is not on ZFS on these hosts, so the
+      // initramfs does not need rebuilding for the modprobe option to apply.
+      const arcMax = args.zfsArcMaxBytes;
+      new remote.Command(
+        `${name}-zfs-arc-max`,
+        {
+          connection,
+          create: `echo "options zfs zfs_arc_max=${arcMax}" > /etc/modprobe.d/zfs.conf && echo ${arcMax} > /sys/module/zfs/parameters/zfs_arc_max`,
+          // No `triggers`: a changed value is a changed `create`, which reruns
+          // in place. A trigger would replace the resource, and replacement is
+          // create-then-delete -- the old delete would wipe the new cap.
+          delete: `rm -f /etc/modprobe.d/zfs.conf && echo 0 > /sys/module/zfs/parameters/zfs_arc_max`,
+        },
+        cro,
+      );
+    }
 
     if (args.installTailscale) {
       const _snippetsCommand = new remote.Command(

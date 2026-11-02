@@ -12,9 +12,9 @@ import { CategoryEnum, OnePasswordItem, TypeEnum } from "dynamic/1password/OnePa
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
 import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
-import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { createGatusDnsUptime, StandardDns } from "../../components/StandardDns.ts";
+import { TalosVm } from "../../components/TalosVm.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
 
 const globals = new GlobalResources({}, {});
@@ -215,7 +215,38 @@ const celestiaHost = new ProxmoxHost("celestia", {
   },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: { start: 302, end: 399 },
+  // 15 GiB host carrying celestia-dockge (5 GiB) plus the milky-way control
+  // plane (7 GiB). ZFS's default of half of RAM left no room for the VM, and
+  // even 1.5 GiB left ~6.9 GiB available, short of the VM plus QEMU overhead.
+  zfsArcMaxBytes: 1 * 1024 ** 3,
 });
+
+// Replacement for milky-way, an equestria control plane whose board died
+// 2026-11-01. Same hostname and IP; its Talos config is the `milky-way` entry in
+// talos/talconfig.yaml. VM id 210 sits outside vmIdRange so the provider's
+// random ids can never collide with it.
+const _milkyWayVm = new TalosVm(
+  "milky-way",
+  {
+    host: celestiaHost,
+    vmId: 210,
+    cores: 4,
+    memoryMiB: 7 * 1024,
+    diskGiB: 64,
+    storage: "local-lvm",
+    bridge: "vmbr0",
+    macAddress: "bc:24:11:20:91:10",
+    // Install media only: talhelper's schematic for the milky-way entry
+    // (`talhelper genurl image -n milky-way`). Later upgrades go through tuppr.
+    isoUrl: "https://factory.talos.dev/image/847c39de8e6eda418acf32739379b76b06f1f82f8fcae9fa64bd78bb3e19b3e5/v1.14.4/metal-amd64.iso",
+    // The spare Samsung 990 EVO Plus, alone in IOMMU group 16. Longhorn's disk.
+    pciDevices: ["0000:05:00.0"],
+    // Fits since celestia-dockge dropped to 5 GiB / 12 cores (#2986) and the
+    // PBS LXC went (#2982).
+    start: true,
+  },
+  { dependsOn: [celestiaHost] },
+);
 const celestiaBackupMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/backup/");
 const celestiaDataMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/data/");
 
@@ -240,6 +271,11 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   credential: dockgeCredential,
   host: celestiaHost,
   vmId: 300,
+  // celestia (16 threads, 15 GB) also hosts the 4 vCPU milky-way
+  // control-plane VM, so this LXC gets the other 12. The containers here use
+  // ~3 GB RSS since hermes and neo4j left (2026-11-01).
+  memory: 5120,
+  cores: 12,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
@@ -277,22 +313,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   authentikForwardAuthHost: "authentik-server",
 });
 
-const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
-  globals,
-  outputs,
-  host: celestiaHost,
-  vmId: 301,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: celestiaCluster,
-  dockge: celestiaDockgeRuntime,
-  dependsOn: [],
-  tags: ["backup-source"],
-});
-celestiaPbs.addHostMount("/data");
-celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
-celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
-// celestiaPbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
-
 // Celestia monitors twilight-sparkle + itself; alpha-site monitors only itself
 const celestiaPveHosts = [twilightSparkleHost, celestiaHost];
 const celestiaPveVariables = {
@@ -308,7 +328,7 @@ const alphaSitePveVariables = {
 
 await awaitOutput(
   alphaSiteDockgeRuntime.deployStacks({
-    dependsOn: [celestiaPbs],
+    dependsOn: [],
     variables: alphaSitePveVariables,
   }),
 );
@@ -316,7 +336,7 @@ await awaitOutput(alphaSiteHost.addUptimeGatus());
 
 await awaitOutput(
   celestiaDockgeRuntime.deployStacks({
-    dependsOn: [celestiaPbs],
+    dependsOn: [],
     variables: celestiaPveVariables,
   }),
 );
@@ -358,15 +378,15 @@ await awaitOutput(
   backupDirector.createPlans(
     {
       dockge: celestiaDockgeRuntime,
-      pbs: celestiaPbs,
+      localRepos: true,
       cluster: celestiaCluster,
     },
-    [celestiaPbs],
+    [celestiaDockgeRuntime],
   ),
 );
 
 // alpha-site's own backrest (docs/plans/host-owned-backups.md, phase 2 step 7).
-// No backup server and no /data, so no pbs: it takes no copies, and its repos
+// No /data, so no localRepos: it takes no copies, and its repos
 // live in Garage (stacks/backups, GARAGE_BACKED_HOSTS). It depends on the
 // dockge host so its first run finds the backrest stack deployed.
 await awaitOutput(
@@ -408,13 +428,6 @@ monitor.exportNodeStateToOnePassword(
       internalIp: celestiaDockgeRuntime.localIpAddress,
       mac: celestiaDockgeRuntime.macAddress,
       nodeType: "dockge",
-    },
-    {
-      name: celestiaPbs.tailscaleName,
-      externalIp: celestiaPbs.tailscaleIpAddress,
-      internalIp: celestiaPbs.localIpAddress,
-      mac: celestiaPbs.macAddress,
-      nodeType: "pbs",
     },
     {
       name: alphaSiteDockgeRuntime.tailscaleName,

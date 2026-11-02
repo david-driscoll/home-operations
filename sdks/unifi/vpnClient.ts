@@ -20,6 +20,17 @@ export class VpnClient extends pulumi.CustomResource {
         return new VpnClient(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing VpnClient resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: VpnClientState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/vpnClient:VpnClient", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/vpnClient:VpnClient';
 
@@ -35,19 +46,20 @@ export class VpnClient extends pulumi.CustomResource {
     }
 
     /**
-     * Specifies whether to use the VPN as the default route.
+     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets `false`), so adopting a client that carries the default route does not drop it (#544).
      */
     declare public readonly defaultRoute: pulumi.Output<boolean>;
     /**
-     * Specifies whether the VPN client is enabled.
+     * Specifies whether the VPN client is enabled. A new client is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
+    declare public readonly ipv6Subnet: pulumi.Output<string>;
     /**
      * The name of the VPN client.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Specifies whether to pull DNS servers from the VPN.
+     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets `false`) (#544).
      */
     declare public readonly pullDns: pulumi.Output<boolean>;
     /**
@@ -79,6 +91,7 @@ export class VpnClient extends pulumi.CustomResource {
             const state = argsOrState as VpnClientState | undefined;
             resourceInputs["defaultRoute"] = state?.defaultRoute;
             resourceInputs["enabled"] = state?.enabled;
+            resourceInputs["ipv6Subnet"] = state?.ipv6Subnet;
             resourceInputs["name"] = state?.name;
             resourceInputs["pullDns"] = state?.pullDns;
             resourceInputs["site"] = state?.site;
@@ -95,6 +108,7 @@ export class VpnClient extends pulumi.CustomResource {
             }
             resourceInputs["defaultRoute"] = args?.defaultRoute;
             resourceInputs["enabled"] = args?.enabled;
+            resourceInputs["ipv6Subnet"] = args?.ipv6Subnet;
             resourceInputs["name"] = args?.name;
             resourceInputs["pullDns"] = args?.pullDns;
             resourceInputs["site"] = args?.site;
@@ -112,19 +126,20 @@ export class VpnClient extends pulumi.CustomResource {
  */
 export interface VpnClientState {
     /**
-     * Specifies whether to use the VPN as the default route.
+     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets `false`), so adopting a client that carries the default route does not drop it (#544).
      */
     defaultRoute?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether the VPN client is enabled.
+     * Specifies whether the VPN client is enabled. A new client is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
+    ipv6Subnet?: pulumi.Input<string | undefined>;
     /**
      * The name of the VPN client.
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether to pull DNS servers from the VPN.
+     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets `false`) (#544).
      */
     pullDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -147,19 +162,20 @@ export interface VpnClientState {
  */
 export interface VpnClientArgs {
     /**
-     * Specifies whether to use the VPN as the default route.
+     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets `false`), so adopting a client that carries the default route does not drop it (#544).
      */
     defaultRoute?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether the VPN client is enabled.
+     * Specifies whether the VPN client is enabled. A new client is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
+    ipv6Subnet?: pulumi.Input<string | undefined>;
     /**
      * The name of the VPN client.
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether to pull DNS servers from the VPN.
+     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets `false`) (#544).
      */
     pullDns?: pulumi.Input<boolean | undefined>;
     /**

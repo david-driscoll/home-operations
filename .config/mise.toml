@@ -28,7 +28,7 @@ gh = "2.103.3"
 # itself as `hk run pre-commit --from-hook` via git config, and an unpinned mise
 # shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
 # The hook exits non-zero and git aborts the commit.
-hk = "2.10.0"
+hk = "2.11.0"
 pkl = "0.32.2"
 biome = "2.5.2"
 typos = "1.51.1"
@@ -69,7 +69,7 @@ vals = "0.50.0"
 # Resolves the secrets local commands need: `fnox exec -- <command>`, configured
 # by .config/fnox.toml. 1.40.0 is the floor: the sops and openbao providers
 # there are Lua plugins, which landed in that release.
-fnox = "v1.45.0"
+fnox = "v1.46.0"
 "github:stacklok/toolhive" = "v0.59.0"
 # REQUIRED BY the `pipx:` backend below, and the reason it never installed here.
 # mise's pipx backend shells out to a `pipx` on PATH (or `uv`, with
@@ -85,7 +85,7 @@ fnox = "v1.45.0"
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
 pipx = "1.18.10"
-"pipx:graphifyy" = "0.9.99"
+"pipx:graphifyy" = "0.9.100"
 
 [tasks.codegen]
 description = 'Regenerate types/application-definition.d.ts from schemas/'

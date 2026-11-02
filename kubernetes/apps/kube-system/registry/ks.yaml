@@ -33,7 +33,9 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      VOLSYNC_CAPACITY: 60Gi
+      # 60Gi hit 98.7% on 2026-11-02. longhorn-critical allows online expansion
+      # and each control-plane disk has ~880 GB free, so growing is cheap.
+      VOLSYNC_CAPACITY: 100Gi
       VOLSYNC_ACCESSMODES: ReadWriteMany
       # Tier 1: one replica on each control plane, so the cache survives a
       # low-power window with every worker off. `longhorn` (the default) is

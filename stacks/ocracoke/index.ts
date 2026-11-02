@@ -8,7 +8,6 @@ import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from 
 import { TailscaleMonitor } from "components/tailscale.ts";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
-import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 
 const globals = new GlobalResources({}, {});
@@ -29,12 +28,15 @@ const dockgeId = new random.RandomInteger("skystar-dockge-id", {
   max: vmRange.start + 50,
   keepers: { clusterId: cluster.key },
 });
-const pbsId = new random.RandomInteger("skystar-pbs-id", {
-  min: vmRange.start + 51,
-  max: vmRange.end,
-  seed: dockgeId.result.apply(z => z.toString()),
-  keepers: { clusterId: cluster.key },
-});
+
+// skystar is physically on the home LAN again. While it is, tailscale must not
+// accept subnet routes: the advertised 10.10.0.0/16 lands in table 52, which is
+// consulted before main, so LAN traffic leaves through tailscale0 instead of
+// vmbr0 (the same failure luna hit, see stacks/gulf-of-mexico/index.ts). Flip
+// this back to false when it goes off-site again. `remote` (and the cluster's
+// `location: remote`) stay as they are: they also pick the dockge LXC's address
+// and authentik domain, which this change deliberately leaves alone.
+const skystarOnHomeLan = true;
 
 const host = new ProxmoxHost("skystar", {
   globals: globals,
@@ -45,7 +47,7 @@ const host = new ProxmoxHost("skystar", {
   cluster: cluster,
   tailscaleArgs: {
     acceptDns: true,
-    acceptRoutes: true,
+    acceptRoutes: !skystarOnHomeLan,
     advertiseExitNode: true,
   },
   peerRelay: true,
@@ -61,7 +63,7 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   cluster: cluster,
   tailscaleArgs: {
     acceptDns: true,
-    acceptRoutes: host.remote,
+    acceptRoutes: !skystarOnHomeLan,
   },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
@@ -69,23 +71,9 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
 });
 dockgeRuntime.addHostMount("/data");
 
-const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
-  globals,
-  outputs,
-  host: host,
-  vmId: pbsId.result,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote, ssh: true },
-  cluster: cluster,
-  dockge: dockgeRuntime,
-  dependsOn: [],
-  tags: ["backup-destination"],
-});
-pbs.addHostMount("/data");
-// pbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
-
 await awaitOutput(
   dockgeRuntime.deployStacks({
-    dependsOn: [pbs],
+    dependsOn: [],
     variables: {
       PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
       PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
@@ -96,7 +84,7 @@ await awaitOutput(
 await awaitOutput(host.addUptimeGatus());
 
 await awaitOutput(createGatusDnsUptime(globals, { parent: host }));
-await awaitOutput(backupDirector.createPlans({ dockge: dockgeRuntime, pbs, cluster }, [pbs]));
+await awaitOutput(backupDirector.createPlans({ dockge: dockgeRuntime, localRepos: true, cluster }, [dockgeRuntime]));
 
 monitor.exportNodeStateToOnePassword(
   [
@@ -113,13 +101,6 @@ monitor.exportNodeStateToOnePassword(
       internalIp: dockgeRuntime.localIpAddress,
       mac: dockgeRuntime.macAddress,
       nodeType: "dockge",
-    },
-    {
-      name: pbs.tailscaleName,
-      externalIp: pbs.tailscaleIpAddress,
-      internalIp: pbs.localIpAddress,
-      mac: pbs.macAddress,
-      nodeType: "pbs",
     },
   ],
   { parent: host },

@@ -19,19 +19,17 @@
  *
  *   dockgeBaoPath   written by DockgeLxc, read back by BaoStore.getDockgeInstances
  *                   (LIST hosts/dockge)
- *   pbsBaoPath      written by ProxmoxBackupServerLxc, read back by
- *                   BaoStore.proxmoxBackupServers (LIST hosts/pbs)
  *   oidcBaoPath     written by the authentik component, read by ExternalSecrets
  *                   and Dockge `.env` templates that spell the path by hand
  *
  * A change to the slug rule moves the write side only. The read side is a LIST
  * of a prefix, so it does not 404 — it silently returns a smaller set, and a
- * smaller set of Dockge hosts or PBS servers reads as an estate that shrank.
+ * smaller set of Dockge hosts reads as an estate that shrank.
  */
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { baoSlug, dockgeBaoPath, oidcBaoPath, pbsBaoPath } from "./bao.ts";
+import { baoSlug, dockgeBaoPath, oidcBaoPath } from "./bao.ts";
 
 describe("baoSlug", () => {
   it("lowercases, collapses non-alphanumerics, and trims", () => {
@@ -91,29 +89,11 @@ describe("oidcBaoPath", () => {
   });
 });
 
-describe("pbsBaoPath", () => {
-  it("derives hosts/pbs/<slug(title)> for generated PBS items", () => {
-    assert.equal(pbsBaoPath("Proxmox Backup Server LXC: Luna"), "hosts/pbs/proxmox-backup-server-lxc-luna");
-    assert.equal(pbsBaoPath("Proxmox Backup Server LXC: Alpha Site"), "hosts/pbs/proxmox-backup-server-lxc-alpha-site");
-  });
-
-  it("covers the case-insensitive hand-created family too", () => {
-    assert.equal(pbsBaoPath("Luna PBS backup user"), "hosts/pbs/luna-pbs-backup-user");
-  });
-
-  it("stays under the prefix proxmoxBackupServers lists", () => {
-    // BaoStore.proxmoxBackupServers does LIST hosts/pbs and reads each child.
-    // A path outside that prefix is not an error there — the server simply
-    // never appears.
-    assert.ok(pbsBaoPath("Proxmox Backup Server LXC: Celestia").startsWith("hosts/pbs/"));
-  });
-});
-
 describe("dockgeBaoPath", () => {
   it("derives hosts/dockge/<slug(title)> for the title DockgeLxc writes", () => {
     // DockgeLxc composes `DockgeLxc: ${title}` before calling this, and
-    // BaoStore.proxmoxBackupServers re-derives the same path from a PBS item's
-    // `dockge` field to inline the host. Both sides go through this function.
+    // BackupPlanDirector re-derives the same path from a cluster's title to
+    // find that host's copy source. Both sides go through this function.
     assert.equal(dockgeBaoPath("DockgeLxc: Celestia"), "hosts/dockge/dockgelxc-celestia");
     assert.equal(dockgeBaoPath("DockgeLxc: Alpha Site"), "hosts/dockge/dockgelxc-alpha-site");
   });

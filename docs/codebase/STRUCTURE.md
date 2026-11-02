@@ -82,8 +82,6 @@ ComponentResource Hierarchy:
 │   ├── NFS exports
 │   ├── SMB shares
 │   └── S3 (Minio)
-├── ProxmoxBackupServerLxc   (components/ProxmoxBackupServerLxc.ts — PBS backup server)
-│   └── Proxmox backup targets
 ├── StandardDns              (components/StandardDns.ts — DNS record management)
 │   └── Cloudflare DNS zones
 └── Helper Components
@@ -128,7 +126,7 @@ TruenasVm.ts
 | `home/` | Core infrastructure | ProxmoxHost (twilight-sparkle, celestia, alpha-site), TruenasVm (spike), DockgeLxc (celestia-dockge, alpha-site-dockge), Minio buckets |
 | `authentik/` | IdP management | Authentik groups/roles/flows; outputs written to 1Password "Authentik Outputs" |
 | `applications/` | Kubernetes app deployment | Helm releases, Authentik app registration, Volsync secrets on Equestria + Stargate Command |
-| `backups/` | Backup automation | PBS backup jobs, B2 targets, retention policies |
+| `backups/` | Backup automation | Backrest (restic) plans, Garage-backed repos, the TrueNAS copy of Garage, Gatus heartbeats |
 | `unifi-network/` | Network management | Unifi firewall rules, Tailscale drop rules (ACL manager) |
 | `ocracoke/` | Ocracoke cluster | Cluster node and network management |
 | `gulf-of-mexico/` | Gulf of Mexico cluster | Cluster node and network management |
