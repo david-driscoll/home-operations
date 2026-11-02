@@ -215,9 +215,10 @@ const celestiaHost = new ProxmoxHost("celestia", {
   },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: { start: 302, end: 399 },
-  // 15 GiB host carrying celestia-dockge plus the milky-way control plane;
-  // ZFS's default of half of RAM left no room for the VM.
-  zfsArcMaxBytes: 1.5 * 1024 ** 3,
+  // 15 GiB host carrying celestia-dockge (5 GiB) plus the milky-way control
+  // plane (7 GiB). ZFS's default of half of RAM left no room for the VM, and
+  // even 1.5 GiB left ~6.9 GiB available, short of the VM plus QEMU overhead.
+  zfsArcMaxBytes: 1 * 1024 ** 3,
 });
 
 // Replacement for milky-way, an equestria control plane whose board died
@@ -240,9 +241,9 @@ const _milkyWayVm = new TalosVm(
     isoUrl: "https://factory.talos.dev/image/847c39de8e6eda418acf32739379b76b06f1f82f8fcae9fa64bd78bb3e19b3e5/v1.14.4/metal-amd64.iso",
     // The spare Samsung 990 EVO Plus, alone in IOMMU group 16. Longhorn's disk.
     pciDevices: ["0000:05:00.0"],
-    // Off until celestia-dockge drops to ~5 GiB / 12 cores and the PBS LXC is
-    // gone; 7 GiB does not fit before that.
-    start: false,
+    // Fits since celestia-dockge dropped to 5 GiB / 12 cores (#2986) and the
+    // PBS LXC went (#2982).
+    start: true,
   },
   { dependsOn: [celestiaHost] },
 );
