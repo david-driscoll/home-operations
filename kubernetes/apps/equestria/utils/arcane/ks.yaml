@@ -32,13 +32,8 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    # NO components/tailscale YET. arcane.<tailnet> is still the `svc:arcane`
-    # Tailscale Service that stacks/home created for the celestia Dockge stack.
-    # The operator's Ingress would adopt that name, and the stacks/home run that
-    # retires the Docker stack would then delete it out from under the cluster.
-    # Nothing orders Flux against the Pulumi operator after one merge, so the
-    # component is added in a follow-up once stacks/home has run --
-    # docs/runbooks/arcane-pdm-celestia-to-equestria.md, step 8.
+    # arcane.<tailnet>, for people on the tailnet.
+    - ../../../../components/tailscale
     # The SQLite databases (arcane.db, arcane.francis.db) ARE the state:
     # environments, agent tokens, users, API keys, registries, settings. Moved
     # from celestia's `arcane_arcane-data` volume, not recreated.

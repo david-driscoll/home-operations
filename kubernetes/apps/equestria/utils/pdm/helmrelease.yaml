@@ -68,13 +68,20 @@ spec:
                 # celestia, where the directory had ended up www-data-owned.
                 # The tmpfs run dir gets the same check, and a fresh emptyDir
                 # is root:root ("bad group ... (0 != 33)").
+                #
+                # The modes are checked EXACTLY, setgid included, and the PVC
+                # root is setgid (2775), so every directory made on it
+                # inherits the bit. GNU chmod leaves setgid on a directory for
+                # a 4-digit mode; the leading 0 is what clears it ("bad
+                # permissions ... (0o2755 != 0o755)" on the first rollout).
                 run=/run/proxmox-datacenter-manager
                 chown root:www-data "$${cfg}" "$${run}"
-                chmod 1770 "$${cfg}" "$${run}"
+                chmod 01770 "$${cfg}" "$${run}"
                 # The state dir is the other way round: www-data must own it
                 # ("bad owner ... (0 != 33)"). Neither exists in the image --
                 # on a host the package's postinst creates them.
                 chown www-data:www-data /var/lib/proxmox-datacenter-manager
+                chmod 00755 /var/lib/proxmox-datacenter-manager
                 # /etc/shadow is in the image, not the volume.
                 echo "root:$${PASSWORD}" | chpasswd
 

@@ -141,6 +141,13 @@ The same merge drives both Pulumi Operator stacks:
   - it rolls the edge-mode agent config to all four hosts and starts celestia's
     new agent.
 
+**Seen at the 2026-11-02 cutover:** the first `home-operations` run failed on
+`Server error (404) for DELETE .../static-dns/<id>: Static DNS Record not found`.
+`arcane.<root domain>`'s UniFi record had already disappeared from the
+controller, and the unifi provider treats a 404 on delete as an error. It was
+fixed by dropping that one URN from state in the workspace pod
+(`pulumi state delete --yes '<urn>'`) and re-requesting the run.
+
 Nudge either one if it does not pick the merge up:
 
 ```bash
@@ -226,7 +233,18 @@ Then put the apps back:
 ```bash
 kubectl -n equestria delete pod arcane-pdm-restore
 flux -n equestria resume helmrelease arcane pdm
+kubectl -n equestria scale deploy arcane pdm --replicas=1
 ```
+
+The explicit scale is needed. The cluster's HelmRelease defaults tell drift
+detection to ignore `/spec/replicas`, so resuming does not undo the scale-to-0.
+
+**Seen at the 2026-11-02 cutover:** pdm crash-looped once on `bad permissions on
+"/var/lib/proxmox-datacenter-manager" (0o2755 != 0o755)`. The fresh PVC's root
+is setgid (2775), directories made on it inherit the bit, and GNU `chmod 1770`
+leaves setgid on a directory. The entrypoint now uses the 5-digit modes that
+clear it (`01770`, `00755`). That run was fixed by hand with `chmod g-s` on the
+volume.
 
 ## 5. Add celestia to Arcane
 
@@ -266,10 +284,9 @@ clears `remotes.shadow` along with `remotes.cfg`.
 
 ## 8. Follow-up PR: tailnet hostnames
 
-Once `stacks/home` has run, `svc:arcane` and `svc:pdm` no longer exist. Add
-`- ../../../../components/tailscale` back to both `ks.yaml` files, plus
-`TAILSCALE_PORT: https` to PDM's `postBuild.substitute`, because PDM serves HTTPS
-only. Then delete the `NO components/tailscale YET` comments.
+Once `stacks/home` has run, `svc:arcane` and `svc:pdm` no longer exist, and
+`components/tailscale` can be added to both `ks.yaml` files (with
+`TAILSCALE_PORT: https` for PDM). Done in the PR that followed the cutover.
 
 ## 9. Soak, then clean up
 
