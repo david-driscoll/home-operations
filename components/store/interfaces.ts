@@ -45,27 +45,6 @@ export interface DockgeLxcDefinition {
   tags: string[];
 }
 
-export interface ProxmoxBackupServerLxcDefinition {
-  name: string;
-  hostname: string;
-  username: string;
-  password: string;
-  webUrl: string;
-  backrest: {
-    privateKey: string;
-    publicKey: string;
-    privateKeyId: string;
-  };
-  ssh: {
-    hostname: string;
-    username: string;
-  };
-  title: string;
-  tags: string[];
-  dockge: DockgeLxcDefinition;
-  cluster: DockgeClusterDefinition;
-}
-
 export interface SshKeyDefinition {
   "public key": string;
   "private key": string;

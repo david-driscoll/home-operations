@@ -158,7 +158,7 @@ export class GlobalResources extends ComponentResource {
    * It must accept the SAME credentials as `baoProvider` below — a token OR the
    * AppRole. Checking only BAO_TOKEN made an AppRole run authenticate fine and
    * then silently skip every dual-write, so `pulumi up` reported success while
-   * `secrets/hosts/pbs/` and the app `.../oidc` paths stayed empty. The
+   * `secrets/hosts/` and the app `.../oidc` paths stayed empty. The
    * `isDryRun()` arm hides that from preview too: preview advertises the creates
    * and the apply quietly drops them, so a clean preview proves nothing here.
    *
@@ -179,8 +179,8 @@ export class GlobalResources extends ComponentResource {
    * Lazy on purpose, unlike every other provider here. Constructing it eagerly
    * would make BAO_ADDR/BAO_TOKEN a hard requirement of `GlobalResources`, and
    * therefore of `pulumi preview` on every stack in the repo — including the
-   * ones that never touch OpenBao. Only the two dual-write sites
-   * (`authentik.ts`, `ProxmoxBackupServerLxc.ts`) reach for it.
+   * ones that never touch OpenBao. Only the dual-write sites
+   * (`authentik.ts`, `DockgeLxc.ts`, ...) reach for it.
    */
   public get baoProvider(): VaultProvider {
     if (this._baoProvider) return this._baoProvider;
