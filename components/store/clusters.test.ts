@@ -50,14 +50,14 @@ describe("the checked-in cluster definitions", () => {
     }
   });
 
-  it("derives the secret-field map from the YAML, celestia excluded", () => {
+  it("derives the secret-field map from the YAML", () => {
     assert.deepEqual(CLUSTER_SECRET_FIELDS, {
       "alpha-site": "arcane_token",
+      celestia: "arcane_token",
       equestria: "secret",
       luna: "arcane_token",
       skystar: "arcane_token",
     });
-    assert.equal(CLUSTERS.find(c => c.key === "celestia")?.secretField, null);
   });
 
   it("never carries a credential value in the checked-in data", () => {

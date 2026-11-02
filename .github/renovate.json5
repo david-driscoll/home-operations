@@ -702,6 +702,26 @@
       },
     },
     {
+      // The Arcane manager (kubernetes/apps/equestria/utils/arcane) and the
+      // edge agents on every Dockge host (docker/_common/arcane-agent) speak
+      // one tunnel protocol and are released together. Since the manager left
+      // celestia they live in different trees and different update streams
+      // (a semver tag in a HelmRelease, a `latest` digest in a compose file);
+      // grouping keeps a bump from landing on one side only.
+      description: "Arcane",
+      groupName: "Arcane",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/getarcaneapp/*"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
       description: "CloudNative-PG Cluster",
       groupName: "CloudNative-PG Cluster",
       matchPackageNames: [
