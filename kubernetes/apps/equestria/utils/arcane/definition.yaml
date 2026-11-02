@@ -21,8 +21,8 @@ spec:
       clientType: confidential
       allowedRedirectUris:
         - url: "https://${APP}.${ROOT_DOMAIN}/auth/oidc/callback"
-        # arcane.<tailnet> comes back with components/tailscale (runbook step
-        # 8); a login started there returns to the tailnet callback.
+        # components/tailscale serves arcane.<tailnet>, so a login started
+        # there comes back to the tailnet callback.
         - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/oidc/callback"
         - url: "arcane-mobile://oidc-callback"
       propertyMappings:

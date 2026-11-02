@@ -32,13 +32,8 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    # NO components/tailscale YET. pdm.<tailnet> is still the `svc:pdm`
-    # Tailscale Service that stacks/home created for the celestia Dockge stack.
-    # The operator's Ingress would adopt that name, and the stacks/home run that
-    # retires the Docker stack would then delete it out from under the cluster.
-    # Nothing orders Flux against the Pulumi operator after one merge, so the
-    # component is added in a follow-up once stacks/home has run --
-    # docs/runbooks/arcane-pdm-celestia-to-equestria.md, step 8.
+    # pdm.<tailnet>, for people on the tailnet.
+    - ../../../../components/tailscale
     # /etc/proxmox-datacenter-manager: remotes.cfg/.shadow (the API tokens for
     # every PVE cluster), realms, the API certificate. Moved from celestia's
     # /opt/stacks-data/pdm, not recreated.
@@ -47,6 +42,8 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      # PDM serves HTTPS only, with its own self-signed certificate.
+      TAILSCALE_PORT: https
       VOLSYNC_CAPACITY: 1Gi
       VOLSYNC_ACCESSMODES: ReadWriteOnce
       # The config is root:www-data with root-only files in it
