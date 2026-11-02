@@ -20,6 +20,17 @@ export class ClientQosRate extends pulumi.CustomResource {
         return new ClientQosRate(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing ClientQosRate resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: ClientQosRateState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/clientQosRate:ClientQosRate", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/clientQosRate:ClientQosRate';
 
@@ -39,7 +50,7 @@ export class ClientQosRate extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * QoS rate limits applied to clients in this group, in kbps.
+     * QoS rate limits applied to clients in this group, in kbps. A new group is unlimited (`-1`) unless set; an existing group keeps the controller's limits when this is not set, so adopting a rate-limited group does not lift its limits (#544).
      */
     declare public readonly qosRate: pulumi.Output<outputs.ClientQosRateQosRate>;
     /**
@@ -86,7 +97,7 @@ export interface ClientQosRateState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * QoS rate limits applied to clients in this group, in kbps.
+     * QoS rate limits applied to clients in this group, in kbps. A new group is unlimited (`-1`) unless set; an existing group keeps the controller's limits when this is not set, so adopting a rate-limited group does not lift its limits (#544).
      */
     qosRate?: pulumi.Input<inputs.ClientQosRateQosRate | undefined>;
     /**
@@ -105,7 +116,7 @@ export interface ClientQosRateArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * QoS rate limits applied to clients in this group, in kbps.
+     * QoS rate limits applied to clients in this group, in kbps. A new group is unlimited (`-1`) unless set; an existing group keeps the controller's limits when this is not set, so adopting a rate-limited group does not lift its limits (#544).
      */
     qosRate?: pulumi.Input<inputs.ClientQosRateQosRate | undefined>;
     /**

@@ -20,6 +20,17 @@ export class VpnServer extends pulumi.CustomResource {
         return new VpnServer(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing VpnServer resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: VpnServerState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/vpnServer:VpnServer", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/vpnServer:VpnServer';
 
@@ -39,7 +50,7 @@ export class VpnServer extends pulumi.CustomResource {
      */
     declare public readonly dns: pulumi.Output<outputs.VpnServerDns>;
     /**
-     * Specifies whether the VPN server is enabled.
+     * Specifies whether the VPN server is enabled. A new server is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled server does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -66,6 +77,10 @@ export class VpnServer extends pulumi.CustomResource {
      * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP, so use the gateway form (`10.100.0.1/24`) — the network address (`10.100.0.0/24`) is rejected with `api.err.IncorrectIPSubnetSpec`.
      */
     declare public readonly subnet: pulumi.Output<string>;
+    /**
+     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as `subnet` (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
+     */
+    declare public readonly subnetIpv6: pulumi.Output<string | undefined>;
     declare public readonly timeouts: pulumi.Output<outputs.VpnServerTimeouts | undefined>;
     /**
      * WAN binding configuration for the VPN server.
@@ -97,6 +112,7 @@ export class VpnServer extends pulumi.CustomResource {
             resourceInputs["radiusprofileId"] = state?.radiusprofileId;
             resourceInputs["site"] = state?.site;
             resourceInputs["subnet"] = state?.subnet;
+            resourceInputs["subnetIpv6"] = state?.subnetIpv6;
             resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["wan"] = state?.wan;
             resourceInputs["wireguard"] = state?.wireguard;
@@ -113,6 +129,7 @@ export class VpnServer extends pulumi.CustomResource {
             resourceInputs["radiusprofileId"] = args?.radiusprofileId;
             resourceInputs["site"] = args?.site;
             resourceInputs["subnet"] = args?.subnet;
+            resourceInputs["subnetIpv6"] = args?.subnetIpv6;
             resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["wan"] = args?.wan;
             resourceInputs["wireguard"] = args?.wireguard;
@@ -131,7 +148,7 @@ export interface VpnServerState {
      */
     dns?: pulumi.Input<inputs.VpnServerDns | undefined>;
     /**
-     * Specifies whether the VPN server is enabled.
+     * Specifies whether the VPN server is enabled. A new server is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled server does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -158,6 +175,10 @@ export interface VpnServerState {
      * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP, so use the gateway form (`10.100.0.1/24`) — the network address (`10.100.0.0/24`) is rejected with `api.err.IncorrectIPSubnetSpec`.
      */
     subnet?: pulumi.Input<string | undefined>;
+    /**
+     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as `subnet` (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
+     */
+    subnetIpv6?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.VpnServerTimeouts | undefined>;
     /**
      * WAN binding configuration for the VPN server.
@@ -178,7 +199,7 @@ export interface VpnServerArgs {
      */
     dns?: pulumi.Input<inputs.VpnServerDns | undefined>;
     /**
-     * Specifies whether the VPN server is enabled.
+     * Specifies whether the VPN server is enabled. A new server is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled server does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -205,6 +226,10 @@ export interface VpnServerArgs {
      * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP, so use the gateway form (`10.100.0.1/24`) — the network address (`10.100.0.0/24`) is rejected with `api.err.IncorrectIPSubnetSpec`.
      */
     subnet: pulumi.Input<string>;
+    /**
+     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as `subnet` (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
+     */
+    subnetIpv6?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.VpnServerTimeouts | undefined>;
     /**
      * WAN binding configuration for the VPN server.

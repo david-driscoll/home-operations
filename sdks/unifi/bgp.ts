@@ -20,6 +20,17 @@ export class Bgp extends pulumi.CustomResource {
         return new Bgp(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Bgp resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: BgpState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/bgp:Bgp", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/bgp:Bgp';
 
@@ -43,11 +54,11 @@ export class Bgp extends pulumi.CustomResource {
      */
     declare public readonly config: pulumi.Output<string>;
     /**
-     * Description of the BGP configuration.
+     * Description of the BGP configuration. Defaults to `BGP Configuration` for a new configuration; an existing one keeps the controller's value when this is not set (#544).
      */
     declare public readonly description: pulumi.Output<string>;
     /**
-     * Enable BGP routing.
+     * Enable BGP routing. Taken from the controller when not set (a new configuration is created disabled), so adopting a running BGP configuration does not switch it off (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -64,7 +75,7 @@ export class Bgp extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.BgpTimeouts | undefined>;
     /**
-     * The name of the uploaded configuration file.
+     * The name of the uploaded configuration file. Defaults to `frr.conf` for a new configuration; an existing one keeps the controller's value when this is not set (#544).
      */
     declare public readonly uploadFileName: pulumi.Output<string>;
 
@@ -120,11 +131,11 @@ export interface BgpState {
      */
     config?: pulumi.Input<string | undefined>;
     /**
-     * Description of the BGP configuration.
+     * Description of the BGP configuration. Defaults to `BGP Configuration` for a new configuration; an existing one keeps the controller's value when this is not set (#544).
      */
     description?: pulumi.Input<string | undefined>;
     /**
-     * Enable BGP routing.
+     * Enable BGP routing. Taken from the controller when not set (a new configuration is created disabled), so adopting a running BGP configuration does not switch it off (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -141,7 +152,7 @@ export interface BgpState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.BgpTimeouts | undefined>;
     /**
-     * The name of the uploaded configuration file.
+     * The name of the uploaded configuration file. Defaults to `frr.conf` for a new configuration; an existing one keeps the controller's value when this is not set (#544).
      */
     uploadFileName?: pulumi.Input<string | undefined>;
 }
@@ -159,11 +170,11 @@ export interface BgpArgs {
      */
     config?: pulumi.Input<string | undefined>;
     /**
-     * Description of the BGP configuration.
+     * Description of the BGP configuration. Defaults to `BGP Configuration` for a new configuration; an existing one keeps the controller's value when this is not set (#544).
      */
     description?: pulumi.Input<string | undefined>;
     /**
-     * Enable BGP routing.
+     * Enable BGP routing. Taken from the controller when not set (a new configuration is created disabled), so adopting a running BGP configuration does not switch it off (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -180,7 +191,7 @@ export interface BgpArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.BgpTimeouts | undefined>;
     /**
-     * The name of the uploaded configuration file.
+     * The name of the uploaded configuration file. Defaults to `frr.conf` for a new configuration; an existing one keeps the controller's value when this is not set (#544).
      */
     uploadFileName?: pulumi.Input<string | undefined>;
 }

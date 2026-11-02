@@ -20,6 +20,17 @@ export class Device extends pulumi.CustomResource {
         return new Device(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Device resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: DeviceState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/device:Device", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/device:Device';
 
@@ -54,6 +65,10 @@ export class Device extends pulumi.CustomResource {
      * Specifies whether this device should be disabled.
      */
     declare public readonly disabled: pulumi.Output<boolean>;
+    /**
+     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with `unifi.Setting`'s `etherlighting` block.
+     */
+    declare public readonly etherlighting: pulumi.Output<outputs.DeviceEtherlighting>;
     /**
      * Enable flow control.
      */
@@ -170,6 +185,7 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["bandsteeringMode"] = state?.bandsteeringMode;
             resourceInputs["configNetwork"] = state?.configNetwork;
             resourceInputs["disabled"] = state?.disabled;
+            resourceInputs["etherlighting"] = state?.etherlighting;
             resourceInputs["flowctrlEnabled"] = state?.flowctrlEnabled;
             resourceInputs["forgetOnDestroy"] = state?.forgetOnDestroy;
             resourceInputs["jumboframeEnabled"] = state?.jumboframeEnabled;
@@ -201,6 +217,7 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["bandsteeringMode"] = args?.bandsteeringMode;
             resourceInputs["configNetwork"] = args?.configNetwork;
             resourceInputs["disabled"] = args?.disabled;
+            resourceInputs["etherlighting"] = args?.etherlighting;
             resourceInputs["flowctrlEnabled"] = args?.flowctrlEnabled;
             resourceInputs["forgetOnDestroy"] = args?.forgetOnDestroy;
             resourceInputs["jumboframeEnabled"] = args?.jumboframeEnabled;
@@ -259,6 +276,10 @@ export interface DeviceState {
      * Specifies whether this device should be disabled.
      */
     disabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with `unifi.Setting`'s `etherlighting` block.
+     */
+    etherlighting?: pulumi.Input<inputs.DeviceEtherlighting | undefined>;
     /**
      * Enable flow control.
      */
@@ -378,6 +399,10 @@ export interface DeviceArgs {
      * Specifies whether this device should be disabled.
      */
     disabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with `unifi.Setting`'s `etherlighting` block.
+     */
+    etherlighting?: pulumi.Input<inputs.DeviceEtherlighting | undefined>;
     /**
      * Enable flow control.
      */

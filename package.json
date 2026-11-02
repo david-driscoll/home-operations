@@ -65,7 +65,7 @@
     "file:sdks/unifi": true
   },
   "overrides": {
-    "typescript": "$typescript",
+    "typescript": "^6.0.3",
     "@types/node": "$@types/node"
   }
 }

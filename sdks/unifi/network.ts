@@ -20,6 +20,17 @@ export class Network extends pulumi.CustomResource {
         return new Network(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Network resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: NetworkState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/network:Network", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/network:Network';
 
@@ -59,7 +70,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly domainName: pulumi.Output<string>;
     /**
-     * Specifies whether the network is enabled.
+     * Specifies whether the network is enabled. Taken from the controller when not set: a network stored without the key (such as the default LAN) reads as enabled, and a disabled network is not re-enabled on import (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -67,15 +78,15 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly firewallZoneId: pulumi.Output<string>;
     /**
-     * The gateway type. Must be one of `default` or `switch`.
+     * The gateway type. Must be one of `default` or `switch`. Defaults to `default` when a network is created; an existing network keeps the controller's value (#544).
      */
     declare public readonly gatewayType: pulumi.Output<string>;
     /**
-     * Specifies whether IGMP snooping is enabled.
+     * Specifies whether IGMP snooping is enabled. Taken from the controller when not set (#544).
      */
     declare public readonly igmpSnooping: pulumi.Output<boolean>;
     /**
-     * Specifies whether internet access is enabled.
+     * Specifies whether internet access is enabled. Defaults to `true` when a network is created; an existing network keeps the controller's value (#544).
      */
     declare public readonly internetAccess: pulumi.Output<boolean>;
     /**
@@ -103,7 +114,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly natOutboundIpAddresses: pulumi.Output<outputs.NetworkNatOutboundIpAddress[] | undefined>;
     /**
-     * Specifies whether network isolation is enabled.
+     * Specifies whether network isolation is enabled. Taken from the controller when not set (#544).
      */
     declare public readonly networkIsolation: pulumi.Output<boolean>;
     /**
@@ -123,7 +134,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly subnet: pulumi.Output<string | undefined>;
     /**
-     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured.
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to `false` (#544).
      */
     declare public readonly thirdPartyGateway: pulumi.Output<boolean>;
     declare public readonly timeouts: pulumi.Output<outputs.NetworkTimeouts | undefined>;
@@ -232,7 +243,7 @@ export interface NetworkState {
      */
     domainName?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether the network is enabled.
+     * Specifies whether the network is enabled. Taken from the controller when not set: a network stored without the key (such as the default LAN) reads as enabled, and a disabled network is not re-enabled on import (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -240,15 +251,15 @@ export interface NetworkState {
      */
     firewallZoneId?: pulumi.Input<string | undefined>;
     /**
-     * The gateway type. Must be one of `default` or `switch`.
+     * The gateway type. Must be one of `default` or `switch`. Defaults to `default` when a network is created; an existing network keeps the controller's value (#544).
      */
     gatewayType?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether IGMP snooping is enabled.
+     * Specifies whether IGMP snooping is enabled. Taken from the controller when not set (#544).
      */
     igmpSnooping?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether internet access is enabled.
+     * Specifies whether internet access is enabled. Defaults to `true` when a network is created; an existing network keeps the controller's value (#544).
      */
     internetAccess?: pulumi.Input<boolean | undefined>;
     /**
@@ -276,7 +287,7 @@ export interface NetworkState {
      */
     natOutboundIpAddresses?: pulumi.Input<pulumi.Input<inputs.NetworkNatOutboundIpAddress>[] | undefined>;
     /**
-     * Specifies whether network isolation is enabled.
+     * Specifies whether network isolation is enabled. Taken from the controller when not set (#544).
      */
     networkIsolation?: pulumi.Input<boolean | undefined>;
     /**
@@ -296,7 +307,7 @@ export interface NetworkState {
      */
     subnet?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured.
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to `false` (#544).
      */
     thirdPartyGateway?: pulumi.Input<boolean | undefined>;
     timeouts?: pulumi.Input<inputs.NetworkTimeouts | undefined>;
@@ -335,7 +346,7 @@ export interface NetworkArgs {
      */
     domainName?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether the network is enabled.
+     * Specifies whether the network is enabled. Taken from the controller when not set: a network stored without the key (such as the default LAN) reads as enabled, and a disabled network is not re-enabled on import (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -343,15 +354,15 @@ export interface NetworkArgs {
      */
     firewallZoneId?: pulumi.Input<string | undefined>;
     /**
-     * The gateway type. Must be one of `default` or `switch`.
+     * The gateway type. Must be one of `default` or `switch`. Defaults to `default` when a network is created; an existing network keeps the controller's value (#544).
      */
     gatewayType?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether IGMP snooping is enabled.
+     * Specifies whether IGMP snooping is enabled. Taken from the controller when not set (#544).
      */
     igmpSnooping?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether internet access is enabled.
+     * Specifies whether internet access is enabled. Defaults to `true` when a network is created; an existing network keeps the controller's value (#544).
      */
     internetAccess?: pulumi.Input<boolean | undefined>;
     /**
@@ -379,7 +390,7 @@ export interface NetworkArgs {
      */
     natOutboundIpAddresses?: pulumi.Input<pulumi.Input<inputs.NetworkNatOutboundIpAddress>[] | undefined>;
     /**
-     * Specifies whether network isolation is enabled.
+     * Specifies whether network isolation is enabled. Taken from the controller when not set (#544).
      */
     networkIsolation?: pulumi.Input<boolean | undefined>;
     /**
@@ -399,7 +410,7 @@ export interface NetworkArgs {
      */
     subnet?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured.
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to `false` (#544).
      */
     thirdPartyGateway?: pulumi.Input<boolean | undefined>;
     timeouts?: pulumi.Input<inputs.NetworkTimeouts | undefined>;

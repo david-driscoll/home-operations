@@ -20,6 +20,17 @@ export class RadiusProfile extends pulumi.CustomResource {
         return new RadiusProfile(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing RadiusProfile resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: RadiusProfileState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/radiusProfile:RadiusProfile", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/radiusProfile:RadiusProfile';
 
@@ -35,7 +46,7 @@ export class RadiusProfile extends pulumi.CustomResource {
     }
 
     /**
-     * Specifies whether to use RADIUS accounting.
+     * Specifies whether to use RADIUS accounting. Taken from the controller when not set.
      */
     declare public readonly accountingEnabled: pulumi.Output<boolean>;
     /**
@@ -47,7 +58,7 @@ export class RadiusProfile extends pulumi.CustomResource {
      */
     declare public readonly authServers: pulumi.Output<outputs.RadiusProfileAuthServer[] | undefined>;
     /**
-     * RADIUS interim accounting update settings.
+     * RADIUS interim accounting update settings. Taken from the controller when not set.
      */
     declare public readonly interimUpdate: pulumi.Output<outputs.RadiusProfileInterimUpdate>;
     /**
@@ -60,15 +71,15 @@ export class RadiusProfile extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.RadiusProfileTimeouts | undefined>;
     /**
-     * Specifies whether to use usg as a RADIUS accounting server.
+     * Specifies whether to use usg as a RADIUS accounting server. Taken from the controller when not set.
      */
     declare public readonly useUsgAcctServer: pulumi.Output<boolean>;
     /**
-     * Specifies whether to use usg as a RADIUS authentication server.
+     * Specifies whether to use usg as a RADIUS authentication server. Taken from the controller when not set.
      */
     declare public readonly useUsgAuthServer: pulumi.Output<boolean>;
     /**
-     * Dynamic VLAN assignment settings.
+     * Dynamic VLAN assignment settings. Taken from the controller when not set.
      */
     declare public readonly vlan: pulumi.Output<outputs.RadiusProfileVlan>;
 
@@ -118,7 +129,7 @@ export class RadiusProfile extends pulumi.CustomResource {
  */
 export interface RadiusProfileState {
     /**
-     * Specifies whether to use RADIUS accounting.
+     * Specifies whether to use RADIUS accounting. Taken from the controller when not set.
      */
     accountingEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -130,7 +141,7 @@ export interface RadiusProfileState {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
-     * RADIUS interim accounting update settings.
+     * RADIUS interim accounting update settings. Taken from the controller when not set.
      */
     interimUpdate?: pulumi.Input<inputs.RadiusProfileInterimUpdate | undefined>;
     /**
@@ -143,15 +154,15 @@ export interface RadiusProfileState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.RadiusProfileTimeouts | undefined>;
     /**
-     * Specifies whether to use usg as a RADIUS accounting server.
+     * Specifies whether to use usg as a RADIUS accounting server. Taken from the controller when not set.
      */
     useUsgAcctServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether to use usg as a RADIUS authentication server.
+     * Specifies whether to use usg as a RADIUS authentication server. Taken from the controller when not set.
      */
     useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Dynamic VLAN assignment settings.
+     * Dynamic VLAN assignment settings. Taken from the controller when not set.
      */
     vlan?: pulumi.Input<inputs.RadiusProfileVlan | undefined>;
 }
@@ -161,7 +172,7 @@ export interface RadiusProfileState {
  */
 export interface RadiusProfileArgs {
     /**
-     * Specifies whether to use RADIUS accounting.
+     * Specifies whether to use RADIUS accounting. Taken from the controller when not set.
      */
     accountingEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -173,7 +184,7 @@ export interface RadiusProfileArgs {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
-     * RADIUS interim accounting update settings.
+     * RADIUS interim accounting update settings. Taken from the controller when not set.
      */
     interimUpdate?: pulumi.Input<inputs.RadiusProfileInterimUpdate | undefined>;
     /**
@@ -186,15 +197,15 @@ export interface RadiusProfileArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.RadiusProfileTimeouts | undefined>;
     /**
-     * Specifies whether to use usg as a RADIUS accounting server.
+     * Specifies whether to use usg as a RADIUS accounting server. Taken from the controller when not set.
      */
     useUsgAcctServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether to use usg as a RADIUS authentication server.
+     * Specifies whether to use usg as a RADIUS authentication server. Taken from the controller when not set.
      */
     useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
-     * Dynamic VLAN assignment settings.
+     * Dynamic VLAN assignment settings. Taken from the controller when not set.
      */
     vlan?: pulumi.Input<inputs.RadiusProfileVlan | undefined>;
 }

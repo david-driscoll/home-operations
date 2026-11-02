@@ -20,6 +20,17 @@ export class PowerSupervisor extends pulumi.CustomResource {
         return new PowerSupervisor(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing PowerSupervisor resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: PowerSupervisorState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/powerSupervisor:PowerSupervisor", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/powerSupervisor:PowerSupervisor';
 
@@ -43,15 +54,15 @@ export class PowerSupervisor extends pulumi.CustomResource {
      */
     declare public readonly deviceMac: pulumi.Output<string>;
     /**
-     * Whether supervision is enabled. Defaults to `true`.
+     * Whether supervision is enabled. Defaults to `true` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s`.
+     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly heartbeatInterval: pulumi.Output<string>;
     /**
-     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s`.
+     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly powerOffDuration: pulumi.Output<string>;
     /**
@@ -59,7 +70,7 @@ export class PowerSupervisor extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly powerSources: pulumi.Output<outputs.PowerSupervisorPowerSource[]>;
     /**
-     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s`.
+     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly silenceThreshold: pulumi.Output<string>;
     /**
@@ -123,15 +134,15 @@ export interface PowerSupervisorState {
      */
     deviceMac?: pulumi.Input<string | undefined>;
     /**
-     * Whether supervision is enabled. Defaults to `true`.
+     * Whether supervision is enabled. Defaults to `true` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s`.
+     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     heartbeatInterval?: pulumi.Input<string | undefined>;
     /**
-     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s`.
+     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     powerOffDuration?: pulumi.Input<string | undefined>;
     /**
@@ -139,7 +150,7 @@ export interface PowerSupervisorState {
      */
     powerSources?: pulumi.Input<pulumi.Input<inputs.PowerSupervisorPowerSource>[] | undefined>;
     /**
-     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s`.
+     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     silenceThreshold?: pulumi.Input<string | undefined>;
     /**
@@ -158,19 +169,19 @@ export interface PowerSupervisorArgs {
      */
     deviceMac: pulumi.Input<string>;
     /**
-     * Whether supervision is enabled. Defaults to `true`.
+     * Whether supervision is enabled. Defaults to `true` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s`.
+     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     heartbeatInterval?: pulumi.Input<string | undefined>;
     /**
-     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s`.
+     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     powerOffDuration?: pulumi.Input<string | undefined>;
     /**
-     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s`.
+     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     silenceThreshold?: pulumi.Input<string | undefined>;
     /**

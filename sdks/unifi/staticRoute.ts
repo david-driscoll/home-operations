@@ -20,6 +20,17 @@ export class StaticRoute extends pulumi.CustomResource {
         return new StaticRoute(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing StaticRoute resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: StaticRouteState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/staticRoute:StaticRoute", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/staticRoute:StaticRoute';
 
@@ -39,11 +50,11 @@ export class StaticRoute extends pulumi.CustomResource {
      */
     declare public readonly distance: pulumi.Output<number>;
     /**
-     * Whether the static route is enabled.
+     * Whether the static route is enabled. A new route is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled route does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * The gateway that applies the static route.
+     * The gateway that applies the static route. When not set, a new route uses the default gateway and an existing route keeps the controller's gateway (#544).
      */
     declare public readonly gateway: pulumi.Output<outputs.StaticRouteGateway>;
     /**
@@ -131,11 +142,11 @@ export interface StaticRouteState {
      */
     distance?: pulumi.Input<number | undefined>;
     /**
-     * Whether the static route is enabled.
+     * Whether the static route is enabled. A new route is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled route does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The gateway that applies the static route.
+     * The gateway that applies the static route. When not set, a new route uses the default gateway and an existing route keeps the controller's gateway (#544).
      */
     gateway?: pulumi.Input<inputs.StaticRouteGateway | undefined>;
     /**
@@ -174,11 +185,11 @@ export interface StaticRouteArgs {
      */
     distance: pulumi.Input<number>;
     /**
-     * Whether the static route is enabled.
+     * Whether the static route is enabled. A new route is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled route does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The gateway that applies the static route.
+     * The gateway that applies the static route. When not set, a new route uses the default gateway and an existing route keeps the controller's gateway (#544).
      */
     gateway?: pulumi.Input<inputs.StaticRouteGateway | undefined>;
     /**

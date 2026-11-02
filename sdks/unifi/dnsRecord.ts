@@ -20,6 +20,17 @@ export class DnsRecord extends pulumi.CustomResource {
         return new DnsRecord(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing DnsRecord resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: DnsRecordState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/dnsRecord:DnsRecord", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/dnsRecord:DnsRecord';
 
@@ -35,7 +46,7 @@ export class DnsRecord extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the DNS record is enabled.
+     * Whether the DNS record is enabled. Defaults to `true` for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -124,7 +135,7 @@ export class DnsRecord extends pulumi.CustomResource {
  */
 export interface DnsRecordState {
     /**
-     * Whether the DNS record is enabled.
+     * Whether the DNS record is enabled. Defaults to `true` for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -167,7 +178,7 @@ export interface DnsRecordState {
  */
 export interface DnsRecordArgs {
     /**
-     * Whether the DNS record is enabled.
+     * Whether the DNS record is enabled. Defaults to `true` for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**

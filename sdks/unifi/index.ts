@@ -30,6 +30,11 @@ export type ClientQosRate = import("./clientQosRate").ClientQosRate;
 export const ClientQosRate: typeof import("./clientQosRate").ClientQosRate = null as any;
 utilities.lazyLoad(exports, ["ClientQosRate"], () => require("./clientQosRate"));
 
+export { ContentFilterArgs, ContentFilterState } from "./contentFilter";
+export type ContentFilter = import("./contentFilter").ContentFilter;
+export const ContentFilter: typeof import("./contentFilter").ContentFilter = null as any;
+utilities.lazyLoad(exports, ["ContentFilter"], () => require("./contentFilter"));
+
 export { DeviceArgs, DeviceState } from "./device";
 export type Device = import("./device").Device;
 export const Device: typeof import("./device").Device = null as any;
@@ -130,6 +135,16 @@ export const getRadiusUser: typeof import("./getRadiusUser").getRadiusUser = nul
 export const getRadiusUserOutput: typeof import("./getRadiusUser").getRadiusUserOutput = null as any;
 utilities.lazyLoad(exports, ["getRadiusUser","getRadiusUserOutput"], () => require("./getRadiusUser"));
 
+export { GetTeleportArgs, GetTeleportResult, GetTeleportOutputArgs } from "./getTeleport";
+export const getTeleport: typeof import("./getTeleport").getTeleport = null as any;
+export const getTeleportOutput: typeof import("./getTeleport").getTeleportOutput = null as any;
+utilities.lazyLoad(exports, ["getTeleport","getTeleportOutput"], () => require("./getTeleport"));
+
+export { NatArgs, NatState } from "./nat";
+export type Nat = import("./nat").Nat;
+export const Nat: typeof import("./nat").Nat = null as any;
+utilities.lazyLoad(exports, ["Nat"], () => require("./nat"));
+
 export { NetworkArgs, NetworkState } from "./network";
 export type Network = import("./network").Network;
 export const Network: typeof import("./network").Network = null as any;
@@ -152,6 +167,11 @@ utilities.lazyLoad(exports, ["PowerSupervisor"], () => require("./powerSuperviso
 
 export * from "./provider";
 import { Provider } from "./provider";
+
+export { QosRuleArgs, QosRuleState } from "./qosRule";
+export type QosRule = import("./qosRule").QosRule;
+export const QosRule: typeof import("./qosRule").QosRule = null as any;
+utilities.lazyLoad(exports, ["QosRule"], () => require("./qosRule"));
 
 export { RadiusProfileArgs, RadiusProfileState } from "./radiusProfile";
 export type RadiusProfile = import("./radiusProfile").RadiusProfile;
@@ -182,6 +202,11 @@ export { StaticRouteArgs, StaticRouteState } from "./staticRoute";
 export type StaticRoute = import("./staticRoute").StaticRoute;
 export const StaticRoute: typeof import("./staticRoute").StaticRoute = null as any;
 utilities.lazyLoad(exports, ["StaticRoute"], () => require("./staticRoute"));
+
+export { TrafficMatchingListArgs, TrafficMatchingListState } from "./trafficMatchingList";
+export type TrafficMatchingList = import("./trafficMatchingList").TrafficMatchingList;
+export const TrafficMatchingList: typeof import("./trafficMatchingList").TrafficMatchingList = null as any;
+utilities.lazyLoad(exports, ["TrafficMatchingList"], () => require("./trafficMatchingList"));
 
 export { TrafficRouteArgs, TrafficRouteState } from "./trafficRoute";
 export type TrafficRoute = import("./trafficRoute").TrafficRoute;
@@ -237,6 +262,8 @@ const _module = {
                 return new Client(name, <any>undefined, { urn })
             case "unifi:index/clientQosRate:ClientQosRate":
                 return new ClientQosRate(name, <any>undefined, { urn })
+            case "unifi:index/contentFilter:ContentFilter":
+                return new ContentFilter(name, <any>undefined, { urn })
             case "unifi:index/device:Device":
                 return new Device(name, <any>undefined, { urn })
             case "unifi:index/dnsRecord:DnsRecord":
@@ -251,6 +278,8 @@ const _module = {
                 return new FirewallRule(name, <any>undefined, { urn })
             case "unifi:index/firewallZone:FirewallZone":
                 return new FirewallZone(name, <any>undefined, { urn })
+            case "unifi:index/nat:Nat":
+                return new Nat(name, <any>undefined, { urn })
             case "unifi:index/network:Network":
                 return new Network(name, <any>undefined, { urn })
             case "unifi:index/portForward:PortForward":
@@ -259,6 +288,8 @@ const _module = {
                 return new PortProfile(name, <any>undefined, { urn })
             case "unifi:index/powerSupervisor:PowerSupervisor":
                 return new PowerSupervisor(name, <any>undefined, { urn })
+            case "unifi:index/qosRule:QosRule":
+                return new QosRule(name, <any>undefined, { urn })
             case "unifi:index/radiusProfile:RadiusProfile":
                 return new RadiusProfile(name, <any>undefined, { urn })
             case "unifi:index/radiusUser:RadiusUser":
@@ -271,6 +302,8 @@ const _module = {
                 return new SiteToSiteVpn(name, <any>undefined, { urn })
             case "unifi:index/staticRoute:StaticRoute":
                 return new StaticRoute(name, <any>undefined, { urn })
+            case "unifi:index/trafficMatchingList:TrafficMatchingList":
+                return new TrafficMatchingList(name, <any>undefined, { urn })
             case "unifi:index/trafficRoute:TrafficRoute":
                 return new TrafficRoute(name, <any>undefined, { urn })
             case "unifi:index/vpnClient:VpnClient":
@@ -293,6 +326,7 @@ pulumi.runtime.registerResourceModule("unifi", "index/apGroup", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/bgp", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/client", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/clientQosRate", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/contentFilter", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/device", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module)
@@ -300,16 +334,19 @@ pulumi.runtime.registerResourceModule("unifi", "index/firewallGroup", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallPolicy", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallRule", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallZone", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/nat", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/network", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portForward", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portProfile", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/powerSupervisor", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/qosRule", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/radiusProfile", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/radiusUser", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/setting", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/site", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/siteToSiteVpn", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/staticRoute", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/trafficMatchingList", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/trafficRoute", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/vpnClient", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/vpnServer", _module)

@@ -20,6 +20,17 @@ export class PortForward extends pulumi.CustomResource {
         return new PortForward(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing PortForward resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: PortForwardState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/portForward:PortForward", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/portForward:PortForward';
 
@@ -39,7 +50,7 @@ export class PortForward extends pulumi.CustomResource {
      */
     declare public readonly destinationIps: pulumi.Output<outputs.PortForwardDestinationIp[] | undefined>;
     /**
-     * Specifies whether the port forwarding rule is enabled or not.
+     * Specifies whether the port forwarding rule is enabled or not. Taken from the controller when not set: a rule disabled on the controller stays disabled, rather than being re-enabled by a plan that does not mention it (#544).
      *
      * @deprecated Deprecated
      */
@@ -49,7 +60,7 @@ export class PortForward extends pulumi.CustomResource {
      */
     declare public readonly forward: pulumi.Output<outputs.PortForwardForward | undefined>;
     /**
-     * Specifies whether to enable syslog logging for forwarded traffic.
+     * Specifies whether to enable syslog logging for forwarded traffic. Taken from the controller when not set; a new rule is created with it off (#544).
      */
     declare public readonly logging: pulumi.Output<boolean>;
     /**
@@ -57,7 +68,7 @@ export class PortForward extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Taken from the controller when not set, so adopting a `tcp`-only rule does not widen it to UDP (#544).
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -124,7 +135,7 @@ export interface PortForwardState {
      */
     destinationIps?: pulumi.Input<pulumi.Input<inputs.PortForwardDestinationIp>[] | undefined>;
     /**
-     * Specifies whether the port forwarding rule is enabled or not.
+     * Specifies whether the port forwarding rule is enabled or not. Taken from the controller when not set: a rule disabled on the controller stays disabled, rather than being re-enabled by a plan that does not mention it (#544).
      *
      * @deprecated Deprecated
      */
@@ -134,7 +145,7 @@ export interface PortForwardState {
      */
     forward?: pulumi.Input<inputs.PortForwardForward | undefined>;
     /**
-     * Specifies whether to enable syslog logging for forwarded traffic.
+     * Specifies whether to enable syslog logging for forwarded traffic. Taken from the controller when not set; a new rule is created with it off (#544).
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
@@ -142,7 +153,7 @@ export interface PortForwardState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Taken from the controller when not set, so adopting a `tcp`-only rule does not widen it to UDP (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -169,7 +180,7 @@ export interface PortForwardArgs {
      */
     destinationIps?: pulumi.Input<pulumi.Input<inputs.PortForwardDestinationIp>[] | undefined>;
     /**
-     * Specifies whether the port forwarding rule is enabled or not.
+     * Specifies whether the port forwarding rule is enabled or not. Taken from the controller when not set: a rule disabled on the controller stays disabled, rather than being re-enabled by a plan that does not mention it (#544).
      *
      * @deprecated Deprecated
      */
@@ -179,7 +190,7 @@ export interface PortForwardArgs {
      */
     forward?: pulumi.Input<inputs.PortForwardForward | undefined>;
     /**
-     * Specifies whether to enable syslog logging for forwarded traffic.
+     * Specifies whether to enable syslog logging for forwarded traffic. Taken from the controller when not set; a new rule is created with it off (#544).
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
@@ -187,7 +198,7 @@ export interface PortForwardArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Taken from the controller when not set, so adopting a `tcp`-only rule does not widen it to UDP (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
