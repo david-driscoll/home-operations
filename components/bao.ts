@@ -237,8 +237,8 @@ export class BaoClient {
  * paths". That script is gone, so this is now the only implementation and the
  * hazard is different: the paths it derives are ALREADY WRITTEN in OpenBao.
  * Changing the rule does not move them, it just stops finding them — and the
- * two biggest callers (`dockgeBaoPath`, `pbsBaoPath`) are read back by a LIST
- * of their prefix, which returns a smaller set rather than an error.
+ * biggest caller (`dockgeBaoPath`) is read back by a LIST
+ * of its prefix, which returns a smaller set rather than an error.
  *
  * `components/bao.test.ts` pins the behaviour.
  */
@@ -274,17 +274,6 @@ export function oidcBaoPath(clusterKey: string, appName: string): string {
  */
 export function postgresBaoPath(clusterKey: string, appName: string): string {
   return `clusters/${clusterKey}/apps/${baoSlug(appName)}/postgres`;
-}
-
-/**
- * Canonical OpenBao path (within the `secrets` mount) for a PBS credential
- * item, from its 1Password title: `hosts/pbs/<slug(title)>`.
- *
- * This is the prefix `BaoStore.proxmoxBackupServers` lists, so it is half of a
- * round trip — see the note on `baoSlug`.
- */
-export function pbsBaoPath(title: string): string {
-  return `hosts/pbs/${baoSlug(title)}`;
 }
 
 /**

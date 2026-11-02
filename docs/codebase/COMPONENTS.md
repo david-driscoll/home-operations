@@ -18,8 +18,6 @@ ComponentResource Hierarchy:
 │   ├── NFS exports
 │   ├── SMB shares
 │   └── S3 (Minio)
-├── ProxmoxBackupServerLxc   (components/ProxmoxBackupServerLxc.ts)
-│   └── Proxmox backup targets
 ├── StandardDns              (components/StandardDns.ts)
 │   └── Cloudflare DNS zones
 └── Helper Modules
@@ -192,14 +190,6 @@ const spikeVm = new TruenasVm("spike", {
   tailscaleIpAddress: "100.111.10.10",
 });
 ```
-
----
-
-## ProxmoxBackupServerLxc
-
-**File:** `components/ProxmoxBackupServerLxc.ts`
-
-**Purpose:** Provisions and manages a Proxmox Backup Server (PBS) LXC container — datastore config, backup scheduling, retention policies.
 
 ---
 

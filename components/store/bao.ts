@@ -19,8 +19,6 @@
  *
  * Still on 1Password after this file (each is a later slice):
  *
- *   proxmoxBackupServers           its items reference dockge/cluster items by
- *                                  title; moves once those reads are proven
  *
  * ## Field shapes carry over unchanged
  *
@@ -45,7 +43,7 @@
  */
 
 import { all, type Output, output, secret } from "@pulumi/pulumi";
-import { BaoClient, baoSlug, dockgeBaoPath } from "../bao.ts";
+import { BaoClient, baoSlug } from "../bao.ts";
 import { clusterSecretPath } from "./clusters.ts";
 import { shapeBackupPlans, shapeTailscaleExports, VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
@@ -299,46 +297,6 @@ export class BaoStore extends VaultStore {
         ),
       )
       .apply(items => shapeBackupPlans<T>(items as unknown as { plan: string }[])) as ReturnType<VaultStore["getBackupPlans"]> & Output<T[]>;
-  }
-
-  /**
-   * `tag:pbs` became the `hosts/pbs/` prefix — the last read in this repo that
-   * still went to 1Password.
-   *
-   * The 1Password items themselves STAY and keep being written: they are how a
-   * human logs into the generated LXC (estate decision 2026-08-12). This moves
-   * only where PULUMI reads, so the browser-fill copy and the machine copy stop
-   * being the same lookup.
-   *
-   * Each item cross-references two others BY TITLE — `dockge` names a
-   * `DockgeLxc: <host>` item and `cluster` names a `Cluster: <name>` — and both
-   * of those already moved: dockge to `hosts/dockge/<slug>`, cluster
-   * definitions to checked-in YAML. So the two title fields resolve through
-   * the same machinery every other read now uses, rather than through a second
-   * round of 1Password lookups.
-   */
-  public override proxmoxBackupServers(withTag: string = "pbs") {
-    if (withTag !== "pbs") throw new Error(`proxmoxBackupServers('${withTag}') — OpenBao has no tags; only the 'pbs' family has a path prefix (hosts/pbs/)`);
-    return this.listUnder("hosts/pbs").apply(items =>
-      all(
-        items.map(item => {
-          const dockgeTitle = item.dockge as string;
-          const clusterTitle = item.cluster as string;
-          if (typeof dockgeTitle !== "string" || typeof clusterTitle !== "string") {
-            throw new Error(`${SECRETS_MOUNT}/hosts/pbs/${baoSlug(String(item.meta?.title ?? "?"))}: 'dockge' and 'cluster' must be item titles — the PBS item shape changed`);
-          }
-          // Same shape the 1Password path produced: the referenced items
-          // inlined, not their titles. The cluster resolves through the same
-          // published definitions every other read uses — one lookup
-          // mechanism, so a PBS item cannot disagree with getAllClusters.
-          return all([this.getSecretByPath<Record<string, unknown>>(dockgeBaoPath(dockgeTitle)), this.getCluster(clusterTitle)]).apply(([dockge, cluster]) => ({
-            ...item,
-            dockge,
-            cluster,
-          }));
-        }),
-      ),
-    ) as unknown as ReturnType<VaultStore["proxmoxBackupServers"]>;
   }
 
   private listUnder(prefix: string): Output<BaoItem[]> {

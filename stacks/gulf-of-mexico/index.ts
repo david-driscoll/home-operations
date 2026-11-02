@@ -7,7 +7,6 @@ import { TailscaleMonitor } from "@components/tailscale.ts";
 import * as random from "@pulumi/random";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
-import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 
 const globals = new GlobalResources({}, {});
@@ -28,24 +27,23 @@ const dockgeId = new random.RandomInteger("luna-dockge-id", {
   max: vmRange.start + 50,
   keepers: { clusterId: cluster.key },
 });
-const pbsId = new random.RandomInteger("luna-pbs-id", {
-  min: vmRange.start + 51,
-  max: vmRange.end,
-  seed: dockgeId.result.apply(z => z.toString()),
-  keepers: { clusterId: cluster.key },
-});
+
+// Once luna ships to the new location, flip this to true so tailscale accepts routes from the LAN.
+const lunaIsRemote = false;
 
 const host = new ProxmoxHost("luna", {
   globals: globals,
   authentikOutputs: outputs,
   tailscaleIpAddress: "100.111.10.104",
   proxmox: mainProxmoxCredentials,
-  remote: false, // once this gets shipped to the new location, flip this to true so that tailscale accepts routes from the LAN
+  remote: lunaIsRemote,
   cluster: cluster,
   tailscaleArgs: {
     advertiseExitNode: true,
     acceptDns: true,
-    acceptRoutes: true,
+    // Never on the home LAN: the advertised 10.10.0.0/16 route wins over vmbr0
+    // and the tailnet ACL drops luna's NFS to the NAS (pvestatd hangs, node goes grey).
+    acceptRoutes: lunaIsRemote,
   },
   tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
@@ -64,23 +62,9 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
 });
 dockgeRuntime.addHostMount("/data");
 
-const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
-  globals,
-  outputs,
-  host: host,
-  vmId: pbsId.result,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote, ssh: true },
-  cluster: cluster,
-  dockge: dockgeRuntime,
-  dependsOn: [],
-  tags: ["backup-destination"],
-});
-pbs.addHostMount("/data");
-// pbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
-
 await awaitOutput(
   dockgeRuntime.deployStacks({
-    dependsOn: [pbs],
+    dependsOn: [],
     variables: {
       PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
       PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
@@ -91,7 +75,7 @@ await awaitOutput(
 await awaitOutput(host.addUptimeGatus());
 
 await awaitOutput(createGatusDnsUptime(globals, { parent: host }));
-await awaitOutput(backupDirector.createPlans({ dockge: dockgeRuntime, pbs, cluster }, [pbs]));
+await awaitOutput(backupDirector.createPlans({ dockge: dockgeRuntime, localRepos: true, cluster }, [dockgeRuntime]));
 
 monitor.exportNodeStateToOnePassword(
   [
@@ -108,13 +92,6 @@ monitor.exportNodeStateToOnePassword(
       internalIp: dockgeRuntime.localIpAddress,
       mac: dockgeRuntime.macAddress,
       nodeType: "dockge",
-    },
-    {
-      name: pbs.tailscaleName,
-      externalIp: pbs.tailscaleIpAddress,
-      internalIp: pbs.localIpAddress,
-      mac: pbs.macAddress,
-      nodeType: "pbs",
     },
   ],
   { parent: host },

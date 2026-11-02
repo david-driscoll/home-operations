@@ -1,6 +1,6 @@
 import { all, type Input, interpolate, jsonStringify, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
 import { type OPClient, TypeEnum } from "../op.ts";
-import type { ClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
+import type { ClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta } from "./interfaces.ts";
 import { SecretRefResolver } from "./refs.ts";
 
 export * from "./interfaces.ts";
@@ -82,8 +82,6 @@ export abstract class VaultStore {
       })),
     );
   }
-
-  public abstract proxmoxBackupServers(withTag?: string): Output<Unwrap<ProxmoxBackupServerLxcDefinition>[]>;
 
   public abstract getSecretByTitle<T>(title: string): Output<Unwrap<T & Meta>>;
 

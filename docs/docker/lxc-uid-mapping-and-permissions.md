@@ -2,7 +2,7 @@
 
 ## Overview
 
-Both `luna-dockge` (LXC 400) and `celestia-dockge` (LXC 300) are **unprivileged** Proxmox LXC
+Both `luna-dockge` (LXC 429) and `celestia-dockge` (LXC 300) are **unprivileged** Proxmox LXC
 containers running Docker. This has important implications for filesystem permissions on
 bind-mounted paths.
 
@@ -27,13 +27,19 @@ host filesystem is performed as UID `100000 + X`.
 
 ## Mount Points (luna-dockge and celestia-dockge)
 
-Both LXCs share the same mount layout (`pct.conf` `mp` entries):
+Mount layout (`pct.conf` `mp` entries):
 
-| LXC path       | Source on PVE host                        | Notes                        |
-|----------------|-------------------------------------------|------------------------------|
-| `/data`        | `/data` (local ZFS dataset)               | Writable — backup destination |
-| `/spike/backup`| `/mnt/pve/<host>-mnt-stash-backup-nfs`   | Read-only source (NFS)       |
-| `/spike/data`  | `/mnt/pve/<host>-mnt-stash-data-nfs`     | Read-only source (NFS)       |
+| LXC path       | Source on PVE host                          | LXCs     | Notes                        |
+|----------------|---------------------------------------------|----------|------------------------------|
+| `/data`        | `/data` (local ZFS dataset)                 | both     | Writable — backup destination |
+| `/spike/backup`| `/mnt/pve/celestia-mnt-stash-backup-nfs`    | celestia | Read-only source (NFS)       |
+| `/spike/data`  | `/mnt/pve/celestia-mnt-stash-data-nfs`      | celestia | Read-only source (NFS)       |
+
+Only celestia has the stash NFS storages (`stacks/home/index.ts`, `addNfsMount` +
+`addHostMount`); `addNfsMount` only names them, the PVE storages are hand-made. luna and
+skystar have none and must not get any: luna's old, unused `luna-mnt-stash-*-nfs` storages
+hung `pvestatd` (and greyed out the whole node) when the NAS became unreachable in
+2026-10. On luna the `backups`/`backrest` stacks' `/spike/*` mounts are empty directories.
 
 The NFS mounts (`/spike/*`) are owned `568:568 drwxrwxrwx` on the PVE host — world-writable,
 no issues there.
