@@ -20,6 +20,17 @@ export class Client extends pulumi.CustomResource {
         return new Client(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Client resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: ClientState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/client:Client", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/client:Client';
 
@@ -39,7 +50,7 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly allowExisting: pulumi.Output<boolean>;
     /**
-     * Specifies whether this client should be blocked from the network.
+     * Specifies whether this client should be blocked from the network. Taken from the controller when not set, so adopting a blocked client does not unblock it.
      */
     declare public readonly blocked: pulumi.Output<boolean>;
     /**
@@ -47,7 +58,7 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly displayName: pulumi.Output<string>;
     /**
-     * The MAC address of the access point to which this client should be fixed.
+     * The MAC address of the access point to which this client should be fixed. Read as null while AP pinning is disabled.
      */
     declare public readonly fixedApMac: pulumi.Output<string>;
     /**
@@ -79,7 +90,7 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The network ID for this client.
+     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, `virtual_network_override_id`). This is not the network of `fixed_ip`: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
      */
     declare public readonly networkId: pulumi.Output<string>;
     /**
@@ -167,7 +178,7 @@ export interface ClientState {
      */
     allowExisting?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether this client should be blocked from the network.
+     * Specifies whether this client should be blocked from the network. Taken from the controller when not set, so adopting a blocked client does not unblock it.
      */
     blocked?: pulumi.Input<boolean | undefined>;
     /**
@@ -175,7 +186,7 @@ export interface ClientState {
      */
     displayName?: pulumi.Input<string | undefined>;
     /**
-     * The MAC address of the access point to which this client should be fixed.
+     * The MAC address of the access point to which this client should be fixed. Read as null while AP pinning is disabled.
      */
     fixedApMac?: pulumi.Input<string | undefined>;
     /**
@@ -207,7 +218,7 @@ export interface ClientState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The network ID for this client.
+     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, `virtual_network_override_id`). This is not the network of `fixed_ip`: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
@@ -238,7 +249,7 @@ export interface ClientArgs {
      */
     allowExisting?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether this client should be blocked from the network.
+     * Specifies whether this client should be blocked from the network. Taken from the controller when not set, so adopting a blocked client does not unblock it.
      */
     blocked?: pulumi.Input<boolean | undefined>;
     /**
@@ -246,7 +257,7 @@ export interface ClientArgs {
      */
     displayName?: pulumi.Input<string | undefined>;
     /**
-     * The MAC address of the access point to which this client should be fixed.
+     * The MAC address of the access point to which this client should be fixed. Read as null while AP pinning is disabled.
      */
     fixedApMac?: pulumi.Input<string | undefined>;
     /**
@@ -270,7 +281,7 @@ export interface ClientArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The network ID for this client.
+     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, `virtual_network_override_id`). This is not the network of `fixed_ip`: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
      */
     networkId?: pulumi.Input<string | undefined>;
     /**

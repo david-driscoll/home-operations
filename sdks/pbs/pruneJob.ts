@@ -18,6 +18,17 @@ export class PruneJob extends pulumi.CustomResource {
         return new PruneJob(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing PruneJob resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: PruneJobState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("pbs:index/pruneJob:PruneJob", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'pbs:index/pruneJob:PruneJob';
 

@@ -30,11 +30,11 @@ export interface AccountTunnel {
      */
     configType?: pulumi.Input<string | undefined>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2. Defaults to `6` for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     mediumType?: pulumi.Input<number | undefined>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common. Defaults to `3` for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     type?: pulumi.Input<number | undefined>;
 }
@@ -117,11 +117,11 @@ export interface ClientQosRate {
 
 export interface ClientQosRateQosRate {
     /**
-     * The QOS maximum download rate.
+     * The QOS maximum download rate in kbps, `2` to `100000`, or `-1` for unlimited. `-1` for a new group when not set; taken from the controller otherwise.
      */
     maxDown?: pulumi.Input<number | undefined>;
     /**
-     * The QOS maximum upload rate.
+     * The QOS maximum upload rate in kbps, `2` to `100000`, or `-1` for unlimited. `-1` for a new group when not set; taken from the controller otherwise.
      */
     maxUp?: pulumi.Input<number | undefined>;
 }
@@ -146,6 +146,60 @@ export interface ClientQosRateTimeouts {
 }
 
 export interface ClientTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: pulumi.Input<string | undefined>;
+}
+
+export interface ContentFilterSchedule {
+    /**
+     * Date for `ONE_TIME_ONLY`, `YYYY-MM-DD`.
+     */
+    date?: pulumi.Input<string | undefined>;
+    /**
+     * Last date, `YYYY-MM-DD`.
+     */
+    dateEnd?: pulumi.Input<string | undefined>;
+    /**
+     * First date, `YYYY-MM-DD`.
+     */
+    dateStart?: pulumi.Input<string | undefined>;
+    /**
+     * `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY` or `CUSTOM`.
+     */
+    mode: pulumi.Input<string>;
+    /**
+     * Days for `EVERY_WEEK`/`CUSTOM`: `mon` … `sun`.
+     */
+    repeatOnDays?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Active the whole day.
+     */
+    timeAllDay?: pulumi.Input<boolean | undefined>;
+    /**
+     * End time, `HH:MM`.
+     */
+    timeRangeEnd?: pulumi.Input<string | undefined>;
+    /**
+     * Start time, `HH:MM`.
+     */
+    timeRangeStart?: pulumi.Input<string | undefined>;
+}
+
+export interface ContentFilterTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
@@ -197,6 +251,25 @@ export interface DeviceConfigNetwork {
      * Network configuration type (dhcp or static).
      */
     type?: pulumi.Input<string | undefined>;
+}
+
+export interface DeviceEtherlighting {
+    /**
+     * LED behavior; valid values are `steady` and `breath`.
+     */
+    behavior?: pulumi.Input<string | undefined>;
+    /**
+     * Etherlighting brightness (1-100).
+     */
+    brightness?: pulumi.Input<number | undefined>;
+    /**
+     * LED mode; valid values are `etherlighting` and `standard`.
+     */
+    ledMode?: pulumi.Input<string | undefined>;
+    /**
+     * What the port LEDs show; valid values are `speed` (color by link speed) and `network` (color by network).
+     */
+    mode?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceLcm {
@@ -385,7 +458,7 @@ export interface DevicePortOverride {
      */
     stpPortMode?: pulumi.Input<boolean | undefined>;
     /**
-     * List of network IDs to tag on this port.
+     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with `tagged_vlan_mgmt = "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
      */
     taggedNetworkconfIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -682,7 +755,11 @@ export interface FirewallPolicyDestination {
      */
     clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`.
+     * IPv6 interface identifier to match, written as `<address>/<mask>` with both parts in IPv6 notation (for example `::eaff:1eff:fed7:bf17/::ffff:ffff:ffff:ffff` matches the lower 64 bits, i.e. an EUI-64 interface ID under any prefix). Required when `matching_target` is `IID`, and only valid with it. Matching the interface ID instead of the full address keeps a rule working when the delegated IPv6 prefix changes. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     */
+    iid?: pulumi.Input<string | undefined>;
+    /**
+     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`. Taken from the controller when not set (#544).
      */
     ipGroupId?: pulumi.Input<string | undefined>;
     /**
@@ -690,23 +767,31 @@ export interface FirewallPolicyDestination {
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Match the clients in `client_macs` by MAC address rather than by their current IP address. Corresponds to the controller's `match_mac` flag on a `CLIENT` matching target. Defaults to `false`.
+     * The MAC address bound to the source IP (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"` and `match_mac = true`, which in turn requires it. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     */
+    mac?: pulumi.Input<string | undefined>;
+    /**
+     * The controller's `match_mac` flag (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"`: the controller drops the flag on every other target (a `CLIENT` target already matches the clients in `client_macs` by MAC) and on the destination, so setting it to `true` anywhere else is rejected at plan time. On an `IP` source the controller also requires the bound MAC address, so `match_mac = true` also requires `mac`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged, so adopting an IP/MAC binding does not drop it (#544).
      */
     matchMac?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
+     * Invert the interface ID match: when `true`, the endpoint matches every address **except** those whose interface ID matches `iid`. Only valid with `matching_target = "IID"`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     */
+    matchOppositeIid?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeIps?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Defaults to `false`.
+     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeNetworks?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Defaults to `false`.
+     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), or `REGION` (country codes, set `regions`). The controller only accepts `REGION` on an external zone.
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), `REGION` (country codes, set `regions`), or `IID` (IPv6 interface identifier, set `iid`). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: pulumi.Input<string>;
     /**
@@ -722,11 +807,11 @@ export interface FirewallPolicyDestination {
      */
     port?: pulumi.Input<string | undefined>;
     /**
-     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`.
+     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`. Taken from the controller when not set (#544).
      */
     portGroupId?: pulumi.Input<string | undefined>;
     /**
-     * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
+     * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group). Taken from the controller when not set; the controller assigns `ANY` to a new policy (#544).
      */
     portMatchingType?: pulumi.Input<string | undefined>;
     /**
@@ -813,7 +898,11 @@ export interface FirewallPolicySource {
      */
     clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`.
+     * IPv6 interface identifier to match, written as `<address>/<mask>` with both parts in IPv6 notation (for example `::eaff:1eff:fed7:bf17/::ffff:ffff:ffff:ffff` matches the lower 64 bits, i.e. an EUI-64 interface ID under any prefix). Required when `matching_target` is `IID`, and only valid with it. Matching the interface ID instead of the full address keeps a rule working when the delegated IPv6 prefix changes. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     */
+    iid?: pulumi.Input<string | undefined>;
+    /**
+     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`. Taken from the controller when not set (#544).
      */
     ipGroupId?: pulumi.Input<string | undefined>;
     /**
@@ -821,23 +910,31 @@ export interface FirewallPolicySource {
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Match the clients in `client_macs` by MAC address rather than by their current IP address. Corresponds to the controller's `match_mac` flag on a `CLIENT` matching target. Defaults to `false`.
+     * The MAC address bound to the source IP (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"` and `match_mac = true`, which in turn requires it. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     */
+    mac?: pulumi.Input<string | undefined>;
+    /**
+     * The controller's `match_mac` flag (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"`: the controller drops the flag on every other target (a `CLIENT` target already matches the clients in `client_macs` by MAC) and on the destination, so setting it to `true` anywhere else is rejected at plan time. On an `IP` source the controller also requires the bound MAC address, so `match_mac = true` also requires `mac`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged, so adopting an IP/MAC binding does not drop it (#544).
      */
     matchMac?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Defaults to `false`.
+     * Invert the interface ID match: when `true`, the endpoint matches every address **except** those whose interface ID matches `iid`. Only valid with `matching_target = "IID"`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     */
+    matchOppositeIid?: pulumi.Input<boolean | undefined>;
+    /**
+     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeIps?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Defaults to `false`.
+     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeNetworks?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Defaults to `false`.
+     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), or `REGION` (country codes, set `regions`). The controller only accepts `REGION` on an external zone.
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), `REGION` (country codes, set `regions`), or `IID` (IPv6 interface identifier, set `iid`). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: pulumi.Input<string>;
     /**
@@ -853,11 +950,11 @@ export interface FirewallPolicySource {
      */
     port?: pulumi.Input<string | undefined>;
     /**
-     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`.
+     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`. Taken from the controller when not set (#544).
      */
     portGroupId?: pulumi.Input<string | undefined>;
     /**
-     * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
+     * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group). Taken from the controller when not set; the controller assigns `ANY` to a new policy (#544).
      */
     portMatchingType?: pulumi.Input<string | undefined>;
     /**
@@ -911,7 +1008,7 @@ export interface FirewallRuleDestination {
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
+     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4` for a newly created rule; an existing rule keeps whatever the controller holds (#544).
      */
     networkType?: pulumi.Input<string | undefined>;
     /**
@@ -953,7 +1050,7 @@ export interface FirewallRuleSource {
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
+     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4` for a newly created rule; an existing rule keeps whatever the controller holds (#544).
      */
     networkType?: pulumi.Input<string | undefined>;
     /**
@@ -1201,6 +1298,101 @@ export interface GetRadiusUserTimeoutsArgs {
     read?: pulumi.Input<string | undefined>;
 }
 
+export interface GetTeleportTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetTeleportTimeoutsArgs {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: pulumi.Input<string | undefined>;
+}
+
+export interface NatDestinationFilter {
+    /**
+     * The address or CIDR to match. Used with the `ADDRESS_AND_PORT` filter type.
+     */
+    address?: pulumi.Input<string | undefined>;
+    /**
+     * How traffic is matched. Can be `NONE`, `ADDRESS_AND_PORT`, `FIREWALL_GROUPS` or `NETWORK_CONF`.
+     */
+    filterType: pulumi.Input<string>;
+    /**
+     * The IDs of the firewall groups to match. Used with the `FIREWALL_GROUPS` filter type.
+     */
+    firewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Match every address except `address`. Taken from the controller when not set (#544).
+     */
+    invertAddress?: pulumi.Input<boolean | undefined>;
+    /**
+     * Match every port except `port`. Taken from the controller when not set (#544).
+     */
+    invertPort?: pulumi.Input<boolean | undefined>;
+    /**
+     * The ID of the network to match. Used with the `NETWORK_CONF` filter type.
+     */
+    networkConfId?: pulumi.Input<string | undefined>;
+    /**
+     * The port to match. Used with the `ADDRESS_AND_PORT` filter type, as a single port (`443`) or a range (`8080-8090`).
+     */
+    port?: pulumi.Input<string | undefined>;
+}
+
+export interface NatSourceFilter {
+    /**
+     * The address or CIDR to match. Used with the `ADDRESS_AND_PORT` filter type.
+     */
+    address?: pulumi.Input<string | undefined>;
+    /**
+     * How traffic is matched. Can be `NONE`, `ADDRESS_AND_PORT`, `FIREWALL_GROUPS` or `NETWORK_CONF`.
+     */
+    filterType: pulumi.Input<string>;
+    /**
+     * The IDs of the firewall groups to match. Used with the `FIREWALL_GROUPS` filter type.
+     */
+    firewallGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Match every address except `address`. Taken from the controller when not set (#544).
+     */
+    invertAddress?: pulumi.Input<boolean | undefined>;
+    /**
+     * Match every port except `port`. Taken from the controller when not set (#544).
+     */
+    invertPort?: pulumi.Input<boolean | undefined>;
+    /**
+     * The ID of the network to match. Used with the `NETWORK_CONF` filter type.
+     */
+    networkConfId?: pulumi.Input<string | undefined>;
+    /**
+     * The port to match. Used with the `ADDRESS_AND_PORT` filter type, as a single port (`443`) or a range (`8080-8090`).
+     */
+    port?: pulumi.Input<string | undefined>;
+}
+
+export interface NatTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: pulumi.Input<string | undefined>;
+}
+
 export interface NetworkDhcpGuarding {
     /**
      * Specifies whether DHCP guarding is enabled.
@@ -1229,7 +1421,7 @@ export interface NetworkDhcpServer {
      */
     boot?: pulumi.Input<inputs.NetworkDhcpServerBoot | undefined>;
     /**
-     * Specifies whether DHCP conflict checking is enabled.
+     * Specifies whether DHCP conflict checking is enabled. Defaults to `true` when the block is first configured; an existing network keeps the controller's value (#544).
      */
     conflictChecking?: pulumi.Input<boolean | undefined>;
     /**
@@ -1237,7 +1429,7 @@ export interface NetworkDhcpServer {
      */
     dns?: pulumi.Input<inputs.NetworkDhcpServerDns | undefined>;
     /**
-     * Specifies whether DHCP server is enabled.
+     * Specifies whether DHCP server is enabled. Defaults to `true` when the block is first configured; an existing network keeps the controller's value (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -1245,7 +1437,7 @@ export interface NetworkDhcpServer {
      */
     gatewayEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies the DHCP lease time, as a Go duration string (e.g. `24h`, `86400s`). Defaults to `24h0m0s`.
+     * Specifies the DHCP lease time, as a Go duration string (e.g. `24h`, `86400s`). Defaults to `24h0m0s` when the DHCP server is first configured; an existing network keeps the controller's lease time (#544).
      */
     leasetime?: pulumi.Input<string | undefined>;
     /**
@@ -1495,7 +1687,7 @@ export interface PortForwardForward {
 
 export interface PortForwardSourceLimiting {
     /**
-     * Specifies whether source limiting is enabled.
+     * Specifies whether source limiting is enabled. Taken from the controller when not set; a new rule is created with it off (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -1503,7 +1695,7 @@ export interface PortForwardSourceLimiting {
      */
     firewallGroupId?: pulumi.Input<string | undefined>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`. Taken from the controller when not set, and not sent on create: the controller stores no source address for a rule that does not limit by IP (#544).
      */
     ip?: pulumi.Input<string | undefined>;
     /**
@@ -1548,11 +1740,11 @@ export interface PortForwardWan {
 
 export interface PortProfileDot1x {
     /**
-     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized` for a newly created profile; an existing profile keeps the controller's value.
      */
     ctrl?: pulumi.Input<string | undefined>;
     /**
-     * The idle timeout to use when using MAC Based 802.1X control, as a Go duration string (e.g. `5m`, `300s`). Defaults to `5m0s`.
+     * The idle timeout to use when using MAC Based 802.1X control, as a Go duration string (e.g. `5m`, `300s`). Defaults to `5m0s` for a newly created profile; an existing profile keeps the controller's value, which may be none.
      */
     idleTimeout?: pulumi.Input<string | undefined>;
 }
@@ -1570,7 +1762,7 @@ export interface PortProfileEgressRateLimit {
 
 export interface PortProfileLldpmed {
     /**
-     * Enable LLDP-MED for the port profile.
+     * Enable LLDP-MED for the port profile. Defaults to `true` for a newly created profile; an existing profile keeps the controller's value.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -1711,13 +1903,137 @@ export interface PowerSupervisorTimeouts {
     update?: pulumi.Input<string | undefined>;
 }
 
+export interface QosRuleDestination {
+    /**
+     * DPI application category IDs, for `APP_CATEGORY`.
+     */
+    appCategoryIds?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * DPI application IDs, for `APP`.
+     */
+    appIds?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * IPv6 interface identifier, for `IID`.
+     */
+    iid?: pulumi.Input<string | undefined>;
+    /**
+     * IP group ID, for `IP` with `OBJECT`.
+     */
+    ipGroupId?: pulumi.Input<string | undefined>;
+    /**
+     * IP addresses or subnets, for `IP` with `SPECIFIC`.
+     */
+    ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * `ANY`, `APP` (`app_ids`), `APP_CATEGORY` (`app_category_ids`), `IP` (`ips` or `ip_group_id`), `IID` (`iid`), `REGION` (`regions`) or `WEB` (`web_domains` or `web_group_id`).
+     */
+    matchingTarget: pulumi.Input<string>;
+    /**
+     * For `IP`/`WEB`: `SPECIFIC` (listed values) or `OBJECT` (a group ID).
+     */
+    matchingTargetType?: pulumi.Input<string | undefined>;
+    /**
+     * Port or comma-separated ports, for `SPECIFIC`.
+     */
+    port?: pulumi.Input<string | undefined>;
+    /**
+     * Port group ID, for `OBJECT`.
+     */
+    portGroupId?: pulumi.Input<string | undefined>;
+    /**
+     * `SPECIFIC` (`port`) or `OBJECT` (`port_group_id`). Omit for any port.
+     */
+    portMatchingType?: pulumi.Input<string | undefined>;
+    /**
+     * Country codes, for `REGION`.
+     */
+    regions?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Domains, for `WEB` with `SPECIFIC`.
+     */
+    webDomains?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Domain group ID, for `WEB` with `OBJECT`.
+     */
+    webGroupId?: pulumi.Input<string | undefined>;
+}
+
+export interface QosRuleSchedule {
+    /**
+     * Date for `ONE_TIME_ONLY`, `YYYY-MM-DD`.
+     */
+    date?: pulumi.Input<string | undefined>;
+    /**
+     * Last date, `YYYY-MM-DD`.
+     */
+    dateEnd?: pulumi.Input<string | undefined>;
+    /**
+     * First date, `YYYY-MM-DD`.
+     */
+    dateStart?: pulumi.Input<string | undefined>;
+    /**
+     * `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY` or `CUSTOM`.
+     */
+    mode: pulumi.Input<string>;
+    /**
+     * Days for `EVERY_WEEK`/`CUSTOM`: `mon` … `sun`.
+     */
+    repeatOnDays?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Active the whole day.
+     */
+    timeAllDay?: pulumi.Input<boolean | undefined>;
+    /**
+     * End time, `HH:MM`.
+     */
+    timeRangeEnd?: pulumi.Input<string | undefined>;
+    /**
+     * Start time, `HH:MM`.
+     */
+    timeRangeStart?: pulumi.Input<string | undefined>;
+}
+
+export interface QosRuleSource {
+    /**
+     * Client MAC addresses, for `CLIENT`.
+     */
+    clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * `ANY`, `CLIENT` (`client_macs`) or `NETWORK` (`network_ids`).
+     */
+    matchingTarget: pulumi.Input<string>;
+    /**
+     * Network IDs, for `NETWORK`.
+     */
+    networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface QosRuleTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: pulumi.Input<string | undefined>;
+}
+
 export interface RadiusProfileAcctServer {
     /**
      * IP address of the accounting server. Optional: the controller-managed default profile returns a server entry without an IP, so importing it must not force one.
      */
     ip?: pulumi.Input<string | undefined>;
     /**
-     * Port of accounting service.
+     * Port of accounting service. Defaults to `1813` for a server added by the configuration; an existing server keeps the controller's port, which may be none.
      */
     port?: pulumi.Input<number | undefined>;
     /**
@@ -1732,7 +2048,7 @@ export interface RadiusProfileAuthServer {
      */
     ip?: pulumi.Input<string | undefined>;
     /**
-     * Port of authentication service.
+     * Port of authentication service. Defaults to `1812` for a server added by the configuration; an existing server keeps the controller's port, which may be none.
      */
     port?: pulumi.Input<number | undefined>;
     /**
@@ -1747,7 +2063,7 @@ export interface RadiusProfileInterimUpdate {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s` for a newly created profile; an existing profile keeps the controller's value, which may be none.
      */
     interval?: pulumi.Input<string | undefined>;
 }
@@ -1807,11 +2123,11 @@ export interface RadiusUserTunnel {
      */
     configType?: pulumi.Input<string | undefined>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2. Defaults to `6` for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     mediumType?: pulumi.Input<number | undefined>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common. Defaults to `3` for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     type?: pulumi.Input<number | undefined>;
 }
@@ -1822,7 +2138,7 @@ export interface SettingAutoSpeedtest {
      */
     cronExpr?: pulumi.Input<string | undefined>;
     /**
-     * Whether periodic automated speed tests are enabled.
+     * Whether periodic automated speed tests are enabled. Taken from the controller when not set (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
 }
@@ -1885,13 +2201,46 @@ export interface SettingDohCustomServer {
 
 export interface SettingDpi {
     /**
-     * Whether DPI is enabled.
+     * Whether DPI is enabled. Taken from the controller when not set, so declaring the `dpi` block for one attribute no longer turns deep packet inspection off (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether device fingerprinting is enabled.
      */
     fingerprintingEnabled?: pulumi.Input<boolean | undefined>;
+}
+
+export interface SettingEtherlighting {
+    /**
+     * Colors for ports on the given network.
+     */
+    networkOverrides?: pulumi.Input<pulumi.Input<inputs.SettingEtherlightingNetworkOverride>[] | undefined>;
+    /**
+     * Colors for ports linked at the given speed.
+     */
+    speedOverrides?: pulumi.Input<pulumi.Input<inputs.SettingEtherlightingSpeedOverride>[] | undefined>;
+}
+
+export interface SettingEtherlightingNetworkOverride {
+    /**
+     * 6-digit hex color without the leading `#` (e.g. `ff0000`).
+     */
+    color: pulumi.Input<string>;
+    /**
+     * ID of the network.
+     */
+    network: pulumi.Input<string>;
+}
+
+export interface SettingEtherlightingSpeedOverride {
+    /**
+     * 6-digit hex color without the leading `#` (e.g. `ff0000`).
+     */
+    color: pulumi.Input<string>;
+    /**
+     * Link speed: `FE`, `GbE`, `2.5GbE`, `5GbE`, `10GbE`, `25GbE`, `40GbE` or `100GbE`.
+     */
+    speed: pulumi.Input<string>;
 }
 
 export interface SettingGlobalSwitch {
@@ -2068,13 +2417,47 @@ export interface SettingLcm {
      */
     idleTimeout?: pulumi.Input<number | undefined>;
     /**
-     * Sync display settings across devices.
+     * Sync display settings across devices. Taken from the controller when not set (#544).
      */
     sync?: pulumi.Input<boolean | undefined>;
     /**
      * Whether touch events on the display are enabled.
      */
     touchEvent?: pulumi.Input<boolean | undefined>;
+}
+
+export interface SettingMdns {
+    /**
+     * Additional services reflected in `custom` mode.
+     */
+    customServices?: pulumi.Input<pulumi.Input<inputs.SettingMdnsCustomService>[] | undefined>;
+    /**
+     * Networks mDNS is enabled for: `all`, `some` (the networks with `multicast_dns` enabled on `unifi.Network`), or `none`.
+     */
+    enabledFor?: pulumi.Input<string | undefined>;
+    /**
+     * IDs of the networks mDNS is enabled for when `enabled_for` is `some`. Read-only: the controller derives this list from each network's `mdns_enabled` flag and ignores writes to it, so choose the networks with `multicast_dns` on `unifi.Network`.
+     */
+    enabledForNetworkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Which services are reflected: `all`, `auto`, or `custom` (only `predefined_services` and `custom_services`).
+     */
+    mode?: pulumi.Input<string | undefined>;
+    /**
+     * Codes of the predefined services reflected in `custom` mode, e.g. `google_chromecast`, `apple_airPlay`, `printers`.
+     */
+    predefinedServices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface SettingMdnsCustomService {
+    /**
+     * Service type, e.g. `_myservice._tcp.local`.
+     */
+    address: pulumi.Input<string>;
+    /**
+     * Display name of the service.
+     */
+    name?: pulumi.Input<string | undefined>;
 }
 
 export interface SettingMgmt {
@@ -2191,6 +2574,107 @@ export interface SettingNtp {
     settingPreference?: pulumi.Input<string | undefined>;
 }
 
+export interface SettingRadioAi {
+    /**
+     * Restrict the channel lists to the site's country.
+     */
+    autoAdjustChannelsToCountry?: pulumi.Input<boolean | undefined>;
+    /**
+     * Channel preset: `maximum_speed`, `conservative` or `custom` (the `channels_*` lists).
+     */
+    autoChannelPresetsType?: pulumi.Input<string | undefined>;
+    /**
+     * The controller's `auto_enabled` flag: whether automatic channel optimization is enabled. It is a separate key from `enabled` and is written as given, without changing `enabled`. Left out of the configuration, the controller's value is kept (and not tracked when the controller does not report it).
+     */
+    autoEnabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * 6 GHz channels the optimizer may choose from.
+     */
+    channels6es?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * Channels the optimizer must not use.
+     */
+    channelsBlacklists?: pulumi.Input<pulumi.Input<inputs.SettingRadioAiChannelsBlacklist>[] | undefined>;
+    /**
+     * 5 GHz channels the optimizer may choose from. The controller drops the DFS channels (52-144) when the `na` entry of `radios_configuration` has `dfs = false`, so listing them then fails the plan. It may also narrow the list to the site's country (`auto_adjust_channels_to_country`) or the preset (`auto_channel_presets_type` other than `custom`); leave the list out to keep what the controller derives.
+     */
+    channelsNas?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * 2.4 GHz channels the optimizer may choose from.
+     */
+    channelsNgs?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * When the optimizer runs, as a cron expression in the controller's time zone (e.g. `0 3 * * *`).
+     */
+    cronExpr?: pulumi.Input<string | undefined>;
+    /**
+     * The controller's `enabled` flag for Channel AI: run the optimizer on its `cron_expr` schedule.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * MAC addresses of devices the optimizer leaves alone.
+     */
+    excludeDevices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * MAC addresses of devices the optimizer handles first.
+     */
+    highPriorityDevices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * 5 GHz channel widths (MHz) the optimizer may use: `20`, `40`, `80`, `160`. Each must be at most the `channel_width` of the `na` entry of `radios_configuration` (the controller drops wider ones), or the plan fails.
+     */
+    htModesNas?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * 2.4 GHz channel widths (MHz) the optimizer may use: `20`, `40`. Each must be at most the `channel_width` of the `ng` entry of `radios_configuration` (the controller drops wider ones), or the plan fails.
+     */
+    htModesNgs?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    /**
+     * What the optimizer adjusts: `channel`, `power`.
+     */
+    optimizes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Bands the optimizer may change: `ng` (2.4 GHz), `na` (5 GHz), `6e` (6 GHz).
+     */
+    radios?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Per-band channel width and DFS use.
+     */
+    radiosConfigurations?: pulumi.Input<pulumi.Input<inputs.SettingRadioAiRadiosConfiguration>[] | undefined>;
+    /**
+     * `auto` or `manual`.
+     */
+    settingPreference?: pulumi.Input<string | undefined>;
+}
+
+export interface SettingRadioAiChannelsBlacklist {
+    /**
+     * Channel number.
+     */
+    channel: pulumi.Input<number>;
+    /**
+     * Channel width in MHz.
+     */
+    channelWidth: pulumi.Input<number>;
+    /**
+     * Band: `ng`, `na` or `6e`.
+     */
+    radio: pulumi.Input<string>;
+}
+
+export interface SettingRadioAiRadiosConfiguration {
+    /**
+     * Channel width in MHz.
+     */
+    channelWidth: pulumi.Input<number>;
+    /**
+     * Whether DFS channels may be used.
+     */
+    dfs: pulumi.Input<boolean>;
+    /**
+     * Band: `ng`, `na` or `6e`.
+     */
+    radio: pulumi.Input<string>;
+}
+
 export interface SettingRadius {
     /**
      * Enable RADIUS accounting.
@@ -2209,9 +2693,37 @@ export interface SettingRadius {
      */
     interimUpdateInterval?: pulumi.Input<string | undefined>;
     /**
-     * RADIUS shared secret.
+     * RADIUS shared secret. Stored in state; use the root-level `radius_secret_wo` to avoid persisting the secret.
      */
     secret?: pulumi.Input<string | undefined>;
+}
+
+export interface SettingSnmp {
+    /**
+     * SNMP v1/v2c community string.
+     */
+    community?: pulumi.Input<string | undefined>;
+    /**
+     * Enable SNMP v1/v2c.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable SNMPv3.
+     */
+    enabledV3?: pulumi.Input<boolean | undefined>;
+    /**
+     * SNMPv3 password, stored in state. The configured value is preserved on read because controllers may omit or mask the password. External password changes are not detected. Mutually exclusive with `password_wo`.
+     */
+    password?: pulumi.Input<string | undefined>;
+    passwordWo?: pulumi.Input<string | undefined>;
+    /**
+     * Positive version for `password_wo`. Required with `password_wo`; change it whenever the write-only password should be applied. The version is stored in state. An unchanged version preserves the controller password during other updates.
+     */
+    passwordWoVersion?: pulumi.Input<number | undefined>;
+    /**
+     * SNMPv3 username.
+     */
+    username?: pulumi.Input<string | undefined>;
 }
 
 export interface SettingSyslog {
@@ -2224,7 +2736,7 @@ export interface SettingSyslog {
      */
     debug?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether remote syslog is enabled.
+     * Whether remote syslog is enabled. Taken from the controller when not set, so declaring the `syslog` block to manage its server address no longer disables logging (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -2232,7 +2744,7 @@ export interface SettingSyslog {
      */
     ip?: pulumi.Input<string | undefined>;
     /**
-     * Log all available facilities.
+     * Log all available facilities. Taken from the controller when not set (#544).
      */
     logAllContents?: pulumi.Input<boolean | undefined>;
     /**
@@ -2581,12 +3093,31 @@ export interface StaticRouteGateway {
      */
     device?: pulumi.Input<string | undefined>;
     /**
-     * The type of gateway for the static route. Can be `default` or `switch`.
+     * The type of gateway for the static route. Can be `default` or `switch`. A new route defaults to `default`; an existing route keeps the controller's value when this is not set, so adopting a switch route does not move it to the gateway (#544).
      */
     type?: pulumi.Input<string | undefined>;
 }
 
 export interface StaticRouteTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: pulumi.Input<string | undefined>;
+}
+
+export interface TrafficMatchingListTimeouts {
     /**
      * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
      */
@@ -2704,7 +3235,7 @@ export interface VpnClientWireguard {
      */
     dnsServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * WAN interface to use for the VPN connection (e.g., `wan`, `wan2`).
+     * WAN interface to use for the VPN connection (e.g., `wan`, `wan2`). Defaults to `wan` for a new client; an existing client keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
@@ -2716,7 +3247,7 @@ export interface VpnClientWireguard {
      */
     presharedKey?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether to use a preshared key for additional security.
+     * Specifies whether to use a preshared key for additional security. Taken from the controller when not set (a new client gets `false`, or `true` when the configuration file carries a preshared key) (#544).
      */
     presharedKeyEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -2769,7 +3300,7 @@ export interface VpnServerDns {
 
 export interface VpnServerL2tp {
     /**
-     * Allow weak ciphers for L2TP connections.
+     * Allow weak ciphers for L2TP connections. Taken from the controller when not set (a new server gets `false`) (#544).
      */
     allowWeakCiphers?: pulumi.Input<boolean | undefined>;
     /**
@@ -2792,15 +3323,15 @@ export interface VpnServerOpenvpn {
      */
     dhKey?: pulumi.Input<string | undefined>;
     /**
-     * Encryption cipher for OpenVPN.
+     * Encryption cipher for OpenVPN. Defaults to `AES_256_GCM` for a new server; an existing server keeps the controller's value when this is not set (#544).
      */
     encryptionCipher?: pulumi.Input<string | undefined>;
     /**
-     * OpenVPN mode.
+     * OpenVPN mode. Defaults to `server` for a new server; an existing server keeps the controller's value when this is not set (#544).
      */
     mode?: pulumi.Input<string | undefined>;
     /**
-     * Port for the OpenVPN server to listen on.
+     * Port for the OpenVPN server to listen on. Defaults to `1194` for a new server; an existing server keeps the controller's port when this is not set (#544).
      */
     port?: pulumi.Input<number | undefined>;
     /**
@@ -2867,24 +3398,33 @@ export interface VpnServerTimeouts {
 
 export interface VpnServerWan {
     /**
-     * WAN interface to use for the VPN server (e.g., `wan`, `wan2`).
+     * WAN interface to use for the VPN server (e.g., `wan`, `wan2`). Defaults to `wan` when the `wan` block is declared on a new server; an existing server keeps the controller's value when this is not set, so adopting a server bound to `wan2` does not move it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
-     * Local WAN IP to bind the VPN server to. Use `any` to listen on all addresses.
+     * Local WAN IP to bind the VPN server to. Use `any` to listen on all addresses. Defaults to `any` when the `wan` block is declared on a new server; an existing server keeps the controller's value when this is not set, including no value at all, which is how a server created in the UI is stored (#544).
      */
     ip?: pulumi.Input<string | undefined>;
 }
 
 export interface VpnServerWireguard {
     /**
-     * UDP port for the WireGuard server to listen on.
+     * The address family the server listens on, `v4` or `v6`: one per server (the UI's IP Address choice between the WAN's IPv4 and IPv6 addresses). Defaults to `v4` for a new server, which is also what a server without the setting does; an existing server keeps the controller's value when this is not set (#544).
+     */
+    ipVersion?: pulumi.Input<string | undefined>;
+    /**
+     * UDP port for the WireGuard server to listen on. Defaults to `51820` for a new server; an existing server keeps the controller's port when this is not set (#544).
      */
     port?: pulumi.Input<number | undefined>;
     /**
-     * WireGuard private key for this server (base64). If not specified, the provider generates one at create time (the controller does not generate it and rejects a server without a key).
+     * WireGuard private key for this server (base64). If neither this nor `private_key_wo` is specified, the provider generates one at create time (the controller does not generate it and rejects a server without a key). Stored in state; use `private_key_wo` to avoid persisting the secret.
      */
     privateKey?: pulumi.Input<string | undefined>;
+    privateKeyWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version counter for `private_key_wo`. Increment this value to send a new `private_key_wo` to the controller (key rotation).
+     */
+    privateKeyWoVersion?: pulumi.Input<number | undefined>;
     /**
      * WireGuard public key for this server. Computed from the private key.
      */
@@ -3001,20 +3541,24 @@ export interface WanDslite {
 
 export interface WanEgressQos {
     /**
-     * Whether egress QoS is enabled
+     * Whether egress QoS is enabled. Null when the controller holds no value, and not sent unless set (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Egress QoS priority
+     * Egress QoS priority (802.1p CoS), `1`-`7`. Null when the controller holds no priority; it is never sent as `0`, which the controller rejects.
      */
     priority?: pulumi.Input<number | undefined>;
 }
 
 export interface WanIgmpProxy {
     /**
-     * IGMP proxy downstream target (none, lan, guest)
+     * IGMP proxy downstream target (`none`, `lan`, `guest`). UniFi OS gateways take the downstream side from `downstream_network_ids` instead and report `some` here while that set is non-empty; they reject `lan` and `guest`. Left unset it follows the set, so it is not carried over from state at plan time.
      */
     downstream?: pulumi.Input<string | undefined>;
+    /**
+     * IDs of the LAN networks the proxy forwards multicast onto (UniFi OS gateways). Setting it also sets `downstream` to `some`, or `none` when empty, unless `downstream` names a target itself.
+     */
+    downstreamNetworkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether IGMP proxy upstream is enabled
      */
@@ -3053,7 +3597,7 @@ export interface WanSmartq {
      */
     downRate?: pulumi.Input<number | undefined>;
     /**
-     * Whether Smart Queue is enabled
+     * Whether Smart Queue is enabled. Taken from the controller when not set (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -3102,11 +3646,11 @@ export interface WanUpnp {
 
 export interface WanVlan {
     /**
-     * Whether VLAN is enabled
+     * Whether VLAN is enabled. Taken from the controller when not set (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The VLAN ID
+     * The VLAN ID. Taken from the controller when not set (#544).
      */
     id?: pulumi.Input<number | undefined>;
 }
@@ -3136,7 +3680,7 @@ export interface WlanApGroup {
      */
     ids?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Access point group mode.
+     * Access point group mode. Defaults to `all` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     mode?: pulumi.Input<string | undefined>;
 }
@@ -3151,7 +3695,7 @@ export interface WlanMacFilter {
      */
     lists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * MAC address filter policy (only valid if `enabled` is `true`).
+     * MAC address filter policy (only valid if `enabled` is `true`). Defaults to `deny` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     policy?: pulumi.Input<string | undefined>;
 }
@@ -3255,7 +3799,7 @@ export interface WlanWpa {
      */
     enc?: pulumi.Input<string | undefined>;
     /**
-     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`.
+     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`. Defaults to `wpa2` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     mode?: pulumi.Input<string | undefined>;
 }

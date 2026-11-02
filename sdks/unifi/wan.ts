@@ -20,6 +20,17 @@ export class Wan extends pulumi.CustomResource {
         return new Wan(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Wan resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: WanState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/wan:Wan", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/wan:Wan';
 
@@ -55,13 +66,21 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly egressQos: pulumi.Output<outputs.WanEgressQos>;
     /**
-     * Whether the WAN network is enabled
+     * Whether the WAN network is enabled. Taken from the controller when not set; a WAN stored without the key reads as enabled (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
      * IGMP proxy configuration
      */
     declare public readonly igmpProxy: pulumi.Output<outputs.WanIgmpProxy>;
+    /**
+     * MTU of the WAN interface, in bytes. Only applied when `interface_mtu_enabled` is `true`. For PPPoE with RFC 4638 ("baby jumbo" frames), set `1508` so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
+     */
+    declare public readonly interfaceMtu: pulumi.Output<number>;
+    /**
+     * Whether `interface_mtu` overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
+     */
+    declare public readonly interfaceMtuEnabled: pulumi.Output<boolean>;
     /**
      * IP aliases
      */
@@ -117,7 +136,7 @@ export class Wan extends pulumi.CustomResource {
     declare public readonly smartq: pulumi.Output<outputs.WanSmartq>;
     declare public readonly timeouts: pulumi.Output<outputs.WanTimeouts | undefined>;
     /**
-     * The WAN type (dhcp, static, pppoe)
+     * The WAN type (`dhcp`, `static`, `pppoe` or `disabled`). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to `dhcp` (#544).
      */
     declare public readonly type: pulumi.Output<string>;
     /**
@@ -157,6 +176,8 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["egressQos"] = state?.egressQos;
             resourceInputs["enabled"] = state?.enabled;
             resourceInputs["igmpProxy"] = state?.igmpProxy;
+            resourceInputs["interfaceMtu"] = state?.interfaceMtu;
+            resourceInputs["interfaceMtuEnabled"] = state?.interfaceMtuEnabled;
             resourceInputs["ipAliases"] = state?.ipAliases;
             resourceInputs["ipv6SettingPreference"] = state?.ipv6SettingPreference;
             resourceInputs["loadBalance"] = state?.loadBalance;
@@ -186,6 +207,8 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["egressQos"] = args?.egressQos;
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["igmpProxy"] = args?.igmpProxy;
+            resourceInputs["interfaceMtu"] = args?.interfaceMtu;
+            resourceInputs["interfaceMtuEnabled"] = args?.interfaceMtuEnabled;
             resourceInputs["ipAliases"] = args?.ipAliases;
             resourceInputs["ipv6SettingPreference"] = args?.ipv6SettingPreference;
             resourceInputs["loadBalance"] = args?.loadBalance;
@@ -239,13 +262,21 @@ export interface WanState {
      */
     egressQos?: pulumi.Input<inputs.WanEgressQos | undefined>;
     /**
-     * Whether the WAN network is enabled
+     * Whether the WAN network is enabled. Taken from the controller when not set; a WAN stored without the key reads as enabled (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
      * IGMP proxy configuration
      */
     igmpProxy?: pulumi.Input<inputs.WanIgmpProxy | undefined>;
+    /**
+     * MTU of the WAN interface, in bytes. Only applied when `interface_mtu_enabled` is `true`. For PPPoE with RFC 4638 ("baby jumbo" frames), set `1508` so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
+     */
+    interfaceMtu?: pulumi.Input<number | undefined>;
+    /**
+     * Whether `interface_mtu` overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
+     */
+    interfaceMtuEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * IP aliases
      */
@@ -301,7 +332,7 @@ export interface WanState {
     smartq?: pulumi.Input<inputs.WanSmartq | undefined>;
     timeouts?: pulumi.Input<inputs.WanTimeouts | undefined>;
     /**
-     * The WAN type (dhcp, static, pppoe)
+     * The WAN type (`dhcp`, `static`, `pppoe` or `disabled`). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to `dhcp` (#544).
      */
     type?: pulumi.Input<string | undefined>;
     /**
@@ -347,13 +378,21 @@ export interface WanArgs {
      */
     egressQos?: pulumi.Input<inputs.WanEgressQos | undefined>;
     /**
-     * Whether the WAN network is enabled
+     * Whether the WAN network is enabled. Taken from the controller when not set; a WAN stored without the key reads as enabled (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
      * IGMP proxy configuration
      */
     igmpProxy?: pulumi.Input<inputs.WanIgmpProxy | undefined>;
+    /**
+     * MTU of the WAN interface, in bytes. Only applied when `interface_mtu_enabled` is `true`. For PPPoE with RFC 4638 ("baby jumbo" frames), set `1508` so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
+     */
+    interfaceMtu?: pulumi.Input<number | undefined>;
+    /**
+     * Whether `interface_mtu` overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
+     */
+    interfaceMtuEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * IP aliases
      */
@@ -409,7 +448,7 @@ export interface WanArgs {
     smartq?: pulumi.Input<inputs.WanSmartq | undefined>;
     timeouts?: pulumi.Input<inputs.WanTimeouts | undefined>;
     /**
-     * The WAN type (dhcp, static, pppoe)
+     * The WAN type (`dhcp`, `static`, `pppoe` or `disabled`). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to `dhcp` (#544).
      */
     type?: pulumi.Input<string | undefined>;
     /**

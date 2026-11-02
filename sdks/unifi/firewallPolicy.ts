@@ -20,6 +20,17 @@ export class FirewallPolicy extends pulumi.CustomResource {
         return new FirewallPolicy(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing FirewallPolicy resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: FirewallPolicyState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/firewallPolicy:FirewallPolicy", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/firewallPolicy:FirewallPolicy';
 
@@ -47,11 +58,11 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly connectionStates: pulumi.Output<string[]>;
     /**
-     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Defaults to `false`.
+     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     declare public readonly createAllowRespond: pulumi.Output<boolean>;
     /**
-     * A description for the policy.
+     * A description for the policy. Taken from the controller when not set (#544).
      */
     declare public readonly description: pulumi.Output<string>;
     /**
@@ -59,7 +70,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly destination: pulumi.Output<outputs.FirewallPolicyDestination>;
     /**
-     * Whether the policy is enabled. Defaults to `true`.
+     * Whether the policy is enabled. Defaults to `true` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -75,11 +86,11 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly ipVersion: pulumi.Output<string>;
     /**
-     * Whether to log packets matching this policy. Defaults to `false`.
+     * Whether to log packets matching this policy. Taken from the controller when not set; a new policy is created with logging off (#544).
      */
     declare public readonly logging: pulumi.Output<boolean>;
     /**
-     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Defaults to `false`.
+     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     declare public readonly matchOppositeProtocol: pulumi.Output<boolean>;
     /**
@@ -87,7 +98,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Defaults to `all`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply.
+     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns `all` to a new policy (#544).
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -187,11 +198,11 @@ export interface FirewallPolicyState {
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Defaults to `false`.
+     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     createAllowRespond?: pulumi.Input<boolean | undefined>;
     /**
-     * A description for the policy.
+     * A description for the policy. Taken from the controller when not set (#544).
      */
     description?: pulumi.Input<string | undefined>;
     /**
@@ -199,7 +210,7 @@ export interface FirewallPolicyState {
      */
     destination?: pulumi.Input<inputs.FirewallPolicyDestination | undefined>;
     /**
-     * Whether the policy is enabled. Defaults to `true`.
+     * Whether the policy is enabled. Defaults to `true` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -215,11 +226,11 @@ export interface FirewallPolicyState {
      */
     ipVersion?: pulumi.Input<string | undefined>;
     /**
-     * Whether to log packets matching this policy. Defaults to `false`.
+     * Whether to log packets matching this policy. Taken from the controller when not set; a new policy is created with logging off (#544).
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Defaults to `false`.
+     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     matchOppositeProtocol?: pulumi.Input<boolean | undefined>;
     /**
@@ -227,7 +238,7 @@ export interface FirewallPolicyState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Defaults to `all`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply.
+     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns `all` to a new policy (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -262,11 +273,11 @@ export interface FirewallPolicyArgs {
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Defaults to `false`.
+     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     createAllowRespond?: pulumi.Input<boolean | undefined>;
     /**
-     * A description for the policy.
+     * A description for the policy. Taken from the controller when not set (#544).
      */
     description?: pulumi.Input<string | undefined>;
     /**
@@ -274,7 +285,7 @@ export interface FirewallPolicyArgs {
      */
     destination: pulumi.Input<inputs.FirewallPolicyDestination>;
     /**
-     * Whether the policy is enabled. Defaults to `true`.
+     * Whether the policy is enabled. Defaults to `true` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -282,11 +293,11 @@ export interface FirewallPolicyArgs {
      */
     ipVersion?: pulumi.Input<string | undefined>;
     /**
-     * Whether to log packets matching this policy. Defaults to `false`.
+     * Whether to log packets matching this policy. Taken from the controller when not set; a new policy is created with logging off (#544).
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Defaults to `false`.
+     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     matchOppositeProtocol?: pulumi.Input<boolean | undefined>;
     /**
@@ -294,7 +305,7 @@ export interface FirewallPolicyArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Defaults to `all`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply.
+     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns `all` to a new policy (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**

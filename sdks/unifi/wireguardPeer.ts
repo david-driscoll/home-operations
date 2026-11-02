@@ -20,6 +20,17 @@ export class WireguardPeer extends pulumi.CustomResource {
         return new WireguardPeer(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing WireguardPeer resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: WireguardPeerState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/wireguardPeer:WireguardPeer", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/wireguardPeer:WireguardPeer';
 
@@ -35,13 +46,17 @@ export class WireguardPeer extends pulumi.CustomResource {
     }
 
     /**
-     * Additional CIDRs routed to this peer beyond its tunnel IP.
+     * Additional CIDRs routed to this peer beyond its tunnel IP. A new peer gets none; an existing peer keeps the controller's list when this is not set, so adopting a peer does not drop the routes behind it (#544). Set it to `[]` to clear them.
      */
     declare public readonly allowedIps: pulumi.Output<string[]>;
     /**
      * The tunnel IP assigned to the peer, without mask (e.g. `192.0.2.10`). Must be within the WireGuard server's subnet.
      */
     declare public readonly interfaceIp: pulumi.Output<string>;
+    /**
+     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with `subnet_ipv6`: within that subnet. Left unset, the peer has no IPv6 address.
+     */
+    declare public readonly interfaceIpv6: pulumi.Output<string | undefined>;
     /**
      * The name of the WireGuard peer.
      */
@@ -80,6 +95,7 @@ export class WireguardPeer extends pulumi.CustomResource {
             const state = argsOrState as WireguardPeerState | undefined;
             resourceInputs["allowedIps"] = state?.allowedIps;
             resourceInputs["interfaceIp"] = state?.interfaceIp;
+            resourceInputs["interfaceIpv6"] = state?.interfaceIpv6;
             resourceInputs["name"] = state?.name;
             resourceInputs["networkId"] = state?.networkId;
             resourceInputs["presharedKey"] = state?.presharedKey;
@@ -100,6 +116,7 @@ export class WireguardPeer extends pulumi.CustomResource {
             }
             resourceInputs["allowedIps"] = args?.allowedIps;
             resourceInputs["interfaceIp"] = args?.interfaceIp;
+            resourceInputs["interfaceIpv6"] = args?.interfaceIpv6;
             resourceInputs["name"] = args?.name;
             resourceInputs["networkId"] = args?.networkId;
             resourceInputs["presharedKey"] = args?.presharedKey ? pulumi.secret(args.presharedKey) : undefined;
@@ -120,13 +137,17 @@ export class WireguardPeer extends pulumi.CustomResource {
  */
 export interface WireguardPeerState {
     /**
-     * Additional CIDRs routed to this peer beyond its tunnel IP.
+     * Additional CIDRs routed to this peer beyond its tunnel IP. A new peer gets none; an existing peer keeps the controller's list when this is not set, so adopting a peer does not drop the routes behind it (#544). Set it to `[]` to clear them.
      */
     allowedIps?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The tunnel IP assigned to the peer, without mask (e.g. `192.0.2.10`). Must be within the WireGuard server's subnet.
      */
     interfaceIp?: pulumi.Input<string | undefined>;
+    /**
+     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with `subnet_ipv6`: within that subnet. Left unset, the peer has no IPv6 address.
+     */
+    interfaceIpv6?: pulumi.Input<string | undefined>;
     /**
      * The name of the WireGuard peer.
      */
@@ -156,13 +177,17 @@ export interface WireguardPeerState {
  */
 export interface WireguardPeerArgs {
     /**
-     * Additional CIDRs routed to this peer beyond its tunnel IP.
+     * Additional CIDRs routed to this peer beyond its tunnel IP. A new peer gets none; an existing peer keeps the controller's list when this is not set, so adopting a peer does not drop the routes behind it (#544). Set it to `[]` to clear them.
      */
     allowedIps?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The tunnel IP assigned to the peer, without mask (e.g. `192.0.2.10`). Must be within the WireGuard server's subnet.
      */
     interfaceIp: pulumi.Input<string>;
+    /**
+     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with `subnet_ipv6`: within that subnet. Left unset, the peer has no IPv6 address.
+     */
+    interfaceIpv6?: pulumi.Input<string | undefined>;
     /**
      * The name of the WireGuard peer.
      */

@@ -20,6 +20,17 @@ export class AgentsModel extends pulumi.CustomResource {
         return new AgentsModel(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing AgentsModel resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: AgentsModelState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("coderd:index/agentsModel:AgentsModel", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'coderd:index/agentsModel:AgentsModel';
 

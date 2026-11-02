@@ -20,6 +20,17 @@ export class DynamicDns extends pulumi.CustomResource {
         return new DynamicDns(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing DynamicDns resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: DynamicDnsState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/dynamicDns:DynamicDns", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/dynamicDns:DynamicDns';
 
@@ -39,7 +50,7 @@ export class DynamicDns extends pulumi.CustomResource {
      */
     declare public readonly hostName: pulumi.Output<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`.
+     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan` for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a `wan2` entry does not plan to replace it (#544).
      */
     declare public readonly interface: pulumi.Output<string>;
     /**
@@ -118,7 +129,7 @@ export interface DynamicDnsState {
      */
     hostName?: pulumi.Input<string | undefined>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`.
+     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan` for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a `wan2` entry does not plan to replace it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
@@ -153,7 +164,7 @@ export interface DynamicDnsArgs {
      */
     hostName: pulumi.Input<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`.
+     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan` for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a `wan2` entry does not plan to replace it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**

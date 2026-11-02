@@ -18,6 +18,17 @@ export class ServerSettings extends pulumi.CustomResource {
         return new ServerSettings(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing ServerSettings resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: ServerSettingsState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("technitium:index/serverSettings:ServerSettings", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'technitium:index/serverSettings:ServerSettings';
 

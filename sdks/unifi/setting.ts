@@ -20,6 +20,17 @@ export class Setting extends pulumi.CustomResource {
         return new Setting(name, <any>state, { ...opts, id: id });
     }
 
+    /**
+     * Check whether an existing Setting resource with the given ID exists.
+     *
+     * @param id The _unique_ provider ID of the resource to check.
+     * @param state Any extra arguments used during the lookup.
+     * @param opts Optional settings to control the behavior of the CustomResource.
+     */
+    public static exists(id: pulumi.Input<string>, state?: SettingState, opts?: pulumi.CustomResourceOptions): pulumi.Output<boolean> {
+        return pulumi.runtime.existsResource("unifi:index/setting:Setting", id, <any>state || {}, { ...opts }, utilities.getPackage());
+    }
+
     /** @internal */
     public static readonly __pulumiType = 'unifi:index/setting:Setting';
 
@@ -41,7 +52,7 @@ export class Setting extends pulumi.CustomResource {
     /**
      * Wireless meshing and uplink connectivity (Settings > WiFi > Wireless Meshing). Disabling meshing frees the standby mesh radio and doubles the per-band SSID budget: with meshing on, APs reserve a hidden backhaul SSID and allow 4 SSIDs per band instead of 8. The controller-generated mesh SSID and pre-shared key are not exposed and are preserved across updates, as are any options this block does not model.
      */
-    declare public readonly connectivity: pulumi.Output<outputs.SettingConnectivity | undefined>;
+    declare public readonly connectivity: pulumi.Output<outputs.SettingConnectivity>;
     /**
      * Regulatory country settings.
      */
@@ -55,13 +66,17 @@ export class Setting extends pulumi.CustomResource {
      */
     declare public readonly dpi: pulumi.Output<outputs.SettingDpi>;
     /**
+     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in `speed` mode color each port by its link speed, those in `network` mode by its network; set the mode per switch with `unifi.Device`'s `etherlighting` block. Each list replaces the controller's list when set and is left untouched when omitted.
+     */
+    declare public readonly etherlighting: pulumi.Output<outputs.SettingEtherlighting | undefined>;
+    /**
      * Site-wide switch settings (Settings > Networks > Global Switch Settings). On current controllers jumbo frames are only honored here, not via `unifi_device.jumboframe_enabled`. Options not exposed by this block are preserved across updates.
      */
-    declare public readonly globalSwitch: pulumi.Output<outputs.SettingGlobalSwitch | undefined>;
+    declare public readonly globalSwitch: pulumi.Output<outputs.SettingGlobalSwitch>;
     /**
      * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
      */
-    declare public readonly igmpSnooping: pulumi.Output<outputs.SettingIgmpSnooping | undefined>;
+    declare public readonly igmpSnooping: pulumi.Output<outputs.SettingIgmpSnooping>;
     /**
      * Intrusion Prevention System (IPS/IDS) and threat management settings. Basic IDS/IPS uses the built-in Emerging Threats ruleset and is free. A UniFi CyberSecure subscription adds enhanced threat intelligence from Proofpoint and Cloudflare on top of the base ruleset.
      */
@@ -70,6 +85,10 @@ export class Setting extends pulumi.CustomResource {
      * LCD/display (LCM) settings for devices with a screen.
      */
     declare public readonly lcm: pulumi.Output<outputs.SettingLcm>;
+    /**
+     * Multicast DNS (Settings > Networks > Multicast DNS): which networks mDNS is reflected between, and which services. Options not exposed by this block are preserved across updates.
+     */
+    declare public readonly mdns: pulumi.Output<outputs.SettingMdns | undefined>;
     /**
      * Management settings.
      */
@@ -83,13 +102,26 @@ export class Setting extends pulumi.CustomResource {
      */
     declare public readonly ntp: pulumi.Output<outputs.SettingNtp>;
     /**
+     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in `radios`, overriding a channel set on the device, so leaving a band out of `radios` is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
+     */
+    declare public readonly radioAi: pulumi.Output<outputs.SettingRadioAi | undefined>;
+    /**
      * RADIUS settings.
      */
     declare public readonly radius: pulumi.Output<outputs.SettingRadius>;
+    declare public readonly radiusSecretWo: pulumi.Output<string | undefined>;
+    /**
+     * Version counter for `radius_secret_wo`. Increment this value to trigger a RADIUS secret update.
+     */
+    declare public readonly radiusSecretWoVersion: pulumi.Output<number | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
     declare public readonly site: pulumi.Output<string>;
+    /**
+     * SNMP agent settings (Settings > System > SNMP): a v1/v2c community and a single SNMPv3 user. Only configured SNMP settings are read; import does not populate this attribute.
+     */
+    declare public readonly snmp: pulumi.Output<outputs.SettingSnmp | undefined>;
     /**
      * Remote syslog (rsyslogd) settings.
      */
@@ -118,15 +150,21 @@ export class Setting extends pulumi.CustomResource {
             resourceInputs["country"] = state?.country;
             resourceInputs["doh"] = state?.doh;
             resourceInputs["dpi"] = state?.dpi;
+            resourceInputs["etherlighting"] = state?.etherlighting;
             resourceInputs["globalSwitch"] = state?.globalSwitch;
             resourceInputs["igmpSnooping"] = state?.igmpSnooping;
             resourceInputs["ips"] = state?.ips;
             resourceInputs["lcm"] = state?.lcm;
+            resourceInputs["mdns"] = state?.mdns;
             resourceInputs["mgmt"] = state?.mgmt;
             resourceInputs["networkOptimization"] = state?.networkOptimization;
             resourceInputs["ntp"] = state?.ntp;
+            resourceInputs["radioAi"] = state?.radioAi;
             resourceInputs["radius"] = state?.radius;
+            resourceInputs["radiusSecretWo"] = state?.radiusSecretWo;
+            resourceInputs["radiusSecretWoVersion"] = state?.radiusSecretWoVersion;
             resourceInputs["site"] = state?.site;
+            resourceInputs["snmp"] = state?.snmp;
             resourceInputs["syslog"] = state?.syslog;
             resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["usg"] = state?.usg;
@@ -137,20 +175,28 @@ export class Setting extends pulumi.CustomResource {
             resourceInputs["country"] = args?.country;
             resourceInputs["doh"] = args?.doh;
             resourceInputs["dpi"] = args?.dpi;
+            resourceInputs["etherlighting"] = args?.etherlighting;
             resourceInputs["globalSwitch"] = args?.globalSwitch;
             resourceInputs["igmpSnooping"] = args?.igmpSnooping;
             resourceInputs["ips"] = args?.ips;
             resourceInputs["lcm"] = args?.lcm;
+            resourceInputs["mdns"] = args?.mdns;
             resourceInputs["mgmt"] = args?.mgmt;
             resourceInputs["networkOptimization"] = args?.networkOptimization;
             resourceInputs["ntp"] = args?.ntp;
+            resourceInputs["radioAi"] = args?.radioAi;
             resourceInputs["radius"] = args?.radius;
+            resourceInputs["radiusSecretWo"] = args?.radiusSecretWo ? pulumi.secret(args.radiusSecretWo) : undefined;
+            resourceInputs["radiusSecretWoVersion"] = args?.radiusSecretWoVersion;
             resourceInputs["site"] = args?.site;
+            resourceInputs["snmp"] = args?.snmp;
             resourceInputs["syslog"] = args?.syslog;
             resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["usg"] = args?.usg;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
+        const secretOpts = { additionalSecretOutputs: ["radiusSecretWo"] };
+        opts = pulumi.mergeOptions(opts, secretOpts);
         super(Setting.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
@@ -180,6 +226,10 @@ export interface SettingState {
      */
     dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
     /**
+     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in `speed` mode color each port by its link speed, those in `network` mode by its network; set the mode per switch with `unifi.Device`'s `etherlighting` block. Each list replaces the controller's list when set and is left untouched when omitted.
+     */
+    etherlighting?: pulumi.Input<inputs.SettingEtherlighting | undefined>;
+    /**
      * Site-wide switch settings (Settings > Networks > Global Switch Settings). On current controllers jumbo frames are only honored here, not via `unifi_device.jumboframe_enabled`. Options not exposed by this block are preserved across updates.
      */
     globalSwitch?: pulumi.Input<inputs.SettingGlobalSwitch | undefined>;
@@ -196,6 +246,10 @@ export interface SettingState {
      */
     lcm?: pulumi.Input<inputs.SettingLcm | undefined>;
     /**
+     * Multicast DNS (Settings > Networks > Multicast DNS): which networks mDNS is reflected between, and which services. Options not exposed by this block are preserved across updates.
+     */
+    mdns?: pulumi.Input<inputs.SettingMdns | undefined>;
+    /**
      * Management settings.
      */
     mgmt?: pulumi.Input<inputs.SettingMgmt | undefined>;
@@ -208,13 +262,26 @@ export interface SettingState {
      */
     ntp?: pulumi.Input<inputs.SettingNtp | undefined>;
     /**
+     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in `radios`, overriding a channel set on the device, so leaving a band out of `radios` is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
+     */
+    radioAi?: pulumi.Input<inputs.SettingRadioAi | undefined>;
+    /**
      * RADIUS settings.
      */
     radius?: pulumi.Input<inputs.SettingRadius | undefined>;
+    radiusSecretWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version counter for `radius_secret_wo`. Increment this value to trigger a RADIUS secret update.
+     */
+    radiusSecretWoVersion?: pulumi.Input<number | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
     site?: pulumi.Input<string | undefined>;
+    /**
+     * SNMP agent settings (Settings > System > SNMP): a v1/v2c community and a single SNMPv3 user. Only configured SNMP settings are read; import does not populate this attribute.
+     */
+    snmp?: pulumi.Input<inputs.SettingSnmp | undefined>;
     /**
      * Remote syslog (rsyslogd) settings.
      */
@@ -251,6 +318,10 @@ export interface SettingArgs {
      */
     dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
     /**
+     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in `speed` mode color each port by its link speed, those in `network` mode by its network; set the mode per switch with `unifi.Device`'s `etherlighting` block. Each list replaces the controller's list when set and is left untouched when omitted.
+     */
+    etherlighting?: pulumi.Input<inputs.SettingEtherlighting | undefined>;
+    /**
      * Site-wide switch settings (Settings > Networks > Global Switch Settings). On current controllers jumbo frames are only honored here, not via `unifi_device.jumboframe_enabled`. Options not exposed by this block are preserved across updates.
      */
     globalSwitch?: pulumi.Input<inputs.SettingGlobalSwitch | undefined>;
@@ -267,6 +338,10 @@ export interface SettingArgs {
      */
     lcm?: pulumi.Input<inputs.SettingLcm | undefined>;
     /**
+     * Multicast DNS (Settings > Networks > Multicast DNS): which networks mDNS is reflected between, and which services. Options not exposed by this block are preserved across updates.
+     */
+    mdns?: pulumi.Input<inputs.SettingMdns | undefined>;
+    /**
      * Management settings.
      */
     mgmt?: pulumi.Input<inputs.SettingMgmt | undefined>;
@@ -279,13 +354,26 @@ export interface SettingArgs {
      */
     ntp?: pulumi.Input<inputs.SettingNtp | undefined>;
     /**
+     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in `radios`, overriding a channel set on the device, so leaving a band out of `radios` is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
+     */
+    radioAi?: pulumi.Input<inputs.SettingRadioAi | undefined>;
+    /**
      * RADIUS settings.
      */
     radius?: pulumi.Input<inputs.SettingRadius | undefined>;
+    radiusSecretWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version counter for `radius_secret_wo`. Increment this value to trigger a RADIUS secret update.
+     */
+    radiusSecretWoVersion?: pulumi.Input<number | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
     site?: pulumi.Input<string | undefined>;
+    /**
+     * SNMP agent settings (Settings > System > SNMP): a v1/v2c community and a single SNMPv3 user. Only configured SNMP settings are read; import does not populate this attribute.
+     */
+    snmp?: pulumi.Input<inputs.SettingSnmp | undefined>;
     /**
      * Remote syslog (rsyslogd) settings.
      */
