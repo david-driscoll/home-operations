@@ -12,7 +12,6 @@ import * as pulumi from "@pulumi/pulumi";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
 import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
-import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { createGatusDnsUptime, StandardDns } from "../../components/StandardDns.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
@@ -277,22 +276,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   authentikForwardAuthHost: "authentik-server",
 });
 
-const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
-  globals,
-  outputs,
-  host: celestiaHost,
-  vmId: 301,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: celestiaCluster,
-  dockge: celestiaDockgeRuntime,
-  dependsOn: [],
-  tags: ["backup-source"],
-});
-celestiaPbs.addHostMount("/data");
-celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
-celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
-// celestiaPbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
-
 // Celestia monitors twilight-sparkle + itself; alpha-site monitors only itself
 const celestiaPveHosts = [twilightSparkleHost, celestiaHost];
 const celestiaPveVariables = {
@@ -308,7 +291,7 @@ const alphaSitePveVariables = {
 
 await awaitOutput(
   alphaSiteDockgeRuntime.deployStacks({
-    dependsOn: [celestiaPbs],
+    dependsOn: [],
     variables: alphaSitePveVariables,
   }),
 );
@@ -316,7 +299,7 @@ await awaitOutput(alphaSiteHost.addUptimeGatus());
 
 await awaitOutput(
   celestiaDockgeRuntime.deployStacks({
-    dependsOn: [celestiaPbs],
+    dependsOn: [],
     variables: celestiaPveVariables,
   }),
 );
@@ -358,15 +341,15 @@ await awaitOutput(
   backupDirector.createPlans(
     {
       dockge: celestiaDockgeRuntime,
-      pbs: celestiaPbs,
+      localRepos: true,
       cluster: celestiaCluster,
     },
-    [celestiaPbs],
+    [celestiaDockgeRuntime],
   ),
 );
 
 // alpha-site's own backrest (docs/plans/host-owned-backups.md, phase 2 step 7).
-// No backup server and no /data, so no pbs: it takes no copies, and its repos
+// No /data, so no localRepos: it takes no copies, and its repos
 // live in Garage (stacks/backups, GARAGE_BACKED_HOSTS). It depends on the
 // dockge host so its first run finds the backrest stack deployed.
 await awaitOutput(
@@ -408,13 +391,6 @@ monitor.exportNodeStateToOnePassword(
       internalIp: celestiaDockgeRuntime.localIpAddress,
       mac: celestiaDockgeRuntime.macAddress,
       nodeType: "dockge",
-    },
-    {
-      name: celestiaPbs.tailscaleName,
-      externalIp: celestiaPbs.tailscaleIpAddress,
-      internalIp: celestiaPbs.localIpAddress,
-      mac: celestiaPbs.macAddress,
-      nodeType: "pbs",
     },
     {
       name: alphaSiteDockgeRuntime.tailscaleName,

@@ -33,8 +33,7 @@
  *
  * Both exist and they differ. `title` is the display name (`Celestia`);
  * `sourceTitle` is the 1Password item title (`Cluster: Celestia`), surfaced as
- * `meta.title`, and is what `ProxmoxBackupServerLxc` writes into its `cluster`
- * field and what names a Gatus group. Changing either is a user-visible
+ * `meta.title`, and is what names a Gatus group. Changing either is a user-visible
  * rename, so both are written out rather than derived from one another.
  *
  * ## Validation is not optional here

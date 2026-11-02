@@ -15,7 +15,6 @@
 | Minio (TrueNAS) | S3 API | Object storage (Thanos, backup data, stack state) | Username/password from 1Password | High | `components/globals.ts` |
 | Authentik | REST API | IdP — SSO flows, groups, application registration | Token + URL from 1Password/env | High | `components/authentik/`, `sdks/authentik/` |
 | AdGuard Home | REST API | DNS filtering and upstream configuration | Username/password from 1Password | Medium | `components/globals.ts` |
-| Proxmox Backup Server (PBS) | REST API | Backup job management | Credentials from 1Password | Medium | `sdks/pbs/`, `components/ProxmoxBackupServerLxc.ts` |
 | Backblaze B2 | S3-compatible API | Off-site backup storage | Application key (currently disabled/commented) | Low | `package.json` (commented out in globals) |
 | GitHub | REST API | GitHub resource management via Pulumi | [ASK USER] — token not visible in scanned files | Low | `package.json` (`@pulumi/github`) |
 | Remote hosts (SSH) | SSH | Direct command execution on Proxmox/LXC hosts | SSH key (from 1Password `sftpKey`) | High | `components/DockgeLxc.ts`, `@pulumi/command` |
@@ -96,7 +95,7 @@ Alertmanager runs in the **Equestria** cluster, `observability` namespace.
 | `sdks/unifi/` | `unifiProvider` | "Unifi Api Key Eris Cluster" | Active | `stacks/unifi-network` |
 | `sdks/authentik/` | (standard) | Authentik system | Active | `stacks/authentik` |
 | `sdks/adguard/` | `adguardProvider` | "AdGuard Home" | Active | `stacks/home` |
-| `sdks/pbs/` | `pbsProvider` | "Proxmox Backup Server" | Active | `stacks/backups` |
+| `sdks/pbs/` | (none) | Not configured | **Unused** (the PBS LXCs were removed) | None |
 | `sdks/terrifi/` | `unifiFirewallProvider` | "Unifi Api Key Eris Cluster" | Active | `stacks/unifi-network` |
 | `sdks/b2/` | (commented out) | Not configured | **Disabled** | None |
 
