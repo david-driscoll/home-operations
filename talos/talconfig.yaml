@@ -294,29 +294,42 @@ nodes:
         mtu: 1500
         # No `vip:` here on purpose -- see the note on hard-hat.
 
+  # A VM on the celestia Proxmox host since 2026-11-02. The original milky-way
+  # (an Intel N-series mini PC like othalla/pegasus) lost its board on
+  # 2026-11-01; the name and IP were kept so talosconfig endpoints and the
+  # authentik-vip address list did not have to change.
+  #
+  # What differs from the bare-metal control planes, all of it deliberate:
+  # - Boot/EPHEMERAL (and so etcd) is a virtio-scsi disk on celestia's
+  #   local-lvm, `/dev/sda`.
+  # - Longhorn gets celestia's spare Samsung 990 EVO Plus, passed through as a
+  #   PCIe device (IOMMU group 16 on the host, alone in it), so the guest sees
+  #   a real NVMe and the model selector below matches -- same as hard-hat's.
+  # - No `technitium-dns` label: Technitium's NAD hardcodes `master: enp3s0`,
+  #   and this node's NIC is virtio (`ens18`). Plex/Jellyfin omit `master`
+  #   and need an Intel GPU, so they simply never land here.
+  # - No Intel GPU, so no i915/intel-ucode; qemu-guest-agent instead.
+  # - 4 vCPU / 7 GiB is all celestia (15 GiB total) can spare. The old board
+  #   had 16 GiB and used ~9.5, with kube-apiserver alone at ~3.8 -- watch
+  #   memory on this node.
   - hostname: "milky-way"
     ipAddress: "10.10.209.10"
-    installDisk: "/dev/nvme0n1"
+    installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
     controlPlane: true
-    userVolumes: &userVolumes
+    userVolumes:
       - name: longhorn
         filesystem:
           type: xfs
         provisioning:
           diskSelector:
-            match: disk.dev_path == "/dev/sda"
+            match: disk.model == "Samsung SSD 990 EVO Plus 1TB"
           grow: false
           minSize: 1TB
           maxSize: 1TB
     nodeLabels:
       <<: *nodeLabels
-      # Technitium DNS runs on the control planes (they carry enp3s0, which the
-      # ipvlan L2 NAD now binds). Moved here from hard-hat 2026-08-19 so the LAN
-      # resolver survives a low-power window with every worker powered off —
-      # docs/cluster-consolidation/20-low-power-tier.md §0.3.
-      technitium-dns: "true"
     nodeAnnotations: &nodeAnnotations
       # `critical` = D6's low-power survivors: Tier-1 data must live on the
       # control planes. See docs/cluster-consolidation/12-longhorn-critical-tier.md.
@@ -331,12 +344,9 @@ nodes:
             }
           ]
         }
-    schematic: &schematic
+    schematic:
       customization:
         extraKernelArgs:
-          - i915.enable_guc=3
-          - intel_iommu=on
-          - iommu=pt
           - sysctl.kernel.kexec_load_disabled=1
           - apparmor=0                          # Less security, faster puter
           - init_on_alloc=0                     # Less security, faster puter
@@ -346,13 +356,14 @@ nodes:
           - talos.auditd.disabled=1             # Less security, faster puter
         systemExtensions:
           officialExtensions:
-            - siderolabs/i915
-            - siderolabs/intel-ucode
+            - siderolabs/qemu-guest-agent
             - siderolabs/iscsi-tools
             - siderolabs/util-linux-tools
     networkInterfaces:
       - deviceSelector:
-          hardwareAddr: "e0:51:d8:19:93:18"
+          # Set explicitly on the VM's net0 (`qm set 210 --net0
+          # virtio=bc:24:11:20:91:10,bridge=vmbr0`) so this never drifts.
+          hardwareAddr: "bc:24:11:20:91:10"
         dhcp: false
         addresses:
           - "10.10.209.10/16"
@@ -375,7 +386,16 @@ nodes:
     machineSpec:
       secureboot: false
     controlPlane: true
-    userVolumes: *userVolumes
+    userVolumes: &userVolumes
+      - name: longhorn
+        filesystem:
+          type: xfs
+        provisioning:
+          diskSelector:
+            match: disk.dev_path == "/dev/sda"
+          grow: false
+          minSize: 1TB
+          maxSize: 1TB
     nodeLabels:
       <<: *nodeLabels
       # Technitium DNS runs on the control planes (they carry enp3s0, which the
@@ -384,7 +404,25 @@ nodes:
       # docs/cluster-consolidation/20-low-power-tier.md §0.3.
       technitium-dns: "true"
     nodeAnnotations: *nodeAnnotations
-    schematic: *schematic
+    schematic: &schematic
+      customization:
+        extraKernelArgs:
+          - i915.enable_guc=3
+          - intel_iommu=on
+          - iommu=pt
+          - sysctl.kernel.kexec_load_disabled=1
+          - apparmor=0                          # Less security, faster puter
+          - init_on_alloc=0                     # Less security, faster puter
+          - init_on_free=0                      # Less security, faster puter
+          - mitigations=off                     # Less security, faster puter
+          - security=none                       # Less security, faster puter
+          - talos.auditd.disabled=1             # Less security, faster puter
+        systemExtensions:
+          officialExtensions:
+            - siderolabs/i915
+            - siderolabs/intel-ucode
+            - siderolabs/iscsi-tools
+            - siderolabs/util-linux-tools
     networkInterfaces:
       - deviceSelector:
           hardwareAddr: "e0:51:d8:19:d4:98"
