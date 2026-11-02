@@ -73,7 +73,6 @@ services:
       # thing that can reach the entrypoint is a host-local process.
       - 127.0.0.1:8443:8443
       - 2022:2022/tcp
-      - 7687:7687
       - 8082:8082/tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

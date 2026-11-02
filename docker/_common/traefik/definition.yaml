@@ -14,7 +14,7 @@ spec:
     groups:
       - admins
   # No `authentik:` block by design -- see compose.yaml's dashboard router. The
-  # other _common stacks (backrest, neo4j, prometheus) still declare proxy
+  # other _common stacks (backrest, prometheus) still declare proxy
   # providers, so each host keeps a non-empty proxyProviders list and its
   # Outpost resource survives (components/DockgeLxc.ts:748).
   gatus:
@@ -22,7 +22,3 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
-    - url: "tcp://internal.${CLUSTER_DOMAIN}:7687"
-      interval: 30s
-      conditions:
-        - "[CONNECTED] == true"
