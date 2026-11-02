@@ -103,10 +103,15 @@ spec:
                     operator: In
                     values:
                     - "true"
-      # One extra encoder on each control plane (milky-way, othalla, pegasus:
-      # Intel N150s with a UHD iGPU, 46d4). Stateless -- media is NFS and the
-      # node registers itself by spec.nodeName -- so none of the relocation
-      # pain behind the #1051 revert (volumes, descheduler) applies.
+      # One extra encoder on each GPU control plane (othalla, pegasus: Intel
+      # N150s with a UHD iGPU, 46d4). milky-way is now a Talos VM on celestia
+      # (AMD, no iGPU), so it carries no intel.feature.node.kubernetes.io/gpu
+      # label and a third replica would sit Pending forever -- replicas tracks
+      # the GPU control planes, not the control plane count.
+      #
+      # Stateless -- media is NFS and the node registers itself by
+      # spec.nodeName -- so none of the relocation pain behind the #1051
+      # revert (volumes, descheduler) applies.
       #
       # The control plane is the one thing here that must not starve: the
       # hard CPU limit keeps a CPU-decoded job (Hi10P, Xvid, MPEG-2) to half
@@ -117,7 +122,7 @@ spec:
         annotations:
           # Always up: excluded from the nightly 01:00-07:00 shed.
           downscaler/exclude: "true"
-        replicas: 3
+        replicas: 2
         containers:
           app:
             image: *nodeImage
@@ -162,7 +167,7 @@ spec:
                     operator: In
                     values:
                     - "true"
-            # One per control plane: three replicas, three N150s.
+            # One per GPU control plane: two replicas, two N150s.
             podAntiAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
                 - topologyKey: kubernetes.io/hostname
