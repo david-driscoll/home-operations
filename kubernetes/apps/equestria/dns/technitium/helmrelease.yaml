@@ -79,10 +79,13 @@ spec:
                 ip -4 route show table main dev eth0 | xargs -I{} sh -c 'ip route replace {} dev eth0 table 100' || echo "WARN: copying eth0 routes into table 100 failed"
                 ip rule del priority 5200 2>/dev/null
                 ip rule add priority 5200 fwmark 0x80000/0xff0000 lookup 100 || echo "WARN: ip rule 5200 failed"
-                iptables -C INPUT -i net1 -p udp --dport 41641 -j DROP 2>/dev/null || iptables -I INPUT 1 -i net1 -p udp --dport 41641 -j DROP || echo "WARN: net1 tailscale DROP failed"
+                # iptables-nft, not iptables: the image points `iptables` at
+                # the legacy backend, and the Talos kernel has no legacy tables
+                # ("can't initialize iptables table `filter'").
+                iptables-nft -C INPUT -i net1 -p udp --dport 41641 -j DROP 2>/dev/null || iptables-nft -I INPUT 1 -i net1 -p udp --dport 41641 -j DROP || echo "WARN: net1 tailscale DROP failed"
                 echo "table 100:"; ip -4 route show table 100
                 echo "rules:"; ip rule show
-                echo "INPUT:"; iptables -S INPUT
+                echo "INPUT:"; iptables-nft -S INPUT
                 exit 0
             securityContext:
               allowPrivilegeEscalation: false
@@ -199,6 +202,13 @@ spec:
               # Fixed so the tailscale-routing init container can DROP this
               # port on net1. Change both together.
               TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
+              # The image points `iptables` at the legacy backend, which the
+              # Talos kernel does not have. Left to choose, tailscaled picked
+              # it and every router reconfig failed ("router config failed ...
+              # iptables -t filter -N ts-input"), so its ts-input/ts-forward
+              # rules were never installed and the node carried a standing
+              # `router` health error.
+              TS_DEBUG_FIREWALL_MODE: nftables
               TS_AUTHKEY:
                 valueFrom:
                   secretKeyRef:
