@@ -10,7 +10,7 @@
 # (10.100.0.0/16) and Tailscale's (100.64.0.0/10) do not overlap.
 services:
   netbird:
-    image: netbirdio/netbird:0.82.0
+    image: netbirdio/netbird:0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
     container_name: netbird-gateway
     hostname: gateway-${CLUSTER_KEY}
     restart: unless-stopped
@@ -25,3 +25,5 @@ services:
       - /dev/net/tun:/dev/net/tun
     volumes:
       - /opt/stacks-data/${APP}/state:/var/lib/netbird
+    labels:
+      traefik.enable: false

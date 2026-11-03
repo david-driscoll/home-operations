@@ -216,6 +216,11 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
   - gateways advertise routes but never accept them.
 - **Equestria:** the NetBird operator runs `NetworkRouter` pods as a second route to the `internal` Gateway IP and
   the Authentik VIP. It does nothing else.
+  - **As built (#2889):** the operator's `NetworkResource` (v0.9.0) can only publish a Service's ClusterIP, and
+    IP/CIDR targets are an open upstream issue (netbirdio/kubernetes-operator#305). So `stacks/netbird` owns the
+    `equestria` network, its two /32 resources (group `equestria-entry`), its router (peer group `k8s-routers`) and
+    the DNS zone the operator requires. `kubernetes/apps/netbird-system/router` owns only the pods, which enrol with
+    the `k8s-router` setup key through a `workloadOverride.podTemplate` patch.
 
 ## H. Dockge hosts publish LAN IPs
 
