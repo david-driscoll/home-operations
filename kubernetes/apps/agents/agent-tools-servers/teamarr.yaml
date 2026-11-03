@@ -53,7 +53,7 @@ kind: MCPServer
 metadata:
   name: toolhive-teamarr
 spec:
-  image: ghcr.io/lukeeexd/teamarr-mcp:latest@sha256:6aa69381601aabe355eeb14ece7e7d49db80c3606b07ddc2d2f07b7ebe585e31
+  image: ghcr.io/lukeeexd/teamarr-mcp:latest@sha256:a4ff2f40b00282f479dacdbb7403d00dfb24a7c2b025b5ee66f52757297f41c6
   transport: streamable-http
   proxyPort: 8000
   mcpPort: 8000
