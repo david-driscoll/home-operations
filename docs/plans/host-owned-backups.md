@@ -244,6 +244,7 @@ step 1).
 - **Buckets pulled.**
   - `volsync-equestria`, `backrest-pgdump` and the per-host `backrest-<host>` buckets, as they
     come into use.
+  - `netbird-backups` ✅, NetBird's restic repo (#2884), encrypted on the VM, so ciphertext only.
   - From day one, the buckets that already live in Garage and have no independent copy on TrueNAS:
     `cnpg-equestria`, `pulumi-state` ✅ (H2), and `postgres-{celestia,luna,skystar}` until
     `garage-sync` retires.

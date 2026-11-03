@@ -192,9 +192,12 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
   - one **local break-glass admin**.
 - **Secrets:** the store encryption key, relay secret and local admin are generated once. They go to OpenBao and
   1Password and are recorded in `bootstrap/INVENTORY.md`, but are not part of any recovery path.
-- **Backups:** an **every-15-minutes** SQLite online backup (`.backup`, no stack stop) plus config, uploaded to
-  Garage S3 over the tailnet, with retention. An empty data directory triggers an automatic restore. That covers
-  both OCI rebuild and Azure promotion.
+- **Backups:** an **every-15-minutes** SQLite online backup (`.backup`, no stack stop) plus config and Traefik's
+  `acme.json`, uploaded to Garage S3 over the tailnet, with retention. An empty data directory triggers an
+  automatic restore, which also puts `acme.json` back (mode 600) when Traefik's volume has none, so a rebuilt
+  VM serves its certificate instead of asking Let's Encrypt again. That covers both OCI rebuild and Azure
+  promotion. TrueNAS pulls the `netbird-backups` bucket daily with the other restic buckets; it holds
+  ciphertext only.
 
 ## G. Relays and gateways
 
