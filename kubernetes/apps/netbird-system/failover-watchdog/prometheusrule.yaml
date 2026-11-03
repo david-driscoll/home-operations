@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# The flips themselves page from the watchdog, straight to Alertmanager
+# (NetbirdFailover, NetbirdFailoverBlocked; watchdog.ts alertFor). This is the
+# other half: a watchdog that stopped running fails over nothing, silently.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: netbird-failover-watchdog
+spec:
+  groups:
+    - name: netbird-failover-watchdog
+      rules:
+        # One run a minute; ten without a success means it is broken (it
+        # exits non-zero only when it cannot read its state, or a flip it
+        # decided on failed). The second branch covers a CronJob that has
+        # never succeeded, which has no last_successful_time series.
+        - alert: NetbirdFailoverWatchdogNotRunning
+          annotations:
+            summary: The NetBird failover watchdog has not succeeded in 10 minutes.
+            description: >-
+              netbird-failover-watchdog last succeeded {{ $value | humanizeDuration }} ago, so a
+              NetBird primary outage would not fail over. Read the failed Job's log
+              (`kubectl -n netbird-system logs job/<job>`).
+          expr: |
+            (
+              time() - max by (namespace, cronjob) (
+                kube_cronjob_status_last_successful_time{namespace="netbird-system", cronjob="netbird-failover-watchdog"}
+              )
+              or
+              (
+                time() - max by (namespace, cronjob) (
+                  kube_cronjob_created{namespace="netbird-system", cronjob="netbird-failover-watchdog"}
+                )
+              )
+              unless on (namespace, cronjob)
+              kube_cronjob_status_last_successful_time{namespace="netbird-system", cronjob="netbird-failover-watchdog"}
+            ) > 600
+          for: 1m
+          labels:
+            severity: warning

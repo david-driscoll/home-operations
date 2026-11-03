@@ -27,6 +27,30 @@ export interface ServerSecrets {
 export interface ServerConfigArgs extends ServerSecrets {
   /** The public management name, `netbird.<root domain>`. */
   domain: string;
+  /**
+   * Standalone relays (`netbirdio/relay`, #3001), by hostname. Listing any
+   * turns the combined server's embedded relay AND its embedded STUN off
+   * (combined/cmd/config.go applyRelayDefaults, v0.82.0), so the relays' STUN
+   * is listed for clients too. Empty or absent: the embedded relay and STUN.
+   */
+  relays?: readonly string[];
+}
+
+/** Every relay listens behind its host's Traefik on 443; its STUN is direct on 3478/udp. */
+export const RELAY_TLS_PORT = 443;
+
+function bareHostname(host: string): string {
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(host)) throw new Error(`Relay '${host}' is not a bare hostname`);
+  return host;
+}
+
+/** `rels://<host>:443`: WebSocket over TLS, terminated by the relay host's Traefik. */
+export function relayAddress(host: string): string {
+  return `rels://${bareHostname(host)}:${RELAY_TLS_PORT}`;
+}
+
+export function stunUri(host: string): string {
+  return `stun:${bareHostname(host)}:${STUN_PORT}`;
 }
 
 /** A YAML double-quoted scalar. JSON's escaping is a subset of YAML's, so this is always valid. */
@@ -35,13 +59,27 @@ const q = (value: string) => JSON.stringify(value);
 /** `/etc/netbird/config.yaml` for the combined server. */
 export function renderServerConfig(args: ServerConfigArgs): string {
   const origin = `https://${args.domain}`;
+  const relays = args.relays ?? [];
+  // The relays share the embedded relay's secret; the TTL is upstream's default.
+  const relayBlock =
+    relays.length > 0
+      ? `  # Standalone relays: the embedded relay and STUN are off.
+  relays:
+    addresses:
+${relays.map(host => `      - ${q(relayAddress(host))}`).join("\n")}
+    secret: ${q(args.relayAuthSecret)}
+    credentialsTTL: "12h"
+  stuns:
+${relays.map(host => `    - uri: ${q(stunUri(host))}`).join("\n")}
+`
+      : `  stunPorts:
+    - ${STUN_PORT}
+`;
   return `# Rendered by stacks/netbird-edge (Pulumi). Edits on the VM are overwritten.
 server:
   listenAddress: ":80"
   exposedAddress: ${q(`${origin}:443`)}
-  stunPorts:
-    - ${STUN_PORT}
-  metricsPort: 9090
+${relayBlock}  metricsPort: 9090
   healthcheckAddress: ":9000"
   logLevel: "info"
   logFile: "console"
@@ -90,6 +128,30 @@ AUTH_SILENT_REDIRECT_URI=/nb-silent-auth
 NGINX_SSL_PORT=443
 LETSENCRYPT_DOMAIN=none
 `;
+}
+
+/**
+ * `relay.env` for the standalone `netbirdio/relay` (#3001): plain HTTP on :80
+ * behind the host's Traefik, which terminates TLS for the relay's own name, and
+ * STUN direct on 3478/udp. Single-quoted, which compose's env_file reads
+ * literally. Secret: it carries the relay auth secret.
+ */
+export function renderRelayEnv(args: { domain: string; authSecret: string }): string {
+  const vars: [string, string][] = [
+    ["NB_LISTEN_ADDRESS", ":80"],
+    ["NB_EXPOSED_ADDRESS", relayAddress(args.domain)],
+    ["NB_AUTH_SECRET", args.authSecret],
+    ["NB_TRUSTED_PROXIES", TRAEFIK_IP],
+    ["NB_ENABLE_STUN", "true"],
+    ["NB_STUN_PORTS", `${STUN_PORT}`],
+    ["NB_HEALTH_LISTEN_ADDRESS", ":9000"],
+    ["NB_LOG_LEVEL", "info"],
+  ];
+  const lines = vars.map(([name, value]) => {
+    if (/['\n\r]/.test(value)) throw new Error(`${name} contains a quote or a newline, which relay.env cannot carry`);
+    return `${name}='${value}'`;
+  });
+  return `# Rendered by stacks/netbird-edge (Pulumi). Edits on the VM are overwritten.\n${lines.join("\n")}\n`;
 }
 
 export interface SetupResult {

@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The NetBird failover watchdog (#3001, docs/plans/netbird-mirror.md §E): a
+# CronJob that repoints the NetBird management record at the standby when the
+# primary stops answering. watchdog.ts has the policy; the hosts' fences
+# (components/netbird/fence.ts) do the promotion.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app netbird-failover-watchdog
+  namespace: &namespace netbird-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/netbird-system/failover-watchdog
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    # The Cloudflare token.
+    - name: external-secrets
+      namespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

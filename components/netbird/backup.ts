@@ -17,7 +17,8 @@
  *     store present            -> leave it
  *     repo missing / no snaps  -> fresh (first install; /api/setup may run)
  *     newest snapshot          -> restore into the volume (and acme.json into
- *                                 Traefik's, if it has none), write the marker
+ *                                 Traefik's, if it has none, or always with
+ *                                 NETBIRD_RESTORE_ACME=replace), write the marker
  *     repo unreadable          -> FAIL: never start on an empty store
  *
  * Both tools are pinned images in compose.yaml (profile `backup`), so Renovate
@@ -281,6 +282,14 @@ export function renderRestoreScript(args: { dir?: string } = {}): string {
   return `${prelude(dir)}
 trap 'echo "netbird-restore: failed (exit $?); NetBird was not started" >&2' ERR
 
+# keep: an acme.json this host already has wins (a rebuilt VM). replace: the
+# snapshot's wins, which is what a promotion asks for (fence.ts, #3001).
+acme_mode=\${NETBIRD_RESTORE_ACME:-keep}
+case "$acme_mode" in
+  keep | replace) ;;
+  *) echo "netbird-restore: NETBIRD_RESTORE_ACME is '$acme_mode', not keep or replace" >&2; exit 2 ;;
+esac
+
 mount=$(docker volume inspect -f '{{ .Mountpoint }}' ${NETBIRD_DATA_VOLUME} 2>/dev/null || true)
 if [ -n "$mount" ] && [ -s "$mount/${REQUIRED_STORE_FILE}" ]; then
   echo "netbird-restore: present"
@@ -315,10 +324,11 @@ fi
 # the restored one, so they go first.
 #
 # Then Traefik's ${ACME_FILE}, before \`compose up\` first starts Traefik, so it
-# serves the snapshot's certificate instead of requesting one. Only into a
-# volume without one: a certificate this host already holds is never replaced.
-# A snapshot from before ${ACME_FILE} was backed up has none, and Traefik
-# requests its certificate as on a first install.
+# serves the snapshot's certificate instead of requesting one. By default only
+# into a volume without one, so a certificate this host already holds is kept;
+# NETBIRD_RESTORE_ACME=replace takes the snapshot's anyway. A snapshot from
+# before ${ACME_FILE} was backed up has none, and Traefik requests its
+# certificate as on a first install.
 restic_sh '
 rm -rf /tmp/restore
 $R restore "$1" --target /tmp/restore
@@ -327,11 +337,11 @@ for db in ${dbs}; do
   if [ -f "/tmp/restore/staging/$db" ]; then cp "/tmp/restore/staging/$db" "/var/lib/netbird/$db"; fi
 done
 test -s /var/lib/netbird/${REQUIRED_STORE_FILE}
-if [ -s /tmp/restore/staging/${ACME_FILE} ] && [ ! -s /letsencrypt/${ACME_FILE} ]; then
+if [ -s /tmp/restore/staging/${ACME_FILE} ] && { [ "$2" = replace ] || [ ! -s /letsencrypt/${ACME_FILE} ]; }; then
   cp /tmp/restore/staging/${ACME_FILE} /letsencrypt/${ACME_FILE}
   chmod 600 /letsencrypt/${ACME_FILE}
   echo "netbird-restore: restored the Traefik ${ACME_FILE}"
-fi' "$latest"
+fi' "$latest" "$acme_mode"
 
 printf '%s %s\\n' "$latest" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > ${paths.restoreMarker}
 echo "netbird-restore: restored $latest"

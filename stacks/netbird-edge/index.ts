@@ -5,10 +5,15 @@
  * Two clouds. On OCI Always Free: the tenancy's free-tier guard (quota
  * allow-list + budget), its network, and the one A1 VM, which is parked
  * (`ociVm: false`) while Ashburn has no capacity. On Azure (#3001): the East US
- * 2 VM that is the primary since 2026-11-03. Then the NetBird combined server
- * (#3000) on the primary, the `netbird.<root domain>` record that points at
- * it, and what makes the server disposable (#2884): 15-minute backups to
- * Garage with a restore before every start.
+ * 2 primary and the Central US standby, each running Traefik and a NetBird
+ * relay always.
+ *
+ * Then the NetBird combined server (#3000) on every host, fenced: each runs
+ * management only while `netbird.<root domain>`, the lease, points at it
+ * (components/netbird/fence.ts). The Equestria watchdog moves the lease on a
+ * primary outage; `netbird-edge:primary` moves it back
+ * (docs/runbooks/netbird-failback.md). Backups every 15 minutes to Garage,
+ * restored by whichever host takes the lease (#2884).
  */
 import * as cloudflare from "@pulumi/cloudflare";
 import * as oci from "@pulumi/oci";
@@ -18,16 +23,19 @@ import * as random from "@pulumi/random";
 import { TailnetKey } from "@pulumi/tailscale";
 import * as tls from "@pulumi/tls";
 import { AzureEdgeVm } from "components/azure/AzureEdgeVm.ts";
+import { AZURE_EDGE_REGIONS } from "components/azure/edgeVm.ts";
 import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { Tailscale } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { addUptimeGatus, toGatusKey } from "components/helpers.ts";
 import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET, resticRepository } from "components/netbird/backup.ts";
+import { assertFenceFasterThanFlip } from "components/netbird/fence.ts";
 import { NetbirdServer, type NetbirdServerArgs } from "components/netbird/NetbirdServer.ts";
 import { instanceAlarms } from "components/oci/alarms.ts";
 import { BOOT_VOLUME_BACKUP_COPIES, bootVolumeBackupSchedule, FREE_TIER, freeTierQuotaStatements, retainedBackupCopies } from "components/oci/freeTier.ts";
 import { OciFreeTierInstance } from "components/oci/OciFreeTierInstance.ts";
+import { DnsLeaseAssignment } from "dynamic/cloudflare/DnsLeaseAssignment.ts";
 import { netbirdEdgeCloudInit, PUBLIC_TCP_PORTS, PUBLIC_UDP_PORTS } from "./cloudInit.ts";
 
 const config = new pulumi.Config();
@@ -266,10 +274,11 @@ if (vm) {
 // ── Azure (#3001) ────────────────────────────────────────────────────────
 // The primary since 2026-11-03: Ashburn has no free-tier compute for this
 // tenancy, so the server runs on the Visual Studio subscription instead
-// (spending limit on). Same tailnet identity as the OCI VM, so the same grants
-// apply: admins SSH/web, tag:egress SSH for the deploy, the garage-s3 and
-// uptime VIPs for backups. Each hostname gets its own egress Service
-// (`netbird-azure-eus2`, stacks/unifi-network/tailnet-egress.ts).
+// (spending limit on). East US 2 is the primary, Central US the fenced
+// standby. Same tailnet identity as the OCI VM, so the same grants apply:
+// admins SSH/web, tag:egress SSH for the deploy, the garage-s3 and uptime VIPs
+// for backups. Each hostname gets its own egress Service (`netbird-azure-eus2`,
+// `netbird-azure-cus`; stacks/unifi-network/tailnet-egress.ts).
 const azureTailscaleAuthKey = new TailnetKey(
   "netbird-edge-azure-authkey",
   {
@@ -283,24 +292,52 @@ const azureTailscaleAuthKey = new TailnetKey(
   { provider: globals.tailscaleProvider },
 );
 
-const azureEus2Hostname = "netbird-azure-eus2";
-const azureEus2 = new AzureEdgeVm(azureEus2Hostname, {
-  region: "eastus2",
-  hostname: azureEus2Hostname,
-  publicPorts: { tcp: PUBLIC_TCP_PORTS, udp: PUBLIC_UDP_PORTS },
-  sshPublicKey: breakGlassKey.publicKeyOpenssh,
-  userData: netbirdEdgeCloudInit({ platform: "azure", hostname: azureEus2Hostname, tailscaleAuthKey: azureTailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
-  provider: globals.azureProvider,
-});
-
-// ── NetBird server (#3000) ───────────────────────────────────────────────
 const root = rootDomain();
 const domain = `netbird.${root}`;
 
-/** A machine that can run the NetBird server. */
+const azureHosts = [
+  // Reboots at the default 09:00 UTC; the standby an hour later, so a kernel
+  // update never takes both down at once (the watchdog would see the primary
+  // down with no standby to promote).
+  { id: "azure-eus2", region: "eastus2", rebootTime: undefined },
+  { id: "azure-cus", region: "centralus", rebootTime: "10:00" },
+] as const;
+const azureVms = azureHosts.map(spec => {
+  const vmHostname = `netbird-${spec.id}`;
+  const machine = new AzureEdgeVm(vmHostname, {
+    region: spec.region,
+    hostname: vmHostname,
+    publicPorts: { tcp: PUBLIC_TCP_PORTS, udp: PUBLIC_UDP_PORTS },
+    sshPublicKey: breakGlassKey.publicKeyOpenssh,
+    userData: netbirdEdgeCloudInit({ platform: "azure", hostname: vmHostname, tailscaleAuthKey: azureTailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge, rebootTime: spec.rebootTime }),
+    provider: globals.azureProvider,
+  });
+  // The host's relay, under its own name: `relay-eus2.<root domain>`. Also how
+  // the watchdog finds each host's address (failover-watchdog/watchdog.ts).
+  // Cloudflare only and grey, like the lease: a public name with a public IP.
+  const relayDomain = `relay-${AZURE_EDGE_REGIONS[spec.region].short}.${root}`;
+  new cloudflare.DnsRecord(
+    `netbird-relay-${spec.id}`,
+    {
+      zoneId: globals.cloudflareCredential.zoneId,
+      name: relayDomain,
+      type: "A",
+      content: machine.publicIpAddress,
+      ttl: 300,
+      proxied: false,
+      comment: `stacks/netbird-edge: the NetBird relay on netbird-${spec.id} (#3001)`,
+    },
+    { provider: globals.cloudflareProvider, ignoreChanges: ["zoneId"] },
+  );
+  return { spec, hostname: vmHostname, machine, relayDomain };
+});
+
+// ── NetBird server (#3000) ───────────────────────────────────────────────
+
+/** A machine that can run the NetBird server. Every one is fenced: it runs management only while it holds the lease. */
 interface EdgeHost {
   /** The `netbird-edge:primary` value that selects it. */
-  id: "oci" | "azure-eus2";
+  id: "oci" | "azure-eus2" | "azure-cus";
   /** Its tailnet name, and the snapshots' restic host. */
   hostname: string;
   publicIpAddress: Output<string>;
@@ -308,15 +345,24 @@ interface EdgeHost {
   hostKey: Input<string>;
   /** What the first SSH session waits for. */
   machine: Resource;
+  /** The relay this host serves, if any. */
+  relayDomain?: string;
 }
 const hosts: EdgeHost[] = [
+  // OCI, when it is back, is a second standby: fenced, no relay of its own.
   ...(vm ? [{ id: "oci" as const, hostname, publicIpAddress: vm.publicIpAddress, hostKey: vm.instance.id, machine: vm.instance }] : []),
-  { id: "azure-eus2", hostname: azureEus2Hostname, publicIpAddress: azureEus2.publicIpAddress, hostKey: azureEus2.vmId, machine: azureEus2.vm },
+  ...azureVms.map(a => ({ id: a.spec.id, hostname: a.hostname, publicIpAddress: a.machine.publicIpAddress, hostKey: a.machine.vmId, machine: a.machine.vm, relayDomain: a.relayDomain })),
 ];
+// Every server lists every relay (and their STUN): the embedded ones are off
+// once any is listed (components/netbird/server.ts).
+const relays = hosts.flatMap(h => (h.relayDomain ? [h.relayDomain] : []));
+// The failover watchdog flips after five failed one-minute checks
+// (kubernetes/apps/netbird-system/failover-watchdog/watchdog.ts); a host that
+// lost DNS must have stopped its management before then.
+assertFenceFasterThanFlip(5 * 60);
 
-// The one host `netbird.<root domain>` points at. Until the DNS-lease fence
-// lands (#3001's second half), it is also the only host that runs a server: two
-// unfenced managements on one store would split it.
+// The host `netbird.<root domain>` is assigned to by config. The watchdog may
+// have moved the live record since: see `dnsLease` below.
 const primaryId = config.get("primary") ?? "azure-eus2";
 const primary = hosts.find(h => h.id === primaryId);
 if (!primary) throw new Error(`netbird-edge:primary is '${primaryId}', which is not one of this stack's hosts (${hosts.map(h => h.id).join(", ")}). Is ociVm off?`);
@@ -325,22 +371,45 @@ if (!primary) throw new Error(`netbird-edge:primary is '${primaryId}', which is 
 // primary, and setup must neither move with it nor run again. Only this host's
 // server carries `setup`, so the owner PAT in OpenBao has exactly one writer.
 const SETUP_HOST: EdgeHost["id"] = "azure-eus2";
-if (primary.id !== SETUP_HOST) {
-  throw new Error(`netbird-edge:primary must stay '${SETUP_HOST}' until the DNS-lease fence (#3001) can stop a second management; it is '${primary.id}'.`);
-}
+const setupHost = hosts.find(h => h.id === SETUP_HOST);
+if (!setupHost) throw new Error(`The setup host ${SETUP_HOST} is not one of this stack's hosts`);
 
-// Cloudflare only, grey-cloud: STUN is UDP and the gRPC streams must reach
-// Traefik directly, and Let's Encrypt's TLS-ALPN check needs it before the
-// server's first start. Not StandardDns: its UniFi and Technitium copies would
-// keep LAN clients on a dead primary after the watchdog repoints this record
-// (#3001), and the name is public anyway, so LAN DNS forwards it upstream.
+// THE LEASE. Cloudflare only, grey-cloud: STUN is UDP and the gRPC streams
+// must reach Traefik directly, and Let's Encrypt's TLS-ALPN check needs it
+// before the server's first start. Not StandardDns: its UniFi and Technitium
+// copies would keep LAN clients on a dead primary after the watchdog repoints
+// this record, and the name is public anyway, so LAN DNS forwards it upstream.
 // 60s: failover is a repoint of this record.
+//
+// Two writers, and Pulumi must never fight the other one. The record takes its
+// content only at create; after that DnsLeaseAssignment writes it, and only
+// when `netbird-edge:primary` (or that host's address) changes. A watchdog
+// flip therefore stands through every later run until a human acknowledges it
+// by setting `primary` to where the lease now is (docs/runbooks/netbird-failback.md).
 const dnsRecord = new cloudflare.DnsRecord(
   "netbird-lease",
   { zoneId: globals.cloudflareCredential.zoneId, name: domain, type: "A", content: primary.publicIpAddress, ttl: 60, proxied: false, comment: "stacks/netbird-edge: the NetBird management lease (#3001)" },
-  // Same as StandardDns: the zone id arrives as a secret and reads back plain.
-  { provider: globals.cloudflareProvider, ignoreChanges: ["zoneId"] },
+  // zoneId as in StandardDns: it arrives as a secret and reads back plain.
+  { provider: globals.cloudflareProvider, ignoreChanges: ["zoneId", "content"] },
 );
+const dnsLease = new DnsLeaseAssignment("netbird-lease-holder", {
+  zoneId: globals.cloudflareCredential.zoneId,
+  recordId: dnsRecord.id,
+  content: primary.publicIpAddress,
+  holder: primary.id,
+  apiToken: globals.cloudflareCredential.credential,
+});
+
+// Say so when the live lease is not where config puts it: the watchdog moved
+// it, and this run leaves it there.
+const liveLease = cloudflare.getDnsRecordOutput({ zoneId: globals.cloudflareCredential.zoneId, dnsRecordId: dnsRecord.id }, { provider: globals.cloudflareProvider });
+pulumi.all([liveLease.content, primary.publicIpAddress, ...hosts.map(h => h.publicIpAddress)]).apply(([live, configured, ...addresses]) => {
+  if (!live || live === configured) return;
+  const holder = hosts[addresses.indexOf(live)]?.id ?? "an address no host has";
+  pulumi.log.warn(
+    `The NetBird lease (${domain}) is held by ${holder} (${live}), not by netbird-edge:primary=${primary.id}: the watchdog failed over. Left as it is. Acknowledge with netbird-edge:primary=${holder}, or fail back by the runbook (docs/runbooks/netbird-failback.md).`,
+  );
+});
 
 // Generated once. The store key is the one that matters: lose it and the
 // SQLite store's user data cannot be decrypted (bootstrap/INVENTORY.md).
@@ -401,6 +470,10 @@ function serverArgs(host: EdgeHost): NetbirdServerArgs {
     },
     domain,
     secrets: serverSecrets,
+    relays,
+    relay: host.relayDomain ? { domain: host.relayDomain } : undefined,
+    // Management only while the lease is this host's (components/netbird/fence.ts).
+    fence: { zone: root, ownIp: host.publicIpAddress },
     // 365 days is the API's ceiling. stacks/netbird replaces it with a service
     // user's token; this one stays as the owner's break-glass credential.
     setup: host.id === SETUP_HOST ? { ...owner, patExpireInDays: 365 } : undefined,
@@ -414,13 +487,15 @@ function serverArgs(host: EdgeHost): NetbirdServerArgs {
       host: host.hostname,
       heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: heartbeatToken },
     },
-    // A replacement VM reruns every deploy step, the restore first.
+    // A replacement VM reruns every deploy step.
     hostKey: host.hostKey,
-    dependsOn: [host.machine, dnsRecord],
+    // The lease first: the first fence pass on the setup host must find it.
+    dependsOn: [host.machine, dnsRecord, dnsLease],
   };
 }
 
-const server = new NetbirdServer(primary.hostname, serverArgs(primary));
+const servers = Object.fromEntries(hosts.map(host => [host.id, new NetbirdServer(host.hostname, serverArgs(host))]));
+const server = servers[setupHost.id];
 
 if (globals.baoDualWriteEnabled) {
   const bao = { provider: globals.baoProvider };
@@ -462,12 +537,14 @@ if (globals.baoDualWriteEnabled) {
   throw new Error("stacks/netbird-edge needs OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID): it writes the NetBird store key and the one-time owner PAT there.");
 }
 
-/** The address `netbird.<root domain>` points at. */
+/** The address config assigns `netbird.<root domain>` to; `leaseAddress` is where it points now. */
 export const publicIpAddress = primary.publicIpAddress;
 export const primaryHost = primary.hostname;
+export const leaseAddress = liveLease.content;
 export const hostAddresses = Object.fromEntries(hosts.map(h => [h.hostname, h.publicIpAddress]));
+export const relayDomains = relays;
 export const availabilityDomain = homeAd;
 export const freeTier = FREE_TIER;
-/** `present`, `fresh` or `restored <snapshot>`: what the last deploy's pre-start restore found. */
-export const restoreResult = server.restoreResult;
+/** Each host's first fence pass on the last deploy: `netbird-fence: <action> (<lease>)`. */
+export const fenceResults = Object.fromEntries(Object.entries(servers).map(([id, s]) => [id, s.restoreResult]));
 export const breakGlassPrivateKey = pulumi.secret(breakGlassKey.privateKeyOpenssh);

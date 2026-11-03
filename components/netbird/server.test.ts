@@ -7,8 +7,10 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { parseSetupResponse, renderDashboardEnv, renderServerConfig } from "./server.ts";
+import { parse } from "yaml";
+import { parseSetupResponse, relayAddress, renderDashboardEnv, renderRelayEnv, renderServerConfig, stunUri } from "./server.ts";
 
 const secrets = {
   relayAuthSecret: "relay+secret/with=chars",
@@ -82,5 +84,103 @@ describe("parseSetupResponse", () => {
       () => parseSetupResponse("<html>nbp_secret</html>"),
       (error: Error) => /not JSON/.test(error.message) && !error.message.includes("nbp_secret"),
     );
+  });
+});
+
+describe("renderServerConfig with standalone relays (#3001)", () => {
+  const relays = ["relay-eus2.example.test", "relay-cus.example.test"];
+  const config = renderServerConfig({ domain: "netbird.example.test", ...secrets, relays });
+  const server = parse(config).server;
+
+  it("lists every relay over TLS on 443, signed with the shared secret", () => {
+    assert.deepEqual(server.relays.addresses, ["rels://relay-eus2.example.test:443", "rels://relay-cus.example.test:443"]);
+    assert.equal(server.relays.secret, secrets.relayAuthSecret);
+    assert.equal(server.relays.credentialsTTL, "12h");
+  });
+
+  // Listing relays turns the embedded relay off, and the embedded STUN with
+  // it (combined/cmd/config.go applyRelayDefaults, v0.82.0): without stuns
+  // clients would be told to use a STUN port nothing listens on.
+  it("points clients at the relays' STUN and opens no STUN port of its own", () => {
+    assert.deepEqual(server.stuns, [{ uri: "stun:relay-eus2.example.test:3478" }, { uri: "stun:relay-cus.example.test:3478" }]);
+    assert.equal(server.stunPorts, undefined);
+  });
+
+  it("is otherwise the same config", () => {
+    assert.equal(server.exposedAddress, "https://netbird.example.test:443");
+    assert.equal(server.store.encryptionKey, secrets.datastoreEncryptionKey);
+  });
+
+  it("renders the embedded relay when no relay is listed", () => {
+    const embedded = parse(renderServerConfig({ domain: "netbird.example.test", ...secrets, relays: [] })).server;
+    assert.equal(embedded.relays, undefined);
+    assert.deepEqual(embedded.stunPorts, [3478]);
+  });
+
+  it("refuses a relay name that is not a bare hostname", () => {
+    assert.throws(() => relayAddress("rels://relay.example.test"), /bare hostname/);
+    assert.throws(() => stunUri("relay.example.test:3478"), /bare hostname/);
+  });
+});
+
+describe("renderRelayEnv", () => {
+  const env = Object.fromEntries(
+    renderRelayEnv({ domain: "relay-cus.example.test", authSecret: "a+b/c$d=" })
+      .split("\n")
+      .filter(line => line && !line.startsWith("#"))
+      .map(line => line.split(/=(.*)/s).slice(0, 2))
+      .map(([name, value]) => {
+        // Single-quoted: compose reads an env_file value in single quotes literally.
+        assert.match(value, /^'.*'$/, `${name} is not single-quoted`);
+        return [name, value.slice(1, -1)];
+      }),
+  );
+
+  it("serves plain HTTP behind Traefik and advertises the TLS address", () => {
+    assert.equal(env.NB_LISTEN_ADDRESS, ":80");
+    assert.equal(env.NB_EXPOSED_ADDRESS, "rels://relay-cus.example.test:443");
+    assert.equal(env.NB_TRUSTED_PROXIES, "172.30.0.10");
+  });
+
+  it("runs STUN on 3478 and carries the secret verbatim", () => {
+    assert.equal(env.NB_ENABLE_STUN, "true");
+    assert.equal(env.NB_STUN_PORTS, "3478");
+    assert.equal(env.NB_AUTH_SECRET, "a+b/c$d=");
+  });
+
+  it("refuses a secret it cannot quote, without echoing it", () => {
+    for (const authSecret of ["a\nb", "a'b"]) {
+      assert.throws(
+        () => renderRelayEnv({ domain: "relay.example.test", authSecret }),
+        (error: Error) => /quote or a newline/.test(error.message) && !error.message.includes(authSecret),
+      );
+    }
+  });
+});
+
+describe("compose.yaml", () => {
+  const compose = parse(readFileSync(new URL("./compose.yaml", import.meta.url), "utf8"));
+  const services = compose.services;
+
+  it("runs the relay only on relay hosts, with STUN on 3478/udp", () => {
+    assert.deepEqual(services.relay.profiles, ["relay"]);
+    assert.deepEqual(services.relay.ports, ["3478:3478/udp"]);
+    assert.ok(services.relay.labels.includes("traefik.http.routers.netbird-relay.tls.certresolver=relay"));
+  });
+
+  // The relay owns 3478/udp; two containers cannot bind it.
+  it("leaves 3478/udp to the relay", () => {
+    assert.equal(services["netbird-server"].ports, undefined);
+  });
+
+  it("lets a fenced host turn off netbird-server's restart policy", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: compose's own interpolation, not a JS template.
+    assert.equal(services["netbird-server"].restart, "${NETBIRD_SERVER_RESTART:-unless-stopped}");
+  });
+
+  it("keeps the relay's certificate out of the acme.json that is backed up and moves between hosts", () => {
+    const command: string[] = services.traefik.command;
+    assert.ok(command.includes("--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"));
+    assert.ok(command.includes("--certificatesresolvers.relay.acme.storage=/letsencrypt/relay-acme.json"));
   });
 });
