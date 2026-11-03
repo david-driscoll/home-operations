@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+# Who may use the back-channel route: the two Authentik instances. alpha-site's
+# runs on dockge-as; equestria's pods arrive from the pod network. Traefik's
+# Service keeps the default externalTrafficPolicy, so a LAN client can be
+# SNATed to a node address on the way in; the equestria node range is listed
+# for that case. The endpoints themselves need the client secret plus a
+# one-time code (token) or an access token (userinfo).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: nbidp-backchannel-sources
+spec:
+  ipAllowList:
+    sourceRange:
+      - 10.10.10.9/32
+      - 10.10.206.0/24
+      - ${CLUSTER_NETWORK}

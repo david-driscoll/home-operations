@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# nbidp (#2891, docs/plans/netbird-mirror.md §K): passwordless "log in with
+# NetBird" in Authentik. The NetBird private reverse proxy, and the Dex behind
+# it that turns the proxy's identity headers into OIDC for Authentik's
+# "NetBird" source. components/netbird/nbidp.ts has the whole chain.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app nbidp
+  namespace: &namespace netbird-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/netbird-system/nbidp
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    # The proxy's static certificate.
+    - name: cert-issuers
+      namespace: cert-manager
+    # The proxy token (stacks/netbird) and Dex's config (stacks/authentik).
+    - name: external-secrets
+      namespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

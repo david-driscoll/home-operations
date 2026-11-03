@@ -1,0 +1,242 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# nbidp: two controllers.
+#
+# proxy -- netbirdio/reverse-proxy in PRIVATE mode (NB_PROXY_PRIVATE). It
+#   registers with management using the account-scoped token stacks/netbird
+#   mints, under the cluster address NB_PROXY_DOMAIN, and joins the mesh as an
+#   ephemeral proxy peer from an embedded, userspace NetBird client (no
+#   NET_ADMIN, no tun device). Requests arrive ONLY on that client's WireGuard
+#   listener: management pushes the nbidp record (pointing at the proxy peer)
+#   to the peers in the private service's access groups, and auto-creates the
+#   policy letting them reach it on 80/443. For each request the proxy asks
+#   management whether the source peer is in those groups, 403s if not, deletes
+#   any X-NetBird-User / X-NetBird-Groups the client sent, and stamps its own.
+#   No Service and no public DNS name: nothing reaches the proxy except over
+#   NetBird.
+#
+# dex -- Dex with only the authproxy connector (config from stacks/authentik,
+#   components/netbird/nbidp.ts). It believes the identity headers on any
+#   request it receives, so ciliumnetworkpolicy.yaml decides who may send it
+#   one: the proxy, and Authentik's server on its two back-channel paths.
+#
+# Images are pinned for Renovate. The proxy tracks the server's version
+# (components/netbird/compose.yaml), like the operator's routing peers.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app nbidp
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  timeout: 10m
+  values:
+    controllers:
+      proxy:
+        # Each replica is its own proxy peer, and management points the nbidp
+        # record at every connected one, so two keep the button working
+        # through a node drain.
+        replicas: 2
+        strategy: RollingUpdate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          topologySpreadConstraints:
+            - topologyKey: kubernetes.io/hostname
+              maxSkew: 1
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: *app
+                  app.kubernetes.io/controller: proxy
+        containers:
+          proxy:
+            image:
+              repository: ghcr.io/netbirdio/reverse-proxy
+              tag: 0.82.0@sha256:cc0deaed250ca1332e28f40caca780055cdda7871750cb020478f6fe96e1f6d7
+            env:
+              NB_PROXY_MANAGEMENT_ADDRESS: https://netbird.${ROOT_DOMAIN}:443
+              # The cluster address, and the private service's domain
+              # (stacks/netbird/nbidp.ts). Management derives the service's
+              # cluster from it and synthesizes the DNS zone for exactly this
+              # name, so no custom domain is registered.
+              NB_PROXY_DOMAIN: nbidp.${ROOT_DOMAIN}
+              NB_PROXY_PRIVATE: "true"
+              # Static certs from certificate.yaml; no ACME, no port 80.
+              NB_PROXY_ACME_CERTIFICATES: "false"
+              NB_PROXY_CERTIFICATE_DIRECTORY: /certs
+              # The proxy's ordinary (non-tunnel) listener. Private services
+              # refuse every request on it, and nothing here is served any
+              # other way, so it listens on loopback only.
+              NB_PROXY_ADDRESS: 127.0.0.1:8443
+              # Default is localhost, where the kubelet cannot probe it.
+              NB_PROXY_HEALTH_ADDRESS: 0.0.0.0:8080
+              # Never trust a forwarded client address: the tunnel source IP
+              # is the identity.
+              NB_PROXY_TRUSTED_PROXIES: ""
+              NB_PROXY_LOG_LEVEL: info
+              NB_PROXY_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: nbidp-proxy
+                    key: NB_PROXY_TOKEN
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz/live
+                    port: 8080
+                  periodSeconds: 30
+                  failureThreshold: 3
+              # Ready once management is connected. No startup probe: its
+              # check includes management, and a management outage must not
+              # restart-loop the proxy.
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz/ready
+                    port: 8080
+                  periodSeconds: 15
+            securityContext:
+              # The image's `netbird` user; numeric so runAsNonRoot can check it.
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+      dex:
+        # Memory storage is per pod: an auth request started on one replica
+        # could not finish on another.
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          dex:
+            image:
+              repository: ghcr.io/dexidp/dex
+              tag: v2.46.1-distroless@sha256:db30f7d5bcc837e8b903209a3783c751f38f480309833ec906010918ff6c4002
+            # Dex itself, not the image's entrypoint, which would run the
+            # config through gomplate first.
+            command: [/usr/local/bin/dex, serve, /etc/dex/config.yaml]
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz/live
+                    port: 5558
+                  periodSeconds: 30
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz/ready
+                    port: 5558
+                  periodSeconds: 15
+            securityContext:
+              # The image's `dex` user.
+              runAsUser: 1001
+              runAsGroup: 1001
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+    service:
+      dex:
+        # components/netbird/nbidp.ts DEX_BACKCHANNEL_URL and the private
+        # service's upstream both name this Service.
+        forceRename: nbidp-dex
+        controller: dex
+        ports:
+          http:
+            port: 5556
+    route:
+      # Authentik's server-to-server door to Dex (components/netbird/nbidp.ts
+      # nbidpBackchannelUrl). Both Authentik instances share the NetBird
+      # source, and the alpha-site one cannot reach Dex's Service, so the two
+      # back-channel calls ride the internal Gateway. Exactly two matches:
+      # the browser legs (/auth, /callback) stay private-proxy only.
+      backchannel:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "nbidp-backchannel.${ROOT_DOMAIN}"
+        rules:
+          - matches:
+              - path:
+                  type: Exact
+                  value: /token
+                method: POST
+              - path:
+                  type: Exact
+                  value: /userinfo
+                method: GET
+            backendRefs:
+              - identifier: dex
+                port: 5556
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: nbidp-backchannel-sources
+    persistence:
+      dex-config:
+        type: secret
+        name: nbidp-dex-config
+        advancedMounts:
+          dex:
+            dex:
+              - path: /etc/dex
+                readOnly: true
+      certs:
+        type: secret
+        name: nbidp-tls
+        advancedMounts:
+          proxy:
+            proxy:
+              - path: /certs
+                readOnly: true
+      # HOME and the GeoLite download directory, under a read-only root.
+      proxy-state:
+        type: emptyDir
+        advancedMounts:
+          proxy:
+            proxy:
+              - path: /var/lib/netbird
+      proxy-tmp:
+        type: emptyDir
+        advancedMounts:
+          proxy:
+            proxy:
+              - path: /tmp
