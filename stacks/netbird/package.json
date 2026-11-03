@@ -1,0 +1,23 @@
+{
+  "name": "netbird",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/david-driscoll/home-operations#readme",
+  "bugs": {
+    "url": "https://github.com/david-driscoll/home-operations/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david-driscoll/home-operations.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "up": "fnox exec -- pulumi up --skip-preview",
+    "cancel": "fnox exec -- pulumi cancel --yes",
+    "refresh": "fnox exec -- pulumi refresh --yes"
+  },
+  "dependencies": {}
+}

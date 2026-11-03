@@ -30,6 +30,10 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters: [registry.terraform.io/tailscale/tailscale, 0.29.3]
+  netbird:
+    source: terraform-provider
+    version: 0.14.0
+    parameters: [registry.opentofu.org/netbirdio/netbird, 0.0.11]
   technitium:
     source: terraform-provider
     version: 0.14.0
