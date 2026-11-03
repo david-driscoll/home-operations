@@ -32,6 +32,12 @@ const config = new pulumi.Config();
 const availabilityDomainIndex = config.getNumber("availabilityDomainIndex") ?? 0;
 // Kept as an encrypted stack secret: the repo is public.
 const budgetAlertEmail = config.requireSecret("budgetAlertEmail");
+// Whether the A1 VM (and the server, its backups and alarms) exists. Off since
+// 2026-11-03: Ashburn had no free-tier compute for this free-only tenancy (A1
+// at every size and E2.1.Micro, all three ADs), and the create failed the whole
+// stack. Until it returns the server runs on Azure (#3001); the quotas, budget,
+// network, reserved secrets and backup key stay so turning this on is enough.
+const ociVmEnabled = config.getBoolean("ociVm") ?? true;
 
 const hostname = "netbird-edge";
 // Outside the home LAN (10.10/16) and NetBird's overlay (10.100/16).
@@ -185,67 +191,71 @@ const tailscaleAuthKey = new TailnetKey(
 // Port 22 is not public, so the key alone opens nothing.
 const breakGlassKey = new tls.PrivateKey("netbird-edge-break-glass", { algorithm: "ED25519" });
 
-const vm = new OciFreeTierInstance(
-  hostname,
-  {
-    compartmentId,
-    availabilityDomain: homeAd,
-    subnetId: subnet.id,
-    nsgIds: [nsg.id],
-    region: globals.ociCredential.region,
-    hostname,
-    sshAuthorizedKeys: breakGlassKey.publicKeyOpenssh,
-    userData: netbirdEdgeCloudInit({ hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
-    provider,
-  },
-  // The quota first: on 2026-11-03 the VM create raced the quota update that
-  // added the regional A1 counts (quota modified 14:38:11.9, create rejected
-  // 14:38:13 against the old statements).
-  { dependsOn: [freeTierQuota] },
-);
+const vm = !ociVmEnabled
+  ? undefined
+  : new OciFreeTierInstance(
+      hostname,
+      {
+        compartmentId,
+        availabilityDomain: homeAd,
+        subnetId: subnet.id,
+        nsgIds: [nsg.id],
+        region: globals.ociCredential.region,
+        hostname,
+        sshAuthorizedKeys: breakGlassKey.publicKeyOpenssh,
+        userData: netbirdEdgeCloudInit({ hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
+        provider,
+      },
+      // The quota first: on 2026-11-03 the VM create raced the quota update that
+      // added the regional A1 counts (quota modified 14:38:11.9, create rejected
+      // 14:38:13 against the old statements).
+      { dependsOn: [freeTierQuota] },
+    );
 
 // ── Boot-volume backups (#2884) ──────────────────────────────────────────
 // User-defined, not OCI's Bronze/Silver/Gold, which keep more copies than the
 // free 5. The quota's backup-count is the server-side stop if this ever drifts.
-const bootBackupSchedule = bootVolumeBackupSchedule();
-if (retainedBackupCopies(bootBackupSchedule) > BOOT_VOLUME_BACKUP_COPIES) {
-  throw new Error(`The boot-volume backup schedule keeps ${retainedBackupCopies(bootBackupSchedule)} copies; the limit is ${BOOT_VOLUME_BACKUP_COPIES}.`);
-}
-const bootBackupPolicy = new oci.core.VolumeBackupPolicy("netbird-edge-boot", { compartmentId, displayName: "netbird-edge-boot-weekly", schedules: [bootBackupSchedule] }, opts);
-// Replaced with the VM (a new boot volume). The old volume's backups stay
-// until they expire, and share the one weekly slot, so the count holds.
-new oci.core.VolumeBackupPolicyAssignment("netbird-edge-boot", { assetId: vm.instance.bootVolumeId, policyId: bootBackupPolicy.id }, opts);
+if (vm) {
+  const bootBackupSchedule = bootVolumeBackupSchedule();
+  if (retainedBackupCopies(bootBackupSchedule) > BOOT_VOLUME_BACKUP_COPIES) {
+    throw new Error(`The boot-volume backup schedule keeps ${retainedBackupCopies(bootBackupSchedule)} copies; the limit is ${BOOT_VOLUME_BACKUP_COPIES}.`);
+  }
+  const bootBackupPolicy = new oci.core.VolumeBackupPolicy("netbird-edge-boot", { compartmentId, displayName: "netbird-edge-boot-weekly", schedules: [bootBackupSchedule] }, opts);
+  // Replaced with the VM (a new boot volume). The old volume's backups stay
+  // until they expire, and share the one weekly slot, so the count holds.
+  new oci.core.VolumeBackupPolicyAssignment("netbird-edge-boot", { assetId: vm.instance.bootVolumeId, policyId: bootBackupPolicy.id }, opts);
 
-// ── Alarms (#2884) ───────────────────────────────────────────────────────
-// OCI Monitoring on the compute agent's metrics, to an email topic. Both are
-// inside the Always Free allowance. The email subscription stays PENDING until
-// the confirmation link OCI sends is clicked. The stale-backup alarm is the
-// Gatus heartbeat below, which pages through Pushover.
-const alertTopic = new oci.ons.NotificationTopic("netbird-edge-alerts", { compartmentId, name: "netbird-edge-alerts", description: "netbird-edge VM alarms (stacks/netbird-edge)" }, opts);
-new oci.ons.Subscription("netbird-edge-alerts-email", { compartmentId, topicId: alertTopic.id, protocol: "EMAIL", endpoint: budgetAlertEmail }, opts);
-// Registered outside an apply, so they show in a preview before the VM exists;
-// only the query waits for the instance id.
-for (const key of ["stopped", "lowMemory"] as const) {
-  const alarm = instanceAlarms("pending")[key];
-  new oci.monitoring.Alarm(
-    `netbird-edge-${key}`,
-    {
-      compartmentId,
-      metricCompartmentId: compartmentId,
-      displayName: `netbird-edge-${key}`,
-      namespace: alarm.namespace,
-      query: vm.instance.id.apply(id => instanceAlarms(id)[key].query),
-      severity: alarm.severity,
-      pendingDuration: alarm.pendingDuration,
-      repeatNotificationDuration: alarm.repeatNotificationDuration,
-      body: alarm.summary,
-      alarmSummary: alarm.summary,
-      messageFormat: "ONS_OPTIMIZED",
-      destinations: [alertTopic.id],
-      isEnabled: true,
-    },
-    opts,
-  );
+  // ── Alarms (#2884) ───────────────────────────────────────────────────────
+  // OCI Monitoring on the compute agent's metrics, to an email topic. Both are
+  // inside the Always Free allowance. The email subscription stays PENDING until
+  // the confirmation link OCI sends is clicked. The stale-backup alarm is the
+  // Gatus heartbeat below, which pages through Pushover.
+  const alertTopic = new oci.ons.NotificationTopic("netbird-edge-alerts", { compartmentId, name: "netbird-edge-alerts", description: "netbird-edge VM alarms (stacks/netbird-edge)" }, opts);
+  new oci.ons.Subscription("netbird-edge-alerts-email", { compartmentId, topicId: alertTopic.id, protocol: "EMAIL", endpoint: budgetAlertEmail }, opts);
+  // Registered outside an apply, so they show in a preview before the VM exists;
+  // only the query waits for the instance id.
+  for (const key of ["stopped", "lowMemory"] as const) {
+    const alarm = instanceAlarms("pending")[key];
+    new oci.monitoring.Alarm(
+      `netbird-edge-${key}`,
+      {
+        compartmentId,
+        metricCompartmentId: compartmentId,
+        displayName: `netbird-edge-${key}`,
+        namespace: alarm.namespace,
+        query: vm.instance.id.apply(id => instanceAlarms(id)[key].query),
+        severity: alarm.severity,
+        pendingDuration: alarm.pendingDuration,
+        repeatNotificationDuration: alarm.repeatNotificationDuration,
+        body: alarm.summary,
+        alarmSummary: alarm.summary,
+        messageFormat: "ONS_OPTIMIZED",
+        destinations: [alertTopic.id],
+        isEnabled: true,
+      },
+      opts,
+    );
+  }
 }
 
 // ── NetBird server (#3000) ───────────────────────────────────────────────
@@ -255,7 +265,7 @@ const domain = `netbird.${root}`;
 // gRPC streams must reach Traefik directly. Let's Encrypt's TLS-ALPN check
 // needs this record before the server's first start.
 // 60s: the Azure fallback (#3001) fails over by repointing this record.
-const dnsRecord = await StandardDns.create("netbird", { hostname: domain, ipAddress: vm.publicIpAddress, type: "A", ttl: 60 }, globals, {});
+const dnsRecord = vm ? await StandardDns.create("netbird", { hostname: domain, ipAddress: vm.publicIpAddress, type: "A", ttl: 60 }, globals, {}) : undefined;
 
 // Generated once. The store key is the one that matters: lose it and the
 // SQLite store's user data cannot be decrypted (bootstrap/INVENTORY.md).
@@ -292,41 +302,46 @@ const heartbeatToken = toGatusKey(BACKUP_HEARTBEAT_GROUP, hostname);
 
 // The stale-backup alarm: Gatus pages when a run reports a failure, or when no
 // run has reported for 30 minutes (components/netbird/backup.ts).
+// Only with a server to back up: an idle heartbeat would page every 30
+// minutes. The file is still written (empty) without one, because removing it
+// from the program would leave the last copy on dockge-as, still paging.
 addUptimeGatus("netbird-backup", globals, {
   endpoints: [],
-  "external-endpoints": [backupHeartbeat({ name: hostname, group: BACKUP_HEARTBEAT_GROUP, token: heartbeatToken })],
+  "external-endpoints": vm ? [backupHeartbeat({ name: hostname, group: BACKUP_HEARTBEAT_GROUP, token: heartbeatToken })] : [],
 });
 
-const server = new NetbirdServer("netbird", {
-  // Over the tailnet: the operator's pods reach the VM through the
-  // `netbird-edge` egress Service (stacks/unifi-network/tailnet-egress.ts),
-  // which tag:egress may SSH into as root (configureNetbirdEdgeAccess).
-  // Tailscale SSH authorises by tailnet identity, so the key is never checked
-  // there; it is passed for the Bastion path only.
-  connection: {
-    host: pulumi.interpolate`${hostname}.${globals.tailscaleDomain}`,
-    user: "root",
-    privateKey: breakGlassKey.privateKeyOpenssh,
-  },
-  domain,
-  secrets: serverSecrets,
-  // 365 days is the API's ceiling. #2885 replaces it with a service user's
-  // token; this one stays as the owner's break-glass credential.
-  setup: { ...owner, patExpireInDays: 365 },
-  // Over the tailnet to the garage-s3 and uptime VIPs, which tag:netbird-edge
-  // may reach on 443 (the `netbird-edge-backups` grant).
-  backup: {
-    repository: pulumi.secret(backupKey.apply(key => resticRepository({ endpoint: key.endpoint, bucket: key.bucket }))),
-    accessKeyId: pulumi.secret(backupKey.username),
-    secretAccessKey: pulumi.secret(backupKey.password),
-    resticPassword,
-    host: hostname,
-    heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: heartbeatToken },
-  },
-  // A replacement VM reruns every deploy step, the restore first.
-  hostKey: vm.instance.id,
-  dependsOn: [vm.instance, dnsRecord],
-});
+const server = !(vm && dnsRecord)
+  ? undefined
+  : new NetbirdServer("netbird", {
+      // Over the tailnet: the operator's pods reach the VM through the
+      // `netbird-edge` egress Service (stacks/unifi-network/tailnet-egress.ts),
+      // which tag:egress may SSH into as root (configureNetbirdEdgeAccess).
+      // Tailscale SSH authorises by tailnet identity, so the key is never checked
+      // there; it is passed for the Bastion path only.
+      connection: {
+        host: pulumi.interpolate`${hostname}.${globals.tailscaleDomain}`,
+        user: "root",
+        privateKey: breakGlassKey.privateKeyOpenssh,
+      },
+      domain,
+      secrets: serverSecrets,
+      // 365 days is the API's ceiling. #2885 replaces it with a service user's
+      // token; this one stays as the owner's break-glass credential.
+      setup: { ...owner, patExpireInDays: 365 },
+      // Over the tailnet to the garage-s3 and uptime VIPs, which tag:netbird-edge
+      // may reach on 443 (the `netbird-edge-backups` grant).
+      backup: {
+        repository: pulumi.secret(backupKey.apply(key => resticRepository({ endpoint: key.endpoint, bucket: key.bucket }))),
+        accessKeyId: pulumi.secret(backupKey.username),
+        secretAccessKey: pulumi.secret(backupKey.password),
+        resticPassword,
+        host: hostname,
+        heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: heartbeatToken },
+      },
+      // A replacement VM reruns every deploy step, the restore first.
+      hostKey: vm.instance.id,
+      dependsOn: [vm.instance, dnsRecord],
+    });
 
 if (globals.baoDualWriteEnabled) {
   const bao = { provider: globals.baoProvider };
@@ -343,33 +358,34 @@ if (globals.baoDualWriteEnabled) {
     },
     bao,
   );
-  baoKvSecret(
-    "netbird-owner",
-    {
-      mount: "secrets",
-      path: "third-party-tokens/netbird/owner",
-      data: {
-        url: `https://${domain}`,
-        email: owner.email,
-        password: owner.password,
-        user_id: server.setupResult!.userId,
-        personal_access_token: server.setupResult!.personalAccessToken,
+  if (server)
+    baoKvSecret(
+      "netbird-owner",
+      {
+        mount: "secrets",
+        path: "third-party-tokens/netbird/owner",
+        data: {
+          url: `https://${domain}`,
+          email: owner.email,
+          password: owner.password,
+          user_id: server.setupResult!.userId,
+          personal_access_token: server.setupResult!.personalAccessToken,
+        },
+        concealedFields: ["password", "personal_access_token"],
+        customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
       },
-      concealedFields: ["password", "personal_access_token"],
-      customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
-    },
-    bao,
-  );
+      bao,
+    );
 } else {
   // Not a warning: setup runs exactly once, so a run that skipped this would
   // leave the owner PAT in Pulumi state alone.
   throw new Error("stacks/netbird-edge needs OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID): it writes the NetBird store key and the one-time owner PAT there.");
 }
 
-export const publicIpAddress = vm.publicIpAddress;
-export const privateIpAddress = vm.privateIpAddress;
+export const publicIpAddress = vm?.publicIpAddress;
+export const privateIpAddress = vm?.privateIpAddress;
 export const availabilityDomain = homeAd;
 export const freeTier = FREE_TIER;
 /** `present`, `fresh` or `restored <snapshot>`: what the last deploy's pre-start restore found. */
-export const restoreResult = server.restoreResult;
+export const restoreResult = server?.restoreResult;
 export const breakGlassPrivateKey = pulumi.secret(breakGlassKey.privateKeyOpenssh);

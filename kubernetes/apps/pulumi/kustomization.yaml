@@ -24,4 +24,9 @@ resources:
   - ./gulf-of-mexico/ks.yaml
   - ./ocracoke/ks.yaml
   - ./netbird-edge/ks.yaml
-  - ./netbird/ks.yaml
+  # Parked (2026-11-03) until a NetBird server exists: it authenticates with
+  # the owner PAT the server's first setup writes, so without one every run
+  # fails and pages. It has no state yet, and destroyOnFinalize is false, so
+  # dropping the Stack CR destroys nothing. Re-add once the Azure primary
+  # (#3001) is up.
+  # - ./netbird/ks.yaml
