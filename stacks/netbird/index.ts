@@ -15,7 +15,9 @@
  *   6. Technitium as every peer's nameserver;
  *   7. a service user whose PAT the in-cluster operator uses (#2889);
  *   8. the `equestria` network the operator's routing peers serve (#2889);
- *   9. the client-access policy (#2888, policy.ts).
+ *   9. the client-access policy (#2888, policy.ts);
+ *  10. nbidp: the private reverse proxy's token, and the private service in
+ *      front of Dex (#2891, nbidp.ts).
  *
  * User groups (admins, family, friends, media-managers) are NOT created here:
  * JWT group sync creates them from Authentik's `groups` claim on first login,
@@ -28,8 +30,12 @@ import { baoKvSecret, baoProvenance, oidcBaoPath } from "components/bao.ts";
 import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
+import { NBIDP_BAO, nbidpHost } from "components/netbird/nbidp.ts";
 import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
+import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
+import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
+import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
 import { ACCESS_RULES, homeResourceGroups, type LiveGroup, resolveGroups, USER_GROUPS } from "./policy.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
 
@@ -369,6 +375,64 @@ pulumi.output(api).apply(async ({ managementUrl, token }) => {
     );
   }
 });
+
+// ── 10. nbidp (#2891) ─────────────────────────────────────────────────────
+// Passwordless "log in with NetBird" in Authentik (plan §K). The NetBird
+// reverse proxy runs in Equestria in private mode
+// (kubernetes/apps/netbird-system/nbidp) and needs two things from here:
+//
+//   - a token to register with management as a bring-your-own proxy. Account
+//     scoped: it can serve this account's services and nothing else. Its
+//     cluster address is NB_PROXY_DOMAIN, `nbidp.<root domain>`;
+//   - the private service: `nbidp.<root domain>` to Dex, NetBird-only, open to
+//     the four Authentik groups and nothing else (nbidp.ts says why).
+//
+// Management only accepts the service once that proxy is connected (it
+// derives the service's cluster from the live proxies), so on the run that
+// mints the token the service waits, like a policy whose group does not exist
+// yet. The next run after the proxy comes up declares it.
+// A token change is an update, not a replace (NetbirdProxyToken.diff), so
+// moving from the owner's PAT to automation's keeps the minted proxy token.
+const nbidpProxyToken = new NetbirdProxyToken("nbidp-proxy", { ...api, name: "nbidp-equestria" }, { dependsOn: [settings] });
+baoKvSecret(
+  "netbird-nbidp-proxy",
+  {
+    mount: "secrets",
+    path: NBIDP_BAO.proxyToken,
+    // Read by kubernetes/apps/netbird-system/nbidp/externalsecret.yaml.
+    data: { proxy_token: nbidpProxyToken.plainToken, token_id: nbidpProxyToken.tokenId },
+    concealedFields: ["proxy_token"],
+    customMetadata: baoProvenance({ source: "stacks/netbird" }),
+  },
+  bao,
+);
+
+const nbidpDomain = nbidpHost();
+pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
+  const [liveGroups, clusters, services] = await Promise.all([
+    netbirdGet<LiveGroup[]>(url, token, "/api/groups"),
+    netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"),
+    netbirdGet<LiveService[]>(url, token, "/api/reverse-proxies/services"),
+  ]);
+  if (!privateServiceReady(clusters, services, nbidpDomain)) {
+    pulumi.log.warn(`nbidp: no private proxy online for ${nbidpDomain} yet (kubernetes/apps/netbird-system/nbidp). The private service waits for it.`);
+    return;
+  }
+  const access = privateServiceAccessGroups(liveGroups);
+  if (access.conflicts.length > 0) pulumi.log.error(`nbidp: groups ${access.conflicts.join(", ")} were not made by JWT sync, so they are left out of the private service.`);
+  if (access.ids.length === 0) {
+    pulumi.log.warn("nbidp: none of the Authentik groups exists in NetBird yet (nobody in them has logged in). The private service waits.");
+    return;
+  }
+  new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds: access.ids }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
+});
+
+/** GET a NetBird API path with `globals.netbirdApi`'s token. */
+async function netbirdGet<T>(url: string, token: string, path: string): Promise<T> {
+  const response = await fetch(`${url.replace(/\/+$/, "")}${path}`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
+  if (!response.ok) throw new Error(`NetBird GET ${path}: HTTP ${response.status}`);
+  return (await response.json()) as T;
+}
 
 export const networkRange = settings.networkRange;
 export const deviceGroups = pulumi.output(Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.id])));

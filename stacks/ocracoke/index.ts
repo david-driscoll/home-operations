@@ -65,10 +65,11 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
     acceptDns: true,
     acceptRoutes: !skystarOnHomeLan,
   },
-  // No `publishLanIpAddress` yet (#2883): the LAN address this LXC recorded is
-  // still its ocracoke one from before the move, so the record would point at
-  // an address the home LAN cannot reach. Re-read `skystar-dockge-ip-address`
-  // first.
+  // App names resolve to the LAN address of whichever site skystar is on, so
+  // that site's LAN-routed clients and NetBird gateway reach them (#2883).
+  // `lanSite` re-reads the address whenever skystarOnHomeLan flips.
+  publishLanIpAddress: true,
+  lanSite: skystarOnHomeLan ? "home" : "ocracoke",
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   monitor,

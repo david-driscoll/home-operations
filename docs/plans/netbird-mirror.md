@@ -192,9 +192,12 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
   - one **local break-glass admin**.
 - **Secrets:** the store encryption key, relay secret and local admin are generated once. They go to OpenBao and
   1Password and are recorded in `bootstrap/INVENTORY.md`, but are not part of any recovery path.
-- **Backups:** an **every-15-minutes** SQLite online backup (`.backup`, no stack stop) plus config, uploaded to
-  Garage S3 over the tailnet, with retention. An empty data directory triggers an automatic restore. That covers
-  both OCI rebuild and Azure promotion.
+- **Backups:** an **every-15-minutes** SQLite online backup (`.backup`, no stack stop) plus config and Traefik's
+  `acme.json`, uploaded to Garage S3 over the tailnet, with retention. An empty data directory triggers an
+  automatic restore, which also puts `acme.json` back (mode 600) when Traefik's volume has none, so a rebuilt
+  VM serves its certificate instead of asking Let's Encrypt again. That covers both OCI rebuild and Azure
+  promotion. TrueNAS pulls the `netbird-backups` bucket daily with the other restic buckets; it holds
+  ciphertext only.
 
 ## G. Relays and gateways
 
@@ -279,6 +282,35 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 - The proxy uses DNS-01 static certs.
 - Access is limited to `members`, because tagged peers would otherwise show up as users under their peer names.
 - PVE and PBS keep their tsidp realms.
+
+**As built (#2891).** Code: `components/netbird/nbidp.ts` (the chain, Dex's config), `stacks/netbird/nbidp.ts`
+(the private service), `components/authentik/flows.ts` (the source), `kubernetes/apps/netbird-system/nbidp`.
+
+- **`members` is the four JWT-synced groups.** The private service's `access_groups` are admins, family, friends and
+  media-managers, never `All` or a device group.
+- **The proxy registers with an account-scoped token** (`POST /api/reverse-proxies/proxy-tokens`, minted by
+  `dynamic/netbird/NetbirdProxyToken`, stored at `third-party-tokens/netbird/nbidp-proxy`). Its cluster address is
+  `nbidp.<root domain>`, which is also the service's domain, so no custom domain is registered.
+- **No public DNS name and no inbound path.** A private service is served only on the proxy's WireGuard listener.
+  Management pushes the record (to the proxy peers' tunnel IPs) only to peers in the access groups, and creates the
+  80/443 policy itself. The certificate is DNS-01.
+- **The provider cannot declare a private service** (0.0.11 has no `private`/`access_groups`), so
+  `dynamic/netbird/NetbirdPrivateService` calls the API. Management only accepts it once the proxy is connected, so it
+  appears on the first `stacks/netbird` run after the proxy comes up.
+- **Every Dex identity header is `X-NetBird-User`.** Dex's authproxy connector reads five headers and four default to
+  names the proxy passes through, which would let a user name someone else's email.
+- **Authentik's server calls Dex over a LAN back-channel** (decided 2026-11-03). Authentik isn't a NetBird peer, and
+  the alpha-site instance can't resolve in-cluster names. So the token exchange and userinfo go to
+  `nbidp-backchannel.<root domain>` on the internal Gateway, which:
+  - routes only `POST /token` and `GET /userinfo`;
+  - is IP-allow-listed to the two Authentik hosts;
+  - is matched by the CiliumNetworkPolicy to the same two paths.
+
+  Only the proxy reaches `/auth` and `/callback`.
+- **No groups come back from Dex.** Authentik stays the source of groups.
+- **Enrollment works like the Tailscale source** (decided 2026-11-03). An identity whose email matches nobody goes
+  through the shared enrollment flow. Ownerless peers never get that far, because the private service admits only the
+  four JWT-synced user groups.
 
 ## L. Devices and onboarding
 

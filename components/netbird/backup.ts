@@ -9,13 +9,15 @@
  *
  *   systemd timer (every 15 min) -> netbird-backup.sh
  *     backup-sqlite  `.backup` of store.db / events.db / idp.db, online, + integrity_check
+ *     host           config.yaml, and Traefik's acme.json (mode 600, must parse)
  *     backup-restic  backup -> Garage (garage-s3 VIP over the tailnet), forget --prune
  *     backup-restic  wget  -> Gatus heartbeat (success, or the failing step)
  *
  *   NetbirdServer, before `docker compose up` -> netbird-restore.sh
  *     store present            -> leave it
  *     repo missing / no snaps  -> fresh (first install; /api/setup may run)
- *     newest snapshot          -> restore into the volume, write the marker
+ *     newest snapshot          -> restore into the volume (and acme.json into
+ *                                 Traefik's, if it has none), write the marker
  *     repo unreadable          -> FAIL: never start on an empty store
  *
  * Both tools are pinned images in compose.yaml (profile `backup`), so Renovate
@@ -38,6 +40,24 @@ export const NETBIRD_DATA_VOLUME = "netbird_netbird_data";
  * they are not backed up.
  */
 export const STORE_FILES = ["store.db", "events.db", "idp.db"] as const;
+
+/** Traefik's Let's Encrypt volume (`netbird` project, `netbird_traefik_letsencrypt` volume). */
+export const TRAEFIK_ACME_VOLUME = "netbird_netbird_traefik_letsencrypt";
+
+/**
+ * Traefik's ACME store (compose.yaml `acme.storage=/letsencrypt/acme.json`),
+ * backed up beside the databases so a rebuilt VM serves the certificate it
+ * already has instead of asking Let's Encrypt again (5 duplicate certificates
+ * a week per name). It holds the ACME account key and, per resolver, each
+ * certificate and its key, keyed by domain. Nothing in it names the host or
+ * its address, so the same file is right on the OCI primary and the Azure
+ * standby (#3001), which serve the same `netbird.<root domain>`; on a host
+ * serving another name its certificates would simply go unused.
+ *
+ * Traefik refuses a store readable by anyone but its owner, so it is staged
+ * and restored with mode 600, whatever mode the snapshot recorded.
+ */
+export const ACME_FILE = "acme.json";
 
 /** The one file whose absence means "this volume holds no NetBird". */
 export const REQUIRED_STORE_FILE = "store.db";
@@ -207,6 +227,18 @@ for db in ${dbs}; do
 done'
 cp "$dir/config.yaml" "$staging/config.yaml"
 
+# Traefik's certificates, read from its volume on the host. Traefik rewrites
+# the file in place when it renews, so a copy caught mid-write is possible:
+# it has to parse before it is uploaded. No file yet means no certificate yet.
+stage=acme
+acme=$(docker volume inspect -f '{{ .Mountpoint }}' ${TRAEFIK_ACME_VOLUME} 2>/dev/null || true)
+if [ -n "$acme" ] && [ -s "$acme/${ACME_FILE}" ]; then
+  install -m 600 "$acme/${ACME_FILE}" "$staging/${ACME_FILE}"
+  restic_sh 'jq empty /staging/${ACME_FILE}'
+else
+  echo "netbird-backup: Traefik has no ${ACME_FILE} yet; backing up without it" >&2
+fi
+
 stage=repository
 if restic cat config >/dev/null; then
   :
@@ -278,9 +310,15 @@ if [ -z "$latest" ]; then
   exit 0
 fi
 
-# Into the volume compose itself creates (run creates it with the project's
+# Into the volumes compose itself creates (run creates them with the project's
 # labels). Stale WAL/SHM files beside an absent store would be replayed onto
 # the restored one, so they go first.
+#
+# Then Traefik's ${ACME_FILE}, before \`compose up\` first starts Traefik, so it
+# serves the snapshot's certificate instead of requesting one. Only into a
+# volume without one: a certificate this host already holds is never replaced.
+# A snapshot from before ${ACME_FILE} was backed up has none, and Traefik
+# requests its certificate as on a first install.
 restic_sh '
 rm -rf /tmp/restore
 $R restore "$1" --target /tmp/restore
@@ -288,7 +326,12 @@ for db in ${dbs}; do
   rm -f "/var/lib/netbird/$db" "/var/lib/netbird/$db-wal" "/var/lib/netbird/$db-shm"
   if [ -f "/tmp/restore/staging/$db" ]; then cp "/tmp/restore/staging/$db" "/var/lib/netbird/$db"; fi
 done
-test -s /var/lib/netbird/${REQUIRED_STORE_FILE}' "$latest"
+test -s /var/lib/netbird/${REQUIRED_STORE_FILE}
+if [ -s /tmp/restore/staging/${ACME_FILE} ] && [ ! -s /letsencrypt/${ACME_FILE} ]; then
+  cp /tmp/restore/staging/${ACME_FILE} /letsencrypt/${ACME_FILE}
+  chmod 600 /letsencrypt/${ACME_FILE}
+  echo "netbird-restore: restored the Traefik ${ACME_FILE}"
+fi' "$latest"
 
 printf '%s %s\\n' "$latest" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > ${paths.restoreMarker}
 echo "netbird-restore: restored $latest"

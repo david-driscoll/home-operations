@@ -88,11 +88,29 @@ export interface DockgeLxcArgs {
    * users, NetBird site gateways -- can then reach the apps (#2883). DNS only:
    * `ipAddress` and everything derived from it stay as they are.
    *
-   * `localIpAddress` is read once, when the LXC is first seen, and stays pinned by
-   * the UniFi DHCP reservation (stacks/unifi-network/local-dns.ts). Turn this off
-   * before a host leaves the home LAN, or the record keeps the old address.
+   * It stays on when a host leaves the home LAN: the record follows the host to
+   * its new site's LAN address, provided `lanSite` changes with the move so the
+   * address is re-read. Off the home LAN that address is reachable only from that
+   * site itself, or through its NetBird gateway once it has one -- not from home
+   * or the bare tailnet.
    */
   publishLanIpAddress?: boolean;
+  /**
+   * The site whose LAN the LXC is on (e.g. "home", "ocracoke"). It is the only
+   * trigger of the `<name>-ip-address` Command, so changing it re-runs
+   * `hostname -I` and `localIpAddress` follows the host to its new LAN. Without it
+   * the address is read once, when the LXC is first seen, and replayed from state
+   * forever. Set it on any host that can move between sites, and flip it in the
+   * first `up` after the host is on the new LAN (it reads whatever address the
+   * LXC holds at that moment). Replacing that Command has no side effects: it has
+   * no `delete`, and nothing that can destroy the LXC depends on `localIpAddress`.
+   * On a non-`remote` host `ipAddress` is `localIpAddress`, so the new address
+   * also reaches the compose files' `ipAddress` substitution and the host's
+   * secret item.
+   *
+   * Left unset, the Command has no triggers, as on hosts that never move.
+   */
+  lanSite?: string;
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
   credential: Input<PasswordDefinition>;
@@ -154,7 +172,10 @@ export class DockgeLxc extends ComponentResource {
   public readonly device?: ReturnType<typeof installTailscaleLxc>;
   public readonly dns: Output<StandardDns>;
   public readonly ipAddress: Output<TailscaleIp>;
-  /** LAN IP of the LXC (first `hostname -I` address), regardless of remote flag */
+  /**
+   * LAN IP of the LXC (first `hostname -I` address), regardless of remote flag.
+   * Re-read only when `lanSite` changes; otherwise replayed from state.
+   */
   public readonly localIpAddress: Output<TailscaleIp>;
   /** LXC vNIC MAC (net0 hwaddr, lowercase) — for DHCP reservations */
   public readonly macAddress: Output<string>;
@@ -293,12 +314,14 @@ export class DockgeLxc extends ComponentResource {
     // LAN-side identity of the LXC, read from the Proxmox host: the vNIC MAC from
     // `pct config` and the first address of `hostname -I`. Exported to 1Password so
     // consumers (e.g. UniFi DHCP reservations in stacks/unifi-network/local-dns.ts)
-    // never need these hardcoded.
+    // never need these hardcoded. The address is create-only, so `lanSite` is its
+    // trigger: a site move replaces the Command and re-reads it (see `lanSite`).
     this.localIpAddress = new remote.Command(
       `${name}-ip-address`,
       {
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- hostname -I`,
+        ...(args.lanSite === undefined ? {} : { triggers: [args.lanSite] }),
       },
       mergeOptions(cro, { dependsOn: [setHostname] }),
     ).stdout.apply(z => z.split(" ")[0].trim()) as Output<TailscaleIp>;

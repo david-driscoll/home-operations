@@ -9,11 +9,12 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
+  ACME_FILE,
   BACKUP_INTERVAL_MINUTES,
   BACKUP_STALE_AFTER_MINUTES,
   backupHeartbeat,
@@ -25,26 +26,50 @@ import {
   renderRestoreScript,
   resticForgetArgs,
   resticRepository,
+  TRAEFIK_ACME_VOLUME,
 } from "./backup.ts";
 
 // Answers the calls the scripts make, by pattern, from FAKE_* variables.
 // Every call is appended to $FAKE_LOG, one line each (newlines in a script
 // argument folded to spaces).
+//
+// With FAKE_ROOT set, the restore's in-container step runs for real: its
+// script runs under bash with the container's paths moved under $FAKE_ROOT,
+// and `restic restore` (FAKE_RESTIC) copies $FAKE_SNAPSHOT in as the
+// snapshot's /staging. That is what lets a test check the files, and their
+// modes, that the restore leaves in the volumes.
 const FAKE_DOCKER = `#!/usr/bin/env bash
 args="$*"
 printf '%s\\n' "\${args//$'\\n'/ }" >> "$FAKE_LOG"
 case "$args" in
   "inspect "*) [ -n "\${FAKE_SERVER_RUNNING:-}" ] || exit 1; echo "$FAKE_SERVER_RUNNING"; exit 0 ;;
+  "volume inspect "*${TRAEFIK_ACME_VOLUME}) [ -n "\${FAKE_ACME_VOLUME:-}" ] || { echo "no such volume" >&2; exit 1; }; echo "$FAKE_ACME_VOLUME"; exit 0 ;;
   "volume inspect "*) [ -n "\${FAKE_VOLUME:-}" ] || { echo "no such volume" >&2; exit 1; }; echo "$FAKE_VOLUME"; exit 0 ;;
 esac
+if [ -n "\${FAKE_ROOT:-}" ] && [[ "$args" == *"--entrypoint /bin/sh backup-restic"*" restore "* ]]; then
+  [ "\${FAKE_RESTORE_RC:-0}" = 0 ] || exit "$FAKE_RESTORE_RC"
+  while [ "$1" != -euc ]; do shift; done
+  script=$2
+  shift 3
+  for path in /tmp/restore /var/lib/netbird /letsencrypt; do script=\${script//"$path"/"$FAKE_ROOT$path"}; done
+  PATH="$FAKE_ROOT/bin:$PATH" exec bash -euc "$script" sh "$@"
+fi
 case "$args" in
   *backup-sqlite*) exit "\${FAKE_SQLITE_RC:-0}" ;;
   *backup-restic*"cat config"*) exit "\${FAKE_REPO_RC:-0}" ;;
   *backup-restic*snapshots*) printf '%s\\n' "\${FAKE_LATEST:-}"; exit "\${FAKE_SNAPSHOTS_RC:-0}" ;;
   *backup-restic*" restore "*) echo "restoring snapshot"; exit "\${FAKE_RESTORE_RC:-0}" ;;
   *backup-restic*" backup "*) exit "\${FAKE_BACKUP_RC:-0}" ;;
+  *backup-restic*"jq "*${ACME_FILE}*) exit "\${FAKE_ACME_CHECK_RC:-0}" ;;
   *) exit 0 ;;
 esac
+`;
+
+// The restic the emulated restore step calls: `restore <id> --target <dir>`.
+const FAKE_RESTIC = `#!/usr/bin/env bash
+while [ "$#" -gt 0 ] && [ "$1" != --target ]; do shift; done
+mkdir -p "$2/staging"
+cp -R "$FAKE_SNAPSHOT/." "$2/staging/"
 `;
 
 interface Run {
@@ -86,6 +111,31 @@ const volume = (box: ReturnType<typeof sandbox>, store: string | undefined) => {
   if (store !== undefined) writeFileSync(join(path, "store.db"), store);
   return { FAKE_VOLUME: path };
 };
+
+/**
+ * A fresh VM for the emulated restore: both volumes exist (compose run creates
+ * them) and are empty, unless `acme` puts an acme.json in Traefik's. The
+ * snapshot holds a store and, unless `snapshotAcme` is null, an acme.json.
+ */
+const emulatedRestore =
+  (args: { snapshotAcme?: string | null; acme?: string } = {}) =>
+  (box: ReturnType<typeof sandbox>) => {
+    withCredentials(box);
+    const root = join(box.root, "container");
+    for (const path of ["bin", "var/lib/netbird", "letsencrypt", "tmp"]) mkdirSync(join(root, path), { recursive: true });
+    writeFileSync(join(root, "bin", "restic"), FAKE_RESTIC);
+    chmodSync(join(root, "bin", "restic"), 0o755);
+    const snapshot = join(box.root, "snapshot");
+    mkdirSync(snapshot);
+    writeFileSync(join(snapshot, "store.db"), "SQLite format 3");
+    if (args.snapshotAcme !== null) {
+      writeFileSync(join(snapshot, ACME_FILE), args.snapshotAcme ?? '{"letsencrypt":{"Certificates":[]}}');
+      // Readable by all, as a careless copy would leave it: the restore must not trust the stored mode.
+      chmodSync(join(snapshot, ACME_FILE), 0o644);
+    }
+    if (args.acme !== undefined) writeFileSync(join(root, "letsencrypt", ACME_FILE), args.acme, { mode: 0o600 });
+    return { FAKE_ROOT: root, FAKE_SNAPSHOT: snapshot };
+  };
 
 const restore = (dir: string) => renderRestoreScript({ dir });
 const lastLine = (text: string) => text.trim().split("\n").at(-1);
@@ -166,6 +216,43 @@ describe("renderRestoreScript: restores only an empty store, and fails closed", 
   });
 });
 
+describe("renderRestoreScript: Traefik's Let's Encrypt state comes back with the store", () => {
+  const container = (result: Run, ...path: string[]) => join(result.dir, "..", "container", ...path);
+  const acmePath = (result: Run) => container(result, "letsencrypt", ACME_FILE);
+
+  it("restores acme.json into Traefik's empty volume with mode 600, which Traefik insists on", () => {
+    const certs = '{"letsencrypt":{"Certificates":[{"domain":{"main":"netbird.example.test"}}]}}';
+    const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e" }, emulatedRestore({ snapshotAcme: certs }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(lastLine(result.stdout), "netbird-restore: restored 4f2a9c1e");
+    assert.equal(readFileSync(acmePath(result), "utf8"), certs);
+    assert.equal(statSync(acmePath(result)).mode & 0o777, 0o600);
+    assert.equal(readFileSync(container(result, "var/lib/netbird", "store.db"), "utf8"), "SQLite format 3");
+  });
+
+  it("never replaces an acme.json the host already has", () => {
+    const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e" }, emulatedRestore({ acme: '{"local":true}' }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(acmePath(result), "utf8"), '{"local":true}');
+    assert.equal(statSync(acmePath(result)).mode & 0o777, 0o600);
+  });
+
+  it("restores a snapshot taken before acme.json was backed up, and leaves Traefik to request its certificate", () => {
+    const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e" }, emulatedRestore({ snapshotAcme: null }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(lastLine(result.stdout), "netbird-restore: restored 4f2a9c1e");
+    assert.ok(!existsSync(acmePath(result)));
+  });
+
+  it("mounts Traefik's volume in the restore container, so the file lands before compose up starts Traefik", () => {
+    const compose = readFileSync(new URL("./compose.yaml", import.meta.url), "utf8");
+    const restic = compose.slice(compose.indexOf("  backup-restic:"), compose.indexOf("\nvolumes:"));
+    assert.match(restic, /- netbird_traefik_letsencrypt:\/letsencrypt$/m);
+    assert.equal(TRAEFIK_ACME_VOLUME, "netbird_netbird_traefik_letsencrypt", "compose project `netbird` + volume `netbird_traefik_letsencrypt`");
+    assert.match(compose, /acme\.storage=\/letsencrypt\/acme\.json"/);
+  });
+});
+
 const backup = (dir: string) => renderBackupScript({ dir, host: "netbird-edge", heartbeat: { url: "https://uptime.example.test", token: "netbird-backups_netbird-edge" } });
 
 describe("renderBackupScript", () => {
@@ -221,6 +308,43 @@ describe("renderBackupScript", () => {
     const result = run(backup, { FAKE_SERVER_RUNNING: "false" }, withCredentials);
     assert.equal(result.status, 0, result.stderr);
     assert.ok(!result.calls.some(call => call.includes("backup-restic") || call.includes("backup-sqlite")));
+  });
+
+  /** Traefik's volume on the host, holding `acme` as acme.json unless it is undefined. */
+  const traefikVolume = (acme?: string) => (box: ReturnType<typeof sandbox>) => {
+    withCredentials(box);
+    const path = join(box.root, "letsencrypt");
+    mkdirSync(path);
+    if (acme !== undefined) writeFileSync(join(path, ACME_FILE), acme, { mode: 0o600 });
+    return { FAKE_ACME_VOLUME: path };
+  };
+
+  it("stages Traefik's acme.json beside the store, mode 600, and checks it before the upload", () => {
+    const certs = '{"letsencrypt":{"Certificates":[]}}';
+    const result = run(backup, { FAKE_SERVER_RUNNING: "true" }, traefikVolume(certs));
+    assert.equal(result.status, 0, result.stderr);
+    const staged = join(result.dir, "backup", "staging", ACME_FILE);
+    assert.equal(readFileSync(staged, "utf8"), certs);
+    assert.equal(statSync(staged).mode & 0o777, 0o600);
+    const check = result.calls.findIndex(call => call.includes("jq ") && call.includes(`/staging/${ACME_FILE}`));
+    const upload = result.calls.findIndex(call => call.includes(" backup "));
+    assert.ok(check >= 0 && check < upload, `acme.json is checked before the upload: ${result.calls.join("\n")}`);
+  });
+
+  it("backs up the store alone while Traefik has no certificate yet", () => {
+    for (const prepare of [withCredentials, traefikVolume(), traefikVolume("")]) {
+      const result = run(backup, { FAKE_SERVER_RUNNING: "true" }, prepare);
+      assert.equal(result.status, 0, result.stderr);
+      assert.ok(!existsSync(join(result.dir, "backup", "staging", ACME_FILE)));
+      assert.ok(result.calls.some(call => call.includes("success=true")));
+    }
+  });
+
+  it("reports an acme.json that is not whole JSON, and uploads nothing", () => {
+    const result = run(backup, { FAKE_SERVER_RUNNING: "true", FAKE_ACME_CHECK_RC: "5" }, traefikVolume('{"letsencrypt":'));
+    assert.notEqual(result.status, 0);
+    assert.ok(!result.calls.some(call => call.includes(" backup ")));
+    assert.ok(result.calls.some(call => call.includes("error=acme")));
   });
 });
 

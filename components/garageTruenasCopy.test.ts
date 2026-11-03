@@ -19,6 +19,7 @@ import {
   TRUENAS_GARAGE_COPY_GROUP,
 } from "./garageTruenasCopy.ts";
 import { toGatusKey } from "./helpers.ts";
+import { NETBIRD_BACKUP_BUCKET } from "./netbird/backup.ts";
 import { cloudCredentialMatches, cloudSyncTaskMatches, nfsShareMatches, snapshotTaskMatches } from "./truenas/truenas-manager.ts";
 import type { CloudSyncTask, NFSShare, SnapshotTask } from "./truenas/truenas-types.ts";
 
@@ -40,9 +41,16 @@ describe("GARAGE_COPY_BUCKETS", () => {
     );
   });
 
+  it("pulls NetBird's restic repo (#2884) with truenas-copy, from the bucket stacks/system creates for it", () => {
+    assert.deepEqual(
+      GARAGE_COPY_BUCKETS.find(entry => entry.bucket === NETBIRD_BACKUP_BUCKET),
+      { bucket: "netbird-backups", key: "truenas-copy", restic: true },
+    );
+  });
+
   it("exports only restic buckets, never one that is not encrypted client-side", () => {
     const exported = GARAGE_COPY_BUCKETS.filter(entry => entry.restic).map(entry => entry.bucket);
-    assert.deepEqual(exported.sort(), ["backrest-alpha-site", "backrest-pgdump", "volsync-equestria"]);
+    assert.deepEqual(exported.sort(), ["backrest-alpha-site", "backrest-pgdump", "netbird-backups", "volsync-equestria"]);
     for (const bucket of ["cnpg-equestria", "pulumi-state", "postgres-celestia", "postgres-luna", "postgres-skystar"]) {
       assert.ok(!exported.includes(bucket), `${bucket} must never get an NFS export`);
     }

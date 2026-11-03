@@ -141,6 +141,10 @@ export function freeTierQuotaStatements(homeAd: string): string[] {
     "zero compute-memory quotas in tenancy",
     `set compute-core quota standard-a1-core-count to ${FREE_TIER.a1Ocpus} in tenancy where ${ad}`,
     `set compute-memory quota standard-a1-memory-count to ${FREE_TIER.a1MemoryGb} in tenancy where ${ad}`,
+    // The same allowance, region-wide: OCI enforces a regional A1 count next to
+    // each per-AD one, and `zero compute-core quotas` zeroes it too.
+    `set compute-core quota standard-a1-core-regional-count to ${FREE_TIER.a1Ocpus} in tenancy where ${region}`,
+    `set compute-memory quota standard-a1-memory-regional-count to ${FREE_TIER.a1MemoryGb} in tenancy where ${region}`,
     "zero block-storage quota total-storage-gb in tenancy",
     `set block-storage quota total-storage-gb to ${FREE_TIER.blockStorageGb} in tenancy where ${ad}`,
     `set block-storage quota backup-count to ${FREE_TIER.volumeBackups} in tenancy where ${region}`,
