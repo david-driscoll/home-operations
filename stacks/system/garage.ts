@@ -33,6 +33,7 @@ import { Tailscale } from "components/constants.ts";
 import { GARAGE_COPY_BUCKETS, GARAGE_COPY_KEYS, garageCopyEndpoint } from "components/garageTruenasCopy.ts";
 import type { GlobalResources } from "components/globals.ts";
 import { copyFileToRemote } from "components/helpers.ts";
+import { NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET } from "components/netbird/backup.ts";
 import type { DockgeLxcDefinition } from "components/store/index.ts";
 import { configureGarageCopy } from "components/truenas.ts";
 
@@ -99,6 +100,10 @@ const RESTIC_BUCKET_QUOTA = 100 * GiB;
 // once, so the margin goes on the side of not failing. Every quota here sums
 // to about 3.46 TiB against the 4T share. Trim it once the real size is known.
 const VOLSYNC_BUCKET_QUOTA = 1024 * GiB;
+
+// NetBird's restic repo (#2884). The store is single-digit MB and restic
+// deduplicates its 15-minute snapshots, so 10 GiB only stops a runaway.
+const NETBIRD_BUCKET_QUOTA = 10 * GiB;
 
 // The Docker hosts that each get a `backrest-<host>` bucket: the garage nodes,
 // plus alpha-site, which has no node and writes through celestia's. Same rule
@@ -587,6 +592,27 @@ aws_secret_access_key = ${key.secretAccessKey}
     );
   }
 
+  // ── NetBird: the control plane's restic repo (#2884) ───────────────────────
+  // components/netbird/backup.ts snapshots the NetBird store every 15 minutes
+  // from the OCI VM (stacks/netbird-edge), and restores the newest one into an
+  // empty volume before the server starts. Created here, not in that stack,
+  // because this module is the one writer of bucket and key state. netbird-edge
+  // reads the record below and hands the key to the VM over SSH stdin.
+  //
+  // The endpoint is the garage-s3 VIP: the VM is outside every site, and
+  // reaches it over the tailnet as tag:netbird-edge (the `netbird-edge-backups`
+  // grant, stacks/unifi-network/acl-manager.ts). The repo is a few MB; the
+  // quota is a ceiling against a runaway, not a sizing.
+  const netbirdBucket = backupBucket(NETBIRD_BACKUP_BUCKET, NETBIRD_BUCKET_QUOTA);
+  managedBuckets.set(NETBIRD_BACKUP_BUCKET, netbirdBucket);
+  keyRecord("netbird-backups-garage-bao", {
+    path: NETBIRD_BACKUP_BAO_PATH,
+    endpoint: pulumi.interpolate`https://garage-s3.${globals.tailscaleDomain}`,
+    bucket: NETBIRD_BACKUP_BUCKET,
+    key: readWriteKey(NETBIRD_BACKUP_BUCKET, netbirdBucket),
+    sourceTitle: "Garage NetBird Backup Key (netbird-edge)",
+  });
+
   // ── TrueNAS: the independent, versioned copy ───────────────────────────────
   // One key with read on every bucket spike pulls with it
   // (components/garageTruenasCopy.ts, docs/plans/host-owned-backups.md §C3).
@@ -670,7 +696,7 @@ aws_secret_access_key = ${key.secretAccessKey}
       cnpgEquestria: cnpgBucket.id,
       garageMirror: mirrorBucket.id,
       postgres: GARAGE_CLUSTERS.map(c => `postgres-${c}`),
-      restic: ["volsync-equestria", "backrest-pgdump", "backrest-immich", ...BACKREST_HOSTS.map(host => `backrest-${host}`)],
+      restic: ["volsync-equestria", "backrest-pgdump", "backrest-immich", ...BACKREST_HOSTS.map(host => `backrest-${host}`), NETBIRD_BACKUP_BUCKET],
     },
     // What this run configured on spike, or why it skipped. Its inputs carry
     // the keys, so Pulumi marks it secret; the result itself holds bucket names

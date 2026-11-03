@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { remote, type types } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, type Output, output, type Resource, secret } from "@pulumi/pulumi";
-import { parseSetupResponse, renderDashboardEnv, renderServerConfig, type ServerSecrets, type SetupResult } from "./server.ts";
+import { backupPaths, renderBackupScript, renderBackupUnits, renderResticEnv, renderRestoreScript } from "./backup.ts";
+import { NETBIRD_DIR, parseSetupResponse, renderDashboardEnv, renderServerConfig, type ServerSecrets, type SetupResult } from "./server.ts";
 
-/** Where the server lives on the VM. Docker volumes hold the state; this holds the config. */
-export const NETBIRD_DIR = "/opt/netbird";
+export { NETBIRD_DIR } from "./server.ts";
 
 const composeFile = readFileSync(new URL("./compose.yaml", import.meta.url), "utf8");
 
@@ -20,8 +20,39 @@ export interface NetbirdServerArgs {
    * (#3001), and setup only ever succeeds once per store.
    */
   setup?: { email: Input<string>; password: Input<string>; name: Input<string>; patExpireInDays: number };
+  /**
+   * 15-minute backups to Garage and the restore that runs before the server
+   * starts (#2884). Without it the server runs on whatever its volume holds.
+   */
+  backup?: NetbirdBackupArgs;
+  /**
+   * Anything that changes when the machine is replaced, e.g. the OCI instance
+   * id. Every deploy step reruns on a new value: a replacement VM starts
+   * empty, and without this the steps' recorded success on the old VM would
+   * stand. Setup is the exception and never reruns.
+   */
+  hostKey?: Input<string>;
   /** Anything that must exist first, e.g. the DNS record Let's Encrypt validates against. */
   dependsOn?: Input<Resource>[];
+}
+
+export interface NetbirdBackupArgs {
+  /** `s3:https://garage-s3.<tailnet>/<bucket>/<prefix>` (backup.ts resticRepository). The standby shares it. */
+  repository: Input<string>;
+  accessKeyId: Input<string>;
+  secretAccessKey: Input<string>;
+  /** Encrypts the repository. Lose it and every snapshot is unreadable. */
+  resticPassword: Input<string>;
+  /** The snapshots' host, and with it their retention group. One per server. */
+  host: string;
+  /** The Gatus heartbeat every run reports to (backup.ts backupHeartbeat). */
+  heartbeat?: { url: Input<string>; token: string };
+  /**
+   * Run the 15-minute timer. Default true. A fenced standby (#3001) restores
+   * on promotion but must not back up while idle. The script also skips any
+   * run where netbird-server is not running.
+   */
+  schedule?: boolean;
 }
 
 /**
@@ -30,20 +61,31 @@ export interface NetbirdServerArgs {
  * Writes compose.yaml, .env, config.yaml and dashboard.env into NETBIRD_DIR and
  * runs `docker compose up` whenever any of them changes. Rerunning is safe: the
  * files are rewritten whole and compose only recreates what changed.
+ *
+ * With `backup`, the order on every deploy is: files -> restore (an empty
+ * volume gets the newest snapshot; an unreadable repository fails the run) ->
+ * up -> setup (refused on a restored store) -> backup timer.
  */
 export class NetbirdServer extends ComponentResource {
   /** The owner's id, email and bootstrap PAT. Undefined when `setup` was not asked for. */
   public readonly setupResult?: Output<SetupResult>;
+  /** What the pre-start restore found: `present`, `fresh` or `restored <snapshot>`. Undefined without `backup`. */
+  public readonly restoreResult?: Output<string>;
 
   constructor(name: string, args: NetbirdServerArgs, opts?: ComponentResourceOptions) {
     super("custom:netbird:Server", name, {}, opts);
 
     const connection = args.connection;
     const cro = { parent: this };
+    const hostKey = args.hostKey;
 
     // cloud-init installs Docker; on a fresh VM the first SSH session can
     // arrive before it finishes.
-    const ready = new remote.Command(`${name}-ready`, { connection, create: "cloud-init status --wait >/dev/null 2>&1 || true; docker version --format '{{.Server.Version}}'" }, { ...cro, dependsOn: args.dependsOn });
+    const ready = new remote.Command(
+      `${name}-ready`,
+      { connection, create: "cloud-init status --wait >/dev/null 2>&1 || true; docker version --format '{{.Server.Version}}'", triggers: [hostKey] },
+      { ...cro, dependsOn: args.dependsOn },
+    );
 
     const config = secret(
       all([args.domain, args.secrets.relayAuthSecret, args.secrets.datastoreEncryptionKey, args.secrets.sessionCookieEncryptionKey]).apply(
@@ -67,25 +109,45 @@ export class NetbirdServer extends ComponentResource {
             // the relay secret, and a command line is visible in ps.
             create: `install -d -m 700 ${NETBIRD_DIR} && umask 077 && cat > ${NETBIRD_DIR}/${file}`,
             stdin: content,
-            triggers: [content],
+            triggers: [content, hostKey],
             logging: "stderr",
           },
           { ...cro, dependsOn: [ready] },
         ),
     );
 
+    const backup = args.backup ? this.deployBackup(name, connection, args.backup, hostKey, written) : undefined;
+
     const up = new remote.Command(
       `${name}-up`,
       {
         connection,
         create: `cd ${NETBIRD_DIR} && docker compose pull --quiet && docker compose up -d --remove-orphans`,
-        triggers: Object.values(files),
+        triggers: [...Object.values(files), hostKey],
       },
-      { ...cro, dependsOn: written },
+      // After the restore: the server must never open an empty store that a
+      // snapshot was about to fill.
+      { ...cro, dependsOn: [...written, ...(backup ? [backup.restore] : [])] },
     );
+    this.restoreResult = backup?.restore.stdout.apply(out => out.trim().split("\n").at(-1) ?? "");
 
+    let setupCommand: remote.Command | undefined;
     if (args.setup) {
       const setup = args.setup;
+      // A restored store already has its owner, and that owner's PAT is the
+      // one in OpenBao. Its own resource, created once like setup and never
+      // rerun: the check belongs to setup's single run, not to every
+      // replacement that restores afterwards.
+      const guard = backup
+        ? new remote.Command(
+            `${name}-setup-guard`,
+            {
+              connection,
+              create: `if [ -e ${backupPaths(NETBIRD_DIR).restoreMarker} ]; then echo "This store was restored from snapshot $(cut -d' ' -f1 ${backupPaths(NETBIRD_DIR).restoreMarker}); its owner already exists. Not running /api/setup: drop setup from this NetbirdServer and keep the owner PAT already in OpenBao." >&2; exit 1; fi`,
+            },
+            { ...cro, dependsOn: [up] },
+          )
+        : undefined;
       const body = secret(
         all([setup.email, setup.password, setup.name]).apply(([email, password, displayName]) => JSON.stringify({ email, password, name: displayName, create_pat: true, pat_expire_in: setup.patExpireInDays })),
       );
@@ -94,7 +156,7 @@ export class NetbirdServer extends ComponentResource {
       // refuses a second time, and a 412 here means the store already has an
       // owner -- left as a failure so nobody overwrites the stored PAT with
       // nothing.
-      const command = new remote.Command(
+      setupCommand = new remote.Command(
         `${name}-setup`,
         {
           connection,
@@ -117,11 +179,88 @@ exit 1`,
           // The response is the PAT: keep it out of logs and mark it secret in state.
           logging: "stderr",
         },
-        { ...cro, dependsOn: [up], additionalSecretOutputs: ["stdout", "stdin"] },
+        { ...cro, dependsOn: [up, ...(guard ? [guard] : [])], additionalSecretOutputs: ["stdout", "stdin"] },
       );
-      this.setupResult = secret(command.stdout.apply(parseSetupResponse));
+      this.setupResult = secret(setupCommand.stdout.apply(parseSetupResponse));
     }
 
-    this.registerOutputs({ setupResult: this.setupResult });
+    if (backup) {
+      // Enabled once the server is up and set up, so no run snapshots a store
+      // that is still arriving. Starting one now puts a snapshot in Garage
+      // straight after every deploy.
+      const schedule = args.backup?.schedule ?? true;
+      new remote.Command(
+        `${name}-backup-enable`,
+        {
+          connection,
+          create: schedule
+            ? "systemctl daemon-reload && systemctl enable --now netbird-backup.timer && systemctl start --no-block netbird-backup.service"
+            : "systemctl daemon-reload && (systemctl disable --now netbird-backup.timer 2>/dev/null || true)",
+          triggers: [...backup.contents, schedule, hostKey],
+        },
+        { ...cro, dependsOn: [up, ...backup.files, ...(setupCommand ? [setupCommand] : [])] },
+      );
+    }
+
+    this.registerOutputs({ setupResult: this.setupResult, restoreResult: this.restoreResult });
+  }
+
+  /**
+   * Writes the backup credentials, scripts and units, and runs the restore.
+   * The restore reruns when the host or the script changes; on a host whose
+   * volume already holds a store it answers `present` and touches nothing.
+   */
+  private deployBackup(name: string, connection: types.input.remote.ConnectionArgs, args: NetbirdBackupArgs, hostKey: Input<string> | undefined, serverFiles: Resource[]) {
+    const paths = backupPaths(NETBIRD_DIR);
+    const units = renderBackupUnits({ dir: NETBIRD_DIR });
+    const env = secret(
+      all([args.repository, args.accessKeyId, args.secretAccessKey, args.resticPassword]).apply(([repository, accessKeyId, secretAccessKey, password]) =>
+        renderResticEnv({ repository, accessKeyId, secretAccessKey, password }),
+      ),
+    );
+    const heartbeat = args.heartbeat;
+    const backupScript: Input<string> = heartbeat ? output(heartbeat.url).apply(url => renderBackupScript({ host: args.host, heartbeat: { url, token: heartbeat.token } })) : renderBackupScript({ host: args.host });
+    const restoreScript = renderRestoreScript();
+
+    // [resource suffix, path, content, mode]
+    const install: [string, string, Input<string>, string][] = [
+      ["restic-env", paths.env, env, "600"],
+      ["backup-script", paths.backupScript, backupScript, "700"],
+      ["restore-script", paths.restoreScript, restoreScript, "700"],
+      ["backup-service", "/etc/systemd/system/netbird-backup.service", units.service, "644"],
+      ["backup-timer", "/etc/systemd/system/netbird-backup.timer", units.timer, "644"],
+    ];
+    const files = install.map(
+      ([suffix, path, content, mode]) =>
+        new remote.Command(
+          `${name}-${suffix}`,
+          {
+            connection,
+            // stdin, never an argument: restic.env holds the S3 key and the
+            // repository password. Written to a temp file and renamed, so a
+            // timer run never reads half a script. Only the backup directory
+            // is created with a mode; /etc/systemd/system keeps its own.
+            create: `${path.startsWith(`${paths.dir}/`) ? `install -d -m 700 ${paths.dir} && ` : ""}umask 077 && cat > ${path}.tmp && chmod ${mode} ${path}.tmp && mv ${path}.tmp ${path}`,
+            stdin: content,
+            triggers: [content, hostKey],
+            logging: "stderr",
+          },
+          { parent: this, dependsOn: serverFiles },
+        ),
+    );
+
+    // compose.yaml and .env must be on disk first: the restore runs the pinned
+    // restic image through the compose project, which also creates the volume.
+    const restore = new remote.Command(
+      `${name}-restore`,
+      {
+        connection,
+        create: paths.restoreScript,
+        triggers: [restoreScript, composeFile, hostKey],
+        logging: "stdoutAndStderr",
+      },
+      { parent: this, dependsOn: [...serverFiles, ...files] },
+    );
+    return { files, restore, contents: install.map(([, , content]) => content) };
   }
 }

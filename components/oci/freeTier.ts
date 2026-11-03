@@ -28,6 +28,53 @@ export const FREE_TIER = {
   minBootVolumeGb: 50,
 } as const;
 
+/**
+ * Boot-volume backups kept by the user-defined policy (#2884). Of the free 5,
+ * so a manual backup before a risky change still fits under the quota.
+ */
+export const BOOT_VOLUME_BACKUP_COPIES = 3;
+
+const DAY_SECONDS = 86_400;
+
+/** Seconds per backup period, the SHORTEST each can be, so a count from it is never low. */
+const BACKUP_PERIOD_SECONDS: Record<string, number> = {
+  ONE_HOUR: 3_600,
+  ONE_DAY: DAY_SECONDS,
+  ONE_WEEK: 7 * DAY_SECONDS,
+  ONE_MONTH: 28 * DAY_SECONDS,
+  ONE_YEAR: 365 * DAY_SECONDS,
+};
+
+/**
+ * How many backups one schedule keeps alive at once: the new one plus every
+ * earlier one still inside its retention. One schedule per policy, so this is
+ * the policy's total, and a VM replacement does not double it (the old
+ * volume's backups and the new one's share the one weekly slot).
+ */
+export function retainedBackupCopies(schedule: { period: string; retentionSeconds: number }): number {
+  const period = BACKUP_PERIOD_SECONDS[schedule.period];
+  if (period === undefined) throw new Error(`unknown backup period ${schedule.period}`);
+  return Math.ceil(schedule.retentionSeconds / period);
+}
+
+/**
+ * The boot volume's backup schedule: weekly, incremental, kept 20 days. Three
+ * weeks would leave the oldest alive at the moment the fourth is taken; 20
+ * days expires it a day before.
+ */
+export function bootVolumeBackupSchedule() {
+  return {
+    backupType: "INCREMENTAL",
+    period: "ONE_WEEK",
+    dayOfWeek: "SUNDAY",
+    // 10:00 UTC is 5-6am US Eastern, an hour after unattended-upgrades' reboot window.
+    hourOfDay: 10,
+    offsetType: "STRUCTURED",
+    timeZone: "UTC",
+    retentionSeconds: 20 * DAY_SECONDS,
+  } as const;
+}
+
 /** Shapes that cost nothing on an Always Free tenancy. */
 export const FREE_TIER_SHAPES: readonly string[] = [FREE_TIER.a1Shape, "VM.Standard.E2.1.Micro"];
 

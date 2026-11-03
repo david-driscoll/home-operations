@@ -9,6 +9,9 @@
  * this module renders the half that carries the domain and the secrets.
  */
 
+/** Where the server lives on the VM. Docker volumes hold the state; this holds the config. */
+export const NETBIRD_DIR = "/opt/netbird";
+
 /** Traefik's fixed address on the compose network (compose.yaml). The only proxy trusted for client IPs. */
 export const TRAEFIK_IP = "172.30.0.10";
 export const STUN_PORT = 3478;
