@@ -48,6 +48,17 @@ export interface ProxmoxHostArgs {
    * parameter, so it takes effect without a reboot.
    */
   zfsArcMaxBytes?: number;
+  /**
+   * The site whose LAN the host is on (e.g. "home", "ocracoke"), as on
+   * `DockgeLxcArgs.lanSite`. It is the only trigger of the
+   * `<name>-local-ip-address` Command, so changing it re-reads the vmbr0 address
+   * and `localIpAddress` follows the host to its new LAN. Without it the address
+   * is read once and replayed from state. Set it on hosts that move between
+   * sites, and flip it in the first `up` after the move. Replacing that Command
+   * only re-runs the read: it has no `delete`, and `localIpAddress` feeds nothing
+   * but the exported `internalIp`.
+   */
+  lanSite?: string;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -61,7 +72,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
   public readonly remote: boolean;
-  /** LAN IP of the host's vmbr0 bridge, discovered over SSH */
+  /** LAN IP of the host's vmbr0 bridge, discovered over SSH; re-read only when `lanSite` changes */
   public readonly localIpAddress: Output<string>;
   /** MAC of the host's vmbr0 bridge (lowercase), discovered over SSH */
   public readonly macAddress: Output<string>;
@@ -162,6 +173,7 @@ export class ProxmoxHost extends ComponentResource {
       {
         connection,
         create: `ip -4 -o addr show vmbr0 scope global | awk '{print $4}' | cut -d/ -f1 | head -1`,
+        ...(args.lanSite === undefined ? {} : { triggers: [args.lanSite] }),
       },
       cro,
     ).stdout.apply(z => z.trim());
