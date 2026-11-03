@@ -119,7 +119,12 @@ GitHub when the repo is archived.
   `stacks/netbird-edge` generates its secrets and writes them to OpenBao:
   `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret,
   the session-cookie key, and `resticPassword`, which decrypts the 15-minute backups) and
-  `third-party-tokens/netbird/owner` (the break-glass owner and its bootstrap PAT). The
+  `third-party-tokens/netbird/owner` (the break-glass owner's login and its setup PAT,
+  which is never rotated and lapses a year after setup). `stacks/netbird` then mints
+  the PATs Pulumi actually uses, `third-party-tokens/netbird/automation` and the owner's
+  `third-party-tokens/netbird/owner-pat`, both 365 days, alerted 30 days out and
+  rotated by a one-line change (docs/plans/netbird-mirror.md, "PATs and their
+  rotation"). If both lapse, the owner's password still logs in. The
   backups live in Garage's `netbird-backups` bucket; `stacks/system` records its key at
   `apps/netbird/garage-backup`. Pulumi state holds a second copy of all of it. Losing the
   store key loses NetBird's user data, which re-enrolling clients rebuilds; nothing else

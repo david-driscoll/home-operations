@@ -33,7 +33,8 @@ spec:
   continueResyncOnCommitMatch: true
   destroyOnFinalize: false
   workspaceReclaimPolicy: Delete
-  # netbird-edge bootstraps the owner PAT this stack authenticates with;
+  # netbird-edge bootstraps the owner PAT this stack's first run authenticates
+  # with (later runs use the automation PAT it mints, components/netbird/tokens.ts);
   # system creates the Authentik client (netbird-edge/definition.yaml) it
   # hands to NetBird's Dex.
   prerequisites:

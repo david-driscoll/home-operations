@@ -67,3 +67,37 @@ spec:
           annotations:
             summary: "Pulumi Stack {{ $labels.name }} is lock-blocked"
             description: "Stack {{ $labels.namespace }}/{{ $labels.name }} is failing because the Pulumi state is locked (the lock text may only be in `kubectl -n {{ $labels.namespace }} logs {{ $labels.name }}-workspace-0 -c pulumi | grep 'locked by'`). The auto-canceller will resolve this after 10 minutes, or run `kubectl exec -n {{ $labels.namespace }} {{ $labels.name }}-workspace-0 -- pulumi cancel --yes` followed by `kubectl annotate stack -n {{ $labels.namespace }} {{ $labels.name }} pulumi.com/reconciliation-request=$(date +%s) --overwrite` to resolve immediately."
+
+    - name: pulumi.stack-tokens
+      rules:
+        - alert: PulumiStackTokenExpiring
+          # A credential a stack holds expires within 30 days (EXPIRY_WARNING_DAYS
+          # in components/netbird/tokens.ts). The value comes from the stack's
+          # tokenExpiresAtSeconds output via kube-state-metrics
+          # (../../observability/prometheus/values.yaml). It is an absolute date,
+          # so the countdown keeps going while the stack is not running. 0 means
+          # the stack could not read the date, and fires at once. stacks/netbird
+          # exports its automation and owner PATs. A warning still pages: the
+          # root route's receiver is pushover.
+          expr: (kube_stack_output_token_expires_timestamp_seconds{token!=""} - time()) < 30 * 86400
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pulumi Stack {{ $labels.name }}: the {{ $labels.token }} token expires within 30 days"
+            description: "Stack {{ $labels.namespace }}/{{ $labels.name }} holds a {{ $labels.token }} token that expires in {{ $value | humanizeDuration }}. For NetBird, bump the token's generation in stacks/netbird/index.ts and merge; docs/plans/netbird-mirror.md (PATs and their rotation) has the steps."
+
+        - alert: NetbirdTokenExpiryUnknown
+          # Guards the alert above. stacks/netbird has succeeded, but its two
+          # expiry series are not both there, so PulumiStackTokenExpiring could
+          # never fire for it (a renamed output, a KSM config that did not load).
+          expr: |
+            max by (namespace, name) (kube_stack_last_update_state{name="netbird"} == 1)
+            unless on (namespace, name)
+            (count by (namespace, name) (kube_stack_output_token_expires_timestamp_seconds{name="netbird", token=~"automation|owner"}) == 2)
+          for: 6h
+          labels:
+            severity: warning
+          annotations:
+            summary: "NetBird PAT expiry is not being watched"
+            description: "Stack {{ $labels.namespace }}/{{ $labels.name }} succeeded, but kube_stack_output_token_expires_timestamp_seconds lacks its automation or owner series, so nothing will warn before those PATs expire. Check the Stack's status.outputs.tokenExpiresAtSeconds and the kube-state-metrics customResourceState config."

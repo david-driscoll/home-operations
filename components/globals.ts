@@ -4,7 +4,7 @@ import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { Provider as NetbirdProvider } from "@pulumi/netbird";
 import { Provider as OciProvider } from "@pulumi/oci";
-import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
+import { all, ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, log, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
@@ -12,6 +12,7 @@ import { Provider as VaultProvider } from "@pulumi/vault";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { BAO_CREDENTIAL_HINT, baoEnv, baoEnvUnresolved } from "./bao.ts";
 import { rootDomain } from "./domains.ts";
+import { chooseToken, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_OWNER_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, type StoredToken, type TokenCandidate } from "./netbird/tokens.ts";
 import { BaoStore } from "./store/bao.ts";
 import type { VaultStore } from "./store/index.ts";
 
@@ -44,7 +45,10 @@ export class GlobalResources extends ComponentResource {
   private _ociCredential?: Output<OciApiKeyCredential>;
   private _ociProvider?: OciProvider;
   private _netbirdOwner?: Output<NetbirdOwnerCredential>;
+  private _netbirdApi?: NetbirdApiCredential;
+  private _netbirdOwnerApi?: NetbirdApiCredential;
   private _netbirdProvider?: NetbirdProvider;
+  private _netbirdOwnerProvider?: NetbirdProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -360,23 +364,85 @@ export class GlobalResources extends ComponentResource {
   }
 
   /**
-   * The self-hosted NetBird's break-glass owner and its bootstrap PAT, written
-   * by stacks/netbird-edge when it first set the server up (#3000). Lazy: only
-   * stacks/netbird reads it, and the path does not exist until that setup ran.
+   * The self-hosted NetBird's break-glass owner, written by stacks/netbird-edge
+   * when it first set the server up (#3000): where the server is, the owner's
+   * login, and the setup PAT. Lazy: only stacks/netbird reads it, and the path
+   * does not exist until that setup ran.
    *
-   * Never log this Output.
+   * Never log this Output. Call the API with `netbirdApi`, not with the PAT in
+   * here.
    */
   public get netbirdOwner(): Output<NetbirdOwnerCredential> {
-    this._netbirdOwner ??= this.store.getSecretByPath<NetbirdOwnerCredential>("third-party-tokens/netbird/owner");
+    this._netbirdOwner ??= this.store.getSecretByPath<NetbirdOwnerCredential>(NETBIRD_OWNER_BAO_PATH);
     return this._netbirdOwner;
   }
 
+  /**
+   * The one credential every NetBird API call Pulumi makes uses: the provider,
+   * the dynamic resources and raw `fetch`es alike. It is the `automation`
+   * service user's PAT once stacks/netbird has written it, and the owner's
+   * until then (components/netbird/tokens.ts has the chain and why it cannot
+   * deadlock).
+   *
+   * Shaped like the provider's and the dynamic resources' args, so it is
+   * passed whole: `new NetbirdDefaultPolicyRemoval(name, globals.netbirdApi)`.
+   * `token` is secret.
+   */
+  public get netbirdApi(): NetbirdApiCredential {
+    this._netbirdApi ??= this.netbirdCredential("automation");
+    return this._netbirdApi;
+  }
+
+  /**
+   * The owner's own PAT, for the one thing `netbirdApi` cannot do: mint the
+   * owner a new PAT. NetBird lets a user manage only its own tokens and its
+   * service users' tokens, so the automation user cannot rotate the owner's.
+   */
+  public get netbirdOwnerApi(): NetbirdApiCredential {
+    this._netbirdOwnerApi ??= this.netbirdCredential("owner");
+    return this._netbirdOwnerApi;
+  }
+
+  /**
+   * Switching this provider's token (owner to automation on the second run, or
+   * a rotation) is an in-place provider update, not a replace. The bridged
+   * provider marks no config key as forcing replacement, so the NetBird
+   * resources keep their provider reference and see no diff.
+   */
   public get netbirdProvider(): NetbirdProvider {
-    if (this._netbirdProvider) return this._netbirdProvider;
-    const owner = this.netbirdOwner;
-    this._netbirdProvider = new NetbirdProvider("netbird", { managementUrl: owner.url, token: owner.personal_access_token }, { parent: this });
+    this._netbirdProvider ??= new NetbirdProvider("netbird", this.netbirdApi, { parent: this });
     return this._netbirdProvider;
   }
+
+  /** `netbirdOwnerApi` as a provider, for the owner's own `netbird.Token` only. */
+  public get netbirdOwnerProvider(): NetbirdProvider {
+    this._netbirdOwnerProvider ??= new NetbirdProvider("netbird-owner", this.netbirdOwnerApi, { parent: this });
+    return this._netbirdOwnerProvider;
+  }
+
+  private netbirdCredential(prefer: "automation" | "owner"): NetbirdApiCredential {
+    const ownerPat = this.store.tryGetSecretByPath<StoredToken>(NETBIRD_OWNER_PAT_BAO_PATH);
+    const automation = prefer === "automation" ? this.store.tryGetSecretByPath<StoredToken>(NETBIRD_AUTOMATION_BAO_PATH) : output(undefined);
+    const chosen = all([this.netbirdOwner, ownerPat, automation]).apply(([owner, ownerPat, automation]) => {
+      const candidates: TokenCandidate[] = [...(prefer === "automation" ? [{ source: "automation", token: automation }] : []), { source: "owner-pat", token: ownerPat }, { source: "owner", token: owner }];
+      const choice = chooseToken(candidates, new Date());
+      for (const skip of choice.skipped) {
+        // Absent is the expected first run; expired means the alert was missed.
+        const message = `NetBird ${prefer} credential: skipping ${skip.source} (${skip.detail}), using ${choice.source}.`;
+        if (skip.reason === "absent") log.info(message, this);
+        else log.warn(message, this);
+      }
+      return { managementUrl: owner.url, token: choice.token };
+    });
+    return { managementUrl: chosen.managementUrl, token: secret(chosen.token) };
+  }
+}
+
+/** Where the NetBird API is and the PAT to call it with. `token` is secret. */
+export interface NetbirdApiCredential {
+  /** `https://netbird.<root domain>`. */
+  managementUrl: Output<string>;
+  token: Output<string>;
 }
 
 export interface NetbirdOwnerCredential {

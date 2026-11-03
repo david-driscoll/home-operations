@@ -16,7 +16,7 @@ import * as pulumi from "@pulumi/pulumi";
 export interface NetbirdDefaultPolicyRemovalArgs {
   /** `https://netbird.<root domain>`. */
   managementUrl: pulumi.Input<string>;
-  /** An admin PAT. */
+  /** An admin PAT. Pass `globals.netbirdApi` whole for both fields. */
   token: pulumi.Input<string>;
 }
 
