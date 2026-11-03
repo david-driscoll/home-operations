@@ -1,17 +1,17 @@
-# Graph Report - home-operations  (2026-10-29)
+# Graph Report - home-operations  (2026-11-02)
 
 ## Corpus Check
-- 3761 files · ~2,263,547 words
+- 3470 files · ~2,126,202 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 254 file(s) not represented in the graph (top: .map 146, (none) 48, .toml 30)
+- Unclassified: 105 file(s) not represented in the graph (top: (none) 46, .toml 30, .conf 5)
 
 ## Summary
-- 35313 nodes · 40603 edges · 3116 communities (2718 shown, 398 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 646 edges (avg confidence: 0.85)
+- 39651 nodes · 45136 edges · 3468 communities (3027 shown, 441 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 593 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c095eb46`
+- Built from commit: `1c9b682e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -51,7 +51,7 @@
 - Forgejo celestia to equestria Cutover
 - Longhorn Snapshot Reclamation
 - tailscale/index.ts
-- globals.ts
+- GlobalResources
 - spec
 - properties
 - properties
@@ -59,16 +59,16 @@
 - application-definition.d.ts
 - copilot-sdk-csharp.instructions.md
 - agent-tools-servers kustomize root
-- Degoog HelmRelease
+- degoog-env ExternalSecret
 - properties
 - resourceOptsDefaults
 - Browser Rendering Patterns
 - Browser Rendering Patterns
-- config-sync.py
+- labels
 - driscoll.dev/v1 ApplicationDefinition schema
 - garageTruenasCopy.ts
 - properties
-- dependencies
+- components/package.json
 - Context7 Documentation Expert
 - Kustomize overlay kube-system/openbao
 - toolhive-registry kustomization resource list
@@ -94,7 +94,7 @@
 - properties
 - Reflector and Registry Mirrors
 - properties
-- authentik/utilities.ts
+- policyGeoip.ts
 - watchdog.mjs
 - Glance Dashboard Pages & Widgets
 - Cilium CNI Configuration
@@ -134,7 +134,7 @@
 - PlaylistData
 - .claude/skills/instruction-eval/scripts/eval.py
 - Team Mode
-- Coder / Forgejo
+- Forgejo `authentik` OAuth auth source values fragment
 - node-feature-discovery HelmRelease
 - properties
 - properties
@@ -158,7 +158,7 @@
 - Examples
 - Equestria / Home
 - HelmRelease tududi (app-template)
-- Enhanced Channel Manager ApplicationDefinition
+- dispatcharr kustomize overlay
 - Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy
 - name
 - backrest.d.ts
@@ -207,14 +207,14 @@
 - Promotion Pipeline
 - Promotion Pipeline
 - Fields
-- unifi-network/package.json
+- helpers.ts
 - truenas-manager.ts
 - manifest.json
 - Patterns
 - System Architecture Reviewer
 - XcProxyConfiguration
-- Observability / Grafana
-- package.json
+- GrafanaFolder: Services
+- dependencies
 - dns
 - properties
 - common Kustomize Component
@@ -262,13 +262,13 @@
 - Pipelines Configuration
 - Cloudflare Workers AI
 - Code Review — Workers
-- components/package.json
+- packages
 - Reflect Skill
 - Alpha Site / Pecron Monitor
-- Alpha Site / Uptime
+- Pushover alerting provider
 - 07 — Authentik moves to alpha-site
 - Reflect Skill
-- Equestria / Utils
+- LibreSpeed ApplicationDefinition
 - compilerOptions
 - compilerOptions
 - properties
@@ -276,7 +276,7 @@
 - compilerOptions
 - compilerOptions
 - compilerOptions
-- coder-templates.ts
+- ref_node_fs
 - Cloudflare Durable Objects
 - CNPG Cluster CRD Field Reference
 - Durable Objects Rules & Best Practices
@@ -439,7 +439,7 @@
 - DevOps Core Principles
 - .github/skills/git-workflow/SKILL.md
 - Equestria / Media
-- getGroup.ts
+- data
 - Durable Objects Configuration
 - compilerOptions
 - compilerOptions
@@ -497,7 +497,7 @@
 - GlobalResources (components/globals.ts)
 - Network / Traefik
 - traefik Kustomization
-- Observability / Blackbox Exporter
+- Flux Kustomization: blackbox-exporter
 - $defs
 - properties
 - spec
@@ -545,7 +545,7 @@
 - API Reference
 - Workers Configuration
 - Configuration
-- dns-celestia Service (bootstrap)
+- tailscale.ts
 - Configuration
 - .claude/skills/instruction-eval/scripts/run-eval.py
 - Cross-Product Correlation Rules
@@ -556,7 +556,7 @@
 - crew.agent.md
 - merge-window.py
 - Kube System / Openbao Replica
-- Observability / Grafana
+- intel-gpu-exporter HelmRelease (app-template)
 - openebs-values ConfigMapGenerator
 - Postgres / Databases
 - type
@@ -675,7 +675,7 @@
 - Process
 - Vectorize (Vector Database)
 - Process
-- stacks/authentik/index.ts
+- AuthentikGroups
 - seed-subscriptions.php
 - Email Handling
 - MCP Integration
@@ -718,8 +718,7 @@
 - Patterns
 - Extensions.cs
 - .agents/skills/cloudflare/references/do-storage/README.md
-- Piece R — Rotate equestria's control planes to workers
-- Migration churn failure modes beyond the CRD cascade
+- Staged is a replica count, not a Flux suspension
 - GitHub Copilot Instructions — home-operations
 - Color Usage Guidelines
 - reconcile_repo
@@ -793,7 +792,7 @@
 - Resource Configuration
 - Architecture Patterns
 - Cloudflare R2 Data Catalog Skill Reference
-- Jellyfin: SQLite → PostgreSQL trial (`jellyfin-pg`)
+- Jellyfin on PostgreSQL (`jellyfin-pg`)
 - Cloudflare R2 SQL Skill Reference
 - RealtimeKit Gotchas & Troubleshooting
 - API Reference
@@ -827,7 +826,7 @@
 - Context7-aware development
 - Imetadata
 - Database / Postgres
-- Equestria / Media
+- sonarr-log CNPG Database
 - Stremio ApplicationDefinition
 - Observability / Nfs System
 - coderd/index.ts
@@ -855,7 +854,7 @@
 - GraphQL Analytics API Reference
 - Cloudflare Images Skill Reference
 - KV API Reference
-- plan.ts
+- data
 - Configuration
 - Functions API
 - coderd/package.json
@@ -1089,7 +1088,7 @@
 - Seraph — Storage & Data Protection
 - Tank — Kubernetes Workloads & Flux Delivery
 - sourceSaml.ts
-- Project Context
+- data
 - Casting Reference
 - {Name} — {Role}
 - Copilot Coding Agent Member
@@ -1206,7 +1205,7 @@
 - Step-by-Step Walkthrough
 - Pagination
 - Alpha Site / Rclone Sftp
-- Prometheus/Alloy Compose Stack
+- spec
 - tailscale.d.ts
 - Fact Checker — Verification & Devil's Advocate
 - 04 — Pulumi state backend: Minio-on-truenas → Postgres DIY on celestia
@@ -1233,7 +1232,7 @@
 - Tailscale
 - Technitium / Scripts
 - Terrifi / Scripts
-- ProxmoxHost.ts
+- home/index.ts
 - Unifi / Scripts
 - Browse the Web (Experimental)
 - Callable Methods
@@ -1324,9 +1323,9 @@
 - init-mode/SKILL.md
 - templates/skills/reviewer-protocol/SKILL.md
 - How to Wire Up a New Team Member
-- Hermes agent service (compose)
+- steps
 - Cluster Consolidation / Celestia
-- pbs/provider.ts
+- spec
 - garage-backup/backup.sh
 - traefik/init.sh
 - Cluster Consolidation
@@ -1417,7 +1416,7 @@
 - Authentik
 - Authentik
 - Authentik
-- rewrite.ts
+- spec
 - Authentik
 - properties
 - Authentik
@@ -1589,7 +1588,7 @@
 - Authentik
 - Authentik
 - Authentik
-- Troubleshooting Common Kubernetes Issues
+- spec
 - Authentik
 - Authentik
 - Authentik
@@ -1621,23 +1620,23 @@
 - notificationMatcher.ts
 - pruneJob.ts
 - Pbs
-- S3Endpoint
+- s3endpoint.ts
 - Pbs
 - Pbs
-- WebhookNotification
+- webhookNotification.ts
 - Tailscale
+- spec
 - Tailscale
-- Tailscale
-- DeviceSubnetRoutes
+- deviceSubnetRoutes.ts
 - Tailscale
 - DnsNameservers
 - Tailscale
 - logstreamConfiguration.ts
-- DockgeLxc
+- DockgeLxc.ts
 - Tailscale
-- TailnetSettings
+- tailnetSettings.ts
 - Webhook
-- AllowedZone
+- technitium/utilities.ts
 - Durable Objects Configuration
 - CatalogMembership
 - record.ts
@@ -1647,9 +1646,9 @@
 - ClientGroup
 - arcane-agent
 - DnsRecord
-- FirewallGroup
+- terrifi/firewallGroup.ts
 - FirewallPolicyOrder
-- Terrifi
+- terrifi/firewallZone.ts
 - Terrifi
 - Unifi
 - Unifi
@@ -1679,25 +1678,25 @@
 - Unifi
 - client.ts
 - Unifi
-- DynamicDns
-- FirewallZone
+- dynamicDns.ts
+- unifi/firewallZone.ts
 - unifi/network.ts
-- PortForward
+- portForward.ts
 - Unifi
 - powerSupervisor.ts
 - Unifi
 - setting.ts
 - site.ts
-- StaticRoute
+- staticRoute.ts
 - Unifi
-- VpnClient
+- vpnClient.ts
 - Unifi
-- Wan
+- wan.ts
 - Unifi
 - Unifi
-- Session Management
+- spec
 - Kubernetes Deployment Best Practices
-- The 2026-09-21 re-run: plugins, repositories and settings included
+- OCIRepository tuppr
 - Human-in-the-Loop
 - Observability
 - Voice (Experimental)
@@ -1761,21 +1760,21 @@
 - Codebase
 - Garage Offsite S3 Backup Architecture
 - Casting & Persistent Naming
-- Radarr & Sonarr Media Apps
-- getPruneJobs.ts
+- spec
+- spec
 - Equestria / Utils
 - Intel GPU Device Plugin Lockstep
-- Fail back (re-establish replication)
+- spec
 - Dependency Patterns (from CLAUDE.md)
 - zwave-js-ui
 - Dependency Patterns (from CLAUDE.md)
 - Pbs
 - Pbs
 - git-pages: static sites from Forgejo
-- Pbs
+- spec
 - coderd/utilities.ts
-- arcane
-- Coder templates
+- spec
+- spec
 - Cloudflare Queues
 - garage-history-copy.sh
 - The Four Key Metrics of DevOps (DORA Metrics)
@@ -1863,7 +1862,7 @@
 - Orchestration Patterns
 - Dashboard Structure Reference
 - Override Blocks
-- getVerifyJobs.ts
+- spec
 - Inventory Tasks (inv:)
 - Design Principles (from CLAUDE.md)
 - Key Blocks
@@ -1880,7 +1879,7 @@
 - templates/skills/test-discipline/SKILL.md
 - Spawn Reference
 - Worktree Reference
-- cert-extractor service
+- spec
 - unlock-stale-garage-locks.sh
 - Celestia / Pdm
 - context-architect.agent.md
@@ -1891,7 +1890,7 @@
 - Kube System / Features
 - Kube System / Spegel
 - spec
-- Observability / Grafana Operator
+- Kustomize overlay: grafana dashboards
 - OCIRepository thanos
 - Pulumi / Openebs System
 - Home Assistant and System Stack
@@ -1929,7 +1928,7 @@
 - Storage Selection
 - Product Tiers
 - extensions
-- Custom Tools
+- spec
 - SDK Configuration
 - Workers Integration
 - BOLA Detection
@@ -1992,9 +1991,9 @@
 - templates/skills/coordinator-source-of-truth/SKILL.md
 - How to Wire Up a Reviewer Gate
 - How to Wire Up an Issue Lifecycle (Git Workflow)
-- Traefik entryPoints (web, websecure, tailscale, sftp, metrics, bolt)
+- spec
 - Alpha Site / Bao Standby
-- Dashboard auth gate fails closed on non-loopback bind
+- spec
 - Wrangler Configuration
 - toolhive-operator-crds Flux Kustomization
 - .github/skills/coordinator-source-of-truth/SKILL.md
@@ -2004,7 +2003,7 @@
 - VolSync-System Kustomization Chain
 - external-secrets OCIRepository
 - Thanos Grafana Dashboards
-- tuppr Kubernetes Upgrade CR
+- kubernetes.yaml
 - Testing & Development
 - Authentik
 - Authentik
@@ -2040,12 +2039,12 @@
 - config
 - apGroup.ts
 - Unifi
-- Unifi
+- spec
 - unifi/device.ts
 - unifi/dnsRecord.ts
 - unifi/firewallGroup.ts
-- FirewallPolicy
-- FirewallRule
+- unifi/firewallPolicy.ts
+- firewallRule.ts
 - radiusProfile.ts
 - siteToSiteVpn.ts
 - Gotchas & Debugging
@@ -2073,6 +2072,7 @@
 - Model Selection Reference
 - templates/skills/coordinator-init-mode/SKILL.md
 - AuthentikApplicationResponse
+- spec
 - mirror.sh
 - sync.sh
 - Postgres
@@ -2123,17 +2123,17 @@
 - Resources / High Seas
 - Resources / Home
 - private-names.sh
-- Traefik
+- errors middleware + error-pages file service
 - Postgres / Backups
 - Prometheus / Docker Socket Proxy
 - Prometheus / Rules
 - Prometheus / Rules
 - Prometheus / Rules
-- Traefik / Config
+- spec
 - Traefik entryPoints (web, websecure, tailscale, sftp, metrics, bolt)
 - Alpha Site / Prometheus
 - spec
-- Celestia / Hermes
+- spec
 - Celestia / Uhf
 - Backups
 - garage/init.sh
@@ -2148,13 +2148,13 @@
 - .Github / Labels
 - bao-transit
 - bake.sh
-- terrifi/config/vars.ts
+- terrifi/utilities.ts
 - toolhive-operator-crds Flux Kustomization
 - toolhive-operator-crds Flux Kustomization
 - Coder / Forgejo
 - Coder / Forgejo
-- Coder / Renovate
-- Coder / Renovate Operator
+- renovate-webhook ExternalSecret (shared bearer token, allow-ref label)
+- RenovateOperatorDown alert
 - Kube System / Secrets
 - Network / Traefik
 - Network / Traefik
@@ -2189,8 +2189,9 @@
 - Prometheus / Rules
 - Prometheus / Rules
 - Dockge Agent Instructions
-- Celestia / Llama Agent
-- Celestia / Hermes
+- spec
+- spec
+- spec
 - Luna / Llama Voice
 - Codebase
 - Codebase / Stack
@@ -2204,8 +2205,10 @@
 - Coder / Forgejo
 - Coder / Forgejo
 - Coder / Renovate Operator
-- Coder / Forgejo
+- spec
+- webhook
 - Freshrss / Kustomization
+- spec
 - Equestria / Home
 - Maintainerr / Kustomization
 - Equestria / Media
@@ -2225,10 +2228,10 @@
 - Talos / Talsecret.Sops
 - ASSETS Binding
 - Claude Code in this repo
-- bao-reorg README
+- labels
 - Build MCP Server on Cloudflare
 - oauth2ProviderSettings.ts
-- home/index.ts
+- sablier
 - agentsDefaultModel.ts
 - agentsMcpServer.ts
 - agentsModel.ts
@@ -2265,16 +2268,16 @@
 - supersync
 - workspaceProxy.ts
 - main
-- getDhcpLeases.ts
+- spec
 - getDhcpScope.ts
 - unpoller/helmrelease.yaml
-- technitium/utilities.ts
+- spec
 - aiModelPrice.ts
-- labels
+- spec
 - tag.sh
 - values
 - meilisearch
-- app
+- metadata
 - spec
 - persistence
 - install-tools.sh
@@ -2284,10 +2287,10 @@
 - claude-toolport-env.sh
 - paseo
 - Talos node logs in Loki
-- ${APP}-postgres nested Flux Kustomization
+- spec
 - persistence
 - spec
-- forgejo/provider.ts
+- spec
 - docs
 - blockedZones.ts
 - dhcpScope.ts
@@ -2306,7 +2309,7 @@
 - containers
 - postiz
 - securityContext
-- from
+- listeners
 - experimental
 - garage-webui
 - paseo
@@ -2314,7 +2317,7 @@
 - dev-shm
 - dev-shm
 - app
-- persistence
+- app
 - server
 - kubernetesCRD
 - rules
@@ -2407,7 +2410,7 @@
 - labels
 - garage-mirror
 - garage-sync
-- neo4j
+- spec
 - labels
 - tailscale
 - gitea
@@ -2441,8 +2444,8 @@
 - bao-standby
 - labels
 - llama-vulkan
-- environment
-- neo4j-data-modeling
+- spec
+- spec
 - technitium
 - E. Phases
 - securityContext
@@ -2470,12 +2473,12 @@
 - spec
 - pg-client-cert
 - internal
-- dependencies
+- spec
 - authentik-pg-standby-role
 - dump-sftp
 - environment
-- neo4j-cypher
-- neo4j-memory
+- spec
+- spec
 - postgres-backup
 - postgres-provision
 - spec
@@ -2719,22 +2722,22 @@
 - crowdsec-ui
 - securityContext
 - encodedCharacters
-- mariadb
-- paseossh
+- ports
+- spec
 - postgres
 - spec
 - securityContext
 - securityContext
 - values
 - securityContext
-- pulumi-workspace-scratch/kustomization.yaml
+- spec
 - healthcheck
 - services
-- services
+- spec
 - healthcheck
 - technitium/compose.yaml
 - Break-glass SOPS artifact set in bootstrap/openbao
-- pulumi preview as the validation substitute
+- spec
 - containers
 - target
 - apm
@@ -2771,7 +2774,7 @@
 - degoog
 - degoog
 - holm
-- n8n/helmrelease.yaml
+- Authentik Single-externalHost Tailnet-URL Workaround
 - api
 - requests
 - issuerRef
@@ -2856,8 +2859,8 @@
 - app
 - fix-permissions
 - getPersonalAccessToken.ts
-- getSshKey.ts
-- getTeam.ts
+- spec
+- spec
 - Core Kubernetes Concepts for Deployment
 - Deployment Strategies in Kubernetes
 - services
@@ -2865,7 +2868,7 @@
 - logging
 - services
 - path
-- Nothing else new lands on this Pi
+- spec
 - longhorn-critical StorageClass
 - containers
 - repository
@@ -2955,11 +2958,11 @@
 - extraSecretEnvironmentVars
 - rollback
 - storageclass/kustomization.yaml
-- GrafanaFolder: Flux
+- restic
 - rollback
-- FirewallPolicy
-- scripts
-- repository
+- terrifi/firewallPolicy.ts
+- spec
+- spec
 - env_file
 - environment
 - environment
@@ -2970,11 +2973,11 @@
 - game-thumbs kustomize overlay
 - chartRef
 - Kustomize overlay: observability/silences
-- repository
-- node-unifi@^2.5.1
-- @pulumi/cloudflare
-- @pulumi/tls@^5.6.2
-- simple-oauth2
+- values
+- spec
+- spec
+- spec
+- spec
 - reflector Flux Kustomization
 - Thanos objstore.yml S3 template
 - Alert: LokiPVCCritical
@@ -2991,38 +2994,381 @@
 - ApplicationDefinition: Thanos Query
 - Alert: LokiCompactorFailures
 - Alert: OomKilled
+- spec
+- spec
+- spec
+- prober
+- app
+- rules
+- oidc
+- spec
+- spec
+- spec
+- apps
+- spec
+- sops
+- rules
+- Bring-up
+- search
+- persistence
+- JellyfinConfiguration.ts
+- spec
+- config.yml
+- spec
+- spec
+- spec
+- values
+- spec
+- values
+- Arcane + PDM: celestia → equestria cutover
+- spec
+- spec
+- globalMounts
+- spec
+- name
+- rules
+- package.json
+- talconfig.yaml
+- config.yaml
+- ForgejoApi
+- policy
+- config
+- app
+- snapshot-controller HelmRelease
+- spec
+- spec
+- ports
+- spec
+- nodes
+- prometheus
+- entryPoints
+- oidc
+- oidc
+- internal
+- spec
+- internal
+- internal
+- values
+- bootstrap.yaml
+- authentik/Pulumi.yaml
+- backups/Pulumi.yaml
+- gulf-of-mexico/Pulumi.yaml
+- home/Pulumi.yaml
+- ocracoke/Pulumi.yaml
+- system/Pulumi.yaml
+- unifi-network/Pulumi.yaml
+- dashboard/kustomization.yaml
+- alloy
+- cadvisor
+- acme
+- Nextcloud on equestria — replacing OpenCloud
+- Manual steps
+- spec
+- spec
+- values
+- internal
+- integrations
+- app
+- internal
+- super-productivity/definition.yaml
+- jellyfin-pg/kustomization.yaml
+- kometa
+- internal
+- spec
+- internal
+- app
+- app
+- run
+- OCIRepository go-kube-downscaler
+- install
+- spec
+- operatorConfig
+- app
+- networkInterfaces
+- MCPServer toolhive-context7
+- ExternalSecret toolhive-forgejo
+- ExternalSecret toolhive-tailscale
+- MCPServer toolhive-unifi-access
+- spec
+- MCPServer toolhive-unifi-protect
+- spec
+- OCIRepository renovate-operator
+- dashboard
+- install
+- branding
+- install
+- values
+- install
+- install
+- install
+- values
+- install
+- install
+- install
+- install
+- install
+- OCIRepository blackbox-exporter
+- config
+- pod
+- install
+- values
+- install
+- provisioning
+- labels
+- node-exporter
+- configMapGenerator
+- spec
+- gatus
+- Romm HelmRelease
+- values
+- cronjob
+- globalMounts
+- spec
+- modules
+- spec
+- globalMounts
+- alertmanager Flux Alert
+- target
+- target
+- alloy-config-reloader
+- labels
+- blackbox-exporter
+- prometheus-config-reloader
+- 1Password used as a cross-stack state store
+- spec
+- spec
+- spec
+- containers
+- spec
+- spec
+- s3
+- app
+- securityContext
+- mariadb
+- spec
+- oauth2
+- securityContext
+- app
+- securityContext
+- arcane
+- values
+- securityContext
+- app
+- values
+- pdm
+- traefik-whoami HelmRelease
+- spec
+- ServiceSustained5xx PrometheusRule alert
+- bolt
+- spec
+- image
+- securityContext
+- pulumi-workspace/kustomization.yaml
+- rbacPermissionUser.ts
+- gpgKey.ts
+- datastore.ts
+- pulumi
+- terrifi/wlan.ts
+- contentFilter.ts
+- nat.ts
+- qosRule.ts
+- trafficMatchingList.ts
+- services
+- autoheal
+- providers
+- tailscale
+- containers
+- spec
+- containers
+- target
+- spec
+- target
+- spec
+- containers
+- target
+- containers
+- target
+- app
+- mariadb-passwords
+- retrom-env ExternalSecret
+- mealie
+- mealie
+- mealie
+- app
+- app
+- app
+- values
+- app
+- arcane
+- limits
+- sourceRef
+- GrafanaFolder: Node (node-monitoring)
+- talos-logs
+- app
+- sourceRef
+- app
+- application.js
+- Provider
+- providerOauth2.js
+- authentik/provider.ts
+- The CALMS Framework (Pillars of DevOps)
+- filters
+- websecure
+- prometheus
+- Sonarr / Radarr native OIDC
+- target
+- spec
+- requests
+- spec
+- requests
+- spec
+- requests
+- requests
+- requests
+- config
+- requests
+- navidrome
+- nextcloud
+- onboarding
+- values
+- securityContext
+- obsidian-sync
+- globalMounts
+- radarr-log CNPG Database
+- app
+- securityContext
+- pdm
+- traefik/helmrelease.yaml
+- pulumi/kustomization.yaml
+- values
+- getTeamMember.ts
+- getNotificationEndpoint.ts
+- getRemoteStores.ts
+- getS3Endpoint.ts
+- getVerifyJob.ts
+- getBlockedZone.ts
+- Logging, Monitoring, and Observability
+- sablier
+- remoteRef
+- remoteRef
+- remoteRef
+- sshd.sh
+- defaults
+- grimmory/helmrelease.yaml
+- romm/definition.yaml
+- seerr
+- mealie/helmrelease.yaml
+- fix-permissions
+- obsidian-sync/helmrelease.yaml
+- scripts
+- trickplay
+- kometa/helmrelease.yaml
+- radarr/helmrelease.yaml
+- sonarr/helmrelease.yaml
+- kptv-fast/helmrelease.yaml
+- arcane/helmrelease.yaml
+- pdm/helmrelease.yaml
+- securityContext
+- talos-logs/helmrelease.yaml
+- operator/helmrelease.yaml
+- valuesFrom
+- PrometheusRule dns-celestia-alerts
+- Probe dockge-as-ssh
+- taildrive/helmrelease.yaml
+- RacEndpoint
+- Device
+- customization
+- Session Lifecycle Management
+- Event Handling
+- ApplicationDefinition CRD (driscoll.dev/v1)
+- Go/no-go checklist
+- Battery posture on the Pecron F3000LFP
+- agent-tools-servers Flux Kustomization
+- rollback
+- Watchstate ApplicationDefinition
+- arcane/kustomization.yaml
+- utils/kustomization.yaml
+- pdm/kustomization.yaml
+- rollback
+- traefik-crds/kustomization.yaml
+- dns_soa
+- http_2xx
+- http_404
+- icmp
+- tcp_connect
+- Flux Kustomization: home-operations
+- kustomize overlay: kubeproxies services
+- Probe dns-celestia
+- authentik/config/vars.ts
+- nodeLabels
+- Equestria Nodes Extension Widget
+- http_2xx_insecure module for self-signed Proxmox UIs
+- vip.ip must change to equestria's VIP
+- prepare.sh
+- ecm kustomize overlay
+- chartRef
+- chartRef
+- overrides
+- repository
+- Tier 0 / Tier 1 / Tier 2 membership
+- Tautulli Flux Kustomization
+- identifiarr Flux Kustomization
+- diff@^9.0.0
+- jsondiffpatch@^0.7.7
+- @pulumi/authentik@file:sdks/authentik
+- @pulumi/coderd@file:sdks/coderd
+- @pulumi/forgejo@file:sdks/forgejo
+- @pulumi/http@^0.3.5
+- @pulumi/kubernetes@^4.34.2
+- @pulumi/technitium@file:sdks/technitium
+- @pulumi/terrifi@file:sdks/terrifi
+- Alpha Site Dashboard Page
+- Celestia Dashboard Page
+- Luna Dashboard Page
+- Skystar Dashboard Page
+- Staging Infra Page
+- Staging Media Page
+- Gatus core config (storage, alerting, ui, web)
+- renovate-operator HTTPRoute
+- Sonarr kustomize overlay
+- backups stack secrets encryptionsalt
+- gulf-of-mexico stack secrets encryptionsalt
+- home-operations stack secrets encryptionsalt
+- ocracoke stack secrets encryptionsalt
+- system stack secrets encryptionsalt
+- unifi-network stack secrets encryptionsalt
 
 ## God Nodes (most connected - your core abstractions)
-1. `@pulumi/pulumi` - 90 edges
-2. `GlobalResources` - 79 edges
-3. `resourceOptsDefaults()` - 52 edges
-4. `getPackage()` - 51 edges
-5. `resourceOptsDefaults()` - 40 edges
-6. `getPackage()` - 39 edges
-7. `Team Mode` - 32 edges
-8. `baoProvenance()` - 29 edges
-9. `resourceOptsDefaults()` - 28 edges
-10. `baoKvSecret()` - 28 edges
+1. `GlobalResources` - 84 edges
+2. `resourceOptsDefaults()` - 52 edges
+3. `getPackage()` - 51 edges
+4. `resourceOptsDefaults()` - 40 edges
+5. `getPackage()` - 39 edges
+6. `Team Mode` - 32 edges
+7. `baoProvenance()` - 31 edges
+8. `baoKvSecret()` - 30 edges
+9. `FlowsManager` - 27 edges
+10. `Context7-aware development` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `dns-celestia Service (bootstrap)` --semantically_similar_to--> `bao-reorg README`  [INFERRED] [semantically similar]
-  kubernetes/apps/tailscale-system/services/bootstrap.yaml → scripts/bao-reorg/README.md
 - `baoKvSecret sets retainOnDelete — old paths need hand-deletion` --semantically_similar_to--> `ensure: absent tombstone (retain-by-default drop protocol)`  [INFERRED] [semantically similar]
   docs/openbao-shared-secrets-reorg.md → docker/celestia/postgres/databases.yaml
 - `toolhive-operator-crds Flux Kustomization` --semantically_similar_to--> `Phase 1a Prune Guard`  [INFERRED] [semantically similar]
   kubernetes/apps/agents/toolhive-operator-crds/ks.yaml → docs/postgres-credentials/PLAN.md
 - `Per-Stack reads (traced 2026-10-20)` --references--> `DockgeLxc`  [INFERRED]
   docs/kubernetes/pulumi-stack-artifacts.md → components/DockgeLxc.ts
-- `Layout` --references--> `stageCoderTemplate()`  [INFERRED]
-  kubernetes/apps/coder/coder/templates/README.md → components/coderTemplates.ts
+- `2. Copy the OpenBao item — DONE 2026-09-05` --references--> `BaoStore`  [INFERRED]
+  docs/runbooks/homelable-celestia-to-equestria.md → components/store/bao.ts
+- `How the stack writes it` --references--> `JellyfinConfiguration`  [INFERRED]
+  docs/kubernetes/jellyfin-sso.md → dynamic/jellyfin/JellyfinConfiguration.ts
 
 ## Import Cycles
-- None detected.
+- 2-file cycle: `sdks/unifi/types/input.ts -> sdks/unifi/types/output.ts -> sdks/unifi/types/input.ts`
+- 2-file cycle: `components/helpers.ts -> dynamic/1password/OnePasswordItem.ts -> components/helpers.ts`
 
 ## Hyperedges (group relationships)
 - **Intel GPU exporter privilege gating and scheduling dependency chain** — kubernetes_apps_observability_intel_gpu_exporter_helmrelease_cap_perfmon_gates, kubernetes_apps_observability_intel_gpu_exporter_helmrelease_gpu_intel_com_monitoring_resource, kubernetes_apps_observability_intel_gpu_exporter_ks_healthcheckexpr_inert_rationale [EXTRACTED 0.85]
 - **Loki ruler rule provisioning and self-match fix** — kubernetes_apps_observability_loki_rules_credential_drift_rules_configmap, kubernetes_apps_observability_loki_rules_credential_drift_rules_databaseauthenticationfailing_alert, kubernetes_apps_observability_loki_rules_credential_drift_rules_loki_sc_rules_sidecar [EXTRACTED 0.90]
-- **Bootstrap-critical hand-maintained tailnet services** — kubernetes_apps_tailscale_system_services_bootstrap_dockge_as_service, kubernetes_apps_tailscale_system_services_bootstrap_dns_celestia_service, kubernetes_apps_tailscale_system_services_equestria_kubeproxy_service [EXTRACTED 0.90]
 - **Tailnet ingress request flow (Ingress -> nested ks -> IngressRoute)** — kubernetes_components_tailscale_ingress_ingress, kubernetes_components_tailscale_ks, kubernetes_components_tailscale_ingressroute [EXTRACTED 0.90]
 - **VolSync stale restic lock mitigation** — kubernetes_components_volsync_replicationsource, kubernetes_apps_volsync_system_lock_canceller_helmrelease, kubernetes_apps_volsync_system_lock_canceller_externalsecret [EXTRACTED 0.90]
 - **Proxmox per-hypervisor MCPServer overlay pattern** — kubernetes_apps_agents_agent_tools_servers_proxmox_base_mcpserver, kubernetes_apps_agents_agent_tools_servers_proxmox_base_externalsecret, kubernetes_apps_agents_agent_tools_servers_proxmox_alpha_site_kustomization, kubernetes_apps_agents_agent_tools_servers_proxmox_celestia_kustomization, kubernetes_apps_agents_agent_tools_servers_proxmox_luna_kustomization, kubernetes_apps_agents_agent_tools_servers_proxmox_skystar_kustomization, kubernetes_apps_agents_agent_tools_servers_proxmox_twilight_sparkle_kustomization [EXTRACTED 0.95]
@@ -3030,7 +3376,6 @@
 - **authentik OIDC values-fragment pattern (ConfigMap -> ExternalSecret -> valuesFrom)** — kubernetes_apps_coder_forgejo_kustomization_values_configmap_generator, kubernetes_apps_coder_forgejo_externalsecret_forgejo_values, kubernetes_apps_coder_renovate_operator_kustomization_values_configmap_generator, kubernetes_apps_coder_renovate_operator_externalsecret_renovate_operator_values, kubernetes_apps_coder_renovate_operator_resources_values_auth_oidc_fragment, kubernetes_apps_coder_forgejo_resources_values_authentik_auth_source [EXTRACTED 1.00]
 - **Authentik SSO configuration model (groups, mappings, flows, stages, policies, applications)** — stacks_authentik_readme_groups, stacks_authentik_readme_property_mappings, stacks_authentik_readme_flows, stacks_authentik_readme_stages, stacks_authentik_readme_policies, stacks_authentik_readme_application_resources, stacks_authentik_readme_kubernetes_integration [EXTRACTED 1.00]
 - **Apps Implementing the Authentik Single-Hostname Tailnet Workaround** — kubernetes_apps_equestria_home_n8n_definition, kubernetes_apps_equestria_home_n8n_ks, kubernetes_apps_equestria_home_super_productivity_definition, kubernetes_apps_equestria_home_super_productivity_ks, kubernetes_apps_equestria_home_tandoor_definition [EXTRACTED 1.00]
-- **Blackbox exporter probe module set** — kubernetes_apps_observability_blackbox_exporter_helmrelease_module_http_2xx, kubernetes_apps_observability_blackbox_exporter_helmrelease_module_http_404, kubernetes_apps_observability_blackbox_exporter_helmrelease_module_icmp, kubernetes_apps_observability_blackbox_exporter_helmrelease_module_tcp_connect, kubernetes_apps_observability_blackbox_exporter_helmrelease_module_dns_soa, kubernetes_apps_observability_blackbox_exporter_helmrelease_module_ssh_banner [EXTRACTED 1.00]
 - **Plumbing that makes celestia's Postgres usable as the Pulumi state backend** — docs_cluster_consolidation_04_pulumi_state_backend_pgapppasswordprovisioning, docs_cluster_consolidation_04_pulumi_state_backend_externalnametailscaleroute, docs_cluster_consolidation_04_pulumi_state_backend_envrefsbackendurl, docs_cluster_consolidation_04_pulumi_state_backend_minioexportarchive [EXTRACTED 1.00]
 - **CloudNativePG Operator + Barman Plugin Deployment Chain** — kubernetes_apps_cloudnative_pg_kustomization_cloudnative_pg_apps, kubernetes_apps_cloudnative_pg_operator_ks_postgres_operator, kubernetes_apps_cloudnative_pg_barman_ks_plugin_barman_cloud, kubernetes_apps_cloudnative_pg_operator_repository_cloudnative_pg [EXTRACTED 1.00]
 - **Cold-start credential chain: age key → SOPS → AppRole → OpenBao → Pulumi** — docs_cluster_consolidation_06_age_key_consolidation_agekeyconsolidation, docs_cluster_consolidation_03_secrets_bootstrap_independence_breakglassartifacts, docs_cluster_consolidation_03_secrets_bootstrap_independence_twoauthpaths, docs_cluster_consolidation_03_secrets_bootstrap_independence_openbaocatch22, docs_cluster_consolidation_03_secrets_bootstrap_independence_passphraseinopenbao [EXTRACTED 1.00]
@@ -3039,9 +3384,7 @@
 - **CrowdSec LAPI VolSync backup set (two PVCs, two restic repos)** — kubernetes_apps_network_crowdsec_volsync_crowdsec_config, kubernetes_apps_network_crowdsec_volsync_crowdsec_db, kubernetes_apps_network_crowdsec_volsync_crowdsec_config_volsync, kubernetes_apps_network_crowdsec_volsync_crowdsec_db_volsync, kubernetes_apps_network_crowdsec_volsync_bespoke_not_component [EXTRACTED 1.00]
 - **Docker MCP per-host kustomize overlay pattern** — kubernetes_apps_agents_agent_tools_servers_docker_base_mcpserver_template, kubernetes_apps_agents_agent_tools_servers_docker_alpha_site_kustomization_overlay, kubernetes_apps_agents_agent_tools_servers_docker_celestia_kustomization_overlay, kubernetes_apps_agents_agent_tools_servers_docker_luna_kustomization_overlay, kubernetes_apps_agents_agent_tools_servers_docker_skystar_kustomization_overlay [EXTRACTED 1.00]
 - **Dockge-host metrics pipeline: exporters to Prometheus to Thanos and Alertmanager** — docker__common_prometheus_config_prometheus_remote_write_thanos, docker__common_prometheus_config_prometheus_alertmanager_target [EXTRACTED 1.00]
-- **Dynacat Flux Application Deployment Unit** — dashboard_kustomization_dynacat, dashboard_helmrelease_dynacat, dashboard_externalsecret_dynacat_env, dashboard_definition_dynacat_applicationdefinition [EXTRACTED 1.00]
 - **Internal HTTPRoutes filtered through the traefik local-user middleware** — kubernetes_apps_equestria_home_freshrss_helmrelease_freshrss, kubernetes_apps_equestria_home_immich_helmrelease_immich, kubernetes_apps_equestria_home_karakeep_helmrelease_karakeep [EXTRACTED 1.00]
-- **Apps sharing the 02:00-09:00 low-power Gatus maintenance window** — kubernetes_apps_equestria_home_searxng_definition_searxng, kubernetes_apps_equestria_home_searxng_definition_low_power_maintenance_window [EXTRACTED 1.00]
 - **ESO ClusterSecretStore backend set for the cluster** — kubernetes_apps_kube_system_external_secrets_stores_onepassword_store_clustersecretstore_onepassword_connect, kubernetes_apps_kube_system_external_secrets_stores_openbao_store_clustersecretstore_openbao, kubernetes_apps_kube_system_external_secrets_stores_kubernetes_clustersecretstore_backup, kubernetes_apps_kube_system_external_secrets_stores_kubernetes_clustersecretstore_database, kubernetes_apps_kube_system_external_secrets_stores_kubernetes_clustersecretstore_network, kubernetes_apps_kube_system_external_secrets_stores_kubernetes_clustersecretstore_cluster, kubernetes_apps_kube_system_external_secrets_stores_kubernetes_external_secrets_serviceaccount [EXTRACTED 1.00]
 - **Flux observability dashboard suite (cluster, control plane, logs)** — kubernetes_apps_observability_grafana_dashboards_flux_flux_folder, kubernetes_apps_observability_grafana_dashboards_flux_flux_cluster, kubernetes_apps_observability_grafana_dashboards_flux_flux_control_plane, kubernetes_apps_observability_grafana_dashboards_flux_flux_logs [EXTRACTED 1.00]
 - **Flux HelmRelease Values-via-ConfigMap Pipeline** — kubernetes_apps_cert_manager_trust_manager_helm_values_trust_manager_values, kubernetes_apps_cert_manager_trust_manager_kustomization_trust_manager_values_configmap, kubernetes_apps_cert_manager_trust_manager_helm_kustomizeconfig_namereference, kubernetes_apps_cert_manager_trust_manager_helmrelease_trust_manager [EXTRACTED 1.00]
@@ -3052,7 +3395,6 @@
 - **Data-loss guard rails around the Garage object store** — kubernetes_apps_garage_system_cluster_ks_deletionpolicy_orphan, kubernetes_apps_garage_system_operator_ks_garage_operator, kubernetes_apps_garage_system_cluster_ks_garage [EXTRACTED 1.00]
 - **Garage object store: cluster, identity secrets, backup key, S3 route, app definition** — kubernetes_apps_garage_system_cluster_garagecluster_garage, kubernetes_apps_garage_system_cluster_externalsecret_garage_secrets, kubernetes_apps_garage_system_cluster_backup_key_garage_backup, kubernetes_apps_garage_system_cluster_httproute_garage_s3, kubernetes_apps_garage_system_cluster_definition_garage [EXTRACTED 1.00]
 - **Garage operator install chain: OCIRepository to HelmRelease to Kustomization to GarageCluster** — kubernetes_apps_garage_system_operator_ocirepository_garage_operator, kubernetes_apps_garage_system_operator_ks_garage_operator, kubernetes_apps_garage_system_cluster_ks_garage [EXTRACTED 1.00]
-- **Gatus heartbeat dead-man's-switch pipeline** — docker_alpha_site_uptime_compose_uptime_service, docker_alpha_site_uptime_compose_gatus_config_merge, docker_alpha_site_uptime_config_default_pushover_alerting, docker_alpha_site_uptime_config_openbao_break_glass_togatuskey_convention, docker_alpha_site_uptime_config_openbao_break_glass_nightly_dump, docker_alpha_site_uptime_config_openbao_break_glass_restore_test, docker_alpha_site_uptime_config_forgejo_actions_canary_endpoint [EXTRACTED 1.00]
 - **GitHub Actions ARC stack: chart repositories, controller and 1Password Connect** — kubernetes_apps_github_actions_repositories_ks_gha_repositories, kubernetes_apps_github_actions_repositories_gha_runner_scale_set_controller_ocirepository, kubernetes_apps_github_actions_repositories_gha_runner_scale_set_ocirepository, kubernetes_apps_github_actions_controller_ks_gha_arc_controller, kubernetes_apps_github_actions_controller_helmrelease_gha_arc_controller, kubernetes_apps_github_actions_1password_syndicates_helmrelease_onepassword_syndicates [EXTRACTED 1.00]
 - **spegel → zot → zot ingress → upstream image pull fallback** — kubernetes_apps_kube_system_spegel_helm_values_prependexisting, kubernetes_apps_kube_system_spegel_helm_values_mirroredregistries, kubernetes_apps_kube_system_spegel_helm_values_pull_chain, kubernetes_apps_kube_system_registry_helmrelease_registry, kubernetes_apps_kube_system_registry_helmrelease_internal_route [EXTRACTED 1.00]
 - **Ingress exposure component family (internal, external, authenticated)** — kubernetes_components_ingress_internal_kustomization_internal_ingress, kubernetes_components_ingress_external_kustomization_external_ingress, kubernetes_components_ingress_authenticated_kustomization_authenticated_ingress [EXTRACTED 1.00]
@@ -3062,7 +3404,6 @@
 - **Low-power storage and placement design cluster** — docs_cluster_consolidation_12_longhorn_critical_tier_piece_k_prime, docs_cluster_consolidation_20_low_power_tier_piece_s_prime, docs_cluster_consolidation_24_power_states_three_state_power_model, docs_cluster_consolidation_29_taint_readiness_audit_audit, docs_cluster_consolidation_30_longhorn_media_tier_abandoned [EXTRACTED 1.00]
 - **Media Stack Postgres Rotation Flow** — kubernetes_apps_equestria_media_bazarr_ks_rotating_credential_restart_chain, kubernetes_apps_equestria_media_bazarr_externalsecret_bazarr_env, kubernetes_apps_equestria_media_bazarr_helmrelease_startup_probe_migration_window, kubernetes_apps_equestria_media_jellyseerr_externalsecret_jellyseerr_env, kubernetes_apps_equestria_media_jellyseerr_helmrelease_startup_probe_migration_window, kubernetes_apps_equestria_media_bazarr_ks_bazarr, kubernetes_apps_equestria_media_jellyseerr_ks_jellyseerr [EXTRACTED 1.00]
 - **Media stack Flux Kustomizations gated on volsync** — kubernetes_apps_equestria_media_stremio_ks_stremio, kubernetes_apps_equestria_media_tautulli_ks_tautulli, kubernetes_apps_equestria_media_tdarr_ks_tdarr, kubernetes_apps_equestria_media_watchstate_ks_watchstate [EXTRACTED 1.00]
-- **Media stack Postgres cutover (four apps, one credential contract)** — kubernetes_apps_equestria_media_pulsarr_externalsecret_pulsarr_env, kubernetes_apps_equestria_media_radarr_externalsecret_radarr_env, kubernetes_apps_equestria_media_seerr_externalsecret_seerr_env, kubernetes_apps_equestria_media_sonarr_externalsecret_sonarr_env, kubernetes_apps_equestria_media_pulsarr_externalsecret_postgres_key_rewrite_convention [EXTRACTED 1.00]
 - **The 2026-08-13 namespace-migration churn incident set** — docs_cluster_consolidation_21_repo_consolidation_flux_repoint_namespace_ref_redirect, docs_cluster_consolidation_26_bootstrap_apps_to_pulumi_crd_cascade_deadlock, docs_cluster_consolidation_27_migration_churn_failure_modes_cilium_l2_leader_loss, docs_cluster_consolidation_27_migration_churn_failure_modes_gatus_name_group_panic, docs_cluster_consolidation_28_postgres_restore_and_bootstrap_deadlock_restore [EXTRACTED 1.00]
 - **Mosquitto secret-driven per-replica bootstrap** — kubernetes_apps_stargate_command_mosquitto_users_sops_mosquitto_secret, kubernetes_apps_stargate_command_mosquitto_helmrelease_init_config, kubernetes_apps_stargate_command_mosquitto_helmrelease_per_replica_config, kubernetes_apps_stargate_command_mosquitto_helmrelease_mosquitto [EXTRACTED 1.00]
 - **Flux delivery chain for the network DNS stack (aggregate → ks → kustomization → HelmRelease)** — kubernetes_apps_network_kustomization_kustomization, kubernetes_apps_network_external_dns_kustomization_kustomization, kubernetes_apps_network_external_dns_cloudflare_ks_cloudflare_dns, kubernetes_apps_network_external_dns_records_ks_dns_records, kubernetes_apps_network_k8s_gateway_ks_k8s_gateway [EXTRACTED 1.00]
@@ -3080,7 +3421,6 @@
 - **Certificate-based Postgres credential migration (docs/postgres-credentials/PLAN.md phases 2.4b/3)** — kubernetes_apps_database_postgres_app_openbao_role_openbao_databaserole, kubernetes_apps_database_postgres_app_baoadmin_role_baoadmin_databaserole, kubernetes_apps_database_postgres_app_cluster_users_non_app_scoped_credential_carveout, kubernetes_apps_database_postgres_app_openbao_role_phase_2_4b_password_removal [EXTRACTED 1.00]
 - **Primary Cross-Referencing Agent Documentation Set** — claude_document, agents_document, github_copilot_instructions_document [EXTRACTED 1.00]
 - **Provider-singleton credential flow into components** — docs_codebase_architecture_globalresources, docs_codebase_architecture_opclient, docs_codebase_components_proxmoxhost, docs_codebase_components_dockgelxc, docs_codebase_integrations_onepassword_connect_integration [EXTRACTED 1.00]
-- **pulumi namespace Flux delivery chain** — kubernetes_apps_pulumi_kustomization_pulumi_apps, kubernetes_apps_pulumi_pulumi_operator_ks_pulumi_operator, kubernetes_apps_pulumi_home_operations_ks_home_operations, kubernetes_apps_pulumi_ocracoke_ks_ocracoke, kubernetes_apps_pulumi_lock_canceller_ks_pulumi_lock_canceller, kubernetes_apps_pulumi_npm_cache_prune_ks_pulumi_npm_cache_prune, kubernetes_apps_pulumi_kubeproxies_ks_pulumi_kubeproxies [EXTRACTED 1.00]
 - **pulumi-update-pruner ServiceAccount/Role/RoleBinding/CronJob chain** — kubernetes_apps_pulumi_update_pruner_rbac_pulumi_update_pruner_serviceaccount, kubernetes_apps_pulumi_update_pruner_rbac_pulumi_update_pruner_role, kubernetes_apps_pulumi_update_pruner_rbac_pulumi_update_pruner_rolebinding [EXTRACTED 1.00]
 - **pvr Three-Layer Flux App Convention (ks -> kustomization -> HelmRelease)** — kubernetes_apps_equestria_pvr_kustomization_pvr, kubernetes_apps_equestria_pvr_teamarr_ks_teamarr, kubernetes_apps_equestria_pvr_teamarr_kustomization_teamarr, kubernetes_apps_equestria_pvr_xcproxy_ks_xcproxy, kubernetes_apps_equestria_pvr_xcproxy_kustomization_xcproxy, kubernetes_apps_equestria_pvr_xcproxy_helmrelease_xcproxy [EXTRACTED 1.00]
 - **PVR Flux Kustomizations using volsync + fast-node-eviction components** — kubernetes_apps_equestria_pvr_dispatcharr_ks_dispatcharr, kubernetes_apps_equestria_pvr_ecm_ks_ecm, kubernetes_apps_equestria_pvr_game_thumbs_ks_game_thumbs, kubernetes_apps_equestria_pvr_identifiarr_ks_identifiarr [EXTRACTED 1.00]
@@ -3088,11 +3428,9 @@
 - **reloader controller-manager RBAC identity set** — kubernetes_apps_kube_system_external_secrets_reloader_helmrelease_reloader_controller_manager, kubernetes_apps_kube_system_external_secrets_reloader_helmrelease_reloader_manager_role, kubernetes_apps_kube_system_external_secrets_reloader_helmrelease_reloader_manager_rolebinding, kubernetes_apps_kube_system_external_secrets_reloader_helmrelease_reloader_leader_election_role, kubernetes_apps_kube_system_external_secrets_reloader_helmrelease_reloader_leader_election_rolebinding, kubernetes_apps_kube_system_external_secrets_reloader_helmrelease_reloader_metrics_reader [EXTRACTED 1.00]
 - **RustDesk rendezvous + relay + LoadBalancer port topology** — kubernetes_apps_equestria_home_rustdesk_helmrelease_hbbs, kubernetes_apps_equestria_home_rustdesk_helmrelease_relay, kubernetes_apps_equestria_home_rustdesk_helmrelease_service_rustdesk, kubernetes_apps_equestria_home_rustdesk_helmrelease_persistence_db [EXTRACTED 1.00]
 - **SearXNG deployment stack: Kustomization, HelmRelease, ExternalSecret, settings ConfigMap** — kubernetes_apps_equestria_home_searxng_ks_searxng, kubernetes_apps_equestria_home_searxng_helmrelease_searxng, kubernetes_apps_equestria_home_searxng_externalsecret_searxng_env, kubernetes_apps_equestria_home_searxng_kustomization_searxng_settings_configmap, kubernetes_apps_equestria_home_searxng_resources_settings_searxng_settings [EXTRACTED 1.00]
-- **Servarr family main/log database pattern** — kubernetes_apps_equestria_media_radarr_externalsecret_radarr_env, kubernetes_apps_equestria_media_sonarr_externalsecret_sonarr_env, kubernetes_apps_equestria_media_radarr_postgres_databases_radarr_log_radarr_log [EXTRACTED 1.00]
 - **SGC app migration pipeline (stage → cutover → migrate → soak)** — docs_cluster_consolidation_13_stage_sgc_apps_piece_l, docs_cluster_consolidation_14_cutover_runbook_piece_m, docs_cluster_consolidation_15_migrate_apps_piece_n, docs_cluster_consolidation_16_soak_and_gate_piece_o, docs_cluster_consolidation_14_cutover_runbook_two_writers_one_restic_repo [EXTRACTED 1.00]
 - **Snapshot CRD single-ownership and cascade-delete protection** — kubernetes_apps_kube_system_snapshot_crds_ks_snapshot_crds, kubernetes_apps_kube_system_snapshot_crds_ks_deletionpolicy_orphan, kubernetes_apps_kube_system_snapshot_crds_kustomization_helm_resource_policy_keep, kubernetes_apps_kube_system_snapshot_controller_helmrelease_installcrds_disabled, kubernetes_apps_kube_system_snapshot_controller_ks_snapshot_controller [EXTRACTED 1.00]
 - **Sonarr log database lifecycle and exclusion policy** — kubernetes_apps_equestria_media_sonarr_postgres_databases_sonarr_log_sonarr_log_database, kubernetes_apps_equestria_media_sonarr_postgres_databases_sonarr_log_servarr_main_log_db_pair, kubernetes_apps_equestria_media_sonarr_postgres_databases_sonarr_log_backup_opt_out, kubernetes_apps_equestria_media_sonarr_postgres_databases_sonarr_log_retain_reclaim_policy, kubernetes_apps_equestria_media_sonarr_postgres_databases_kustomization_deliberate_parent_exclusion [EXTRACTED 1.00]
-- **Tailnet dual-hostname (tailnetUrl) + TAILSCALE_MIDDLEWARE:tailscale-user pairing** — kubernetes_apps_equestria_downloads_prowlarr_definition_prowlarr, kubernetes_apps_equestria_downloads_prowlarr_ks_prowlarr, kubernetes_apps_equestria_downloads_sabnzbd_definition_sabnzbd, kubernetes_apps_equestria_downloads_sabnzbd_ks_sabnzbd, kubernetes_apps_equestria_games_playerr_definition_playerr, kubernetes_apps_equestria_games_playerr_ks_playerr, kubernetes_apps_equestria_games_questarr_definition_questarr, kubernetes_apps_equestria_games_questarr_ks_questarr [EXTRACTED 1.00]
 - **tailscale-system Flux Kustomization tree** — kubernetes_apps_tailscale_system_kustomization_tailscale_system, kubernetes_apps_tailscale_system_operator_ks_tailscale_operator, kubernetes_apps_tailscale_system_resources_ks_tailscale_resources, kubernetes_apps_tailscale_system_golink_ks_golink, kubernetes_apps_tailscale_system_idp_ks_tsidp, kubernetes_apps_tailscale_system_iam_ks_tsiam [EXTRACTED 1.00]
 - **Terraform-bridged vendor SDK family** — sdks_authentik_readme_authentik_provider, sdks_forgejo_readme_forgejo_provider, sdks_pbs_readme_pbs_provider, sdks_tailscale_readme_tailscale_provider, sdks_technitium_readme_technitium_provider, sdks_terrifi_readme_terrifi_provider, sdks_unifi_readme_unifi_provider [EXTRACTED 1.00]
 - **Thanos dashboard suite provisioned into one Grafana folder** — kubernetes_apps_observability_grafana_dashboards_thanos_thanos, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_bucket_replicate, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_compact, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_overview, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_query_frontend, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_query, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_receive, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_rule, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_sidecar, kubernetes_apps_observability_grafana_dashboards_thanos_thanos_store [EXTRACTED 1.00]
@@ -3132,7 +3470,6 @@
 - **Pulumi stack reliability safety net (metrics, alerts, auto-cancel)** — kubernetes_apps_pulumi_pulumi_operator_ksm_rbac_kube_state_metrics_pulumi_stacks, kubernetes_apps_pulumi_pulumi_operator_prometheusrule_pulumi_stacks, kubernetes_apps_pulumi_pulumi_operator_prometheusrule_pulumistacklocked, kubernetes_apps_pulumi_pulumi_operator_helmrelease_pulumi_operator [INFERRED 0.85]
 - **Hand-written API-key route carve-outs deliberately bypassing components/route/api-key** — kubernetes_apps_equestria_downloads_sabnzbd_helmrelease_sabnzbd, kubernetes_apps_equestria_games_questarr_helmrelease_questarr, kubernetes_apps_equestria_downloads_sabnzbd_helmrelease_route_api_key_component [INFERRED 0.85]
 - **stargate-command Tier-1 workloads that survive low-power windows** — kubernetes_apps_stargate_command_chrony_helmrelease_chrony, kubernetes_apps_stargate_command_chrony_helmrelease_control_plane_toleration, kubernetes_apps_stargate_command_home_assistant_ks_volsync_critical_tier [INFERRED 0.85]
-- **Taildrive share bring-up flow (permissions, identity, socket, share assertion)** — kubernetes_apps_tailscale_system_taildrive_helmrelease_fix_permissions, kubernetes_apps_tailscale_system_taildrive_helmrelease_nobody_uid_65534, kubernetes_apps_tailscale_system_taildrive_helmrelease_run_tailscale_emptydir, kubernetes_apps_tailscale_system_taildrive_helmrelease_poststart_drive_share, kubernetes_apps_tailscale_system_taildrive_helmrelease_persistence_subpath_shares [INFERRED 0.85]
 - **Global Talos Machine Config Patches (applied to every node)** — talos_patches_global_machine_files, talos_patches_global_machine_kubelet, talos_patches_global_machine_network, talos_patches_global_machine_registries, talos_patches_global_machine_sysctls, talos_patches_global_machine_time [INFERRED 0.85]
 - **Tier-1 critical storage for tailnet identity signing keys** — kubernetes_apps_tailscale_system_iam_ks_tier1_critical_storage, kubernetes_apps_tailscale_system_idp_ks_oidc_signing_key_persistence [INFERRED 0.85]
 - **Per-Cluster Active Alerts Widget Pattern** — dashboard_resources_servers_alpha_site_active_alerts_widget, dashboard_resources_servers_celestia_active_alerts_widget, dashboard_resources_servers_equestria_active_alerts_widget, dashboard_resources_servers_luna_active_alerts_widget, dashboard_resources_servers_skystar_active_alerts_widget [INFERRED 0.90]
@@ -3140,7 +3477,7 @@
 - **GPU feature enablement stack (NFD labels, device plugin, RuntimeClass)** — kubernetes_apps_kube_system_features_kustomization_features_aggregator, kubernetes_apps_kube_system_features_node_feature_discovery_helmrelease_node_feature_discovery, kubernetes_apps_kube_system_features_nvidia_helmrelease_nvidia_device_plugin, kubernetes_apps_kube_system_features_nvidia_helmrelease_runtimeclass_nvidia [INFERRED 0.95]
 - **Repeated five-range internal/tailnet allowlist** — kubernetes_apps_network_traefik_middleware_internal_network_internal_network, kubernetes_apps_network_traefik_middleware_cloudflare_ips_cloudflare_ips, kubernetes_apps_network_traefik_middleware_fail2ban_fail2ban, kubernetes_apps_network_traefik_middleware_crowdsec_crowdsec_bouncer_plugin [INFERRED 0.95]
 
-## Communities (3116 total, 398 thin omitted)
+## Communities (3468 total, 441 thin omitted)
 
 ### Community 0 - "truenas-types.ts"
 Cohesion: 0.01
@@ -3148,7 +3485,7 @@ Nodes (233): Alert, AlertDismissRequest, AlertListRequest, AlertRestoreRequest, 
 
 ### Community 1 - "resourceOptsDefaults"
 Cohesion: 0.02
-Nodes (112): getApplicationEntitlement(), GetApplicationEntitlementArgs, getApplicationEntitlementOutput(), GetApplicationEntitlementOutputArgs, GetApplicationEntitlementResult, getBrand(), GetBrandArgs, getBrandOutput() (+104 more)
+Nodes (134): getApplicationEntitlement(), GetApplicationEntitlementArgs, getApplicationEntitlementOutput(), GetApplicationEntitlementOutputArgs, GetApplicationEntitlementResult, getBrand(), GetBrandArgs, getBrandOutput() (+126 more)
 
 ### Community 2 - "D1 Patterns & Best Practices"
 Cohesion: 0.05
@@ -3156,23 +3493,23 @@ Nodes (35): "Batch size exceeded", "BLOB data corrupted on export", D1 Gotchas &
 
 ### Community 3 - "sdks/authentik/index.ts"
 Cohesion: 0.01
-Nodes (154): Agent, Application, ApplicationEntitlement, Blueprint, Brand, CertificateKeyPair, EndpointsConnectorAgent, EndpointsConnectorAgentEnrollmentToken (+146 more)
+Nodes (176): FlowArgs, FlowState, Agent, Application, ApplicationEntitlement, Blueprint, Brand, CertificateKeyPair (+168 more)
 
 ### Community 4 - "UniFi SDK Input Types (bin)"
 Cohesion: 0.02
 Nodes (124): AccountTimeouts, ApGroupTimeouts, BgpPeer, BgpTimeouts, ClientQosRate, ClientQosRateTimeouts, ClientTimeouts, DeviceConfigNetwork (+116 more)
 
 ### Community 5 - "UniFi SDK Input Types"
-Cohesion: 0.02
-Nodes (124): AccountTimeouts, ApGroupTimeouts, BgpPeer, BgpTimeouts, ClientQosRate, ClientQosRateTimeouts, ClientTimeouts, DeviceConfigNetwork (+116 more)
+Cohesion: 0.01
+Nodes (214): AccountTimeouts, AccountTunnel, ApGroupTimeouts, BgpPeer, BgpTimeouts, ClientQosRate, ClientQosRateQosRate, ClientQosRateTimeouts (+206 more)
 
 ### Community 6 - "UniFi SDK Output Types (bin)"
 Cohesion: 0.02
 Nodes (121): AccountTimeouts, ApGroupTimeouts, BgpPeer, BgpTimeouts, ClientQosRate, ClientQosRateTimeouts, ClientTimeouts, DeviceConfigNetwork (+113 more)
 
 ### Community 7 - "UniFi SDK Output Types"
-Cohesion: 0.02
-Nodes (121): AccountTimeouts, ApGroupTimeouts, BgpPeer, BgpTimeouts, ClientQosRate, ClientQosRateTimeouts, ClientTimeouts, DeviceConfigNetwork (+113 more)
+Cohesion: 0.01
+Nodes (237): AccountTimeouts, AccountTunnel, ApGroupTimeouts, BgpPeer, BgpTimeouts, ClientQosRate, ClientQosRateQosRate, ClientQosRateTimeouts (+229 more)
 
 ### Community 8 - "RustDesk hbbs ID/Rendezvous Container"
 Cohesion: 0.14
@@ -3180,27 +3517,27 @@ Nodes (17): RustDesk hbbs ID/Rendezvous Container, RustDesk SQLite DB Persistenc
 
 ### Community 9 - "flows.ts"
 Cohesion: 0.04
-Nodes (41): ApplicationCertificate, AuthenticationStages, AuthenticatorStages, ConsentStages, authenticationFlow(), authenticatorStaticSetup(), authenticatorTotpSetup(), authenticatorWebauthnSetup() (+33 more)
+Nodes (42): AuthenticationStages, AuthenticatorStages, ConsentStages, authenticationFlow(), authenticatorStaticSetup(), authenticatorTotpSetup(), authenticatorWebauthnSetup(), DefaultFlowsParent (+34 more)
 
 ### Community 10 - "authentik/bin/index.d.ts"
 Cohesion: 0.02
 Nodes (105): Agent, Application, ApplicationEntitlement, Blueprint, Brand, CertificateKeyPair, EndpointsConnectorAgent, EndpointsConnectorAgentEnrollmentToken (+97 more)
 
 ### Community 11 - "UniFi SDK Data Sources"
-Cohesion: 0.04
-Nodes (70): getAccount(), GetAccountArgs, getAccountOutput(), GetAccountOutputArgs, GetAccountResult, getApGroup(), GetApGroupArgs, getApGroupOutput() (+62 more)
+Cohesion: 0.06
+Nodes (42): __config, get(), getApGroup(), GetApGroupArgs, getApGroupOutput(), GetApGroupOutputArgs, GetApGroupResult, getClient() (+34 more)
 
 ### Community 12 - "iptv-audit.py"
 Cohesion: 0.17
 Nodes (7): base_name(), fetch(), logo_status(), main(), parse_epg(), parse_m3u(), west_offset()
 
 ### Community 13 - "unifi/index.ts"
-Cohesion: 0.03
-Nodes (71): DynamicDnsArgs, DynamicDnsState, FirewallPolicyArgs, FirewallPolicyState, FirewallRuleArgs, FirewallRuleState, FirewallZoneArgs, FirewallZoneState (+63 more)
+Cohesion: 0.02
+Nodes (90): ClientArgs, ClientState, FirewallGroupArgs, FirewallGroupState, GetAccountArgs, GetAccountOutputArgs, GetAccountResult, GetClientInfoArgs (+82 more)
 
 ### Community 14 - "components/bao.ts"
 Cohesion: 0.04
-Nodes (50): BaoClient, assertClustersFound(), assertNotDirectory(), BACKUP_PLAN_KEYS, backupPlanKeys(), BaoItem, BaoStore, CLUSTER_KEYS (+42 more)
+Nodes (42): BaoClient, CategoryEnum, assertClustersFound(), assertNotDirectory(), BACKUP_PLAN_KEYS, backupPlanKeys(), BaoItem, BaoStore (+34 more)
 
 ### Community 15 - "properties"
 Cohesion: 0.07
@@ -3208,31 +3545,31 @@ Nodes (28): type, type, type, type, type, type, type, type (+20 more)
 
 ### Community 16 - "pbs/index.ts"
 Cohesion: 0.04
-Nodes (57): GotifyNotificationArgs, GotifyNotificationState, Datastore, getDatastore, getDatastoreOutput, getDatastores, getDatastoresOutput, getMetricsServer (+49 more)
+Nodes (59): GotifyNotificationArgs, GotifyNotificationState, Datastore, getDatastore, getDatastoreOutput, getDatastores, getDatastoresOutput, getMetricsServer (+51 more)
 
 ### Community 17 - "accepted_statuscodes"
 Cohesion: 0.08
 Nodes (48): items, type, type, group, port, properties, type, type (+40 more)
 
 ### Community 18 - "acl-manager.ts"
-Cohesion: 0.07
-Nodes (45): getTailscaleIp(), applyAllEdits(), getGrantName(), getNodeAttrName(), getSshGrantName(), getSshTestName(), getTestName(), setExitNode() (+37 more)
+Cohesion: 0.06
+Nodes (46): getTailscaleIp(), applyAllEdits(), getGrantName(), getNodeAttrName(), getSshGrantName(), getSshTestName(), getTestName(), setExitNode() (+38 more)
 
 ### Community 19 - "properties"
 Cohesion: 0.06
 Nodes (57): type, type, enum, type, type, type, type, type (+49 more)
 
 ### Community 20 - "forgejo/index.ts"
-Cohesion: 0.05
-Nodes (45): BranchProtection, Collaborator, DeployKey, getCollaborator, getCollaboratorOutput, getDeployKey, getDeployKeyOutput, getGpgKey (+37 more)
+Cohesion: 0.04
+Nodes (49): BranchProtectionArgs, BranchProtectionState, BranchProtection, Collaborator, DeployKey, getCollaborator, getCollaboratorOutput, getDeployKey (+41 more)
 
 ### Community 21 - "properties"
 Cohesion: 0.06
 Nodes (60): type, type, enum, type, type, type, type, http (+52 more)
 
 ### Community 22 - "resourceOptsDefaults"
-Cohesion: 0.07
-Nodes (37): getCollaborator(), GetCollaboratorArgs, getCollaboratorOutput(), GetCollaboratorOutputArgs, GetCollaboratorResult, getDeployKey(), GetDeployKeyArgs, getDeployKeyOutput() (+29 more)
+Cohesion: 0.06
+Nodes (42): getCollaborator(), GetCollaboratorArgs, getCollaboratorOutput(), GetCollaboratorOutputArgs, GetCollaboratorResult, getDeployKey(), GetDeployKeyArgs, getDeployKeyOutput() (+34 more)
 
 ### Community 23 - "Configuration Patterns"
 Cohesion: 0.04
@@ -3267,8 +3604,8 @@ Cohesion: 0.07
 Nodes (28): description, items, type, externalEndpoint, description, items, type, description (+20 more)
 
 ### Community 31 - "bao-reorg/index.ts"
-Cohesion: 0.11
-Nodes (23): Where commands run, apply, argv, bao(), BAO_MOVE, canonical(), copyOnly, destroy() (+15 more)
+Cohesion: 0.05
+Nodes (48): bootstrap/openbao/equestria-init.sh (ESO policies), Where commands run, docs/openbao-shared-secrets-reorg.md, bao-reorg README, apply, argv, bao(), BAO_MOVE (+40 more)
 
 ### Community 32 - "Forgejo celestia to equestria Cutover"
 Cohesion: 0.12
@@ -3280,11 +3617,11 @@ Nodes (33): vsc-retention HelmRelease (app-template), vsc-retention ClusterRole 
 
 ### Community 34 - "tailscale/index.ts"
 Cohesion: 0.05
-Nodes (43): DeviceSubnetRoutesArgs, DeviceSubnetRoutesState, DnsNameserversArgs, DnsNameserversState, Acl, AwsExternalId, Contacts, DeviceAuthorization (+35 more)
+Nodes (45): AclArgs, AclState, DnsNameserversArgs, DnsNameserversState, DnsPreferencesArgs, DnsPreferencesState, DnsSplitNameserversArgs, DnsSplitNameserversState (+37 more)
 
-### Community 35 - "globals.ts"
-Cohesion: 0.02
-Nodes (77): BAO_CREDENTIAL_HINT, baoEnv(), baoEnvUnresolved(), authentikVip, dns, dnsServers, Groups, Tailscale (+69 more)
+### Community 35 - "GlobalResources"
+Cohesion: 0.05
+Nodes (51): BAO_CREDENTIAL_HINT, baoEnv(), baoEnvUnresolved(), baoKvSecret(), BaoKvSecretArgs, baoProvenance(), baoSlug(), dockgeBaoPath() (+43 more)
 
 ### Community 36 - "spec"
 Cohesion: 0.04
@@ -3311,20 +3648,20 @@ Cohesion: 0.04
 Nodes (45): Append Mode (Default - Preserves Guardrails), Automatic Cleanup with Using, Basic Client Setup, Best Practices, Bring Your Own Key (BYOK), Checking Connection State, Client Configuration Options, Client Initialization (+37 more)
 
 ### Community 42 - "agent-tools-servers kustomize root"
-Cohesion: 0.09
-Nodes (30): toolhive-degoog MCPServer, docker/alpha-site MCPServer overlay, docker/base kustomization, Docker socket-proxy trust boundary, mcp-server-docker MCPServer template, docker/celestia MCPServer overlay, docker/luna MCPServer overlay, docker/skystar MCPServer overlay (+22 more)
+Cohesion: 0.11
+Nodes (20): toolhive-degoog MCPServer, docker/alpha-site MCPServer overlay, docker/base kustomization, Docker socket-proxy trust boundary, mcp-server-docker MCPServer template, docker/celestia MCPServer overlay, docker/luna MCPServer overlay, docker/skystar MCPServer overlay (+12 more)
 
-### Community 43 - "Degoog HelmRelease"
-Cohesion: 0.08
-Nodes (23): Retrom Authentik OAuth2 Client, Retrom ApplicationDefinition, retrom-env ExternalSecret, Retrom Internal HTTPRoute, Retrom HelmRelease, Retrom truenas-media Mounts, Retrom Flux Kustomization, Retrom Kustomize Resource List (+15 more)
+### Community 43 - "degoog-env ExternalSecret"
+Cohesion: 0.20
+Nodes (5): Retrom Flux Kustomization, degoog-env ExternalSecret, DEGOOG_VALKEY_URL (shared valkey db 9), Degoog Flux Kustomization, Degoog Kustomize Resource List
 
 ### Community 44 - "properties"
 Cohesion: 0.04
 Nodes (46): additionalProperties, properties, type, description, type, default, description, type (+38 more)
 
 ### Community 45 - "resourceOptsDefaults"
-Cohesion: 0.06
-Nodes (42): getDatastores(), getDatastoresOutput(), GetDatastoresResult, getMetricsServers(), getMetricsServersOutput(), GetMetricsServersResult, getNotificationEndpoint(), GetNotificationEndpointArgs (+34 more)
+Cohesion: 0.07
+Nodes (37): getDatastore(), GetDatastoreArgs, getDatastoreOutput(), GetDatastoreOutputArgs, GetDatastoreResult, getDatastores(), getDatastoresOutput(), GetDatastoresResult (+29 more)
 
 ### Community 46 - "Browser Rendering Patterns"
 Cohesion: 0.04
@@ -3334,25 +3671,25 @@ Nodes (40): Browser Rendering API, Endpoints, Key Options, Playwright, Puppeteer
 Cohesion: 0.04
 Nodes (40): Browser Rendering API, Endpoints, Key Options, Playwright, Puppeteer, REST API, Session Management, Workers Binding (+32 more)
 
-### Community 48 - "config-sync.py"
-Cohesion: 0.11
-Nodes (17): apply_ownership(), carry(), ignore(), carry_plugin_databases(), checkpoint(), host_pattern(), log(), main() (+9 more)
+### Community 48 - "labels"
+Cohesion: 0.04
+Nodes (48): environment, image, restart, volumes, external, path, AcmeFileServiceOptions__FilePath, CertExtractorServiceOptions__DirectoryPath (+40 more)
 
 ### Community 49 - "driscoll.dev/v1 ApplicationDefinition schema"
-Cohesion: 0.17
-Nodes (12): driscoll.dev/v1 ApplicationDefinition schema, LibreSpeed ApplicationDefinition, Authentik forward_single proxy access policy, Gatus healthcheck declaration in ApplicationDefinition, Neo4J ApplicationDefinition, OpenSpeedTest ApplicationDefinition, http_2xx_insecure module for self-signed Proxmox UIs, Blackbox prober module catalog (+4 more)
+Cohesion: 0.40
+Nodes (5): driscoll.dev/v1 ApplicationDefinition schema, LibreSpeed ApplicationDefinition, OpenSpeedTest ApplicationDefinition, Alloy ApplicationDefinition, Prometheus Metrics ApplicationDefinition
 
 ### Community 50 - "garageTruenasCopy.ts"
-Cohesion: 0.12
-Nodes (23): GARAGE_COPY_BUCKETS, GARAGE_COPY_DATASET, GARAGE_COPY_EXTRA_EXCLUDES, GARAGE_COPY_KEYS, GARAGE_COPY_PULL_SCHEDULE, GARAGE_COPY_RCLONE_ARGS, GARAGE_COPY_TASK_PREFIX, garageCopyCredential() (+15 more)
+Cohesion: 0.11
+Nodes (26): GARAGE_COPY_BUCKETS, GARAGE_COPY_DATASET, GARAGE_COPY_EXTRA_EXCLUDES, GARAGE_COPY_KEYS, GARAGE_COPY_PULL_SCHEDULE, GARAGE_COPY_RCLONE_ARGS, GARAGE_COPY_TASK_PREFIX, garageCopyCredential() (+18 more)
 
 ### Community 51 - "properties"
 Cohesion: 0.10
 Nodes (21): type, type, type, type, type, type, type, properties (+13 more)
 
-### Community 52 - "dependencies"
-Cohesion: 0.09
-Nodes (23): dependencies, @axnic/pulumi-garage@^1.1.2, @goauthentik/api@^2026.8.5, moment@^2.31.0, node-ssh@^13.2.1, @octokit/auth-app@^8.3.1, openapi-fetch@^0.17.0, @pulumi/minio@^0.17.1 (+15 more)
+### Community 52 - "components/package.json"
+Cohesion: 0.03
+Nodes (94): author, bugs, url, dependencies, @axnic/pulumi-garage@^1.1.2, @goauthentik/api@^2026.8.5, moment@^2.31.0, node-ssh@^13.2.1 (+86 more)
 
 ### Community 53 - "Context7 Documentation Expert"
 Cohesion: 0.05
@@ -3412,7 +3749,7 @@ Nodes (25): description, type, description, type, description, type, description
 
 ### Community 67 - "pbs/types/output.ts"
 Cohesion: 0.05
-Nodes (33): Datastore, DatastoreArgs, DatastoreState, getDatastore(), GetDatastoreArgs, getDatastoreOutput(), GetDatastoreOutputArgs, GetDatastoreResult (+25 more)
+Nodes (35): getPruneJobs(), GetPruneJobsArgs, getPruneJobsOutput(), GetPruneJobsOutputArgs, GetPruneJobsResult, getSyncJobs(), GetSyncJobsArgs, getSyncJobsOutput() (+27 more)
 
 ### Community 68 - "app-template Values Reference"
 Cohesion: 0.05
@@ -3432,7 +3769,7 @@ Nodes (23): technitium-dns-net NetworkAttachmentDefinition, TECHNITIUM_VIP stati
 
 ### Community 72 - "forgejo/types/output.ts"
 Cohesion: 0.06
-Nodes (31): getGpgKey(), GetGpgKeyArgs, getGpgKeyOutput(), GetGpgKeyOutputArgs, GetGpgKeyResult, getRepository(), GetRepositoryArgs, getRepositoryOutput() (+23 more)
+Nodes (30): getGpgKey(), GetGpgKeyArgs, getGpgKeyOutput(), GetGpgKeyOutputArgs, GetGpgKeyResult, getRepository(), GetRepositoryArgs, getRepositoryOutput() (+22 more)
 
 ### Community 73 - "tailscale-grants.d.ts"
 Cohesion: 0.05
@@ -3440,31 +3777,31 @@ Nodes (39): TailscaleAllGroups, TailscaleAppCapabilities, TailscaleAppConnectors
 
 ### Community 74 - "Context7-aware development"
 Cohesion: 0.05
-Nodes (39): Append Mode (Default - Preserves Guardrails), Automatic Cleanup with Using, Bring Your Own Key (BYOK), Checking Connection State, Connectivity Testing, Context7-aware development, Core Principles, Deleting Sessions (+31 more)
+Nodes (40): Append Mode (Default - Preserves Guardrails), Automatic Cleanup with Using, Bring Your Own Key (BYOK), Connectivity Testing, Context7-aware development, Core Principles, Creating Sessions, Custom Tools (+32 more)
 
 ### Community 75 - "properties"
 Cohesion: 0.07
 Nodes (27): type, type, type, type, type, type, type, type (+19 more)
 
 ### Community 76 - "Reflector and Registry Mirrors"
-Cohesion: 0.09
-Nodes (22): registry Gatus /livez health check, registry ApplicationDefinition (Container Registry Mirror), third-party-tokens/docker-hub/api-key, registry-values ExternalSecret, zot config.json / credentials.json configMap mount, fix-permissions initContainer, registry internal HTTPRoute (registry.CLUSTER_DOMAIN), registry HelmRelease (zot mirror) (+14 more)
+Cohesion: 0.17
+Nodes (12): registry Gatus /livez health check, registry ApplicationDefinition (Container Registry Mirror), third-party-tokens/docker-hub/api-key, registry-values ExternalSecret, zot config.json / credentials.json configMap mount, fix-permissions initContainer, registry internal HTTPRoute (registry.CLUSTER_DOMAIN), registry HelmRelease (zot mirror) (+4 more)
 
 ### Community 77 - "properties"
 Cohesion: 0.05
 Nodes (47): type, type, type, type, type, googleWorkspace, scim, type (+39 more)
 
-### Community 78 - "authentik/utilities.ts"
-Cohesion: 0.05
-Nodes (17): __config, get(), PolicyGeoip, PolicyGeoipArgs, PolicyGeoipState, Provider, ProviderArgs, TerraformConfigResult (+9 more)
+### Community 78 - "policyGeoip.ts"
+Cohesion: 0.25
+Nodes (3): PolicyGeoip, PolicyGeoipArgs, PolicyGeoipState
 
 ### Community 79 - "watchdog.mjs"
 Cohesion: 0.10
 Nodes (26): D. Enforcement (phase 1), backendUp(), CALL_TIMEOUT, CANARIES_PATH, check(), CHECK_INTERVAL, checkProfile(), COOLDOWN (+18 more)
 
 ### Community 80 - "Glance Dashboard Pages & Widgets"
-Cohesion: 0.09
-Nodes (26): Dynacat Dashboard Configuration, High Seas Dashboard Page, Home Dashboard Page, Equestria Nodes Extension Widget (Homelab Head), Homelab Dashboard Page, Alpha Site Dashboard Page, Celestia Dashboard Page, Equestria Nodes Extension Widget (+18 more)
+Cohesion: 0.13
+Nodes (16): High Seas Dashboard Page, Home Dashboard Page, Homelab Dashboard Page, Backrest Backups Widget (Celestia), Backrest Backups Widget (Luna), Now Playing Widget (Tautulli, Staging), Grouped App Launcher Template, Now Playing Widget (Media-Playing) (+8 more)
 
 ### Community 81 - "Cilium CNI Configuration"
 Cohesion: 0.07
@@ -3475,16 +3812,16 @@ Cohesion: 0.05
 Nodes (50): type, type, type, type, type, googleWorkspace, microsoftEntra, scim (+42 more)
 
 ### Community 83 - "Tailscale SDK Input Types"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (27): Contacts, ContactsArgs, ContactsState, DnsConfiguration, DnsConfigurationArgs, DnsConfigurationState, ContactsAccount, ContactsSecurity (+19 more)
 
 ### Community 84 - "VolSync and Taildrive"
-Cohesion: 0.08
-Nodes (28): fix-permissions init container, postStart tailscale drive share hook, taildrive HelmRelease, taildrive Flux Kustomization, taildrive kustomization, restore-cleanup HelmRelease, restore-cleanup ClusterRole for replicationdestinations, restore-once ReplicationDestination reaper script (+20 more)
+Cohesion: 0.12
+Nodes (18): taildrive Flux Kustomization, taildrive kustomization, restore-cleanup HelmRelease, restore-cleanup ClusterRole for replicationdestinations, restore-once ReplicationDestination reaper script, volsync-restore-cleanup Flux Kustomization, restore-cleanup kustomization, volsync HelmRelease (+10 more)
 
 ### Community 85 - "${APP} CNPG DatabaseRole"
-Cohesion: 0.20
-Nodes (6): Postgres component (docs), postgres/client-cert Component, ${APP}-postgres-conn connection metadata Secret, ${APP} CNPG Database, ${APP} CNPG DatabaseRole, postgres/database kustomization
+Cohesion: 0.17
+Nodes (8): Postgres component (docs), postgres/client-cert Component, ${APP}-postgres-conn connection metadata Secret, ${APP} CNPG Database, ${APP} CNPG DatabaseRole, postgres/database kustomization, ${APP}-postgres nested Flux Kustomization, postgres Kustomize Component
 
 ### Community 86 - "definitions"
 Cohesion: 0.11
@@ -3503,8 +3840,8 @@ Cohesion: 0.06
 Nodes (37): MISE_EXPERIMENTAL, UNIFI_ACCESS_HOST, UNIFI_ACCESS_PASSWORD, UNIFI_ACCESS_PORT, UNIFI_ACCESS_USERNAME, UNIFI_ACCESS_VERIFY_SSL, UNIFI_NETWORK_HOST, UNIFI_NETWORK_PASSWORD (+29 more)
 
 ### Community 90 - "technitium/index.ts"
-Cohesion: 0.05
-Nodes (45): ApiTokenArgs, ApiTokenState, AllowedZone, AllowedZones, ApiToken, BlockedZone, BlockedZones, CatalogMembership (+37 more)
+Cohesion: 0.04
+Nodes (49): ApiTokenArgs, ApiTokenState, ClusterSecondaryArgs, ClusterSecondaryState, DhcpReservedLeaseArgs, DhcpReservedLeaseState, AllowedZone, AllowedZones (+41 more)
 
 ### Community 91 - "ralph-triage.js"
 Cohesion: 0.12
@@ -3516,35 +3853,35 @@ Nodes (29): external-secrets Flux app bundle, HelmRelease external-secrets-reloa
 
 ### Community 93 - "env"
 Cohesion: 0.04
-Nodes (47): concurrency, cancel-in-progress, group, image, run, default, description, type (+39 more)
+Nodes (48): concurrency, cancel-in-progress, group, image, run, default, description, type (+40 more)
 
 ### Community 94 - "Observability / Prometheus"
-Cohesion: 0.09
-Nodes (26): Flux Kustomization: observability-priority-class, Kustomize overlay: observability/priority-class, PriorityClass: observability-critical, ApplicationDefinition: Prometheus, HelmRelease: prometheus (kube-prometheus-stack), Flux Kustomization: prometheus, configMapGenerator: prometheus-values, PrometheusRule: amd-gpu-rules (+18 more)
+Cohesion: 0.12
+Nodes (19): Flux Kustomization: observability-priority-class, Kustomize overlay: observability/priority-class, PriorityClass: observability-critical, ApplicationDefinition: Prometheus, HelmRelease: prometheus (kube-prometheus-stack), Flux Kustomization: prometheus, configMapGenerator: prometheus-values, PrometheusRule: amd-gpu-rules (+11 more)
 
 ### Community 95 - "definitions"
 Cohesion: 0.07
 Nodes (27): definitions, dns, docker, gamedig, http, json-query, mongodb, mysql (+19 more)
 
 ### Community 96 - "store/index.ts"
-Cohesion: 0.13
-Nodes (12): OPClient, OPClientItem, OPClientItemFields, OPClientItemFiles, OPClientItemInput, OPClientItemSections, PurposeEnum, TypeEnum (+4 more)
+Cohesion: 0.09
+Nodes (20): OPClient, OPClientItem, OPClientItemFields, OPClientItemFiles, OPClientItemInput, OPClientItemSections, PurposeEnum, TypeEnum (+12 more)
 
 ### Community 97 - "coder HelmRelease"
 Cohesion: 0.11
 Nodes (22): Coder ApplicationDefinition, coder-oidc-secret ExternalSecret, coder-pguser-secret ExternalSecret, coder HTTPRoute (code.${ROOT_DOMAIN}), coder-apps HTTPRoute (*.code.${ROOT_DOMAIN}), coder Flux Kustomization, coder kustomization.yaml, coder PodMonitor (+14 more)
 
 ### Community 98 - "Equestria / Media"
-Cohesion: 0.11
-Nodes (16): Equestria Namespace App Kustomization, Low Power Mode (Nightly Shed), Bazarr ApplicationDefinition, Bazarr Postgres ExternalSecret (bazarr-env), Bazarr HelmRelease, Bazarr Flux Kustomization, Rotating Credential Restart Chain, Bazarr Kustomize Resource List (+8 more)
+Cohesion: 0.12
+Nodes (14): Equestria Namespace App Kustomization, Low Power Mode (Nightly Shed), Bazarr Postgres ExternalSecret (bazarr-env), Bazarr HelmRelease, Bazarr Flux Kustomization, Rotating Credential Restart Chain, Bazarr Kustomize Resource List, Jellyfin Flux Kustomization (+6 more)
 
 ### Community 99 - "xcproxy HelmRelease"
-Cohesion: 0.11
-Nodes (19): iptv-proxy-secret (SOPS-encrypted Secret), iptv-sync HelmRelease (tivi-sync CronJob), iptv-sync sync CronJob Controller, iptv-sync Flux Kustomization, iptv-sync Kustomize Overlay, kptv-fast HelmRelease (FAST channel aggregator), kptv-fast Flux Kustomization, kptv-fast Kustomize Overlay (+11 more)
+Cohesion: 0.10
+Nodes (18): iptv-proxy-secret (SOPS-encrypted Secret), iptv-sync HelmRelease (tivi-sync CronJob), iptv-sync sync CronJob Controller, iptv-sync Flux Kustomization, iptv-sync Kustomize Overlay, kptv-fast Flux Kustomization, kptv-fast Kustomize Overlay, app-template OCIRepository chartRef Convention (+10 more)
 
 ### Community 100 - "Golink Tailscale IAM"
 Cohesion: 0.09
-Nodes (23): golink ApplicationDefinition, golink Flux Kustomization, golink Kustomize overlay, tsiam ApplicationDefinition, tsiam Flux Kustomization, tsiam Kustomize overlay, tsidp ApplicationDefinition, tsidp Flux Kustomization (+15 more)
+Nodes (21): golink ApplicationDefinition, golink Flux Kustomization, golink Kustomize overlay, tsiam ApplicationDefinition, tsiam Flux Kustomization, tsiam Kustomize overlay, tsidp ApplicationDefinition, tsidp Flux Kustomization (+13 more)
 
 ### Community 101 - ".agents/skills/create-k8s-deployment/SKILL.md"
 Cohesion: 0.06
@@ -3567,8 +3904,8 @@ Cohesion: 0.06
 Nodes (31): "Client can't connect to WiFi", Client Groups, Clients, Common Scenarios, Content Filtering, Devices, DNS Records, DPI Application Lookup (+23 more)
 
 ### Community 106 - "BackupPlanDirector.ts"
-Cohesion: 0.04
-Nodes (67): backrestGarageRepoUri(), BACKREST_LEDGER_PATH, BACKREST_LEDGER_SEED, BackrestLedger, isStringArray(), LedgerRemovals, parseBackrestLedger(), planLedgerRemovals() (+59 more)
+Cohesion: 0.11
+Nodes (28): BACKREST_LEDGER_PATH, BACKREST_LEDGER_SEED, BackrestLedger, isStringArray(), LedgerRemovals, parseBackrestLedger(), planLedgerRemovals(), renderBackrestLedger() (+20 more)
 
 ### Community 107 - "crew-commands/SKILL.md"
 Cohesion: 0.06
@@ -3587,12 +3924,12 @@ Cohesion: 0.09
 Nodes (26): Thanos Grafana Folder, thanos-bucket-replicate Dashboard, thanos-compact Dashboard, thanos-overview Dashboard, thanos-query Dashboard, thanos-query-frontend Dashboard, thanos-receive Dashboard, thanos-rule Dashboard (+18 more)
 
 ### Community 111 - "resourceOptsDefaults"
-Cohesion: 0.07
-Nodes (34): getAllowedZone(), GetAllowedZoneArgs, getAllowedZoneOutput(), GetAllowedZoneOutputArgs, GetAllowedZoneResult, getAllowedZones(), getAllowedZonesOutput(), GetAllowedZonesResult (+26 more)
+Cohesion: 0.06
+Nodes (39): getAllowedZone(), GetAllowedZoneArgs, getAllowedZoneOutput(), GetAllowedZoneOutputArgs, GetAllowedZoneResult, getAllowedZones(), getAllowedZonesOutput(), GetAllowedZonesResult (+31 more)
 
 ### Community 112 - "Authentik / Home"
-Cohesion: 0.10
-Nodes (27): authentik stack (Pulumi project: applications), authentik stack secrets encryptionsalt, Application certificate key-pair generation, AuthentikApplicationResources (applications and providers), Authentik Pulumi Stack (TypeScript), Extension methods for flows and bindings, External identity sources (Plex, Tailscale), Authentik flows (login, enrollment, MFA, user settings) (+19 more)
+Cohesion: 0.18
+Nodes (14): authentik stack secrets encryptionsalt, Application certificate key-pair generation, AuthentikApplicationResources (applications and providers), Authentik Pulumi Stack (TypeScript), Extension methods for flows and bindings, External identity sources (Plex, Tailscale), Authentik flows (login, enrollment, MFA, user settings), AuthentikGroups (user groups and role hierarchy) (+6 more)
 
 ### Community 113 - "Cloudflare Workers KV"
 Cohesion: 0.05
@@ -3614,9 +3951,9 @@ Nodes (21): build_system_prompt(), cmd_ab(), cmd_review(), cmd_run(), cmd_update
 Cohesion: 0.06
 Nodes (31): Acknowledge Immediately — "Feels Heard", Adding Team Members, After Agent Work, Ceremonies, Client Compatibility, Consult Mode Detection, Directive Capture, Eager Execution Philosophy (+23 more)
 
-### Community 118 - "Coder / Forgejo"
-Cohesion: 0.07
-Nodes (24): Forgejo authentik OAuth2 client registration, Forgejo ApplicationDefinition, forgejo-oauth ExternalSecret (OIDC client id/secret), forgejo-values ExternalSecret (Helm values fragment), Forgejo Flux Kustomization, forgejo-values configMapGenerator, Forgejo `authentik` OAuth auth source values fragment, forgejo-runner daemon config.yml (+16 more)
+### Community 118 - "Forgejo `authentik` OAuth auth source values fragment"
+Cohesion: 0.15
+Nodes (10): Forgejo authentik OAuth2 client registration, Forgejo ApplicationDefinition, forgejo-oauth ExternalSecret (OIDC client id/secret), forgejo-values ExternalSecret (Helm values fragment), forgejo-values configMapGenerator, Forgejo `authentik` OAuth auth source values fragment, forgejo-runner daemon config.yml, renovate-operator-values ExternalSecret (Helm values fragment) (+2 more)
 
 ### Community 119 - "node-feature-discovery HelmRelease"
 Cohesion: 0.11
@@ -3695,8 +4032,8 @@ Cohesion: 0.07
 Nodes (23): DeviceArgs, DeviceState, FirewallGroup, FirewallGroupArgs, FirewallGroupState, GetAccountArgs, GetAccountOutputArgs, GetAccountResult (+15 more)
 
 ### Community 138 - "Kubernetes Deployment Best Practices"
-Cohesion: 0.08
-Nodes (28): 1. **C - Culture**, **1. Centralized Logging**, **1. ConfigMaps**, **1. Liveness Probe**, **1. Resource Requests and Limits**, 2. **A - Automation**, **2. Horizontal Pod Autoscaler (HPA)**, **2. Metrics Collection** (+20 more)
+Cohesion: 0.09
+Nodes (23): **1. ConfigMaps**, **1. Liveness Probe**, **1. Pods Not Starting (Pending, CrashLoopBackOff)**, **1. Resource Requests and Limits**, **2. Horizontal Pod Autoscaler (HPA)**, **2. Pods Not Ready (Service Unavailable)**, **2. Readiness Probe**, **2. Secrets** (+15 more)
 
 ### Community 139 - "Examples"
 Cohesion: 0.07
@@ -3707,16 +4044,16 @@ Cohesion: 0.15
 Nodes (19): ApplicationDefinition: FreshRSS, freshrss-env ExternalSecret (OIDC + DB + system config.php template), FreshRSS HelmRelease, FreshRSS Flux Kustomization, ApplicationDefinition: Immich, ExternalSecret: immich-config, ExternalSecret: immich-env, HelmRelease: immich (+11 more)
 
 ### Community 141 - "HelmRelease tududi (app-template)"
-Cohesion: 0.16
-Nodes (15): Tududi ApplicationDefinition, Tududi Authentik OAuth2 Client, ExternalSecret tududi-env, Flux Kustomization tududi, Tududi Kustomize Resource List, Windmill ApplicationDefinition, Windmill Authentik OAuth2 Client, ExternalSecret windmill-pguser-secret (+7 more)
+Cohesion: 0.17
+Nodes (13): Tududi ApplicationDefinition, Tududi Authentik OAuth2 Client, ExternalSecret tududi-env, Flux Kustomization tududi, Tududi Kustomize Resource List, ExternalSecret windmill-pguser-secret, Windmill HTTPRoute (internal Gateway), Flux Kustomization windmill (+5 more)
 
-### Community 142 - "Enhanced Channel Manager ApplicationDefinition"
-Cohesion: 0.20
-Nodes (10): Dispatcharr ApplicationDefinition, dispatcharr Flux Kustomization, dispatcharr kustomize overlay, Enhanced Channel Manager ApplicationDefinition, ecm HelmRelease, ecm Flux Kustomization, ecm kustomize overlay, Channel Identifiarr ApplicationDefinition (+2 more)
+### Community 142 - "dispatcharr kustomize overlay"
+Cohesion: 0.67
+Nodes (3): Dispatcharr ApplicationDefinition, dispatcharr Flux Kustomization, dispatcharr kustomize overlay
 
 ### Community 143 - "Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy"
-Cohesion: 0.09
-Nodes (24): S3PreSyncArgs, A1. Today's shape, A2. What that costs, A3. Live defects (logs 2026-09-27 → 2026-09-29), A. Why, Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy, C1. Every Docker host backs up its own stacks, C2. Garage holds the restic repos, for these cases (+16 more)
+Cohesion: 0.08
+Nodes (25): S3PreSyncArgs, A1. Today's shape, A2. What that costs, A3. Live defects (logs 2026-09-27 → 2026-09-29), A. Why, Backups: hosts own their snapshots, Garage holds the repos, TrueNAS keeps the copy, C1. Every Docker host backs up its own stacks, C2. Garage holds the restic repos, for these cases (+17 more)
 
 ### Community 144 - "name"
 Cohesion: 0.08
@@ -3759,8 +4096,8 @@ Cohesion: 0.07
 Nodes (27): 1. Issue Assignment (Triage), 2. Branch Creation (Start Work), 3. Implementation & Commit, 4. PR Creation, 5. PR Review & Updates, 6. PR Merge, 7. Cleanup, Anti-Patterns (+19 more)
 
 ### Community 154 - "Pulumi / Pulumi Operator"
-Cohesion: 0.11
-Nodes (26): Flux Kustomization: home-operations, kustomize overlay: home-operations stack resources, Flux Kustomization: pulumi-kubeproxies, kustomize overlay: kubeproxies services, ExternalName Service: equestria-kubeproxy, ExternalName Service: sgc-kubeproxy, pulumi namespace app aggregator (kustomization), Flux Kustomization: pulumi-lock-canceller (+18 more)
+Cohesion: 0.16
+Nodes (17): Flux Kustomization: pulumi-lock-canceller, kustomize overlay: lock-canceller rbac + cronjob, ClusterRole: pulumi-lock-canceller (get/list stacks), Role: pulumi-lock-canceller (pods, pods/exec), ServiceAccount: pulumi-lock-canceller, Flux Kustomization: pulumi-npm-cache-prune, kustomize overlay: npm-cache-prune cronjob, HelmRelease: pulumi-operator (+9 more)
 
 ### Community 155 - "mosquitto HelmRelease (eclipse-mosquitto StatefulSet)"
 Cohesion: 0.11
@@ -3771,8 +4108,8 @@ Cohesion: 0.14
 Nodes (14): Backend health, Backend paths through toolport, How the URL gets chosen, MCP under agentboard, No Python server runs over stdio, One trap worth knowing about, Profiles, and two doors each, The one rule (+6 more)
 
 ### Community 157 - "lock-canceller HelmRelease"
-Cohesion: 0.09
-Nodes (21): AGENTS.md: Two storage classes, not one, components/volsync/externalsecret.yaml, docs/cluster-consolidation/12-longhorn-critical-tier.md, talos-etcd-restic-keys ExternalSecret (kube-system/etcd), etcd HelmRelease (kube-system), tuppr TalosUpgrade healthChecks (talos.yaml, 15m timeout), pulumi lock-canceller CronJob, lock-canceller ExternalSecret (+13 more)
+Cohesion: 0.12
+Nodes (15): AGENTS.md: Two storage classes, not one, components/volsync/externalsecret.yaml, talos-etcd-restic-keys ExternalSecret (kube-system/etcd), etcd HelmRelease (kube-system), tuppr TalosUpgrade healthChecks (talos.yaml, 15m timeout), pulumi lock-canceller CronJob, lock-canceller ExternalSecret, lock-canceller HelmRelease (+7 more)
 
 ### Community 158 - "enabled"
 Cohesion: 0.11
@@ -3815,7 +4152,7 @@ Cohesion: 0.08
 Nodes (26): Assuming Single Read Gets All Data, Blocked Destinations, Certificate Validation, Common Errors, Connection Limits, Data Handling Issues, Debugging Tips, Error: Connection timeout (+18 more)
 
 ### Community 168 - "truenas-client.ts"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (12): TrueNASClient, AuthLoginExParams, AuthLoginExRequest, AuthLoginExResponse, CollectionUpdateNotification, CoreSubscribeRequest, CoreUnsubscribeRequest, Job (+4 more)
 
 ### Community 169 - "Playground.cs"
@@ -3823,12 +4160,12 @@ Cohesion: 0.06
 Nodes (10): B2Backend, BackupTask, LocalBackend, LocalContext, RCloneBackend, RCloneBackendExtensions, RCloneJob, S3Backend (+2 more)
 
 ### Community 170 - "Equestria / Games"
-Cohesion: 0.12
-Nodes (22): Sabnzbd ApplicationDefinition, components/route/api-key shared component (X-Api-Key OR ?apikey), Sabnzbd HelmRelease, Sabnzbd Flux Kustomization, sabnzbd kustomize resource list, Habitica ApplicationDefinition, habitica Flux Kustomization, habitica kustomize resource list (+14 more)
+Cohesion: 0.13
+Nodes (19): Sabnzbd ApplicationDefinition, components/route/api-key shared component (X-Api-Key OR ?apikey), Sabnzbd HelmRelease, Sabnzbd Flux Kustomization, sabnzbd kustomize resource list, habitica Flux Kustomization, habitica kustomize resource list, equestria games app group kustomization (+11 more)
 
 ### Community 171 - "Equestria / Media"
-Cohesion: 0.13
-Nodes (16): Pulsarr ApplicationDefinition, pulsarr-env ExternalSecret, Pulsarr HelmRelease, Pulsarr Flux Kustomization, Pulsarr kustomize overlay, radarr-env ExternalSecret, Radarr kustomize overlay, radarr postgres-databases overlay (+8 more)
+Cohesion: 0.24
+Nodes (10): Pulsarr ApplicationDefinition, pulsarr-env ExternalSecret, Pulsarr HelmRelease, Pulsarr Flux Kustomization, Pulsarr kustomize overlay, Seerr ApplicationDefinition, seerr-env ExternalSecret, Seerr HelmRelease (+2 more)
 
 ### Community 172 - "Github Actions / Garage System"
 Cohesion: 0.10
@@ -3875,8 +4212,8 @@ Cohesion: 0.08
 Nodes (24): Auto-Generated Secret, External HTTPRoute, ExternalSecret, File Templates for Application Deployment, Helm Chart Version, helm-charts.yaml Entry, HTTPRoute (config/<app-name>/route.yaml), Kustomization for Config Directory (+16 more)
 
 ### Community 183 - "patchmon.ts"
-Cohesion: 0.10
-Nodes (20): installPatchmonAgent(), PATCHMON_ENROLLMENT_PATH, PatchmonAgentArgs, patchmonEnrollScript(), patchmonSkipScript(), patchmonUrl(), shellQuote(), args (+12 more)
+Cohesion: 0.11
+Nodes (18): installPatchmonAgent(), PATCHMON_ENROLLMENT_PATH, PatchmonAgentArgs, patchmonEnrollScript(), patchmonSkipScript(), patchmonUrl(), shellQuote(), args (+10 more)
 
 ### Community 184 - "Phase 1: Network Policy Testing"
 Cohesion: 0.08
@@ -3884,7 +4221,7 @@ Nodes (24): 1.1 Intra-Namespace Lateral Movement, 1.2 Cross-Namespace Escape, 1.
 
 ### Community 185 - "Equestria / Home"
 Cohesion: 0.15
-Nodes (17): ExternalSecret: meilisearch-env, Flux Kustomization: meilisearch, Kustomize overlay: meilisearch, ExternalSecret: n8n-env, Kustomize overlay: n8n, ConfigMap generator: n8n-hooks, ApplicationDefinition: Obsidian Sync, ExternalSecret: obsidian-sync (OpenBao pilot) (+9 more)
+Nodes (15): ExternalSecret: meilisearch-env, Flux Kustomization: meilisearch, Kustomize overlay: meilisearch, ExternalSecret: n8n-env, Kustomize overlay: n8n, ConfigMap generator: n8n-hooks, ApplicationDefinition: Obsidian Sync, ExternalSecret: obsidian-sync (OpenBao pilot) (+7 more)
 
 ### Community 186 - "Network / External Dns"
 Cohesion: 0.14
@@ -3906,13 +4243,13 @@ Nodes (21): Anti-Patterns, Core Patterns, Cross-References, GitHub Actions Pipel
 Cohesion: 0.18
 Nodes (11): Context Analysis Criteria, Front Matter Structure, Icons Reference, Local Skills Discovery Process, Output Format, Process, Requirements, Skill Structure Requirements (+3 more)
 
-### Community 191 - "unifi-network/package.json"
-Cohesion: 0.09
-Nodes (22): @pulumi/technitium, @types/cidr-matcher, author, bugs, url, description, devDependencies, @types/cidr-matcher (+14 more)
+### Community 191 - "helpers.ts"
+Cohesion: 0.08
+Nodes (28): BackupPlanOrchestrator, CERTIFICATE_EXPIRATION_CONDITION, withCertificateExpiration(), addUptimeGatus(), awaitOutput(), BackupTask, getTempFilePath(), mkdirParent (+20 more)
 
 ### Community 192 - "truenas-manager.ts"
-Cohesion: 0.06
-Nodes (35): cloudCredentialMatches(), cloudSyncTaskMatches(), nfsShareMatches(), sameCronField(), sameSchedule(), sameValue(), snapshotTaskMatches(), CloudCredential (+27 more)
+Cohesion: 0.07
+Nodes (32): cloudCredentialMatches(), cloudSyncTaskMatches(), sameCronField(), sameSchedule(), sameValue(), snapshotTaskMatches(), CloudCredential, CloudCredentialCreateRequest (+24 more)
 
 ### Community 193 - "manifest.json"
 Cohesion: 0.15
@@ -3930,13 +4267,13 @@ Nodes (23): AI Architecture:, Cost Optimization, Create Review Plan:, Data Consi
 Cohesion: 0.08
 Nodes (23): XcProxyConfiguration, CacheTtlSeconds, CategoryPickFirst, EnrichDetails, M3uUrlFallback, MetaCacheFile, MovieCategoryId, MovieM3uUrl (+15 more)
 
-### Community 197 - "Observability / Grafana"
-Cohesion: 0.12
-Nodes (20): GrafanaDashboard: Docker Container Metrics (cAdvisor), GrafanaFolder: Docker (docker-monitoring), GrafanaDashboard: Coder Dashboard, GrafanaFolder: Coder, Kustomize overlay: grafana dashboards, GrafanaFolder: Media, GrafanaDashboard: miniflux, GrafanaDashboard: node-exporter-bsd (grafana.com 4260) (+12 more)
+### Community 197 - "GrafanaFolder: Services"
+Cohesion: 0.25
+Nodes (8): GrafanaDashboard: Pecron Batteries, GrafanaFolder: Power, GrafanaDashboard: cert-manager (grafana.com 20842), GrafanaDashboard: external-secrets, GrafanaDashboard: network-ups-tools (grafana.com 12455), GrafanaFolder: Services, GrafanaDashboard: spegel (grafana.com 18089), GrafanaDashboard: volsync (grafana.com 21356)
 
-### Community 198 - "package.json"
-Cohesion: 0.05
-Nodes (53): author, bugs, url, dependencies, confbox@^0.3.1, diff@^9.0.0, jsonc-morph@^0.4.0, jsonc-parser@^3.3.1 (+45 more)
+### Community 198 - "dependencies"
+Cohesion: 0.11
+Nodes (18): dependencies, confbox@^0.3.2, jsonc-morph@^0.4.0, jsonc-parser@^3.3.1, private-ip@^3.0.2, @pulumi/pbs@file:sdks/pbs, @pulumi/tailscale@file:sdks/tailscale, @pulumi/unifi@file:sdks/unifi (+10 more)
 
 ### Community 199 - "dns"
 Cohesion: 0.17
@@ -3947,16 +4284,16 @@ Cohesion: 0.08
 Nodes (24): additionalProperties, properties, type, $ref, $ref, $ref, $ref, authentik (+16 more)
 
 ### Community 201 - "common Kustomize Component"
-Cohesion: 0.19
-Nodes (13): alerts Kustomize Component, common Kustomize Component, default-limits LimitRange, authenticated-user Traefik Middleware chain, crowdsec-bouncer per-namespace Middleware alias, local-api Traefik Middleware chain, local-user Traefik Middleware chain, Namespace placeholder (prune disabled) (+5 more)
+Cohesion: 0.14
+Nodes (17): alerts Kustomize Component, cluster-versions ConfigMap generator, common Kustomize Component, HelmRelease defaults patch (retries, sops, substituteFrom), Kustomization defaults patch (sops, substituteFrom), default-limits LimitRange, authenticated-user Traefik Middleware chain, crowdsec-bouncer per-namespace Middleware alias (+9 more)
 
 ### Community 202 - "Terrifi"
-Cohesion: 0.09
-Nodes (17): Device, DeviceArgs, DeviceState, DeviceConfigNetwork, DeviceRadio24, DeviceRadio5, DeviceRadio6, FirewallPolicyDestination (+9 more)
+Cohesion: 0.11
+Nodes (16): DeviceArgs, DeviceState, DeviceConfigNetwork, DeviceRadio24, DeviceRadio5, DeviceRadio6, FirewallPolicyDestination, FirewallPolicySchedule (+8 more)
 
 ### Community 203 - "terrifi/index.ts"
-Cohesion: 0.05
-Nodes (42): ClientDeviceArgs, ClientDeviceState, ClientGroupArgs, ClientGroupState, DnsRecordArgs, DnsRecordState, FirewallGroupArgs, FirewallGroupState (+34 more)
+Cohesion: 0.09
+Nodes (23): ClientDeviceArgs, ClientDeviceState, ClientGroupArgs, ClientGroupState, DnsRecordArgs, DnsRecordState, FirewallPolicyOrderArgs, FirewallPolicyOrderState (+15 more)
 
 ### Community 204 - "supersync/resources/App.cs"
 Cohesion: 0.11
@@ -3999,8 +4336,8 @@ Cohesion: 0.09
 Nodes (22): "A door reader seems offline", Access Server Tool Reference (34 tools), API Key Path (Port 12445), Common Scenarios, "Create a visitor pass for tomorrow", Credentials, Devices, Doors (+14 more)
 
 ### Community 214 - "Equestria Home & Media App Trios"
-Cohesion: 0.10
-Nodes (24): Authentik Single-externalHost Tailnet-URL Workaround, Nightly Low Power Shed Maintenance Window Pattern, Super Productivity ApplicationDefinition, apiVersion, kind, metadata, name, Super Productivity Flux Kustomization (+16 more)
+Cohesion: 0.12
+Nodes (15): apiVersion, kind, resources, apiVersion, kind, metadata, name, apiVersion (+7 more)
 
 ### Community 215 - "templates/skills/cross-crew-communication/SKILL.md"
 Cohesion: 0.09
@@ -4011,7 +4348,7 @@ Cohesion: 0.09
 Nodes (22): ❄️ Cold (include when task needs history — add `--include-cold`), ❄️ Cold Tier — Summarized Cross-Session History, Escalation, 🔥 Hot (always included), 🔥 Hot Tier — Current Session Context, Implementation Checklist (tracked in #1264), Integration with Scribe Agent (design — not yet implemented), Memory Context (+14 more)
 
 ### Community 217 - "DockgeLxc ComponentResource"
-Cohesion: 0.12
+Cohesion: 0.14
 Nodes (15): Code metrics and largest files, High-churn files (last 90 days), Provisioning a Dockge LXC — concrete flow, AuthentikApplicationManager, DockgeLxc ComponentResource, Component file dependency graph, ProxmoxHost ComponentResource, StandardDns ComponentResource (+7 more)
 
 ### Community 218 - ".github/skills/cross-crew-communication/SKILL.md"
@@ -4023,12 +4360,12 @@ Cohesion: 0.09
 Nodes (22): ❄️ Cold (include when task needs history — add `--include-cold`), ❄️ Cold Tier — Summarized Cross-Session History, Escalation, 🔥 Hot (always included), 🔥 Hot Tier — Current Session Context, Implementation Checklist (tracked in #1264), Integration with Scribe Agent (design — not yet implemented), Memory Context (+14 more)
 
 ### Community 220 - "Kapowarr Media App"
-Cohesion: 0.14
-Nodes (18): Movie Chart Sort-Title Template, Kometa Movie Chart Collections, TV Chart Sort-Title Template, Kometa TV Chart Collections, Kometa Best-Of Collections, Kometa Holiday Collections, Kometa Network Collections, Kometa Root Config (+10 more)
+Cohesion: 0.15
+Nodes (15): Movie Chart Sort-Title Template, Kometa Movie Chart Collections, TV Chart Sort-Title Template, Kometa TV Chart Collections, Kometa Best-Of Collections, Kometa Holiday Collections, Kometa Network Collections, Kometa Root Config (+7 more)
 
 ### Community 221 - "sdks/authentik/package.json"
-Cohesion: 0.08
-Nodes (24): dependencies, @pulumi/pulumi, @types/node, typescript, description, @pulumi/pulumi, @types/node, typescript (+16 more)
+Cohesion: 0.09
+Nodes (24): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+16 more)
 
 ### Community 222 - "Monitoring Patterns for Application Deployment"
 Cohesion: 0.09
@@ -4079,7 +4416,7 @@ Cohesion: 0.13
 Nodes (15): kafka-producer, additionalProperties, type, type, properties, enum, type, type (+7 more)
 
 ### Community 234 - "account.ts"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): Account, AccountArgs, AccountState, RFC-2868
 
 ### Community 235 - ".agents/skills/deploy-app/SKILL.md"
@@ -4126,9 +4463,9 @@ Nodes (21): Cloudflare Workers AI, Common Tasks, Development Workflow, Embedding
 Cohesion: 0.10
 Nodes (20): Anti-Patterns to Flag, Binding access — the most common error, Binding-code consistency, Cloudflare docs, Code Review — Workers, Common config mistakes, Config format, Config Validation (+12 more)
 
-### Community 247 - "components/package.json"
-Cohesion: 0.12
-Nodes (19): author, bugs, url, description, devDependencies, openapi-typescript@^7.13.0, @types/node-unifi@^2.5.1, @types/simple-oauth2@^5.0.8 (+11 more)
+### Community 247 - "packages"
+Cohesion: 0.04
+Nodes (44): parameters, source, version, parameters, source, version, config, pulumi:tags (+36 more)
 
 ### Community 248 - "Reflect Skill"
 Cohesion: 0.10
@@ -4138,21 +4475,21 @@ Nodes (20): Example 1: User Correction, Example 2: Success Pattern, HIGH Confide
 Cohesion: 0.10
 Nodes (16): pecron-exporter MQTT-to-Prometheus bridge, pecron-monitor battery poller (host-built from pinned git ref), Home Assistant MQTT discovery publisher (replicator broker), ref+openbao vals references for cloud credentials, device keys and LAN IPs, restore_outputs_after_shutdown snapshot/restore of AC-DC switches, Per-unit discharge staging state (normal / low / critical), pecron-monitor rules engine (set_state-only staging rules), 46.0V pack-voltage safety net for LiFePO4 SoC drift (+8 more)
 
-### Community 250 - "Alpha Site / Uptime"
-Cohesion: 0.17
-Nodes (12): Gatus merged-directory config model, uptime (Gatus) container, Gatus core config (storage, alerting, ui, web), Pushover alerting provider, Gatus external-endpoint: Forgejo Actions canary, Gatus external-endpoint: openbao nightly-dump, Gatus external-endpoint: openbao restore-test, toGatusKey(group, name) token convention (+4 more)
+### Community 250 - "Pushover alerting provider"
+Cohesion: 0.43
+Nodes (5): Pushover alerting provider, Gatus external-endpoint: Forgejo Actions canary, Gatus external-endpoint: openbao nightly-dump, Gatus external-endpoint: openbao restore-test, toGatusKey(group, name) token convention
 
 ### Community 251 - "07 — Authentik moves to alpha-site"
-Cohesion: 0.11
-Nodes (27): 01 — Stabilise (consolidation Phase 0), vault#127 — etcd fsync starvation on fluttershy/kerfuffle PNY SATA disks, 02 — VolSync two-writer cleanup, CONNECT_HOST repoint from op-connect.sgc to op-connect.equestria, 03 — Secrets bootstrap independence, 04 — Pulumi state backend: Minio-on-truenas → Postgres DIY on celestia, system/backups backend prefix mismatch, 05 — Import audit (+19 more)
+Cohesion: 0.10
+Nodes (31): 01 — Stabilise (consolidation Phase 0), 02 — VolSync two-writer cleanup, CONNECT_HOST repoint from op-connect.sgc to op-connect.equestria, 03 — Secrets bootstrap independence, system/backups backend prefix mismatch, 05 — Import audit, 06 — One age key, In-cluster sops-age Secret rotation (+23 more)
 
 ### Community 252 - "Reflect Skill"
 Cohesion: 0.10
 Nodes (20): Example 1: User Correction, Example 2: Success Pattern, HIGH Confidence: Corrections, 🔴 HIGH Priority (Invoke Immediately), Integration with Crew Architecture, LOW Confidence: Preferences, 🟢 LOW Priority (Invoke at Session End), MEDIUM Confidence: Edge Cases (+12 more)
 
-### Community 253 - "Equestria / Utils"
-Cohesion: 0.15
-Nodes (14): equestria utils kustomization, LibreSpeed ApplicationDefinition, librespeed Flux Kustomization, librespeed kustomization, OpenSpeedTest ApplicationDefinition, openspeedtest Flux Kustomization, openspeedtest kustomization, Authentik forward_single proxy provider for whoami (+6 more)
+### Community 253 - "LibreSpeed ApplicationDefinition"
+Cohesion: 0.29
+Nodes (6): LibreSpeed ApplicationDefinition, librespeed Flux Kustomization, librespeed kustomization, OpenSpeedTest ApplicationDefinition, openspeedtest Flux Kustomization, openspeedtest kustomization
 
 ### Community 254 - "compilerOptions"
 Cohesion: 0.12
@@ -4160,7 +4497,7 @@ Nodes (16): compilerOptions, declaration, declarationMap, module, moduleDetectio
 
 ### Community 255 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, composite, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, composite, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution (+13 more)
 
 ### Community 256 - "properties"
 Cohesion: 0.10
@@ -4172,19 +4509,19 @@ Nodes (14): mqtt, enum, type, type, properties, type, type, type (+6 more)
 
 ### Community 258 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
 ### Community 259 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
 ### Community 260 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
-### Community 261 - "coder-templates.ts"
-Cohesion: 0.08
-Nodes (24): CODER_TEMPLATES_ROOT, copyFilter(), defaultCoderTemplateStagingRoot(), EXCLUDED, listCoderTemplates(), stageCoderTemplate(), StageCoderTemplateArgs, lines (+16 more)
+### Community 261 - "ref_node_fs"
+Cohesion: 0.05
+Nodes (41): CODER_TEMPLATES_ROOT, copyFilter(), defaultCoderTemplateStagingRoot(), EXCLUDED, listCoderTemplates(), stageCoderTemplate(), StageCoderTemplateArgs, JellyfinConfiguration (+33 more)
 
 ### Community 262 - "Cloudflare Durable Objects"
 Cohesion: 0.10
@@ -4223,24 +4560,24 @@ Cohesion: 0.10
 Nodes (19): Cloudflare Workers Best Practices, CORS Handling, Development Commands, Environment Interface, Error Handling, Export Durable Object Classes, Graceful DO Errors, Observability & Logging (+11 more)
 
 ### Community 271 - "default-stages.ts"
-Cohesion: 0.10
-Nodes (29): DefaultStagesParent, getAuthenticationIdentification(), getAuthenticationLogin(), getAuthenticationMfaValidation(), getAuthenticationPassword(), getAuthenticatorStaticSetup(), getAuthenticatorTotpSetup(), getAuthenticatorWebauthnSetup() (+21 more)
+Cohesion: 0.19
+Nodes (19): DefaultStagesParent, getAuthenticationIdentification(), getAuthenticationLogin(), getAuthenticationMfaValidation(), getAuthenticationPassword(), getAuthenticatorStaticSetup(), getAuthenticatorTotpSetup(), getAuthenticatorWebauthnSetup() (+11 more)
 
 ### Community 272 - "AuthentikApplication"
 Cohesion: 0.10
 Nodes (19): AuthentikApplication, BackchannelProviders, BackchannelProvidersObj, Group, LaunchUrl, MetaDescription, MetaHide, MetaIcon (+11 more)
 
 ### Community 273 - "Transit seal against bao-transit on alpha-site"
-Cohesion: 0.17
-Nodes (4): Alpha Site (Pi 4 Docker host), bao-transit container on alpha-site, Transit seal against bao-transit on alpha-site, Known issues, not yet fixed
+Cohesion: 0.12
+Nodes (7): Alpha Site (Pi 4 Docker host), DatabaseRole/Database CNPG objects, kubernetes/components/postgres Flux component, bao-transit container on alpha-site, KV v2 mount layout (secrets/docs/meta), Transit seal against bao-transit on alpha-site, Known issues, not yet fixed
 
 ### Community 274 - "dynamic/package.json"
 Cohesion: 0.11
-Nodes (18): author, bugs, url, dependencies, jsondiffpatch, description, homepage, jsondiffpatch (+10 more)
+Nodes (18): author, bugs, url, dependencies, jsondiffpatch@^0.7.7, description, homepage, jsondiffpatch (+10 more)
 
 ### Community 275 - "GitHub Copilot Instructions (home-operations)"
-Cohesion: 0.12
-Nodes (20): AuthentikOutputs 1Password Section Mapping Pattern, `AuthentikOutputs` — reading structured 1Password data, ComponentResource hierarchy, Standard Docker Compose Conventions, constants.ts Typed Reference Convention, `constants.ts` — use typed references, GitHub Copilot Instructions (home-operations), Hostname conventions (+12 more)
+Cohesion: 0.10
+Nodes (22): Dynacat/Glance ApplicationDefinition, AuthentikOutputs 1Password Section Mapping Pattern, `AuthentikOutputs` — reading structured 1Password data, ComponentResource hierarchy, Standard Docker Compose Conventions, constants.ts Typed Reference Convention, `constants.ts` — use typed references, definition.yaml ApplicationDefinition Schema Convention (+14 more)
 
 ### Community 276 - "Terraform-derived Pulumi provider (MPL 2.0)"
 Cohesion: 0.15
@@ -4508,7 +4845,7 @@ Nodes (3): M3uParser, RegexPatterns, StringHelpers
 
 ### Community 342 - "Piece K' — Longhorn critical tier"
 Cohesion: 0.08
-Nodes (9): Tier-1 volume list for longhorn-critical, Battery posture on the Pecron F3000LFP, Piece S' — Low-power / control-plane-only mode, Tier 0 / Tier 1 / Tier 2 membership, Low Power — sheds workloads, not nodes, py-kube-downscaler mechanism and polarity, Three-state power model (Full / Low Power / Battery), Control-plane taint readiness audit (+1 more)
+Nodes (11): Per-namespace home-operations redirect pattern, Low Power — sheds workloads, not nodes, py-kube-downscaler mechanism and polarity, Three-state power model (Full / Low Power / Battery), age-unseal keypair, A scoped age key for the static-unseal file, Migrate bootstrap-apps.sh into Pulumi, Migration churn failure modes beyond the CRD cascade (+3 more)
 
 ### Community 343 - "Rai — RAI Reviewer"
 Cohesion: 0.20
@@ -4523,56 +4860,56 @@ Cohesion: 0.05
 Nodes (19): QualityAndSourceHelpers, SeriesInfo, ServerInfo, UserInfo, XtreamChannel, XtreamSeriesDetail, XtreamSeriesEpisode, XtreamSeriesSeason (+11 more)
 
 ### Community 346 - "forgejo/utilities.ts"
-Cohesion: 0.22
-Nodes (5): __config, get(), getEnv(), getEnvBoolean(), getEnvNumber()
+Cohesion: 0.12
+Nodes (8): __config, get(), Provider, ProviderArgs, TerraformConfigResult, getEnv(), getEnvBoolean(), getEnvNumber()
 
 ### Community 347 - "forgejo/package.json"
 Cohesion: 0.09
-Nodes (23): typescript@^6.0.3, typescript, dependencies, @pulumi/pulumi, @types/node, typescript, description, main (+15 more)
+Nodes (24): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+16 more)
 
 ### Community 348 - "pbs/utilities.ts"
-Cohesion: 0.13
-Nodes (10): __config, get(), getVerifyJob(), GetVerifyJobArgs, getVerifyJobOutput(), GetVerifyJobOutputArgs, GetVerifyJobResult, getEnv() (+2 more)
+Cohesion: 0.12
+Nodes (8): __config, get(), Provider, ProviderArgs, TerraformConfigResult, getEnv(), getEnvBoolean(), getEnvNumber()
 
 ### Community 349 - "pbs/package.json"
-Cohesion: 0.08
-Nodes (24): dependencies, @pulumi/pulumi, @types/node, typescript, description, @pulumi/pulumi, @types/node, typescript (+16 more)
+Cohesion: 0.09
+Nodes (24): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+16 more)
 
 ### Community 350 - "tailscale/package.json"
-Cohesion: 0.08
-Nodes (24): dependencies, @pulumi/pulumi, @types/node, typescript, description, @pulumi/pulumi, @types/node, typescript (+16 more)
+Cohesion: 0.09
+Nodes (24): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+16 more)
 
 ### Community 351 - "ports"
-Cohesion: 0.06
-Nodes (45): expose, exposedPort, port, protocol, transport, default, funnel, trustedIPs (+37 more)
+Cohesion: 0.08
+Nodes (28): trustedIPs, transport, tls, tailscale, tunnel, websecure, readTimeout, asDefault (+20 more)
 
 ### Community 352 - "terrifi/package.json"
-Cohesion: 0.10
-Nodes (21): dependencies, @pulumi/pulumi, @types/node, typescript, description, main, name, name (+13 more)
+Cohesion: 0.15
+Nodes (16): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+8 more)
 
 ### Community 353 - "unifi/package.json"
-Cohesion: 0.08
-Nodes (24): dependencies, @pulumi/pulumi, @types/node, typescript, description, @pulumi/pulumi, @types/node, typescript (+16 more)
+Cohesion: 0.09
+Nodes (24): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+16 more)
 
 ### Community 354 - "backups/package.json"
-Cohesion: 0.07
-Nodes (28): author, bugs, url, dependencies, glob, @muhlba91/pulumi-proxmoxve, @pulumi/command, @pulumi/kubernetes (+20 more)
+Cohesion: 0.09
+Nodes (26): author, bugs, url, dependencies, @muhlba91/pulumi-proxmoxve@^8.6.0, @pulumi/command@^1.3.0, @pulumi/kubernetes@^4.34.2, @pulumi/std@^2.3.2 (+18 more)
 
 ### Community 355 - "gulf-of-mexico/package.json"
-Cohesion: 0.06
-Nodes (32): author, bugs, url, dependencies, glob, @muhlba91/pulumi-proxmoxve, @pulumi/command, @pulumi/kubernetes (+24 more)
+Cohesion: 0.08
+Nodes (30): author, bugs, url, dependencies, @muhlba91/pulumi-proxmoxve@^8.6.0, @pulumi/command@^1.3.0, @pulumi/kubernetes@^4.34.2, @pulumi/std@^2.3.2 (+22 more)
 
 ### Community 356 - "home/package.json"
-Cohesion: 0.06
-Nodes (32): author, bugs, url, dependencies, glob, @muhlba91/pulumi-proxmoxve, @pulumi/command, @pulumi/kubernetes (+24 more)
+Cohesion: 0.08
+Nodes (30): author, bugs, url, dependencies, @muhlba91/pulumi-proxmoxve@^8.6.0, @pulumi/command@^1.3.0, @pulumi/kubernetes@^4.34.2, @pulumi/std@^2.3.2 (+22 more)
 
 ### Community 357 - "ocracoke/package.json"
-Cohesion: 0.06
-Nodes (32): author, bugs, url, dependencies, glob, @muhlba91/pulumi-proxmoxve, @pulumi/command, @pulumi/kubernetes (+24 more)
+Cohesion: 0.08
+Nodes (30): author, bugs, url, dependencies, @muhlba91/pulumi-proxmoxve@^8.6.0, @pulumi/command@^1.3.0, @pulumi/kubernetes@^4.34.2, @pulumi/std@^2.3.2 (+22 more)
 
 ### Community 358 - "applications.ts"
 Cohesion: 0.06
-Nodes (44): BackupPlanOrchestrator, rootDomain(), rootDomainSlug(), addUptimeGatus(), awaitOutput(), addGatusDnsRecord(), createGatusDnsUptime(), gatusDnsRecords (+36 more)
+Nodes (32): rootDomain(), rootDomainSlug(), OidcClientCredentials, OpenBaoOidc, OpenBaoOidcArgs, ROLE_BINDINGS, addGatusDnsRecord(), createGatusDnsUptime() (+24 more)
 
 ### Community 359 - "RoleBinding plex-restart"
 Cohesion: 0.05
@@ -4643,8 +4980,8 @@ Cohesion: 0.21
 Nodes (15): ApplicationDefinition: OpenBooks, HelmRelease: openbooks, Flux Kustomization: openbooks, Kustomization (openbooks resources), HelmRelease: bookbounty-audio, ApplicationDefinition: Readarr Audio, HelmRelease: readarr-audio, Flux Kustomization: readarr-audio (+7 more)
 
 ### Community 376 - "Observability / Grafana"
-Cohesion: 0.15
-Nodes (17): GrafanaFolder: K8S, GrafanaDashboard: k8s-system-api-server (dotdc, raw URL), GrafanaDashboard: k8s-system-coredns (dotdc, raw URL), GrafanaDashboard: k8s-views-global (dotdc, raw URL), GrafanaDashboard: k8s-views-namespaces (dotdc, raw URL), GrafanaDashboard: k8s-views-nodes (dotdc, raw URL), GrafanaDashboard: k8s-views-pods (dotdc, raw URL), GrafanaDashboard: kubernetes-api-server (grafana.com 15761) (+9 more)
+Cohesion: 0.19
+Nodes (14): GrafanaFolder: K8S, GrafanaDashboard: k8s-system-api-server (dotdc, raw URL), GrafanaDashboard: k8s-views-global (dotdc, raw URL), GrafanaDashboard: k8s-views-namespaces (dotdc, raw URL), GrafanaDashboard: k8s-views-nodes (dotdc, raw URL), GrafanaDashboard: k8s-views-pods (dotdc, raw URL), GrafanaDashboard: kubernetes-api-server (grafana.com 15761), GrafanaFolder: Kubernetes (+6 more)
 
 ### Community 377 - "compilerOptions"
 Cohesion: 0.12
@@ -4740,7 +5077,7 @@ Nodes (18): `close(): Promise<void>`, `closed: Promise<void>`, Complete Example,
 
 ### Community 400 - "CLAUDE.md"
 Cohesion: 0.15
-Nodes (15): Agent Comment Signing Convention, Agent comment signing (estate rule), Architecture, Conventions, Crew Multi-Agent Team System, Crew — your AI team, Developer Workflow, CLAUDE.md (Claude Code Guidance) (+7 more)
+Nodes (14): Agent Comment Signing Convention, Agent comment signing (estate rule), Architecture, Conventions, Crew Multi-Agent Team System, Crew — your AI team, Developer Workflow, CLAUDE.md (Claude Code Guidance) (+6 more)
 
 ### Community 401 - "Scheduling"
 Cohesion: 0.12
@@ -4811,8 +5148,8 @@ Cohesion: 0.12
 Nodes (15): Obj, AssignedApplicationName, AssignedApplicationSlug, AssignedBackchannelApplicationName, AssignedBackchannelApplicationSlug, AuthenticationFlow, AuthorizationFlow, Component (+7 more)
 
 ### Community 418 - "Tailscale Ingress & API-Key Route Components"
-Cohesion: 0.16
-Nodes (14): docker/_common/backrest/compose.yaml (traefik.http.routers labels), apps/equestria/media/radarr/helmrelease.yaml (example), network/traefik HelmRelease (dropped dependsOn), components/common/middleware.yaml (ExtensionRef namespace trap), components/postgres/ks.yaml (nested-Kustomization precedent), components/postgres/superuser (JSON6902 pattern precedent), route/api-key Component (LAN API-key carve-out), tailscale/api-key IngressRoute (${APP}-tailnet-api) (+6 more)
+Cohesion: 0.19
+Nodes (12): docker/_common/backrest/compose.yaml (traefik.http.routers labels), components/common/middleware.yaml (ExtensionRef namespace trap), components/postgres/ks.yaml (nested-Kustomization precedent), components/postgres/superuser (JSON6902 pattern precedent), route/api-key Component (LAN API-key carve-out), tailscale/api-key IngressRoute (${APP}-tailnet-api), tailscale/api-key Component, tailscale/ingress Ingress (${APP}-tailscale-ingress) (+4 more)
 
 ### Community 420 - "IPTV / Live TV"
 Cohesion: 0.11
@@ -4827,12 +5164,12 @@ Cohesion: 0.12
 Nodes (16): Anti-Patterns, Branch Naming Convention, Cleanup After Merge, Context, Coordinated PRs, .crew/ State in Worktrees, Local Linking for Testing, Multi-Repo Downstream Scenarios (+8 more)
 
 ### Community 423 - "Equestria / Media"
-Cohesion: 0.12
-Nodes (15): lidarr-postgres-databases Kustomization, lidarr-log CNPG Database, Servarr main/log database pair, PinePods ApplicationDefinition, PinePods authentik OAuth2 confidential client, pinepods-values ExternalSecret, Three-store credential fan-in (openbao, database, cluster), pinepods HelmRelease (+7 more)
+Cohesion: 0.13
+Nodes (13): lidarr-postgres-databases Kustomization, lidarr-log CNPG Database, Servarr main/log database pair, pinepods-values ExternalSecret, Three-store credential fan-in (openbao, database, cluster), pinepods HelmRelease, pinepods HelmRepository (helm.pinepods.online), pinepods HTTPRoute (internal gateway) (+5 more)
 
-### Community 424 - "getGroup.ts"
-Cohesion: 0.09
-Nodes (19): getGroup(), GetGroupArgs, getGroupOutput(), GetGroupOutputArgs, GetGroupResult, getGroups(), GetGroupsArgs, getGroupsOutput() (+11 more)
+### Community 424 - "data"
+Cohesion: 0.06
+Nodes (37): RADARR__AUTH__OIDCAUTHORITY, RADARR__AUTH__OIDCCLIENTID, RADARR__AUTH__OIDCCLIENTSECRET, RADARR__POSTGRES__HOST, RADARR__POSTGRES__LOGDB, RADARR__POSTGRES__MAINDB, RADARR__POSTGRES__PASSWORD, RADARR__POSTGRES__PORT (+29 more)
 
 ### Community 425 - "Durable Objects Configuration"
 Cohesion: 0.20
@@ -4840,23 +5177,23 @@ Nodes (10): Basic Setup, Binding Options, Commands, Durable Objects Configuratio
 
 ### Community 426 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
 ### Community 427 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
 ### Community 428 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
 ### Community 429 - "compilerOptions"
 Cohesion: 0.09
-Nodes (21): compilerOptions, allowImportingTsExtensions, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit, noFallthroughCasesInSwitch (+13 more)
+Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, experimentalDecorators, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+13 more)
 
 ### Community 430 - "forgejo/package.json"
 Cohesion: 0.09
-Nodes (23): @types/node@^26.6.5, @types/node, dependencies, @pulumi/pulumi, @types/node, typescript, description, main (+15 more)
+Nodes (24): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+16 more)
 
 ### Community 431 - "Cloudflare Agents SDK"
 Cohesion: 0.13
@@ -5035,8 +5372,8 @@ Cohesion: 0.13
 Nodes (14): Anti-Patterns to Flag, Architecture, Code Patterns, Configuration, FIRST: Fetch Latest References, Observability, Principles, Reference Documentation (+6 more)
 
 ### Community 475 - "OpenBao Postgres Client-Certificate Credential"
-Cohesion: 0.18
-Nodes (3): Client Certificate CN Comes from DatabaseRole spec.name, baoadmin — Certificate-Only Superuser Rotation Identity, Talos API CA Rotation
+Cohesion: 0.15
+Nodes (4): Client Certificate CN Comes from DatabaseRole spec.name, baoadmin — Certificate-Only Superuser Rotation Identity, OpenBao database Secrets Engine (stacks/system), Talos API CA Rotation
 
 ### Community 476 - "Patterns"
 Cohesion: 0.13
@@ -5046,25 +5383,17 @@ Nodes (14): Anti-Patterns, Config Directory Isolation (Advanced), Context, ✓ C
 Cohesion: 0.13
 Nodes (14): Action Item Enforcement, Blocking Semantics, Cadence Enforcement, Coordinator Integration, Core Function: Test-RetroOverdue, Detection Logic, Purpose, Ralph integration example (+6 more)
 
-### Community 478 - "1Password used as a cross-stack state store"
-Cohesion: 0.13
-Nodes (4): Minio on TrueNAS — Pulumi state and backups, eso-parity-check.sh pre-batch gate, The five jobs 1Password was doing, Phase 10 — the PushSecrets are retired
-
 ### Community 479 - "GlobalResources (components/globals.ts)"
 Cohesion: 0.11
-Nodes (11): Equestria cluster, ClusterDefinition discriminated union, GlobalResources (components/globals.ts), OPClient — 1Password Connect client, Stack system flow (mise → GlobalResources → components), Error and logging conventions, Path aliases @components/@dynamic/@openapi, Pulumi-managed Docker deployment workflow (+3 more)
+Nodes (9): GlobalResources (components/globals.ts), OPClient — 1Password Connect client, Stack system flow (mise → GlobalResources → components), Error and logging conventions, Path aliases @components/@dynamic/@openapi, Pulumi-managed Docker deployment workflow, 1Password Connect integration, Vendor SDK wrappers and their providers (+1 more)
 
 ### Community 480 - "Network / Traefik"
 Cohesion: 0.15
 Nodes (13): Traefik Dashboard ApplicationDefinition, error-pages HelmRelease, external Gateway, authenticated-user Middleware chain, local-user Middleware chain, cloudflare-ips ipAllowList Middleware, crowdsec-bouncer-plugin Middleware, error-pages Middleware (+5 more)
 
 ### Community 481 - "traefik Kustomization"
-Cohesion: 0.24
-Nodes (8): traefik-crds Kustomization (manually applied CRDs), traefik HelmRelease (chart 41.4.0), JSON6902 patch removing spec.values.defaultPodOptions on traefik HelmRelease, traefik Kustomization, traefik-values ConfigMapGenerator (from values.yaml), traefik middleware Kustomization, tailscale-local Middleware, tailscale-network Middleware (ipAllowList 100.64.0.0/10, depth 1)
-
-### Community 482 - "Observability / Blackbox Exporter"
-Cohesion: 0.24
-Nodes (10): HelmRelease: blackbox-exporter, OCIRepository: prometheus-blackbox-exporter chart 11.17.2, Blackbox probe module: dns_soa, Blackbox probe module: http_2xx, Blackbox probe module: http_404, Blackbox probe module: icmp, Blackbox probe module: ssh_banner, Blackbox probe module: tcp_connect (+2 more)
+Cohesion: 0.33
+Nodes (7): JSON6902 patch removing spec.values.defaultPodOptions on traefik HelmRelease, traefik Kustomization, traefik-values ConfigMapGenerator (from values.yaml), traefik middleware Kustomization, tailscale-local Middleware, tailscale-network Middleware (ipAllowList 100.64.0.0/10, depth 1), traefik rules Kustomization
 
 ### Community 483 - "$defs"
 Cohesion: 0.12
@@ -5254,9 +5583,9 @@ Nodes (14): Advanced Options, Automatic Provisioning (Beta), Automatic Type Gene
 Cohesion: 0.14
 Nodes (14): Browser Compatibility, Browser Tab, Code Editor, Configuration, Deploying from Playground, DevTools Integration, Getting Started, HTTP Test Panel (+6 more)
 
-### Community 530 - "dns-celestia Service (bootstrap)"
-Cohesion: 0.16
-Nodes (15): Bootstrap Secret Inventory, OpenBao bootstrap material README, dns-celestia-alerts PrometheusRule, dns-celestia-doh Probe, dns-celestia-dot Probe, dns-celestia Probe (SOA), dns-celestia Service (bootstrap), dockge-as-alerts PrometheusRule (+7 more)
+### Community 530 - "tailscale.ts"
+Cohesion: 0.05
+Nodes (44): authentikVip, dns, dnsServers, Groups, Tailscale, KubernetesClusterDefinition, getDnsMachines(), getTailscaleClient() (+36 more)
 
 ### Community 531 - "Configuration"
 Cohesion: 0.14
@@ -5279,8 +5608,8 @@ Cohesion: 0.14
 Nodes (13): Conflict Handling, Crew Notes Protocol, Decision notes, Every work round, Fetch / Push, Namespaces, Note JSON Schema, One-time setup (+5 more)
 
 ### Community 536 - "SGC folds into equestria (consolidation plan)"
-Cohesion: 0.17
-Nodes (4): Repo consolidation and Flux re-point (piece 21), Stargate Command (SGC) cluster, github-status-token replicated into 17 namespaces, volsync component ExternalSecret fan-out
+Cohesion: 0.14
+Nodes (6): Equestria cluster, Repo consolidation and Flux re-point (piece 21), Stargate Command (SGC) cluster, ClusterDefinition discriminated union, github-status-token replicated into 17 namespaces, volsync component ExternalSecret fan-out
 
 ### Community 537 - "Converting the 22 OnePasswordItem CRs"
 Cohesion: 0.17
@@ -5298,9 +5627,9 @@ Nodes (10): evaluate(), _label(), main(), parse_days(), parse_pull(), parse_repo
 Cohesion: 0.20
 Nodes (13): BAO_ADDR, BAO_PG_CONNECTION_URL, cleanup(), fail(), PGPASSWORD, RCLONE_CONFIG, RCLONE_CONFIG_BAO_HOST, RCLONE_CONFIG_BAO_KEY_FILE (+5 more)
 
-### Community 541 - "Observability / Grafana"
-Cohesion: 0.13
-Nodes (11): traefik rules Kustomization, ServiceSustained5xx PrometheusRule alert, AMD GPU (amdgpu) GrafanaDashboard, $${DS_PROMETHEUS} doubled-dollar escaping for Flux postBuild substitution, GPU GrafanaFolder, Intel GPU (Quick Sync) GrafanaDashboard, gpu.intel.com/monitoring device resource (renamed from i915_monitoring at 0.36.0), intel-gpu-exporter HelmRelease (app-template) (+3 more)
+### Community 541 - "intel-gpu-exporter HelmRelease (app-template)"
+Cohesion: 0.28
+Nodes (7): AMD GPU (amdgpu) GrafanaDashboard, $${DS_PROMETHEUS} doubled-dollar escaping for Flux postBuild substitution, GPU GrafanaFolder, Intel GPU (Quick Sync) GrafanaDashboard, gpu.intel.com/monitoring device resource (renamed from i915_monitoring at 0.36.0), intel-gpu-exporter HelmRelease (app-template), intel-gpu-exporter Flux Kustomization
 
 ### Community 542 - "openebs-values ConfigMapGenerator"
 Cohesion: 0.20
@@ -5627,8 +5956,8 @@ Cohesion: 0.15
 Nodes (12): 3-Cycle Protocol, Anti-Patterns, Bad spawn prompt (don't do this), Coordinator Validation Checklist, Examples, Good spawn prompt, Issue Dedup Check (Mandatory), Iterative Retrieval Skill (+4 more)
 
 ### Community 623 - "Equestria / Books"
-Cohesion: 0.28
-Nodes (9): Audiobookshelf ApplicationDefinition, authentik forward_single proxy access pattern, audiobookshelf Flux Kustomization, volsync + tailscale component pairing for books apps, audiobookshelf resource kustomization, books category kustomization, LazyLibrarian ApplicationDefinition, lazylibrarian Flux Kustomization (+1 more)
+Cohesion: 0.40
+Nodes (6): audiobookshelf Flux Kustomization, volsync + tailscale component pairing for books apps, audiobookshelf resource kustomization, books category kustomization, lazylibrarian Flux Kustomization, lazylibrarian resource kustomization
 
 ### Community 624 - "Equestria / Books"
 Cohesion: 0.22
@@ -5774,10 +6103,6 @@ Nodes (4): Config Binding, Manage Indexes, Manage Vectors, Vectorize (Vector Dat
 Cohesion: 0.17
 Nodes (11): Data Sources, Key Gotchas, Output Format, Process, Step 1 — Fetch Gatus endpoint statuses, Step 2 — Fetch AlertManager active alerts, Step 3 — Identify patterns, Step 4 — Check cluster state for implicated namespaces (+3 more)
 
-### Community 660 - "stacks/authentik/index.ts"
-Cohesion: 0.08
-Nodes (14): AuthentikGroups, GroupDef, Roles, PurposeEnum, authentikFlows, authentikGroups, _authentikSecret, flows (+6 more)
-
 ### Community 662 - "Email Handling"
 Cohesion: 0.17
 Nodes (11): Address-Based (Inbound Mail), Basic Email Handler, Catch-All (Single Instance), Combining Resolvers, Email Handling, Overview, Resolvers, Routing Emails (+3 more)
@@ -5811,8 +6136,8 @@ Cohesion: 0.05
 Nodes (42): apiVersion, enabled, secretRef, name, value, valueFrom, kind, memory (+34 more)
 
 ### Community 670 - "garage.ts"
-Cohesion: 0.07
-Nodes (35): BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE, BACKREST_GARAGE_REPO_ENV, BACKREST_GARAGE_REPO_FLAGS, backrestGarageBucket(), backrestGarageEndpoint(), BACKUP_OPT_OUT_STACKS (+27 more)
+Cohesion: 0.08
+Nodes (34): BACKREST_CREDENTIALS_DIR, BACKREST_CREDENTIALS_FILE, BACKREST_CREDENTIALS_PROFILE, BACKREST_GARAGE_REPO_ENV, BACKREST_GARAGE_REPO_FLAGS, backrestGarageBucket(), backrestGarageEndpoint(), backrestGarageRepoUri() (+26 more)
 
 ### Community 671 - "Email Routing Configuration"
 Cohesion: 0.17
@@ -5942,14 +6267,6 @@ Nodes (11): MetaIconThemedUrls, Dark, Light, PrometheusVectorMetric, Cluster, Cl
 Cohesion: 0.11
 Nodes (15): CPU Limits, DO Storage Configuration, Initialization, KV-backed (Legacy), Location Control, SQLite-backed (Recommended), TypeScript Setup, Cloudflare Durable Objects Storage (+7 more)
 
-### Community 703 - "Piece R — Rotate equestria's control planes to workers"
-Cohesion: 0.09
-Nodes (4): Piece J — Trim volumesnapshotcontents, Piece P' — NVMe replacement (deferred), ShiJi 256GB NVMe etcd substrate, Piece R — Rotate equestria's control planes to workers
-
-### Community 704 - "Migration churn failure modes beyond the CRD cascade"
-Cohesion: 0.09
-Nodes (11): 08 — Test-target re-designation, tsidp staging spec, Flat 10.10.0.0/16 L2 with Cilium native routing, Per-namespace home-operations redirect pattern, Piece V — Talos machine config into Pulumi, talhelper → @pulumiverse/talos retirement map, age-unseal keypair, A scoped age key for the static-unseal file (+3 more)
-
 ### Community 705 - "GitHub Copilot Instructions — home-operations"
 Cohesion: 0.15
 Nodes (11): Cluster & Node Topology, Docker / Dockge Patterns, Every service needs a `definition.yaml`, GitHub Copilot Instructions — home-operations, Safety Rules (summary), Standard Compose conventions, Docker / Dockge Memory, DockgeLxc Variable Scoping: `${CLUSTER_DOMAIN}` vs `${searchDomain}` (+3 more)
@@ -5959,8 +6276,8 @@ Cohesion: 0.17
 Nodes (11): Additional Resources, Appropriate Use Cases, Background Colors, Best Practices, Color Definitions, Color Usage Guidelines, Colors to Avoid, Colors to Use Sparingly (+3 more)
 
 ### Community 707 - "reconcile_repo"
-Cohesion: 0.14
-Nodes (6): ApiError, Forge, ForgejoApi, is_gated(), latest_state(), reconcile_repo()
+Cohesion: 0.27
+Nodes (4): Forge, is_gated(), latest_state(), reconcile_repo()
 
 ### Community 708 - "Common Errors"
 Cohesion: 0.22
@@ -5975,7 +6292,7 @@ Cohesion: 0.17
 Nodes (11): 1. Find Recent Sessions, 2. Filter Out Automated Sessions, 3. Search by Topic (FTS5), 4. Search by Working Directory, 5. Get Full Session Context Before Resuming, 6. Detect Orphaned Issue Work, 7. Resume a Session, Anti-Patterns (+3 more)
 
 ### Community 711 - "ApplicationDefinition CRD Schema & Definitions"
-Cohesion: 0.32
+Cohesion: 0.28
 Nodes (8): OpenBao Gatus health probe with standbyok=true, OpenBao OIDC double /oidc/ callback path convention, OpenBao ApplicationDefinition, ApplicationDefinition CRD (driscoll.dev/v1), authentik provider schema block (oauth2/proxy/saml/scim/ldap/radius/rac/microsoftEntra/googleWorkspace/ssf), gatus endpoints[] schema block (structural, no preserve-unknown-fields), maintenance-windows field (Low Power nightly shed 02:00-09:00), Grafana ApplicationDefinition
 
 ### Community 712 - "spec"
@@ -6242,9 +6559,9 @@ Nodes (11): Architecture Patterns, Build + Deploy Pattern, Component Resources, 
 Cohesion: 0.18
 Nodes (11): Architecture, Cloudflare R2 Data Catalog Skill Reference, Current Status, Decision Tree: Is R2 Data Catalog Right For You?, In This Reference, Limits, Reading Order, See Also (+3 more)
 
-### Community 778 - "Jellyfin: SQLite → PostgreSQL trial (`jellyfin-pg`)"
-Cohesion: 0.12
-Nodes (16): 1. Stand up the empty instance, 2. Take a copy of production's database, 3.1 Render the load file (offline), 3.2 Dump the target schema, 3.3 Pre-clean — THE STEP THE FORK'S README DOES NOT HAVE, 3.4 Load, 3.5 Carry the code-migration state across, 3.6 Bring the config across (+8 more)
+### Community 778 - "Jellyfin on PostgreSQL (`jellyfin-pg`)"
+Cohesion: 0.15
+Nodes (12): 1. Bring the clone up, 2. Empty the database, 3. Install, migrate, activate, 4. Verify, Back to SQLite, How the pod is put together, Jellyfin on PostgreSQL (`jellyfin-pg`), Re-clone from production (+4 more)
 
 ### Community 779 - "Cloudflare R2 SQL Skill Reference"
 Cohesion: 0.18
@@ -6355,16 +6672,16 @@ Cohesion: 0.18
 Nodes (10): 1. Version Format, 2. Prerelease Versions Are Ephemeral, 3. SDK and CLI Version Sync, 4. npm Workspace Semver Footgun, 5. Who Bumps Versions, 6. Version Bump Lifecycle, 7. CI Enforcement, 8. Incident Reference — PR #640 (+2 more)
 
 ### Community 806 - "Dynacat/Glance Deployment & Secret Conventions"
-Cohesion: 0.22
-Nodes (6): Dynacat/Glance ApplicationDefinition, Dynacat ExternalSecret (env from OpenBao), downscaler/exclude Annotation (Low Power Keep-List), Dynacat HelmRelease (app-template), Dynacat Kustomization, definition.yaml ApplicationDefinition Schema Convention
+Cohesion: 0.29
+Nodes (3): Dynacat ExternalSecret (env from OpenBao), downscaler/exclude Annotation (Low Power Keep-List), Dynacat HelmRelease (app-template)
 
 ### Community 807 - "PrometheusVectorData"
 Cohesion: 0.18
 Nodes (11): PrometheusVector, Data, Status, PrometheusVectorAnalysis, Children, ExecutionTime, Name, PrometheusVectorData (+3 more)
 
 ### Community 808 - "Phase 8a — stacks write generated credentials to OpenBao"
-Cohesion: 0.20
-Nodes (10): ApplicationDefinition CRD drives Authentik registration, addUptimeGatus() central uptime registration, helpers.ts utility module, Gatus uptime monitoring registration, Authentik application generation from a definition, definition.yaml app definition file, Gatus/uptime definitions for alpha-site, Generated OIDC client credentials written to 1Password (+2 more)
+Cohesion: 0.12
+Nodes (13): No CI/CD pipelines detected, ApplicationDefinition CRD drives Authentik registration, addUptimeGatus() central uptime registration, helpers.ts utility module, TypeScript strict-mode settings, Gatus uptime monitoring registration, No test framework configured, Authentik application generation from a definition (+5 more)
 
 ### Community 809 - "Context7-aware development"
 Cohesion: 0.18
@@ -6378,10 +6695,6 @@ Nodes (7): TailscaleDns, Metadata, Status, TailscaleDnsStatus, Nameserver, Tails
 Cohesion: 0.24
 Nodes (9): pg-backups Flux Kustomization, postgres-backup-script configMapGenerator, postgres app aggregate kustomization, Valkey ApplicationDefinition, valkey HelmRelease, fast-node-eviction failover component, valkey Flux Kustomization, valkey resource kustomization (+1 more)
 
-### Community 812 - "Equestria / Media"
-Cohesion: 0.13
-Nodes (8): sonarr-postgres-databases Kustomize overlay, sonarr-log CNPG Database, Tautulli ApplicationDefinition, Tautulli Flux Kustomization, Tautulli Kustomize build, Watchstate ApplicationDefinition, Watchstate Flux Kustomization, Watchstate Kustomize build
-
 ### Community 813 - "Stremio ApplicationDefinition"
 Cohesion: 0.50
 Nodes (3): Stremio ApplicationDefinition, Stremio Flux Kustomization, Stremio Kustomize build
@@ -6391,8 +6704,8 @@ Cohesion: 0.25
 Nodes (11): AlertmanagerConfig: alertmanager, Pushover receiver, ApplicationDefinition: alertmanager, HelmRelease: alertmanager, Flux Kustomization: alertmanager, Kustomize overlay: alertmanager, ConfigMap generator: alertmanager-values, alertmanager chart values (+3 more)
 
 ### Community 815 - "coderd/index.ts"
-Cohesion: 0.05
-Nodes (36): AiModelPriceArgs, AiModelPriceState, GetGroupArgs, GetGroupOutputArgs, GetGroupResult, GetOrganizationArgs, GetOrganizationOutputArgs, GetOrganizationResult (+28 more)
+Cohesion: 0.06
+Nodes (35): AiModelPriceArgs, AiModelPriceState, GetOrganizationArgs, GetOrganizationOutputArgs, GetOrganizationResult, GetUserArgs, GetUserOutputArgs, GetUserResult (+27 more)
 
 ### Community 816 - "FakeForge"
 Cohesion: 0.19
@@ -6407,8 +6720,8 @@ Cohesion: 0.14
 Nodes (14): kafka-producer, type, type, properties, enum, type, type, type (+6 more)
 
 ### Community 819 - "tailscale/utilities.ts"
-Cohesion: 0.22
-Nodes (5): __config, get(), getEnv(), getEnvBoolean(), getEnvNumber()
+Cohesion: 0.12
+Nodes (8): AwsExternalId, AwsExternalIdArgs, AwsExternalIdState, __config, get(), getEnv(), getEnvBoolean(), getEnvNumber()
 
 ### Community 820 - "Receiving & Routing Inbound Email"
 Cohesion: 0.20
@@ -6467,8 +6780,8 @@ Cohesion: 0.20
 Nodes (10): Batch Operations, D1 API Reference, Error Handling, Prepared Statements (Required for Security), Query Execution Methods, Read Replication (Paid Plans), REST API (HTTP) Access, Sessions API (Paid Plans) (+2 more)
 
 ### Community 834 - "setup-status/resources/server.mjs"
-Cohesion: 0.07
-Nodes (52): Core workflow, In this estate, Multi-step work: `toolport_run_script`, Results, approvals, and errors, Search tips, Working through Toolport, attempt(), authentik() (+44 more)
+Cohesion: 0.06
+Nodes (62): Core workflow, In this estate, Multi-step work: `toolport_run_script`, Results, approvals, and errors, Search tips, Working through Toolport, Accounts, Changing things later (+54 more)
 
 ### Community 835 - "SendEmail Binding"
 Cohesion: 0.20
@@ -6490,9 +6803,9 @@ Nodes (7): Cloudflare Images Skill Reference, Core Methods, In This Reference, K
 Cohesion: 0.20
 Nodes (10): Delete Operations, Error Handling, Get with Metadata, KV API Reference, List Operations, Parallel Reads, Performance Considerations, Read Operations (+2 more)
 
-### Community 840 - "plan.ts"
-Cohesion: 0.14
-Nodes (12): CLUSTER_MOVES, DELETE, DeleteEntry, Entry, MoveEntry, NEW_PREFIX_MOVES, Phase, RETIRE (+4 more)
+### Community 840 - "data"
+Cohesion: 0.06
+Nodes (37): SONARR__AUTH__OIDCAUTHORITY, SONARR__AUTH__OIDCCLIENTID, SONARR__AUTH__OIDCCLIENTSECRET, SONARR__POSTGRES__HOST, SONARR__POSTGRES__LOGDB, SONARR__POSTGRES__MAINDB, SONARR__POSTGRES__PASSWORD, SONARR__POSTGRES__PORT (+29 more)
 
 ### Community 841 - "Configuration"
 Cohesion: 0.20
@@ -6504,7 +6817,7 @@ Nodes (10): Advanced Mode, Bindings Usage, Context Object, Dynamic Routes, File-
 
 ### Community 843 - "coderd/package.json"
 Cohesion: 0.09
-Nodes (23): dependencies, @pulumi/pulumi, @types/node, typescript, description, typescript, main, name (+15 more)
+Nodes (25): dependencies, @pulumi/pulumi@^3.269.0, @types/node@^20, typescript@^4.7.0, description, @pulumi/pulumi, @types/node, typescript (+17 more)
 
 ### Community 844 - "API & Data Sources"
 Cohesion: 0.20
@@ -6943,7 +7256,7 @@ Cohesion: 0.25
 Nodes (7): $defs, externalEndpoint, description, $ref, required, $schema, title
 
 ### Community 957 - "policyExpression.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PolicyExpression, PolicyExpressionArgs, PolicyExpressionState
 
 ### Community 958 - "Authentik"
@@ -7018,10 +7331,6 @@ Nodes (9): Adaptive DDoS Profiles, Alerting, Common Categories, Dashboard Setup,
 Cohesion: 0.22
 Nodes (9): Alarms, Async KV API (Both backends), DO Storage API Reference, Misc, Point-in-Time Recovery, SQL API, Storage Options, Sync KV API (SQLite only) (+1 more)
 
-### Community 976 - "providerWsFederation.ts"
-Cohesion: 0.29
-Nodes (3): ProviderWsFederation, ProviderWsFederationArgs, ProviderWsFederationState
-
 ### Community 977 - "Cloudflare Email Routing Skill Reference"
 Cohesion: 0.22
 Nodes (9): Architecture, Cloudflare Email Routing Skill Reference, Decision Tree, In This Reference, Key Concepts, Overview, Quick Start, Reading Order (+1 more)
@@ -7047,11 +7356,11 @@ Cohesion: 0.22
 Nodes (9): Best Practices, Debugging, From Miniflare 2.x to 3+, From unstable_dev to Miniflare, From Wrangler Dev, Gotchas & Troubleshooting, Migration Guides, Miniflare Limitations (+1 more)
 
 ### Community 983 - "userOffboarding.ts"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): RFC-3339, UserOffboarding, UserOffboardingArgs, UserOffboardingState
 
 ### Community 984 - "rbacPermissionRole.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RbacPermissionRole, RbacPermissionRoleArgs, RbacPermissionRoleState
 
 ### Community 985 - "Configuration & Deployment"
@@ -7263,11 +7572,11 @@ Cohesion: 0.22
 Nodes (9): allowScripts, file:sdks/authentik, file:sdks/coderd, file:sdks/forgejo, file:sdks/pbs, file:sdks/tailscale, file:sdks/technitium, file:sdks/terrifi (+1 more)
 
 ### Community 1037 - "agent.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Agent, AgentArgs, AgentState
 
 ### Community 1038 - "endpointsConnectorAgent.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EndpointsConnectorAgent, EndpointsConnectorAgentArgs, EndpointsConnectorAgentState
 
 ### Community 1039 - "Configuration & Deployment"
@@ -7339,7 +7648,7 @@ Cohesion: 0.22
 Nodes (9): Authentication, Caching, CORS Handling, Error Handling, Hono Framework, JSON API, Proxy Pattern, Router Pattern (+1 more)
 
 ### Community 1056 - "objectAttribute.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ObjectAttribute, ObjectAttributeArgs, ObjectAttributeState
 
 ### Community 1057 - "Cloudflare Workflows"
@@ -7419,12 +7728,12 @@ Cohesion: 0.22
 Nodes (8): Boundaries, Collaboration, How I Work, Identity, Model, Tank — Kubernetes Workloads & Flux Delivery, Voice, What I Own
 
 ### Community 1076 - "sourceSaml.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourceSaml, SourceSamlArgs, SourceSamlState
 
-### Community 1077 - "Project Context"
-Cohesion: 0.22
-Nodes (8): Coordinator, Crew Team, Cross-crew topology, Members, Platform domain ownership, Project Context, Repository, Stack
+### Community 1077 - "data"
+Cohesion: 0.05
+Nodes (36): apiVersion, ADMIN_STATIC_API_KEY, AUTO_LOGIN_PASSWORD, AUTO_LOGIN_USERNAME, ENCRYPTION_KEY, JWT_SECRET, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET (+28 more)
 
 ### Community 1078 - "Casting Reference"
 Cohesion: 0.22
@@ -7483,8 +7792,8 @@ Cohesion: 0.11
 Nodes (9): volsync-mover-nfs MutatingAdmissionPolicy injects the per-cluster repository mount, RUNBOOK Scenario B — the break-glass standby is a procedure, not a command, Eight ungated OnePasswordItem dual-writes, ClusterDefinition, ComponentResource pattern, GlobalResources (central provider + credential wiring), Home Operations Development Guide, OPClient (1Password Connect client) (+1 more)
 
 ### Community 1092 - "kubernetes/components/postgres Flux component"
-Cohesion: 0.14
-Nodes (11): Adding a new app to the postgres component, Credential Secret via pgsql-user-template, DatabaseRole/Database CNPG objects, kubernetes/components/postgres Flux component, KV v2 mount layout (secrets/docs/meta), op-to-bao conversion script (plan/apply/verify), 1Password → OpenBao migration plan, OpenBao path scheme and title→slug rule (+3 more)
+Cohesion: 0.25
+Nodes (6): Adding a new app to the postgres component, Credential Secret via pgsql-user-template, op-to-bao conversion script (plan/apply/verify), OpenBao path scheme and title→slug rule, Staged migration phases 0–11, Phase 4 — bulk conversion, dual-run begins
 
 ### Community 1093 - "env"
 Cohesion: 0.05
@@ -7583,7 +7892,7 @@ Cohesion: 0.25
 Nodes (8): 409 Conflict on Flag Creation, Client Provider Token Exposure, Common Errors, Flag Always Returns Default Value, FLAG_NOT_FOUND in Client Provider, Inconsistent Rollout Results, TYPE_MISMATCH Error in Details, Update Overwrites Entire Flag
 
 ### Community 1117 - "providerMicrosoftEntra.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderMicrosoftEntra, ProviderMicrosoftEntraArgs, ProviderMicrosoftEntraState
 
 ### Community 1118 - "Gotchas & Best Practices"
@@ -7751,7 +8060,7 @@ Cohesion: 0.25
 Nodes (8): 409 Conflict on Flag Creation, Client Provider Token Exposure, Common Errors, Flag Always Returns Default Value, FLAG_NOT_FOUND in Client Provider, Inconsistent Rollout Results, TYPE_MISMATCH Error in Details, Update Overwrites Entire Flag
 
 ### Community 1159 - "providerOauth2Dcr.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderOauth2Dcr, ProviderOauth2DcrArgs, ProviderOauth2DcrState
 
 ### Community 1160 - "Gotchas & Best Practices"
@@ -7767,7 +8076,7 @@ Cohesion: 0.25
 Nodes (8): "Binding not found", Common Errors, "D1 error", "KV key not found", "Module not found", "Request exceeded CPU limit", "Script too large", "Too many subrequests"
 
 ### Community 1163 - "requestRule.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RequestRule, RequestRuleArgs, RequestRuleState
 
 ### Community 1164 - "API Reference"
@@ -7843,7 +8152,7 @@ Cohesion: 0.25
 Nodes (8): Command Properties, Include Properties, Root-Level Properties, Special Variables, Task Properties, Taskfile Schema Reference, Variable Types, Wildcard Tasks
 
 ### Community 1182 - "requestRuleBinding.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RequestRuleBinding, RequestRuleBindingArgs, RequestRuleBindingState
 
 ### Community 1183 - "Work Routing"
@@ -7890,9 +8199,9 @@ Nodes (8): Pagination, Count, Current, EndIndex, Next, Previous, StartIndex, Tot
 Cohesion: 0.33
 Nodes (3): rclone-sftp read-only SFTP export service, PecronDeviceMissing alert, PecronDeviceStale alert
 
-### Community 1194 - "Prometheus/Alloy Compose Stack"
-Cohesion: 0.25
-Nodes (7): Alloy Config Reloader Service, Grafana Alloy Service, Blackbox Exporter Service, cAdvisor Service, Node Exporter Service, Prometheus Config Reloader Service, Prometheus Server Service
+### Community 1194 - "spec"
+Cohesion: 0.06
+Nodes (36): apiVersion, labels, name, namespace, kind, app.kubernetes.io/name, driscoll.dev/name, metadata (+28 more)
 
 ### Community 1195 - "tailscale.d.ts"
 Cohesion: 0.25
@@ -7903,12 +8212,12 @@ Cohesion: 0.25
 Nodes (8): Background Mode (Default), Boundaries, Confidence Ratings (Verification Mode), Devil's Advocate Output (DA Mode), Fact Checker State, Fact Checker — Verification & Devil's Advocate, Roster Entry, Triggers
 
 ### Community 1197 - "04 — Pulumi state backend: Minio-on-truenas → Postgres DIY on celestia"
-Cohesion: 0.22
-Nodes (4): Minio retained as a versioned stack-export archive, The live literal import on the home-operations Minio bucket, StandardDns imports are structurally inert (but the wire is still there), Minio bucket protect + retainOnDelete
+Cohesion: 0.13
+Nodes (7): vault#127 — etcd fsync starvation on fluttershy/kerfuffle PNY SATA disks, Minio retained as a versioned stack-export archive, 04 — Pulumi state backend: Minio-on-truenas → Postgres DIY on celestia, The live literal import on the home-operations Minio bucket, StandardDns imports are structurally inert (but the wire is still there), skystar as proposed test target (recommended, not decided), Minio bucket protect + retainOnDelete
 
 ### Community 1198 - "devDependencies"
-Cohesion: 0.11
-Nodes (16): devDependencies, @biomejs/biome@2.6.3, json-schema-to-typescript@^16.0.0, tsx@^4.23.15, @types/ssh2@^1.15.6, yaml@^2.9.1, yaml, @biomejs/biome (+8 more)
+Cohesion: 0.15
+Nodes (13): devDependencies, @biomejs/biome@2.6.4, json-schema-to-typescript@^16.0.0, @types/node@^26.6.5, @types/ssh2@^1.15.6, typescript@^6.0.3, yaml@^2.9.1, @types/node (+5 more)
 
 ### Community 1199 - "labels"
 Cohesion: 0.06
@@ -7939,8 +8248,8 @@ Cohesion: 0.25
 Nodes (7): 1. Retry with Backoff, 2. Fallback Alternatives, 3. Diagnose-and-Fix, 4. Escalate with Context, 5. Graceful Degradation, Applying These Patterns, Error Recovery Patterns
 
 ### Community 1206 - "agent-tools-mcp Flux Kustomization"
-Cohesion: 0.40
-Nodes (5): agent-tools-mcp Flux Kustomization, agent-tools-mcp Kustomize resource list, MCPGroup agent-tools, MCPServer toolhive-context7, agents namespace Kustomization (resource ordering)
+Cohesion: 0.50
+Nodes (4): agent-tools-mcp Flux Kustomization, agent-tools-mcp Kustomize resource list, MCPGroup agent-tools, agents namespace Kustomization (resource ordering)
 
 ### Community 1207 - "values"
 Cohesion: 0.06
@@ -7955,7 +8264,7 @@ Cohesion: 0.25
 Nodes (7): GrafanaDashboard: unpoller-client-insights, GrafanaDashboard: unpoller-network-sites, GrafanaDashboard: unpoller-uap-insights, GrafanaDashboard: unpoller-usg-insights, ExternalSecret: unpoller, Flux Kustomization: unpoller, Kustomize resource list: unpoller
 
 ### Community 1210 - "radiusUser.ts"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): RadiusUser, RadiusUserArgs, RadiusUserState, RFC-2868
 
 ### Community 1211 - "Authentik / Scripts"
@@ -7967,7 +8276,7 @@ Cohesion: 0.25
 Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 
 ### Community 1213 - "requestRuleChildBinding.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RequestRuleChildBinding, RequestRuleChildBindingArgs, RequestRuleChildBindingState
 
 ### Community 1214 - "Pbs / Scripts"
@@ -7975,11 +8284,11 @@ Cohesion: 0.25
 Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 
 ### Community 1215 - "Tailscale"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): FederatedIdentity, FederatedIdentityArgs, FederatedIdentityState, RFC-3339
 
 ### Community 1216 - "Tailscale"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): OauthClient, OauthClientArgs, OauthClientState, RFC-3339
 
 ### Community 1217 - "Tailscale / Scripts"
@@ -7987,7 +8296,7 @@ Cohesion: 0.25
 Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 
 ### Community 1218 - "Tailscale"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): TailnetKey, TailnetKeyArgs, TailnetKeyState, RFC-3339
 
 ### Community 1219 - "Technitium / Scripts"
@@ -7998,9 +8307,9 @@ Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 Cohesion: 0.25
 Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 
-### Community 1221 - "ProxmoxHost.ts"
-Cohesion: 0.03
-Nodes (89): AuthentikApplicationManager, AuthentikOutputs, AuthentikResourcesArgs, RolesKeys, RolesValues, GarageRepository, PreSyncArgs, baoKvSecret() (+81 more)
+### Community 1221 - "home/index.ts"
+Cohesion: 0.02
+Nodes (118): ApplicationCertificate, AuthentikApplicationManager, AuthentikOutputs, AuthentikResourcesArgs, RolesKeys, RolesValues, GarageRepository, PreSyncArgs (+110 more)
 
 ### Community 1222 - "Unifi / Scripts"
 Cohesion: 0.25
@@ -8350,25 +8659,25 @@ Nodes (6): Anti-Patterns, Context, Examples, Patterns, Reviewer Rejection Protoc
 Cohesion: 0.29
 Nodes (7): How to Wire Up a New Team Member, Step 1: Create the member (files), Step 2: Add to roster (`team.md`), Step 3: Add routing entry (`routing.md`), Step 4: Add issue routing (if applicable), Step 5: Add to casting registry, Step 6: Wire any gates (if this member is a reviewer/gate)
 
-### Community 1312 - "Hermes agent service (compose)"
-Cohesion: 0.50
-Nodes (4): Arcane ApplicationDefinition, Hermes agent service (compose), Hermes ApplicationDefinition, Proxmox Datacenter Manager ApplicationDefinition
+### Community 1312 - "steps"
+Cohesion: 0.06
+Nodes (35): concurrency, cancel-in-progress, group, image, BASE_VERSION, CRANE_SHA256, CRANE_VERSION, DIGEST (+27 more)
 
 ### Community 1313 - "Cluster Consolidation / Celestia"
 Cohesion: 0.29
 Nodes (3): Host-level postgres database declarations (celestia), ExternalName + tailnet-inbound ProxyGroup route to celestia Postgres, PGAPP_<NAME>_PASSWORD provisioning convention
 
-### Community 1314 - "pbs/provider.ts"
-Cohesion: 0.29
-Nodes (3): Provider, ProviderArgs, TerraformConfigResult
+### Community 1314 - "spec"
+Cohesion: 0.06
+Nodes (35): apiVersion, labels, name, namespace, kind, app.kubernetes.io/name, driscoll.dev/name, metadata (+27 more)
 
 ### Community 1316 - "garage-backup/backup.sh"
 Cohesion: 0.44
 Nodes (10): api_get(), api_post(), bootstrap(), fail(), first_field(), first_number(), log(), prune_snapshots() (+2 more)
 
 ### Community 1319 - "Pulumi Monorepo Architecture & Cluster Topology"
-Cohesion: 0.57
-Nodes (7): Pulumi Monorepo Architecture & Cluster Topology, Alpha Site Cluster Definition, Celestia Cluster Definition, Equestria Cluster Definition, Luna Cluster Definition, Cluster Definition Loader Convention (components/store/clusters.ts), Cluster & Node Topology Reference
+Cohesion: 0.60
+Nodes (6): Pulumi Monorepo Architecture & Cluster Topology, Alpha Site Cluster Definition, Equestria Cluster Definition, Luna Cluster Definition, Cluster Definition Loader Convention (components/store/clusters.ts), Cluster & Node Topology Reference
 
 ### Community 1320 - "Implementation Plan"
 Cohesion: 0.20
@@ -8377,10 +8686,6 @@ Nodes (9): Feature Implementation Plan Prompt, File System, Goal, Goal, Implemen
 ### Community 1321 - ".github/skills/reviewer-protocol/SKILL.md"
 Cohesion: 0.29
 Nodes (6): Anti-Patterns, Context, Examples, Patterns, Reviewer Rejection Protocol, Strict Lockout Semantics
-
-### Community 1322 - "stageAuthenticatorWebauthn.ts"
-Cohesion: 0.29
-Nodes (3): StageAuthenticatorWebauthn, StageAuthenticatorWebauthnArgs, StageAuthenticatorWebauthnState
 
 ### Community 1323 - "Loki Credential-Drift Alert Rules"
 Cohesion: 0.29
@@ -8395,11 +8700,11 @@ Cohesion: 0.25
 Nodes (8): Agent Routing, AI Gateway (Optional), Configuration, Deployment, Email Routing, Environment Bindings, MCP Configuration (Optional), Wrangler Setup
 
 ### Community 1326 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Application, ApplicationArgs, ApplicationState
 
 ### Community 1327 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ApplicationEntitlement, ApplicationEntitlementArgs, ApplicationEntitlementState
 
 ### Community 1328 - "The Forgejo copy of this repository"
@@ -8710,9 +9015,9 @@ Nodes (3): ProviderMicrosoftEntra, pulumi, utilities
 Cohesion: 0.29
 Nodes (3): ProviderMicrosoftEntra, ProviderMicrosoftEntraArgs, ProviderMicrosoftEntraState
 
-### Community 1406 - "rewrite.ts"
-Cohesion: 0.20
-Nodes (8): PLAN, rewrites(), apply, EXCLUDE, files, map, perPath, untouched
+### Community 1406 - "spec"
+Cohesion: 0.06
+Nodes (33): apiVersion, labels, name, namespace, kind, app.kubernetes.io/name, driscoll.dev/name, metadata (+25 more)
 
 ### Community 1407 - "Authentik"
 Cohesion: 0.29
@@ -9087,187 +9392,175 @@ Cohesion: 0.29
 Nodes (3): User, UserArgs, UserState
 
 ### Community 1500 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Blueprint, BlueprintArgs, BlueprintState
 
 ### Community 1501 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Brand, BrandArgs, BrandState
 
 ### Community 1502 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): CertificateKeyPair, CertificateKeyPairArgs, CertificateKeyPairState
 
 ### Community 1503 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EndpointsConnectorAgentEnrollmentToken, EndpointsConnectorAgentEnrollmentTokenArgs, EndpointsConnectorAgentEnrollmentTokenState
 
 ### Community 1504 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EndpointsDeviceAccessGroup, EndpointsDeviceAccessGroupArgs, EndpointsDeviceAccessGroupState
 
 ### Community 1505 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EndpointsGoogleChromeConnector, EndpointsGoogleChromeConnectorArgs, EndpointsGoogleChromeConnectorState
 
 ### Community 1506 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EnterpriseLicense, EnterpriseLicenseArgs, EnterpriseLicenseState
 
 ### Community 1507 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EventRule, EventRuleArgs, EventRuleState
 
 ### Community 1508 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): EventTransport, EventTransportArgs, EventTransportState
 
-### Community 1509 - "Authentik"
-Cohesion: 0.29
-Nodes (3): Flow, FlowArgs, FlowState
-
 ### Community 1510 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): FlowStageBinding, FlowStageBindingArgs, FlowStageBindingState
 
 ### Community 1511 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Group, GroupArgs, GroupState
 
 ### Community 1512 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Outpost, OutpostArgs, OutpostState
 
 ### Community 1513 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): OutpostProviderAttachment, OutpostProviderAttachmentArgs, OutpostProviderAttachmentState
 
 ### Community 1514 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PolicyBinding, PolicyBindingArgs, PolicyBindingState
 
 ### Community 1515 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PolicyDummy, PolicyDummyArgs, PolicyDummyState
 
-### Community 1516 - "Authentik"
-Cohesion: 0.29
-Nodes (3): PolicyEventMatcher, PolicyEventMatcherArgs, PolicyEventMatcherState
-
 ### Community 1517 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PolicyExpiry, PolicyExpiryArgs, PolicyExpiryState
 
 ### Community 1518 - "system/package.json"
 Cohesion: 0.06
-Nodes (44): glob, @llamaduck/forgejo-ts, @muhlba91/pulumi-proxmoxve, @pulumi/std, rxjs, author, bugs, url (+36 more)
+Nodes (43): @axnic/pulumi-garage, @llamaduck/forgejo-ts, rxjs, author, bugs, url, dependencies, @axnic/pulumi-garage@^1.1.2 (+35 more)
 
 ### Community 1519 - "Promote"
-Cohesion: 0.20
-Nodes (10): authentik failover: promote the alpha-site standby, P0. Decide, P1. Fence equestria, if any of it answers, P2. Promote the standby, P3. Repoint the Pi's authentik at it, P4. Verify, P5. Make git agree — before equestria comes back, Promote (+2 more)
+Cohesion: 0.11
+Nodes (19): authentik failover: promote the alpha-site standby, F0. Pre-flight, F1. Wake authentik-pg without authentik, F2. Freeze the Pi's authentik and dump the promoted server, F3. Drop the standby's old slot on the primary, F4. Restore into authentik-pg, F5. Point the Pi's authentik back at authentik-pg, F6. Re-clone the standby (+11 more)
 
 ### Community 1520 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PolicyPassword, PolicyPasswordArgs, PolicyPasswordState
 
 ### Community 1521 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PolicyReputation, PolicyReputationArgs, PolicyReputationState
 
-### Community 1522 - "Authentik"
-Cohesion: 0.29
-Nodes (3): PolicyUniquePassword, PolicyUniquePasswordArgs, PolicyUniquePasswordState
-
 ### Community 1523 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingNotification, PropertyMappingNotificationArgs, PropertyMappingNotificationState
 
 ### Community 1524 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderGoogleWorkspace, PropertyMappingProviderGoogleWorkspaceArgs, PropertyMappingProviderGoogleWorkspaceState
 
 ### Community 1525 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderMicrosoftEntra, PropertyMappingProviderMicrosoftEntraArgs, PropertyMappingProviderMicrosoftEntraState
 
 ### Community 1526 - "authentik/utilities.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderRac, PropertyMappingProviderRacArgs, PropertyMappingProviderRacState
 
 ### Community 1527 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderRadius, PropertyMappingProviderRadiusArgs, PropertyMappingProviderRadiusState
 
 ### Community 1528 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderSaml, PropertyMappingProviderSamlArgs, PropertyMappingProviderSamlState
 
 ### Community 1529 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderScim, PropertyMappingProviderScimArgs, PropertyMappingProviderScimState
 
 ### Community 1530 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingProviderScope, PropertyMappingProviderScopeArgs, PropertyMappingProviderScopeState
 
 ### Community 1531 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingSourceKerberos, PropertyMappingSourceKerberosArgs, PropertyMappingSourceKerberosState
 
 ### Community 1532 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingSourceLdap, PropertyMappingSourceLdapArgs, PropertyMappingSourceLdapState
 
 ### Community 1533 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingSourceOauth, PropertyMappingSourceOauthArgs, PropertyMappingSourceOauthState
 
 ### Community 1534 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingSourcePlex, PropertyMappingSourcePlexArgs, PropertyMappingSourcePlexState
 
 ### Community 1535 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingSourceSaml, PropertyMappingSourceSamlArgs, PropertyMappingSourceSamlState
 
 ### Community 1536 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PropertyMappingSourceScim, PropertyMappingSourceScimArgs, PropertyMappingSourceScimState
 
 ### Community 1537 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderGoogleWorkspace, ProviderGoogleWorkspaceArgs, ProviderGoogleWorkspaceState
 
 ### Community 1538 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderLdap, ProviderLdapArgs, ProviderLdapState
 
 ### Community 1539 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderOauth2, ProviderOauth2Args, ProviderOauth2State
 
 ### Community 1540 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderProxy, ProviderProxyArgs, ProviderProxyState
 
 ### Community 1541 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderRac, ProviderRacArgs, ProviderRacState
 
 ### Community 1542 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderRadius, ProviderRadiusArgs, ProviderRadiusState
 
 ### Community 1543 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderSaml, ProviderSamlArgs, ProviderSamlState
 
 ### Community 1544 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderScim, ProviderScimArgs, ProviderScimState
 
 ### Community 1545 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProviderSsf, ProviderSsfArgs, ProviderSsfState
 
 ### Community 1546 - "Configuration"
@@ -9279,43 +9572,43 @@ Cohesion: 0.06
 Nodes (32): apiVersion, kind, name, name, volumeMounts, kind, cpu, memory (+24 more)
 
 ### Community 1548 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RbacInitialPermissions, RbacInitialPermissionsArgs, RbacInitialPermissionsState
 
 ### Community 1549 - "The 2026-09-21 re-run: plugins, repositories and settings included"
-Cohesion: 0.12
-Nodes (9): 2.4b — Remove the Password Rollback, openbao-replica-dump Nightly pg_dump CronJob, components/postgres Kustomize Component, OpenBao database Secrets Engine (stacks/system), discoverPostgresApps() Repository Discovery, passwords.sops.yaml Retirement, components/postgres/rotate Folded into the Base Component, components/postgres Update.cs Generator (retired) (+1 more)
+Cohesion: 0.13
+Nodes (8): 2.4b — Remove the Password Rollback, openbao-replica-dump Nightly pg_dump CronJob, components/postgres Kustomize Component, discoverPostgresApps() Repository Discovery, passwords.sops.yaml Retirement, components/postgres/rotate Folded into the Base Component, components/postgres Update.cs Generator (retired), Media Stack SQLite to PostgreSQL Migration
 
 ### Community 1550 - "coderd/types/output.ts"
-Cohesion: 0.11
-Nodes (18): AgentsModelAcl, AiProviderSettings, AiProviderSettingsBedrock, AiProviderSettingsClaudePlatformAws, GetGroupMember, GetTemplateAcl, GetTemplateAclGroup, GetTemplateAclUser (+10 more)
+Cohesion: 0.08
+Nodes (21): GetTemplateArgs, GetTemplateOutputArgs, GetTemplateResult, AgentsModelAcl, AiProviderSettings, AiProviderSettingsBedrock, AiProviderSettingsClaudePlatformAws, GetGroupMember (+13 more)
 
 ### Community 1551 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RbacRole, RbacRoleArgs, RbacRoleState
 
 ### Community 1552 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ServiceConnectionDocker, ServiceConnectionDockerArgs, ServiceConnectionDockerState
 
 ### Community 1553 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ServiceConnectionKubernetes, ServiceConnectionKubernetesArgs, ServiceConnectionKubernetesState
 
 ### Community 1554 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourceKerberos, SourceKerberosArgs, SourceKerberosState
 
 ### Community 1555 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourceLdap, SourceLdapArgs, SourceLdapState
 
 ### Community 1556 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourceOauth, SourceOauthArgs, SourceOauthState
 
 ### Community 1557 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourcePlex, SourcePlexArgs, SourcePlexState
 
 ### Community 1558 - "compilerOptions"
@@ -9323,171 +9616,151 @@ Cohesion: 0.12
 Nodes (16): compilerOptions, declaration, declarationMap, module, moduleDetection, moduleResolution, noFallthroughCasesInSwitch, noImplicitReturns (+8 more)
 
 ### Community 1559 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourceScim, SourceScimArgs, SourceScimState
 
 ### Community 1560 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SourceTelegram, SourceTelegramArgs, SourceTelegramState
 
 ### Community 1561 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAccountLockdown, StageAccountLockdownArgs, StageAccountLockdownState
 
 ### Community 1562 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAuthenticatorDuo, StageAuthenticatorDuoArgs, StageAuthenticatorDuoState
 
 ### Community 1563 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAuthenticatorEmail, StageAuthenticatorEmailArgs, StageAuthenticatorEmailState
 
-### Community 1564 - "Authentik"
-Cohesion: 0.29
-Nodes (3): StageAuthenticatorEndpointGdtc, StageAuthenticatorEndpointGdtcArgs, StageAuthenticatorEndpointGdtcState
-
 ### Community 1565 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAuthenticatorSms, StageAuthenticatorSmsArgs, StageAuthenticatorSmsState
 
 ### Community 1566 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAuthenticatorStatic, StageAuthenticatorStaticArgs, StageAuthenticatorStaticState
 
 ### Community 1567 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAuthenticatorTotp, StageAuthenticatorTotpArgs, StageAuthenticatorTotpState
 
 ### Community 1568 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageAuthenticatorValidate, StageAuthenticatorValidateArgs, StageAuthenticatorValidateState
 
 ### Community 1569 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageCaptcha, StageCaptchaArgs, StageCaptchaState
 
 ### Community 1570 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageConsent, StageConsentArgs, StageConsentState
 
-### Community 1571 - "Authentik"
-Cohesion: 0.29
-Nodes (3): StageDeny, StageDenyArgs, StageDenyState
-
 ### Community 1572 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageDummy, StageDummyArgs, StageDummyState
 
 ### Community 1573 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageEmail, StageEmailArgs, StageEmailState
 
 ### Community 1574 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageEndpoints, StageEndpointsArgs, StageEndpointsState
 
-### Community 1575 - "Authentik"
-Cohesion: 0.29
-Nodes (3): StageIdentification, StageIdentificationArgs, StageIdentificationState
-
 ### Community 1576 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageInvitation, StageInvitationArgs, StageInvitationState
 
-### Community 1577 - "Authentik"
-Cohesion: 0.29
-Nodes (3): StageMutualTls, StageMutualTlsArgs, StageMutualTlsState
-
-### Community 1578 - "Troubleshooting Common Kubernetes Issues"
-Cohesion: 0.33
-Nodes (6): **1. Pods Not Starting (Pending, CrashLoopBackOff)**, **2. Pods Not Ready (Service Unavailable)**, **3. Service Not Accessible**, **4. Resource Exhaustion (OOMKilled)**, **5. Performance Issues**, Troubleshooting Common Kubernetes Issues
+### Community 1578 - "spec"
+Cohesion: 0.06
+Nodes (33): apiVersion, labels, name, namespace, kind, app.kubernetes.io/name, driscoll.dev/name, metadata (+25 more)
 
 ### Community 1579 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StagePrompt, StagePromptArgs, StagePromptState
 
 ### Community 1580 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StagePromptField, StagePromptFieldArgs, StagePromptFieldState
 
 ### Community 1581 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageRedirect, StageRedirectArgs, StageRedirectState
 
 ### Community 1582 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageSource, StageSourceArgs, StageSourceState
 
 ### Community 1583 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageUserDelete, StageUserDeleteArgs, StageUserDeleteState
 
 ### Community 1584 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageUserLogin, StageUserLoginArgs, StageUserLoginState
 
 ### Community 1585 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StageUserLogout, StageUserLogoutArgs, StageUserLogoutState
 
-### Community 1586 - "Authentik"
-Cohesion: 0.29
-Nodes (3): StageUserWrite, StageUserWriteArgs, StageUserWriteState
-
 ### Community 1587 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SystemSettings, SystemSettingsArgs, SystemSettingsState
 
 ### Community 1588 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): TaskSchedule, TaskScheduleArgs, TaskScheduleState
 
 ### Community 1589 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Token, TokenArgs, TokenState
 
 ### Community 1590 - "Authentik"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): User, UserArgs, UserState
 
 ### Community 1591 - "Forgejo"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Collaborator, CollaboratorArgs, CollaboratorState
 
 ### Community 1592 - "Suggest Awesome GitHub Copilot Custom Agents"
 Cohesion: 0.20
 Nodes (9): Context Analysis Criteria, Icons Reference, Local Agent Discovery Process, Output Format, Process, Requirements, Suggest Awesome GitHub Copilot Custom Agents, Update Handling (+1 more)
 
-### Community 1593 - "forgejo/organization.ts"
-Cohesion: 0.29
-Nodes (3): Organization, OrganizationArgs, OrganizationState
-
 ### Community 1594 - "organizationActionSecret.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): OrganizationActionSecret, OrganizationActionSecretArgs, OrganizationActionSecretState
 
+### Community 1595 - "organizationActionVariable.ts"
+Cohesion: 0.25
+Nodes (3): OrganizationActionVariable, OrganizationActionVariableArgs, OrganizationActionVariableState
+
 ### Community 1596 - "Forgejo"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PersonalAccessToken, PersonalAccessTokenArgs, PersonalAccessTokenState
 
 ### Community 1598 - "repositoryWebhook.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): RepositoryWebhook, RepositoryWebhookArgs, RepositoryWebhookState
 
 ### Community 1599 - "sshKey.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SshKey, SshKeyArgs, SshKeyState
 
 ### Community 1600 - "team.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Team, TeamArgs, TeamState
 
 ### Community 1601 - "TeamMember"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): TeamMember, TeamMemberArgs, TeamMemberState
 
 ### Community 1602 - "Forgejo"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): User, UserArgs, UserState
 
 ### Community 1603 - "Pbs"
@@ -9503,91 +9776,99 @@ Cohesion: 0.29
 Nodes (3): S3Endpoint, S3EndpointArgs, S3EndpointState
 
 ### Community 1607 - "Pbs"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): MetricsServer, MetricsServerArgs, MetricsServerState
 
-### Community 1608 - "notificationMatcher.ts"
-Cohesion: 0.29
-Nodes (3): NotificationMatcher, NotificationMatcherArgs, NotificationMatcherState
-
 ### Community 1609 - "pruneJob.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PruneJob, PruneJobArgs, PruneJobState
 
 ### Community 1610 - "Pbs"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Remote, RemoteArgs, RemoteState
 
-### Community 1612 - "Pbs"
-Cohesion: 0.29
-Nodes (3): SmtpNotification, SmtpNotificationArgs, SmtpNotificationState
+### Community 1611 - "s3endpoint.ts"
+Cohesion: 0.25
+Nodes (3): S3Endpoint, S3EndpointArgs, S3EndpointState
 
 ### Community 1613 - "Pbs"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): VerifyJob, VerifyJobArgs, VerifyJobState
 
-### Community 1615 - "Tailscale"
-Cohesion: 0.29
-Nodes (3): Acl, AclArgs, AclState
+### Community 1614 - "webhookNotification.ts"
+Cohesion: 0.25
+Nodes (3): WebhookNotification, WebhookNotificationArgs, WebhookNotificationState
 
-### Community 1616 - "Tailscale"
-Cohesion: 0.29
-Nodes (3): AwsExternalId, AwsExternalIdArgs, AwsExternalIdState
+### Community 1616 - "spec"
+Cohesion: 0.06
+Nodes (33): apiVersion, labels, name, namespace, kind, app.kubernetes.io/name, driscoll.dev/name, metadata (+25 more)
 
 ### Community 1617 - "Tailscale"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DeviceKey, DeviceKeyArgs, DeviceKeyState
 
+### Community 1618 - "deviceSubnetRoutes.ts"
+Cohesion: 0.25
+Nodes (3): DeviceSubnetRoutes, DeviceSubnetRoutesArgs, DeviceSubnetRoutesState
+
 ### Community 1619 - "Tailscale"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DeviceTags, DeviceTagsArgs, DeviceTagsState
 
-### Community 1621 - "Tailscale"
-Cohesion: 0.29
-Nodes (3): DnsSplitNameservers, DnsSplitNameserversArgs, DnsSplitNameserversState
-
 ### Community 1622 - "logstreamConfiguration.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): LogstreamConfiguration, LogstreamConfigurationArgs, LogstreamConfigurationState
 
-### Community 1623 - "DockgeLxc"
-Cohesion: 0.10
-Nodes (21): defaultDatabaseName(), normalize(), parseDatabasesFile(), parseStackPostgresDeclaration(), POSTGRES_RESERVED_DATABASES, PostgresTenantDeclaration, PostgresTenantResources, renderPostgresEnvLocal() (+13 more)
+### Community 1623 - "DockgeLxc.ts"
+Cohesion: 0.07
+Nodes (39): defaultDatabaseName(), normalize(), parseDatabasesFile(), parseStackPostgresDeclaration(), POSTGRES_RESERVED_DATABASES, PostgresTenantDeclaration, PostgresTenantResources, renderPostgresEnvLocal() (+31 more)
 
 ### Community 1624 - "Tailscale"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Service, ServiceArgs, ServiceState
 
-### Community 1627 - "AllowedZone"
-Cohesion: 0.29
-Nodes (3): AllowedZone, AllowedZoneArgs, AllowedZoneState
+### Community 1625 - "tailnetSettings.ts"
+Cohesion: 0.25
+Nodes (3): TailnetSettings, TailnetSettingsArgs, TailnetSettingsState
+
+### Community 1627 - "technitium/utilities.ts"
+Cohesion: 0.15
+Nodes (6): AllowedZone, AllowedZoneArgs, AllowedZoneState, getEnv(), getEnvBoolean(), getEnvNumber()
 
 ### Community 1628 - "Durable Objects Configuration"
 Cohesion: 0.20
 Nodes (10): Basic Setup, Binding Options, Commands, Durable Objects Configuration, Environment Isolation, Jurisdiction (Data Locality), Limits & Settings, Migrations (+2 more)
 
 ### Community 1629 - "CatalogMembership"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): CatalogMembership, CatalogMembershipArgs, CatalogMembershipState
 
-### Community 1631 - "tsigKey.ts"
-Cohesion: 0.29
-Nodes (3): TsigKey, TsigKeyArgs, TsigKeyState
+### Community 1630 - "record.ts"
+Cohesion: 0.25
+Nodes (3): Record, RecordArgs, RecordState
 
 ### Community 1632 - "stagePassword.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): StagePassword, StagePasswordArgs, StagePasswordState
 
 ### Community 1635 - "arcane-agent"
 Cohesion: 0.06
 Nodes (31): cgroup, container_name, dns, env_file, environment, healthcheck, image, labels (+23 more)
 
+### Community 1637 - "terrifi/firewallGroup.ts"
+Cohesion: 0.25
+Nodes (3): FirewallGroup, FirewallGroupArgs, FirewallGroupState
+
+### Community 1639 - "terrifi/firewallZone.ts"
+Cohesion: 0.25
+Nodes (3): FirewallZone, FirewallZoneArgs, FirewallZoneState
+
 ### Community 1640 - "Terrifi"
 Cohesion: 0.29
 Nodes (3): Provider, ProviderArgs, TerraformConfigResult
 
 ### Community 1641 - "Unifi"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Bgp, BgpArgs, BgpState
 
 ### Community 1642 - "Unifi"
@@ -9690,65 +9971,81 @@ Nodes (3): pulumi, utilities, Wlan
 Cohesion: 0.29
 Nodes (3): Wlan, WlanArgs, WlanState
 
-### Community 1667 - "client.ts"
-Cohesion: 0.29
-Nodes (3): Client, ClientArgs, ClientState
-
 ### Community 1668 - "Unifi"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ClientQosRate, ClientQosRateArgs, ClientQosRateState
 
+### Community 1669 - "dynamicDns.ts"
+Cohesion: 0.25
+Nodes (3): DynamicDns, DynamicDnsArgs, DynamicDnsState
+
+### Community 1670 - "unifi/firewallZone.ts"
+Cohesion: 0.25
+Nodes (3): FirewallZone, FirewallZoneArgs, FirewallZoneState
+
 ### Community 1671 - "unifi/network.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Network, NetworkArgs, NetworkState
 
-### Community 1673 - "Unifi"
-Cohesion: 0.29
-Nodes (3): PortProfile, PortProfileArgs, PortProfileState
+### Community 1672 - "portForward.ts"
+Cohesion: 0.25
+Nodes (3): PortForward, PortForwardArgs, PortForwardState
 
-### Community 1674 - "powerSupervisor.ts"
-Cohesion: 0.29
-Nodes (3): PowerSupervisor, PowerSupervisorArgs, PowerSupervisorState
+### Community 1673 - "Unifi"
+Cohesion: 0.25
+Nodes (3): PortProfile, PortProfileArgs, PortProfileState
 
 ### Community 1675 - "Unifi"
 Cohesion: 0.29
 Nodes (3): Provider, ProviderArgs, TerraformConfigResult
 
 ### Community 1676 - "setting.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Setting, SettingArgs, SettingState
 
 ### Community 1677 - "site.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Site, SiteArgs, SiteState
 
+### Community 1678 - "staticRoute.ts"
+Cohesion: 0.25
+Nodes (3): StaticRoute, StaticRouteArgs, StaticRouteState
+
 ### Community 1679 - "Unifi"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): TrafficRoute, TrafficRouteArgs, TrafficRouteState
 
+### Community 1680 - "vpnClient.ts"
+Cohesion: 0.25
+Nodes (3): VpnClient, VpnClientArgs, VpnClientState
+
 ### Community 1681 - "Unifi"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): VpnServer, VpnServerArgs, VpnServerState
 
+### Community 1682 - "wan.ts"
+Cohesion: 0.22
+Nodes (4): RFC-4638, Wan, WanArgs, WanState
+
 ### Community 1683 - "Unifi"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): WireguardPeer, WireguardPeerArgs, WireguardPeerState
 
 ### Community 1684 - "Unifi"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Wlan, WlanArgs, WlanState
 
-### Community 1685 - "Session Management"
-Cohesion: 0.40
-Nodes (5): Creating Sessions, Resuming Sessions, Session Config Options, Session Management, Session Operations
+### Community 1685 - "spec"
+Cohesion: 0.06
+Nodes (31): reloader.stakater.com/auto, apiVersion, command, env, envFrom, name, volumeMounts, name (+23 more)
 
 ### Community 1686 - "Kubernetes Deployment Best Practices"
 Cohesion: 0.33
 Nodes (6): **1. Network Policies**, **2. Role-Based Access Control (RBAC)**, **3. Pod Security Context**, **4. Image Security**, **5. API Server Security**, Security Best Practices in Kubernetes
 
-### Community 1687 - "The 2026-09-21 re-run: plugins, repositories and settings included"
-Cohesion: 0.22
-Nodes (9): Afterwards, ⛔ It does not run today, and the reason is not a bug, ⚠️ Metadata, subtitles and trickplay are production's, Plugin settings are repointed at this instance, Running it, The 2026-09-21 re-run: plugins, repositories and settings included, ⚠️ Three settings that name paths this pod does not have, ⚠️ `truenas-media` is no longer read-only (+1 more)
+### Community 1687 - "OCIRepository tuppr"
+Cohesion: 0.07
+Nodes (31): kind, name, OCIRepository tuppr, HelmRelease tuppr, apiVersion, kind, metadata, spec (+23 more)
 
 ### Community 1688 - "Human-in-the-Loop"
 Cohesion: 0.33
@@ -9994,13 +10291,13 @@ Nodes (4): authentik-outpost proxy service, autoheal service, autoheal label con
 Cohesion: 0.33
 Nodes (6): Casting & Persistent Naming, Casting State Files, Migration — Already-Crewified Repos, Name Allocation, Overflow Handling, Universe Allowlist
 
-### Community 1753 - "Radarr & Sonarr Media Apps"
-Cohesion: 0.33
-Nodes (6): Radarr ApplicationDefinition, Radarr HelmRelease, Radarr Flux Kustomization, Sonarr ApplicationDefinition, Sonarr HelmRelease, Sonarr Flux Kustomization
+### Community 1753 - "spec"
+Cohesion: 0.06
+Nodes (30): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+22 more)
 
-### Community 1754 - "getPruneJobs.ts"
-Cohesion: 0.33
-Nodes (5): getPruneJobs(), GetPruneJobsArgs, getPruneJobsOutput(), GetPruneJobsOutputArgs, GetPruneJobsResult
+### Community 1754 - "spec"
+Cohesion: 0.06
+Nodes (30): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+22 more)
 
 ### Community 1755 - "Equestria / Utils"
 Cohesion: 0.53
@@ -10010,9 +10307,9 @@ Nodes (5): equestria shared apps kustomization, truenas-volumes Flux Kustomizati
 Cohesion: 0.47
 Nodes (5): intel-device-plugins-gpu OCIRepository, intel-gpu-plugin HelmRelease (control-plane), intel-gpu-plugin-workers HelmRelease, intel-device-plugins-operator OCIRepository, intel-device-plugin-operator HelmRelease
 
-### Community 1757 - "Fail back (re-establish replication)"
-Cohesion: 0.22
-Nodes (9): F0. Pre-flight, F1. Wake authentik-pg without authentik, F2. Freeze the Pi's authentik and dump the promoted server, F3. Drop the standby's old slot on the primary, F4. Restore into authentik-pg, F5. Point the Pi's authentik back at authentik-pg, F6. Re-clone the standby, F7. Verify (+1 more)
+### Community 1757 - "spec"
+Cohesion: 0.07
+Nodes (30): apiVersion, labels, name, namespace, kind, app.kubernetes.io/name, driscoll.dev/name, metadata (+22 more)
 
 ### Community 1758 - "Dependency Patterns (from CLAUDE.md)"
 Cohesion: 0.40
@@ -10038,21 +10335,21 @@ Nodes (5): getRemoteGroups(), GetRemoteGroupsArgs, getRemoteGroupsOutput(), GetR
 Cohesion: 0.12
 Nodes (15): Adding a team, git-pages: static sites from Forgejo, Make my app password (Nextcloud), My apps: the guide's API (`setup-status`), Operations, Publishing workflow, setup.<root domain> (the family setup guide), Site features (+7 more)
 
-### Community 1764 - "Pbs"
-Cohesion: 0.33
-Nodes (5): getSyncJob(), GetSyncJobArgs, getSyncJobOutput(), GetSyncJobOutputArgs, GetSyncJobResult
+### Community 1764 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
 ### Community 1765 - "coderd/utilities.ts"
 Cohesion: 0.20
 Nodes (5): __config, get(), getEnv(), getEnvBoolean(), getEnvNumber()
 
-### Community 1766 - "arcane"
-Cohesion: 0.06
-Nodes (30): container_name, dns, env_file, environment, healthcheck, image, labels, networks (+22 more)
+### Community 1766 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
-### Community 1767 - "Coder templates"
-Cohesion: 0.20
-Nodes (9): Adding a template, Checking a change, Coder templates, Docker and dev containers, How Pulumi gets into Coder, Layout, OpenBao, Versions (+1 more)
+### Community 1767 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
 ### Community 1768 - "Cloudflare Queues"
 Cohesion: 0.22
@@ -10386,9 +10683,9 @@ Nodes (4): Dashboard JSON Skeleton, Dashboard Structure Reference, Existing Cust
 Cohesion: 0.40
 Nodes (5): Override Blocks, Override Data Source, Override Module, Override Resource, Scope to Run Block
 
-### Community 1899 - "getVerifyJobs.ts"
-Cohesion: 0.33
-Nodes (5): getVerifyJobs(), GetVerifyJobsArgs, getVerifyJobsOutput(), GetVerifyJobsOutputArgs, GetVerifyJobsResult
+### Community 1899 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
 ### Community 1900 - "Inventory Tasks (inv:)"
 Cohesion: 0.40
@@ -10454,9 +10751,13 @@ Nodes (4): How to Spawn an Agent, Spawn Reference, Sub-Sessions (Copilot App Mod
 Cohesion: 0.40
 Nodes (4): Pre-Spawn: Worktree Setup, Worktree Awareness, Worktree Lifecycle Management, Worktree Reference
 
+### Community 1916 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
+
 ### Community 1918 - "Celestia / Pdm"
-Cohesion: 0.40
-Nodes (5): PDM root password via ref+openbao, pdm service (Proxmox Datacenter Manager container), Dual entrypoint routing (websecure + tailscale), zot container registry mirror service, Container Registry Mirror ApplicationDefinition
+Cohesion: 0.67
+Nodes (3): Dual entrypoint routing (websecure + tailscale), zot container registry mirror service, Container Registry Mirror ApplicationDefinition
 
 ### Community 1919 - "context-architect.agent.md"
 Cohesion: 0.40
@@ -10490,9 +10791,9 @@ Nodes (4): spegel HelmRelease, spegel OCIRepository (chart 0.7.4, digest-pinned)
 Cohesion: 0.14
 Nodes (13): apiVersion, kind, mediaType, operation, metadata, name, digest, tag (+5 more)
 
-### Community 1927 - "Observability / Grafana Operator"
-Cohesion: 0.40
-Nodes (4): Flux Kustomization: grafana-operator, Kustomize overlay: grafana-operator, HelmRelease: grafana-operator, OCIRepository: grafana-operator chart 5.25.0
+### Community 1927 - "Kustomize overlay: grafana dashboards"
+Cohesion: 0.15
+Nodes (13): GrafanaDashboard: Coder Dashboard, GrafanaFolder: Coder, GrafanaDashboard: Flux Cluster Stats, GrafanaDashboard: Flux Control Plane, GrafanaFolder: Flux, GrafanaDashboard: Flux Logs, Kustomize overlay: grafana dashboards, GrafanaFolder: Media (+5 more)
 
 ### Community 1928 - "OCIRepository thanos"
 Cohesion: 0.14
@@ -10526,9 +10827,9 @@ Nodes (5): Bot Fight Mode (Free), Bot Management for Enterprise, Bot Score Group
 Cohesion: 0.07
 Nodes (27): watch, environment, image, networks, ports, volumes, GLANCE_KUBE_CONFIG, environment (+19 more)
 
-### Community 1965 - "Custom Tools"
-Cohesion: 0.50
-Nodes (4): Custom Tools, Defining Tools with AIFunctionFactory, Tool Execution Flow, Tool Return Types
+### Community 1965 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
 ### Community 1966 - "SDK Configuration"
 Cohesion: 0.50
@@ -10723,7 +11024,7 @@ Cohesion: 0.39
 Nodes (9): Proxmox Alpha-Site MCPServer Overlay, Proxmox Base ExternalSecret (API token split), Proxmox Base Kustomization, Proxmox Base MCPServer (ProxmoxMCP-Plus), Proxmox Celestia MCPServer Overlay, Proxmox Luna MCPServer Overlay, Proxmox Skystar MCPServer Overlay, Proxmox Twilight-Sparkle MCPServer Overlay (+1 more)
 
 ### Community 2032 - "cluster.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Cluster, ClusterArgs, ClusterState
 
 ### Community 2033 - "Assertions"
@@ -10774,13 +11075,17 @@ Nodes (4): How to Wire Up a Reviewer Gate, Option A: Routing Rule (recommended f
 Cohesion: 0.50
 Nodes (4): How to Wire Up an Issue Lifecycle (Git Workflow), Step 1: Create `templates/issue-lifecycle.md`, Step 2: Add enforcement rules to `routing.md`, Step 3: Verify your wiring
 
-### Community 2046 - "Traefik entryPoints (web, websecure, tailscale, sftp, metrics, bolt)"
-Cohesion: 0.50
-Nodes (3): Traefik Dashboard ApplicationDefinition, Traefik service (compose), Traefik static configuration (config.yaml)
+### Community 2046 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
 ### Community 2047 - "Alpha Site / Bao Standby"
 Cohesion: 0.83
 Nodes (3): compose(), die(), restore.sh script
+
+### Community 2048 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
 
 ### Community 2049 - "Wrangler Configuration"
 Cohesion: 0.50
@@ -10796,7 +11101,7 @@ Nodes (4): flate diff Job (PR Comment), ESO Values Lint Job, flate CI Workflow (
 
 ### Community 2053 - "coderd/types/input.ts"
 Cohesion: 0.10
-Nodes (16): GetTemplateArgs, GetTemplateOutputArgs, GetTemplateResult, AgentsModelAcl, AiProviderSettings, AiProviderSettingsBedrock, AiProviderSettingsClaudePlatformAws, OrganizationGroupSync (+8 more)
+Nodes (16): GetGroupArgs, GetGroupOutputArgs, GetGroupResult, AgentsModelAcl, AiProviderSettings, AiProviderSettingsBedrock, AiProviderSettingsClaudePlatformAws, OrganizationGroupSync (+8 more)
 
 ### Community 2054 - "Kapowarr Media App"
 Cohesion: 0.50
@@ -10810,9 +11115,9 @@ Nodes (4): external-secrets Kustomization (kube-system, dependsOn), volsync-syst
 Cohesion: 0.50
 Nodes (4): loki HelmRelease (SingleBinary), loki OCIRepository (chart 7.3.0), Loki ruler wired to alertmanager-operated (loki_rule ConfigMaps), loki Kustomization
 
-### Community 2058 - "tuppr Kubernetes Upgrade CR"
-Cohesion: 0.50
-Nodes (4): tuppr HelmRelease, tuppr OCIRepository, KubernetesUpgrade CR (kubernetes), KubernetesUpgrade healthCheck on VolSync ReplicationSource
+### Community 2058 - "kubernetes.yaml"
+Cohesion: 0.17
+Nodes (11): apiVersion, apiVersion, expr, kind, kind, version, metadata, name (+3 more)
 
 ### Community 2059 - "Testing & Development"
 Cohesion: 0.50
@@ -10886,76 +11191,64 @@ Nodes (3): GetUserArgs, GetUserOutputArgs, GetUserResult
 Cohesion: 0.50
 Nodes (3): GetWebauthnDeviceTypeArgs, GetWebauthnDeviceTypeOutputArgs, GetWebauthnDeviceTypeResult
 
-### Community 2077 - "BranchProtection"
-Cohesion: 0.29
-Nodes (3): BranchProtection, BranchProtectionArgs, BranchProtectionState
-
 ### Community 2078 - "deployKey.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DeployKey, DeployKeyArgs, DeployKeyState
 
-### Community 2079 - "RepositoryActionSecret"
-Cohesion: 0.29
-Nodes (3): RepositoryActionSecret, RepositoryActionSecretArgs, RepositoryActionSecretState
-
-### Community 2081 - "sendmailNotification.ts"
-Cohesion: 0.29
-Nodes (3): SendmailNotification, SendmailNotificationArgs, SendmailNotificationState
-
 ### Community 2082 - "syncJob.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SyncJob, SyncJobArgs, SyncJobState
 
 ### Community 2083 - "deviceAuthorization.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DeviceAuthorization, DeviceAuthorizationArgs, DeviceAuthorizationState
 
-### Community 2084 - "dnsPreferences.ts"
-Cohesion: 0.29
-Nodes (3): DnsPreferences, DnsPreferencesArgs, DnsPreferencesState
-
 ### Community 2085 - "dnsSearchPaths.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DnsSearchPaths, DnsSearchPathsArgs, DnsSearchPathsState
 
 ### Community 2086 - "postureIntegration.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): PostureIntegration, PostureIntegrationArgs, PostureIntegrationState
 
-### Community 2087 - "clusterSecondary.ts"
-Cohesion: 0.29
-Nodes (3): ClusterSecondary, ClusterSecondaryArgs, ClusterSecondaryState
-
 ### Community 2088 - "The merge window on the forge"
-Cohesion: 0.22
-Nodes (9): Branch protection, Changing the window, How it works, Renovate, The merge window on the forge, The sync can never force-push here, The token, Using it on a pull request (+1 more)
+Cohesion: 0.20
+Nodes (10): Branch protection, Changing the window, How it works, Renovate, The merge window on the forge, The sync can never force-push here, The token, Using it on a pull request (+2 more)
+
+### Community 2089 - "serverSettings.ts"
+Cohesion: 0.25
+Nodes (3): ServerSettings, ServerSettingsArgs, ServerSettingsState
 
 ### Community 2091 - "config"
 Cohesion: 0.07
 Nodes (28): DEFAULT_ACTIONS_URL, ENABLED, actions, cron.update_checker, database, git.config, oauth2_client, repository.issue (+20 more)
 
 ### Community 2092 - "apGroup.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ApGroup, ApGroupArgs, ApGroupState
 
+### Community 2094 - "spec"
+Cohesion: 0.07
+Nodes (29): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+21 more)
+
 ### Community 2095 - "unifi/device.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Device, DeviceArgs, DeviceState
 
 ### Community 2096 - "unifi/dnsRecord.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DnsRecord, DnsRecordArgs, DnsRecordState
 
-### Community 2097 - "unifi/firewallGroup.ts"
-Cohesion: 0.29
-Nodes (3): FirewallGroup, FirewallGroupArgs, FirewallGroupState
+### Community 2098 - "unifi/firewallPolicy.ts"
+Cohesion: 0.25
+Nodes (3): FirewallPolicy, FirewallPolicyArgs, FirewallPolicyState
 
-### Community 2100 - "radiusProfile.ts"
-Cohesion: 0.29
-Nodes (3): RadiusProfile, RadiusProfileArgs, RadiusProfileState
+### Community 2099 - "firewallRule.ts"
+Cohesion: 0.25
+Nodes (3): FirewallRule, FirewallRuleArgs, FirewallRuleState
 
 ### Community 2101 - "siteToSiteVpn.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): SiteToSiteVpn, SiteToSiteVpnArgs, SiteToSiteVpnState
 
 ### Community 2102 - "Gotchas & Debugging"
@@ -10995,12 +11288,8 @@ Cohesion: 0.67
 Nodes (3): Gotchas & Debugging, Limits & Pricing, References
 
 ### Community 2112 - "sso.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Sso, SsoArgs, SsoState
-
-### Community 2113 - "technitium/user.ts"
-Cohesion: 0.29
-Nodes (3): User, UserArgs, UserState
 
 ### Community 2114 - "Troubleshooting"
 Cohesion: 0.67
@@ -11034,6 +11323,10 @@ Nodes (4): Config Binding, Manage Workflow Instances, Manage Workflows, Workflow
 Cohesion: 0.67
 Nodes (3): AuthentikApplicationResponse, Pagination, Results
 
+### Community 2128 - "spec"
+Cohesion: 0.07
+Nodes (28): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+20 more)
+
 ### Community 2132 - "Luna / Llama Voice"
 Cohesion: 0.67
 Nodes (3): wyoming-piper (TTS), wyoming-whisper (STT), Wyoming Speech ApplicationDefinition (no launch URL)
@@ -11054,10 +11347,6 @@ Nodes (3): bao-standby break-glass container, Nightly age-encrypted pg_dump repl
 Cohesion: 0.67
 Nodes (3): Connecting to a Repo, Issue → PR → Merge Lifecycle, Ralph — Work Monitor
 
-### Community 2142 - "Mylar / Definition"
-Cohesion: 0.67
-Nodes (3): Mylar ApplicationDefinition, Mylar HelmRelease, Mylar Flux Kustomization
-
 ### Community 2143 - "Observability / Nfs System"
 Cohesion: 0.67
 Nodes (3): Middleware: strip-query-string, Middleware: tailscale-redirect, Middleware: tailscale-user
@@ -11067,16 +11356,24 @@ Cohesion: 0.67
 Nodes (3): ClusterDefinition CRD (driscoll.dev/v1), Flux Kustomization: application-definition-crds, Kustomize overlay: observability CRDs
 
 ### Community 2166 - "zone.ts"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): RFC-2136, Zone, ZoneArgs, ZoneState
 
 ### Community 2208 - "private-names.sh"
 Cohesion: 0.50
 Nodes (3): test.sh script, private_names(), private-names.sh script
 
+### Community 2215 - "spec"
+Cohesion: 0.07
+Nodes (28): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+20 more)
+
 ### Community 2219 - "spec"
 Cohesion: 0.07
 Nodes (27): downscaler/exclude, apiVersion, spec, kind, metadata, annotations, name, runAsGroup (+19 more)
+
+### Community 2220 - "spec"
+Cohesion: 0.07
+Nodes (28): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+20 more)
 
 ### Community 2234 - "bao-transit"
 Cohesion: 0.07
@@ -11086,17 +11383,45 @@ Nodes (26): cap_add, command, container_name, dns, env_file, image, labels, netw
 Cohesion: 0.38
 Nodes (4): retry(), bake.sh script, vals_asset(), inputs.sh script
 
+### Community 2236 - "terrifi/utilities.ts"
+Cohesion: 0.14
+Nodes (12): __config, get(), getDevice(), GetDeviceArgs, getDeviceOutput(), GetDeviceOutputArgs, GetDeviceResult, getEnv() (+4 more)
+
 ### Community 2250 - "spec"
 Cohesion: 0.07
 Nodes (26): apiVersion, spec, kind, app, metadata, labels, name, namespace (+18 more)
 
 ### Community 2274 - "spec"
-Cohesion: 0.08
-Nodes (25): kind, name, mode, createNamespace, remediation, replace, retries, strategy (+17 more)
+Cohesion: 0.13
+Nodes (15): kind, name, mode, cleanupOnFail, force, recreate, spec, chartRef (+7 more)
+
+### Community 2281 - "spec"
+Cohesion: 0.07
+Nodes (27): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+19 more)
+
+### Community 2282 - "spec"
+Cohesion: 0.07
+Nodes (27): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+19 more)
+
+### Community 2283 - "spec"
+Cohesion: 0.07
+Nodes (27): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+19 more)
 
 ### Community 2295 - "Misconfigurations"
 Cohesion: 0.50
 Nodes (4): Misconfigurations, Missing Environment Variables, Test Keys in Production, Wrong Key Pairing
+
+### Community 2302 - "spec"
+Cohesion: 0.07
+Nodes (27): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+19 more)
+
+### Community 2303 - "webhook"
+Cohesion: 0.50
+Nodes (4): webhook, baseUrl, enabled, port
+
+### Community 2307 - "spec"
+Cohesion: 0.07
+Nodes (27): groups, url, apiVersion, oauth2, conditions, group, maintenance-windows, method (+19 more)
 
 ### Community 2312 - "spec"
 Cohesion: 0.08
@@ -11118,36 +11443,36 @@ Nodes (3): ASSETS Binding, Method Signatures, Type Definition
 Cohesion: 0.25
 Nodes (7): Adding things without undoing this, Claude Code in this repo, Context budget, Measuring, What `.claude/settings.json` trims, and why, Why the mise rules exist, Why the worktree rule exists
 
-### Community 2336 - "bao-reorg README"
-Cohesion: 0.33
-Nodes (6): bootstrap/openbao/equestria-init.sh (ESO policies), docs/openbao-shared-secrets-reorg.md, bao-reorg README, APPROLE, BAO_ADDR, run.sh script
+### Community 2336 - "labels"
+Cohesion: 0.07
+Nodes (26): external, GATUS_CONFIG_PATH, TZ, traefik.enable, traefik.http.routers.uptime.entrypoints, traefik.http.routers.uptime.rule, traefik.http.routers.uptime.service, traefik.http.routers.uptime-tailscale.entrypoints (+18 more)
 
 ### Community 2337 - "Build MCP Server on Cloudflare"
 Cohesion: 0.25
 Nodes (7): Arguments, Build MCP Server on Cloudflare, Example Usage, Instructions, Quick Reference, Scaffold Steps, Transport Options
 
 ### Community 2339 - "oauth2ProviderSettings.ts"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (4): RFC-7591, Oauth2ProviderSettings, Oauth2ProviderSettingsArgs, Oauth2ProviderSettingsState
 
-### Community 2340 - "home/index.ts"
-Cohesion: 0.05
-Nodes (37): OpenBaoOidc, ProxmoxBackupServerLxc, StandardDns, 5. Run the Pulumi home stack to release the DNS name, alphaSite, alphaSiteCluster, alphaSiteDockgeRuntime, alphaSiteHost (+29 more)
+### Community 2340 - "sablier"
+Cohesion: 0.07
+Nodes (26): external, DOCKER_HOST, NO_COLOR, TZ, interval, retries, start_period, test (+18 more)
 
 ### Community 2341 - "agentsDefaultModel.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): AgentsDefaultModel, AgentsDefaultModelArgs, AgentsDefaultModelState
 
 ### Community 2342 - "agentsMcpServer.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): AgentsMcpServer, AgentsMcpServerArgs, AgentsMcpServerState
 
 ### Community 2344 - "agentsModel.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): AgentsModel, AgentsModelArgs, AgentsModelState
 
 ### Community 2350 - "agentsSystemPrompt.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): AgentsSystemPrompt, AgentsSystemPromptArgs, AgentsSystemPromptState
 
 ### Community 2361 - "Build AI Agent on Cloudflare"
@@ -11155,23 +11480,23 @@ Cohesion: 0.29
 Nodes (6): Arguments, Build AI Agent on Cloudflare, Example Usage, Instructions, Key Decision: Agent vs AIChatAgent vs Think, Scaffold Steps
 
 ### Community 2362 - "aiProvider.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): AiProvider, AiProviderArgs, AiProviderState
 
 ### Community 2363 - "coderd/group.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Group, GroupArgs, GroupState
 
 ### Community 2364 - "license.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): License, LicenseArgs, LicenseState
 
 ### Community 2365 - "coderd/organization.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Organization, OrganizationArgs, OrganizationState
 
 ### Community 2366 - "organizationGroupSync.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): OrganizationGroupSync, OrganizationGroupSyncArgs, OrganizationGroupSyncState
 
 ### Community 2367 - "spec"
@@ -11179,7 +11504,7 @@ Cohesion: 0.09
 Nodes (24): kind, name, spec, createNamespace, remediation, retries, strategy, cleanupOnFail (+16 more)
 
 ### Community 2368 - "organizationSyncSettings.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): OrganizationSyncSettings, OrganizationSyncSettingsArgs, OrganizationSyncSettingsState
 
 ### Community 2369 - "coderd/provider.ts"
@@ -11195,28 +11520,20 @@ Cohesion: 0.08
 Nodes (23): apiVersion, spec, kind, metadata, name, runAsNonRoot, seccompProfile, spec (+15 more)
 
 ### Community 2372 - "BlockedZone"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): BlockedZone, BlockedZoneArgs, BlockedZoneState
 
-### Community 2373 - "DhcpReservedLease"
-Cohesion: 0.29
-Nodes (3): DhcpReservedLease, DhcpReservedLeaseArgs, DhcpReservedLeaseState
-
 ### Community 2374 - "allowedZones.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): AllowedZones, AllowedZonesArgs, AllowedZonesState
 
 ### Community 2378 - "provisionerKey.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): ProvisionerKey, ProvisionerKeyArgs, ProvisionerKeyState
 
 ### Community 2379 - "template.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): Template, TemplateArgs, TemplateState
-
-### Community 2380 - "coderd/user.ts"
-Cohesion: 0.29
-Nodes (3): User, UserArgs, UserState
 
 ### Community 2381 - "traefik/values.yaml"
 Cohesion: 0.08
@@ -11227,16 +11544,16 @@ Cohesion: 0.10
 Nodes (23): coordinator, supersync, app, advancedMounts, type, data, public, script (+15 more)
 
 ### Community 2383 - "workspaceProxy.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): WorkspaceProxy, WorkspaceProxyArgs, WorkspaceProxyState
 
 ### Community 2384 - "main"
 Cohesion: 0.11
 Nodes (22): reloader.stakater.com/auto, annotations, containers, type, main, canary-check, dump, restore-test (+14 more)
 
-### Community 2385 - "getDhcpLeases.ts"
-Cohesion: 0.33
-Nodes (5): getDhcpLeases(), GetDhcpLeasesArgs, getDhcpLeasesOutput(), GetDhcpLeasesOutputArgs, GetDhcpLeasesResult
+### Community 2385 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
 ### Community 2386 - "getDhcpScope.ts"
 Cohesion: 0.33
@@ -11246,25 +11563,25 @@ Nodes (5): getDhcpScope(), GetDhcpScopeArgs, getDhcpScopeOutput(), GetDhcpScopeO
 Cohesion: 0.40
 Nodes (4): apiVersion, kind, metadata, name
 
-### Community 2388 - "technitium/utilities.ts"
-Cohesion: 0.18
-Nodes (8): getTsigKey(), GetTsigKeyArgs, getTsigKeyOutput(), GetTsigKeyOutputArgs, GetTsigKeyResult, getEnv(), getEnvBoolean(), getEnvNumber()
+### Community 2388 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
-### Community 2395 - "labels"
-Cohesion: 0.10
-Nodes (21): traefik.http.routers.${APP}.entrypoints, traefik.http.routers.${APP}.rule, traefik.http.routers.${APP}.service, traefik.http.routers.${APP}-tailscale.entrypoints, traefik.http.routers.${APP}-tailscale.rule, traefik.http.routers.${APP}-tailscale.service, traefik.http.routers.${APP}.tls.certresolver, traefik.http.services.${APP}.loadbalancer.healthcheck.interval (+13 more)
+### Community 2395 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
 ### Community 2397 - "values"
-Cohesion: 0.10
-Nodes (21): controller, ports, type, port, hostnames, kind, parentRefs, rules (+13 more)
+Cohesion: 0.18
+Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+3 more)
 
 ### Community 2398 - "meilisearch"
 Cohesion: 0.10
 Nodes (21): downscaler/exclude, k8s.v1.cni.cncf.io/networks, reloader.stakater.com/auto, meilisearch, jellyfin, meilisearch-chown, annotations, containers (+13 more)
 
-### Community 2399 - "app"
-Cohesion: 0.10
-Nodes (21): app, app, meilisearch, advancedMounts, existingClaim, advancedMounts, path, server (+13 more)
+### Community 2399 - "metadata"
+Cohesion: 0.40
+Nodes (5): advancedMounts, path, server, type, metadata
 
 ### Community 2400 - "spec"
 Cohesion: 0.10
@@ -11274,13 +11591,17 @@ Nodes (20): apiVersion, kind, name, name, namespace, kind, metadata, name (+12 m
 Cohesion: 0.10
 Nodes (21): restore-test, path, pgdata, scripts, sops-age, tmp, advancedMounts, type (+13 more)
 
+### Community 2402 - "install-tools.sh"
+Cohesion: 0.67
+Nodes (3): apt_private(), PATH, install-tools.sh script
+
 ### Community 2408 - "Talos node logs in Loki"
 Cohesion: 0.29
 Nodes (6): Applying the Talos half, Labels, Limits, Queries, Talos node logs in Loki, Verifying
 
-### Community 2409 - "${APP}-postgres nested Flux Kustomization"
-Cohesion: 0.33
-Nodes (6): cluster-versions ConfigMap generator, HelmRelease defaults patch (retries, sops, substituteFrom), Kustomization defaults patch (sops, substituteFrom), fast-node-eviction Component, ${APP}-postgres nested Flux Kustomization, postgres Kustomize Component
+### Community 2409 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
 ### Community 2410 - "persistence"
 Cohesion: 0.11
@@ -11290,20 +11611,20 @@ Nodes (21): globalMounts, type, existingClaim, globalMounts, type, globalMounts,
 Cohesion: 0.10
 Nodes (19): apiVersion, kind, name, mode, kind, metadata, name, cleanupOnFail (+11 more)
 
-### Community 2412 - "forgejo/provider.ts"
-Cohesion: 0.29
-Nodes (3): Provider, ProviderArgs, TerraformConfigResult
+### Community 2412 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
 ### Community 2413 - "docs"
 Cohesion: 0.13
 Nodes (20): external-dns.kubernetes.io/target, annotations, hostnames, kind, rules, annotations, hostnames, kind (+12 more)
 
 ### Community 2414 - "blockedZones.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): BlockedZones, BlockedZonesArgs, BlockedZonesState
 
 ### Community 2415 - "dhcpScope.ts"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (3): DhcpScope, DhcpScopeArgs, DhcpScopeState
 
 ### Community 2416 - "internal"
@@ -11324,7 +11645,7 @@ Nodes (19): networkPolicy, registry, version, instance, cluster, components, dis
 
 ### Community 2420 - "listeners"
 Cohesion: 0.11
-Nodes (20): funnel, external-dns.kubernetes.io/hostname, external-dns.kubernetes.io/target, io.cilium/lb-ipam-ips, kubernetes.io/ingress.class, annotations, spec, gateway (+12 more)
+Nodes (19): funnel, external-dns.kubernetes.io/hostname, external-dns.kubernetes.io/target, io.cilium/lb-ipam-ips, kubernetes.io/ingress.class, annotations, spec, gateway (+11 more)
 
 ### Community 2421 - "OCIRepository forgejo"
 Cohesion: 0.11
@@ -11347,8 +11668,8 @@ Cohesion: 0.14
 Nodes (18): forceRename, hostnames, kind, parentRefs, rules, hostnames, kind, parentRefs (+10 more)
 
 ### Community 2426 - "n8n"
-Cohesion: 0.11
-Nodes (18): downscaler/exclude, reloader.stakater.com/auto, n8n, n8n, command, image, securityContext, fix-permissions (+10 more)
+Cohesion: 0.15
+Nodes (13): downscaler/exclude, reloader.stakater.com/auto, n8n, n8n, annotations, containers, env, envFrom (+5 more)
 
 ### Community 2427 - "hook-files"
 Cohesion: 0.14
@@ -11366,9 +11687,9 @@ Nodes (18): downscaler/exclude, reloader.stakater.com/auto, annotations, replica
 Cohesion: 0.11
 Nodes (18): controller, ports, type, securityContext, port, http, type, fsGroupChangePolicy (+10 more)
 
-### Community 2431 - "from"
-Cohesion: 0.12
-Nodes (18): namespacePolicy, kind, name, expose, exposedPort, namespacePolicy, port, protocol (+10 more)
+### Community 2431 - "listeners"
+Cohesion: 0.10
+Nodes (23): kind, name, listeners, namespacePolicy, paseossh, web, websecure, from (+15 more)
 
 ### Community 2432 - "experimental"
 Cohesion: 0.11
@@ -11398,9 +11719,9 @@ Nodes (17): existingClaim, globalMounts, globalMounts, medium, sizeLimit, type, 
 Cohesion: 0.16
 Nodes (17): hostnames, kind, parentRefs, rules, hostnames, kind, parentRefs, rules (+9 more)
 
-### Community 2439 - "persistence"
-Cohesion: 0.15
-Nodes (17): globalMounts, type, existingClaim, globalMounts, path, globalMounts, type, existingClaim (+9 more)
+### Community 2439 - "app"
+Cohesion: 0.07
+Nodes (32): app, app, meilisearch, prepare, advancedMounts, type, existingClaim, globalMounts (+24 more)
 
 ### Community 2440 - "server"
 Cohesion: 0.12
@@ -11415,8 +11736,8 @@ Cohesion: 0.12
 Nodes (16): description, summary, apiVersion, name, rules, kind, severity, metadata (+8 more)
 
 ### Community 2443 - "releases"
-Cohesion: 0.12
-Nodes (15): helmDefaults, cleanupOnFail, wait, waitForJobs, releases, atomic, chart, name (+7 more)
+Cohesion: 0.11
+Nodes (17): helmDefaults, cleanupOnFail, wait, waitForJobs, releases, atomic, chart, name (+9 more)
 
 ### Community 2444 - "environment"
 Cohesion: 0.12
@@ -11667,8 +11988,8 @@ Cohesion: 0.14
 Nodes (14): pluginConfiguration, scheduledBackups, name, recovery, clusterName, endpointURL, method, pluginConfiguration (+6 more)
 
 ### Community 2506 - "tailscale"
-Cohesion: 0.14
-Nodes (14): downscaler/exclude, k8s.v1.cni.cncf.io/networks, reloader.stakater.com/auto, tailscale, technitium, annotations, env, image (+6 more)
+Cohesion: 0.11
+Nodes (19): downscaler/exclude, k8s.v1.cni.cncf.io/networks, reloader.stakater.com/auto, tailscale, technitium, tailscale-routing, annotations, env (+11 more)
 
 ### Community 2507 - "app"
 Cohesion: 0.16
@@ -11743,8 +12064,8 @@ Cohesion: 0.14
 Nodes (14): reloader.stakater.com/auto, crowdsec-ui, annotations, containers, initContainers, pod, replicas, register-watcher (+6 more)
 
 ### Community 2525 - "web"
-Cohesion: 0.14
-Nodes (14): permanent, scheme, to, redirections, web, web, entryPoint, asDefault (+6 more)
+Cohesion: 0.20
+Nodes (10): permanent, scheme, to, redirections, web, entryPoint, asDefault, exposedPort (+2 more)
 
 ### Community 2526 - "effect"
 Cohesion: 0.27
@@ -11770,9 +12091,9 @@ Nodes (13): cap_drop, container_name, cpus, dns, entrypoint, image, mem_limit, n
 Cohesion: 0.15
 Nodes (13): cap_drop, container_name, cpus, dns, entrypoint, image, mem_limit, networks (+5 more)
 
-### Community 2532 - "neo4j"
-Cohesion: 0.15
-Nodes (13): NEO4J_AUTH, NEO4J_dbms_security_procedures_unrestricted, NEO4J_PLUGINS, NEO4J_server_memory_heap_max__size, NEO4J_server_memory_pagecache_size, container_name, dns, environment (+5 more)
+### Community 2532 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
 ### Community 2533 - "labels"
 Cohesion: 0.15
@@ -11851,8 +12172,8 @@ Cohesion: 0.18
 Nodes (13): existingClaim, globalMounts, path, subPath, config, tmp, truenas-media, globalMounts (+5 more)
 
 ### Community 2552 - "meilisearch"
-Cohesion: 0.15
-Nodes (13): reloader.stakater.com/auto, annotations, containers, strategy, meilisearch, app, env, envFrom (+5 more)
+Cohesion: 0.29
+Nodes (7): meilisearch, env, envFrom, image, probes, resources, securityContext
 
 ### Community 2553 - "app"
 Cohesion: 0.15
@@ -11906,13 +12227,13 @@ Nodes (12): labels, traefik.enable, traefik.http.routers.garage.entrypoints, tra
 Cohesion: 0.17
 Nodes (11): command, container_name, devices, environment, group_add, image, ports, restart (+3 more)
 
-### Community 2566 - "environment"
-Cohesion: 0.41
-Nodes (12): NEO4J_MCP_SERVER_ALLOWED_HOSTS, NEO4J_MCP_SERVER_HOST, NEO4J_MCP_SERVER_PATH, NEO4J_MCP_SERVER_PORT, NEO4J_PASSWORD, NEO4J_TRANSPORT, NEO4J_URL, NEO4J_USERNAME (+4 more)
+### Community 2566 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
-### Community 2567 - "neo4j-data-modeling"
-Cohesion: 0.17
-Nodes (12): traefik.enable, traefik.http.routers.${APP}-mcp-data-modeling.entrypoints, traefik.http.routers.${APP}-mcp-data-modeling.rule, traefik.http.routers.${APP}-mcp-data-modeling.tls.certresolver, traefik.http.services.${APP}-mcp-data-modeling.loadbalancer.server.port, container_name, depends_on, image (+4 more)
+### Community 2567 - "spec"
+Cohesion: 0.07
+Nodes (26): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+18 more)
 
 ### Community 2568 - "technitium"
 Cohesion: 0.17
@@ -12022,9 +12343,9 @@ Nodes (12): dump, main, pg-client-cert, sftp-key, advancedMounts, defaultMode, n
 Cohesion: 0.17
 Nodes (12): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+4 more)
 
-### Community 2595 - "dependencies"
-Cohesion: 0.17
-Nodes (12): dependencies, cidr-matcher, glob, @muhlba91/pulumi-proxmoxve, private-ip, @pulumi/command, @pulumi/kubernetes, @pulumi/std (+4 more)
+### Community 2595 - "spec"
+Cohesion: 0.08
+Nodes (25): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+17 more)
 
 ### Community 2596 - "authentik-pg-standby-role"
 Cohesion: 0.18
@@ -12038,13 +12359,13 @@ Nodes (11): command, container_name, dns, image, networks, ports, restart, tmpfs
 Cohesion: 0.25
 Nodes (11): GARAGE_ADMIN_TOKEN, GARAGE_RPC_SECRET, RCLONE_CONFIG_GARAGE_ENDPOINT, RCLONE_CONFIG_GARAGE_PROVIDER, RCLONE_CONFIG_GARAGE_REGION, RCLONE_CONFIG_GARAGE_TYPE, RUST_LOG, TZ (+3 more)
 
-### Community 2599 - "neo4j-cypher"
-Cohesion: 0.18
-Nodes (11): traefik.http.routers.${APP}-mcp-cypher.entrypoints, traefik.http.routers.${APP}-mcp-cypher.rule, traefik.http.routers.${APP}-mcp-cypher.tls.certresolver, traefik.http.services.${APP}-mcp-cypher.loadbalancer.server.port, container_name, depends_on, image, labels (+3 more)
+### Community 2599 - "spec"
+Cohesion: 0.08
+Nodes (25): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+17 more)
 
-### Community 2600 - "neo4j-memory"
-Cohesion: 0.18
-Nodes (11): traefik.http.routers.${APP}-mcp-memory.entrypoints, traefik.http.routers.${APP}-mcp-memory.rule, traefik.http.routers.${APP}-mcp-memory.tls.certresolver, traefik.http.services.${APP}-mcp-memory.loadbalancer.server.port, container_name, depends_on, image, labels (+3 more)
+### Community 2600 - "spec"
+Cohesion: 0.08
+Nodes (25): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+17 more)
 
 ### Community 2601 - "postgres-backup"
 Cohesion: 0.18
@@ -12095,8 +12416,8 @@ Cohesion: 0.18
 Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+3 more)
 
 ### Community 2613 - "dns"
-Cohesion: 0.18
-Nodes (11): clusterIP, controller, ports, port, protocol, type, port, protocol (+3 more)
+Cohesion: 0.14
+Nodes (14): controller, clusterIP, controller, ports, port, protocol, type, port (+6 more)
 
 ### Community 2614 - "internal"
 Cohesion: 0.18
@@ -12243,8 +12564,8 @@ Cohesion: 0.31
 Nodes (10): runners/base Kustomization, david-driscoll Flux Kustomization, david-driscoll-runners overlay, github-actions runners Kustomization index, littles-tech Flux Kustomization, littles-tech-runners overlay, littles-tech-release Flux Kustomization, littles-tech-release-runners overlay (+2 more)
 
 ### Community 2650 - "reloader"
-Cohesion: 0.18
-Nodes (11): tolerations, enabled, namespace, deployment, enableHA, podMonitor, readOnlyRootFileSystem, values (+3 more)
+Cohesion: 0.17
+Nodes (12): tolerations, enabled, namespace, deployment, enableHA, podMonitor, readOnlyRootFileSystem, reloadOnCreate (+4 more)
 
 ### Community 2651 - "config"
 Cohesion: 0.18
@@ -12399,8 +12720,8 @@ Cohesion: 0.20
 Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
 
 ### Community 2689 - "ports"
-Cohesion: 0.20
-Nodes (10): controller, port, ports, protocol, port, protocol, admin, cluster-https (+2 more)
+Cohesion: 0.29
+Nodes (7): port, ports, protocol, port, protocol, admin, cluster-https
 
 ### Community 2690 - "install"
 Cohesion: 0.20
@@ -12535,8 +12856,8 @@ Cohesion: 0.20
 Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
 
 ### Community 2723 - "values"
-Cohesion: 0.20
-Nodes (10): controller, ports, type, port, http, app, values, defaultPodOptions (+2 more)
+Cohesion: 0.18
+Nodes (11): controller, ports, type, port, http, app, values, controllers (+3 more)
 
 ### Community 2724 - "install"
 Cohesion: 0.20
@@ -12719,12 +13040,12 @@ Cohesion: 0.22
 Nodes (9): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile (+1 more)
 
 ### Community 2769 - "admin"
-Cohesion: 0.22
-Nodes (9): hostnames, kind, parentRefs, rules, kind, name, namespace, admin (+1 more)
+Cohesion: 0.20
+Nodes (10): hostnames, kind, parentRefs, rules, kind, name, namespace, admin (+2 more)
 
 ### Community 2770 - "values"
 Cohesion: 0.22
-Nodes (9): nodeSelector, tolerations, technitium-dns, values, effect, key, operator, defaultPodOptions (+1 more)
+Nodes (9): nodeSelector, tolerations, technitium-dns, values, effect, key, operator, controllers (+1 more)
 
 ### Community 2771 - "securityContext"
 Cohesion: 0.22
@@ -13015,16 +13336,16 @@ Cohesion: 0.25
 Nodes (8): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile
 
 ### Community 2843 - "encodedCharacters"
-Cohesion: 0.25
-Nodes (8): allowEncodedBackSlash, allowEncodedNullCharacter, allowEncodedPercent, allowEncodedSlash, http, aliasHeadersStrategy, encodedCharacters, middlewares
+Cohesion: 0.13
+Nodes (15): allowEncodedBackSlash, allowEncodedNullCharacter, allowEncodedPercent, allowEncodedSlash, funnel, expose, exposedPort, forwardedHeaders (+7 more)
 
-### Community 2844 - "mariadb"
-Cohesion: 0.29
-Nodes (8): mariadb, expose, exposedPort, namespacePolicy, port, protocol, transport, mariadb
+### Community 2844 - "ports"
+Cohesion: 0.14
+Nodes (18): default, expose, exposedPort, port, protocol, gitssh, mariadb, expose (+10 more)
 
-### Community 2845 - "paseossh"
-Cohesion: 0.29
-Nodes (8): paseossh, expose, exposedPort, namespacePolicy, port, protocol, transport, paseossh
+### Community 2845 - "spec"
+Cohesion: 0.08
+Nodes (25): groups, url, apiVersion, oauth2, conditions, group, method, url (+17 more)
 
 ### Community 2846 - "postgres"
 Cohesion: 0.29
@@ -13050,9 +13371,9 @@ Nodes (8): data, enabled, config, config.yaml, values, configMaps, controllers, 
 Cohesion: 0.25
 Nodes (8): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile
 
-### Community 2852 - "pulumi-workspace-scratch/kustomization.yaml"
-Cohesion: 0.25
-Nodes (7): apiVersion, kind, patches, patch, target, group, kind
+### Community 2852 - "spec"
+Cohesion: 0.08
+Nodes (25): groups, url, apiVersion, oauth2, conditions, group, method, url (+17 more)
 
 ### Community 2853 - "healthcheck"
 Cohesion: 0.48
@@ -13062,9 +13383,9 @@ Nodes (7): healthcheck, interval, retries, start_period, test, timeout, healthch
 Cohesion: 0.29
 Nodes (6): external, networks, dockge_default, services, x-dockge, urls
 
-### Community 2855 - "services"
-Cohesion: 0.29
-Nodes (6): external, networks, dockge_default, services, x-dockge, urls
+### Community 2855 - "spec"
+Cohesion: 0.08
+Nodes (24): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+16 more)
 
 ### Community 2856 - "healthcheck"
 Cohesion: 0.48
@@ -13078,9 +13399,9 @@ Nodes (6): external, networks, dockge_default, services, x-dockge, urls
 Cohesion: 0.29
 Nodes (4): Break-glass SOPS artifact set in bootstrap/openbao, Two independent OpenBao auth paths inside one pulumi preview, OIDC auth method moved from equestria-init.sh into components/openbao/oidc.ts, Moving OpenBao configuration into Pulumi
 
-### Community 2859 - "pulumi preview as the validation substitute"
-Cohesion: 0.29
-Nodes (3): No CI/CD pipelines detected, TypeScript strict-mode settings, No test framework configured
+### Community 2859 - "spec"
+Cohesion: 0.08
+Nodes (24): groups, url, apiVersion, oauth2, conditions, method, url, kind (+16 more)
 
 ### Community 2860 - "containers"
 Cohesion: 0.29
@@ -13226,9 +13547,9 @@ Nodes (7): controller, ports, type, port, http, degoog, service
 Cohesion: 0.29
 Nodes (7): holm, env, envFrom, image, probes, resources, securityContext
 
-### Community 2896 - "n8n/helmrelease.yaml"
-Cohesion: 0.33
-Nodes (6): N8N ApplicationDefinition, apiVersion, kind, metadata, name, N8N Flux Kustomization
+### Community 2896 - "Authentik Single-externalHost Tailnet-URL Workaround"
+Cohesion: 0.12
+Nodes (17): Authentik Single-externalHost Tailnet-URL Workaround, N8N ApplicationDefinition, apiVersion, kind, metadata, name, N8N Flux Kustomization, apiVersion (+9 more)
 
 ### Community 2897 - "api"
 Cohesion: 0.33
@@ -13299,8 +13620,8 @@ Cohesion: 0.29
 Nodes (7): env, envFrom, image, probes, resources, securityContext, app
 
 ### Community 2914 - "app"
-Cohesion: 0.29
-Nodes (7): env, envFrom, image, probes, resources, securityContext, app
+Cohesion: 0.11
+Nodes (18): reloader.stakater.com/auto, annotations, containers, env, envFrom, image, initContainers, probes (+10 more)
 
 ### Community 2915 - "values"
 Cohesion: 0.29
@@ -13389,10 +13710,6 @@ Nodes (7): tsiam, env, image, nameOverride, probes, resources, securityContext
 ### Community 2936 - "ProviderProxy"
 Cohesion: 0.29
 Nodes (3): ProviderProxy, pulumi, utilities
-
-### Community 2937 - "repository.ts"
-Cohesion: 0.29
-Nodes (3): Repository, RepositoryArgs, RepositoryState
 
 ### Community 2938 - "healthcheck"
 Cohesion: 0.33
@@ -13566,13 +13883,13 @@ Nodes (6): command, image, resources, securityContext, initContainers, fix-permi
 Cohesion: 0.33
 Nodes (5): getPersonalAccessToken(), GetPersonalAccessTokenArgs, getPersonalAccessTokenOutput(), GetPersonalAccessTokenOutputArgs, GetPersonalAccessTokenResult
 
-### Community 2981 - "getSshKey.ts"
-Cohesion: 0.33
-Nodes (5): getSshKey(), GetSshKeyArgs, getSshKeyOutput(), GetSshKeyOutputArgs, GetSshKeyResult
+### Community 2981 - "spec"
+Cohesion: 0.08
+Nodes (24): apiVersion, POSTGRES_CONNECTION_STRING, extract, rewrite, key, kind, metadata, name (+16 more)
 
-### Community 2982 - "getTeam.ts"
-Cohesion: 0.33
-Nodes (5): getTeam(), GetTeamArgs, getTeamOutput(), GetTeamOutputArgs, GetTeamResult
+### Community 2982 - "spec"
+Cohesion: 0.09
+Nodes (24): kind, name, spec, createNamespace, remediation, retries, strategy, cleanupOnFail (+16 more)
 
 ### Community 2983 - "Core Kubernetes Concepts for Deployment"
 Cohesion: 0.40
@@ -13601,6 +13918,10 @@ Nodes (4): external, networks, dockge_default, services
 ### Community 2989 - "path"
 Cohesion: 0.60
 Nodes (5): path, required, env_file, env_file, env_file
+
+### Community 2990 - "spec"
+Cohesion: 0.08
+Nodes (23): groups, apiVersion, proxy, conditions, group, maintenance-windows, method, url (+15 more)
 
 ### Community 2991 - "longhorn-critical StorageClass"
 Cohesion: 0.40
@@ -13835,8 +14156,8 @@ Cohesion: 0.40
 Nodes (5): enabled, values, fullnameOverride, priorityClassName, serviceMonitor
 
 ### Community 3049 - "GrafanaFolder: Network"
-Cohesion: 0.40
-Nodes (5): GrafanaDashboard: blackbox-exporter (grafana.com 7587), GrafanaDashboard: cloudflared (grafana.com 17457), GrafanaDashboard: external-dns (grafana.com 15038), GrafanaFolder: Network, GrafanaDashboard: speedtest-exporter-hub (grafana.com 13665)
+Cohesion: 0.25
+Nodes (8): GrafanaDashboard: k8s-system-coredns (dotdc, raw URL), GrafanaDashboard: kubernetes-coredns (grafana.com 15762), GrafanaDashboard: blackbox-exporter (grafana.com 7587), GrafanaDashboard: cloudflared (grafana.com 17457), GrafanaDashboard: coredns (grafana.com 14981), GrafanaDashboard: external-dns (grafana.com 15038), GrafanaFolder: Network, GrafanaDashboard: speedtest-exporter-hub (grafana.com 13665)
 
 ### Community 3050 - "app"
 Cohesion: 0.40
@@ -13954,21 +14275,25 @@ Nodes (4): cleanupOnFail, force, recreate, rollback
 Cohesion: 0.50
 Nodes (3): apiVersion, kind, resources
 
-### Community 3080 - "GrafanaFolder: Flux"
-Cohesion: 0.50
-Nodes (4): GrafanaDashboard: Flux Cluster Stats, GrafanaDashboard: Flux Control Plane, GrafanaFolder: Flux, GrafanaDashboard: Flux Logs
+### Community 3080 - "restic"
+Cohesion: 0.08
+Nodes (23): apiVersion, kind, metadata, name, driscoll.dev/volsync-backend, fsGroup, runAsGroup, runAsUser (+15 more)
 
 ### Community 3081 - "rollback"
 Cohesion: 0.50
 Nodes (4): cleanupOnFail, force, recreate, rollback
 
-### Community 3083 - "scripts"
-Cohesion: 0.50
-Nodes (4): scripts, cancel, refresh, up
+### Community 3082 - "terrifi/firewallPolicy.ts"
+Cohesion: 0.25
+Nodes (3): FirewallPolicy, FirewallPolicyArgs, FirewallPolicyState
 
-### Community 3084 - "repository"
-Cohesion: 0.67
-Nodes (3): repository, type, url
+### Community 3083 - "spec"
+Cohesion: 0.09
+Nodes (23): groups, proxy, conditions, group, maintenance-windows, method, url, duration (+15 more)
+
+### Community 3084 - "spec"
+Cohesion: 0.09
+Nodes (22): groups, apiVersion, proxy, conditions, group, method, url, kind (+14 more)
 
 ### Community 3085 - "env_file"
 Cohesion: 0.67
@@ -14010,17 +14335,1261 @@ Nodes (3): kind, name, chartRef
 Cohesion: 0.67
 Nodes (3): Flux Kustomization: silence-operator, Kustomize overlay: observability/silences, Silence: keda-hpa-maxed-out
 
-### Community 3095 - "repository"
+### Community 3095 - "values"
+Cohesion: 0.09
+Nodes (22): reloader.stakater.com/auto, install, mode, annotations, name, value, format, level (+14 more)
+
+### Community 3096 - "spec"
+Cohesion: 0.09
+Nodes (21): groups, apiVersion, proxy, conditions, group, method, url, kind (+13 more)
+
+### Community 3097 - "spec"
+Cohesion: 0.09
+Nodes (22): groups, proxy, conditions, group, maintenance-windows, method, url, duration (+14 more)
+
+### Community 3098 - "spec"
+Cohesion: 0.09
+Nodes (22): groups, proxy, conditions, group, maintenance-windows, method, url, duration (+14 more)
+
+### Community 3099 - "spec"
+Cohesion: 0.09
+Nodes (21): groups, apiVersion, conditions, group, maintenance-windows, method, url, kind (+13 more)
+
+### Community 3116 - "spec"
+Cohesion: 0.09
+Nodes (21): groups, apiVersion, conditions, group, maintenance-windows, method, url, kind (+13 more)
+
+### Community 3117 - "spec"
+Cohesion: 0.09
+Nodes (21): apiVersion, PASSWORD, extract, key, kind, metadata, name, kind (+13 more)
+
+### Community 3118 - "spec"
+Cohesion: 0.10
+Nodes (20): groups, apiVersion, conditions, maintenance-windows, method, url, kind, duration (+12 more)
+
+### Community 3119 - "prober"
+Cohesion: 0.16
+Nodes (20): Probe dns-celestia-tcp, Probe dns-celestia-dot, spec, apiVersion, kind, metadata, spec, spec (+12 more)
+
+### Community 3120 - "app"
+Cohesion: 0.12
+Nodes (19): app, app, mariadb, mariadb-passwords, advancedMounts, existingClaim, advancedMounts, existingClaim (+11 more)
+
+### Community 3121 - "rules"
+Cohesion: 0.11
+Nodes (18): description, summary, apiVersion, interval, name, rules, kind, severity (+10 more)
+
+### Community 3122 - "oidc"
+Cohesion: 0.11
+Nodes (17): auth, disable-password, oidc, require-auth, secret-key, document, head, client-id (+9 more)
+
+### Community 3123 - "spec"
+Cohesion: 0.11
+Nodes (18): groups, proxy, conditions, group, method, url, externalHost, mode (+10 more)
+
+### Community 3124 - "spec"
+Cohesion: 0.11
+Nodes (17): groups, apiVersion, conditions, group, method, url, kind, metadata (+9 more)
+
+### Community 3125 - "spec"
+Cohesion: 0.12
+Nodes (16): groups, apiVersion, conditions, method, url, kind, metadata, name (+8 more)
+
+### Community 3126 - "apps"
+Cohesion: 0.12
+Nodes (17): android, ios, apps, app_store, default_visible, icon, id, name (+9 more)
+
+### Community 3127 - "spec"
+Cohesion: 0.12
+Nodes (16): groups, apiVersion, conditions, group, method, url, kind, metadata (+8 more)
+
+### Community 3128 - "sops"
+Cohesion: 0.12
+Nodes (16): enc, recipient, apiVersion, kind, metadata, name, sops, age (+8 more)
+
+### Community 3129 - "rules"
+Cohesion: 0.12
+Nodes (16): description, summary, apiVersion, name, rules, kind, severity, metadata (+8 more)
+
+### Community 3130 - "Bring-up"
+Cohesion: 0.12
+Nodes (15): 1. Create the two OpenBao values (once, before merging), 2. Merge; Flux deploys `seedstrem` and `aiostreams`, 3. seedstrem UI (`https://seedstrem.<domain>`), 4. AIOStreams UI (`https://aiostreams.<domain>/stremio/configure`), 5. Gelato: test on `jellyfin-pg` first, then production, 6. Optional: browse finished downloads, AIOStreams (`kubernetes/apps/equestria/media/aiostreams`), Bring-up (+7 more)
+
+### Community 3131 - "search"
+Cohesion: 0.15
+Nodes (16): surfaces, default_url, enabled, name, surfaces, tip, immich, jellyfin (+8 more)
+
+### Community 3132 - "persistence"
+Cohesion: 0.13
+Nodes (16): existingClaim, path, globalMounts, type, existingClaim, path, server, type (+8 more)
+
+### Community 3133 - "JellyfinConfiguration.ts"
+Cohesion: 0.28
+Nodes (13): applyOwned(), containsUnknown(), isPlainObject(), JellyfinConfigurationArgs, jellyfinConfigurationProvider, JellyfinListUpsert, jellyfinRequest(), jsonEqual() (+5 more)
+
+### Community 3134 - "spec"
+Cohesion: 0.13
+Nodes (15): kind, name, mode, cleanupOnFail, force, recreate, spec, chartRef (+7 more)
+
+### Community 3135 - "config.yml"
+Cohesion: 0.13
+Nodes (14): customization, enabled, database, enabled, search, enabled, icon, name (+6 more)
+
+### Community 3136 - "spec"
+Cohesion: 0.13
+Nodes (15): kind, name, mode, cleanupOnFail, force, recreate, spec, chartRef (+7 more)
+
+### Community 3137 - "spec"
+Cohesion: 0.13
+Nodes (15): kind, name, mode, cleanupOnFail, force, recreate, spec, chartRef (+7 more)
+
+### Community 3138 - "spec"
+Cohesion: 0.13
+Nodes (14): apiVersion, apiGroup, kind, name, kind, metadata, name, storage (+6 more)
+
+### Community 3139 - "values"
+Cohesion: 0.13
+Nodes (15): controller, ports, type, securityContext, port, http, type, fsGroupChangePolicy (+7 more)
+
+### Community 3140 - "spec"
+Cohesion: 0.13
+Nodes (15): kind, name, mode, cleanupOnFail, force, recreate, spec, chartRef (+7 more)
+
+### Community 3141 - "values"
+Cohesion: 0.13
+Nodes (15): extraConfig, name, enabled, enabled, values, effect, key, operator (+7 more)
+
+### Community 3142 - "Arcane + PDM: celestia → equestria cutover"
+Cohesion: 0.14
+Nodes (13): 1. Before merging: OpenBao, 2. Stop the celestia containers and take the data, 3. Merge, 4. Restore the data, 5. Add celestia to Arcane, 6. Remove the PBS remotes from PDM, 7. Verify, 8. Follow-up PR: tailnet hostnames (+5 more)
+
+### Community 3143 - "spec"
+Cohesion: 0.15
+Nodes (14): kind, name, remediation, retries, spec, chartRef, install, interval (+6 more)
+
+### Community 3144 - "spec"
+Cohesion: 0.14
+Nodes (14): kind, name, mode, cleanupOnFail, force, spec, chartRef, driftDetection (+6 more)
+
+### Community 3145 - "globalMounts"
+Cohesion: 0.16
+Nodes (14): existingClaim, globalMounts, path, readOnly, subPath, globalMounts, identifier, type (+6 more)
+
+### Community 3146 - "spec"
+Cohesion: 0.14
+Nodes (14): kind, name, mode, cleanupOnFail, force, spec, chartRef, driftDetection (+6 more)
+
+### Community 3147 - "name"
+Cohesion: 0.16
+Nodes (14): tailscale.com/proxy-group, tailscale.com/tailnet-fqdn, Service dockge-as, Service dns-celestia, annotations, name, metadata, apiVersion (+6 more)
+
+### Community 3148 - "rules"
+Cohesion: 0.14
+Nodes (14): PrometheusRule dockge-celestia-alerts, name, rules, spec, apiVersion, kind, metadata, spec (+6 more)
+
+### Community 3149 - "package.json"
+Cohesion: 0.14
+Nodes (13): author, bugs, url, description, homepage, license, main, name (+5 more)
+
+### Community 3150 - "talconfig.yaml"
+Cohesion: 0.14
+Nodes (13): additionalApiServerCertSans, additionalMachineCertSans, clusterName, clusterPodNets, clusterSvcNets, cniConfig, name, controlPlane (+5 more)
+
+### Community 3151 - "config.yaml"
+Cohesion: 0.15
+Nodes (12): api, dashboard, insecure, global, checkNewVersion, sendAnonymousUsage, log, format (+4 more)
+
+### Community 3153 - "policy"
+Cohesion: 0.18
+Nodes (11): Forgejo Flux Kustomization, coder namespace kustomization (app ordering), renovate Flux Kustomization (CR split from operator), allowedHosts, allowedImages, allowRootUser, enabled, requireSecretRefOptIn (+3 more)
+
+### Community 3154 - "config"
+Cohesion: 0.17
+Nodes (13): enabled, globalMounts, name, type, enabled, existingClaim, globalMounts, path (+5 more)
+
+### Community 3155 - "app"
+Cohesion: 0.15
+Nodes (13): reloader.stakater.com/auto, annotations, containers, env, envFrom, image, probes, resources (+5 more)
+
+### Community 3156 - "snapshot-controller HelmRelease"
+Cohesion: 0.19
+Nodes (9): reloader Flux Kustomization (deletionPolicy Orphan), reloader kustomize resource list, longhorn-snapclass VolumeSnapshotClass, snapshot-controller HelmRelease, snapshot-controller OCIRepository (piraeus 5.2.0), snapshot-controller Flux Kustomization, snapshot-controller kustomize resource list, snapshot-crds Flux Kustomization (+1 more)
+
+### Community 3157 - "spec"
+Cohesion: 0.15
+Nodes (13): cleanupOnFail, force, recreate, spec, interval, maxHistory, rollback, timeout (+5 more)
+
+### Community 3158 - "spec"
+Cohesion: 0.15
+Nodes (13): name, namespace, cleanupOnFail, force, recreate, spec, dependsOn, interval (+5 more)
+
+### Community 3159 - "ports"
+Cohesion: 0.21
+Nodes (13): Service dockge-celestia, name, port, protocol, targetPort, spec, spec, apiVersion (+5 more)
+
+### Community 3160 - "spec"
+Cohesion: 0.15
+Nodes (13): kind, name, cleanupOnFail, force, recreate, spec, chartRef, interval (+5 more)
+
+### Community 3161 - "nodes"
+Cohesion: 0.15
+Nodes (13): model, secureboot, node.longhorn.io/default-disks-config, node.longhorn.io/default-node-tags, nodes, controlPlane, hostname, installDisk (+5 more)
+
+### Community 3162 - "prometheus"
+Cohesion: 0.17
+Nodes (12): command, container_name, depends_on, dns, extra_hosts, image, networks, ports (+4 more)
+
+### Community 3163 - "entryPoints"
+Cohesion: 0.18
+Nodes (12): entryPoints, metrics, sftp, web, address, readTimeout, address, transport (+4 more)
+
+### Community 3164 - "oidc"
+Cohesion: 0.17
+Nodes (11): renovate-secret ExternalSecret (RENOVATE_TOKEN), renovate-operator authentik OAuth2 client registration, renovate-operator-oidc ExternalSecret (client + session secret), oidc, enabled, existingSecret, redirectUrl, secretKey (+3 more)
+
+### Community 3165 - "oidc"
+Cohesion: 0.17
+Nodes (12): auth, enabled, oidc, password_change_url, registration, client_id, client_secret, issuer (+4 more)
+
+### Community 3166 - "internal"
+Cohesion: 0.17
+Nodes (12): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+4 more)
+
+### Community 3167 - "spec"
+Cohesion: 0.17
+Nodes (12): mode, cleanupOnFail, force, recreate, spec, driftDetection, interval, maxHistory (+4 more)
+
+### Community 3168 - "internal"
+Cohesion: 0.17
+Nodes (12): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+4 more)
+
+### Community 3169 - "internal"
+Cohesion: 0.17
+Nodes (12): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+4 more)
+
+### Community 3170 - "values"
+Cohesion: 0.17
+Nodes (12): interval, scrapeTimeout, defaults, enabled, values, effect, key, operator (+4 more)
+
+### Community 3171 - "bootstrap.yaml"
+Cohesion: 0.17
+Nodes (11): Probe dns-celestia-doh, PrometheusRule dockge-as-alerts, Probe dockge-celestia-ssh, apiVersion, kind, metadata, apiVersion, kind (+3 more)
+
+### Community 3172 - "authentik/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3173 - "backups/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3174 - "gulf-of-mexico/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3175 - "home/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3176 - "ocracoke/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3177 - "system/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3178 - "unifi-network/Pulumi.yaml"
+Cohesion: 0.17
+Nodes (11): config, pulumi:tags, description, name, packagemanager, typescript, value, runtime (+3 more)
+
+### Community 3179 - "dashboard/kustomization.yaml"
+Cohesion: 0.18
+Nodes (10): kustomize.toolkit.fluxcd.io/substitute, apiVersion, configMapGenerator, files, name, options, kind, annotations (+2 more)
+
+### Community 3180 - "alloy"
+Cohesion: 0.18
+Nodes (11): command, container_name, dns, environment, image, networks, ports, restart (+3 more)
+
+### Community 3181 - "cadvisor"
+Cohesion: 0.18
+Nodes (11): container_name, devices, dns, environment, image, networks, privileged, restart (+3 more)
+
+### Community 3182 - "acme"
+Cohesion: 0.24
+Nodes (11): caServer, dnsChallenge, email, storage, certificatesResolvers, cloudflare, le, acme (+3 more)
+
+### Community 3183 - "Nextcloud on equestria — replacing OpenCloud"
+Cohesion: 0.18
+Nodes (10): B. Identity, C. Files from OpenCloud, D. Calendars and contacts from Radicale, E. Cutover and rollback, F. Operations, G. Risks and open questions, Nextcloud on equestria — replacing OpenCloud, Target (+2 more)
+
+### Community 3184 - "Manual steps"
+Cohesion: 0.18
+Nodes (10): 1. Stop the celestia stack, 2. Copy the OpenBao item — DONE 2026-09-05, 3. Run the Pulumi system stack, 4. Let it start, and check the whole chain, 6. Verify the scanner actually reaches the target VLANs, 7. Soak, then clean up, Homelable: celestia → equestria cutover, Manual steps (+2 more)
+
+### Community 3185 - "spec"
+Cohesion: 0.18
+Nodes (11): remoteRef, secretKey, spec, key, property, kind, name, data (+3 more)
+
+### Community 3186 - "spec"
+Cohesion: 0.18
+Nodes (11): remoteRef, secretKey, spec, key, property, kind, name, data (+3 more)
+
+### Community 3187 - "values"
+Cohesion: 0.18
+Nodes (11): controller, ports, type, port, http, app, values, controllers (+3 more)
+
+### Community 3188 - "internal"
+Cohesion: 0.18
+Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+3 more)
+
+### Community 3189 - "integrations"
+Cohesion: 0.18
+Nodes (11): default_url, enabled, name, tip, integrations, caldav, mealie, default_url (+3 more)
+
+### Community 3190 - "app"
+Cohesion: 0.18
+Nodes (11): downscaler/exclude, reloader.stakater.com/auto, env, image, probes, resources, app, obsidian-sync (+3 more)
+
+### Community 3191 - "internal"
+Cohesion: 0.18
+Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+3 more)
+
+### Community 3192 - "super-productivity/definition.yaml"
+Cohesion: 0.20
+Nodes (9): apiVersion, kind, metadata, name, apiVersion, kind, metadata, name (+1 more)
+
+### Community 3193 - "jellyfin-pg/kustomization.yaml"
+Cohesion: 0.18
+Nodes (10): kustomize.toolkit.fluxcd.io/substitute, apiVersion, configMapGenerator, files, name, options, kind, annotations (+2 more)
+
+### Community 3194 - "kometa"
+Cohesion: 0.18
+Nodes (11): reloader.stakater.com/auto, imagemaid, kometa, annotations, containers, type, annotations, containers (+3 more)
+
+### Community 3195 - "internal"
+Cohesion: 0.18
+Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+3 more)
+
+### Community 3196 - "spec"
+Cohesion: 0.18
+Nodes (11): kind, name, mode, spec, chartRef, driftDetection, interval, maxHistory (+3 more)
+
+### Community 3197 - "internal"
+Cohesion: 0.18
+Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, internal (+3 more)
+
+### Community 3198 - "app"
+Cohesion: 0.18
+Nodes (11): reloader.stakater.com/auto, annotations, containers, env, image, probes, resources, strategy (+3 more)
+
+### Community 3199 - "app"
+Cohesion: 0.18
+Nodes (11): hostnames, kind, parentRefs, rules, kind, name, namespace, app (+3 more)
+
+### Community 3200 - "run"
+Cohesion: 0.20
+Nodes (11): existingClaim, globalMounts, path, subPath, data, run, globalMounts, medium (+3 more)
+
+### Community 3201 - "OCIRepository go-kube-downscaler"
+Cohesion: 0.22
+Nodes (10): OCIRepository go-kube-downscaler, HelmRelease go-kube-downscaler, apiVersion, kind, metadata, name, namespace, apiVersion (+2 more)
+
+### Community 3202 - "install"
+Cohesion: 0.18
+Nodes (11): crds, createNamespace, remediation, replace, retries, strategy, install, upgrade (+3 more)
+
+### Community 3203 - "spec"
+Cohesion: 0.20
+Nodes (11): kind, name, spec, remediation, retries, chartRef, install, interval (+3 more)
+
+### Community 3204 - "operatorConfig"
+Cohesion: 0.18
+Nodes (11): defaultProxyClass, defaultTags, hostname, logging, podAnnotations, tolerations, reloader.stakater.com/auto, effect (+3 more)
+
+### Community 3205 - "app"
+Cohesion: 0.18
+Nodes (11): reloader.stakater.com/auto, annotations, containers, initContainers, strategy, app, command, image (+3 more)
+
+### Community 3206 - "networkInterfaces"
+Cohesion: 0.18
+Nodes (11): hardwareAddr, addresses, deviceSelector, dhcp, mtu, routes, vip, networkInterfaces (+3 more)
+
+### Community 3207 - "MCPServer toolhive-context7"
+Cohesion: 0.22
+Nodes (9): MCPServer toolhive-context7, ExternalSecret toolhive-context7, apiVersion, kind, metadata, apiVersion, kind, metadata (+1 more)
+
+### Community 3208 - "ExternalSecret toolhive-forgejo"
+Cohesion: 0.22
+Nodes (9): ExternalSecret toolhive-forgejo, MCPServer toolhive-forgejo, apiVersion, kind, metadata, apiVersion, kind, metadata (+1 more)
+
+### Community 3209 - "ExternalSecret toolhive-tailscale"
+Cohesion: 0.22
+Nodes (9): ExternalSecret toolhive-tailscale, MCPServer toolhive-tailscale, apiVersion, kind, metadata, apiVersion, kind, metadata (+1 more)
+
+### Community 3210 - "MCPServer toolhive-unifi-access"
+Cohesion: 0.22
+Nodes (9): MCPServer toolhive-unifi-access, ExternalSecret toolhive-unifi-access, apiVersion, kind, metadata, apiVersion, kind, metadata (+1 more)
+
+### Community 3211 - "spec"
+Cohesion: 0.20
+Nodes (10): name, value, name, spec, env, groupRef, image, mcpPort (+2 more)
+
+### Community 3212 - "MCPServer toolhive-unifi-protect"
+Cohesion: 0.22
+Nodes (9): MCPServer toolhive-unifi-protect, ExternalSecret toolhive-unifi-protect, apiVersion, kind, metadata, apiVersion, kind, metadata (+1 more)
+
+### Community 3213 - "spec"
+Cohesion: 0.20
+Nodes (10): name, value, name, spec, env, groupRef, image, mcpPort (+2 more)
+
+### Community 3214 - "OCIRepository renovate-operator"
+Cohesion: 0.22
+Nodes (9): OCIRepository renovate-operator, HelmRelease renovate-operator, apiVersion, kind, metadata, name, apiVersion, kind (+1 more)
+
+### Community 3215 - "dashboard"
+Cohesion: 0.20
+Nodes (10): enabled, grafanaDashboard, labels, allowCrossNamespaceImport, instanceSelector, dashboard, enabled, serviceMonitor (+2 more)
+
+### Community 3216 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3217 - "branding"
+Cohesion: 0.20
+Nodes (10): branding, accent_color, description, font, name, short_name, show_footer, theme_color (+2 more)
+
+### Community 3218 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3219 - "values"
+Cohesion: 0.20
+Nodes (10): controller, ports, type, port, http, app, values, controllers (+2 more)
+
+### Community 3220 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3221 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3222 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3223 - "values"
+Cohesion: 0.20
+Nodes (10): existingClaim, path, subPath, existingClaim, globalMounts, config, media, values (+2 more)
+
+### Community 3224 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3225 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3226 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3227 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3228 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3229 - "OCIRepository blackbox-exporter"
+Cohesion: 0.22
+Nodes (9): OCIRepository blackbox-exporter, HelmRelease blackbox-exporter, apiVersion, kind, metadata, name, apiVersion, kind (+1 more)
+
+### Community 3230 - "config"
+Cohesion: 0.22
+Nodes (10): globalMounts, name, type, globalMounts, type, path, readOnly, config (+2 more)
+
+### Community 3231 - "pod"
+Cohesion: 0.20
+Nodes (10): dnsPolicy, hostNetwork, priorityClassName, securityContext, tolerations, runAsGroup, runAsNonRoot, runAsUser (+2 more)
+
+### Community 3232 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3233 - "values"
+Cohesion: 0.20
+Nodes (10): controller, ports, type, port, health, app, values, defaultPodOptions (+2 more)
+
+### Community 3234 - "install"
+Cohesion: 0.20
+Nodes (10): createNamespace, remediation, replace, retries, strategy, install, upgrade, cleanupOnFail (+2 more)
+
+### Community 3235 - "provisioning"
+Cohesion: 0.20
+Nodes (10): match, type, userVolumes, diskSelector, grow, maxSize, minSize, filesystem (+2 more)
+
+### Community 3236 - "labels"
+Cohesion: 0.22
+Nodes (9): traefik.http.routers.prometheus.entrypoints, traefik.http.routers.prometheus.rule, traefik.http.routers.prometheus.service, traefik.http.routers.prometheus-tailscale.entrypoints, traefik.http.routers.prometheus-tailscale.rule, traefik.http.routers.prometheus-tailscale.service, traefik.http.routers.prometheus.tls.certresolver, traefik.http.services.prometheus.loadbalancer.server.port (+1 more)
+
+### Community 3237 - "node-exporter"
+Cohesion: 0.22
+Nodes (9): command, container_name, image, network_mode, pid, restart, user, volumes (+1 more)
+
+### Community 3238 - "configMapGenerator"
+Cohesion: 0.22
+Nodes (8): kustomize.toolkit.fluxcd.io/substitute, configMapGenerator, files, name, options, annotations, disableNameSuffixHash, resources
+
+### Community 3239 - "spec"
+Cohesion: 0.22
+Nodes (9): mediaType, operation, spec, digest, tag, interval, layerSelector, ref (+1 more)
+
+### Community 3240 - "gatus"
+Cohesion: 0.22
+Nodes (9): conditions, group, maintenance-windows, method, url, duration, start, timezone (+1 more)
+
+### Community 3241 - "Romm HelmRelease"
+Cohesion: 0.25
+Nodes (8): Romm OIDC Group-to-Role Mapping, romm-env ExternalSecret, Romm Internal HTTPRoute (local-user), Romm HelmRelease, Romm Kustomize Resource List, romm-config ConfigMap Generator, Romm Platform Slug Map, Romm Scan Exclusion Config
+
+### Community 3242 - "values"
+Cohesion: 0.22
+Nodes (9): mealie, advancedMounts, existingClaim, mealie, data, values, defaultPodOptions, fullnameOverride (+1 more)
+
+### Community 3243 - "cronjob"
+Cohesion: 0.39
+Nodes (9): backoffLimit, concurrencyPolicy, failedJobsHistory, schedule, successfulJobsHistory, timeZone, ttlSecondsAfterFinished, cronjob (+1 more)
+
+### Community 3244 - "globalMounts"
+Cohesion: 0.25
+Nodes (9): existingClaim, globalMounts, path, subPath, existingClaim, globalMounts, config, media (+1 more)
+
+### Community 3245 - "spec"
+Cohesion: 0.22
+Nodes (9): mediaType, operation, spec, digest, tag, interval, layerSelector, ref (+1 more)
+
+### Community 3246 - "modules"
+Cohesion: 0.22
+Nodes (9): modules, dns, prober, timeout, dns_soa_tcp, ssh_banner, prober, tcp (+1 more)
+
+### Community 3247 - "spec"
+Cohesion: 0.25
+Nodes (9): remediation, retries, strategy, spec, install, interval, upgrade, cleanupOnFail (+1 more)
+
+### Community 3248 - "globalMounts"
+Cohesion: 0.25
+Nodes (9): existingClaim, globalMounts, path, subPath, data, run-tailscale, globalMounts, type (+1 more)
+
+### Community 3249 - "alertmanager Flux Alert"
+Cohesion: 0.31
+Nodes (7): alertmanager Flux Alert, alertmanager alerts kustomization, alertmanager Flux Provider, github-status Flux Alert, github-status-token ExternalSecret, github-status alerts kustomization, github-status Flux Provider
+
+### Community 3250 - "target"
+Cohesion: 0.22
+Nodes (8): apiVersion, kind, patches, patch, target, group, kind, version
+
+### Community 3251 - "target"
+Cohesion: 0.22
+Nodes (8): apiVersion, kind, patches, patch, target, group, kind, version
+
+### Community 3252 - "alloy-config-reloader"
+Cohesion: 0.25
+Nodes (8): command, container_name, depends_on, image, networks, restart, volumes, alloy-config-reloader
+
+### Community 3253 - "labels"
+Cohesion: 0.25
+Nodes (8): labels, traefik.http.routers.alloy.entrypoints, traefik.http.routers.alloy.rule, traefik.http.routers.alloy-tailscale.entrypoints, traefik.http.routers.alloy-tailscale.rule, traefik.http.routers.alloy-tailscale.service, traefik.http.routers.alloy.tls.certresolver, traefik.http.services.alloy.loadbalancer.server.port
+
+### Community 3254 - "blackbox-exporter"
+Cohesion: 0.25
+Nodes (8): command, container_name, image, networks, restart, user, volumes, blackbox-exporter
+
+### Community 3255 - "prometheus-config-reloader"
+Cohesion: 0.25
+Nodes (8): command, container_name, depends_on, image, networks, restart, volumes, prometheus-config-reloader
+
+### Community 3256 - "1Password used as a cross-stack state store"
+Cohesion: 0.25
+Nodes (4): Minio on TrueNAS — Pulumi state and backups, The five jobs 1Password was doing, 1Password → OpenBao migration plan, OpenBao migration status and handoff
+
+### Community 3257 - "spec"
+Cohesion: 0.25
+Nodes (8): reloader.stakater.com/auto, annotations, metadata, spec, podTemplateSpec, volumes, emptyDir, name
+
+### Community 3258 - "spec"
+Cohesion: 0.25
+Nodes (8): reloader.stakater.com/auto, annotations, metadata, spec, podTemplateSpec, volumes, emptyDir, name
+
+### Community 3259 - "spec"
+Cohesion: 0.25
+Nodes (8): reloader.stakater.com/auto, annotations, metadata, spec, podTemplateSpec, volumes, emptyDir, name
+
+### Community 3260 - "containers"
+Cohesion: 0.25
+Nodes (8): args, command, env, envFrom, name, securityContext, volumeMounts, containers
+
+### Community 3261 - "spec"
+Cohesion: 0.25
+Nodes (8): reloader.stakater.com/auto, annotations, metadata, spec, podTemplateSpec, volumes, emptyDir, name
+
+### Community 3262 - "spec"
+Cohesion: 0.25
+Nodes (8): reloader.stakater.com/auto, annotations, metadata, spec, podTemplateSpec, volumes, emptyDir, name
+
+### Community 3263 - "s3"
+Cohesion: 0.25
+Nodes (8): bucket, cachePrefix, endpoint, existingSecret, forcePathStyle, logPrefix, region, s3
+
+### Community 3264 - "app"
+Cohesion: 0.25
+Nodes (8): reloader.stakater.com/auto, annotations, containers, initContainers, pod, strategy, app, terminationGracePeriodSeconds
+
+### Community 3265 - "securityContext"
+Cohesion: 0.25
+Nodes (8): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile
+
+### Community 3266 - "mariadb"
+Cohesion: 0.25
+Nodes (8): mariadb, args, env, image, probes, resources, restartPolicy, securityContext
+
+### Community 3267 - "spec"
+Cohesion: 0.25
+Nodes (8): groups, spec, access_policy, category, description, icon, name, url
+
+### Community 3268 - "oauth2"
+Cohesion: 0.25
+Nodes (8): url, oauth2, allowedRedirectUris, clientType, includeClaimsInIdToken, propertyMappings, subMode, authentik
+
+### Community 3269 - "securityContext"
+Cohesion: 0.25
+Nodes (8): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile
+
+### Community 3270 - "app"
+Cohesion: 0.25
+Nodes (8): args, command, env, envFrom, image, resources, securityContext, app
+
+### Community 3271 - "securityContext"
+Cohesion: 0.25
+Nodes (8): securityContext, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, values, controllers, defaultPodOptions
+
+### Community 3272 - "arcane"
+Cohesion: 0.25
+Nodes (8): downscaler/exclude, reloader.stakater.com/auto, annotations, containers, replicas, strategy, arcane, controllers
+
+### Community 3273 - "values"
+Cohesion: 0.25
+Nodes (8): oidc, oidc-mapping.json, data, enabled, values, configMaps, defaultPodOptions, fullnameOverride
+
+### Community 3274 - "securityContext"
+Cohesion: 0.25
+Nodes (8): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile
+
+### Community 3275 - "app"
+Cohesion: 0.25
+Nodes (8): command, env, envFrom, image, probes, resources, securityContext, app
+
+### Community 3276 - "values"
+Cohesion: 0.25
+Nodes (8): hostname, securityContext, type, seccompProfile, values, controllers, defaultPodOptions, fullnameOverride
+
+### Community 3277 - "pdm"
+Cohesion: 0.25
+Nodes (8): appProtocol, port, controller, ports, type, https, pdm, service
+
+### Community 3278 - "traefik-whoami HelmRelease"
+Cohesion: 0.32
+Nodes (7): Authentik forward_single proxy provider for whoami, whoami ApplicationDefinition, authenticated-user Traefik middleware, crowdsec-bouncer Traefik middleware, traefik-whoami HelmRelease, traefik-whoami Flux Kustomization, whoami kustomization
+
+### Community 3279 - "spec"
+Cohesion: 0.25
+Nodes (8): kind, name, spec, chartRef, maxHistory, timeout, uninstall, keepHistory
+
+### Community 3280 - "ServiceSustained5xx PrometheusRule alert"
+Cohesion: 0.25
+Nodes (3): ServiceSustained5xx PrometheusRule alert, IntelGpuExporterAbsent PrometheusRule alert, IntelGpuMetricsAbsent PrometheusRule alert
+
+### Community 3281 - "bolt"
+Cohesion: 0.29
+Nodes (8): expose, exposedPort, namespacePolicy, port, protocol, transport, bolt, bolt
+
+### Community 3282 - "spec"
+Cohesion: 0.25
+Nodes (8): mediaType, operation, spec, digest, tag, layerSelector, ref, url
+
+### Community 3283 - "image"
+Cohesion: 0.29
+Nodes (8): pullPolicy, repository, tag, image, defaultTags, firewallMode, image, proxyConfig
+
+### Community 3284 - "securityContext"
+Cohesion: 0.25
+Nodes (8): securityContext, type, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser, seccompProfile
+
+### Community 3285 - "pulumi-workspace/kustomization.yaml"
+Cohesion: 0.25
+Nodes (7): apiVersion, kind, patches, patch, target, group, kind
+
+### Community 3286 - "rbacPermissionUser.ts"
+Cohesion: 0.25
+Nodes (3): RbacPermissionUser, RbacPermissionUserArgs, RbacPermissionUserState
+
+### Community 3287 - "gpgKey.ts"
+Cohesion: 0.25
+Nodes (3): GpgKey, GpgKeyArgs, GpgKeyState
+
+### Community 3288 - "datastore.ts"
+Cohesion: 0.25
+Nodes (3): Datastore, DatastoreArgs, DatastoreState
+
+### Community 3289 - "pulumi"
+Cohesion: 0.25
+Nodes (8): name, value, version, pulumi, name, parameterization, resource, version
+
+### Community 3290 - "terrifi/wlan.ts"
+Cohesion: 0.25
+Nodes (3): Wlan, WlanArgs, WlanState
+
+### Community 3291 - "contentFilter.ts"
+Cohesion: 0.25
+Nodes (3): ContentFilter, ContentFilterArgs, ContentFilterState
+
+### Community 3292 - "nat.ts"
+Cohesion: 0.25
+Nodes (3): Nat, NatArgs, NatState
+
+### Community 3293 - "qosRule.ts"
+Cohesion: 0.25
+Nodes (3): QosRule, QosRuleArgs, QosRuleState
+
+### Community 3294 - "trafficMatchingList.ts"
+Cohesion: 0.25
+Nodes (3): TrafficMatchingList, TrafficMatchingListArgs, TrafficMatchingListState
+
+### Community 3295 - "services"
+Cohesion: 0.29
+Nodes (6): external, networks, dockge_default, services, x-dockge, urls
+
+### Community 3296 - "autoheal"
+Cohesion: 0.48
+Nodes (7): labels, labels, labels, autoheal, traefik.enable, labels, labels
+
+### Community 3297 - "providers"
+Cohesion: 0.29
+Nodes (7): endpoint, exposedByDefault, directory, watch, providers, docker, file
+
+### Community 3298 - "tailscale"
+Cohesion: 0.29
+Nodes (7): tailscale, trustedIPs, middlewares, address, forwardedHeaders, http, transport
+
+### Community 3299 - "containers"
+Cohesion: 0.29
+Nodes (7): args, command, env, name, securityContext, volumeMounts, containers
+
+### Community 3300 - "spec"
+Cohesion: 0.29
+Nodes (7): name, spec, groupRef, image, proxyMode, proxyPort, transport
+
+### Community 3301 - "containers"
+Cohesion: 0.29
+Nodes (7): command, env, envFrom, name, securityContext, volumeMounts, containers
+
+### Community 3302 - "target"
+Cohesion: 0.29
+Nodes (7): GITEA_ACCESS_TOKEN, GITEA_HOST, target, creationPolicy, name, template, data
+
+### Community 3303 - "spec"
+Cohesion: 0.29
+Nodes (7): name, spec, groupRef, image, proxyMode, proxyPort, transport
+
+### Community 3304 - "target"
+Cohesion: 0.29
+Nodes (7): TAILSCALE_API_KEY, TAILSCALE_TAILNET, target, creationPolicy, name, template, data
+
+### Community 3305 - "spec"
+Cohesion: 0.29
+Nodes (7): name, spec, groupRef, image, proxyMode, proxyPort, transport
+
+### Community 3306 - "containers"
+Cohesion: 0.29
+Nodes (7): command, env, envFrom, name, securityContext, volumeMounts, containers
+
+### Community 3307 - "target"
+Cohesion: 0.29
+Nodes (7): UNIFI_ACCESS_PASSWORD, UNIFI_ACCESS_USERNAME, target, creationPolicy, name, template, data
+
+### Community 3308 - "containers"
+Cohesion: 0.29
+Nodes (7): command, env, envFrom, name, securityContext, volumeMounts, containers
+
+### Community 3309 - "target"
+Cohesion: 0.29
+Nodes (7): UNIFI_PROTECT_PASSWORD, UNIFI_PROTECT_USERNAME, target, creationPolicy, name, template, data
+
+### Community 3310 - "app"
+Cohesion: 0.29
+Nodes (7): command, env, image, probes, resources, securityContext, app
+
+### Community 3311 - "mariadb-passwords"
+Cohesion: 0.29
+Nodes (7): mariadb-passwords, command, dependsOn, env, image, resources, securityContext
+
+### Community 3312 - "retrom-env ExternalSecret"
+Cohesion: 0.38
+Nodes (7): Retrom Authentik OAuth2 Client, Retrom ApplicationDefinition, retrom-env ExternalSecret, Retrom Internal HTTPRoute, Retrom HelmRelease, Retrom truenas-media Mounts, Retrom Kustomize Resource List
+
+### Community 3313 - "mealie"
+Cohesion: 0.29
+Nodes (7): reloader.stakater.com/auto, mealie, annotations, containers, replicas, strategy, controllers
+
+### Community 3314 - "mealie"
+Cohesion: 0.29
+Nodes (7): mealie, env, envFrom, image, probes, resources, securityContext
+
+### Community 3315 - "mealie"
+Cohesion: 0.29
+Nodes (7): port, controller, ports, type, http, mealie, service
+
+### Community 3316 - "app"
+Cohesion: 0.29
+Nodes (7): controller, ports, type, port, http, app, service
+
+### Community 3317 - "app"
+Cohesion: 0.29
+Nodes (7): env, envFrom, image, probes, resources, securityContext, app
+
+### Community 3318 - "app"
+Cohesion: 0.29
+Nodes (7): controller, ports, type, port, http, app, service
+
+### Community 3319 - "values"
+Cohesion: 0.29
+Nodes (7): path, tmpfs, values, globalMounts, type, fullnameOverride, persistence
+
+### Community 3320 - "app"
+Cohesion: 0.29
+Nodes (7): env, envFrom, image, probes, resources, securityContext, app
+
+### Community 3321 - "arcane"
+Cohesion: 0.29
+Nodes (7): controller, ports, type, port, http, arcane, service
+
+### Community 3322 - "limits"
+Cohesion: 0.29
+Nodes (7): cpu, memory, cpu, memory, limits, requests, resources
+
+### Community 3323 - "sourceRef"
+Cohesion: 0.29
+Nodes (7): spec, kind, name, namespace, chart, sourceRef, version
+
+### Community 3324 - "GrafanaFolder: Node (node-monitoring)"
+Cohesion: 0.29
+Nodes (7): GrafanaDashboard: Docker Container Metrics (cAdvisor), GrafanaFolder: Docker (docker-monitoring), GrafanaDashboard: node-exporter-bsd (grafana.com 4260), GrafanaDashboard: node-exporter-full (grafana.com 1860), GrafanaDashboard: node-feature-discovery, GrafanaFolder: Node (node-monitoring), GrafanaDashboard: smartctl-exporter (grafana.com 22604)
+
+### Community 3325 - "talos-logs"
+Cohesion: 0.29
+Nodes (7): reloader.stakater.com/auto, talos-logs, values, annotations, containers, type, controllers
+
+### Community 3326 - "app"
+Cohesion: 0.29
+Nodes (7): args, env, image, probes, resources, securityContext, app
+
+### Community 3327 - "sourceRef"
+Cohesion: 0.29
+Nodes (7): spec, kind, name, namespace, chart, sourceRef, version
+
+### Community 3328 - "app"
+Cohesion: 0.29
+Nodes (7): env, image, lifecycle, probes, resources, securityContext, app
+
+### Community 3329 - "application.js"
+Cohesion: 0.29
+Nodes (3): Application, pulumi, utilities
+
+### Community 3330 - "Provider"
+Cohesion: 0.29
+Nodes (3): Provider, ProviderArgs, TerraformConfigResult
+
+### Community 3331 - "providerOauth2.js"
+Cohesion: 0.29
+Nodes (3): ProviderOauth2, pulumi, utilities
+
+### Community 3332 - "authentik/provider.ts"
+Cohesion: 0.29
+Nodes (3): Provider, ProviderArgs, TerraformConfigResult
+
+### Community 3333 - "The CALMS Framework (Pillars of DevOps)"
+Cohesion: 0.33
+Nodes (6): 1. **C - Culture**, 2. **A - Automation**, 3. **L - Lean**, 4. **M - Measurement**, 5. **S - Sharing**, The CALMS Framework (Pillars of DevOps)
+
+### Community 3334 - "filters"
+Cohesion: 0.33
+Nodes (6): accessLog, filters, format, minDuration, retryAttempts, statusCodes
+
+### Community 3335 - "websecure"
+Cohesion: 0.33
+Nodes (6): websecure, tls, certResolver, address, http, transport
+
+### Community 3336 - "prometheus"
+Cohesion: 0.33
+Nodes (6): prometheus, addEntryPointsLabels, addRoutersLabels, addServicesLabels, buckets, entryPoint
+
+### Community 3337 - "Sonarr / Radarr native OIDC"
+Cohesion: 0.33
+Nodes (5): Bring-up order, Kill switch: log everyone out, Sonarr / Radarr native OIDC, Troubleshooting, Why a shared identity
+
+### Community 3338 - "target"
+Cohesion: 0.33
+Nodes (6): CONTEXT7_API_KEY, target, creationPolicy, name, template, data
+
+### Community 3339 - "spec"
+Cohesion: 0.33
+Nodes (6): spec, kind, name, refreshInterval, refreshPolicy, secretStoreRef
+
+### Community 3340 - "requests"
+Cohesion: 0.33
+Nodes (6): memory, cpu, memory, limits, requests, resources
+
+### Community 3341 - "spec"
+Cohesion: 0.33
+Nodes (6): spec, kind, name, refreshInterval, refreshPolicy, secretStoreRef
+
+### Community 3342 - "requests"
+Cohesion: 0.33
+Nodes (6): memory, cpu, memory, limits, requests, resources
+
+### Community 3343 - "spec"
+Cohesion: 0.33
+Nodes (6): spec, kind, name, refreshInterval, refreshPolicy, secretStoreRef
+
+### Community 3344 - "requests"
+Cohesion: 0.33
+Nodes (6): memory, cpu, memory, limits, requests, resources
+
+### Community 3345 - "requests"
+Cohesion: 0.33
+Nodes (6): memory, cpu, memory, limits, requests, resources
+
+### Community 3346 - "requests"
+Cohesion: 0.33
+Nodes (6): memory, cpu, memory, limits, requests, resources
+
+### Community 3347 - "config"
+Cohesion: 0.33
+Nodes (6): deleteSuccessfulJobs, forwardS3CacheToJobs, jobTTLSecondsAfterFinished, logStorage, mode, config
+
+### Community 3348 - "requests"
+Cohesion: 0.33
+Nodes (6): memory, cpu, memory, limits, requests, resources
+
+### Community 3349 - "navidrome"
+Cohesion: 0.33
+Nodes (6): navidrome, default_url, enabled, name, surfaces, tip
+
+### Community 3350 - "nextcloud"
+Cohesion: 0.33
+Nodes (6): nextcloud, default_url, enabled, name, surfaces, tip
+
+### Community 3351 - "onboarding"
+Cohesion: 0.33
+Nodes (6): onboarding, enabled, services, welcome_text, desc, id
+
+### Community 3352 - "values"
+Cohesion: 0.33
+Nodes (6): obsidian-sync, cors.ini, data, values, configMaps, defaultPodOptions
+
+### Community 3353 - "securityContext"
+Cohesion: 0.33
+Nodes (6): securityContext, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser
+
+### Community 3354 - "obsidian-sync"
+Cohesion: 0.33
+Nodes (6): port, controller, ports, http, obsidian-sync, service
+
+### Community 3355 - "globalMounts"
+Cohesion: 0.33
+Nodes (6): globalMounts, name, type, readOnly, subPath, config-file
+
+### Community 3356 - "radarr-log CNPG Database"
+Cohesion: 0.33
+Nodes (3): Radarr kustomize overlay, radarr postgres-databases overlay, radarr-log CNPG Database
+
+### Community 3357 - "app"
+Cohesion: 0.33
+Nodes (6): reloader.stakater.com/auto, annotations, containers, strategy, app, controllers
+
+### Community 3358 - "securityContext"
+Cohesion: 0.33
+Nodes (6): securityContext, type, fsGroupChangePolicy, seccompProfile, supplementalGroups, defaultPodOptions
+
+### Community 3359 - "pdm"
+Cohesion: 0.33
+Nodes (6): reloader.stakater.com/auto, pdm, annotations, containers, replicas, strategy
+
+### Community 3360 - "traefik/helmrelease.yaml"
+Cohesion: 0.33
+Nodes (5): apiVersion, kind, metadata, name, namespace
+
+### Community 3361 - "pulumi/kustomization.yaml"
+Cohesion: 0.33
+Nodes (5): apiVersion, components, kind, namespace, resources
+
+### Community 3362 - "values"
+Cohesion: 0.33
+Nodes (6): allowImpersonation, mode, values, apiServerProxyConfig, fullnameOverride, installCRDs
+
+### Community 3363 - "getTeamMember.ts"
+Cohesion: 0.33
+Nodes (5): getTeamMember(), GetTeamMemberArgs, getTeamMemberOutput(), GetTeamMemberOutputArgs, GetTeamMemberResult
+
+### Community 3364 - "getNotificationEndpoint.ts"
+Cohesion: 0.33
+Nodes (5): getNotificationEndpoint(), GetNotificationEndpointArgs, getNotificationEndpointOutput(), GetNotificationEndpointOutputArgs, GetNotificationEndpointResult
+
+### Community 3365 - "getRemoteStores.ts"
+Cohesion: 0.33
+Nodes (5): getRemoteStores(), GetRemoteStoresArgs, getRemoteStoresOutput(), GetRemoteStoresOutputArgs, GetRemoteStoresResult
+
+### Community 3366 - "getS3Endpoint.ts"
+Cohesion: 0.33
+Nodes (5): getS3Endpoint(), GetS3EndpointArgs, getS3EndpointOutput(), GetS3EndpointOutputArgs, GetS3EndpointResult
+
+### Community 3367 - "getVerifyJob.ts"
+Cohesion: 0.33
+Nodes (5): getVerifyJob(), GetVerifyJobArgs, getVerifyJobOutput(), GetVerifyJobOutputArgs, GetVerifyJobResult
+
+### Community 3368 - "getBlockedZone.ts"
+Cohesion: 0.33
+Nodes (5): getBlockedZone(), GetBlockedZoneArgs, getBlockedZoneOutput(), GetBlockedZoneOutputArgs, GetBlockedZoneResult
+
+### Community 3369 - "Logging, Monitoring, and Observability"
+Cohesion: 0.40
+Nodes (5): **1. Centralized Logging**, **2. Metrics Collection**, **3. Alerting**, **4. Distributed Tracing**, Logging, Monitoring, and Observability
+
+### Community 3370 - "sablier"
+Cohesion: 0.40
+Nodes (5): experimental, plugins, sablier, moduleName, version
+
+### Community 3371 - "remoteRef"
+Cohesion: 0.40
+Nodes (5): remoteRef, secretKey, key, property, data
+
+### Community 3372 - "remoteRef"
+Cohesion: 0.40
+Nodes (5): remoteRef, secretKey, key, property, data
+
+### Community 3373 - "remoteRef"
+Cohesion: 0.40
+Nodes (5): remoteRef, secretKey, key, property, data
+
+### Community 3374 - "sshd.sh"
+Cohesion: 0.60
+Nodes (4): apt_private(), install_sshd(), LD_LIBRARY_PATH, sshd.sh script
+
+### Community 3375 - "defaults"
+Cohesion: 0.40
+Nodes (5): defaults, enabled, adminGroups, anonymousRead, authorization
+
+### Community 3376 - "grimmory/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3377 - "romm/definition.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3378 - "seerr"
+Cohesion: 0.40
+Nodes (5): seerr, default_url, enabled, name, surfaces
+
+### Community 3379 - "mealie/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3380 - "fix-permissions"
+Cohesion: 0.40
+Nodes (5): command, image, securityContext, fix-permissions, initContainers
+
+### Community 3381 - "obsidian-sync/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3382 - "scripts"
+Cohesion: 0.40
+Nodes (5): scripts, advancedMounts, defaultMode, name, type
+
+### Community 3383 - "trickplay"
+Cohesion: 0.40
+Nodes (5): trickplay, advancedMounts, path, server, type
+
+### Community 3384 - "kometa/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3385 - "radarr/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3386 - "sonarr/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3387 - "kptv-fast/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3388 - "arcane/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3389 - "pdm/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3390 - "securityContext"
+Cohesion: 0.40
+Nodes (5): add, allowPrivilegeEscalation, capabilities, readOnlyRootFilesystem, securityContext
+
+### Community 3391 - "talos-logs/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3392 - "operator/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3393 - "valuesFrom"
+Cohesion: 0.40
+Nodes (5): valuesFrom, kind, name, targetPath, valuesKey
+
+### Community 3394 - "PrometheusRule dns-celestia-alerts"
+Cohesion: 0.40
+Nodes (5): PrometheusRule dns-celestia-alerts, apiVersion, kind, metadata, spec
+
+### Community 3395 - "Probe dockge-as-ssh"
+Cohesion: 0.40
+Nodes (5): Probe dockge-as-ssh, apiVersion, kind, metadata, spec
+
+### Community 3396 - "taildrive/helmrelease.yaml"
+Cohesion: 0.40
+Nodes (4): apiVersion, kind, metadata, name
+
+### Community 3399 - "customization"
+Cohesion: 0.40
+Nodes (5): extraKernelArgs, systemExtensions, schematic, customization, officialExtensions
+
+### Community 3400 - "Session Lifecycle Management"
+Cohesion: 0.50
+Nodes (4): Checking Connection State, Deleting Sessions, Listing Sessions, Session Lifecycle Management
+
+### Community 3401 - "Event Handling"
+Cohesion: 0.50
+Nodes (4): Event Handling, Event Subscription Pattern, Event Types, Unsubscribing from Events
+
+### Community 3402 - "ApplicationDefinition CRD (driscoll.dev/v1)"
+Cohesion: 0.50
+Nodes (4): ApplicationDefinition CRD (driscoll.dev/v1), ApplicationDefinition: Uptime, ApplicationDefinition: Z-Wave, ApplicationDefinition: llama.cpp Agent Server
+
+### Community 3405 - "agent-tools-servers Flux Kustomization"
+Cohesion: 0.50
+Nodes (3): agent-tools-mcp Kustomization (dependency), external-secrets Kustomization (dependency), agent-tools-servers Flux Kustomization
+
+### Community 3406 - "rollback"
+Cohesion: 0.50
+Nodes (4): cleanupOnFail, force, recreate, rollback
+
+### Community 3407 - "Watchstate ApplicationDefinition"
+Cohesion: 0.50
+Nodes (3): Watchstate ApplicationDefinition, Watchstate Flux Kustomization, Watchstate Kustomize build
+
+### Community 3408 - "arcane/kustomization.yaml"
+Cohesion: 0.50
+Nodes (3): apiVersion, kind, resources
+
+### Community 3409 - "utils/kustomization.yaml"
+Cohesion: 0.50
+Nodes (3): apiVersion, kind, resources
+
+### Community 3410 - "pdm/kustomization.yaml"
+Cohesion: 0.50
+Nodes (3): apiVersion, kind, resources
+
+### Community 3411 - "rollback"
+Cohesion: 0.50
+Nodes (4): cleanupOnFail, force, recreate, rollback
+
+### Community 3412 - "traefik-crds/kustomization.yaml"
+Cohesion: 0.50
+Nodes (3): apiVersion, kind, resources
+
+### Community 3413 - "dns_soa"
+Cohesion: 0.50
+Nodes (4): dns, prober, timeout, dns_soa
+
+### Community 3414 - "http_2xx"
+Cohesion: 0.50
+Nodes (4): http, prober, timeout, http_2xx
+
+### Community 3415 - "http_404"
+Cohesion: 0.50
+Nodes (4): http, prober, timeout, http_404
+
+### Community 3416 - "icmp"
+Cohesion: 0.50
+Nodes (4): icmp, prober, timeout, icmp
+
+### Community 3417 - "tcp_connect"
+Cohesion: 0.50
+Nodes (4): tcp_connect, prober, tcp, timeout
+
+### Community 3418 - "Flux Kustomization: home-operations"
+Cohesion: 0.50
+Nodes (4): Flux Kustomization: home-operations, kustomize overlay: home-operations stack resources, Flux Kustomization: ocracoke, kustomize overlay: ocracoke stack resources
+
+### Community 3419 - "kustomize overlay: kubeproxies services"
+Cohesion: 0.67
+Nodes (4): Flux Kustomization: pulumi-kubeproxies, kustomize overlay: kubeproxies services, ExternalName Service: equestria-kubeproxy, ExternalName Service: sgc-kubeproxy
+
+### Community 3420 - "Probe dns-celestia"
+Cohesion: 0.50
+Nodes (4): Probe dns-celestia, apiVersion, kind, metadata
+
+### Community 3422 - "nodeLabels"
+Cohesion: 0.50
+Nodes (4): driscoll.dev/ephemeral-disk, node.longhorn.io/create-default-disk, technitium-dns, nodeLabels
+
+### Community 3423 - "Equestria Nodes Extension Widget"
+Cohesion: 0.67
+Nodes (3): Equestria Nodes Extension Widget (Homelab Head), Equestria Nodes Extension Widget, Equestria Dashboard Page
+
+### Community 3424 - "http_2xx_insecure module for self-signed Proxmox UIs"
+Cohesion: 0.67
+Nodes (3): http_2xx_insecure module for self-signed Proxmox UIs, Blackbox prober module catalog, Tailscale-IP to Proxmox-hostname relabel map
+
+### Community 3429 - "ecm kustomize overlay"
+Cohesion: 0.67
+Nodes (3): ecm HelmRelease, ecm Flux Kustomization, ecm kustomize overlay
+
+### Community 3430 - "chartRef"
+Cohesion: 0.67
+Nodes (3): kind, name, chartRef
+
+### Community 3431 - "chartRef"
+Cohesion: 0.67
+Nodes (3): kind, name, chartRef
+
+### Community 3432 - "overrides"
+Cohesion: 0.67
+Nodes (3): overrides, @types/node, typescript
+
+### Community 3433 - "repository"
 Cohesion: 0.67
 Nodes (3): repository, type, url
 
 ## Ambiguous Edges - Review These
-- `jellyfin/restart.yaml` → `media/kustomization.yaml`  [AMBIGUOUS]
+- `media/kustomization.yaml` → `jellyfin/restart.yaml`  [AMBIGUOUS]
   kubernetes/apps/equestria/media/jellyfin/restart.yaml · relation: references
-- `authentik stack (Pulumi project: applications)` → `unifi-network stack (Pulumi project: applications)`  [AMBIGUOUS]
-  stacks/unifi-network/Pulumi.yaml · relation: conceptually_related_to
-- `Windmill ApplicationDefinition` → `Tududi Gatus Low-Power Maintenance Window`  [AMBIGUOUS]
-  kubernetes/apps/equestria/home/tududi/definition.yaml · relation: semantically_similar_to
 - `Mosquitto ApplicationDefinition` → `mosquitto kustomize resource list`  [AMBIGUOUS]
   kubernetes/apps/stargate-command/mosquitto/kustomization.yaml · relation: references
 - `tuppr TalosUpgrade healthChecks (talos.yaml, 15m timeout)` → `volsync ReplicationSource component (${APP})`  [AMBIGUOUS]
@@ -14037,36 +15606,34 @@ Nodes (3): repository, type, url
   kubernetes/apps/network/external-dns/unifi/helmrelease.yaml · relation: references
 - `Kustomize overlay: grafana dashboards` → `GrafanaFolder: K8S`  [AMBIGUOUS]
   kubernetes/apps/observability/grafana/dashboards/kustomization.yaml · relation: references
-- `Gatus external-endpoint: Forgejo Actions canary` → `Gatus /config mount must not be :ro`  [AMBIGUOUS]
-  docker/alpha-site/uptime/compose.yaml · relation: conceptually_related_to
 - `Global Machine Kubelet Patch` → `un1290 Machine Disks Patch (empty/commented)`  [AMBIGUOUS]
   talos/patches/un1290/machine-disks.yaml · relation: conceptually_related_to
 - `CoreDNS Flux Kustomization` → `CoreDNS Uptime ApplicationDefinition (disabled)`  [AMBIGUOUS]
   kubernetes/apps/kube-system/coredns/uptime.yaml · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **799 isolated node(s):** `../tsconfig.json`, `Count`, `Current`, `EndIndex`, `Next` (+794 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 22655 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **398 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **749 isolated node(s):** `mise`, `MISE_EXPERIMENTAL`, `kubernetes-mcp-server`, `@pulumi/mcp-server`, `unifi-access-mcp` (+744 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 25516 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **441 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `@pulumi/pulumi` connect `globals.ts` to `coderd/types/input.ts`, `coder-templates.ts`, `technitium/types/output.ts`, `flows.ts`, `UniFi SDK Data Sources`, `components/bao.ts`, `coderd/types/output.ts`, `acl-manager.ts`, `stacks/authentik/index.ts`, `garage.ts`, `RepositoryActionSecret`, `oauth2ProviderSettings.ts`, `home/index.ts`, `agentsDefaultModel.ts`, `agentsMcpServer.ts`, `clusterSecondary.ts`, `agentsModel.ts`, `agentsSystemPrompt.ts`, `coderd/index.ts`, `forgejo/package.json`, `garageTruenasCopy.ts`, `patchmon.ts`, `aiProvider.ts`, `coderd/group.ts`, `license.ts`, `coderd/organization.ts`, `organizationGroupSync.ts`, `organizationActionSecret.ts`, `organizationSyncSettings.ts`, `coderd/provider.ts`, `sso.ts`, `technitium/user.ts`, `ProxmoxHost.ts`, `DhcpReservedLease`, `provisionerKey.ts`, `coderd/package.json`, `template.ts`, `coderd/user.ts`, `authentik/utilities.ts`, `workspaceProxy.ts`, `terrifi/index.ts`, `getDhcpLeases.ts`, `getDhcpScope.ts`, `technitium/utilities.ts`, `forgejo/utilities.ts`, `technitium/index.ts`, `forgejo/package.json`, `terrifi/package.json`, `coderd/utilities.ts`, `applications.ts`, `BackupPlanDirector.ts`, `dhcpScope.ts`, `cluster.ts`, `resourceOptsDefaults`, `zone.ts`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
-- **What connects `../tsconfig.json`, `Count`, `Current` to the rest of the system?**
-  _799 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `07 — Authentik moves to alpha-site` connect `07 — Authentik moves to alpha-site` to `The OpenBao catch-22 (GlobalResources cannot construct without a live OpenBao)`, `04 — Pulumi state backend: Minio-on-truenas → Postgres DIY on celestia`, `Piece K' — Longhorn critical tier`, `Authentik active-active: equestria + alpha-site behind one VIP`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **What connects `mise`, `MISE_EXPERIMENTAL`, `kubernetes-mcp-server` to the rest of the system?**
+  _749 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `truenas-types.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.008547008547008548 - nodes in this community are weakly interconnected._
-- **Why does `07 — Authentik moves to alpha-site` connect `07 — Authentik moves to alpha-site` to `Migration churn failure modes beyond the CRD cascade`, `The OpenBao catch-22 (GlobalResources cannot construct without a live OpenBao)`, `Piece K' — Longhorn critical tier`, `Authentik active-active: equestria + alpha-site behind one VIP`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Why does `DockgeLxc` connect `DockgeLxc.ts` to `Per-Stack source artifacts`, `home/index.ts`, `BackupPlanDirector.ts`, `Authentik active-active: equestria + alpha-site behind one VIP`, `patchmon.ts`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Should `resourceOptsDefaults` be split into smaller, more focused modules?**
-  _Cohesion score 0.022219728425541464 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.020007301935012777 - nodes in this community are weakly interconnected._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
 
-- **What is the exact relationship between `jellyfin/restart.yaml` and `media/kustomization.yaml`?**
+- **What is the exact relationship between `media/kustomization.yaml` and `jellyfin/restart.yaml`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **What is the exact relationship between `authentik stack (Pulumi project: applications)` and `unifi-network stack (Pulumi project: applications)`?**
-  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
+- **What is the exact relationship between `Mosquitto ApplicationDefinition` and `mosquitto kustomize resource list`?**
+  _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
