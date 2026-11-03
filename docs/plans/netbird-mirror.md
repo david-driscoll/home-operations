@@ -296,9 +296,14 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
   appears on the first `stacks/netbird` run after the proxy comes up.
 - **Every Dex identity header is `X-NetBird-User`.** Dex's authproxy connector reads five headers and four default to
   names the proxy passes through, which would let a user name someone else's email.
-- **Authentik's server calls Dex in the cluster.** It is not a NetBird peer, so the token exchange and userinfo go to
-  Dex's Service. The CiliumNetworkPolicy allows it `POST /token` and `GET /userinfo` only. Only the proxy reaches the
-  login path.
+- **Authentik's server calls Dex over a LAN back-channel** (decided 2026-11-03). Authentik isn't a NetBird peer, and
+  the alpha-site instance can't resolve in-cluster names. So the token exchange and userinfo go to
+  `nbidp-backchannel.<root domain>` on the internal Gateway, which:
+  - routes only `POST /token` and `GET /userinfo`;
+  - is IP-allow-listed to the two Authentik hosts;
+  - is matched by the CiliumNetworkPolicy to the same two paths.
+
+  Only the proxy reaches `/auth` and `/callback`.
 - **No groups come back from Dex.** Authentik stays the source of groups.
 - **Enrollment works like the Tailscale source** (decided 2026-11-03). An identity whose email matches nobody goes
   through the shared enrollment flow. Ownerless peers never get that far, because the private service admits only the

@@ -19,10 +19,15 @@
 #      not a NetBird peer, so it cannot come through the proxy, and an L7 rule
 #      keeps even an authentik pod off /auth and /callback, where headers
 #      would count. Cilium's proxy answers anything else with 403;
-#   3. the kubelet (`host`), on the telemetry port only, for the probes.
+#   3. Traefik, on the same two paths only: the LAN back-channel route
+#      (helmrelease.yaml `route.backchannel`) the alpha-site Authentik uses,
+#      since it cannot reach Dex's Service. The route matches only those two
+#      paths too, and a Middleware limits it to the Authentik hosts;
+#   4. the kubelet (`host`), on the telemetry port only, for the probes.
 #
-# Everything else -- Traefik, the NetBird routing peers in this namespace, any
-# other pod, the LAN -- is dropped. No HTTPRoute or Ingress names Dex either.
+# Everything else -- the NetBird routing peers in this namespace, any other
+# pod, the LAN -- is dropped, and nothing but the proxy reaches /auth or
+# /callback.
 #
 # This is the cluster's first L7 (HTTP) policy. Cilium runs its Envoy inside
 # the agent here (helm values `envoy.enabled: false`), and rule 1 has no HTTP
@@ -56,6 +61,23 @@ spec:
             io.kubernetes.pod.namespace: stargate-command
             app.kubernetes.io/name: authentik
             app.kubernetes.io/component: server
+      toPorts:
+        - ports:
+            - port: "5556"
+              protocol: TCP
+          rules:
+            http:
+              - method: POST
+                path: /token
+              - method: GET
+                path: /userinfo
+    # 3. Traefik, for the LAN back-channel route (helmrelease.yaml `route.backchannel`)
+    #    that the alpha-site Authentik uses: the same two paths, nothing else.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
       toPorts:
         - ports:
             - port: "5556"

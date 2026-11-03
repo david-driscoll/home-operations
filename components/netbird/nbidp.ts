@@ -37,8 +37,16 @@ export const DEX_NAMESPACE = "netbird-system";
 export const DEX_SERVICE = "nbidp-dex";
 export const DEX_PORT = 5556;
 export const DEX_TELEMETRY_PORT = 5558;
-/** In-cluster Dex, for the proxy's upstream and Authentik's server-to-server calls. Plain HTTP: it never leaves the pod network. */
-export const DEX_BACKCHANNEL_URL = `http://${DEX_SERVICE}.${DEX_NAMESPACE}.svc.cluster.local:${DEX_PORT}`;
+/**
+ * Authentik's server-to-server door to Dex: `nbidp-backchannel.<root domain>`
+ * on the internal Gateway, serving only `POST /token` and `GET /userinfo`
+ * (kubernetes/apps/netbird-system/nbidp, route `backchannel`). Both Authentik
+ * instances share the NetBird source, and alpha-site's cannot resolve
+ * in-cluster Service names, so it is a LAN name rather than Dex's Service.
+ */
+export function nbidpBackchannelUrl(root: string = rootDomain()): string {
+  return `https://nbidp-backchannel.${root}`;
+}
 
 /** OpenBao (`secrets` mount) paths. */
 export const NBIDP_BAO = {
@@ -125,15 +133,16 @@ export function renderDexConfig(args: DexConfigArgs): string {
  * The browser goes to the issuer: `nbidp.<root domain>` resolves only for
  * NetBird peers in the private service's access groups (management
  * synthesizes the record), so with NetBird off the login cannot start.
- * Authentik's own pods are not NetBird peers, so the token exchange and
- * userinfo go to Dex's Service, on the two paths the CiliumNetworkPolicy lets
- * them use. No well-known or JWKS URL: Authentik would fetch both when the
+ * Authentik is not a NetBird peer, so the token exchange and userinfo go to the
+ * LAN back-channel (nbidpBackchannelUrl), which serves only those two paths and
+ * which both the equestria and the alpha-site Authentik reach. No well-known or JWKS URL: Authentik would fetch both when the
  * source is saved, and reads the profile from /userinfo anyway.
  */
-export function sourceEndpoints(issuer: string): { authorizationUrl: string; accessTokenUrl: string; profileUrl: string } {
+export function sourceEndpoints(issuer: string, root: string = rootDomain()): { authorizationUrl: string; accessTokenUrl: string; profileUrl: string } {
+  const backchannel = nbidpBackchannelUrl(root);
   return {
     authorizationUrl: `${issuer}/auth`,
-    accessTokenUrl: `${DEX_BACKCHANNEL_URL}/token`,
-    profileUrl: `${DEX_BACKCHANNEL_URL}/userinfo`,
+    accessTokenUrl: `${backchannel}/token`,
+    profileUrl: `${backchannel}/userinfo`,
   };
 }

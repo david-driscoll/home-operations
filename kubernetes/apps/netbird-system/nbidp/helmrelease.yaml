@@ -178,6 +178,38 @@ spec:
         ports:
           http:
             port: 5556
+    route:
+      # Authentik's server-to-server door to Dex (components/netbird/nbidp.ts
+      # nbidpBackchannelUrl). Both Authentik instances share the NetBird
+      # source, and the alpha-site one cannot reach Dex's Service, so the two
+      # back-channel calls ride the internal Gateway. Exactly two matches:
+      # the browser legs (/auth, /callback) stay private-proxy only.
+      backchannel:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "nbidp-backchannel.${ROOT_DOMAIN}"
+        rules:
+          - matches:
+              - path:
+                  type: Exact
+                  value: /token
+                method: POST
+              - path:
+                  type: Exact
+                  value: /userinfo
+                method: GET
+            backendRefs:
+              - identifier: dex
+                port: 5556
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: nbidp-backchannel-sources
     persistence:
       dex-config:
         type: secret

@@ -14,7 +14,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { DEX_BACKCHANNEL_URL, DEX_CONNECTOR_ID, NETBIRD_IDENTITY_HEADERS, nbidpHost, renderDexConfig, sourceEndpoints } from "./nbidp.ts";
+import { DEX_CONNECTOR_ID, NETBIRD_IDENTITY_HEADERS, nbidpBackchannelUrl, nbidpHost, renderDexConfig, sourceEndpoints } from "./nbidp.ts";
 
 const args = {
   issuer: "https://nbidp.example.test",
@@ -106,16 +106,18 @@ describe("renderDexConfig: the rest of Dex", () => {
 });
 
 describe("sourceEndpoints", () => {
-  const endpoints = sourceEndpoints("https://nbidp.example.test");
+  const endpoints = sourceEndpoints("https://nbidp.example.test", "example.test");
 
   it("sends the browser to the issuer, which only resolves over NetBird", () => {
     assert.equal(endpoints.authorizationUrl, "https://nbidp.example.test/auth");
   });
 
-  it("keeps Authentik's server-to-server calls in the cluster, on the two paths the CiliumNetworkPolicy allows", () => {
-    assert.equal(endpoints.accessTokenUrl, `${DEX_BACKCHANNEL_URL}/token`);
-    assert.equal(endpoints.profileUrl, `${DEX_BACKCHANNEL_URL}/userinfo`);
-    assert.match(DEX_BACKCHANNEL_URL, /^http:\/\/nbidp-dex\.netbird-system\.svc\.cluster\.local:5556$/);
+  it("sends both Authentik instances' server-to-server calls to the LAN back-channel, on the two paths it serves", () => {
+    // equestria's AND alpha-site's Authentik share this source, and alpha-site
+    // cannot resolve in-cluster Service names.
+    assert.equal(endpoints.accessTokenUrl, "https://nbidp-backchannel.example.test/token");
+    assert.equal(endpoints.profileUrl, "https://nbidp-backchannel.example.test/userinfo");
+    assert.equal(nbidpBackchannelUrl("example.test"), "https://nbidp-backchannel.example.test");
   });
 });
 
