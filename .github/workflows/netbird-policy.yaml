@@ -51,3 +51,21 @@ jobs:
 
       - name: Run policy tests
         run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts
+
+  # The one check branch protection requires. `test` is skipped when nothing it
+  # covers changed, and a skipped job never reports, so a required `Test`
+  # would block every unrelated PR; this always runs and fails only on failure.
+  # Same shape as flux-local.yaml's `flate Success`.
+  netbird-policy-status:
+    name: NetBird Policy Success
+    needs: ["pre-job", "test"]
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Any jobs failed?
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
+
+      - name: All jobs passed or skipped?
+        if: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+        run: echo "All jobs passed or skipped" && echo "${{ toJSON(needs.*.result) }}"
