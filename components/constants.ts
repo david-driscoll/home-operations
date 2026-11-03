@@ -28,6 +28,37 @@ import type { TailscaleAutogroups, TailscaleCidr, TailscaleGroups, TailscaleIp, 
  */
 export const authentikVip = "10.10.255.10" as TailscaleIp;
 
+export interface KubernetesCluster {
+  tag: TailscaleTags;
+  serviceNetwork: TailscaleCidr;
+  clusterNetwork: TailscaleCidr;
+  /** The cluster's Gateway/LoadBalancer addresses (its service VIP first). */
+  publicIps: TailscaleIp[];
+  kubeApiIp: TailscaleIp;
+}
+
+/**
+ * The Kubernetes clusters, as stacks/unifi-network's tailnet policy and
+ * stacks/netbird's client-access policy both see them: members reach each
+ * cluster's publicIps on the web ports, admins its networks.
+ */
+export const kubernetesClusters: readonly KubernetesCluster[] = [
+  {
+    tag: "tag:sgc" as TailscaleTags,
+    clusterNetwork: "10.209.0.0/16" as TailscaleCidr,
+    serviceNetwork: "10.199.0.0/16" as TailscaleCidr,
+    kubeApiIp: "10.10.209.201" as TailscaleIp,
+    publicIps: ["10.199.0.10", "10.10.209.100", "10.10.209.101", "10.10.209.202"] as TailscaleIp[],
+  },
+  {
+    tag: "tag:equestria" as TailscaleTags,
+    clusterNetwork: "10.206.0.0/16" as TailscaleCidr,
+    serviceNetwork: "10.196.0.0/16" as TailscaleCidr,
+    kubeApiIp: "10.10.206.201" as TailscaleIp,
+    publicIps: ["10.196.0.10", "10.10.206.100", "10.10.206.101", "10.10.206.202"] as TailscaleIp[],
+  },
+];
+
 const dnsServers = {
   "Alpha Site": {
     ips: ["10.10.10.9"],

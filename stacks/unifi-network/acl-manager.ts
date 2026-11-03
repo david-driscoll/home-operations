@@ -8,20 +8,12 @@ import { writeFileSync } from "node:fs";
 import type { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags, TailscaleTest } from "@openapi/tailscale-grants.js";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
-import { authentikVip, Roles } from "../../components/constants.ts";
+import { authentikVip, type KubernetesCluster, kubernetesClusters, Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
 import { assertGrantPath } from "../../components/tailscale/policyGuards.ts";
 import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../../components/tailscale.ts";
-
-interface KubernetesCluster {
-  tag: TailscaleTags;
-  serviceNetwork: TailscaleCidr;
-  clusterNetwork: TailscaleCidr;
-  publicIps: TailscaleIp[];
-  kubeApiIp: TailscaleIp;
-}
 
 /**
  * `autogroup:tagged` minus tag:funnel, spelled out -- use it wherever a grant's
@@ -147,22 +139,8 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     Object.values(groups).forEach(t => manager.setGroup(t));
 
     // ── Kubernetes clusters ───────────────────────────────────────────────
-    const clusters: KubernetesCluster[] = [
-      {
-        tag: tag.sgc,
-        clusterNetwork: "10.209.0.0/16",
-        serviceNetwork: "10.199.0.0/16",
-        kubeApiIp: "10.10.209.201",
-        publicIps: ["10.199.0.10", "10.10.209.100", "10.10.209.101", "10.10.209.202"],
-      },
-      {
-        tag: tag.equestria,
-        clusterNetwork: "10.206.0.0/16",
-        serviceNetwork: "10.196.0.0/16",
-        kubeApiIp: "10.10.206.201",
-        publicIps: ["10.196.0.10", "10.10.206.100", "10.10.206.101", "10.10.206.202"],
-      },
-    ];
+    // Shared with stacks/netbird's client-access policy (components/constants.ts).
+    const clusters: readonly KubernetesCluster[] = kubernetesClusters;
 
     // // ── Register Dockge services from all stacks ──────────────────────────
     for (const service of services) {
@@ -962,7 +940,7 @@ function configurePbsAccess(manager: TailscaleAclManager) {
   );
 }
 
-function configureKubernetesAccess(manager: TailscaleAclManager, clusters: KubernetesCluster[]) {
+function configureKubernetesAccess(manager: TailscaleAclManager, clusters: readonly KubernetesCluster[]) {
   const testData = manager.testData;
   const clusterTags = clusters.map(z => z.tag);
   const rules = Object.fromEntries(
