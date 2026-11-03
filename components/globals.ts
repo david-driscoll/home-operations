@@ -2,6 +2,7 @@ import { Provider as GarageProvider } from "@axnic/pulumi-garage";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
+import { Provider as OciProvider } from "@pulumi/oci";
 import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
@@ -39,6 +40,8 @@ export class GlobalResources extends ComponentResource {
   private _garageProvider?: GarageProvider;
   private _githubCredential?: Output<GithubAppCredential>;
   private _githubProvider?: GithubProvider;
+  private _ociCredential?: Output<OciApiKeyCredential>;
+  private _ociProvider?: OciProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -321,6 +324,45 @@ export class GlobalResources extends ComponentResource {
     );
     return this._githubProvider;
   }
+
+  /**
+   * The `pulumi-netbird` user's API key on the Always Free OCI tenancy
+   * (stacks/netbird-edge, docs/plans/netbird-mirror.md). Lazy like
+   * `githubCredential`: only that stack reads it. `.config/fnox.toml` exposes
+   * the same path as OCI_CLI_* for the `oci` CLI.
+   *
+   * Never log this Output: `private_key` is a PEM.
+   */
+  public get ociCredential(): Output<OciApiKeyCredential> {
+    this._ociCredential ??= this.store.getSecretByPath<OciApiKeyCredential>("third-party-tokens/oci/pulumi");
+    return this._ociCredential;
+  }
+
+  public get ociProvider(): OciProvider {
+    if (this._ociProvider) return this._ociProvider;
+    const credential = this.ociCredential;
+    this._ociProvider = new OciProvider(
+      "oci",
+      {
+        auth: "ApiKey",
+        tenancyOcid: credential.tenancy_ocid,
+        userOcid: credential.user_ocid,
+        fingerprint: credential.fingerprint,
+        privateKey: credential.private_key,
+        region: credential.region,
+      },
+      { parent: this },
+    );
+    return this._ociProvider;
+  }
+}
+
+export interface OciApiKeyCredential {
+  tenancy_ocid: string;
+  user_ocid: string;
+  fingerprint: string;
+  region: string;
+  private_key: string;
 }
 
 export interface GithubAppCredential {

@@ -78,3 +78,11 @@ AUTHENTIK_URL = { provider = "openbao", value = "secrets/clusters/alpha-site/app
 # these now; they stay for ad-hoc API calls (`mise x --secrets TAILSCALE_CLIENT_ID,…`).
 TAILSCALE_CLIENT_ID = { provider = "openbao", value = "secrets/third-party-tokens/tailscale/pulumi-oauth#username", if_missing = "warn" }
 TAILSCALE_CLIENT_SECRET = { provider = "openbao", value = "secrets/third-party-tokens/tailscale/pulumi-oauth#credential", if_missing = "warn" }
+# OCI API key for the `pulumi-netbird` user (stacks/netbird-edge). Pulumi reads
+# the same path itself through GlobalResources.ociProvider; these exist for the
+# `oci` CLI (quota checks: `mise x --secrets OCI_CLI_USER,… -- oci limits …`).
+OCI_CLI_TENANCY = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#tenancy_ocid", if_missing = "warn" }
+OCI_CLI_USER = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#user_ocid", if_missing = "warn" }
+OCI_CLI_FINGERPRINT = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#fingerprint", if_missing = "warn" }
+OCI_CLI_REGION = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#region", if_missing = "warn" }
+OCI_CLI_KEY_CONTENT = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#private_key", if_missing = "warn" }
