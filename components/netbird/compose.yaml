@@ -3,9 +3,15 @@
 # components/netbird/NetbirdServer.ts; Renovate keeps the image tags here current.
 #
 # Adapted from upstream's getting-started.sh (v0.82.0), built-in Traefik mode,
-# without the optional reverse proxy and CrowdSec. ${NETBIRD_DOMAIN} comes from
-# the .env file written beside this one; config.yaml and dashboard.env are
-# rendered by components/netbird/server.ts.
+# without the optional reverse proxy and CrowdSec. The .env file written beside
+# this one sets NETBIRD_DOMAIN and, on a relay host, NETBIRD_RELAY_DOMAIN and
+# COMPOSE_PROFILES=relay; config.yaml, dashboard.env and relay.env are rendered
+# by components/netbird/server.ts.
+#
+# A fenced host (#3001, components/netbird/fence.ts) runs Traefik and the relay
+# always, and netbird-server and the dashboard only while it holds the DNS
+# lease; its .env sets NETBIRD_SERVER_RESTART=no, so a reboot never starts
+# management before the fence has checked the lease.
 name: netbird
 
 services:
@@ -37,6 +43,11 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      # The relay's own name, in a file of its own: acme.json is the management
+      # name's, backed up and handed to whichever host takes the lease, and
+      # this one never leaves the host that serves the relay.
+      - "--certificatesresolvers.relay.acme.storage=/letsencrypt/relay-acme.json"
+      - "--certificatesresolvers.relay.acme.tlschallenge=true"
       - "--serverstransport.forwardingtimeouts.responseheadertimeout=0s"
       - "--serverstransport.forwardingtimeouts.idleconntimeout=0s"
     ports:
@@ -69,19 +80,19 @@ services:
       - traefik.http.services.dashboard.loadbalancer.server.port=80
     logging: *logging
 
-  # Management + Signal + Relay + STUN.
+  # Management + Signal (+ Relay + STUN when server.relays is empty).
   netbird-server:
     image: netbirdio/netbird-server:0.82.0
     container_name: netbird-server
-    restart: unless-stopped
+    restart: ${NETBIRD_SERVER_RESTART:-unless-stopped}
     networks: [netbird]
     environment:
       # Lets POST /api/setup return the owner's PAT, so Pulumi can bootstrap
       # the account without a human. The endpoint only works once, before any
       # account exists.
       NB_SETUP_PAT_ENABLED: "true"
-    ports:
-      - "3478:3478/udp"
+    # No 3478/udp: with the standalone relays listed in config.yaml the
+    # embedded STUN is off, and the relay below owns the port.
     volumes:
       - netbird_data:/var/lib/netbird
       - ./config.yaml:/etc/netbird/config.yaml:ro
@@ -104,6 +115,31 @@ services:
       - traefik.http.services.netbird-server.loadbalancer.server.port=80
       - traefik.http.services.netbird-server-h2c.loadbalancer.server.port=80
       - traefik.http.services.netbird-server-h2c.loadbalancer.server.scheme=h2c
+    logging: *logging
+
+  # The standalone relay and its STUN (#3001), on hosts with
+  # COMPOSE_PROFILES=relay. Not fenced: a standby keeps relaying. Plain HTTP
+  # behind Traefik, which terminates TLS for NETBIRD_RELAY_DOMAIN with its own
+  # resolver; relay.env is rendered by components/netbird/server.ts.
+  relay:
+    image: netbirdio/relay:0.82.0
+    container_name: netbird-relay
+    profiles: [relay]
+    restart: unless-stopped
+    networks: [netbird]
+    env_file:
+      - path: ./relay.env
+        required: false
+    ports:
+      - "3478:3478/udp"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.netbird-relay.rule=Host(`${NETBIRD_RELAY_DOMAIN:-relay.invalid}`) && PathPrefix(`/relay`)
+      - traefik.http.routers.netbird-relay.entrypoints=websecure
+      - traefik.http.routers.netbird-relay.tls=true
+      - traefik.http.routers.netbird-relay.tls.certresolver=relay
+      - traefik.http.routers.netbird-relay.service=netbird-relay
+      - traefik.http.services.netbird-relay.loadbalancer.server.port=80
     logging: *logging
 
   # ── Backups (#2884): components/netbird/backup.ts ───────────────────────

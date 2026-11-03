@@ -237,6 +237,29 @@ describe("renderRestoreScript: Traefik's Let's Encrypt state comes back with the
     assert.equal(statSync(acmePath(result)).mode & 0o777, 0o600);
   });
 
+  // A promotion (fence.ts) takes the lease holder's certificate and account,
+  // whatever this host's Traefik already wrote (#3001).
+  it("replaces the host's acme.json with the snapshot's when NETBIRD_RESTORE_ACME=replace", () => {
+    const certs = '{"letsencrypt":{"Certificates":[{"domain":{"main":"netbird.example.test"}}]}}';
+    const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e", NETBIRD_RESTORE_ACME: "replace" }, emulatedRestore({ snapshotAcme: certs, acme: '{"local":true}' }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(acmePath(result), "utf8"), certs);
+    assert.equal(statSync(acmePath(result)).mode & 0o777, 0o600);
+    assert.match(result.stdout, /restored the Traefik acme\.json/);
+  });
+
+  it("keeps the host's acme.json on replace when the snapshot has none", () => {
+    const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e", NETBIRD_RESTORE_ACME: "replace" }, emulatedRestore({ snapshotAcme: null, acme: '{"local":true}' }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(acmePath(result), "utf8"), '{"local":true}');
+  });
+
+  it("refuses an unknown NETBIRD_RESTORE_ACME", () => {
+    const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e", NETBIRD_RESTORE_ACME: "always" }, emulatedRestore({}));
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /NETBIRD_RESTORE_ACME/);
+  });
+
   it("restores a snapshot taken before acme.json was backed up, and leaves Traefik to request its certificate", () => {
     const result = run(restore, { FAKE_REPO_RC: "0", FAKE_LATEST: "4f2a9c1e" }, emulatedRestore({ snapshotAcme: null }));
     assert.equal(result.status, 0, result.stderr);

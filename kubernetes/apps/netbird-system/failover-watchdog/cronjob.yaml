@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Every minute: probe the host the NetBird lease points at, and after
+# WATCHDOG_FAILURES_TO_FLIP failures in a row repoint the lease at a reachable
+# standby (watchdog.ts). Forbid: two runs at once would both count, and could
+# both flip.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: netbird-failover-watchdog
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 50
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 55
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: netbird-failover-watchdog
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: watchdog
+              image: node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+              # Node strips the types itself.
+              command: ["node", "/app/watchdog.ts"]
+              env:
+                - name: NETBIRD_LEASE
+                  value: netbird.${ROOT_DOMAIN}
+                # In preference order. Each host's relay record is how the
+                # watchdog finds its address (stacks/netbird-edge).
+                - name: NETBIRD_CANDIDATES
+                  value: azure-eus2=relay-eus2.${ROOT_DOMAIN},azure-cus=relay-cus.${ROOT_DOMAIN}
+                - name: STATE_CONFIGMAP
+                  value: netbird-failover-watchdog-state
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: ALERTMANAGER_URL
+                  value: http://alertmanager-operated.observability.svc.cluster.local:9093
+                # The API server's CA, for the state ConfigMap calls.
+                - name: NODE_EXTRA_CA_CERTS
+                  value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              envFrom:
+                - secretRef:
+                    name: netbird-failover-watchdog-cloudflare
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: app
+              configMap:
+                name: netbird-failover-watchdog

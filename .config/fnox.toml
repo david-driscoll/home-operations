@@ -86,3 +86,10 @@ OCI_CLI_USER = { provider = "openbao", value = "secrets/third-party-tokens/oci/p
 OCI_CLI_FINGERPRINT = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#fingerprint", if_missing = "warn" }
 OCI_CLI_REGION = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#region", if_missing = "warn" }
 OCI_CLI_KEY_CONTENT = { provider = "openbao", value = "secrets/third-party-tokens/oci/pulumi#private_key", if_missing = "warn" }
+# Azure service principal for stacks/netbird-edge's Azure VMs (#3001). Pulumi
+# reads the same path through GlobalResources; these are the names the az CLI
+# and the azure-native provider read from the environment.
+ARM_TENANT_ID = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#tenant_id", if_missing = "warn" }
+ARM_SUBSCRIPTION_ID = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#subscription_id", if_missing = "warn" }
+ARM_CLIENT_ID = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#client_id", if_missing = "warn" }
+ARM_CLIENT_SECRET = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#client_secret", if_missing = "warn" }

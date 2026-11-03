@@ -26,7 +26,7 @@ import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../
  * least-privileged node on the tailnet instead (plan J6, decided 2026-09-27),
  * and `member-funnel-access`'s tests pin that.
  *
- * tag:netbird-edge is the same case: the OCI VM serving NetBird to the internet
+ * tag:netbird-edge is the same case: the OCI and Azure VMs serving NetBird to the internet
  * (configureNetbirdEdgeAccess). It gets only what that function grants it.
  *
  * Every other tagged device keeps exactly what autogroup:tagged gave it.
@@ -864,7 +864,7 @@ function configureDnsAccess(manager: TailscaleAclManager) {
 }
 
 /**
- * The OCI VM that hosts the NetBird control plane (stacks/netbird-edge). Its
+ * The OCI and Azure VMs that host the NetBird control plane (stacks/netbird-edge). Their
  * public NSG has no port 22: this grant is the admin path in. tag:proxmox owns
  * the tag because that is the tag the Pulumi OAuth client mints keys under, as
  * for tag:dockge and tag:backups.

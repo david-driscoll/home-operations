@@ -1,0 +1,9 @@
+---
+# The watchdog's memory between runs: consecutive failures and the last flip.
+# No `data` here on purpose. Flux applies this server-side and owns only the
+# fields it sets, so the watchdog's own writes to `data` survive every
+# reconcile. Deleting the object resets the count, which is harmless.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netbird-failover-watchdog-state

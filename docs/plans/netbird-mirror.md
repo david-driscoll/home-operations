@@ -351,6 +351,79 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D23 | 11-03 | Pure seams tested with `node --test`; Pulumi wiring validated by `pulumi preview`, live behaviour by each ticket's acceptance criteria |
 | D24 | 11-03 | One PR per ticket, stacked in dependency order |
 
+### Azure primary (#3001, 2026-11-03)
+
+OCI's Ashburn has had no free-tier compute for this tenancy in any AD (#3037), so David moved the primary to
+Azure. §C, §D and §E describe the OCI-primary plan; this is what is built instead.
+
+- **Hosts.** `stacks/netbird-edge` runs a `Standard_B2pls_v2` (Arm, 2 vCPU / 4 GB, Ubuntu 24.04 arm64, 30 GB
+  Standard SSD) in **East US 2** as the primary, through `components/azure/AzureEdgeVm.ts` and
+  `globals.azureProvider` (OpenBao `third-party-tokens/azure/netbird-edge`). A static Standard IPv4 and an NSG
+  for 80/tcp, 443/tcp, 443/udp, 3478/udp; Azure's default rules deny every other inbound, so no public 22.
+- **One resource group per region** (`netbird-eus2`, `netbird-cus`). A group's metadata lives in its region,
+  and an outage there blocks changes to everything in it, which is the outage the standby exists for.
+- **Tailnet identity:** `tag:netbird-edge` for every host, so the existing grants apply unchanged. Hostnames
+  `netbird-azure-eus2` and `netbird-azure-cus` give egress Services of the same names
+  (`stacks/unifi-network/tailnet-egress.ts`); both are in `remoteServers`.
+- **cloud-init** has an `oci` and an `azure` variant: only OCI gets the iptables ACCEPT rules and the memory
+  ballast.
+- **`netbird-edge:primary`** (default `azure-eus2`) picks the host `netbird.<root domain>` points at. Setup and
+  the owner write are pinned to `azure-eus2` (`SETUP_HOST`), never to "the primary", so a failback can never
+  run `/api/setup` a second time.
+- **The record is Cloudflare only** (`netbird-lease`, TTL 60, grey cloud), not StandardDns: UniFi and
+  Technitium copies would keep LAN clients on a dead primary after a repoint. LAN DNS forwards the name
+  upstream.
+- **One backup heartbeat** (`netbird-server`) for the service, not one per host: the backup script reports
+  only while `netbird-server` runs.
+- **Cost:** about $64 a month at list price for both VMs, their IPs and disks
+  (`components/azure/edgeVm.ts`), plus egress past 100 GB.
+
+### Standby, fence and watchdog (#3001, 2026-11-03)
+
+- **The standby** is the same VM in **Central US** (`netbird-azure-cus`, resource group `netbird-cus`). It
+  reboots for kernel updates at 10:00 UTC, an hour after the primary, so they are never down together.
+- **Relays: standalone on both Azure hosts, none embedded.** Listing anything in `server.relays` turns off the
+  combined server's embedded relay **and its embedded STUN** (`combined/cmd/config.go` `applyRelayDefaults`,
+  v0.82.0). So "the Azure relay beside the embedded one" can't be configured. Instead each Azure host runs
+  `netbirdio/relay` (compose profile `relay`) as `relay-eus2.<root domain>` / `relay-cus.<root domain>`, and
+  every server lists both in `server.relays` and their STUN in `server.stuns`.
+  - **TLS:** the host's Traefik terminates it on 443 with a second resolver (`relay`, storage `relay-acme.json`,
+    TLS-ALPN). The relay listens on plain :80 and advertises `rels://<name>:443`, the same shape upstream uses for
+    the embedded relay. That avoids a second 443 listener, and the relay's certificate never mixes with the
+    management one that moves between hosts.
+  - **STUN** is the relay container's, on 3478/udp; `netbird-server` no longer binds it.
+  - **QUIC** isn't served, because the relay would need its own certificate on 443/udp. Clients use WebSocket.
+- **Fence** (`components/netbird/fence.ts`, a systemd timer every 15 s on every host). It asks the zone's NS set
+  (through 1.1.1.1, then 8.8.8.8), then each nameserver without recursion, and accepts only an authoritative
+  NOERROR. The outcomes:
+
+  | The record says | Running | Not running |
+  | --- | --- | --- |
+  | only our IP | keep | start (restore first) |
+  | another IP | demote | standby |
+  | ours and another | stop | idle |
+  | nothing, or no answer | hold 120 s, then stop | idle |
+
+  - Demote and standby move any store and `acme.json` aside, so a later promotion always restores the newest
+    snapshot.
+  - `netbird-server` runs with `restart: no` on fenced hosts, so a reboot never starts management before the
+    fence has looked.
+  - The backup timer follows management.
+- **Watchdog** (`kubernetes/apps/netbird-system/failover-watchdog`). A Node CronJob every minute. It checks
+  `/oauth2/.well-known/openid-configuration` at the lease's address, with the certificate verified for the
+  management name. It flips after 5 failures in a row, only if Cloudflare and a standby (TLS on 443) both answer,
+  never twice within an hour, and never from a management it has not once seen answer.
+  - The count lives in a ConfigMap. Hosts are found through their relay records.
+  - Flips page straight to Alertmanager. A PrometheusRule pages if the CronJob stops succeeding.
+- **Two writers on one record, no fight.** The `cloudflare.DnsRecord` ignores `content` after create.
+  `dynamic/cloudflare/DnsLeaseAssignment.ts` PATCHes it only when `netbird-edge:primary` (or that host's
+  address) changes, and never diffs against the live record. A watchdog flip therefore stands until a human
+  acknowledges it by setting `primary`, and failback is the same switch. The stack warns while the live lease
+  and `primary` disagree.
+- **acme.json on promotion** (the open question from #3033): the snapshot's replaces the host's
+  (`NETBIRD_RESTORE_ACME=replace`). See [the runbook](../runbooks/netbird-failback.md#acmejson-on-promotion).
+- **Runbook:** [`docs/runbooks/netbird-failback.md`](../runbooks/netbird-failback.md).
+
 ### Implementation notes (2026-11-03)
 
 These came out of building #3000, #2885, #2887 and #2888, and they amend the sections above.

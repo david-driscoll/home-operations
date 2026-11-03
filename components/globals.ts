@@ -1,4 +1,7 @@
 import { Provider as GarageProvider } from "@axnic/pulumi-garage";
+// The subpath, not the package root: the root's index loads every Azure
+// service module (about 2 s), and every stack imports this file.
+import { Provider as AzureProvider } from "@pulumi/azure-native/provider.js";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
@@ -44,6 +47,8 @@ export class GlobalResources extends ComponentResource {
   private _githubProvider?: GithubProvider;
   private _ociCredential?: Output<OciApiKeyCredential>;
   private _ociProvider?: OciProvider;
+  private _azureCredential?: Output<AzureServicePrincipalCredential>;
+  private _azureProvider?: AzureProvider;
   private _netbirdOwner?: Output<NetbirdOwnerCredential>;
   private _netbirdApi?: NetbirdApiCredential;
   private _netbirdOwnerApi?: NetbirdApiCredential;
@@ -364,6 +369,35 @@ export class GlobalResources extends ComponentResource {
   }
 
   /**
+   * The `netbird-edge` service principal on the Visual Studio subscription
+   * (#3001): Contributor on that one subscription, which has its spending
+   * limit on. Lazy like `ociCredential`: only stacks/netbird-edge reads it.
+   * `.config/fnox.toml` exposes the same path as ARM_* for the az CLI.
+   *
+   * Never log this Output: `client_secret` is the credential.
+   */
+  public get azureCredential(): Output<AzureServicePrincipalCredential> {
+    this._azureCredential ??= this.store.getSecretByPath<AzureServicePrincipalCredential>("third-party-tokens/azure/netbird-edge");
+    return this._azureCredential;
+  }
+
+  public get azureProvider(): AzureProvider {
+    if (this._azureProvider) return this._azureProvider;
+    const credential = this.azureCredential;
+    this._azureProvider = new AzureProvider(
+      "azure-native",
+      {
+        tenantId: credential.tenant_id,
+        subscriptionId: credential.subscription_id,
+        clientId: credential.client_id,
+        clientSecret: secret(credential.client_secret),
+      },
+      { parent: this },
+    );
+    return this._azureProvider;
+  }
+
+  /**
    * The self-hosted NetBird's break-glass owner, written by stacks/netbird-edge
    * when it first set the server up (#3000): where the server is, the owner's
    * login, and the setup PAT. Lazy: only stacks/netbird reads it, and the path
@@ -460,6 +494,14 @@ export interface OciApiKeyCredential {
   fingerprint: string;
   region: string;
   private_key: string;
+}
+
+/** OpenBao `third-party-tokens/azure/netbird-edge`. */
+export interface AzureServicePrincipalCredential {
+  tenant_id: string;
+  subscription_id: string;
+  client_id: string;
+  client_secret: string;
 }
 
 export interface GithubAppCredential {
