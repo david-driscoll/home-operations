@@ -52,7 +52,7 @@ const homeAd = oci.identity.getAvailabilityDomainsOutput({ compartmentId: tenanc
 // ── Free-tier guard, tenancy-wide ────────────────────────────────────────
 // Quotas block creation server-side; the budget only alerts. Both cover the
 // whole tenancy, not just this stack's compartment.
-new oci.limits.Quota(
+const freeTierQuota = new oci.limits.Quota(
   "free-tier",
   {
     compartmentId: tenancyId,
@@ -185,17 +185,24 @@ const tailscaleAuthKey = new TailnetKey(
 // Port 22 is not public, so the key alone opens nothing.
 const breakGlassKey = new tls.PrivateKey("netbird-edge-break-glass", { algorithm: "ED25519" });
 
-const vm = new OciFreeTierInstance(hostname, {
-  compartmentId,
-  availabilityDomain: homeAd,
-  subnetId: subnet.id,
-  nsgIds: [nsg.id],
-  region: globals.ociCredential.region,
+const vm = new OciFreeTierInstance(
   hostname,
-  sshAuthorizedKeys: breakGlassKey.publicKeyOpenssh,
-  userData: netbirdEdgeCloudInit({ hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
-  provider,
-});
+  {
+    compartmentId,
+    availabilityDomain: homeAd,
+    subnetId: subnet.id,
+    nsgIds: [nsg.id],
+    region: globals.ociCredential.region,
+    hostname,
+    sshAuthorizedKeys: breakGlassKey.publicKeyOpenssh,
+    userData: netbirdEdgeCloudInit({ hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
+    provider,
+  },
+  // The quota first: on 2026-11-03 the VM create raced the quota update that
+  // added the regional A1 counts (quota modified 14:38:11.9, create rejected
+  // 14:38:13 against the old statements).
+  { dependsOn: [freeTierQuota] },
+);
 
 // ── Boot-volume backups (#2884) ──────────────────────────────────────────
 // User-defined, not OCI's Bronze/Silver/Gold, which keep more copies than the
