@@ -3,9 +3,10 @@
  * them (docs/plans/netbird-mirror.md §D).
  *
  * Plain TypeScript with no Pulumi imports, so `node --test` can exercise it.
- * Three layers enforce these numbers: this module at program time, the OCI
- * quota policy rendered by `freeTierQuotaStatements` server-side, and the
- * budget alert for anything that still costs money.
+ * Four layers enforce these numbers: this module at program time, the
+ * CrossGuard pack in policies/oci-free-tier on a local preview, the OCI quota
+ * policy rendered by `freeTierQuotaStatements` server-side, and the budget
+ * alert for anything that still costs money.
  */
 
 /**
@@ -14,7 +15,7 @@
  * Ampere A1 was cut from 4 OCPU / 24 GB to 2 OCPU / 12 GB in mid-2026
  * ("1,500 OCPU hours and 9,000 GB hours"). Always Free compute exists only in
  * the home region. Block storage is 200 GB across boot and block volumes, with
- * 5 volume backups.
+ * 5 volume backups. One flexible load balancer is free at 10 Mbps.
  */
 export const FREE_TIER = {
   homeRegion: "us-ashburn-1",
@@ -24,6 +25,8 @@ export const FREE_TIER = {
   blockStorageGb: 200,
   volumeBackups: 5,
   reservedPublicIps: 1,
+  loadBalancers: 1,
+  loadBalancerMbps: 10,
   vcns: 2,
   minBootVolumeGb: 50,
 } as const;
@@ -43,7 +46,7 @@ export interface FreeTierInstanceRequest {
  * Every reason `request` would leave the free tier. Empty means it fits.
  *
  * Checks one instance against the whole allowance. Totals across several
- * instances are the CrossGuard pack's job (#2882).
+ * instances are the CrossGuard pack's job (policies/oci-free-tier).
  */
 export function freeTierViolations(request: FreeTierInstanceRequest): string[] {
   const violations: string[] = [];

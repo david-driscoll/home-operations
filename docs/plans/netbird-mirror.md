@@ -92,13 +92,29 @@ From the 2026-11-02 reachability sweep:
   - Tailscale (`tag:netbird-edge`, admins only).
 - **Guards:**
   1. A component that throws when the shape, region or size is outside the free allowance.
-  2. A CrossGuard pack, run in CI, that checks:
+  2. A CrossGuard pack, `policies/oci-free-tier` (#2882), every rule mandatory. It checks:
      - Σ A1 ≤ 2 OCPU / 12 GB;
-     - Σ storage ≤ 200 GB;
+     - Σ boot + block storage ≤ 200 GB;
+     - every shape on the Always Free allow-list;
      - at most 1 reserved IP;
-     - backup retention ≤ 5;
+     - at most one load balancer, flexible at 10/10 Mbps;
+     - backup retention ≤ 5 (schedules × assignments + manual backups), and no Oracle-defined policy;
      - `deleteBeforeReplace` on every instance;
-     - the quota statements match the allow-list exactly.
+     - the quota statements match `freeTierQuotaStatements(<the instance AD>)` exactly.
+
+     **Where it runs.** CI (`.github/workflows/oci-free-tier-policy.yaml`) cannot reach the state
+     backend or OpenBao, which are tailnet-only. So CI runs the rules' unit tests and a smoke test that
+     loads the pack under the Pulumi CLI. The preview against the live stack is local:
+
+     ```bash
+     # repo root; PULUMI_BACKEND_URL etc. as in kubernetes/apps/pulumi/netbird-edge/stack.yaml
+     fnox exec -- sh -c 'cd stacks/netbird-edge && pulumi preview --stack netbird-edge --policy-pack ../../policies/oci-free-tier'
+     ```
+
+     **The operator cannot run it.** Pulumi Kubernetes Operator v2.10.0 has no policy-pack field on
+     `Stack`, and its agent leaves `// TODO:PolicyPack` in both the preview and up paths
+     (pulumi/pulumi-kubernetes-operator#366). The operator's `up` on merge is guarded by layers 1, 3
+     and 4 only. Preview locally with the pack before merging a netbird-edge change.
   3. OCI quotas.
   4. The budget.
 - **Quota sketch.** Verify the zero-then-set semantics, and find the LB/NLB quota names
