@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/external-secrets.io/externalsecret_v1.json
+#
+# Dispatcharr's connection to the shared CNPG cluster, as the env vars its
+# entrypoint and dispatcharr/settings.py read. Both the `app` and `celery`
+# containers load this with `envFrom`, and they must agree.
+#
+# The source is `${APP}-postgres`, rendered by components/postgres (see ks.yaml);
+# the password is OpenBao's and rotates every 30 days, and reloader restarts the
+# pod when it does.
+#
+# ⚠️ None of this is read unless DISPATCHARR_ENV is `modular`. In `aio` mode the
+# entrypoint starts the bundled Postgres and rewrites POSTGRES_HOST to the local
+# socket whenever it is unset or localhost -- and with any other value it still
+# starts the bundled server and runs migrations against it.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ${APP}-postgres-env
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: database
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: ${APP}-postgres-env
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      data:
+        POSTGRES_HOST: "{{ .postgres_hostname }}"
+        POSTGRES_PORT: "{{ .postgres_port }}"
+        POSTGRES_DB: "{{ .postgres_database }}"
+        POSTGRES_USER: "{{ .postgres_username }}"
+        POSTGRES_PASSWORD: "{{ .postgres_password }}"
+  dataFrom:
+    - extract:
+        key: "${APP}-postgres"
+      rewrite:
+        - regexp:
+            source: "[\\W]"
+            target: _
+        - regexp:
+            source: "(.*)"
+            target: "postgres_$1"

@@ -21,6 +21,10 @@ spec:
       namespace: volsync-system
     - name: tailscale-operator
       namespace: tailscale-system
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
   path: ./kubernetes/apps/equestria/pvr/dispatcharr
   prune: true
   wait: true
@@ -35,6 +39,18 @@ spec:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/tailscale
     - ../../../../components/volsync
+    # Phase 1 of moving Dispatcharr off its bundled Postgres (/data/db) onto
+    # the shared CNPG cluster. This line alone creates the `dispatcharr` role,
+    # database and rotating credential; the app keeps running in `aio` mode on
+    # its bundled database until the data is restored and phase 2 switches it
+    # to `DISPATCHARR_ENV: modular` (the only mode in which Dispatcharr honours
+    # an external POSTGRES_HOST -- `aio` always starts the bundled server).
+    #
+    # ⚠️ BRAND-NEW-APP case: `stacks/system` may create the OpenBao static
+    # role before CNPG applies the DatabaseRole and stall on
+    # `role "dispatcharr" does not exist`. Expected; recovery is in
+    # components/postgres/ks.yaml.
+    - ../../../../components/postgres
   postBuild:
     substitute:
       APP: *app
