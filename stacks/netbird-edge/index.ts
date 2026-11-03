@@ -1,29 +1,33 @@
 /**
- * The self-hosted NetBird control plane's infrastructure on OCI Always Free
+ * The self-hosted NetBird control plane's infrastructure
  * (docs/plans/netbird-mirror.md, epic #2880).
  *
- * This stack owns the tenancy's free-tier guard (quota allow-list + budget),
- * the one A1 VM, the NetBird combined server on it (#3000), and what makes
- * that server disposable (#2884): 15-minute backups to Garage with a restore
- * before every start, a boot-volume backup policy, and the alarms. The Azure
- * fallback lands here in #3001.
+ * Two clouds. On OCI Always Free: the tenancy's free-tier guard (quota
+ * allow-list + budget), its network, and the one A1 VM, which is parked
+ * (`ociVm: false`) while Ashburn has no capacity. On Azure (#3001): the East US
+ * 2 VM that is the primary since 2026-11-03. Then the NetBird combined server
+ * (#3000) on the primary, the `netbird.<root domain>` record that points at
+ * it, and what makes the server disposable (#2884): 15-minute backups to
+ * Garage with a restore before every start.
  */
+import * as cloudflare from "@pulumi/cloudflare";
 import * as oci from "@pulumi/oci";
+import type { Input, Output, Resource } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import { TailnetKey } from "@pulumi/tailscale";
 import * as tls from "@pulumi/tls";
+import { AzureEdgeVm } from "components/azure/AzureEdgeVm.ts";
 import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { Tailscale } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { addUptimeGatus, toGatusKey } from "components/helpers.ts";
 import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET, resticRepository } from "components/netbird/backup.ts";
-import { NetbirdServer } from "components/netbird/NetbirdServer.ts";
+import { NetbirdServer, type NetbirdServerArgs } from "components/netbird/NetbirdServer.ts";
 import { instanceAlarms } from "components/oci/alarms.ts";
 import { BOOT_VOLUME_BACKUP_COPIES, bootVolumeBackupSchedule, FREE_TIER, freeTierQuotaStatements, retainedBackupCopies } from "components/oci/freeTier.ts";
 import { OciFreeTierInstance } from "components/oci/OciFreeTierInstance.ts";
-import { StandardDns } from "components/StandardDns.ts";
 import { netbirdEdgeCloudInit, PUBLIC_TCP_PORTS, PUBLIC_UDP_PORTS } from "./cloudInit.ts";
 
 const config = new pulumi.Config();
@@ -187,7 +191,8 @@ const tailscaleAuthKey = new TailnetKey(
   { provider: globals.tailscaleProvider },
 );
 
-// Break-glass key for OCI Bastion sessions if Tailscale never comes up.
+// Break-glass key for OCI Bastion sessions and the Azure VMs' admin user, if
+// Tailscale never comes up.
 // Port 22 is not public, so the key alone opens nothing.
 const breakGlassKey = new tls.PrivateKey("netbird-edge-break-glass", { algorithm: "ED25519" });
 
@@ -203,7 +208,7 @@ const vm = !ociVmEnabled
         region: globals.ociCredential.region,
         hostname,
         sshAuthorizedKeys: breakGlassKey.publicKeyOpenssh,
-        userData: netbirdEdgeCloudInit({ hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
+        userData: netbirdEdgeCloudInit({ platform: "oci", hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
         provider,
       },
       // The quota first: on 2026-11-03 the VM create raced the quota update that
@@ -258,17 +263,88 @@ if (vm) {
   }
 }
 
+// ── Azure (#3001) ────────────────────────────────────────────────────────
+// The primary since 2026-11-03: Ashburn has no free-tier compute for this
+// tenancy, so the server runs on the Visual Studio subscription instead
+// (spending limit on). Same tailnet identity as the OCI VM, so the same grants
+// apply: admins SSH/web, tag:egress SSH for the deploy, the garage-s3 and
+// uptime VIPs for backups. Each hostname gets its own egress Service
+// (`netbird-azure-eus2`, stacks/unifi-network/tailnet-egress.ts).
+const azureTailscaleAuthKey = new TailnetKey(
+  "netbird-edge-azure-authkey",
+  {
+    reusable: true,
+    preauthorized: true,
+    ephemeral: false,
+    recreateIfInvalid: "always",
+    tags: [Tailscale.tag.netbirdEdge],
+    description: "netbird-edge Azure VMs",
+  },
+  { provider: globals.tailscaleProvider },
+);
+
+const azureEus2Hostname = "netbird-azure-eus2";
+const azureEus2 = new AzureEdgeVm(azureEus2Hostname, {
+  region: "eastus2",
+  hostname: azureEus2Hostname,
+  publicPorts: { tcp: PUBLIC_TCP_PORTS, udp: PUBLIC_UDP_PORTS },
+  sshPublicKey: breakGlassKey.publicKeyOpenssh,
+  userData: netbirdEdgeCloudInit({ platform: "azure", hostname: azureEus2Hostname, tailscaleAuthKey: azureTailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
+  provider: globals.azureProvider,
+});
+
 // ── NetBird server (#3000) ───────────────────────────────────────────────
 const root = rootDomain();
 const domain = `netbird.${root}`;
-// Grey-cloud by construction (StandardDns never proxies): STUN is UDP and the
-// gRPC streams must reach Traefik directly. Let's Encrypt's TLS-ALPN check
-// needs this record before the server's first start.
-// 60s: the Azure fallback (#3001) fails over by repointing this record.
-const dnsRecord = vm ? await StandardDns.create("netbird", { hostname: domain, ipAddress: vm.publicIpAddress, type: "A", ttl: 60 }, globals, {}) : undefined;
+
+/** A machine that can run the NetBird server. */
+interface EdgeHost {
+  /** The `netbird-edge:primary` value that selects it. */
+  id: "oci" | "azure-eus2";
+  /** Its tailnet name, and the snapshots' restic host. */
+  hostname: string;
+  publicIpAddress: Output<string>;
+  /** Changes when the machine is replaced, so every deploy step reruns there. */
+  hostKey: Input<string>;
+  /** What the first SSH session waits for. */
+  machine: Resource;
+}
+const hosts: EdgeHost[] = [
+  ...(vm ? [{ id: "oci" as const, hostname, publicIpAddress: vm.publicIpAddress, hostKey: vm.instance.id, machine: vm.instance }] : []),
+  { id: "azure-eus2", hostname: azureEus2Hostname, publicIpAddress: azureEus2.publicIpAddress, hostKey: azureEus2.vmId, machine: azureEus2.vm },
+];
+
+// The one host `netbird.<root domain>` points at. Until the DNS-lease fence
+// lands (#3001's second half), it is also the only host that runs a server: two
+// unfenced managements on one store would split it.
+const primaryId = config.get("primary") ?? "azure-eus2";
+const primary = hosts.find(h => h.id === primaryId);
+if (!primary) throw new Error(`netbird-edge:primary is '${primaryId}', which is not one of this stack's hosts (${hosts.map(h => h.id).join(", ")}). Is ociVm off?`);
+
+// Where `/api/setup` ran, once, ever. Not "the primary": a failback moves the
+// primary, and setup must neither move with it nor run again. Only this host's
+// server carries `setup`, so the owner PAT in OpenBao has exactly one writer.
+const SETUP_HOST: EdgeHost["id"] = "azure-eus2";
+if (primary.id !== SETUP_HOST) {
+  throw new Error(`netbird-edge:primary must stay '${SETUP_HOST}' until the DNS-lease fence (#3001) can stop a second management; it is '${primary.id}'.`);
+}
+
+// Cloudflare only, grey-cloud: STUN is UDP and the gRPC streams must reach
+// Traefik directly, and Let's Encrypt's TLS-ALPN check needs it before the
+// server's first start. Not StandardDns: its UniFi and Technitium copies would
+// keep LAN clients on a dead primary after the watchdog repoints this record
+// (#3001), and the name is public anyway, so LAN DNS forwards it upstream.
+// 60s: failover is a repoint of this record.
+const dnsRecord = new cloudflare.DnsRecord(
+  "netbird-lease",
+  { zoneId: globals.cloudflareCredential.zoneId, name: domain, type: "A", content: primary.publicIpAddress, ttl: 60, proxied: false, comment: "stacks/netbird-edge: the NetBird management lease (#3001)" },
+  // Same as StandardDns: the zone id arrives as a secret and reads back plain.
+  { provider: globals.cloudflareProvider, ignoreChanges: ["zoneId"] },
+);
 
 // Generated once. The store key is the one that matters: lose it and the
 // SQLite store's user data cannot be decrypted (bootstrap/INVENTORY.md).
+// Every host gets the same: a standby restores the primary's store with them.
 const base64Key = (name: string) => new random.RandomBytes(name, { length: 32 }).base64;
 const serverSecrets = {
   relayAuthSecret: base64Key("netbird-relay-auth-secret"),
@@ -296,52 +372,55 @@ const backupKey = globals.store.tryGetSecretByPath<{ endpoint: string; bucket: s
 });
 // The repository's encryption key. The snapshots hold the store AND
 // config.yaml (the store key, the relay secret), so Garage only ever sees
-// ciphertext. Generated once; the Azure standby (#3001) reads the same one.
+// ciphertext. Generated once; every host reads the same one.
 const resticPassword = new random.RandomPassword("netbird-backup-restic-password", { length: 48, special: false }).result;
-const heartbeatToken = toGatusKey(BACKUP_HEARTBEAT_GROUP, hostname);
+// One heartbeat for the service, not per host: the backup script reports only
+// while netbird-server runs, so it is whichever host is active.
+const heartbeatName = "netbird-server";
+const heartbeatToken = toGatusKey(BACKUP_HEARTBEAT_GROUP, heartbeatName);
 
 // The stale-backup alarm: Gatus pages when a run reports a failure, or when no
 // run has reported for 30 minutes (components/netbird/backup.ts).
-// Only with a server to back up: an idle heartbeat would page every 30
-// minutes. The file is still written (empty) without one, because removing it
-// from the program would leave the last copy on dockge-as, still paging.
 addUptimeGatus("netbird-backup", globals, {
   endpoints: [],
-  "external-endpoints": vm ? [backupHeartbeat({ name: hostname, group: BACKUP_HEARTBEAT_GROUP, token: heartbeatToken })] : [],
+  "external-endpoints": [backupHeartbeat({ name: heartbeatName, group: BACKUP_HEARTBEAT_GROUP, token: heartbeatToken })],
 });
 
-const server = !(vm && dnsRecord)
-  ? undefined
-  : new NetbirdServer("netbird", {
-      // Over the tailnet: the operator's pods reach the VM through the
-      // `netbird-edge` egress Service (stacks/unifi-network/tailnet-egress.ts),
-      // which tag:egress may SSH into as root (configureNetbirdEdgeAccess).
-      // Tailscale SSH authorises by tailnet identity, so the key is never checked
-      // there; it is passed for the Bastion path only.
-      connection: {
-        host: pulumi.interpolate`${hostname}.${globals.tailscaleDomain}`,
-        user: "root",
-        privateKey: breakGlassKey.privateKeyOpenssh,
-      },
-      domain,
-      secrets: serverSecrets,
-      // 365 days is the API's ceiling. #2885 replaces it with a service user's
-      // token; this one stays as the owner's break-glass credential.
-      setup: { ...owner, patExpireInDays: 365 },
-      // Over the tailnet to the garage-s3 and uptime VIPs, which tag:netbird-edge
-      // may reach on 443 (the `netbird-edge-backups` grant).
-      backup: {
-        repository: pulumi.secret(backupKey.apply(key => resticRepository({ endpoint: key.endpoint, bucket: key.bucket }))),
-        accessKeyId: pulumi.secret(backupKey.username),
-        secretAccessKey: pulumi.secret(backupKey.password),
-        resticPassword,
-        host: hostname,
-        heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: heartbeatToken },
-      },
-      // A replacement VM reruns every deploy step, the restore first.
-      hostKey: vm.instance.id,
-      dependsOn: [vm.instance, dnsRecord],
-    });
+/** The parts of NetbirdServerArgs every host shares; only the machine differs. */
+function serverArgs(host: EdgeHost): NetbirdServerArgs {
+  return {
+    // Over the tailnet: the operator's pods reach the VM through its
+    // `netbird-<server>` egress Service (stacks/unifi-network/tailnet-egress.ts),
+    // which tag:egress may SSH into as root (configureNetbirdEdgeAccess).
+    // Tailscale SSH authorises by tailnet identity, so the key is never checked
+    // there; it is passed for the break-glass path only.
+    connection: {
+      host: pulumi.interpolate`${host.hostname}.${globals.tailscaleDomain}`,
+      user: "root",
+      privateKey: breakGlassKey.privateKeyOpenssh,
+    },
+    domain,
+    secrets: serverSecrets,
+    // 365 days is the API's ceiling. stacks/netbird replaces it with a service
+    // user's token; this one stays as the owner's break-glass credential.
+    setup: host.id === SETUP_HOST ? { ...owner, patExpireInDays: 365 } : undefined,
+    // Over the tailnet to the garage-s3 and uptime VIPs, which tag:netbird-edge
+    // may reach on 443 (the `netbird-edge-backups` grant).
+    backup: {
+      repository: pulumi.secret(backupKey.apply(key => resticRepository({ endpoint: key.endpoint, bucket: key.bucket }))),
+      accessKeyId: pulumi.secret(backupKey.username),
+      secretAccessKey: pulumi.secret(backupKey.password),
+      resticPassword,
+      host: host.hostname,
+      heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: heartbeatToken },
+    },
+    // A replacement VM reruns every deploy step, the restore first.
+    hostKey: host.hostKey,
+    dependsOn: [host.machine, dnsRecord],
+  };
+}
+
+const server = new NetbirdServer(primary.hostname, serverArgs(primary));
 
 if (globals.baoDualWriteEnabled) {
   const bao = { provider: globals.baoProvider };
@@ -358,34 +437,37 @@ if (globals.baoDualWriteEnabled) {
     },
     bao,
   );
-  if (server)
-    baoKvSecret(
-      "netbird-owner",
-      {
-        mount: "secrets",
-        path: "third-party-tokens/netbird/owner",
-        data: {
-          url: `https://${domain}`,
-          email: owner.email,
-          password: owner.password,
-          user_id: server.setupResult!.userId,
-          personal_access_token: server.setupResult!.personalAccessToken,
-        },
-        concealedFields: ["password", "personal_access_token"],
-        customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
+  const setupResult = server.setupResult;
+  if (!setupResult) throw new Error(`The ${SETUP_HOST} server has no setup result; the owner PAT would never reach OpenBao.`);
+  baoKvSecret(
+    "netbird-owner",
+    {
+      mount: "secrets",
+      path: "third-party-tokens/netbird/owner",
+      data: {
+        url: `https://${domain}`,
+        email: owner.email,
+        password: owner.password,
+        user_id: setupResult.userId,
+        personal_access_token: setupResult.personalAccessToken,
       },
-      bao,
-    );
+      concealedFields: ["password", "personal_access_token"],
+      customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
+    },
+    bao,
+  );
 } else {
   // Not a warning: setup runs exactly once, so a run that skipped this would
   // leave the owner PAT in Pulumi state alone.
   throw new Error("stacks/netbird-edge needs OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID): it writes the NetBird store key and the one-time owner PAT there.");
 }
 
-export const publicIpAddress = vm?.publicIpAddress;
-export const privateIpAddress = vm?.privateIpAddress;
+/** The address `netbird.<root domain>` points at. */
+export const publicIpAddress = primary.publicIpAddress;
+export const primaryHost = primary.hostname;
+export const hostAddresses = Object.fromEntries(hosts.map(h => [h.hostname, h.publicIpAddress]));
 export const availabilityDomain = homeAd;
 export const freeTier = FREE_TIER;
 /** `present`, `fresh` or `restored <snapshot>`: what the last deploy's pre-start restore found. */
-export const restoreResult = server?.restoreResult;
+export const restoreResult = server.restoreResult;
 export const breakGlassPrivateKey = pulumi.secret(breakGlassKey.privateKeyOpenssh);

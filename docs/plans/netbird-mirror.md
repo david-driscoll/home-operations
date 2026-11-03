@@ -351,6 +351,33 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D23 | 11-03 | Pure seams tested with `node --test`; Pulumi wiring validated by `pulumi preview`, live behaviour by each ticket's acceptance criteria |
 | D24 | 11-03 | One PR per ticket, stacked in dependency order |
 
+### Azure primary (#3001, 2026-11-03)
+
+OCI's Ashburn has had no free-tier compute for this tenancy in any AD (#3037), so David moved the primary to
+Azure. §C, §D and §E describe the OCI-primary plan; this is what is built instead.
+
+- **Hosts.** `stacks/netbird-edge` runs a `Standard_B2pls_v2` (Arm, 2 vCPU / 4 GB, Ubuntu 24.04 arm64, 30 GB
+  Standard SSD) in **East US 2** as the primary, through `components/azure/AzureEdgeVm.ts` and
+  `globals.azureProvider` (OpenBao `third-party-tokens/azure/netbird-edge`). A static Standard IPv4 and an NSG
+  for 80/tcp, 443/tcp, 443/udp, 3478/udp; Azure's default rules deny every other inbound, so no public 22.
+- **One resource group per region** (`netbird-eus2`, `netbird-cus`). A group's metadata lives in its region,
+  and an outage there blocks changes to everything in it, which is the outage the standby exists for.
+- **Tailnet identity:** `tag:netbird-edge` for every host, so the existing grants apply unchanged. Hostnames
+  `netbird-azure-eus2` and `netbird-azure-cus` give egress Services of the same names
+  (`stacks/unifi-network/tailnet-egress.ts`); both are in `remoteServers`.
+- **cloud-init** has an `oci` and an `azure` variant: only OCI gets the iptables ACCEPT rules and the memory
+  ballast.
+- **`netbird-edge:primary`** (default `azure-eus2`) picks the host `netbird.<root domain>` points at. Setup and
+  the owner write are pinned to `azure-eus2` (`SETUP_HOST`), never to "the primary", so a failback can never
+  run `/api/setup` a second time.
+- **The record is Cloudflare only** (`netbird-lease`, TTL 60, grey cloud), not StandardDns: UniFi and
+  Technitium copies would keep LAN clients on a dead primary after a repoint. LAN DNS forwards the name
+  upstream.
+- **One backup heartbeat** (`netbird-server`) for the service, not one per host: the backup script reports
+  only while `netbird-server` runs.
+- **Cost:** about $64 a month at list price for both VMs, their IPs and disks
+  (`components/azure/edgeVm.ts`), plus egress past 100 GB.
+
 ### Implementation notes (2026-11-03)
 
 These came out of building #3000, #2885, #2887 and #2888, and they amend the sections above.

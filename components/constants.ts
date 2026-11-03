@@ -233,7 +233,7 @@ export const Tailscale = {
     // (taggedExceptInternetFacing in stacks/unifi-network/acl-manager.ts), so it reaches
     // nothing on the tailnet. See docs/plans/cloudflare-tunnel-to-funnel.md.
     funnel: "tag:funnel" as TailscaleTags,
-    // The OCI-hosted NetBird control plane (stacks/netbird-edge,
+    // The OCI- and Azure-hosted NetBird control plane (stacks/netbird-edge,
     // docs/plans/netbird-mirror.md). Internet-facing like tag:funnel, so it is
     // likewise kept out of every autogroup:tagged grant: admins reach it, it
     // reaches nothing it is not explicitly granted.
