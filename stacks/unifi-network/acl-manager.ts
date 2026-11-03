@@ -34,11 +34,15 @@ interface KubernetesCluster {
  * least-privileged node on the tailnet instead (plan J6, decided 2026-09-27),
  * and `member-funnel-access`'s tests pin that.
  *
+ * tag:netbird-edge is the same case: the OCI VM serving NetBird to the internet
+ * (configureNetbirdEdgeAccess). It gets only what that function grants it.
+ *
  * Every other tagged device keeps exactly what autogroup:tagged gave it.
  * tagOwners is rebuilt from this same constant, so no tag outside it can be
  * applied. On 2026-09-27 all 16 tags on the 37 tagged devices were in it.
  */
-const taggedExceptFunnel = Object.values(tag).filter(t => t !== tag.funnel);
+const internetFacingTags: readonly string[] = [tag.funnel, tag.netbirdEdge];
+const taggedExceptInternetFacing = Object.values(tag).filter(t => !internetFacingTags.includes(t));
 
 export interface AggregatedNodeExport {
   stackName: string;
@@ -172,13 +176,14 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     configurePbsAccess(manager);
     configureKubernetesAccess(manager, clusters);
     configureBorder0Pam(manager);
+    configureNetbirdEdgeAccess(manager);
     createGroupGrants(manager);
 
     // ── General member/admin grants ───────────────────────────────────────
     manager.setGrant(
       "default-apps-access",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: [tag.apps, tag.dockge, tag.dns, tag.idp],
         ip: [...ports.web],
       },
@@ -194,7 +199,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "forgejo-git-ssh",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: [tag.apps],
         ip: [...ports.git],
       },
@@ -233,7 +238,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "default-dns",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: [tag.dns],
         ip: ports.dns,
       },
@@ -250,7 +255,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "member-home-subnet-access",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: allowedIps,
         ip: [...ports.dns, ...ports.web],
       },
@@ -270,7 +275,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "member-exit-node",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: [tag.exitNode, autogroups.internet],
         ip: ["*"],
       },
@@ -280,7 +285,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "member-idp",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: ["host:idp"],
         ip: ["tcp:443"],
       },
@@ -373,7 +378,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "member-tsidp-defaults",
       {
-        src: [autogroups.member, ...taggedExceptFunnel],
+        src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: ["*"],
         app: {
           "tailscale.com/cap/tsidp": [
@@ -832,7 +837,7 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
   manager.setGrant(
     "member-dockge-web",
     {
-      src: [autogroups.member, ...taggedExceptFunnel],
+      src: [autogroups.member, ...taggedExceptInternetFacing],
       dst: [tag.dockge],
       ip: ports.web,
     },
@@ -868,6 +873,40 @@ function configureDnsAccess(manager: TailscaleAclManager) {
       ip: ports.technitiumManagement,
     },
     { accept: [tag.dns], deny: testData.knownNormalUsers },
+  );
+}
+
+/**
+ * The OCI VM that hosts the NetBird control plane (stacks/netbird-edge). Its
+ * public NSG has no port 22: this grant is the admin path in. tag:proxmox owns
+ * the tag because that is the tag the Pulumi OAuth client mints keys under, as
+ * for tag:dockge and tag:backups.
+ */
+function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
+  const testData = manager.testData;
+  manager.setTagOwner(tag.proxmox, [tag.netbirdEdge]);
+
+  manager.setGrant(
+    "admins-netbird-edge",
+    {
+      src: [autogroups.admin],
+      dst: [tag.netbirdEdge],
+      ip: [...ports.ssh, ...ports.web],
+    },
+    { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers },
+  );
+  manager.setSshRule(
+    {
+      src: [autogroups.admin],
+      dst: [tag.netbirdEdge],
+      users: ["root", "ubuntu"],
+      action: "check",
+    },
+    Object.fromEntries(
+      testData.knownNormalUsers
+        .map(user => [user, { deny: ["root"] } as TailscaleSshTestInputItem] as const)
+        .concat(testData.knownAdminUsers.map(user => [user, { check: ["root"] } as TailscaleSshTestInputItem] as const)),
+    ),
   );
 }
 
@@ -938,7 +977,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   // only the paths its Ingress mounts, so this exposes nothing further.
   //
   // The tests also pin the other direction: a Funnel proxy reaches NOTHING on
-  // the tailnet (see taggedExceptFunnel). One destination per network grant it
+  // the tailnet (see taggedExceptInternetFacing). One destination per network grant it
   // would have inherited through autogroup:tagged -- member-tsidp-defaults is
   // app-only and no network test can cover it -- checked by Tailscale on every
   // PUT, so a grant that lets tag:funnel back in fails the Stack. It only holds
@@ -1081,7 +1120,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setGrant(
     "member-cluster-web",
     {
-      src: [autogroups.member, ...taggedExceptFunnel],
+      src: [autogroups.member, ...taggedExceptInternetFacing],
       dst: [...clusterTags, tag.ingress],
       ip: ports.web,
     },

@@ -199,9 +199,14 @@ export const Tailscale = {
     // Funnel Ingress proxies the tailscale operator mints (it owns this tag).
     // Never give `funnel` to tag:apps -- tsnet apps on the shared authkey could
     // then self-enable it. It is also left out of every autogroup:tagged grant
-    // (taggedExceptFunnel in stacks/unifi-network/acl-manager.ts), so it reaches
+    // (taggedExceptInternetFacing in stacks/unifi-network/acl-manager.ts), so it reaches
     // nothing on the tailnet. See docs/plans/cloudflare-tunnel-to-funnel.md.
     funnel: "tag:funnel" as TailscaleTags,
+    // The OCI-hosted NetBird control plane (stacks/netbird-edge,
+    // docs/plans/netbird-mirror.md). Internet-facing like tag:funnel, so it is
+    // likewise kept out of every autogroup:tagged grant: admins reach it, it
+    // reaches nothing it is not explicitly granted.
+    netbirdEdge: "tag:netbird-edge" as TailscaleTags,
 
     // Tailscale PAM (Border0). NOT a tag this repo applies to anything -- the
     // Tailscale control plane creates it the moment PAM is enabled in the admin

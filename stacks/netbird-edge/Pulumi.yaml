@@ -1,0 +1,11 @@
+name: netbird-edge
+description: Self-hosted NetBird control plane on OCI Always Free, with the Azure fallback (docs/plans/netbird-mirror.md)
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript
