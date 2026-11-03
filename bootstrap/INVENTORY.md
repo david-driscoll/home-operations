@@ -120,7 +120,8 @@ GitHub when the repo is archived.
   `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret,
   the session-cookie key, and `resticPassword`, which decrypts the 15-minute backups) and
   `third-party-tokens/netbird/owner` (the break-glass owner and its bootstrap PAT). The
-  backups live in Garage's `netbird-backups` bucket; `stacks/system` records its key at
+  backups (store, config, and Traefik's `acme.json` with the TLS and ACME account keys) live in
+  Garage's `netbird-backups` bucket, which TrueNAS also pulls; `stacks/system` records its key at
   `apps/netbird/garage-backup`. Pulumi state holds a second copy of all of it. Losing the
   store key loses NetBird's user data, which re-enrolling clients rebuilds; nothing else
   depends on it.

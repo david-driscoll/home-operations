@@ -22,6 +22,7 @@
  * Pulumi runtime or a TrueNAS.
  */
 import { toGatusKey } from "./helpers.ts";
+import { NETBIRD_BACKUP_BUCKET } from "./netbird/backup.ts";
 import type { CloudCredentialInput, CloudSyncTaskInput, CronSchedule, NfsShareInput, SnapshotTaskInput } from "./truenas/truenas-types.ts";
 
 /**
@@ -84,6 +85,14 @@ export const GARAGE_COPY_BUCKETS: readonly { bucket: string; key: GarageCopyKey;
   // The k8s pg_dump CronJob's streamed dumps (phase 3, step 5). Pulled from
   // before its first night, for the same reason.
   { bucket: "backrest-pgdump", key: "truenas-copy", restic: true },
+  // NetBird's 15-minute snapshots (#2884, components/netbird/backup.ts): the
+  // SQLite store, config.yaml and Traefik's acme.json. One restic repository,
+  // encrypted with `resticPassword` (OpenBao `apps/netbird/server`) before it
+  // leaves the VM, so this copy and its export hold ciphertext only. Restoring
+  // from it needs that password, which is in OpenBao and Pulumi state, never
+  // on TrueNAS. Pulled daily like the rest, so the copy trails Garage by up
+  // to a day; Garage itself keeps the 15-minute history.
+  { bucket: NETBIRD_BACKUP_BUCKET, key: "truenas-copy", restic: true },
 ];
 
 /**

@@ -135,6 +135,8 @@ services:
         required: false
     volumes:
       - netbird_data:/var/lib/netbird
+      # The restore puts Traefik's acme.json back before Traefik first starts.
+      - netbird_traefik_letsencrypt:/letsencrypt
       - ./backup/staging:/staging
       - netbird_restic_cache:/root/.cache/restic
     logging: *logging
