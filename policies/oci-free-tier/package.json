@@ -1,0 +1,14 @@
+{
+  "name": "oci-free-tier-policy",
+  "version": "1.0.0",
+  "description": "CrossGuard policy pack keeping stacks/netbird-edge inside the OCI Always Free tier",
+  "license": "ISC",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test checks.test.ts"
+  },
+  "dependencies": {
+    "@pulumi/policy": "^1.21.0"
+  }
+}

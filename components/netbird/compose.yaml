@@ -106,9 +106,43 @@ services:
       - traefik.http.services.netbird-server-h2c.loadbalancer.server.scheme=h2c
     logging: *logging
 
+  # ── Backups (#2884): components/netbird/backup.ts ───────────────────────
+  # Profile services: `docker compose up` never starts them. The 15-minute
+  # timer and the pre-start restore run them with `docker compose run`.
+
+  # SQLite's online `.backup` of the live store into ./backup/staging. Root,
+  # because the store is root's and a WAL reader must write the -shm file.
+  backup-sqlite:
+    image: keinos/sqlite3:3.54.1
+    profiles: [backup]
+    user: "0:0"
+    network_mode: none
+    volumes:
+      - netbird_data:/var/lib/netbird
+      - ./backup/staging:/staging
+    logging: *logging
+
+  # Uploads the staging copy to Garage, and restores the newest snapshot into
+  # an empty volume. MagicDNS directly: the VM runs tailscale with
+  # --accept-dns=false, and the garage-s3 and uptime VIPs are tailnet names.
+  backup-restic:
+    image: restic/restic:0.19.1
+    profiles: [backup]
+    dns: [100.100.100.100]
+    env_file:
+      # Written by NetbirdServer from stdin; absent on a server without backups.
+      - path: ./backup/restic.env
+        required: false
+    volumes:
+      - netbird_data:/var/lib/netbird
+      - ./backup/staging:/staging
+      - netbird_restic_cache:/root/.cache/restic
+    logging: *logging
+
 volumes:
   netbird_data:
   netbird_traefik_letsencrypt:
+  netbird_restic_cache:
 
 networks:
   netbird:

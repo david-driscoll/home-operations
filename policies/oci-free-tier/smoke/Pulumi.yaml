@@ -1,0 +1,7 @@
+# An empty program for smoke-test.sh: no OCI quota, so the pack must fail it.
+# YAML runtime, so loading it needs no node_modules of its own.
+name: oci-free-tier-smoke
+description: Fixture for policies/oci-free-tier/smoke-test.sh. Never deployed.
+runtime: yaml
+outputs:
+  ok: 1

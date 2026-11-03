@@ -313,9 +313,10 @@ export interface TailscaleGrant {
   src: TailscaleSelector[];
 
   /**
-   * Destination selectors - what resources can be accessed
+   * Destination selectors - what resources can be accessed. A Tailscale
+   * Service (`svc:<name>`) is a destination only, never a source.
    */
-  dst?: TailscaleSelector[];
+  dst?: (TailscaleSelector | TailscaleService)[];
 
   /**
    * Network layer capabilities - ports and protocols

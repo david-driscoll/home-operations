@@ -1,0 +1,97 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+#
+# The OCI free-tier CrossGuard pack (policies/oci-free-tier, issue #2882).
+#
+# This cannot run `pulumi preview --policy-pack` against stacks/netbird-edge:
+# its state backend and OpenBao are reachable only over the tailnet, and a
+# hosted runner is not on it. So it gates what it can reach:
+#
+#   1. the pack's rules, as unit tests on fake resource arrays (the real
+#      netbird-edge shape passes; 4 OCPU, a second reserved IP, an edited
+#      quota statement, a paid shape and an oversized volume fail);
+#   2. the pack itself, loaded by the real Pulumi CLI against an empty local
+#      stack, which it must block (smoke-test.sh).
+#
+# The preview against the live stack stays a local step; see the header of
+# policies/oci-free-tier/pack.ts. The in-cluster operator cannot run a policy
+# pack (docs/plans/netbird-mirror.md §D).
+#
+# `pre-job` + a job-level `if`, not an `on.paths` filter, so the check reports
+# (as skipped) on every PR and can be made required in branch protection.
+name: "OCI Free-Tier Policy"
+
+on:
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pre-job:
+    name: Pre-Job
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: |
+            policies/oci-free-tier/**
+            components/oci/**
+            stacks/netbird-edge/**
+            package-lock.json
+            .github/workflows/oci-free-tier-policy.yaml
+
+  test:
+    name: Test
+    needs: pre-job
+    runs-on: ubuntu-latest
+    if: ${{ needs.pre-job.outputs.any_changed == 'true' }}
+    env:
+      PULUMI_SKIP_UPDATE_CHECK: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The same versions the repo pins for everyone else, read from the mise
+      # config rather than repeated here.
+      - name: Read pinned versions
+        id: pins
+        run: |
+          {
+            echo "node=$(yq -p toml -oy '.tools.node' .config/mise.toml)"
+            echo "pulumi=$(yq -p toml -oy '.tools.pulumi' .config/mise.toml)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.pins.outputs.node }}
+
+      - name: Setup Pulumi
+        uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
+        with:
+          pulumi-version: ${{ steps.pins.outputs.pulumi }}
+
+      # --ignore-scripts: the sdks/* postinstall regenerates bridged SDKs,
+      # which nothing here needs. The workspace links (components/,
+      # @pulumi/policy) are all the tests and the pack resolve.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Unit-test the rules
+        run: node --test policies/oci-free-tier/checks.test.ts components/oci/freeTier.test.ts
+
+      - name: Smoke-test the pack under the Pulumi CLI
+        run: policies/oci-free-tier/smoke-test.sh

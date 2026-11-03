@@ -68,7 +68,18 @@ spec:
               UMASK: 002
               DISPATCHARR_ENV: &mode modular
               REDIS_HOST: &redisHost valkey.database.svc.cluster.local
-              CELERY_BROKER_URL: &broker redis://valkey.database.svc.cluster.local:6379/6
+              # ⚠️ REDIS_DB, NEVER CELERY_BROKER_URL. The entrypoint launches
+              # uWSGI through `su -`, which wipes the environment, then rebuilds
+              # it from a fixed list (docker/entrypoint.sh `variables=(...)`):
+              # REDIS_DB is on it, CELERY_BROKER_URL is not. A broker URL set
+              # here reaches the `celery` sidecar (no `su -`) but not the web
+              # side, which falls back to redis://REDIS_HOST:6379/REDIS_DB --
+              # so `.delay()` from the UI/API published to db 0 while the
+              # workers listened on db 6, and every manual EPG/M3U refresh sat
+              # unconsumed (beat-scheduled tasks still ran: beat is in the
+              # sidecar). With only REDIS_DB set, broker, result backend, cache
+              # and task locks all derive the same db 6 in both containers.
+              REDIS_DB: &redisDb "6"
               DISPATCHARR_LOG_LEVEL: &logLevel info
               TZ: ${TIMEZONE}
               DISPATCHARR_PORT: &port 9191
@@ -126,7 +137,7 @@ spec:
             env:
               DISPATCHARR_ENV: *mode
               REDIS_HOST: *redisHost
-              CELERY_BROKER_URL: *broker
+              REDIS_DB: *redisDb
               DISPATCHARR_LOG_LEVEL: *logLevel
               TZ: ${TIMEZONE}
               # The DVR worker calls back into the web container; it defaults

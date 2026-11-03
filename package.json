@@ -21,6 +21,7 @@
     "components/",
     "dynamic/",
     "stacks/*",
+    "policies/*",
     "sdks/*"
   ],
   "devDependencies": {

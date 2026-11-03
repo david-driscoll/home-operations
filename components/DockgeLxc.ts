@@ -73,7 +73,26 @@ export interface DockgeLxcArgs {
    * `memory`, it takes effect live, and left unset nothing manages it.
    */
   cores?: Input<number>;
+  /**
+   * A STATIC LAN address for the LXC. Besides the host A record, it is baked into
+   * the community-script `vars` on hosts with `createDockerLxc`, and those vars are
+   * that Command's triggers -- adding it to an existing host replaces the Command,
+   * whose delete is `pct destroy --purge`. To publish an existing DHCP host's LAN
+   * address, use `publishLanIpAddress` instead.
+   */
   ipAddress?: TailscaleIp;
+  /**
+   * Publish the host A record (`dockge-<host>.<root domain>`, the CNAME target of
+   * every app `Host()` name) on the LXC's LAN address (`localIpAddress`) instead of
+   * its tailnet address. LAN-routed clients -- the LAN itself, tailnet subnet-route
+   * users, NetBird site gateways -- can then reach the apps (#2883). DNS only:
+   * `ipAddress` and everything derived from it stay as they are.
+   *
+   * `localIpAddress` is read once, when the LXC is first seen, and stays pinned by
+   * the UniFi DHCP reservation (stacks/unifi-network/local-dns.ts). Turn this off
+   * before a host leaves the home LAN, or the record keeps the old address.
+   */
+  publishLanIpAddress?: boolean;
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
   credential: Input<PasswordDefinition>;
@@ -307,7 +326,7 @@ export class DockgeLxc extends ComponentResource {
         name,
         {
           hostname: g,
-          ipAddress: args.ipAddress ?? this.tailscaleIpAddress,
+          ipAddress: args.ipAddress ?? (args.publishLanIpAddress ? this.localIpAddress : this.tailscaleIpAddress),
           type: "A",
         },
         args.globals,

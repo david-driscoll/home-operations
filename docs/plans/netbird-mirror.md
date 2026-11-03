@@ -92,13 +92,29 @@ From the 2026-11-02 reachability sweep:
   - Tailscale (`tag:netbird-edge`, admins only).
 - **Guards:**
   1. A component that throws when the shape, region or size is outside the free allowance.
-  2. A CrossGuard pack, run in CI, that checks:
+  2. A CrossGuard pack, `policies/oci-free-tier` (#2882), every rule mandatory. It checks:
      - Σ A1 ≤ 2 OCPU / 12 GB;
-     - Σ storage ≤ 200 GB;
+     - Σ boot + block storage ≤ 200 GB;
+     - every shape on the Always Free allow-list;
      - at most 1 reserved IP;
-     - backup retention ≤ 5;
+     - at most one load balancer, flexible at 10/10 Mbps;
+     - backup retention ≤ 5 (schedules × assignments + manual backups), and no Oracle-defined policy;
      - `deleteBeforeReplace` on every instance;
-     - the quota statements match the allow-list exactly.
+     - the quota statements match `freeTierQuotaStatements(<the instance AD>)` exactly.
+
+     **Where it runs.** CI (`.github/workflows/oci-free-tier-policy.yaml`) cannot reach the state
+     backend or OpenBao, which are tailnet-only. So CI runs the rules' unit tests and a smoke test that
+     loads the pack under the Pulumi CLI. The preview against the live stack is local:
+
+     ```bash
+     # repo root; PULUMI_BACKEND_URL etc. as in kubernetes/apps/pulumi/netbird-edge/stack.yaml
+     fnox exec -- sh -c 'cd stacks/netbird-edge && pulumi preview --stack netbird-edge --policy-pack ../../policies/oci-free-tier'
+     ```
+
+     **The operator cannot run it.** Pulumi Kubernetes Operator v2.10.0 has no policy-pack field on
+     `Stack`, and its agent leaves `// TODO:PolicyPack` in both the preview and up paths
+     (pulumi/pulumi-kubernetes-operator#366). The operator's `up` on merge is guarded by layers 1, 3
+     and 4 only. Preview locally with the pack before merging a netbird-edge change.
   3. OCI quotas.
   4. The budget.
 - **Quota sketch.** Verify the zero-then-set semantics, and find the LB/NLB quota names
@@ -320,3 +336,29 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D18 | 11-02 | nbidp kept (private proxy + Dex authproxy → Authentik source) |
 | D19 | 11-02 | Overlay `10.100.0.0/16`; peer domain `nb.<root domain>` |
 | D20 | 11-02 | Manual onboarding with a one-page guide |
+| D21 | 11-03 | Server deployment is **pushed over SSH** from the in-cluster operator via a `netbird-edge` tailnet egress Service. `tag:egress` may SSH to `tag:netbird-edge` as root (`accept`) |
+| D22 | 11-03 | Tailscale stays on the OCI/Azure VMs for admin and backup traffic; NetBird is for clients only |
+| D23 | 11-03 | Pure seams tested with `node --test`; Pulumi wiring validated by `pulumi preview`, live behaviour by each ticket's acceptance criteria |
+| D24 | 11-03 | One PR per ticket, stacked in dependency order |
+
+### Implementation notes (2026-11-03)
+
+These came out of building #3000, #2885, #2887 and #2888, and they amend the sections above.
+
+**Bootstrap needs no human.** The server runs with `NB_SETUP_PAT_ENABLED=true`, so a one-time `POST /api/setup` creates the break-glass owner and returns a 365-day PAT. `stacks/netbird-edge` writes both to OpenBao:
+- `third-party-tokens/netbird/owner`;
+- `apps/netbird/server`, which holds the store, relay and cookie keys.
+
+`stacks/netbird` drives the account with that PAT and mints an `automation` service user for machines.
+
+**Authentik groups are never created by Pulumi.**
+- JWT group sync creates them from the `groups` claim the first time one of their members logs in.
+- Sync only puts users into groups it created itself (`issued: jwt`), so a same-named group made through the API would grant nobody.
+- Policies therefore look the groups up live, and a rule waits until its group exists.
+- The plan's separate `members` group is dropped: the four synced groups are the membership.
+
+**Gateways are keyed per Dockge host.** Each host gets a `gateway-<cluster key>` setup key and group; `stacks/netbird/sites.ts` decides which hosts route which site LAN. Today all four hosts (alpha-site, celestia, luna and skystar) sit on the home LAN, so `home` is the only routed site.
+
+**Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or login connector exists, so no peer can take an address from the default range.
+
+**The CrossGuard pack does not run in-cluster.** Pulumi Kubernetes Operator v2.10 has no policy-pack support (pulumi/pulumi-kubernetes-operator#366). The pack runs in CI as unit tests plus a smoke test, and locally with `--policy-pack`. In-cluster, the component check, OCI quotas and the budget remain.
