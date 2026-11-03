@@ -11,7 +11,8 @@
  *   5. site LANs routed through the gateway containers, and each gateway an
  *      exit node (#2887);
  *   6. Technitium as every peer's nameserver;
- *   7. a service user whose PAT the in-cluster operator uses (#2889).
+ *   7. a service user whose PAT the in-cluster operator uses (#2889);
+ *   8. the client-access policy (#2888, policy.ts).
  *
  * User groups (admins, family, friends, media-managers) are NOT created here:
  * JWT group sync creates them from Authentik's `groups` claim on first login,
@@ -25,6 +26,7 @@ import { dns } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
+import { ACCESS_RULES, type LiveGroup, resolveGroups } from "./policy.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
 
 /** Who may log in at all: the Authentik groups NetBird's ApplicationDefinition admits. */
@@ -193,6 +195,50 @@ baoKvSecret(
   },
   bao,
 );
+
+// ── 8. Client-access policy (#2888) ───────────────────────────────────────
+// policy.ts says who reaches what by NAME. Device groups are this stack's own;
+// Authentik groups exist only once JWT sync has seen a member log in, so they
+// are looked up live and a rule waits (with a warning) until its group exists.
+// The operator re-runs this stack, so a rule appears on the first run after.
+const deviceGroupIds: Record<string, pulumi.Output<string>> = { "apple-tv": groups.appleTv.id, gateways: groups.gateways.id, "k8s-routers": groups.k8sRouters.id };
+const userGroupNames = [...new Set(ACCESS_RULES.flatMap(rule => rule.sources))].filter(name => !(name in deviceGroupIds));
+
+pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) => {
+  const response = await fetch(`${url.replace(/\/+$/, "")}/api/groups`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
+  if (!response.ok) throw new Error(`NetBird GET /api/groups: HTTP ${response.status}`);
+  const { ids, missing, conflicts } = resolveGroups((await response.json()) as LiveGroup[], userGroupNames, []);
+  if (missing.length > 0) pulumi.log.warn(`NetBird groups not created yet (nobody in them has logged in): ${missing.join(", ")}. Their rules wait.`);
+  if (conflicts.length > 0) pulumi.log.error(`NetBird groups ${conflicts.join(", ")} exist but were not made by JWT sync, so sync never adds users to them. Delete them in NetBird.`);
+
+  for (const rule of ACCESS_RULES) {
+    const sources = rule.sources.map(name => deviceGroupIds[name] ?? ids[name]).filter(id => id !== undefined);
+    if (sources.length === 0) continue;
+    const destination = siteResourceGroups[rule.destination.replace(/^lan-/, "")];
+    if (!destination) throw new Error(`policy.ts rule ${rule.name} targets ${rule.destination}, which sites.ts does not route`);
+    new netbird.Policy(
+      `client-${rule.name}`,
+      {
+        name: `client-${rule.name}`,
+        description: rule.description,
+        enabled: true,
+        rules: [
+          {
+            name: rule.name,
+            action: "accept",
+            bidirectional: false,
+            protocol: rule.protocol,
+            ports: rule.ports?.map(String),
+            sources,
+            destinations: [destination.id],
+            enabled: true,
+          },
+        ],
+      },
+      { ...opts, dependsOn: [defaultPolicyRemoval] },
+    );
+  }
+});
 
 export const networkRange = settings.networkRange;
 export const deviceGroups = pulumi.output(Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.id])));
