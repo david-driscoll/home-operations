@@ -39,6 +39,12 @@ export class StandardDns extends ComponentResource {
        * Same rule as `unifiImportId`: one run, then remove it.
        */
       cloudflareImportId?: string;
+      /**
+       * Seconds, for Technitium and Cloudflare. Defaults to 300 and Cloudflare's
+       * "auto". Set it low only for a record that is flipped on failover
+       * (`netbird.<root domain>`, docs/plans/netbird-mirror.md §E).
+       */
+      ttl?: number;
     },
     globals: GlobalResources,
     cro: ComponentResourceOptions,
@@ -125,6 +131,7 @@ export class StandardDns extends ComponentResource {
         record,
         unifiId,
         cloudflareId,
+        ttl: args.ttl,
       },
       globals,
       cro,
@@ -140,6 +147,7 @@ export class StandardDns extends ComponentResource {
       record?: Input<string>;
       unifiId: string | undefined;
       cloudflareId: string | undefined;
+      ttl?: number;
     },
     globals: GlobalResources,
     cro: ComponentResourceOptions,
@@ -183,7 +191,7 @@ export class StandardDns extends ComponentResource {
         name: args.hostname,
         type: args.type,
         value: record,
-        ttl: 300,
+        ttl: args.ttl ?? 300,
       },
       {
         parent: this,
@@ -199,7 +207,7 @@ export class StandardDns extends ComponentResource {
         zoneId: globals.cloudflareCredential.zoneId,
         content: record,
         type: args.type,
-        ttl: 1,
+        ttl: args.ttl ?? 1,
       },
       {
         parent: this,

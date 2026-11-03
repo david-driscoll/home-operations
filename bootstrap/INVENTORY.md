@@ -115,6 +115,12 @@ GitHub when the repo is archived.
 
 - **Everything else.** App credentials, OIDC clients, database passwords, API tokens,
   provider credentials — all of it belongs in OpenBao under `secrets/`.
+- **NetBird.** Client access only, never in a recovery path (docs/plans/netbird-mirror.md).
+  `stacks/netbird-edge` generates its secrets and writes them to OpenBao:
+  `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret,
+  the session-cookie key) and `third-party-tokens/netbird/owner` (the break-glass owner
+  and its bootstrap PAT). Pulumi state holds a second copy. Losing the store key loses
+  NetBird's user data, which re-enrolling clients rebuilds; nothing else depends on it.
 - **1Password.** It is retained for browser-fill logins, recovery codes, and
   personal-scope credentials. It is no longer infrastructure source of truth. The one
   remaining personal-scope reference in code is `dashboard/.mise.toml`

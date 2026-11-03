@@ -2,18 +2,23 @@
  * The self-hosted NetBird control plane's infrastructure on OCI Always Free
  * (docs/plans/netbird-mirror.md, epic #2880).
  *
- * This stack owns the tenancy's free-tier guard (quota allow-list + budget)
- * and the one A1 VM. The NetBird server, backups and the Azure fallback land
- * here in later tickets (#3000, #2884, #3001).
+ * This stack owns the tenancy's free-tier guard (quota allow-list + budget),
+ * the one A1 VM, and the NetBird combined server on it (#3000). Backups and the
+ * Azure fallback land here in later tickets (#2884, #3001).
  */
 import * as oci from "@pulumi/oci";
 import * as pulumi from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
 import { TailnetKey } from "@pulumi/tailscale";
 import * as tls from "@pulumi/tls";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { Tailscale } from "components/constants.ts";
+import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
+import { NetbirdServer } from "components/netbird/NetbirdServer.ts";
 import { FREE_TIER, freeTierQuotaStatements } from "components/oci/freeTier.ts";
 import { OciFreeTierInstance } from "components/oci/OciFreeTierInstance.ts";
+import { StandardDns } from "components/StandardDns.ts";
 import { netbirdEdgeCloudInit, PUBLIC_TCP_PORTS, PUBLIC_UDP_PORTS } from "./cloudInit.ts";
 
 const config = new pulumi.Config();
@@ -186,6 +191,84 @@ const vm = new OciFreeTierInstance(hostname, {
   userData: netbirdEdgeCloudInit({ hostname, tailscaleAuthKey: tailscaleAuthKey.key, tailscaleTag: Tailscale.tag.netbirdEdge }),
   provider,
 });
+
+// ── NetBird server (#3000) ───────────────────────────────────────────────
+const root = rootDomain();
+const domain = `netbird.${root}`;
+// Grey-cloud by construction (StandardDns never proxies): STUN is UDP and the
+// gRPC streams must reach Traefik directly. Let's Encrypt's TLS-ALPN check
+// needs this record before the server's first start.
+// 60s: the Azure fallback (#3001) fails over by repointing this record.
+const dnsRecord = await StandardDns.create("netbird", { hostname: domain, ipAddress: vm.publicIpAddress, type: "A", ttl: 60 }, globals, {});
+
+// Generated once. The store key is the one that matters: lose it and the
+// SQLite store's user data cannot be decrypted (bootstrap/INVENTORY.md).
+const base64Key = (name: string) => new random.RandomBytes(name, { length: 32 }).base64;
+const serverSecrets = {
+  relayAuthSecret: base64Key("netbird-relay-auth-secret"),
+  datastoreEncryptionKey: base64Key("netbird-datastore-encryption-key"),
+  sessionCookieEncryptionKey: base64Key("netbird-session-cookie-key"),
+};
+const owner = {
+  email: `netbird-admin@${root}`,
+  password: new random.RandomPassword("netbird-owner-password", { length: 32, special: false }).result,
+  name: "NetBird break-glass admin",
+};
+
+const server = new NetbirdServer("netbird", {
+  // Over the tailnet: the operator's pods reach the VM through the
+  // `netbird-edge` egress Service (stacks/unifi-network/tailnet-egress.ts),
+  // which tag:egress may SSH into as root (configureNetbirdEdgeAccess).
+  // Tailscale SSH authorises by tailnet identity, so the key is never checked
+  // there; it is passed for the Bastion path only.
+  connection: {
+    host: pulumi.interpolate`${hostname}.${globals.tailscaleDomain}`,
+    user: "root",
+    privateKey: breakGlassKey.privateKeyOpenssh,
+  },
+  domain,
+  secrets: serverSecrets,
+  // 365 days is the API's ceiling. #2885 replaces it with a service user's
+  // token; this one stays as the owner's break-glass credential.
+  setup: { ...owner, patExpireInDays: 365 },
+  dependsOn: [vm.instance, dnsRecord],
+});
+
+if (globals.baoDualWriteEnabled) {
+  const bao = { provider: globals.baoProvider };
+  baoKvSecret(
+    "netbird-server-secrets",
+    {
+      mount: "secrets",
+      path: "apps/netbird/server",
+      data: serverSecrets,
+      concealedFields: Object.keys(serverSecrets),
+      customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
+    },
+    bao,
+  );
+  baoKvSecret(
+    "netbird-owner",
+    {
+      mount: "secrets",
+      path: "third-party-tokens/netbird/owner",
+      data: {
+        url: `https://${domain}`,
+        email: owner.email,
+        password: owner.password,
+        user_id: server.setupResult!.userId,
+        personal_access_token: server.setupResult!.personalAccessToken,
+      },
+      concealedFields: ["password", "personal_access_token"],
+      customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
+    },
+    bao,
+  );
+} else {
+  // Not a warning: setup runs exactly once, so a run that skipped this would
+  // leave the owner PAT in Pulumi state alone.
+  throw new Error("stacks/netbird-edge needs OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID): it writes the NetBird store key and the one-time owner PAT there.");
+}
 
 export const publicIpAddress = vm.publicIpAddress;
 export const privateIpAddress = vm.privateIpAddress;

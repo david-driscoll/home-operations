@@ -81,7 +81,7 @@ import type { GlobalResources } from "../../components/globals.ts";
 const NAMESPACE = "tailscale-system";
 
 /** The kinds of machine that get an egress Service, keyed off the device's tag. */
-export type ServiceKind = "dockge" | "proxmox" | "pbs" | "dns";
+export type ServiceKind = "dockge" | "proxmox" | "pbs" | "dns" | "netbird";
 
 type ProbeModule = "http_2xx" | "ssh_banner" | "tcp_connect" | "dns_soa" | "dns_soa_tcp";
 
@@ -161,6 +161,10 @@ const defaultPorts: Record<ServiceKind, PortDef[]> = {
     { name: "doh", port: grantedPort("dns", Tailscale.ports.dns, 443), probe: "http_2xx", probeDomain: "dns" },
     { name: "admin", port: grantedPort("technitiumManagement", Tailscale.ports.technitiumManagement, 53443) },
   ],
+  // The OCI VM running the NetBird control plane. SSH only: stacks/netbird-edge
+  // deploys over it (the `netbird-edge-deploy` grant). Its HTTPS is public, so
+  // nothing in the cluster needs a tailnet path to it.
+  netbird: [{ name: "ssh", port: grantedPort("ssh", Tailscale.ports.ssh, 22), probe: "ssh_banner" }],
 };
 
 /** Per-server additions, on top of the kind's defaults. */
@@ -215,7 +219,7 @@ const decommissionedServers = new Set(["sgc"]);
  * cluster is still `location: remote` and its ProxmoxHost still `remote: true`,
  * and it is expected to go back off-site.
  */
-const remoteServers = new Set(["skystar"]);
+const remoteServers = new Set(["skystar", "edge"]);
 
 /** Services this stack must NOT create. Written as the service NAME so a rename
  *  cannot silently un-carve one. See the header for why each is here. */
@@ -269,6 +273,8 @@ const TAG_MAP: Record<string, { kind: ServiceKind; server: (hostname: string) =>
   "tag:proxmox": { kind: "proxmox", server: h => h },
   "tag:backups": { kind: "pbs", server: h => (h.startsWith("pbs-") ? h.slice("pbs-".length) : h) },
   "tag:dns": { kind: "dns", server: h => (h.startsWith("dns-") ? h.slice("dns-".length) : h) },
+  // Hostname `netbird-edge` -> server `edge`, so the Service is `netbird-edge`.
+  "tag:netbird-edge": { kind: "netbird", server: h => (h.startsWith("netbird-") ? h.slice("netbird-".length) : h) },
 };
 
 const serviceName = (server: string, kind: ServiceKind) => `${kind}-${server}`;
@@ -503,6 +509,9 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
           break;
         case "pbs":
           created.push(alertRule(name, [sshAlert("PBSSSHConnectivityLost", "PBS", server, `${name}-ssh`, forDuration)], service));
+          break;
+        case "netbird":
+          created.push(alertRule(name, [sshAlert("NetbirdEdgeSSHConnectivityLost", "NetBird edge", server, `${name}-ssh`, forDuration)], service));
           break;
         case "dns":
           created.push(
