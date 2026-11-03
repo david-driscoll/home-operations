@@ -9,7 +9,8 @@
  *
  * Sources are names: the Authentik groups (JWT-synced, so they exist only once
  * someone in them has logged in) and the device groups stacks/netbird creates.
- * Destinations are the `lan-<site>` resource groups from sites.ts.
+ * Destinations are the `lan-<site>` resource groups from sites.ts, or
+ * `equestria-entry`, the cluster's own two addresses (#2889).
  */
 
 export type Protocol = "tcp" | "udp" | "all";
@@ -61,6 +62,24 @@ export const ACCESS_RULES: AccessRule[] = [
     description: "Jellyfin and the other media apps, all HTTPS through Traefik",
     sources: ["apple-tv"],
     destination: "lan-home",
+    protocol: "tcp",
+    ports: [443],
+    mirrors: [],
+  },
+  {
+    name: "users-equestria",
+    description: "The same apps through the in-cluster routers (#2889), when the home gateways are down",
+    sources: USERS,
+    destination: "equestria-entry",
+    protocol: "tcp",
+    ports: [80, 443],
+    mirrors: [],
+  },
+  {
+    name: "apple-tv-equestria",
+    description: "Media through the in-cluster routers (#2889)",
+    sources: ["apple-tv"],
+    destination: "equestria-entry",
     protocol: "tcp",
     ports: [443],
     mirrors: [],
