@@ -293,3 +293,29 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D18 | 11-02 | nbidp kept (private proxy + Dex authproxy → Authentik source) |
 | D19 | 11-02 | Overlay `10.100.0.0/16`; peer domain `nb.<root domain>` |
 | D20 | 11-02 | Manual onboarding with a one-page guide |
+| D21 | 11-03 | Server deployment is **pushed over SSH** from the in-cluster operator via a `netbird-edge` tailnet egress Service. `tag:egress` may SSH to `tag:netbird-edge` as root (`accept`) |
+| D22 | 11-03 | Tailscale stays on the OCI/Azure VMs for admin and backup traffic; NetBird is for clients only |
+| D23 | 11-03 | Pure seams tested with `node --test`; Pulumi wiring validated by `pulumi preview`, live behaviour by each ticket's acceptance criteria |
+| D24 | 11-03 | One PR per ticket, stacked in dependency order |
+
+### Implementation notes (2026-11-03)
+
+These came out of building #3000, #2885, #2887 and #2888, and they amend the sections above.
+
+**Bootstrap needs no human.** The server runs with `NB_SETUP_PAT_ENABLED=true`, so a one-time `POST /api/setup` creates the break-glass owner and returns a 365-day PAT. `stacks/netbird-edge` writes both to OpenBao:
+- `third-party-tokens/netbird/owner`;
+- `apps/netbird/server`, which holds the store, relay and cookie keys.
+
+`stacks/netbird` drives the account with that PAT and mints an `automation` service user for machines.
+
+**Authentik groups are never created by Pulumi.**
+- JWT group sync creates them from the `groups` claim the first time one of their members logs in.
+- Sync only puts users into groups it created itself (`issued: jwt`), so a same-named group made through the API would grant nobody.
+- Policies therefore look the groups up live, and a rule waits until its group exists.
+- The plan's separate `members` group is dropped: the four synced groups are the membership.
+
+**Gateways are keyed per Dockge host.** Each host gets a `gateway-<cluster key>` setup key and group; `stacks/netbird/sites.ts` decides which hosts route which site LAN. Today all four hosts (alpha-site, celestia, luna and skystar) sit on the home LAN, so `home` is the only routed site.
+
+**Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or login connector exists, so no peer can take an address from the default range.
+
+**The CrossGuard pack does not run in-cluster.** Pulumi Kubernetes Operator v2.10 has no policy-pack support (pulumi/pulumi-kubernetes-operator#366). The pack runs in CI as unit tests plus a smoke test, and locally with `--policy-pack`. In-cluster, the component check, OCI quotas and the budget remain.
