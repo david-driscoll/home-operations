@@ -359,7 +359,22 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 - `third-party-tokens/netbird/owner`;
 - `apps/netbird/server`, which holds the store, relay and cookie keys.
 
-`stacks/netbird` drives the account with that PAT and mints an `automation` service user for machines.
+`stacks/netbird` drives the account with that PAT only on its first run. That run mints an `automation` service user for machines, and from the next run on Pulumi uses the automation user's PAT (see "PATs and their rotation").
+
+**PATs and their rotation.** Pulumi holds three NetBird PATs. Each has a path in OpenBao's `secrets` mount:
+
+| Path | Whose | Written by | Used for |
+| --- | --- | --- | --- |
+| `third-party-tokens/netbird/automation` | the `automation` service user (admin) | `stacks/netbird` | every API call Pulumi makes; the operator (#2889) |
+| `third-party-tokens/netbird/owner-pat` | the break-glass owner | `stacks/netbird` | minting the owner's next PAT; the fallback below |
+| `third-party-tokens/netbird/owner` | the break-glass owner, plus its login and the server URL | `stacks/netbird-edge` (`/api/setup`) | the first run only; never rotated |
+
+- **One credential.** `globals.netbirdApi` is the credential the provider, the dynamic resources and the raw `fetch`es all use. It takes the first token in the order automation, owner-pat, owner that exists in OpenBao and has more than an hour left (`components/netbird/tokens.ts`). The run that creates the automation user cannot depend on its token, so that run falls through to the owner's. Skipping an expired token means a missed alert cannot lock Pulumi out of the rotation that would fix it.
+- **The owner needs its own provider.** NetBird lets a user manage only its own PATs and its service users' PATs, so the automation user cannot mint the owner's PAT. `globals.netbirdOwnerProvider` (owner-pat, then owner) is used for that one `netbird.Token` and nothing else.
+- **No replaces.** Switching the provider's token is an in-place provider update. Checked with a throwaway stack: changing `token` shows `~ pulumi:providers:netbird (update)` and no replace. The bridged provider marks no config key as forcing replacement, so no NetBird resource is replaced. `NetbirdDefaultPolicyRemoval` re-runs on a token change, by design and idempotently.
+- **Alert.** `stacks/netbird` exports `tokenExpiresAtSeconds` (`automation`, `owner`), taken from each `netbird.Token`'s `expirationDate`. kube-state-metrics reads that value off the Stack CR as `kube_stack_output_token_expires_timestamp_seconds{token=…}`. `PulumiStackTokenExpiring` pages 30 days before either token expires, and `NetbirdTokenExpiryUnknown` fires if the series go missing (`kubernetes/apps/pulumi/pulumi-operator/prometheusrule.yaml`). The run also logs a warning inside that window. The setup PAT's expiry was never recorded anywhere (`/api/setup` returns only the token), which is one reason the owner gets a managed PAT.
+- **Rotating.** In `stacks/netbird/index.ts`, set `AUTOMATION_TOKEN_GENERATION` or `OWNER_TOKEN_GENERATION` to the current month and merge. The generation is in the Pulumi name, so the run creates the new token, rewrites its OpenBao path, and deletes the old token last. The operator's ExternalSecret picks the new automation PAT up on its next refresh. Rotate one token at a time, in a run that changes nothing else: the run authenticates with the token it is deleting, so a delete scheduled after that one fails, and the next run (which reads the new token) completes it.
+- **Both expired.** Log in to the dashboard as the owner (email and password at `third-party-tokens/netbird/owner`) and create a PAT for the owner. Write it with `bao kv patch secrets/third-party-tokens/netbird/owner-pat personal_access_token=<pat> expires=<RFC 3339>`, then bump `OWNER_TOKEN_GENERATION` so Pulumi takes over again.
 
 **Authentik groups are never created by Pulumi.**
 - JWT group sync creates them from the `groups` claim the first time one of their members logs in.

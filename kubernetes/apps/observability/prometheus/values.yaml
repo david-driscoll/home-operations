@@ -310,6 +310,21 @@ kube-state-metrics:
                   gauge:
                     path: [metadata, annotations, pulumi-lock-canceller/locked-since]
                     nilIsZero: true
+              # A stack that holds an expiring credential exports
+              # `tokenExpiresAtSeconds: {<token>: <epoch seconds>}`; one series
+              # per token, labelled token=<key>. stacks/netbird does (its
+              # automation and owner PATs). A stack without the output yields
+              # one 0 series with no `token` label, which the alert's
+              # token!="" ignores. PulumiStackTokenExpiring
+              # (../../pulumi/pulumi-operator/prometheusrule.yaml) pages on it.
+              - name: output_token_expires_timestamp_seconds
+                help: "When a credential a Pulumi Stack holds expires, from its tokenExpiresAtSeconds output"
+                each:
+                  type: Gauge
+                  gauge:
+                    path: [status, outputs, tokenExpiresAtSeconds]
+                    labelFromKey: token
+                    nilIsZero: true
   prometheus:
     monitor:
       enabled: true

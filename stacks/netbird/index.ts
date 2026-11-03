@@ -2,7 +2,9 @@
  * The self-hosted NetBird account (#2885, docs/plans/netbird-mirror.md §I).
  *
  * stacks/netbird-edge runs the server and bootstrapped its owner; this stack
- * drives the account through the owner's PAT:
+ * drives the account through `globals.netbirdApi`, which is the `automation`
+ * service user's PAT (7, below) once a run has written it and the owner's
+ * until then:
  *
  *   1. account settings, the overlay range first, before anything can enrol;
  *   2. the built-in allow-all `Default` policy removed;
@@ -29,6 +31,7 @@ import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { NBIDP_BAO, nbidpHost } from "components/netbird/nbidp.ts";
+import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
@@ -45,6 +48,7 @@ const DAY = 24 * 60 * 60;
 
 const globals = new GlobalResources({}, {});
 const provider = globals.netbirdProvider;
+const api = globals.netbirdApi;
 const owner = globals.netbirdOwner;
 const opts = { provider };
 
@@ -72,7 +76,7 @@ const settings = new netbird.AccountSettings(
 );
 
 // ── 2. No allow-all ──────────────────────────────────────────────────────
-const defaultPolicyRemoval = new NetbirdDefaultPolicyRemoval("default-policy", { managementUrl: owner.url, token: owner.personal_access_token }, { dependsOn: [settings] });
+const defaultPolicyRemoval = new NetbirdDefaultPolicyRemoval("default-policy", api, { dependsOn: [settings] });
 
 // ── 3. Login ─────────────────────────────────────────────────────────────
 // The OAuth2 client stacks/system created from
@@ -179,11 +183,34 @@ new netbird.NameserverGroup(
   { ...opts, dependsOn: [settings] },
 );
 
-// ── 7. Service user ──────────────────────────────────────────────────────
-// For machines: the operator's routers (#2889) and anything else that should
-// not hold the owner's break-glass PAT.
+// ── 7. Service user, and the PATs Pulumi holds ───────────────────────────
+// For machines: this stack itself (globals.netbirdApi), the operator's routers
+// (#2889), and anything else that should not hold the owner's break-glass PAT.
+//
+// Both PATs rotate by bumping their generation to the current month. The
+// generation is in the Pulumi name, so a bump creates the new token, rewrites
+// its OpenBao path, and deletes the old token last, at the end of the run
+// (docs/plans/netbird-mirror.md, "PATs and their rotation"). Bump one at a
+// time, in a run that changes nothing else: the run authenticates with the
+// token it is deleting, so a delete scheduled after it would fail (the next
+// run reads the new token and finishes it).
+const AUTOMATION_TOKEN_GENERATION = "2026-11";
+const OWNER_TOKEN_GENERATION = "2026-11";
+
 const serviceUser = new netbird.User("automation", { name: "automation", isServiceUser: true, role: "admin" }, opts);
-const serviceToken = new netbird.Token("automation", { userId: serviceUser.id, name: "automation", expirationDays: 365 }, { ...opts, additionalSecretOutputs: ["token"] });
+const serviceToken = new netbird.Token(
+  `automation-${AUTOMATION_TOKEN_GENERATION}`,
+  { userId: serviceUser.id, name: `automation-${AUTOMATION_TOKEN_GENERATION}`, expirationDays: TOKEN_LIFETIME_DAYS },
+  { ...opts, additionalSecretOutputs: ["token"] },
+);
+// The owner's break-glass PAT, minted by the owner (only a user can mint its
+// own), so the setup PAT stacks/netbird-edge got from /api/setup is used just
+// once, by the first run. That one is never rotated and lapses on its own.
+const ownerToken = new netbird.Token(
+  `owner-${OWNER_TOKEN_GENERATION}`,
+  { userId: owner.user_id, name: `break-glass-${OWNER_TOKEN_GENERATION}`, expirationDays: TOKEN_LIFETIME_DAYS },
+  { provider: globals.netbirdOwnerProvider, additionalSecretOutputs: ["token"] },
+);
 
 if (!globals.baoDualWriteEnabled) {
   throw new Error("stacks/netbird needs OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID): it writes the setup keys and the service PAT there.");
@@ -204,12 +231,38 @@ baoKvSecret(
   "netbird-automation",
   {
     mount: "secrets",
-    path: "third-party-tokens/netbird/automation",
-    data: { url: owner.url, user_id: serviceUser.id, personal_access_token: serviceToken.token, expires: serviceToken.expirationDate },
+    path: NETBIRD_AUTOMATION_BAO_PATH,
+    data: { url: owner.url, user_id: serviceUser.id, personal_access_token: serviceToken.token, expires: serviceToken.expirationDate, generation: AUTOMATION_TOKEN_GENERATION },
     concealedFields: ["personal_access_token"],
     customMetadata: baoProvenance({ source: "stacks/netbird" }),
   },
   bao,
+);
+baoKvSecret(
+  "netbird-owner-pat",
+  {
+    mount: "secrets",
+    path: NETBIRD_OWNER_PAT_BAO_PATH,
+    data: { url: owner.url, user_id: owner.user_id, personal_access_token: ownerToken.token, expires: ownerToken.expirationDate, generation: OWNER_TOKEN_GENERATION },
+    concealedFields: ["personal_access_token"],
+    customMetadata: baoProvenance({ source: "stacks/netbird" }),
+  },
+  bao,
+);
+
+// When each PAT expires, in epoch seconds. Not secret: kube-state-metrics
+// reads it off the Stack CR's status.outputs as
+// kube_stack_output_token_expires_timestamp_seconds, and the
+// PulumiStackTokenExpiring alert pages EXPIRY_WARNING_DAYS before either
+// (kubernetes/apps/pulumi/pulumi-operator/prometheusrule.yaml).
+export const tokenExpiresAtSeconds = pulumi.unsecret(
+  pulumi.all({ automation: serviceToken.expirationDate, owner: ownerToken.expirationDate }).apply(dates => {
+    const expiry = { automation: expiresAtSeconds(dates.automation), owner: expiresAtSeconds(dates.owner) };
+    for (const { name, daysLeft } of expiringTokens(expiry, new Date())) {
+      pulumi.log.warn(`NetBird ${name} PAT expires in ${daysLeft} days. Rotate it: bump its generation in stacks/netbird/index.ts (docs/plans/netbird-mirror.md).`);
+    }
+    return expiry;
+  }),
 );
 
 // ── 8. Equestria entry ───────────────────────────────────────────────────
@@ -261,8 +314,8 @@ entryResource("authentik-vip", `${authentikVip}/32`);
 const deviceGroupIds: Record<string, pulumi.Output<string>> = { "apple-tv": groups.appleTv.id, gateways: groups.gateways.id, "k8s-routers": groups.k8sRouters.id };
 const userGroupNames = [...new Set(ACCESS_RULES.flatMap(rule => rule.sources))].filter(name => !(name in deviceGroupIds));
 
-pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) => {
-  const response = await fetch(`${url.replace(/\/+$/, "")}/api/groups`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
+pulumi.output(api).apply(async ({ managementUrl, token }) => {
+  const response = await fetch(`${managementUrl.replace(/\/+$/, "")}/api/groups`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
   if (!response.ok) throw new Error(`NetBird GET /api/groups: HTTP ${response.status}`);
   const { ids, missing, conflicts } = resolveGroups((await response.json()) as LiveGroup[], userGroupNames);
   if (missing.length > 0) pulumi.log.warn(`NetBird groups not created yet (nobody in them has logged in): ${missing.join(", ")}. Their rules wait.`);
@@ -338,7 +391,9 @@ pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) 
 // derives the service's cluster from the live proxies), so on the run that
 // mints the token the service waits, like a policy whose group does not exist
 // yet. The next run after the proxy comes up declares it.
-const nbidpProxyToken = new NetbirdProxyToken("nbidp-proxy", { managementUrl: owner.url, token: owner.personal_access_token, name: "nbidp-equestria" }, { dependsOn: [settings] });
+// A token change is an update, not a replace (NetbirdProxyToken.diff), so
+// moving from the owner's PAT to automation's keeps the minted proxy token.
+const nbidpProxyToken = new NetbirdProxyToken("nbidp-proxy", { ...api, name: "nbidp-equestria" }, { dependsOn: [settings] });
 baoKvSecret(
   "netbird-nbidp-proxy",
   {
@@ -353,7 +408,7 @@ baoKvSecret(
 );
 
 const nbidpDomain = nbidpHost();
-pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) => {
+pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
   const [liveGroups, clusters, services] = await Promise.all([
     netbirdGet<LiveGroup[]>(url, token, "/api/groups"),
     netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"),
@@ -372,7 +427,7 @@ pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) 
   new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds: access.ids }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
 });
 
-/** GET a NetBird API path with the owner's PAT. */
+/** GET a NetBird API path with `globals.netbirdApi`'s token. */
 async function netbirdGet<T>(url: string, token: string, path: string): Promise<T> {
   const response = await fetch(`${url.replace(/\/+$/, "")}${path}`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
   if (!response.ok) throw new Error(`NetBird GET ${path}: HTTP ${response.status}`);

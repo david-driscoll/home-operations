@@ -32,6 +32,8 @@ jobs:
           files: |
             stacks/netbird/**
             stacks/unifi-network/acl-manager.ts
+            components/netbird/tokens.ts
+            components/netbird/tokens.test.ts
             .github/workflows/netbird-policy.yaml
 
   test:
@@ -50,7 +52,7 @@ jobs:
           node-version: "24"
 
       - name: Run policy tests
-        run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts
+        run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts components/netbird/tokens.test.ts
 
   # The one check branch protection requires. `test` is skipped when nothing it
   # covers changed, and a skipped job never reports, so a required `Test`
