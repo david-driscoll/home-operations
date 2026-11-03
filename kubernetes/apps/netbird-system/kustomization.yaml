@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# NetBird's in-cluster entry path (#2889, docs/plans/netbird-mirror.md §G):
+# the operator, and the routing peers it runs. Routing peers are privileged
+# pods (NET_ADMIN, a WireGuard interface), hence the PodSecurity label.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: netbird-system
+metadata:
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+components:
+  - ../../components/alerts
+  - ../../components/common
+resources:
+  - ./operator/ks.yaml
+  - ./router/ks.yaml

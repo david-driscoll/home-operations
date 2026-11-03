@@ -48,6 +48,13 @@ spec:
       type: Literal
       literal:
         value: "${ROOT_DOMAIN}"
+    # The internal Traefik Gateway's LoadBalancer IP, one of the two addresses
+    # the Equestria network routes (#2889). Same mechanism, from
+    # cluster-secrets (SOPS); stacks/netbird fails closed without it.
+    INTERNAL_IP:
+      type: Literal
+      literal:
+        value: "${INTERNAL_IP}"
     AWS_ACCESS_KEY_ID:
       type: Secret
       secret:

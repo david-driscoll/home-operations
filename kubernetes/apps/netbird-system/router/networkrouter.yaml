@@ -1,0 +1,68 @@
+---
+# The second way into Equestria for NetBird clients (#2889,
+# docs/plans/netbird-mirror.md §G): three routing peers, one per node, for the
+# `internal` Gateway's address and the Authentik VIP, so cluster apps stay
+# reachable while the home gateways (#2887) are down.
+#
+# WHO OWNS WHAT. The operator's own model cannot express this route. Its
+# NetworkResource (v0.9.0) publishes a Service's ClusterIP and nothing else,
+# while clients resolve <app>.<root domain> through Technitium to the Gateway's
+# LoadBalancer IP and to the Authentik VIP, which Traefik's internal Service
+# carries as an externalIP. An IP/CIDR target is upstream's open issue
+# netbirdio/kubernetes-operator#305. So:
+#
+#   stacks/netbird (Pulumi) owns every NetBird object that carries meaning:
+#     the `equestria` network, its two /32 resources (resource group
+#     `equestria-entry`), the network router whose peer group is `k8s-routers`,
+#     the `k8s-router` setup key that enrols into that group, and the DNS zone
+#     named below. The policy that lets users reach `equestria-entry` is #2888.
+#   This file owns only the routing-peer pods. The operator runs them as a
+#     Deployment with a PDB, probes and restart-on-logout, and podTemplate
+#     below swaps its generated setup key for stacks/netbird's.
+#
+# Side effect: the operator still creates a network named after this object,
+# plus a router, a group and an ephemeral setup key, none of which any peer
+# uses. That network has no resources, so it routes nothing.
+#
+# No NetworkResource, ClusterProxy, SidecarProfile or NetworkEgress anywhere.
+apiVersion: netbird.io/v1alpha1
+kind: NetworkRouter
+metadata:
+  name: equestria-routers
+spec:
+  # Required: the operator refuses to reconcile until a NetBird DNS zone with
+  # this NAME exists. stacks/netbird creates it; no records are ever written
+  # to it, because there are no NetworkResources.
+  dnsZoneRef:
+    name: equestria.netbird.internal
+  # The operator v0.9.0 default is 0.81.4. Pinned to the server's version
+  # (components/netbird/compose.yaml) instead.
+  image: ghcr.io/netbirdio/netbird:0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
+  logLevel: info
+  workloadOverride:
+    replicas: 3
+    # A strategic merge patch over the operator's generated pod template
+    # (internal/controller/networkrouter_controller.go): containers and env
+    # merge by `name`, topologySpreadConstraints by `topologyKey`.
+    podTemplate:
+      spec:
+        topologySpreadConstraints:
+          # The operator ships this constraint as ScheduleAnyway; hard here, so
+          # the three peers never share a node. Honor taints, or the untolerated
+          # control planes would count as empty domains and pin the skew.
+          - topologyKey: kubernetes.io/hostname
+            maxSkew: 1
+            whenUnsatisfiable: DoNotSchedule
+            nodeTaintsPolicy: Honor
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: networkrouter
+                app.kubernetes.io/instance: equestria-routers
+        containers:
+          - name: netbird
+            env:
+              - name: NB_SETUP_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: netbird-k8s-router
+                    key: setup_key

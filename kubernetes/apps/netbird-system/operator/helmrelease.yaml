@@ -1,0 +1,80 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: netbird-operator
+spec:
+  interval: 1h
+  url: oci://ghcr.io/netbirdio/helm-charts/netbird-operator
+  ref:
+    tag: 0.9.0
+    digest: sha256:f0beed15aa959403a08c098c7eaf81a98e4cabde1fd5d7703f8210b50083cf01
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+#
+# The official NetBird operator (netbirdio/kubernetes-operator), pointed at the
+# self-hosted management server on the OCI VM (stacks/netbird-edge), never at
+# NetBird Cloud. Its only job here is the NetworkRouter in ../router: no
+# ClusterProxy, no sidecars, no Gateway API, no per-app NetworkResources.
+#
+# Value names are from the chart's values.yaml and templates at v0.9.0
+# (charts/netbird-operator), not assumed: `managementURL` is a top-level key the
+# deployment template reads although values.yaml does not declare it.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: netbird-operator
+spec:
+  interval: 1h
+  timeout: 10m
+  chartRef:
+    kind: OCIRepository
+    name: netbird-operator
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  dependsOn:
+    - name: cert-manager
+      namespace: cert-manager
+  values:
+    fullnameOverride: netbird-operator
+    managementURL: "https://netbird.${ROOT_DOMAIN}"
+    netbirdAPI:
+      keyFromSecret:
+        name: netbird-mgmt-api-key
+        key: NB_API_KEY
+    cluster:
+      name: equestria
+      dns: svc.cluster.local
+    # The pod-mutating webhook (sidecar injection) is cluster-wide by default,
+    # on every Pod CREATE, with failurePolicy Fail: with the operator down, no
+    # pod anywhere in the cluster could be created. Nothing here uses
+    # sidecars, so the webhook is scoped to namespaces carrying a label that no
+    # namespace has, and fails open besides.
+    webhook:
+      enableCertManager: true
+      failurePolicy: Ignore
+      namespaceSelectors:
+        - key: netbird.io/sidecar-injection
+          operator: In
+          values: ["enabled"]
+    # Deprecated (v1 NBRoutingPeer/Service-annotation) ingress mode: off.
+    ingress:
+      enabled: false
+    gatewayAPI:
+      enabled: false
+    operator:
+      replicaCount: 1
+      podAnnotations:
+        reloader.stakater.com/auto: "true"
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
