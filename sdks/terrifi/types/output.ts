@@ -32,6 +32,25 @@ export interface DeviceConfigNetwork {
     type: string;
 }
 
+export interface DevicePortsPorts {
+    /**
+     * The port name. Omit to use the controller's default (`Port N`).
+     */
+    name?: string;
+    /**
+     * Native (untagged) network. Set with tagged_vlan_mode; conflicts with port_profile_id.
+     */
+    nativeNetworkId?: string;
+    /**
+     * The ID of the `terrifi.PortProfile` to assign. The profile then controls every setting of the port, PoE included, and per-port settings are cleared. Use inline VLAN settings instead, or omit to remove the profile.
+     */
+    portProfileId?: string;
+    /**
+     * Tagged traffic: allow_all or block_all. Set with native_network_id; conflicts with port_profile_id.
+     */
+    taggedVlanMode?: string;
+}
+
 export interface DeviceRadio24 {
     /**
      * Channel number or `auto`. Valid channels depend on the radio band and country.
@@ -127,7 +146,7 @@ export interface FirewallPolicyDestination {
      */
     macAddresses?: string[];
     /**
-     * Inverts IP matching. When `true` and action is `ALLOW`, all IPs except the specified ones are allowed. When `true` and action is `BLOCK`, all IPs except the specified ones are blocked.
+     * Inverts the match on `ips` or `network_ids`. When `true` and action is `ALLOW`, everything except the specified IPs or networks is allowed. When `true` and action is `BLOCK`, everything except the specified IPs or networks is blocked.
      */
     matchOppositeIps?: boolean;
     /**
@@ -205,7 +224,7 @@ export interface FirewallPolicySource {
      */
     macAddresses?: string[];
     /**
-     * Inverts IP matching. When `true` and action is `ALLOW`, all IPs except the specified ones are allowed. When `true` and action is `BLOCK`, all IPs except the specified ones are blocked.
+     * Inverts the match on `ips` or `network_ids`. When `true` and action is `ALLOW`, everything except the specified IPs or networks is allowed. When `true` and action is `BLOCK`, everything except the specified IPs or networks is blocked.
      */
     matchOppositeIps?: boolean;
     /**

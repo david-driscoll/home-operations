@@ -20,6 +20,11 @@ export type Device = import("./device").Device;
 export const Device: typeof import("./device").Device = null as any;
 utilities.lazyLoad(exports, ["Device"], () => require("./device"));
 
+export { DevicePortsArgs, DevicePortsState } from "./devicePorts";
+export type DevicePorts = import("./devicePorts").DevicePorts;
+export const DevicePorts: typeof import("./devicePorts").DevicePorts = null as any;
+utilities.lazyLoad(exports, ["DevicePorts"], () => require("./devicePorts"));
+
 export { DnsRecordArgs, DnsRecordState } from "./dnsRecord";
 export type DnsRecord = import("./dnsRecord").DnsRecord;
 export const DnsRecord: typeof import("./dnsRecord").DnsRecord = null as any;
@@ -55,6 +60,11 @@ export type Network = import("./network").Network;
 export const Network: typeof import("./network").Network = null as any;
 utilities.lazyLoad(exports, ["Network"], () => require("./network"));
 
+export { PortProfileArgs, PortProfileState } from "./portProfile";
+export type PortProfile = import("./portProfile").PortProfile;
+export const PortProfile: typeof import("./portProfile").PortProfile = null as any;
+utilities.lazyLoad(exports, ["PortProfile"], () => require("./portProfile"));
+
 export * from "./provider";
 import { Provider } from "./provider";
 
@@ -83,6 +93,8 @@ const _module = {
                 return new ClientGroup(name, <any>undefined, { urn })
             case "terrifi:index/device:Device":
                 return new Device(name, <any>undefined, { urn })
+            case "terrifi:index/devicePorts:DevicePorts":
+                return new DevicePorts(name, <any>undefined, { urn })
             case "terrifi:index/dnsRecord:DnsRecord":
                 return new DnsRecord(name, <any>undefined, { urn })
             case "terrifi:index/firewallGroup:FirewallGroup":
@@ -95,6 +107,8 @@ const _module = {
                 return new FirewallZone(name, <any>undefined, { urn })
             case "terrifi:index/network:Network":
                 return new Network(name, <any>undefined, { urn })
+            case "terrifi:index/portProfile:PortProfile":
+                return new PortProfile(name, <any>undefined, { urn })
             case "terrifi:index/wlan:Wlan":
                 return new Wlan(name, <any>undefined, { urn })
             default:
@@ -105,12 +119,14 @@ const _module = {
 pulumi.runtime.registerResourceModule("terrifi", "index/clientDevice", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/clientGroup", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/device", _module)
+pulumi.runtime.registerResourceModule("terrifi", "index/devicePorts", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/firewallGroup", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/firewallPolicy", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/firewallPolicyOrder", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/firewallZone", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/network", _module)
+pulumi.runtime.registerResourceModule("terrifi", "index/portProfile", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/wlan", _module)
 pulumi.runtime.registerResourcePackage("terrifi", {
     version: utilities.getVersion(),

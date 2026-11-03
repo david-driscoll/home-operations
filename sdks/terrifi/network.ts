@@ -44,7 +44,7 @@ export class Network extends pulumi.CustomResource {
     }
 
     /**
-     * List of DNS servers for DHCP clients. Maximum 4 servers.
+     * List of DNS servers for DHCP clients. Maximum 4 servers. Set to an empty list to clear all custom DNS servers; omit to use the controller value.
      */
     declare public readonly dhcpDns: pulumi.Output<string[]>;
     /**
@@ -145,7 +145,7 @@ export class Network extends pulumi.CustomResource {
  */
 export interface NetworkState {
     /**
-     * List of DNS servers for DHCP clients. Maximum 4 servers.
+     * List of DNS servers for DHCP clients. Maximum 4 servers. Set to an empty list to clear all custom DNS servers; omit to use the controller value.
      */
     dhcpDns?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -199,7 +199,7 @@ export interface NetworkState {
  */
 export interface NetworkArgs {
     /**
-     * List of DNS servers for DHCP clients. Maximum 4 servers.
+     * List of DNS servers for DHCP clients. Maximum 4 servers. Set to an empty list to clear all custom DNS servers; omit to use the controller value.
      */
     dhcpDns?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
