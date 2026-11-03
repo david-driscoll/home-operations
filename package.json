@@ -39,6 +39,7 @@
     "@pulumi/github": "^6.15.0",
     "@pulumi/http": "^0.3.5",
     "@pulumi/kubernetes": "^4.34.2",
+    "@pulumi/netbird": "file:sdks/netbird",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/tailscale": "file:sdks/tailscale",
     "@pulumi/technitium": "file:sdks/technitium",

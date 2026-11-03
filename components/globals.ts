@@ -2,6 +2,7 @@ import { Provider as GarageProvider } from "@axnic/pulumi-garage";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
+import { Provider as NetbirdProvider } from "@pulumi/netbird";
 import { Provider as OciProvider } from "@pulumi/oci";
 import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
@@ -42,6 +43,8 @@ export class GlobalResources extends ComponentResource {
   private _githubProvider?: GithubProvider;
   private _ociCredential?: Output<OciApiKeyCredential>;
   private _ociProvider?: OciProvider;
+  private _netbirdOwner?: Output<NetbirdOwnerCredential>;
+  private _netbirdProvider?: NetbirdProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -355,6 +358,34 @@ export class GlobalResources extends ComponentResource {
     );
     return this._ociProvider;
   }
+
+  /**
+   * The self-hosted NetBird's break-glass owner and its bootstrap PAT, written
+   * by stacks/netbird-edge when it first set the server up (#3000). Lazy: only
+   * stacks/netbird reads it, and the path does not exist until that setup ran.
+   *
+   * Never log this Output.
+   */
+  public get netbirdOwner(): Output<NetbirdOwnerCredential> {
+    this._netbirdOwner ??= this.store.getSecretByPath<NetbirdOwnerCredential>("third-party-tokens/netbird/owner");
+    return this._netbirdOwner;
+  }
+
+  public get netbirdProvider(): NetbirdProvider {
+    if (this._netbirdProvider) return this._netbirdProvider;
+    const owner = this.netbirdOwner;
+    this._netbirdProvider = new NetbirdProvider("netbird", { managementUrl: owner.url, token: owner.personal_access_token }, { parent: this });
+    return this._netbirdProvider;
+  }
+}
+
+export interface NetbirdOwnerCredential {
+  /** `https://netbird.<root domain>`. */
+  url: string;
+  email: string;
+  password: string;
+  user_id: string;
+  personal_access_token: string;
 }
 
 export interface OciApiKeyCredential {

@@ -24,3 +24,4 @@ resources:
   - ./gulf-of-mexico/ks.yaml
   - ./ocracoke/ks.yaml
   - ./netbird-edge/ks.yaml
+  - ./netbird/ks.yaml

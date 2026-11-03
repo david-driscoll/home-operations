@@ -1,0 +1,11 @@
+name: netbird
+description: The self-hosted NetBird account — settings, login connector, groups, setup keys, DNS (docs/plans/netbird-mirror.md)
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript
