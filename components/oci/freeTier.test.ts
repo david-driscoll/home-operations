@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { assertFreeTier, FREE_TIER, freeTierQuotaStatements, freeTierViolations } from "./freeTier.ts";
+import { assertFreeTier, BOOT_VOLUME_BACKUP_COPIES, bootVolumeBackupSchedule, FREE_TIER, freeTierQuotaStatements, freeTierViolations, retainedBackupCopies } from "./freeTier.ts";
 
 const fits = {
   shape: FREE_TIER.a1Shape,
@@ -71,5 +71,44 @@ describe("freeTierQuotaStatements", () => {
   it("never zeroes the whole vcn or block-storage family", () => {
     assert.ok(!statements.includes("zero vcn quotas in tenancy"));
     assert.ok(!statements.includes("zero block-storage quotas in tenancy"));
+  });
+});
+
+describe("bootVolumeBackupSchedule", () => {
+  const schedule = bootVolumeBackupSchedule();
+
+  it("keeps at most 3 boot-volume backups, inside the free 5", () => {
+    assert.equal(BOOT_VOLUME_BACKUP_COPIES, 3);
+    assert.ok(BOOT_VOLUME_BACKUP_COPIES <= FREE_TIER.volumeBackups);
+    assert.equal(retainedBackupCopies(schedule), 3);
+  });
+
+  it("expires each backup before the fourth is taken, so the count never reaches 4", () => {
+    // Exactly three periods would leave the oldest alive while the fourth runs.
+    assert.ok(schedule.retentionSeconds < 3 * 7 * 86400);
+    assert.ok(schedule.retentionSeconds > 2 * 7 * 86400);
+  });
+
+  it("is weekly and incremental, at a fixed UTC time", () => {
+    assert.equal(schedule.period, "ONE_WEEK");
+    assert.equal(schedule.backupType, "INCREMENTAL");
+    assert.equal(schedule.offsetType, "STRUCTURED");
+    assert.equal(schedule.timeZone, "UTC");
+  });
+});
+
+describe("retainedBackupCopies", () => {
+  it("counts the backups alive at the moment a new one is taken", () => {
+    assert.equal(retainedBackupCopies({ period: "ONE_DAY", retentionSeconds: 86400 * 5 }), 5);
+    assert.equal(retainedBackupCopies({ period: "ONE_DAY", retentionSeconds: 86400 * 5 + 1 }), 6);
+    assert.equal(retainedBackupCopies({ period: "ONE_WEEK", retentionSeconds: 86400 * 20 }), 3);
+  });
+
+  it("assumes the shortest month, so a monthly schedule is never undercounted", () => {
+    assert.equal(retainedBackupCopies({ period: "ONE_MONTH", retentionSeconds: 86400 * 85 }), 4);
+  });
+
+  it("refuses a period it does not know", () => {
+    assert.throws(() => retainedBackupCopies({ period: "FORTNIGHTLY", retentionSeconds: 1 }), /FORTNIGHTLY/);
   });
 });

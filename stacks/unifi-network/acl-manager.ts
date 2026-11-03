@@ -649,6 +649,15 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         ports.garageS3Node.map(String),
         "That is how TrueNAS pulls its independent copy of the Garage buckets (components/garageTruenasCopy.ts) -- restore the `garage-truenas-copy` grant.",
       );
+      for (const service of NETBIRD_EDGE_BACKUP_SERVICES) {
+        assertGrantPath(
+          json,
+          tag.netbirdEdge,
+          service,
+          ports.garageS3Vip.map(String),
+          "That is how the NetBird server's 15-minute backups reach Garage and report to Gatus (components/netbird/backup.ts) -- restore the `netbird-edge-backups` grant.",
+        );
+      }
       return json;
     });
 
@@ -902,7 +911,22 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
     },
     Object.fromEntries(testData.knownNormalUsers.map(user => [user, { deny: ["root"] } as TailscaleSshTestInputItem] as const)),
   );
+
+  // The VM's 15-minute NetBird backups (components/netbird/backup.ts, #2884):
+  // restic to the garage-s3 VIP, and the Gatus heartbeat to the uptime VIP.
+  // The two services by name, not tag:dockge on 443. Every Dockge host and
+  // every per-host VIP carries that tag, and this VM parses internet traffic.
+  // The accept is a policy test, and assertGrantPath() checks each service in
+  // the rendered policy before it is written.
+  manager.setGrant("netbird-edge-backups", { src: [tag.netbirdEdge], dst: [...NETBIRD_EDGE_BACKUP_SERVICES], ip: ports.garageS3Vip }, { accept: [tag.netbirdEdge] });
 }
+
+/**
+ * What the netbird-edge VM's backups need on the tailnet, by Tailscale Service.
+ * garage-s3 is created by stacks/system (garage.ts); uptime is alpha-site's
+ * Gatus, published by DockgeLxc from its `uptime.<tailnet>` Host() rule.
+ */
+const NETBIRD_EDGE_BACKUP_SERVICES: readonly TailscaleService[] = ["svc:garage-s3", "svc:uptime"];
 
 function configurePbsAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
