@@ -41,25 +41,22 @@ spec:
           # (scaler.py define_scope). docs/cluster-consolidation/24-power-states.md
           downscaler/exclude: "true"
         strategy: Recreate
-        initContainers:
-          chown-dbdir:
-            image:
-              repository: alpine
-              tag: 3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
-              pullPolicy: IfNotPresent
-            command:
-              - /bin/sh
-              - -c
-            args:
-              - |
-                chmod 0750 /data/db
-            securityContext:
-              runAsUser: 0
-              # fsGroupChangePolicy: OnRootMismatch
-
+        # The `chown-dbdir` init container is gone with the bundled Postgres:
+        # it only fixed the mode of /data/db, which modular mode never opens.
+        # /data/db is left on the PVC as the rollback copy -- revert this
+        # change and `aio` starts on it again.
         containers:
+          # ── Modular mode ─────────────────────────────────────────────────
+          # `DISPATCHARR_ENV: modular` is the ONLY mode that uses an external
+          # Postgres: `aio` always starts the bundled server from /data/db
+          # (docker/entrypoint.sh). Modular also strips redis-server and every
+          # Celery process out of uWSGI (docker/uwsgi.modular.ini), so Celery
+          # -- beat, the default worker and the DVR worker -- runs in the
+          # `celery` sidecar below. The two containers MUST agree on the
+          # database and Redis settings; the database half comes from
+          # ${APP}-postgres-env (postgres.yaml) for both.
           app:
-            image:
+            image: &image
               repository: ghcr.io/dispatcharr/dispatcharr
               tag: 0.33.0@sha256:96bc548978c68e684677da7895692eeeefb7f0b2edfa38311dac2b702c61d236
               pullPolicy: IfNotPresent
@@ -69,12 +66,15 @@ spec:
               PUID: ${PUID}
               PGID: ${PGID}
               UMASK: 002
-              DISPATCHARR_ENV: aio
-              REDIS_HOST: valkey.database.svc.cluster.local
-              CELERY_BROKER_URL: redis://valkey.database.svc.cluster.local:6379/6
-              DISPATCHARR_LOG_LEVEL: info
+              DISPATCHARR_ENV: &mode modular
+              REDIS_HOST: &redisHost valkey.database.svc.cluster.local
+              CELERY_BROKER_URL: &broker redis://valkey.database.svc.cluster.local:6379/6
+              DISPATCHARR_LOG_LEVEL: &logLevel info
               TZ: ${TIMEZONE}
               DISPATCHARR_PORT: &port 9191
+            envFrom: &postgresEnv
+              - secretRef:
+                  name: ${APP}-postgres-env
             probes:
               liveness: &probes
                 enabled: true
@@ -106,12 +106,44 @@ spec:
                 # plane: those nodes have ~2.3 cores free, so a 1-core request
                 # made it a poor fit on the one tier that stays up overnight.
                 cpu: 300m
-                memory: 2Gi
+                # Was 2Gi request / 6Gi limit for the whole stack, bundled
+                # Postgres and Celery included (~1.7Gi observed 2026-11-02).
+                # The pod-level request is unchanged: 1Gi here + 1Gi on celery.
+                memory: 1Gi
               limits:
                 gpu.intel.com/i915: 1
                 # amd.com/gpu: 1
-                memory: 6Gi
+                memory: 4Gi
                 # cpu: 8
+          celery:
+            image: *image
+            # The modular-mode Celery entrypoint: waits for /data/jwt (written
+            # by `app`) and for `manage.py migrate --check` to pass, then runs
+            # beat plus the `celery` and `dvr` queue workers. EPG and M3U
+            # refreshes run here, so this is where their memory goes.
+            command:
+              - /app/docker/entrypoint.celery.sh
+            env:
+              DISPATCHARR_ENV: *mode
+              REDIS_HOST: *redisHost
+              CELERY_BROKER_URL: *broker
+              DISPATCHARR_LOG_LEVEL: *logLevel
+              TZ: ${TIMEZONE}
+              # The DVR worker calls back into the web container; it defaults
+              # to the compose service name `web`. Same pod, so loopback.
+              DISPATCHARR_WEB_HOST: 127.0.0.1
+              DISPATCHARR_PORT: *port
+              DJANGO_SETTINGS_MODULE: dispatcharr.settings
+              PYTHONUNBUFFERED: "1"
+            envFrom: *postgresEnv
+            # No GPU share: Celery does no transcoding, and a second i915
+            # request would take another of the node's shared slots.
+            resources:
+              requests:
+                cpu: 100m
+                memory: 1Gi
+              limits:
+                memory: 4Gi
           streamwatchdog:
             image:
               repository: sergeantpanda/streamwatchdog
@@ -156,7 +188,9 @@ spec:
           app:
             app:
               - path: /data
-            chown-dbdir:
+            # Shared with `app`: /data/jwt (the Django secret key), logs,
+            # plugins and DVR recordings all live here.
+            celery:
               - path: /data
       media:
         existingClaim: truenas-media
