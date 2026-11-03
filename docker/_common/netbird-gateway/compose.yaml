@@ -1,0 +1,27 @@
+# NetBird gateway for client devices (#2887, docs/plans/netbird-mirror.md §G).
+#
+# Joins the self-hosted NetBird as `gateway-<cluster>` with this host's setup
+# key (stacks/netbird, group gateway-<cluster>). stacks/netbird's Networks make
+# it a routing peer for its site LAN and an exit node; masquerading means LAN
+# services see this host's address, never the client's.
+#
+# Host networking: routing and NAT happen in the host's namespace. The LXC
+# already passes /dev/net/tun through for Tailscale. NetBird's overlay
+# (10.100.0.0/16) and Tailscale's (100.64.0.0/10) do not overlap.
+services:
+  netbird:
+    image: netbirdio/netbird:0.82.0
+    container_name: netbird-gateway
+    hostname: gateway-${CLUSTER_KEY}
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - /opt/stacks-data/${APP}/state:/var/lib/netbird
