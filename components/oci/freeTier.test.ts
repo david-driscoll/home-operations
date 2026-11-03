@@ -68,6 +68,13 @@ describe("freeTierQuotaStatements", () => {
     assert.ok(zeroCore >= 0 && zeroCore < setCore);
   });
 
+  it("also allows the REGIONAL A1 counts, which `zero compute-core quotas` zeroes too", () => {
+    // OCI enforces both: 2026-11-03 the VM create failed with
+    // "standard-a1-core-regional-count ... exceeded by 2" with only the per-AD sets.
+    assert.ok(statements.includes("set compute-core quota standard-a1-core-regional-count to 2 in tenancy where request.region = 'us-ashburn-1'"));
+    assert.ok(statements.includes("set compute-memory quota standard-a1-memory-regional-count to 12 in tenancy where request.region = 'us-ashburn-1'"));
+  });
+
   it("never zeroes the whole vcn or block-storage family", () => {
     assert.ok(!statements.includes("zero vcn quotas in tenancy"));
     assert.ok(!statements.includes("zero block-storage quotas in tenancy"));
