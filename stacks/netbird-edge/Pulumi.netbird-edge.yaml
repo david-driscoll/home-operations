@@ -3,3 +3,4 @@ config:
   netbird-edge:budgetAlertEmail:
     secure: v1:ma94FcEAXbuNTscU:hqQ1JqnvrY81TxMzncK0FEofICixqSYcOehv1zuABdz+iuL3iTCy6g==
   netbird-edge:availabilityDomainIndex: "0"
+  netbird-edge:ociVm: "false"
