@@ -40,7 +40,7 @@ export interface LiveService {
  * pass to Authentik as a verified email.
  */
 export function privateServiceAccessGroups(live: LiveGroup[]): { ids: string[]; missing: string[]; conflicts: string[] } {
-  const { ids, missing, conflicts } = resolveGroups(live, USER_GROUPS, []);
+  const { ids, missing, conflicts } = resolveGroups(live, USER_GROUPS);
   return { ids: USER_GROUPS.map(name => ids[name]).filter((id): id is string => id !== undefined), missing, conflicts };
 }
 

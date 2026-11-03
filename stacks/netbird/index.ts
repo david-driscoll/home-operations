@@ -25,7 +25,7 @@
 import * as netbird from "@pulumi/netbird";
 import * as pulumi from "@pulumi/pulumi";
 import { baoKvSecret, baoProvenance, oidcBaoPath } from "components/bao.ts";
-import { authentikVip, dns } from "components/constants.ts";
+import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { NBIDP_BAO, nbidpHost } from "components/netbird/nbidp.ts";
@@ -33,9 +33,10 @@ import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolic
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
 import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
-import { ACCESS_RULES, type LiveGroup, resolveGroups, USER_GROUPS } from "./policy.ts";
+import { ACCESS_RULES, homeResourceGroups, type LiveGroup, resolveGroups, USER_GROUPS } from "./policy.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
 
+/** Who may log in at all; one list, shared with the client-access policy. */
 export { USER_GROUPS };
 
 /** NetBird's overlay. Clear of Tailscale's 100.64/10 on dual-mesh desktops and of the 10.10/16 LAN. */
@@ -120,10 +121,14 @@ const all = netbird.getGroupOutput({ name: "All" }, { provider });
 const problems = siteProblems(SITES, GATEWAY_HOSTS);
 if (problems.length > 0) throw new Error(`stacks/netbird/sites.ts is inconsistent:\n  - ${problems.join("\n  - ")}`);
 
-// One resource group per site LAN: what #2888's policies grant users access to.
+// One resource group per site LAN (`lan-<site>`, admins only), plus the home
+// LAN's specific endpoints, the groups #2888's member rules target.
 export const siteResourceGroups: Record<string, netbird.Group> = {};
+const endpointGroups = { "home-web": group("home-web"), "home-dns": group("home-dns"), "home-media": group("home-media") };
+let homeNetwork: netbird.Network | undefined;
 for (const [site, config] of routedSites(SITES)) {
   const network = new netbird.Network(`lan-${site}`, { name: `lan-${site}`, description: `The ${site} LAN, via its gateway containers` }, { ...opts, dependsOn: [defaultPolicyRemoval] });
+  if (site === "home") homeNetwork = network;
   const resourceGroup = (siteResourceGroups[site] = group(`lan-${site}`));
   for (const cidr of config.cidrs) {
     new netbird.NetworkResource(`lan-${site}-${cidr.replace(/[./]/g, "-")}`, { networkId: network.id, name: cidr, address: cidr, groups: [resourceGroup.id], enabled: true }, opts);
@@ -134,23 +139,27 @@ for (const [site, config] of routedSites(SITES)) {
   new netbird.NetworkRouter(`lan-${site}`, { networkId: network.id, peerGroups: config.gateways.map(host => gatewayHostGroups[host].id), masquerade: true, metric: 9999, enabled: true }, opts);
 }
 
-// Every gateway is an exit node a client can pick (never applied by default).
-// Exit nodes are still legacy network routes in NetBird.
-for (const host of GATEWAY_HOSTS) {
-  new netbird.Route(
-    `exit-${host}`,
-    {
-      networkId: `exit-${host}`,
-      description: `Exit through ${host}`,
-      network: "0.0.0.0/0",
-      peerGroups: [gatewayHostGroups[host].id],
-      groups: [all.id],
-      masquerade: true,
-      skipAutoApply: true,
-      enabled: true,
-    },
-    { ...opts, dependsOn: [defaultPolicyRemoval] },
-  );
+// The addresses member-home-subnet-access allows on Tailscale: every cluster
+// Gateway IP on the LAN, every exported host's internalIp, the Authentik VIP;
+// plus Technitium for DNS. One resource per address, in the home network.
+if (homeNetwork) {
+  const network = homeNetwork;
+  const inHome = (ip: string) => ip.startsWith("10.10.");
+  globals.store.getTailscaleExports().apply(exports => {
+    const endpoints = homeResourceGroups({
+      clusterIps: kubernetesClusters.flatMap(cluster => cluster.publicIps).filter(inHome),
+      hostIps: exports.flatMap(exp => exp.hosts.map(host => host.internalIp)).filter(ip => !!ip && inHome(ip)),
+      authentikVip,
+      dnsIps: dns.internalIps,
+    });
+    for (const [ip, names] of Object.entries(endpoints)) {
+      new netbird.NetworkResource(
+        `home-endpoint-${ip.replaceAll(".", "-")}`,
+        { networkId: network.id, name: ip, address: `${ip}/32`, groups: names.map(name => endpointGroups[name as keyof typeof endpointGroups].id), enabled: true },
+        opts,
+      );
+    }
+  });
 }
 
 // ── 6. DNS ───────────────────────────────────────────────────────────────
@@ -255,15 +264,41 @@ const userGroupNames = [...new Set(ACCESS_RULES.flatMap(rule => rule.sources))].
 pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) => {
   const response = await fetch(`${url.replace(/\/+$/, "")}/api/groups`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
   if (!response.ok) throw new Error(`NetBird GET /api/groups: HTTP ${response.status}`);
-  const { ids, missing, conflicts } = resolveGroups((await response.json()) as LiveGroup[], userGroupNames, []);
+  const { ids, missing, conflicts } = resolveGroups((await response.json()) as LiveGroup[], userGroupNames);
   if (missing.length > 0) pulumi.log.warn(`NetBird groups not created yet (nobody in them has logged in): ${missing.join(", ")}. Their rules wait.`);
   if (conflicts.length > 0) pulumi.log.error(`NetBird groups ${conflicts.join(", ")} exist but were not made by JWT sync, so sync never adds users to them. Delete them in NetBird.`);
 
+  // Every gateway is an exit node the user groups can pick (never applied by
+  // default). Exit nodes are still legacy routes: offered only to the user
+  // groups, and the route's own ACL is what lets their traffic out. The
+  // `users-exit-nodes` rule below is what connects them to the gateway.
+  const userGroupIds = USER_GROUPS.map(name => ids[name]).filter(id => id !== undefined);
+  if (userGroupIds.length > 0) {
+    for (const host of GATEWAY_HOSTS) {
+      new netbird.Route(
+        `exit-${host}`,
+        {
+          networkId: `exit-${host}`,
+          description: `Exit through ${host}`,
+          network: "0.0.0.0/0",
+          peerGroups: [gatewayHostGroups[host].id],
+          groups: userGroupIds,
+          accessControlGroups: userGroupIds,
+          masquerade: true,
+          skipAutoApply: true,
+          enabled: true,
+        },
+        { ...opts, dependsOn: [defaultPolicyRemoval] },
+      );
+    }
+  }
+
+  const destinationGroups: Record<string, netbird.Group | undefined> = { ...endpointGroups, gateways: groups.gateways, "lan-home": siteResourceGroups.home, "equestria-entry": equestriaEntry };
   for (const rule of ACCESS_RULES) {
     const sources = rule.sources.map(name => deviceGroupIds[name] ?? ids[name]).filter(id => id !== undefined);
     if (sources.length === 0) continue;
-    const destination = rule.destination === "equestria-entry" ? equestriaEntry : siteResourceGroups[rule.destination.replace(/^lan-/, "")];
-    if (!destination) throw new Error(`policy.ts rule ${rule.name} targets ${rule.destination}, which neither sites.ts nor the Equestria entry provides`);
+    const destination = destinationGroups[rule.destination];
+    if (!destination) throw new Error(`policy.ts rule ${rule.name} targets ${rule.destination}, which this stack does not create`);
     new netbird.Policy(
       `client-${rule.name}`,
       {
@@ -276,7 +311,7 @@ pulumi.all([owner.url, owner.personal_access_token]).apply(async ([url, token]) 
             action: "accept",
             bidirectional: false,
             protocol: rule.protocol,
-            ports: rule.ports?.map(String),
+            ports: rule.protocol === "icmp" ? undefined : rule.ports?.map(String),
             sources,
             destinations: [destination.id],
             enabled: true,

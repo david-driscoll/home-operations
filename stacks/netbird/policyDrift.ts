@@ -16,7 +16,6 @@
 /** User-facing grants with no NetBird equivalent, and why. */
 export const TAILSCALE_ONLY: Record<string, string> = {
   "forgejo-git-ssh": "git over SSH to tag:apps. NetBird routes the whole LAN, so opening :22 to members would open every host's sshd",
-  "member-exit-node": "mirrored by the exit-<host> routes (stacks/netbird/index.ts), not by a policy",
   "peer-relay": "Tailscale peer relays (app capability); NetBird runs its own relays",
   "member-drive-access": "Taildrive (app capability)",
   "shared-drive-access": "Taildrive (app capability)",
