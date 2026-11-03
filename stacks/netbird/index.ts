@@ -8,8 +8,10 @@
  *   2. the built-in allow-all `Default` policy removed;
  *   3. Authentik as the login connector, with JWT group sync;
  *   4. device groups and the setup keys that place peers in them;
- *   5. Technitium as every peer's nameserver;
- *   6. a service user whose PAT the in-cluster operator uses (#2889).
+ *   5. site LANs routed through the gateway containers, and each gateway an
+ *      exit node (#2887);
+ *   6. Technitium as every peer's nameserver;
+ *   7. a service user whose PAT the in-cluster operator uses (#2889).
  *
  * User groups (admins, family, friends, media-managers) are NOT created here:
  * JWT group sync creates them from Authentik's `groups` claim on first login,
@@ -23,6 +25,7 @@ import { dns } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
+import { routedSites, SITES, siteProblems } from "./sites.ts";
 
 /** Who may log in at all: the Authentik groups NetBird's ApplicationDefinition admits. */
 export const USER_GROUPS = ["admins", "family", "friends", "media-managers"];
@@ -102,11 +105,49 @@ const setupKeys = {
   apple_tv: setupKey("apple-tv", groups.appleTv).key,
 };
 
-// ── 5. DNS ───────────────────────────────────────────────────────────────
+// ── 5. Site LANs and exit nodes (#2887) ─────────────────────────────────
+// NetBird's built-in group of every peer.
+const all = netbird.getGroupOutput({ name: "All" }, { provider });
+const problems = siteProblems(SITES, GATEWAY_HOSTS);
+if (problems.length > 0) throw new Error(`stacks/netbird/sites.ts is inconsistent:\n  - ${problems.join("\n  - ")}`);
+
+// One resource group per site LAN: what #2888's policies grant users access to.
+export const siteResourceGroups: Record<string, netbird.Group> = {};
+for (const [site, config] of routedSites(SITES)) {
+  const network = new netbird.Network(`lan-${site}`, { name: `lan-${site}`, description: `The ${site} LAN, via its gateway containers` }, { ...opts, dependsOn: [defaultPolicyRemoval] });
+  const resourceGroup = (siteResourceGroups[site] = group(`lan-${site}`));
+  for (const cidr of config.cidrs) {
+    new netbird.NetworkResource(`lan-${site}-${cidr.replace(/[./]/g, "-")}`, { networkId: network.id, name: cidr, address: cidr, groups: [resourceGroup.id], enabled: true }, opts);
+  }
+  // Equal metrics: each client picks the lowest-latency gateway, and the
+  // others take over when it goes. Masquerade, so LAN services see the
+  // gateway host and need no return route to 10.100.0.0/16.
+  new netbird.NetworkRouter(`lan-${site}`, { networkId: network.id, peerGroups: config.gateways.map(host => gatewayHostGroups[host].id), masquerade: true, metric: 9999, enabled: true }, opts);
+}
+
+// Every gateway is an exit node a client can pick (never applied by default).
+// Exit nodes are still legacy network routes in NetBird.
+for (const host of GATEWAY_HOSTS) {
+  new netbird.Route(
+    `exit-${host}`,
+    {
+      networkId: `exit-${host}`,
+      description: `Exit through ${host}`,
+      network: "0.0.0.0/0",
+      peerGroups: [gatewayHostGroups[host].id],
+      groups: [all.id],
+      masquerade: true,
+      skipAutoApply: true,
+      enabled: true,
+    },
+    { ...opts, dependsOn: [defaultPolicyRemoval] },
+  );
+}
+
+// ── 6. DNS ───────────────────────────────────────────────────────────────
 // Technitium's LAN addresses, reached through the gateways' routes (#2887),
 // so clients keep resolving the existing <root domain> names. Every peer
 // gets them.
-const all = netbird.getGroupOutput({ name: "All" }, { provider });
 new netbird.NameserverGroup(
   "technitium",
   {
@@ -120,7 +161,7 @@ new netbird.NameserverGroup(
   { ...opts, dependsOn: [settings] },
 );
 
-// ── 6. Service user ──────────────────────────────────────────────────────
+// ── 7. Service user ──────────────────────────────────────────────────────
 // For machines: the operator's routers (#2889) and anything else that should
 // not hold the owner's break-glass PAT.
 const serviceUser = new netbird.User("automation", { name: "automation", isServiceUser: true, role: "admin" }, opts);
