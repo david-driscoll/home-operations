@@ -18,10 +18,17 @@ const hosts = (standbyReachable = true) => [
 const down = (standbyReachable = true) => ({ leaseIp: PRIMARY, activeHealthy: false, candidates: hosts(standbyReachable), now });
 
 describe("decide", () => {
-  it("resets the count while management answers", () => {
+  it("resets the count while management answers, and remembers it did", () => {
     const { decision, next } = decide({ failures: 3 }, { leaseIp: PRIMARY, activeHealthy: true, candidates: hosts(), now });
     assert.deepEqual(decision, { action: "healthy" });
     assert.equal(next.failures, 0);
+    assert.equal(next.everHealthy, true);
+  });
+
+  it("never fails over from a management that has never answered", () => {
+    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP }, down());
+    assert.equal(decision.action, "hold");
+    assert.match((decision as { reason: string }).reason, /never answered/);
   });
 
   it("counts failures up to the threshold without flipping", () => {
@@ -34,9 +41,9 @@ describe("decide", () => {
   });
 
   it("flips to the reachable standby on the Nth failure in a row, and starts over", () => {
-    const { decision, next } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP - 1 }, down());
+    const { decision, next } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP - 1, everHealthy: true }, down());
     assert.deepEqual(decision, { action: "flip", from: PRIMARY, to: { name: "azure-cus", ip: STANDBY } });
-    assert.deepEqual(next, { failures: 0, lastFlipAt: now.toISOString() });
+    assert.deepEqual(next, { failures: 0, lastFlipAt: now.toISOString(), everHealthy: true });
   });
 
   it("a single healthy run in between restarts the count", () => {
@@ -53,27 +60,27 @@ describe("decide", () => {
   });
 
   it("holds when no standby answers on 443, which is what a home-internet outage looks like", () => {
-    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP }, down(false));
+    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP, everHealthy: true }, down(false));
     assert.deepEqual(decision, { action: "hold", reason: "no standby answers on 443", failures: WATCHDOG_FAILURES_TO_FLIP + 1 });
   });
 
   it("holds when there is no other host at all", () => {
-    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP }, { ...down(), candidates: [{ name: "azure-eus2", ip: PRIMARY, reachable: false }] });
+    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP, everHealthy: true }, { ...down(), candidates: [{ name: "azure-eus2", ip: PRIMARY, reachable: false }] });
     assert.equal(decision.action, "hold");
     assert.match((decision as { reason: string }).reason, /no standby/);
   });
 
   it("never flips again inside the cooldown, and may after it", () => {
     const recent = new Date(now.getTime() - (FLIP_COOLDOWN_MINUTES - 1) * 60000).toISOString();
-    assert.equal(decide({ failures: WATCHDOG_FAILURES_TO_FLIP, lastFlipAt: recent }, down()).decision.action, "hold");
+    assert.equal(decide({ failures: WATCHDOG_FAILURES_TO_FLIP, lastFlipAt: recent, everHealthy: true }, down()).decision.action, "hold");
     const old = new Date(now.getTime() - (FLIP_COOLDOWN_MINUTES + 1) * 60000).toISOString();
-    assert.equal(decide({ failures: WATCHDOG_FAILURES_TO_FLIP, lastFlipAt: old }, down()).decision.action, "flip");
+    assert.equal(decide({ failures: WATCHDOG_FAILURES_TO_FLIP, lastFlipAt: old, everHealthy: true }, down()).decision.action, "flip");
   });
 
   it("after a flip, watches the new holder: the lease address is what it probes", () => {
     // The standby holds the lease now and is down; the old primary is back.
     const { decision } = decide(
-      { failures: WATCHDOG_FAILURES_TO_FLIP },
+      { failures: WATCHDOG_FAILURES_TO_FLIP, everHealthy: true },
       {
         leaseIp: STANDBY,
         activeHealthy: false,
@@ -89,7 +96,7 @@ describe("decide", () => {
 
   it("prefers candidates in the order given", () => {
     const { decision } = decide(
-      { failures: WATCHDOG_FAILURES_TO_FLIP },
+      { failures: WATCHDOG_FAILURES_TO_FLIP, everHealthy: true },
       {
         ...down(),
         candidates: [
@@ -124,6 +131,8 @@ describe("parseState", () => {
     assert.deepEqual(parseState({ failures: "x" }), { failures: 0 });
     assert.deepEqual(parseState({ failures: "3", lastFlipAt: "2026-11-03T19:00:00.000Z" }), { failures: 3, lastFlipAt: "2026-11-03T19:00:00.000Z" });
     assert.deepEqual(parseState({ failures: "2", lastFlipAt: "" }), { failures: 2 });
+    assert.deepEqual(parseState({ failures: "0", everHealthy: "true" }), { failures: 0, everHealthy: true });
+    assert.deepEqual(parseState({ failures: "0", everHealthy: "false" }), { failures: 0 });
   });
 });
 

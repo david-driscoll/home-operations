@@ -9,7 +9,9 @@
  *   - Cloudflare answered: no internet, no Cloudflare, no flip;
  *   - a standby answers TLS on 443: so a home-internet outage, where nothing
  *     outside answers, never flips;
- *   - no flip happened in the last FLIP_COOLDOWN_MINUTES: no ping-pong.
+ *   - no flip happened in the last FLIP_COOLDOWN_MINUTES: no ping-pong;
+ *   - management has answered at least once: nothing fails over from a
+ *     server that never came up.
  * Each host's fence (components/netbird/fence.ts) then does the rest: the old
  * primary stops management, the standby restores and starts.
  *
@@ -35,6 +37,13 @@ export const HEALTH_PATH = "/oauth2/.well-known/openid-configuration";
 export interface WatchdogState {
   failures: number;
   lastFlipAt?: string;
+  /**
+   * Whether management has ever answered since this state began. Until it
+   * has, there is nothing to fail over from: a server still being set up
+   * would otherwise be "failed over" to a standby with no snapshot to restore,
+   * which would start an empty management.
+   */
+  everHealthy?: boolean;
 }
 
 export interface Candidate {
@@ -63,11 +72,12 @@ export function decide(state: WatchdogState, obs: Observation, failuresToFlip: n
     // The count stands; nothing is learned about the primary.
     return { decision: { action: "hold", reason: "Cloudflare did not answer", failures: state.failures }, next: state };
   }
-  if (obs.activeHealthy) return { decision: { action: "healthy" }, next: { ...state, failures: 0 } };
+  if (obs.activeHealthy) return { decision: { action: "healthy" }, next: { ...state, failures: 0, everHealthy: true } };
 
   const failures = state.failures + 1;
   const next = { ...state, failures };
   if (failures < failuresToFlip) return { decision: { action: "count", failures }, next };
+  if (!state.everHealthy) return { decision: { action: "hold", reason: "management has never answered, so there is nothing to fail over from", failures }, next };
 
   if (state.lastFlipAt) {
     const since = (obs.now.getTime() - Date.parse(state.lastFlipAt)) / 60000;
@@ -82,7 +92,7 @@ export function decide(state: WatchdogState, obs: Observation, failuresToFlip: n
   }
   return {
     decision: { action: "flip", from: obs.leaseIp, to: { name: target.name, ip: target.ip } },
-    next: { failures: 0, lastFlipAt: obs.now.toISOString() },
+    next: { failures: 0, lastFlipAt: obs.now.toISOString(), everHealthy: true },
   };
 }
 
@@ -103,7 +113,11 @@ export function parseCandidates(value: string): Candidate[] {
 
 export function parseState(data: Record<string, string> | undefined): WatchdogState {
   const failures = Number.parseInt(data?.failures ?? "0", 10);
-  return { failures: Number.isFinite(failures) && failures >= 0 ? failures : 0, ...(data?.lastFlipAt ? { lastFlipAt: data.lastFlipAt } : {}) };
+  return {
+    failures: Number.isFinite(failures) && failures >= 0 ? failures : 0,
+    ...(data?.lastFlipAt ? { lastFlipAt: data.lastFlipAt } : {}),
+    ...(data?.everHealthy === "true" ? { everHealthy: true } : {}),
+  };
 }
 
 /** The Alertmanager v2 payload for a decision worth a page, or undefined. */
@@ -249,7 +263,14 @@ async function main(): Promise<void> {
     }
   }
   await kube("PATCH", stateUrl, {
-    data: { failures: String(next.failures), lastFlipAt: next.lastFlipAt ?? "", lastRun: now.toISOString(), lastDecision: decision.action, lastLease: record?.content ?? "" },
+    data: {
+      failures: String(next.failures),
+      lastFlipAt: next.lastFlipAt ?? "",
+      everHealthy: String(next.everHealthy === true),
+      lastRun: now.toISOString(),
+      lastDecision: decision.action,
+      lastLease: record?.content ?? "",
+    },
   });
   console.log(JSON.stringify({ msg: "netbird-failover-watchdog", lease: record?.content ?? null, activeHealthy, candidates: probed, decision }));
 }

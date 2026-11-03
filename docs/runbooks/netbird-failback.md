@@ -20,7 +20,8 @@ design is in [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md) §E an
   never starts on an unknown lease.
 - **The watchdog** (`kubernetes/apps/netbird-system/failover-watchdog`, a CronJob every minute in Equestria)
   probes management where the lease points. After 5 failed runs in a row it repoints the lease at the first
-  standby that answers TLS on 443, but only if Cloudflare answered too. It never flips twice within 60 minutes.
+  standby that answers TLS on 443, but only if Cloudflare answered too. It never flips twice within 60 minutes,
+  and never from a management it has not once seen answer (its state ConfigMap's `everHealthy`).
   Every flip pages as `NetbirdFailover`; a flip it would make but may not pages as `NetbirdFailoverBlocked`.
 - **Pulumi and the lease.** `netbird-edge:primary` says which host config assigns the lease to.
   `DnsLeaseAssignment` writes the record only when that value (or that host's address) changes, so a run after a
@@ -110,6 +111,8 @@ resolver) and never leaves its host.
   reason says why:
   - "no standby answers on 443": the standby is down too, or Equestria's internet is.
   - "cooldown": it flipped less than an hour ago.
+  - "never answered": the server hasn't come up once since the watchdog's state began (a first deploy, or
+    someone deleted `netbird-failover-watchdog-state`).
 
   To promote by hand, use the config switch as in "Fail back", step 3, with the host you want.
 - **Both fences stopped (`stop (unknown)`).** Neither host can reach DNS. Management comes back by itself once
