@@ -45,6 +45,8 @@ const host = new ProxmoxHost("luna", {
     // and the tailnet ACL drops luna's NFS to the NAS (pvestatd hangs, node goes grey).
     acceptRoutes: lunaIsRemote,
   },
+  // Re-reads the exported vmbr0 address whenever lunaIsRemote flips.
+  lanSite: lunaIsRemote ? "remote" : "home",
   tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
 });

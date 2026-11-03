@@ -51,6 +51,8 @@ const host = new ProxmoxHost("skystar", {
     advertiseExitNode: true,
   },
   peerRelay: true,
+  // Re-reads the exported vmbr0 address whenever skystarOnHomeLan flips.
+  lanSite: skystarOnHomeLan ? "home" : "ocracoke",
   tailscaleSubnetRoutes: [Tailscale.subnets.ocracoke],
   vmIdRange: vmRange,
 });
