@@ -299,8 +299,10 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 - **Authentik's server calls Dex in the cluster.** It is not a NetBird peer, so the token exchange and userinfo go to
   Dex's Service. The CiliumNetworkPolicy allows it `POST /token` and `GET /userinfo` only. Only the proxy reaches the
   login path.
-- **No groups come back from Dex, and the source has no enrollment flow.** Authentik stays the source of groups, and
-  an identity that matches no existing email is refused.
+- **No groups come back from Dex.** Authentik stays the source of groups.
+- **Enrollment works like the Tailscale source** (decided 2026-11-03). An identity whose email matches nobody goes
+  through the shared enrollment flow. Ownerless peers never get that far, because the private service admits only the
+  four JWT-synced user groups.
 
 ## L. Devices and onboarding
 

@@ -89,7 +89,7 @@ export class FlowsManager extends pulumi.ComponentResource {
 
     // Create sources
     const tailscaleSource = this.createTailscaleSource(enrollmentFlow, sourceAuthenticationFlow);
-    const netbirdSource = this.createNetbirdSource(sourceAuthenticationFlow);
+    const netbirdSource = this.createNetbirdSource(enrollmentFlow, sourceAuthenticationFlow);
     const plexSource = this.createPlexSource(enrollmentFlow, sourceAuthenticationFlow);
 
     // Create source identification stage
@@ -295,12 +295,15 @@ return {}`,
    * redirect URIs included) into OpenBao for Dex's ExternalSecret. One owner,
    * so the two halves cannot disagree and no stack waits on another.
    *
-   * Two deliberate differences from the Tailscale source:
+   * Enrollment matches the Tailscale source (decided by David, 2026-11-03): an
+   * identity with no matching email goes through the shared enrollment flow.
+   * In practice every NetBird user logged into NetBird through Authentik, so
+   * email_link finds them; ownerless peers (whose PEER NAME the proxy would
+   * stamp as the user) never reach Dex, because the private service admits
+   * only the four JWT-synced user groups (stacks/netbird/nbidp.ts).
    *
-   * - No enrollment flow. Every NetBird user logged into NetBird through
-   *   Authentik, so their email already exists here; email_link links it, and
-   *   an unknown identity (a peer with no owner, whose PEER NAME the proxy
-   *   stamps as its user) is refused instead of becoming a new account.
+   * One deliberate difference from the Tailscale source:
+   *
    * - No `groups` scope. Authentik is where the groups come from (NetBird's
    *   are JWT-synced from it); taking them back would let an edit to a peer's
    *   groups in NetBird change someone's Authentik groups. name_link is set to
@@ -309,7 +312,7 @@ return {}`,
    * Skipped without OpenBao credentials: Dex could not get the client, so the
    * button could only ever fail.
    */
-  private createNetbirdSource(authenticationFlow: authentik.Flow): authentik.SourceOauth | undefined {
+  private createNetbirdSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth | undefined {
     if (!this.globals.baoDualWriteEnabled) {
       pulumi.log.warn("BAO credentials absent — skipping the NetBird source: Dex reads its client from OpenBao, so the button could not log anyone in", this);
       return undefined;
@@ -350,7 +353,9 @@ return {}`,
         pkce: "S256",
         userMatchingMode: "email_link",
         groupMatchingMode: "name_link",
+        userPathTemplate: "driscoll.dev/netbird/%(slug)s",
         authenticationFlow: authenticationFlow.uuid,
+        enrollmentFlow: enrollmentFlow.uuid,
       },
       { parent: this.sourcesComponent },
     );
