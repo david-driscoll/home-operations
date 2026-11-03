@@ -908,6 +908,22 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
         .concat(testData.knownAdminUsers.map(user => [user, { check: ["root"] } as TailscaleSshTestInputItem] as const)),
     ),
   );
+
+  // The in-cluster Pulumi operator deploys the NetBird server over SSH
+  // (components/netbird/NetbirdServer.ts). Its pods leave through the
+  // tailnet-inbound ProxyGroup as tag:egress, onto the `netbird-edge` egress
+  // Service (tailnet-egress.ts). `accept`, not `check`: nobody is there to
+  // answer a check prompt.
+  manager.setGrant("netbird-edge-deploy", { src: [tag.egress], dst: [tag.netbirdEdge], ip: ports.ssh }, { accept: [tag.egress] });
+  manager.setSshRule(
+    {
+      src: [tag.egress],
+      dst: [tag.netbirdEdge],
+      users: ["root"],
+      action: "accept",
+    },
+    Object.fromEntries(testData.knownNormalUsers.map(user => [user, { deny: ["root"] } as TailscaleSshTestInputItem] as const)),
+  );
 }
 
 function configurePbsAccess(manager: TailscaleAclManager) {
