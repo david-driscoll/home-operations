@@ -2,7 +2,8 @@
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 #
 # NetBird's in-cluster entry path (#2889, docs/plans/netbird-mirror.md §G):
-# the operator, and the routing peers it runs. Routing peers are privileged
+# the operator, and the routing peers it runs; and nbidp (#2891, §K), the
+# private reverse proxy and Dex behind "log in with NetBird". Routing peers are privileged
 # pods (NET_ADMIN, a WireGuard interface), hence the PodSecurity label.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -13,6 +14,9 @@ metadata:
 components:
   - ../../components/alerts
   - ../../components/common
+  # nbidp's HelmRelease (#2891).
+  - ../../components/repos/app-template
 resources:
   - ./operator/ks.yaml
   - ./router/ks.yaml
+  - ./nbidp/ks.yaml

@@ -264,6 +264,28 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 - Access is limited to `members`, because tagged peers would otherwise show up as users under their peer names.
 - PVE and PBS keep their tsidp realms.
 
+**As built (#2891).** Code: `components/netbird/nbidp.ts` (the chain, Dex's config), `stacks/netbird/nbidp.ts`
+(the private service), `components/authentik/flows.ts` (the source), `kubernetes/apps/netbird-system/nbidp`.
+
+- **`members` is the four JWT-synced groups.** The private service's `access_groups` are admins, family, friends and
+  media-managers, never `All` or a device group.
+- **The proxy registers with an account-scoped token** (`POST /api/reverse-proxies/proxy-tokens`, minted by
+  `dynamic/netbird/NetbirdProxyToken`, stored at `third-party-tokens/netbird/nbidp-proxy`). Its cluster address is
+  `nbidp.<root domain>`, which is also the service's domain, so no custom domain is registered.
+- **No public DNS name and no inbound path.** A private service is served only on the proxy's WireGuard listener.
+  Management pushes the record (to the proxy peers' tunnel IPs) only to peers in the access groups, and creates the
+  80/443 policy itself. The certificate is DNS-01.
+- **The provider cannot declare a private service** (0.0.11 has no `private`/`access_groups`), so
+  `dynamic/netbird/NetbirdPrivateService` calls the API. Management only accepts it once the proxy is connected, so it
+  appears on the first `stacks/netbird` run after the proxy comes up.
+- **Every Dex identity header is `X-NetBird-User`.** Dex's authproxy connector reads five headers and four default to
+  names the proxy passes through, which would let a user name someone else's email.
+- **Authentik's server calls Dex in the cluster.** It is not a NetBird peer, so the token exchange and userinfo go to
+  Dex's Service. The CiliumNetworkPolicy allows it `POST /token` and `GET /userinfo` only. Only the proxy reaches the
+  login path.
+- **No groups come back from Dex, and the source has no enrollment flow.** Authentik stays the source of groups, and
+  an identity that matches no existing email is refused.
+
 ## L. Devices and onboarding
 
 - **Apple TVs:** all of them enrol with the `apple-tv` **setup key**. The tvOS app is beta, and SSO device-code

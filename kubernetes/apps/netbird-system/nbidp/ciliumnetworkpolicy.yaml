@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# ONLY THE NETBIRD PROXY MAY LOG ANYONE IN THROUGH DEX.
+#
+# Dex's authproxy connector believes X-NetBird-User on whatever request reaches
+# /callback/netbird: that header IS the login. The proxy deletes the client's
+# copy and stamps the tunnel peer's identity (components/netbird/nbidp.ts), so
+# a request that came through it is trustworthy, and any other request to Dex
+# could name any user. This policy is what keeps those apart.
+#
+# Selecting Dex puts it into default-deny for ingress. Then:
+#
+#   1. the proxy pods, on the Dex port, any path. They dial Dex's Service from
+#      their own pod (`direct_upstream`), never through the mesh;
+#   2. authentik's server pods, on the Dex port, ONLY `POST /token` and
+#      `GET /userinfo` -- the code exchange and profile read that
+#      components/authentik/flows.ts points the NetBird source at. Authentik is
+#      not a NetBird peer, so it cannot come through the proxy, and an L7 rule
+#      keeps even an authentik pod off /auth and /callback, where headers
+#      would count. Cilium's proxy answers anything else with 403;
+#   3. the kubelet (`host`), on the telemetry port only, for the probes.
+#
+# Everything else -- Traefik, the NetBird routing peers in this namespace, any
+# other pod, the LAN -- is dropped. No HTTPRoute or Ingress names Dex either.
+#
+# This is the cluster's first L7 (HTTP) policy. Cilium runs its Envoy inside
+# the agent here (helm values `envoy.enabled: false`), and rule 1 has no HTTP
+# rules, so the proxy's traffic passes through Envoy unfiltered.
+#
+# Verify after rollout: `hubble observe --to-label app.kubernetes.io/controller=dex
+# --verdict DROPPED` shows any other source dropped, and a request from an
+# authentik pod to /callback/netbird is answered 403 by Cilium (`hubble
+# observe --protocol http` shows it DENIED).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: nbidp-dex
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: nbidp
+      app.kubernetes.io/controller: dex
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: netbird-system
+            app.kubernetes.io/name: nbidp
+            app.kubernetes.io/controller: proxy
+      toPorts:
+        - ports:
+            - port: "5556"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: stargate-command
+            app.kubernetes.io/name: authentik
+            app.kubernetes.io/component: server
+      toPorts:
+        - ports:
+            - port: "5556"
+              protocol: TCP
+          rules:
+            http:
+              - method: POST
+                path: /token
+              - method: GET
+                path: /userinfo
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "5558"
+              protocol: TCP

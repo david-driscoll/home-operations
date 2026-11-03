@@ -1,8 +1,10 @@
 import * as authentik from "@pulumi/authentik";
 import * as pulumi from "@pulumi/pulumi";
 import * as purrl from "@pulumiverse/purrl";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import type { GlobalResources } from "components/globals.ts";
 import { clientIdPair } from "components/helpers.ts";
+import { NBIDP_BAO, nbidpIssuer, renderDexConfig, sourceEndpoints } from "components/netbird/nbidp.ts";
 import type { VaultStore } from "components/store/index.ts";
 import { AuthenticationStages } from "./authentication-stages.ts";
 import { AuthenticatorStages } from "./authenticator-stages.ts";
@@ -87,13 +89,14 @@ export class FlowsManager extends pulumi.ComponentResource {
 
     // Create sources
     const tailscaleSource = this.createTailscaleSource(enrollmentFlow, sourceAuthenticationFlow);
+    const netbirdSource = this.createNetbirdSource(sourceAuthenticationFlow);
     const plexSource = this.createPlexSource(enrollmentFlow, sourceAuthenticationFlow);
 
     // Create source identification stage
     const sourceIdentificationStage = new authentik.StageIdentification(
       "source-identification",
       {
-        sources: [tailscaleSource.uuid, plexSource.uuid],
+        sources: [tailscaleSource.uuid, ...(netbirdSource ? [netbirdSource.uuid] : []), plexSource.uuid],
         showSourceLabels: true,
         enableRememberMe: true,
         showMatchedUser: true,
@@ -184,26 +187,36 @@ export class FlowsManager extends pulumi.ComponentResource {
     );
   }
 
+  /**
+   * Authentik's callback for source `slug` on every name it answers to.
+   *
+   * `redirect_uris` is a SET as far as the IdP is concerned, but it is
+   * serialized into a JSON body, so its ORDER is part of the resource input.
+   * Built naively it inherits the order `getAllClusters()` happens to return,
+   * which differs between the 1Password tag lookup and the checked-in
+   * definitions — a perpetual `~body` diff that says nothing about intent.
+   * Deduplicate on the resolved strings and sort, so the body is canonical
+   * whatever the source order.
+   */
+  private sourceCallbackUrls(slug: string): pulumi.Output<string[]> {
+    return (
+      pulumi
+        .output(this.vault.getAllClusters())
+        .apply(clusters =>
+          pulumi.all([
+            ...clusters.map(z => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/${slug}/`),
+            pulumi.interpolate`https://authentik.${this.globals.searchDomain}/source/oauth/callback/${slug}/`,
+            pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/${slug}/`,
+          ]),
+        )
+        // Dedupe AFTER resolution: a Set of Outputs compares object identity, so
+        // the original never actually removed a duplicate URL.
+        .apply(urls => Array.from(new Set(urls)).sort((a, b) => a.localeCompare(b)))
+    );
+  }
+
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
-    // `redirect_uris` is a SET as far as the IdP is concerned, but it is
-    // serialized into a JSON body, so its ORDER is part of the resource input.
-    // Built naively it inherits the order `getAllClusters()` happens to return,
-    // which differs between the 1Password tag lookup and the checked-in
-    // definitions — a perpetual `~body` diff that says nothing about intent.
-    // Deduplicate on the resolved strings and sort, so the body is canonical
-    // whatever the source order.
-    const items = pulumi
-      .output(this.vault.getAllClusters())
-      .apply(clusters =>
-        pulumi.all([
-          ...clusters.map(z => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`),
-          pulumi.interpolate`https://authentik.${this.globals.searchDomain}/source/oauth/callback/tailscale/`,
-          pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`,
-        ]),
-      )
-      // Dedupe AFTER resolution: a Set of Outputs compares object identity, so
-      // the original never actually removed a duplicate URL.
-      .apply(urls => Array.from(new Set(urls)).sort((a, b) => a.localeCompare(b)));
+    const items = this.sourceCallbackUrls("tailscale");
     const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", {
       options: { parent: this.sourcesComponent },
     });
@@ -264,6 +277,78 @@ return {}`,
         authenticationFlow: authenticationFlow.uuid,
         enrollmentFlow: enrollmentFlow.uuid,
         propertyMappings: [propertyMapping.propertyMappingSourceOauthId],
+      },
+      { parent: this.sourcesComponent },
+    );
+  }
+
+  /**
+   * "NetBird": the passwordless button for clients that run NetBird only
+   * (#2891, docs/plans/netbird-mirror.md §K), next to "Tailscale".
+   *
+   * The IdP is the Dex in kubernetes/apps/netbird-system/nbidp, behind the
+   * NetBird private reverse proxy; components/netbird/nbidp.ts has the chain.
+   * This stack owns the OAuth client on both ends: it generates the client,
+   * gives it to this source, and renders Dex's whole config (static client and
+   * redirect URIs included) into OpenBao for Dex's ExternalSecret. One owner,
+   * so the two halves cannot disagree and no stack waits on another.
+   *
+   * Two deliberate differences from the Tailscale source:
+   *
+   * - No enrollment flow. Every NetBird user logged into NetBird through
+   *   Authentik, so their email already exists here; email_link links it, and
+   *   an unknown identity (a peer with no owner, whose PEER NAME the proxy
+   *   stamps as its user) is refused instead of becoming a new account.
+   * - No `groups` scope. Authentik is where the groups come from (NetBird's
+   *   are JWT-synced from it); taking them back would let an edit to a peer's
+   *   groups in NetBird change someone's Authentik groups. name_link is set to
+   *   match the Tailscale source and is inert while Dex sends no groups.
+   *
+   * Skipped without OpenBao credentials: Dex could not get the client, so the
+   * button could only ever fail.
+   */
+  private createNetbirdSource(authenticationFlow: authentik.Flow): authentik.SourceOauth | undefined {
+    if (!this.globals.baoDualWriteEnabled) {
+      pulumi.log.warn("BAO credentials absent — skipping the NetBird source: Dex reads its client from OpenBao, so the button could not log anyone in", this);
+      return undefined;
+    }
+    const issuer = nbidpIssuer();
+    const { clientId, clientSecret } = clientIdPair("netbird-oauth-client", {
+      options: { parent: this.sourcesComponent },
+    });
+    baoKvSecret(
+      "nbidp-dex-config",
+      {
+        mount: "secrets",
+        path: NBIDP_BAO.dexConfig,
+        // No dot in the key: ExternalSecrets reads `property` as a path, so
+        // `config.yaml` would look for key `yaml` under `config`.
+        data: {
+          config_yaml: pulumi.all([clientId, clientSecret, this.sourceCallbackUrls("netbird")]).apply(([id, secret, redirectUris]) => renderDexConfig({ issuer, clientId: id, clientSecret: secret, redirectUris })),
+        },
+        concealedFields: ["config_yaml"],
+        customMetadata: baoProvenance({ source: "stacks/authentik" }),
+      },
+      { provider: this.globals.baoProvider, parent: this.sourcesComponent },
+    );
+
+    return new authentik.SourceOauth(
+      "netbird",
+      {
+        name: "NetBird",
+        slug: "netbird",
+        providerType: "openidconnect",
+        enabled: true,
+        policyEngineMode: "any",
+        // The browser to the issuer (resolves only over NetBird); the token
+        // exchange and userinfo to Dex's in-cluster Service.
+        ...sourceEndpoints(issuer),
+        consumerKey: clientId,
+        consumerSecret: clientSecret,
+        pkce: "S256",
+        userMatchingMode: "email_link",
+        groupMatchingMode: "name_link",
+        authenticationFlow: authenticationFlow.uuid,
       },
       { parent: this.sourcesComponent },
     );

@@ -27,7 +27,9 @@ export interface AccessRule {
   mirrors: string[];
 }
 
-const USERS = ["admins", "family", "friends", "media-managers"];
+/** Who may log in at all: the Authentik groups NetBird's ApplicationDefinition admits (JWT-synced). */
+export const USER_GROUPS = ["admins", "family", "friends", "media-managers"];
+const USERS = USER_GROUPS;
 
 export const ACCESS_RULES: AccessRule[] = [
   {
