@@ -56,11 +56,11 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   vmId: dockgeId.result,
   cluster: cluster,
   tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote },
-  // App names resolve to the LAN address while luna is on the home LAN, so
-  // LAN-routed clients and NetBird gateways reach them (#2883). Flipping
-  // lunaIsRemote puts them back on the tailnet address: the recorded LAN
-  // address would be stale off-site.
-  publishLanIpAddress: !lunaIsRemote,
+  // App names resolve to the LAN address of whichever site luna is on, so that
+  // site's LAN-routed clients and NetBird gateway reach them (#2883). Flipping
+  // lunaIsRemote changes `lanSite`, which re-reads the address at the new site.
+  publishLanIpAddress: true,
+  lanSite: lunaIsRemote ? "remote" : "home",
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   monitor,
