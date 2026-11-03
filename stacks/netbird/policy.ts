@@ -17,6 +17,7 @@
  *   home-media   the cluster's LAN IPs (Jellyfin and the rest sit behind its Gateway)
  *   lan-home     the whole home LAN (admins only)
  *   gateways     the gateway peers themselves, for exit nodes
+ *   equestria-entry  the cluster's two /32s via the in-cluster routers (#2889)
  */
 
 export type Protocol = "tcp" | "udp" | "icmp" | "all";
@@ -92,6 +93,24 @@ export const ACCESS_RULES: AccessRule[] = [
     destination: "gateways",
     protocol: "icmp",
     mirrors: ["member-exit-node"],
+  },
+  {
+    name: "users-equestria",
+    description: "The same apps through the in-cluster routers (#2889), when the home gateways are down",
+    sources: USER_GROUPS,
+    destination: "equestria-entry",
+    protocol: "tcp",
+    ports: [80, 443],
+    mirrors: [],
+  },
+  {
+    name: "apple-tv-equestria",
+    description: "Media through the in-cluster routers (#2889)",
+    sources: ["apple-tv"],
+    destination: "equestria-entry",
+    protocol: "tcp",
+    ports: [443],
+    mirrors: [],
   },
   {
     name: "admins-lan",

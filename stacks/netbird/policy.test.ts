@@ -86,3 +86,17 @@ describe("resolveGroups", () => {
     assert.deepEqual(conflicts, ["admins"]);
   });
 });
+
+describe("client access through the Equestria entry (#2889)", () => {
+  const via = (who: string, port: number) => allows(ACCESS_RULES, who, "equestria-entry", "tcp", port);
+
+  it("gives the same web access as the LAN path, so a down home gateway changes nothing", () => {
+    for (const group of ["admins", "family", "friends", "media-managers"]) assert.ok(via(group, 443), group);
+    assert.ok(via("apple-tv", 443));
+  });
+
+  it("is web only: the entry is two /32s, the Gateway and the Authentik VIP", () => {
+    assert.ok(!via("admins", 22));
+    assert.ok(!via("apple-tv", 80));
+  });
+});
