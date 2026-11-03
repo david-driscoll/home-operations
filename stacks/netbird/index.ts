@@ -80,14 +80,22 @@ const groups = {
   appleTv: group("apple-tv"),
 };
 
-/** The sites a gateway container joins from (#2887). */
-const GATEWAY_SITES = ["home", "ocracoke", "gulf-of-mexico"];
+/**
+ * The Dockge hosts that run a gateway container (#2887), by cluster key. Keyed
+ * per HOST, not per site: hosts move between sites (luna and skystar are both
+ * on the home LAN today), and a peer keeps the groups its setup key gave it.
+ * Which host routes which site is decided by the Network routers instead.
+ */
+export const GATEWAY_HOSTS = ["alpha-site", "celestia", "luna", "skystar"];
 
 const setupKey = (name: string, autoGroup: netbird.Group, extra: Partial<netbird.SetupKeyArgs> = {}) =>
   new netbird.SetupKey(name, { name, type: "reusable", autoGroups: [autoGroup.id], expirySeconds: 0, usageLimit: 0, ...extra }, { ...opts, dependsOn: [defaultPolicyRemoval] });
 
+const gatewayHostGroups = Object.fromEntries(GATEWAY_HOSTS.map(host => [host, group(`gateway-${host}`)]));
+
 const setupKeys = {
-  ...Object.fromEntries(GATEWAY_SITES.map(site => [`gateway_${site.replaceAll("-", "_")}`, setupKey(`gateway-${site}`, groups.gateways).key])),
+  // Read by docker/_common/netbird-gateway/.env as `#/gateway-${CLUSTER_KEY}`.
+  ...Object.fromEntries(GATEWAY_HOSTS.map(host => [`gateway-${host}`, setupKey(`gateway-${host}`, groups.gateways, { autoGroups: [groups.gateways.id, gatewayHostGroups[host].id] }).key])),
   // Router pods come and go; ephemeral peers are cleaned up when they do.
   k8s_router: setupKey("k8s-router", groups.k8sRouters, { ephemeral: true }).key,
   // TVs have no user to log in with SSO, so they enrol by key (#2886).
@@ -147,3 +155,4 @@ baoKvSecret(
 
 export const networkRange = settings.networkRange;
 export const deviceGroups = pulumi.output(Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.id])));
+export const gatewayGroups = pulumi.output(Object.fromEntries(Object.entries(gatewayHostGroups).map(([key, value]) => [key, value.id])));
