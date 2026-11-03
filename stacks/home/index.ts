@@ -278,6 +278,9 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   cores: 12,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
+  // App names resolve to the LAN address, as on alpha-site, so LAN-routed
+  // clients and NetBird gateways reach them (#2883). Not `ipAddress`: see its doc.
+  publishLanIpAddress: true,
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   monitor,

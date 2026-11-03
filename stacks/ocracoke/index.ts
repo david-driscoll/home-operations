@@ -65,6 +65,10 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
     acceptDns: true,
     acceptRoutes: !skystarOnHomeLan,
   },
+  // No `publishLanIpAddress` yet (#2883): the LAN address this LXC recorded is
+  // still its ocracoke one from before the move, so the record would point at
+  // an address the home LAN cannot reach. Re-read `skystar-dockge-ip-address`
+  // first.
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   monitor,
