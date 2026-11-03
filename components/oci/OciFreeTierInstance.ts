@@ -107,6 +107,9 @@ export class OciFreeTierInstance extends ComponentResource {
       },
       {
         ...cro,
+        // A component's own dependsOn does not hold back its children, so the
+        // caller's (e.g. the free-tier quota) is passed to the instance itself.
+        dependsOn: opts?.dependsOn,
         // Create-before-delete would briefly run two A1 VMs: over the allowance.
         deleteBeforeReplace: true,
         // A newer image every few weeks would otherwise replace the VM, and
