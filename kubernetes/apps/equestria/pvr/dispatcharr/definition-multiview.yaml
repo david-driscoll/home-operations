@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# The Multiview plugin's dashboard: a second authentik application next to
+# Dispatcharr's own, pointing at the `multiview` route in helmrelease.yaml.
+# The dashboard signs in with Dispatcharr credentials itself, so there is no
+# authentik provider here -- this is the launch tile and access policy only.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}-multiview
+spec:
+  name: Dispatcharr Multiview
+  category: Media Management
+  description: Tile multiple Dispatcharr channel streams into multi-view outputs, each published as a regular M3U channel.
+  url: https://${APP}-multiview.${ROOT_DOMAIN}/dash/
+  icon: https://cdn.jsdelivr.net/gh/swvn-dispatch/dispatcharr-multiview@main/src/dash/ui/public/logo.png
+  access_policy:
+    groups:
+      - media-managers
+  gatus:
+    - group: "Applications"
+      # /dash/, not /: the bare hostname is a redirect. 404 here means the
+      # plugin's "Web Dashboard" (dash_enabled) setting is off.
+      url: https://${APP}-multiview.${ROOT_DOMAIN}/dash/
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
