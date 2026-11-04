@@ -186,6 +186,14 @@ spec:
                 - "true"
     service:
       app:
+        # ⚠️ forceRename keeps this Service named `dispatcharr`. app-template
+        # appends the identifier once a release has MORE THAN ONE service
+        # (lib/common/_determineResourceNameFromValues.tpl), so adding
+        # `multiview` below silently renamed it to `dispatcharr-app` -- which
+        # broke ECM (http://dispatcharr:9191), the tailnet IngressRoute
+        # (components/tailscale: TAILSCALE_SERVICE defaults to ${APP}) and the
+        # dashboard's DISPATCHARR_URL.
+        forceRename: *app
         controller: app
         type: ClusterIP
         ports:
@@ -225,6 +233,8 @@ spec:
 
     route:
       app:
+        # Same rule as the Service above: keep the original HTTPRoute name.
+        forceRename: *app
         parentRefs:
           - name: internal
             namespace: network
