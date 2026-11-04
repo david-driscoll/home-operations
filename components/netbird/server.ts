@@ -42,7 +42,7 @@ export interface RelayEndpoint {
   host: string;
   /**
    * Whether it also answers STUN on 3478/udp and is listed in `server.stuns`.
-   * Default true: the Azure relays do. The home relay does not (D30): its
+   * Default true: the Azure relays do. The home relay does not (D32): its
    * site forwards 443 only.
    */
   stun?: boolean;

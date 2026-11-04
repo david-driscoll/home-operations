@@ -339,7 +339,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D7 | 11-02 | Backups every 15 minutes to Garage; automatic restore |
 | D8 | 11-02 | Manual, runbooked failback |
 | D9 | 11-02 | Login via Authentik connector + JWT group sync + local break-glass admin (superseded by D25–D29) |
-| D10 | 11-02 | Relays: OCI embedded, Azure, and a Docker relay on every Dockge host (as built: the two Azure relays, plus one at home per D30) |
+| D10 | 11-02 | Relays: OCI embedded, Azure, and a Docker relay on every Dockge host (as built: the two Azure relays, plus one at home per D32) |
 | D11 | 11-02 | Gateways: Docker stacks on each site's Dockge host(s), each an exit node |
 | D12 | 11-02 | Equestria operator = a second route to the internal Gateway + Authentik |
 | D13 | 11-02 | Clients run NetBird only; admin work stays on Tailscale |
@@ -359,7 +359,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D27 | 11-03 | People join by invite: `mise run netbird:invite <email> "<name>" <group>` prints a 72-hour link; invite under the person's Authentik email so nbidp's `email_link` matches |
 | D28 | 11-03 | No peer login expiry; a device is removed by deleting its peer |
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
-| D30 | 11-04 | **One home relay**: `netbirdio/relay` on celestia's Dockge host as `relay-home.<root domain>`, WAN 443 (TCP and UDP) forwarded to it, listed by every server beside the Azure relays. Reverses the earlier call to skip home relays: Azure egress is capped by the subscription's spending limit. Only celestia, not every Dockge host |
+| D32 | 11-04 | **One home relay**: `netbirdio/relay` on celestia's Dockge host as `relay-home.<root domain>`, WAN 443 (TCP and UDP) forwarded to it, listed by every server beside the Azure relays. A private Technitium record for the home WAN address, no public record; a DNS-01 certificate from Equestria, copied to OpenBao. Reverses the earlier call to skip home relays: Azure egress is capped by the subscription's spending limit. Only celestia, not every Dockge host |
 
 ### Azure primary (#3001, 2026-11-03)
 
@@ -434,41 +434,68 @@ Azure. §C, §D and §E describe the OCI-primary plan; this is what is built ins
   (`NETBIRD_RESTORE_ACME=replace`). See [the runbook](../runbooks/netbird-failback.md#acmejson-on-promotion).
 - **Runbook:** [`docs/runbooks/netbird-failback.md`](../runbooks/netbird-failback.md).
 
-### Home relay (D30, 2026-11-04)
+### Home relay (D32, 2026-11-04)
 
 The closest NetBird has to Tailscale's peer relays: a relay at home, so relayed traffic with a home peer stays
 off Azure, whose egress the spending limit caps.
 
 - **What runs.** `docker/celestia/netbird-relay`: `netbirdio/relay`, the Azure relays' release (one Renovate
   group, `NetBird`, keeps the server, relays and gateways together). Its auth secret is the shared one,
-  `ref+openbao://secrets/apps/netbird/server#/relayAuthSecret`. The name and ports are in
-  `components/netbird/homeRelay.ts`, and `homeRelay.test.ts` checks the compose file against them.
+  `ref+openbao://secrets/apps/netbird/server#/relayAuthSecret`. The name, ports and certificate paths are in
+  `components/netbird/homeRelay.ts`, and `homeRelay.test.ts` checks the compose file, `.env`, `tls/`, `init.sh`
+  and the Certificate against them.
 - **Listed by every server.** `stacks/netbird-edge` adds `relay-home.<root domain>` to `server.relays` on the
   primary and the standby alike (the list is per stack, not per host). It is not in `server.stuns`: the home
   relay runs no STUN and its site forwards 443 only. `renderServerConfig` refuses a relay list where no relay
   serves STUN, because the embedded STUN is off as soon as any relay is listed.
 - **WAN 443, TCP and UDP**, forwarded by `stacks/unifi-network/netbird-relay.ts` to celestia-dockge's 33443
   (443 there is the shared Traefik's). The target is the host's LAN address from the tailscale exports, the one
-  `local-dns.ts` pins with a DHCP reservation. Nothing at home forwarded 443 before. A dedicated high port
-  was rejected for two reasons:
-  - **Peers dial the other side's relay.** A pair is relayed through the controlling peer's own relay
-    (`client/internal/peer/worker_relay.go` `preferredRelayServer`, v0.82.0). So a client away from home must
-    reach this relay whenever the home peer is the controller. Networks that only let 80 and 443 out would lose
-    the relay path, which is the path they depend on.
-  - **TLS.** On 443 the relay's own Let's Encrypt (TLS-ALPN-01) works.
-- **TLS and QUIC.** No Traefik in front, unlike Azure. The relay terminates TLS itself (`NB_LETSENCRYPT_DOMAINS`,
-  cached under `/opt/stacks-data/netbird-relay/letsencrypt`), so it also serves QUIC on 443/udp. The compose file
-  carries no Traefik labels, on purpose: a `Host()` rule there would make DockgeLxc publish the name as a CNAME to
-  celestia's LAN address, in Cloudflare too.
-- **Which relay a peer uses.** Each client takes the first relay in the list that connects
-  (`shared/relay/client/picker.go`). Home peers (the site gateways, LAN devices) take this one. A pair
-  with a home peer is relayed here when the home peer is the controller. Otherwise it goes through the remote
-  peer's relay, which may be Azure's. So this keeps roughly half of those pairs at home, not all of them.
-- **LAN clients** resolve the public name (Technitium forwards it upstream) and reach the relay by the
-  gateway's hairpin NAT.
-- **DNS: open.** `relay-home.<root domain>` has to point at the home WAN address. The estate had no record of
-  that address until now, and no DDNS. See the PR for the options. Until the record exists, clients cannot
-  resolve the name, skip the relay, and keep using Azure's.
+  `local-dns.ts` pins with a DHCP reservation. Nothing at home forwarded 443 before. Why 443 and not a high
+  port: a pair is relayed through the controlling peer's own relay (`client/internal/peer/worker_relay.go`
+  `preferredRelayServer`, v0.82.0), so a client away from home must reach this relay whenever the home peer
+  is the controller. Networks that only let 80 and 443 out would otherwise lose the relay path, which is the
+  path they depend on.
+- **A private name.** `relay-home.<root domain>` is a Technitium A record and nothing in public DNS.
+  `stacks/unifi-network` writes it on every run, from the gateway's WAN IPv4 in the controller's device list
+  (`gatewayWanIpv4`). An empty lookup, a private address or a CGNAT address fails the run, so the record
+  keeps its last value. An address change reaches the record within one resync (five minutes). Technitium
+  is the resolver for the LAN, for the tailnet, and for NetBird's primary nameserver group. LAN and tailnet
+  clients get the same WAN address and reach the relay by the gateway's hairpin NAT. The repo has no
+  split-horizon pattern, and a LAN answer would need port 443 on the LAN, where the relay listens on 33443.
+- **TLS: DNS-01, delivered as files.** Let's Encrypt cannot resolve a private name, so TLS-ALPN on the relay
+  is out.
+  - cert-manager issues `netbird-relay-home-tls` in `netbird-system`
+    (`kubernetes/apps/netbird-system/relay-home`) with the estate's `letsencrypt-production` DNS-01 issuer.
+  - `stacks/unifi-network` copies the Secret to OpenBao at `apps/netbird/relay-home-tls` (`tls_crt`,
+    `tls_key`), as `stacks/netbird` does for its `*.app` certificate. ESO's OpenBao identity is read-only.
+    This stack already reaches Equestria and writes OpenBao.
+  - `docker/celestia/netbird-relay/tls/` holds two `ref+openbao://` files that DockgeLxc renders into the
+    PEMs.
+  - The relay reads them once (`encryption.LoadTLSConfig`) and never reloads them. The stack's `init.sh`
+    hashes them on every run and restarts the relay when they change, the same fix as
+    `docker/_common/traefik/init.sh`.
+  - A renewal is live within about one `unifi-network` resync plus one `home-operations` run.
+  - The relay terminates TLS itself, with no Traefik in front, unlike Azure. So it also serves QUIC on
+    443/udp.
+  - The compose file carries no Traefik labels on purpose: a `Host()` rule there would make DockgeLxc publish
+    the name as a CNAME to celestia's LAN address, in Cloudflare too.
+- **Resolving the name.** The client dials relays with `client/net`'s dialer, which resolves through
+  `net.DefaultResolver`, the OS resolver. When NetBird manages DNS, the OS resolver points at NetBird's local
+  resolver, which forwards to the nameserver groups over the tunnel.
+  - **Remote clients** cannot resolve the name until their tunnel to a Technitium nameserver is up. The Azure
+    relays have public names and carry the client until then.
+  - **The client's own relay.** Each client takes the first relay in its list that connects
+    (`shared/relay/client/picker.go`). If a name fails to resolve, that relay just fails to connect, and
+    another one wins. A client that started before its DNS worked keeps an Azure relay until it reconnects.
+  - **The relay that matters.** A remote client mostly uses this relay as the *foreign* one, the home peer's.
+    For that, the offer carries the home peer's relay address and server IP. `Manager.OpenConn` dials that IP
+    when the name does not resolve, and still verifies TLS for the name by SNI. So the private name does not
+    stop it.
+  - **Home peers** resolve through the host or LAN resolver, which is Technitium. That covers the gateways
+    (`NB_DISABLE_DNS`) and the Technitium sidecars. They pick this relay as their own.
+- **Which relay a pair uses.** A pair with a home peer is relayed here when the home peer is the controller.
+  Otherwise it goes through the remote peer's relay, which may be Azure's. So this keeps roughly half of
+  those pairs at home, not all of them.
 
 ### Implementation notes (2026-11-03)
 

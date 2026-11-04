@@ -124,7 +124,9 @@ GitHub when the repo is archived.
   the PATs Pulumi actually uses, `third-party-tokens/netbird/automation` and the owner's
   `third-party-tokens/netbird/owner-pat`, both 365 days, alerted 30 days out and
   rotated by a one-line change (docs/plans/netbird-mirror.md, "PATs and their
-  rotation"). If both lapse, the owner's password still logs in. The
+  rotation"). If both lapse, the owner's password still logs in.
+  `apps/netbird/relay-home-tls` is the home relay's certificate, which `stacks/unifi-network`
+  copies from cert-manager's Secret; cert-manager reissues it, so nothing here needs keeping. The
   backups (store, config, and Traefik's `acme.json` with the TLS and ACME account keys) live in
   Garage's `netbird-backups` bucket, which TrueNAS also pulls; `stacks/system` records its key at
   `apps/netbird/garage-backup`. Pulumi state holds a second copy of all of it. Losing the

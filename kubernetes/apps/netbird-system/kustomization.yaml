@@ -22,3 +22,5 @@ resources:
   - ./router/ks.yaml
   - ./nbidp/ks.yaml
   - ./failover-watchdog/ks.yaml
+  # The home relay's certificate (D32); the relay itself runs on celestia.
+  - ./relay-home/ks.yaml

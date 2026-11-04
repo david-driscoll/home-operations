@@ -1,16 +1,17 @@
 /**
  * node --test components/netbird/homeRelay.test.ts
  *
- * The home relay (D30) is described three times: homeRelay.ts (read by the
- * port forward and the management servers), and the compose file and .env
- * that celestia runs. These keep the static two in step with the first.
+ * The home relay (D32) is described in several places: homeRelay.ts (read by
+ * stacks/unifi-network and the management servers), the compose file, .env,
+ * tls/ and init.sh that celestia runs, and the Certificate Equestria issues.
+ * These keep the static ones in step with the first.
  */
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { parse } from "yaml";
-import { HOME_RELAY, homeRelayDomain } from "./homeRelay.ts";
+import { gatewayWanIpv4, HOME_RELAY, homeRelayDomain, isPublicIpv4 } from "./homeRelay.ts";
 import { RELAY_TLS_PORT, relayAddress, renderServerConfig } from "./server.ts";
 
 const stackDir = new URL("../../docker/celestia/netbird-relay/", import.meta.url);
@@ -54,13 +55,37 @@ describe("docker/celestia/netbird-relay", () => {
     assert.equal(env.NB_EXPOSED_ADDRESS, expected);
   });
 
-  it("gets its own certificate for that name, kept across restarts", () => {
-    assert.equal(env.NB_LETSENCRYPT_DOMAINS, `${HOME_RELAY.label}.\${searchDomain}`);
-    const dataDir = env.NB_LETSENCRYPT_DATA_DIR;
-    assert.ok(
-      relay.volumes.some((v: string) => v.startsWith("/opt/stacks-data/") && v.endsWith(`:${dataDir}`)),
-      "the Let's Encrypt data dir is a host bind mount",
-    );
+  // Let's Encrypt cannot resolve a private name, so no TLS-ALPN: the DNS-01
+  // certificate stacks/unifi-network copies to OpenBao, rendered as files.
+  it("loads the DNS-01 certificate from the files OpenBao renders", () => {
+    assert.equal(env.NB_LETSENCRYPT_DOMAINS, undefined);
+    const [mount] = relay.volumes as string[];
+    assert.equal(mount, "./tls:/etc/netbird-relay/tls:ro");
+    assert.equal(env.NB_TLS_CERT_FILE, "/etc/netbird-relay/tls/tls.crt");
+    assert.equal(env.NB_TLS_KEY_FILE, "/etc/netbird-relay/tls/tls.key");
+    for (const [file, field] of [
+      ["tls.crt", "tls_crt"],
+      ["tls.key", "tls_key"],
+    ]) {
+      assert.equal(readFileSync(new URL(`tls/${file}`, stackDir), "utf8").trim(), `ref+openbao://secrets/${HOME_RELAY.tlsBaoPath}#/${field}`);
+    }
+  });
+
+  // The relay never reloads its certificate; init.sh is what makes a renewal take.
+  it("restarts the relay when the certificate files change", () => {
+    const init = readFileSync(new URL("init.sh", stackDir), "utf8");
+    assert.match(init, /sha256sum/);
+    assert.match(init, /tls\/tls\.crt tls\/tls\.key/);
+    assert.match(init, /docker restart netbird-relay/);
+  });
+
+  it("matches the Certificate cert-manager issues", () => {
+    const certificate = parse(readFileSync(new URL("../../kubernetes/apps/netbird-system/relay-home/certificate.yaml", import.meta.url), "utf8"));
+    assert.equal(certificate.spec.secretName, HOME_RELAY.tlsSecret.name);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Flux's substitution, not a JS template.
+    assert.deepEqual(certificate.spec.dnsNames, [homeRelayDomain("example.test").replace("example.test", "${ROOT_DOMAIN}")]);
+    const ks = parse(readFileSync(new URL("../../kubernetes/apps/netbird-system/relay-home/ks.yaml", import.meta.url), "utf8"));
+    assert.equal(ks.spec.targetNamespace, HOME_RELAY.tlsSecret.namespace);
   });
 
   it("reads the shared relay secret from OpenBao, where stacks/netbird-edge writes it", () => {
@@ -78,6 +103,46 @@ describe("docker/celestia/netbird-relay", () => {
     const azure = parse(readFileSync(new URL("./compose.yaml", import.meta.url), "utf8")).services.relay.image as string;
     const [, azureTag] = azure.match(/^netbirdio\/relay:([^@]+)/) ?? [];
     assert.match(relay.image, new RegExp(`^netbirdio/relay:${azureTag?.replaceAll(".", "\\.")}@sha256:[0-9a-f]{64}$`));
+  });
+});
+
+describe("gatewayWanIpv4", () => {
+  const gateway = { type: "udm", name: "gw" };
+
+  it("reads the gateway's wan1 address", () => {
+    assert.equal(
+      gatewayWanIpv4([
+        { type: "usw", ip: "203.0.113.9" },
+        { ...gateway, wan1: { ip: "198.51.100.7" }, ip: "203.0.113.1" },
+      ]),
+      "198.51.100.7",
+    );
+  });
+
+  it("falls back to the uplink, then the device address", () => {
+    assert.equal(gatewayWanIpv4([{ ...gateway, uplink: { ip: "198.51.100.8" } }]), "198.51.100.8");
+    assert.equal(gatewayWanIpv4([{ ...gateway, ip: "198.51.100.9" }]), "198.51.100.9");
+  });
+
+  // A port forward cannot be reached through any of these.
+  it("refuses a private, CGNAT or missing address rather than publish it", () => {
+    for (const ip of ["10.10.0.1", "192.168.1.1", "172.20.0.1", "100.100.1.1", "169.254.1.1", "not-an-ip"]) {
+      assert.throws(() => gatewayWanIpv4([{ ...gateway, wan1: { ip } }]), /no public IPv4/, ip);
+    }
+    assert.throws(() => gatewayWanIpv4([gateway]), /no public IPv4/);
+  });
+
+  it("refuses to guess between gateways, or without one", () => {
+    assert.throws(() => gatewayWanIpv4([]), /one UniFi gateway, found 0/);
+    assert.throws(() => gatewayWanIpv4([gateway, { type: "ugw" }]), /found 2/);
+  });
+
+  it("knows the routable ranges", () => {
+    assert.ok(isPublicIpv4("198.51.100.1"));
+    assert.ok(isPublicIpv4("100.63.255.255"));
+    assert.ok(!isPublicIpv4("100.64.0.1"));
+    assert.ok(!isPublicIpv4("224.0.0.1"));
+    assert.ok(!isPublicIpv4("256.1.1.1"));
   });
 });
 

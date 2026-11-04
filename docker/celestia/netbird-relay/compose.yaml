@@ -1,4 +1,4 @@
-# The NetBird relay at home (docs/plans/netbird-mirror.md, D30).
+# The NetBird relay at home (docs/plans/netbird-mirror.md, D32).
 #
 # `relay-home.<root domain>`, beside the two on the Azure hosts
 # (components/netbird/compose.yaml). Every management server lists it
@@ -7,15 +7,19 @@
 #
 # Reached from the internet on WAN 443, TCP and UDP, through the UniFi port
 # forward in stacks/unifi-network/netbird-relay.ts, which lands on this
-# host's 33443. The name and ports live in components/netbird/homeRelay.ts;
-# homeRelay.test.ts checks this file against them.
+# host's 33443. The name is private: a Technitium record for the home WAN
+# address, also from that file, and nothing in public DNS. The name and ports
+# live in components/netbird/homeRelay.ts; homeRelay.test.ts checks this file
+# against them.
 #
 # Unlike the Azure relays there is no Traefik in front. The relay terminates
-# TLS itself, so it serves QUIC on 443/udp as well as WebSocket, and its own
-# Let's Encrypt answers the TLS-ALPN-01 challenge that arrives on WAN 443. The
-# certificate is cached under /opt/stacks-data, so a restart does not ask
-# again. No Traefik labels either: a Host() rule here would make DockgeLxc
-# publish the name as a CNAME to this host's LAN address, in Cloudflare too.
+# TLS itself, so it serves QUIC on 443/udp as well as WebSocket. Its
+# certificate is DNS-01, since Let's Encrypt cannot resolve a private name:
+# cert-manager issues it in Equestria (kubernetes/apps/netbird-system/relay-home),
+# stacks/unifi-network copies it to OpenBao, and ./tls renders it from there.
+# init.sh restarts the relay when a renewal changes those files. No Traefik
+# labels either: a Host() rule here would make DockgeLxc publish the name as a
+# CNAME to this host's LAN address, in Cloudflare too.
 #
 # No STUN (the server lists only the Azure relays' STUN), and its health and
 # metrics ports stay inside the container.
@@ -31,7 +35,7 @@ services:
       - 33443:443/tcp
       - 33443:443/udp
     volumes:
-      - /opt/stacks-data/${APP}/letsencrypt:/var/lib/netbird-relay
+      - ./tls:/etc/netbird-relay/tls:ro
     labels:
       traefik.enable: false
     logging:

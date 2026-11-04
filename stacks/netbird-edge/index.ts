@@ -357,7 +357,7 @@ const hosts: EdgeHost[] = [
 ];
 // Every server lists every relay (and their STUN): the embedded ones are off
 // once any is listed (components/netbird/server.ts). Plus the home relay on
-// celestia (D30, components/netbird/homeRelay.ts), which no host here serves
+// celestia (D32, components/netbird/homeRelay.ts), which no host here serves
 // and which has no STUN: its site forwards 443 only.
 const homeRelay: RelayEndpoint = { host: homeRelayDomain(root), stun: false };
 const relays: RelayEndpoint[] = [...hosts.flatMap(h => (h.relayDomain ? [{ host: h.relayDomain }] : [])), homeRelay];

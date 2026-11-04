@@ -117,7 +117,7 @@ describe("renderServerConfig with standalone relays (#3001)", () => {
     assert.deepEqual(embedded.stunPorts, [3478]);
   });
 
-  it("lists a relay without STUN for relaying only (D30)", () => {
+  it("lists a relay without STUN for relaying only (D32)", () => {
     const mixed = parse(renderServerConfig({ domain: "netbird.example.test", ...secrets, relays: ["relay-eus2.example.test", { host: "relay-home.example.test", stun: false }] })).server;
     assert.deepEqual(mixed.relays.addresses, ["rels://relay-eus2.example.test:443", "rels://relay-home.example.test:443"]);
     assert.deepEqual(mixed.stuns, [{ uri: "stun:relay-eus2.example.test:3478" }]);
