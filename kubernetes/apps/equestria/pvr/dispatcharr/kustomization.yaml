@@ -5,5 +5,6 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./definition.yaml
+  - ./definition-multiview.yaml
   - ./secret.yaml
   - ./postgres.yaml

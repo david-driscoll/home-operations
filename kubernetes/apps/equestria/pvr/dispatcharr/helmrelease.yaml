@@ -191,6 +191,19 @@ spec:
         ports:
           http:
             port: *port
+      # Dispatcharr Multiview plugin (swvn-dispatch/dispatcharr-multiview).
+      # The plugin runs its own gevent server inside the Dispatcharr process,
+      # bound to 0.0.0.0 on a FIXED port (DEFAULT_SERVER_PORT, not a setting),
+      # so it needs its own Service rather than a path on the web port. Only
+      # the dashboard (`dash_path`, default /dash, enabled in the plugin's
+      # settings) and its /api are reachable from here: /stream/* and
+      # /internal/* answer loopback callers only, by design.
+      multiview:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: &multiviewPort 9292
 
     persistence:
       config:
@@ -223,6 +236,39 @@ spec:
           - backendRefs:
               - identifier: app
                 port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
+      # Hostname is published to DNS by external-dns from this route, like
+      # every other `internal` gateway route. The dashboard logs in with
+      # Dispatcharr credentials itself; local-user keeps it LAN-only.
+      multiview:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}-multiview.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # The server has nothing at `/`; send the bare hostname to the SPA.
+          - matches:
+              - path:
+                  type: Exact
+                  value: /
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  path:
+                    type: ReplaceFullPath
+                    replaceFullPath: /dash/
+                  statusCode: 302
+          - backendRefs:
+              - identifier: multiview
+                port: *multiviewPort
             filters:
               - type: ExtensionRef
                 extensionRef:
