@@ -16,7 +16,7 @@ name: netbird
 
 services:
   traefik:
-    image: traefik:v3.7.14
+    image: traefik:v3.7.17@sha256:68ae5fe5b64ca166704b746a9e8afcd385e36b3f569a5691401bf652d57b3748
     container_name: netbird-traefik
     restart: unless-stopped
     networks:
