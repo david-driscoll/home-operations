@@ -13,7 +13,8 @@
  * and the three PATs in the environment (.config/fnox.toml, profile
  * `netbird`). It uses the first usable one in globals.netbirdApi's order:
  * automation, owner-pat, owner. It looks the group up by name, then
- * `POST /api/users/invites` with that group as the user's only auto group.
+ * `POST /api/users/invites` with that group as the user's only auto group;
+ * `admins` invites are NetBird admins, the rest regular users.
  * `--dry-run` does the lookup and shows the request, and sends nothing.
  *
  * No secret is printed: not the PAT, and the invite link is printed only
@@ -46,14 +47,14 @@ async function main(): Promise<void> {
   };
 
   const groupId = findGroupId(await call<NamedGroup[]>("GET", "/api/groups"), args.group);
-  const request = inviteRequest({ email: args.email, name: args.name, groupId });
+  const request = inviteRequest({ email: args.email, name: args.name, group: args.group, groupId });
   if (args.dryRun) {
     console.log(`dry run: would POST /api/users/invites\n${JSON.stringify(request, null, 2)}`);
     return;
   }
 
   const invite = await call<{ id: string; expires_at: string; invite_token?: string }>("POST", "/api/users/invites", request);
-  console.error(`netbird-invite: invited ${args.name} <${args.email}> to ${args.group}; the link expires ${invite.expires_at}`);
+  console.error(`netbird-invite: invited ${args.name} <${args.email}> to ${args.group} as ${request.role}; the link expires ${invite.expires_at}`);
   console.log(inviteUrl(managementUrl, invite.invite_token));
 }
 
