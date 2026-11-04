@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           # Same major as .config/mise.toml: the tests run TypeScript by type stripping.
-          node-version: "24"
+          node-version: "26"
 
       - name: Run policy tests
         run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts stacks/netbird/invite.test.ts stacks/netbird/dns.test.ts components/netbird/tokens.test.ts
