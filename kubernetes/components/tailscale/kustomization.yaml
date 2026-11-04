@@ -8,6 +8,9 @@ commonLabels:
 resources:
   # The Traefik router, in the app's own namespace.
   - ./ingressroute.yaml
+  # Its NetBird twin, `<host>.app.<root domain>` on the `netbird` entrypoint.
+  # stacks/netbird declares the matching private service; see the file.
+  - ./netbird-ingressroute.yaml
   # The tailnet Ingress. NOT a plain resource: it has to land in `network`,
   # which only a nested Kustomization can do. See ./ks.yaml.
   - ./ks.yaml

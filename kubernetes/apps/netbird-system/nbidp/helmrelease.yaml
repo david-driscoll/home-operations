@@ -16,6 +16,12 @@
 #   No Service and no public DNS name: nothing reaches the proxy except over
 #   NetBird.
 #
+#   It also serves every tailnet app's NetBird twin, `<app>.app.<root domain>`
+#   (docs/plans/netbird-mirror.md §N): one private service per app, declared by
+#   stacks/netbird, each dialling Traefik's `netbird` door
+#   (traefik-netbird.network:8446) with the client's Host kept. Same headers,
+#   same per-request group check; certificate.yaml covers those names too.
+#
 # dex -- Dex with only the authproxy connector (config from stacks/authentik,
 #   components/netbird/nbidp.ts). It believes the identity headers on any
 #   request it receives, so ciliumnetworkpolicy.yaml decides who may send it

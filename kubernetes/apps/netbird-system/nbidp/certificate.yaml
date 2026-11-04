@@ -1,14 +1,29 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/cert-manager.io/certificate_v1.json
 #
-# The proxy's TLS certificate for the nbidp name, issued by DNS-01, so nothing
-# about the name has to be reachable from the internet: there is no public
-# record for it and no inbound path to the proxy. NetBird clients resolve it
-# from the record management synthesizes for the private service, which points
-# at the proxy's tunnel IP.
+# The proxy's TLS certificate, issued by DNS-01, so nothing about the names has
+# to be reachable from the internet: there is no inbound path to the proxy.
+# NetBird clients resolve each service's name from the record management
+# synthesizes for the private service, which points at the proxy's tunnel IP.
 #
 # Mounted as static certs (NB_PROXY_CERTIFICATE_DIRECTORY, tls.crt/tls.key).
 # The proxy watches the files, so a renewal needs no restart.
+#
+# ONE certificate for every name the proxy serves, because with ACME off the
+# proxy loads exactly one pair and serves it for every SNI (configureTLS in
+# proxy/server.go, v0.82.0). It checks each service's domain against this
+# leaf's SANs (staticCertCovers), and a covered domain is certificate-ready at
+# once. NB_PROXY_WILDCARD_CERT_DIR is NOT an alternative: the proxy reads that
+# directory only in ACME mode, and ACME would then try to issue nbidp's name
+# over an inbound challenge that cannot reach it. So:
+#
+#   - nbidp.<root domain>   Dex's issuer and the proxy's cluster address;
+#   - *.app.<root domain>   every tailnet app's NetBird twin
+#                           (docs/plans/netbird-mirror.md §N).
+#
+# The copy other hosts may pull from OpenBao is ./app-wildcard-certificate.yaml,
+# a separate certificate without nbidp's name, so this key never leaves the
+# cluster.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -21,3 +36,4 @@ spec:
   commonName: nbidp.${ROOT_DOMAIN}
   dnsNames:
     - nbidp.${ROOT_DOMAIN}
+    - "*.app.${ROOT_DOMAIN}"
