@@ -13,6 +13,7 @@ import { baoKvSecret, baoProvenance, oidcBaoPath } from "./bao.ts";
 import type { Roles } from "./constants.ts";
 import type { GlobalResources } from "./globals.ts";
 import { awaitOutput, clientIdPair } from "./helpers.ts";
+import { type RedirectUri, withNetbirdRedirectUris } from "./netbird/appRedirectUris.ts";
 import type { ClusterDefinition, VaultStore } from "./store/index.ts";
 
 export interface AuthentikResourcesArgs {
@@ -21,6 +22,13 @@ export interface AuthentikResourcesArgs {
   outputs: pulumi.Input<AuthentikOutputs>;
   cluster: pulumi.Input<ClusterDefinition>;
   loadFromResource<T>(application: ApplicationDefinitionSchema, type: "authentik" | "uptime" | "gatus", from: { type: string; name: string }): Promise<T>;
+  /**
+   * Set where the apps also have NetBird names (equestria, stacks/system):
+   * every OAuth2 redirect URI on a `<host>.<tailnet>` name gets its
+   * `<host>.app.<root domain>` twin (components/netbird/appRedirectUris.ts,
+   * docs/plans/netbird-mirror.md §N).
+   */
+  netbirdApps?: { tailnet: pulumi.Input<string>; root: string };
 }
 type RolesKeys = keyof typeof Roles;
 type RolesValues = (typeof Roles)[RolesKeys];
@@ -215,10 +223,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           clientId: clientId,
           clientSecret: clientSecret,
           signingKey: signingKey.signingKey.id,
-          allowedRedirectUris: oauth2.allowedRedirectUris?.map(uri => ({
-            matching_mode: uri.matching_mode ?? "strict",
-            url: uri.url,
-          })),
+          allowedRedirectUris: this.resolveRedirectUris(oauth2.allowedRedirectUris),
           accessCodeValidity: oauth2.accessCodeValidity,
           accessTokenValidity: oauth2.accessTokenValidity,
           refreshTokenValidity: oauth2.refreshTokenValidity,
@@ -484,6 +489,21 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // }
 
     throw new Error("Unknown authentik provider type");
+  }
+
+  /** The definition's redirect URIs, strict unless it says otherwise, plus their NetBird twins where netbirdApps is set. */
+  private resolveRedirectUris(uris?: RedirectUri[]): pulumi.Input<{ matching_mode: string; url: string }[]> | undefined {
+    if (!uris) return undefined;
+    const declared = uris.map(uri => ({ matching_mode: uri.matching_mode ?? "strict", url: uri.url }));
+    const netbird = this.args.netbirdApps;
+    // A plain value when there is nothing to derive from: every tailnet name
+    // ends in Tailscale's .ts.net, and an Output here would plan an update for
+    // providers that do not change.
+    if (!netbird || !declared.some(uri => /\.ts\.net(?:[:/?#]|$)/i.test(uri.url))) return declared;
+    // unsecret: the tailnet name arrives from OpenBao as a secret, which would
+    // mask every provider's URIs and plan an update for each. The URIs already
+    // sit in state in the clear, as the definitions spell them.
+    return pulumi.unsecret(pulumi.output(netbird.tailnet).apply(tailnet => withNetbirdRedirectUris(declared, tailnet, netbird.root)));
   }
 
   private resolvePropertyMappings(mappings?: pulumi.Input<string>[]): pulumi.Output<string[]> | undefined {
