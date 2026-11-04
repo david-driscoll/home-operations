@@ -454,7 +454,11 @@ baoKvSecret(
 );
 
 const nbidpDomain = nbidpHost();
-pulumi.all([pulumi.output(api), pulumi.output(sourceGroupIds)]).apply(async ([{ managementUrl: url, token }, groupIds]) => {
+// The user groups' ids only: a device group added later is unknown in the
+// preview that adds it, which would skip this callback and show the private
+// service as a delete.
+const userGroupIdsByName = Object.fromEntries(USER_GROUPS.map(name => [name, userGroups[name].id]));
+pulumi.all([pulumi.output(api), pulumi.output(userGroupIdsByName)]).apply(async ([{ managementUrl: url, token }, groupIds]) => {
   const [clusters, services] = await Promise.all([netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"), netbirdGet<LiveService[]>(url, token, "/api/reverse-proxies/services")]);
   if (!privateServiceReady(clusters, services, nbidpDomain)) {
     pulumi.log.warn(`nbidp: no private proxy online for ${nbidpDomain} yet (kubernetes/apps/netbird-system/nbidp). The private service waits for it.`);
