@@ -12,7 +12,8 @@
  *   4. device groups and the setup keys that place peers in them;
  *   5. site LANs routed through the gateway containers, and each gateway an
  *      exit node (#2887);
- *   6. Technitium as every peer's nameserver;
+ *   6. Technitium as every peer's nameserver: each node's NetBird sidecar
+ *      once it has enrolled, its LAN address until then (dns.ts);
  *   7. a service user whose PAT the in-cluster operator uses (#2889);
  *   8. the `equestria` network the operator's routing peers serve (#2889);
  *   9. the client-access policy (#2888, policy.ts);
@@ -36,6 +37,7 @@ import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
+import { DNS_SERVER_GROUP, enrolledDnsPeers, type LivePeer, selectNameservers, technitiumLanIps } from "./dns.ts";
 import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
@@ -91,6 +93,8 @@ const groups = {
   gateways: group("gateways"),
   k8sRouters: group("k8s-routers"),
   appleTv: group("apple-tv"),
+  // Every Technitium node's NetBird sidecar (6, below).
+  dnsServers: group(DNS_SERVER_GROUP),
 };
 
 /**
@@ -113,6 +117,10 @@ const setupKeys = {
   k8s_router: setupKey("k8s-router", groups.k8sRouters, { ephemeral: true }).key,
   // TVs have no user to log in with SSO, so they enrol by key (#2886).
   apple_tv: setupKey("apple-tv", groups.appleTv).key,
+  // The Technitium sidecars, all five nodes on one key. Not ephemeral: each
+  // keeps its peer, and so its overlay address, across restarts. Read by
+  // docker/_common/technitium and Equestria's ExternalSecret as `#/dns`.
+  dns: setupKey("dns-servers", groups.dnsServers).key,
 };
 
 // ── 5. Site LANs and exit nodes (#2887) ─────────────────────────────────
@@ -139,18 +147,48 @@ for (const [site, config] of routedSites(SITES)) {
   new netbird.NetworkRouter(`lan-${site}`, { networkId: network.id, peerGroups: config.gateways.map(host => gatewayHostGroups[host].id), masquerade: true, metric: 9999, enabled: true }, opts);
 }
 
+/**
+ * Equestria's Technitium VIP, its LAN address on the ipvlan interface. Its only
+ * home is SOPS (`TECHNITIUM_VIP` in kubernetes/flux/meta/cluster-secrets.sops.yaml);
+ * the Stack CR passes it in as a literal Flux substitutes, like INTERNAL_IP.
+ * Fails closed: without it Equestria would silently drop out of home-dns.
+ */
+function technitiumVip(): string {
+  const value = process.env.TECHNITIUM_VIP?.trim();
+  if (!value) throw new Error("TECHNITIUM_VIP is not set. In the Stack it comes from envRefs (Flux substitutes it from cluster-secrets); locally, export it.");
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) throw new Error("TECHNITIUM_VIP is not an IPv4 address; check the Stack CR's envRefs substitution.");
+  return value;
+}
+
+const inHome = (ip: string) => ip.startsWith("10.10.");
+
+// Every Technitium node's LAN address, by cluster key: the fallback path to
+// it, through the gateways' routes. The Dockge hosts publish Technitium's
+// ports on the host, so theirs are the hosts' exported internalIp. Alpha
+// Site's export is `dockge-as` (its shortName), and its address is the one
+// constants.ts already lists.
+const technitiumLan = globals.store.getTailscaleExports().apply(exports => {
+  const { ips, missing } = technitiumLanIps({
+    dockgeHosts: Object.fromEntries(GATEWAY_HOSTS.filter(host => host !== "alpha-site").map(host => [host, `dockge-${host}`])),
+    exportHosts: exports.flatMap(exp => exp.hosts),
+    fixed: { equestria: technitiumVip(), "alpha-site": dns.config["Alpha Site"].ips[0] },
+    isLan: inHome,
+  });
+  if (missing.length > 0) pulumi.log.warn(`Technitium: no LAN address in the Tailscale exports for ${missing.join(", ")}; left out of home-dns and the LAN nameserver fallback.`);
+  return ips;
+});
+
 // The addresses member-home-subnet-access allows on Tailscale: every cluster
 // Gateway IP on the LAN, every exported host's internalIp, the Authentik VIP;
-// plus Technitium for DNS. One resource per address, in the home network.
+// plus every Technitium node for DNS. One resource per address, in the home network.
 if (homeNetwork) {
   const network = homeNetwork;
-  const inHome = (ip: string) => ip.startsWith("10.10.");
-  globals.store.getTailscaleExports().apply(exports => {
+  pulumi.all([globals.store.getTailscaleExports(), technitiumLan]).apply(([exports, lan]) => {
     const endpoints = homeResourceGroups({
       clusterIps: kubernetesClusters.flatMap(cluster => cluster.publicIps).filter(inHome),
       hostIps: exports.flatMap(exp => exp.hosts.map(host => host.internalIp)).filter(ip => !!ip && inHome(ip)),
       authentikVip,
-      dnsIps: dns.internalIps,
+      dnsIps: Object.values(lan).filter(inHome),
     });
     for (const [ip, names] of Object.entries(endpoints)) {
       new netbird.NetworkResource(
@@ -163,21 +201,33 @@ if (homeNetwork) {
 }
 
 // ── 6. DNS ───────────────────────────────────────────────────────────────
-// Technitium's LAN addresses, reached through the gateways' routes (#2887),
-// so clients keep resolving the existing <root domain> names. Every peer
-// gets them.
-new netbird.NameserverGroup(
-  "technitium",
-  {
-    name: "Technitium",
-    description: "Estate DNS over the LAN routes (stacks/netbird)",
-    nameservers: dns.internalIps.slice(0, 3).map(ip => ({ ip, nsType: "udp", port: 53 })),
-    groups: [all.id],
-    primary: true,
-    enabled: true,
-  },
-  { ...opts, dependsOn: [settings] },
-);
+// Technitium, so clients keep resolving the existing <root domain> names.
+// Every peer gets it. Each node runs a NetBird sidecar in its own network
+// namespace (docker/_common/technitium, kubernetes/apps/equestria/dns/technitium)
+// that enrols with the `dns` key above. Enrolled nodes are used on their
+// overlay address, which works with every gateway down; the rest, and all of
+// them before any has enrolled, on their LAN address through the gateways'
+// routes (#2887). At most three, in dns.ts's preference order: management
+// refuses more. Read live on every run, so a newly enrolled sidecar is picked
+// up by the next one.
+pulumi.all([pulumi.output(api), technitiumLan]).apply(async ([{ managementUrl: url, token }, lan]) => {
+  const peers = await netbirdGet<LivePeer[]>(url, token, "/api/peers");
+  const nameservers = selectNameservers({ overlay: enrolledDnsPeers(peers), lan });
+  if (nameservers.length === 0) throw new Error("Technitium: no nameserver address at all, neither an enrolled sidecar nor a LAN address.");
+  pulumi.log.info(`Technitium nameservers: ${nameservers.map(ns => `${ns.cluster} ${ns.ip} (${ns.via})`).join(", ")}`);
+  new netbird.NameserverGroup(
+    "technitium",
+    {
+      name: "Technitium",
+      description: "Estate DNS: the Technitium sidecars over the overlay, LAN routes as fallback (stacks/netbird)",
+      nameservers: nameservers.map(ns => ({ ip: ns.ip, nsType: "udp", port: 53 })),
+      groups: [all.id],
+      primary: true,
+      enabled: true,
+    },
+    { ...opts, dependsOn: [settings] },
+  );
+});
 
 // ── 7. Service user, and the PATs Pulumi holds ───────────────────────────
 // For machines: this stack itself (globals.netbirdApi), the operator's routers
@@ -309,6 +359,7 @@ entryResource("authentik-vip", `${authentikVip}/32`);
 const sourceGroupIds: Record<string, pulumi.Output<string>> = {
   ...Object.fromEntries(USER_GROUPS.map(name => [name, userGroups[name].id])),
   "apple-tv": groups.appleTv.id,
+  "dns-servers": groups.dnsServers.id,
   gateways: groups.gateways.id,
   "k8s-routers": groups.k8sRouters.id,
 };
@@ -337,7 +388,13 @@ for (const host of GATEWAY_HOSTS) {
   );
 }
 
-const destinationGroups: Record<string, netbird.Group | undefined> = { ...endpointGroups, gateways: groups.gateways, "lan-home": siteResourceGroups.home, "equestria-entry": equestriaEntry };
+const destinationGroups: Record<string, netbird.Group | undefined> = {
+  ...endpointGroups,
+  "dns-servers": groups.dnsServers,
+  gateways: groups.gateways,
+  "lan-home": siteResourceGroups.home,
+  "equestria-entry": equestriaEntry,
+};
 for (const rule of ACCESS_RULES) {
   const destination = destinationGroups[rule.destination];
   if (!destination) throw new Error(`policy.ts rule ${rule.name} targets ${rule.destination}, which this stack does not create`);
