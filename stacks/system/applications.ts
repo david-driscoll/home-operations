@@ -146,6 +146,9 @@ async function kubernetesApplications(globals: GlobalResources, outputs: Authent
     outputs,
     clusterKey: clusterDefinition.key,
     cluster: clusterDefinition,
+    // Every equestria tailnet app is also a NetBird app (stacks/netbird
+    // app-services.ts), so its OIDC client accepts that name's redirect too.
+    netbirdApps: { tailnet: globals.tailscaleDomain, root: rootDomain() },
     async loadFromResource(application, kind, from) {
       let data: { [key: string]: string };
       switch (from.type) {
