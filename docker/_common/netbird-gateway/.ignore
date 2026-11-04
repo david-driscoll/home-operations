@@ -1,9 +1,0 @@
-Parked until stacks/netbird has run once (2026-11-03).
-
-The stack's .env reads its setup key from OpenBao
-(secrets/third-party-tokens/netbird/setup-keys#/gateway-<cluster>), which
-stacks/netbird creates. That stack waits on stacks/netbird-edge, so until both
-have applied the reference cannot resolve, and every Dockge site stack (home,
-ocracoke, gulf-of-mexico) fails before deploying anything.
-
-Delete this file once `secrets/third-party-tokens/netbird/setup-keys` exists.
