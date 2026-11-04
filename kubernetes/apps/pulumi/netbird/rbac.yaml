@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/clusterrole-rbac-v1.json
+#
+# What stacks/netbird reads to find the tailnet apps it gives NetBird twins
+# (stacks/netbird/app-services.ts, docs/plans/netbird-mirror.md §N): the
+# tailnet Ingresses kubernetes/components/tailscale renders into `network`,
+# and every ApplicationDefinition for their access groups. Read-only, and
+# neither carries a secret.
+#
+# Cluster-wide only because a namespaced grant would need a RoleBinding in
+# `network`, which this kustomization cannot place (its targetNamespace is
+# `pulumi`); the program lists `network` alone. The one Secret it reads, the
+# `*.app` certificate, is granted by name in netbird-system
+# (apps/netbird-system/nbidp/app-wildcard-rbac.yaml).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ${APP}-stack-app-discovery
+rules:
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [list]
+  - apiGroups: [driscoll.dev]
+    resources: [applicationdefinitions]
+    verbs: [list]
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/clusterrolebinding-rbac-v1.json
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${APP}-stack-app-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ${APP}-stack-app-discovery
+subjects:
+  - kind: ServiceAccount
+    namespace: ${NAMESPACE}
+    name: ${APP}

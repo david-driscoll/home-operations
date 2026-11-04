@@ -20,7 +20,11 @@ spec:
     dir: stacks/netbird
   serviceAccountName: ${APP}
   stack: *stack
-  resyncFrequencySeconds: 86400
+  # Hourly, not daily: stacks/netbird finds the tailnet apps it gives NetBird
+  # twins from the cluster (app-services.ts), so a new app changes nothing in
+  # this Stack's source artifact and only a resync picks it up. stacks/system
+  # runs every 300s for the same reason; an hour is plenty for this.
+  resyncFrequencySeconds: 3600
   retryMaxBackoffDurationSeconds: 60
   # Pulumi state on the dockge Garage cluster (celestia/luna/skystar), one
   # prefix per Stack exactly as on the old TrueNAS Minio. Through the

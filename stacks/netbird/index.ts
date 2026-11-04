@@ -17,7 +17,9 @@
  *   8. the `equestria` network the operator's routing peers serve (#2889);
  *   9. the client-access policy (#2888, policy.ts);
  *  10. nbidp: the private reverse proxy's token, and the private service in
- *      front of Dex (#2891, nbidp.ts).
+ *      front of Dex (#2891, nbidp.ts);
+ *  11. every tailnet app's NetBird twin, `<host>.app.<root domain>`, on the
+ *      same proxy (app-services.ts, apps.ts).
  *
  * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
  * the server runs on Azure and Authentik is LAN/tailnet-only, so neither the
@@ -36,6 +38,7 @@ import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
+import { declareAppServices } from "./app-services.ts";
 import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
@@ -405,6 +408,20 @@ pulumi.all([pulumi.output(api), pulumi.output(sourceGroupIds)]).apply(async ([{ 
   }
   const accessGroupIds = privateServiceAccessGroups(groupIds);
   new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
+});
+
+// ── 11. Tailnet apps on NetBird ─────────────────────────────────────────────
+// Every app with a tailnet name gets `<host>.app.<root domain>` as a private
+// service on the same proxy, open to its definition.yaml's groups
+// (app-services.ts, apps.ts; docs/plans/netbird-mirror.md §N).
+declareAppServices({
+  globals,
+  api,
+  provider,
+  userGroupIds: Object.fromEntries(USER_GROUPS.map(name => [name, userGroups[name].id])),
+  clusterAddress: nbidpDomain,
+  root: rootDomain(),
+  dependsOn: [defaultPolicyRemoval, nbidpProxyToken],
 });
 
 /** GET a NetBird API path with `globals.netbirdApi`'s token. */
