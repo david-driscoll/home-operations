@@ -60,18 +60,29 @@ export function findGroupId(groups: NamedGroup[], name: string): string {
 export interface InviteRequest {
   email: string;
   name: string;
-  role: "user";
+  role: InviteRole;
   auto_groups: string[];
   expires_in: number;
 }
 
+/** NetBird's account role. Only these two are handed out by invite. */
+export type InviteRole = "admin" | "user";
+
 /**
- * A regular user (no dashboard: the account has `regularUsersViewBlocked`)
- * whose peers all join `groupId`, which is what the client-access policy and
- * nbidp key on.
+ * `admins` invites make NetBird admins, who get the dashboard and can manage
+ * the account (David, 2026-11-04). Everyone else is a regular user, with no
+ * dashboard: the account has `regularUsersViewBlocked`.
  */
-export function inviteRequest(args: { email: string; name: string; groupId: string }): InviteRequest {
-  return { email: args.email, name: args.name, role: "user", auto_groups: [args.groupId], expires_in: INVITE_EXPIRES_SECONDS };
+export function inviteRole(group: string): InviteRole {
+  return group === "admins" ? "admin" : "user";
+}
+
+/**
+ * A user in the role `inviteRole(group)` whose peers all join `groupId`, which
+ * is what the client-access policy and nbidp key on.
+ */
+export function inviteRequest(args: { email: string; name: string; group: string; groupId: string }): InviteRequest {
+  return { email: args.email, name: args.name, role: inviteRole(args.group), auto_groups: [args.groupId], expires_in: INVITE_EXPIRES_SECONDS };
 }
 
 /**

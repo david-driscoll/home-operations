@@ -359,6 +359,8 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D27 | 11-03 | People join by invite: `mise run netbird:invite <email> "<name>" <group>` prints a 72-hour link; invite under the person's Authentik email so nbidp's `email_link` matches |
 | D28 | 11-03 | No peer login expiry; a device is removed by deleting its peer |
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
+| D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
+| D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
 
 ### Azure primary (#3001, 2026-11-03)
 
