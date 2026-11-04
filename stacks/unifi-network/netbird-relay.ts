@@ -21,6 +21,7 @@
 import * as kubernetes from "@kubernetes/client-node";
 import * as pulumi from "@pulumi/pulumi";
 import * as technitium from "@pulumi/technitium";
+import * as tls from "@pulumi/tls";
 import * as unifi from "@pulumiverse/unifi";
 import CIDRMatcher from "cidr-matcher";
 import { baoKvSecret, baoProvenance } from "../../components/bao.ts";
@@ -99,8 +100,15 @@ function homeRelayRecord(globals: GlobalResources, parent: pulumi.Resource) {
 /**
  * kubernetes/apps/netbird-system/relay-home's Secret into OpenBao at
  * `apps/netbird/relay-home-tls` (`tls_crt`, `tls_key`). A missing Secret
- * (before cert-manager's first issue) or a refused read warns and skips;
- * baoKvSecret's retainOnDelete keeps the last copy in OpenBao meanwhile.
+ * or a refused read warns and skips; baoKvSecret's retainOnDelete keeps the
+ * last copy in OpenBao meanwhile.
+ *
+ * Until cert-manager's first issue there is no copy at all, and
+ * home-operations, which renders docker/celestia/netbird-relay/tls/ from this
+ * path, would fail every run on the missing field. So while the path is empty
+ * this writes a self-signed placeholder. The relay starts with it, peers
+ * refuse its certificate and use another relay, and the real one replaces it
+ * on the first run that can read the Secret (init.sh then restarts the relay).
  */
 function copyHomeRelayCertificate(globals: GlobalResources, parent: pulumi.Resource) {
   if (!globals.baoDualWriteEnabled) {
@@ -108,37 +116,55 @@ function copyHomeRelayCertificate(globals: GlobalResources, parent: pulumi.Resou
     return;
   }
   const { namespace, name } = HOME_RELAY.tlsSecret;
-  const certificate = pulumi.secret(
-    globals.store.getKubernetesClusters().apply(async clusters => {
-      const equestria = clusters.find(cluster => cluster.key === "equestria");
-      try {
-        if (!equestria) throw new Error("no `equestria` cluster in the store");
-        const config = new kubernetes.KubeConfig();
-        config.loadFromString(equestria.kubeConfig);
-        const secret = await config.makeApiClient(kubernetes.CoreV1Api).readNamespacedSecret({ namespace, name });
-        const decode = (key: string) => Buffer.from(secret.data?.[key] ?? "", "base64").toString("utf8");
-        const tlsCrt = decode("tls.crt");
-        const tlsKey = decode("tls.key");
-        if (!tlsCrt || !tlsKey) throw new Error("tls.crt or tls.key is empty");
-        return { tlsCrt, tlsKey };
-      } catch (error) {
-        pulumi.log.warn(`netbird-relay: could not read ${namespace}/${name} (${(error as Error).message?.split("\n")[0]}); OpenBao keeps its last copy of the home relay's certificate.`, parent);
-        return undefined;
-      }
-    }),
-  );
-  certificate.apply(cert => {
-    if (!cert) return;
-    baoKvSecret(
-      "netbird-relay-home-tls",
-      {
-        mount: "secrets",
-        path: HOME_RELAY.tlsBaoPath,
-        data: { tls_crt: cert.tlsCrt, tls_key: cert.tlsKey },
-        concealedFields: ["tls_key"],
-        customMetadata: baoProvenance({ source: "stacks/unifi-network", copied_from: `kubernetes:equestria/${namespace}/${name}` }),
-      },
-      { provider: globals.baoProvider, parent },
-    );
+  const issued = globals.store.getKubernetesClusters().apply(async clusters => {
+    const equestria = clusters.find(cluster => cluster.key === "equestria");
+    try {
+      if (!equestria) throw new Error("no `equestria` cluster in the store");
+      const config = new kubernetes.KubeConfig();
+      config.loadFromString(equestria.kubeConfig);
+      const secret = await config.makeApiClient(kubernetes.CoreV1Api).readNamespacedSecret({ namespace, name });
+      const decode = (key: string) => Buffer.from(secret.data?.[key] ?? "", "base64").toString("utf8");
+      const tlsCrt = decode("tls.crt");
+      const tlsKey = decode("tls.key");
+      if (!tlsCrt || !tlsKey) throw new Error("tls.crt or tls.key is empty");
+      return { tlsCrt, tlsKey };
+    } catch (error) {
+      pulumi.log.warn(`netbird-relay: could not read ${namespace}/${name} (${(error as Error).message?.split("\n")[0]}); OpenBao keeps its last copy of the home relay's certificate.`, parent);
+      return undefined;
+    }
   });
+  const existing = globals.store.tryGetSecretByPath<{ tls_crt?: string; tls_key?: string }>(HOME_RELAY.tlsBaoPath);
+
+  pulumi.all([issued, existing]).apply(([cert, stored]) => {
+    if (cert) return writeCertificate(globals, parent, { tlsCrt: cert.tlsCrt, tlsKey: cert.tlsKey }, `kubernetes:equestria/${namespace}/${name}`);
+    if (stored?.tls_crt && stored.tls_key) return;
+    pulumi.log.warn(`netbird-relay: no certificate in secrets/${HOME_RELAY.tlsBaoPath} yet; writing a self-signed placeholder until cert-manager issues one.`, parent);
+    const key = new tls.PrivateKey("netbird-relay-home-placeholder", { algorithm: "ECDSA", ecdsaCurve: "P256" }, { parent });
+    const placeholder = new tls.SelfSignedCert(
+      "netbird-relay-home-placeholder",
+      {
+        privateKeyPem: key.privateKeyPem,
+        subject: { commonName: homeRelayDomain(rootDomain()) },
+        dnsNames: [homeRelayDomain(rootDomain())],
+        validityPeriodHours: 24 * 30,
+        allowedUses: ["digital_signature", "server_auth"],
+      },
+      { parent },
+    );
+    return writeCertificate(globals, parent, { tlsCrt: placeholder.certPem, tlsKey: key.privateKeyPem }, "placeholder:stacks/unifi-network");
+  });
+}
+
+function writeCertificate(globals: GlobalResources, parent: pulumi.Resource, cert: { tlsCrt: pulumi.Input<string>; tlsKey: pulumi.Input<string> }, copiedFrom: string) {
+  return baoKvSecret(
+    "netbird-relay-home-tls",
+    {
+      mount: "secrets",
+      path: HOME_RELAY.tlsBaoPath,
+      data: { tls_crt: cert.tlsCrt, tls_key: pulumi.secret(cert.tlsKey) },
+      concealedFields: ["tls_key"],
+      customMetadata: baoProvenance({ source: "stacks/unifi-network", copied_from: copiedFrom }),
+    },
+    { provider: globals.baoProvider, parent },
+  );
 }
