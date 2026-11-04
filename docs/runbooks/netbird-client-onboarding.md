@@ -3,31 +3,72 @@
 For family and friends on phones and laptops (#2887). The design is in
 [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md).
 
-## Before you start
+NetBird has its own login with its own password, separate from Authentik. You join
+with an invite link from an admin, and it works from anywhere: the server is public,
+so you don't need to be at home or on Tailscale.
 
-- **Your Authentik account must be in one of these groups:** admins, family, friends or
-  media-managers. Anyone else can't sign in to NetBird at all.
-- **Turn Tailscale off on this device.** Phones and tablets only allow one VPN at a time.
-  Two meshes on one laptop also route the same LAN twice. Admins who need both on one
-  laptop can keep them, because the NetBird range (10.100.0.0/16) doesn't clash with
-  Tailscale's.
+## For the admin: send an invite
 
-## Set it up
+```bash
+mise run netbird:invite <email> "<name>" <group>
+# e.g. mise run netbird:invite pinkie@example.com "Pinkie Pie" family
+```
 
-1. **Install NetBird.**
+- **`<group>`** is one of `admins`, `family`, `friends` or `media-managers`. It decides
+  what the person's devices can reach (`stacks/netbird/policy.ts`). Each person gets
+  exactly one.
+- **`<email>`** should be the person's **Authentik email**. NetBird doesn't need it,
+  but the passwordless **NetBird** button on Authentik's login page matches people by
+  that email (nbidp, #2891). With any other email they would arrive at Authentik as a
+  stranger.
+- The task prints the invite link. Send it to the person yourself; NetBird emails
+  nothing. The link expires after **72 hours**.
+- `--dry-run` (anywhere in the arguments) checks the group and shows the request
+  without sending it.
+
+The task reads the NetBird API credential from OpenBao through fnox's `netbird`
+profile (`.config/fnox.toml`), the same automation → owner-pat → owner chain Pulumi
+uses. It needs the OpenBao AppRole that every `fnox exec` uses.
+
+| Message | Meaning |
+|---|---|
+| `"x" is not a user group` | Typo in the group; it lists the four |
+| `NetBird has no group "family" yet` | `stacks/netbird` hasn't created the user groups; let it run |
+| `HTTP 409` | A user or invite for that email already exists: Team → Users in the dashboard |
+| `No usable NetBird PAT` | Every PAT has expired: see "Both expired" in the plan's implementation notes |
+
+**A lost or expired link:** in the dashboard, Team → Users → Invites, regenerate it
+(that invalidates the old one), or delete the invite and run the task again.
+
+**Changing someone's group:** Team → Users → the person → edit their groups. Their
+devices follow (group propagation is on).
+
+**Removing a device:** delete its peer (Peers → the device → Delete). Logins never
+expire, so a device stays on until then. Removing a person: block or delete the user,
+then delete their peers.
+
+## For the person: set it up
+
+1. **Open the invite link** and choose a password. This is your NetBird password; it
+   is not your Authentik one. Any network works.
+2. **Turn Tailscale off on this device.** Phones and tablets only allow one VPN at a
+   time. Two meshes on one laptop also route the same LAN twice. Admins who need both
+   on one laptop can keep them, because the NetBird range (10.100.0.0/16) doesn't
+   clash with Tailscale's.
+3. **Install NetBird.**
    - iPhone/iPad and Mac: the App Store.
    - Android: Google Play.
    - Windows and Linux: [netbird.io/download](https://netbird.io/download).
-2. **Point it at our server, not NetBird's cloud.** This is the step people miss.
+4. **Point it at our server, not NetBird's cloud.** This is the step people miss.
    - **Phone:** open the menu → **Change Server**, then enter
-     `https://netbird.<root domain>`. Use the real domain; it's in the admin's
-     password manager.
+     `https://netbird.<root domain>`. Use the real domain; the admin sends it with the
+     invite (it's the start of the invite link).
    - **Laptop:** run `netbird up --management-url https://netbird.<root domain>`.
-3. **Sign in.**
-   - Choose **Authentik**, then use your usual login.
-   - On a NetBird-only device, the **NetBird** button on Authentik's login page signs you
-     in without a password once it exists (#2891).
-4. **Connect.** The app shows the site gateways as routes. Leave them on.
+5. **Log in** with the email and the password you just set.
+6. **Connect.** The app shows the site gateways as routes. Leave them on.
+
+Once a device is connected, the **NetBird** button on Authentik's login page signs you
+in to the estate's apps without a password (#2891).
 
 ## What works
 
@@ -35,17 +76,20 @@ For family and friends on phones and laptops (#2887). The design is in
   Authentik, and so on. Lookups go to the estate's DNS through the gateways.
 - **Exit nodes (optional):** under **Exit node**, pick a gateway to send all traffic
   through home, e.g. on hotel Wi-Fi. Leave it off otherwise.
-- **Signing in again:** NetBird asks you to sign in every 30 days.
+- **Staying signed in:** NetBird never asks you to log in again on a connected device.
 
 ## Apple TV
 
-TVs don't sign in. An admin enrols them with the `apple-tv` setup key; see #2886.
+TVs don't log in. An admin enrols them with the `apple-tv` setup key; see #2886.
 
 ## When it doesn't work
 
 | Symptom | Check |
 |---|---|
-| "No account" or a login loop | Your Authentik user is not in an allowed group |
+| The invite page says the link is invalid or expired | Ask the admin for a new link (72 hours, one use) |
+| The app opens NetBird's cloud login | The server wasn't changed (step 4) |
+| Login rejected | You're using your Authentik password; use the NetBird one from step 1 |
 | Connected, but names don't resolve | The app's DNS setting must be on; reconnect |
 | Names resolve but pages time out | No gateway is up; tell an admin (gateways are the `netbird-gateway` stack on the Dockge hosts) |
+| Pages are blocked that others can open | Your group; an admin checks it under Team → Users |
 | A phone shows Tailscale "connected" too | Turn Tailscale off; only one VPN can be active |

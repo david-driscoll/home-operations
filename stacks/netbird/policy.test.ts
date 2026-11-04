@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ACCESS_RULES, allows, homeResourceGroups, resolveGroups } from "./policy.ts";
+import { ACCESS_RULES, allows, USER_GROUPS as CREATED_USER_GROUPS, DEVICE_GROUPS, homeResourceGroups, unresolvedSources } from "./policy.ts";
 
 const can = (who: string, destination: string, port: number, protocol: "tcp" | "udp" | "icmp" = "tcp") => allows(ACCESS_RULES, who, destination, protocol, port);
 const USER_GROUPS = ["admins", "family", "friends", "media-managers"];
@@ -66,24 +66,18 @@ describe("homeResourceGroups", () => {
   });
 });
 
-describe("resolveGroups", () => {
-  const live = [
-    { id: "j1", name: "family", issued: "jwt" },
-    { id: "a2", name: "admins", issued: "api" },
-  ];
-
-  it("takes Authentik groups only as JWT sync made them", () => {
-    assert.deepEqual(resolveGroups(live, ["family"]).ids, { family: "j1" });
+describe("rule sources", () => {
+  it("are all groups stacks/netbird creates: the four user groups and the device groups", () => {
+    assert.deepEqual(unresolvedSources(ACCESS_RULES, [...CREATED_USER_GROUPS, ...DEVICE_GROUPS]), []);
   });
 
-  it("reports a user group nobody in it has logged in with yet", () => {
-    assert.deepEqual(resolveGroups(live, ["friends"]).missing, ["friends"]);
+  it("are the same four user groups the Tailscale grants were written for", () => {
+    assert.deepEqual([...CREATED_USER_GROUPS].sort(), [...USER_GROUPS].sort());
   });
 
-  it("refuses a same-named API group: JWT sync never adds users to it", () => {
-    const { ids, conflicts } = resolveGroups(live, ["admins"]);
-    assert.deepEqual(ids, {});
-    assert.deepEqual(conflicts, ["admins"]);
+  it("reports a source no created group backs, which would grant nobody", () => {
+    const rules = [{ ...ACCESS_RULES[0], name: "r", sources: ["admins", "strangers"] }];
+    assert.deepEqual(unresolvedSources(rules, CREATED_USER_GROUPS), ["r: strangers"]);
   });
 });
 

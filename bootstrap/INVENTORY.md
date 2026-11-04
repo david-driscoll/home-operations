@@ -128,8 +128,9 @@ GitHub when the repo is archived.
   backups (store, config, and Traefik's `acme.json` with the TLS and ACME account keys) live in
   Garage's `netbird-backups` bucket, which TrueNAS also pulls; `stacks/system` records its key at
   `apps/netbird/garage-backup`. Pulumi state holds a second copy of all of it. Losing the
-  store key loses NetBird's user data, which re-enrolling clients rebuilds; nothing else
-  depends on it.
+  store key loses NetBird's user data, the local accounts included (NetBird's login is its
+  built-in one, not Authentik): re-invite everyone (`mise run netbird:invite`) and
+  re-enrol their clients; nothing else depends on it.
   The server's VMs are reached with `third-party-tokens/oci/pulumi` (OCI) and
   `third-party-tokens/azure/netbird-edge` (an Azure service principal, Contributor on the
   Visual Studio subscription, #3001); both are recreated in their cloud's console.

@@ -12,35 +12,34 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
-import type { LiveGroup } from "./policy.ts";
 
 const HOST = "nbidp.example.test";
 
-const live: LiveGroup[] = [
-  { id: "g-all", name: "All", issued: "api" },
-  { id: "g-admins", name: "admins", issued: "jwt" },
-  { id: "g-family", name: "family", issued: "jwt" },
-  { id: "g-tv", name: "apple-tv", issued: "api" },
-  { id: "g-gw", name: "gateways", issued: "api" },
-  { id: "g-k8s", name: "k8s-routers", issued: "api" },
-];
+/** Every group stacks/netbird creates, by name, plus NetBird's built-in `All`. */
+const ids: Record<string, string> = {
+  All: "g-all",
+  admins: "g-admins",
+  family: "g-family",
+  friends: "g-friends",
+  "media-managers": "g-media",
+  "apple-tv": "g-tv",
+  gateways: "g-gw",
+  "k8s-routers": "g-k8s",
+};
 
 describe("privateServiceAccessGroups", () => {
-  it("admits the JWT-synced Authentik groups that exist, and reports the rest as missing", () => {
-    const { ids, missing } = privateServiceAccessGroups(live);
-    assert.deepEqual(ids, ["g-admins", "g-family"]);
-    assert.deepEqual(missing, ["friends", "media-managers"]);
+  it("admits the four user groups the stack creates", () => {
+    assert.deepEqual(privateServiceAccessGroups(ids), ["g-admins", "g-family", "g-friends", "g-media"]);
   });
 
   it("never admits All or a device group", () => {
-    const { ids } = privateServiceAccessGroups(live);
-    for (const id of ["g-all", "g-tv", "g-gw", "g-k8s"]) assert.ok(!ids.includes(id), `${id} must not reach Dex`);
+    const admitted = privateServiceAccessGroups(ids);
+    for (const id of ["g-all", "g-tv", "g-gw", "g-k8s"]) assert.ok(!admitted.includes(id), `${id} must not reach Dex`);
   });
 
-  it("refuses a same-named group made through the API: JWT sync never puts users in it", () => {
-    const { ids, conflicts } = privateServiceAccessGroups([{ id: "g-fake", name: "admins", issued: "api" }]);
-    assert.deepEqual(ids, []);
-    assert.deepEqual(conflicts, ["admins"]);
+  it("refuses to run short of a user group, rather than quietly lock its people out", () => {
+    const { friends: _friends, ...short } = ids;
+    assert.throws(() => privateServiceAccessGroups(short), /friends/);
   });
 });
 

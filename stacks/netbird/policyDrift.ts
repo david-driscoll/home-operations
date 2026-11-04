@@ -23,7 +23,7 @@ export const TAILSCALE_ONLY: Record<string, string> = {
   "admin-drive-access": "Taildrive (app capability)",
   "media-manager-drive-access": "Taildrive (app capability)",
   "member-golink-defaults": "golink (app capability)",
-  "member-tsidp-defaults": "tsidp claims (app capability); NetBird logins get groups from Authentik",
+  "member-tsidp-defaults": "tsidp claims (app capability); NetBird users get their group from their invite",
   "family-tsidp-defaults": "tsidp claims (app capability)",
   "friends-tsidp-defaults": "tsidp claims (app capability)",
   "tsidp-admin": "tsidp admin UI (app capability)",

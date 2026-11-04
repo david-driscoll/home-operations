@@ -1,5 +1,5 @@
 name: netbird
-description: The self-hosted NetBird account — settings, login connector, groups, setup keys, DNS (docs/plans/netbird-mirror.md)
+description: The self-hosted NetBird account — settings, user and device groups, setup keys, DNS (docs/plans/netbird-mirror.md)
 runtime:
   name: nodejs
   options:
