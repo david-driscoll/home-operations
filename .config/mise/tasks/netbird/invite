@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Invite someone to NetBird and print their link: netbird:invite [--dry-run] <email> \"<name>\" <admins|family|friends|media-managers>"
+#MISE dir="{{config_root}}"
+#
+# NetBird logs people in with its built-in IdP, so joining is by invite
+# (docs/runbooks/netbird-client-onboarding.md). The work is in
+# scripts/netbird-invite.ts; this only resolves the NetBird credential for
+# that one command, from the `netbird` profile in .config/fnox.toml, so no
+# other `fnox exec` ever carries a NetBird PAT.
+set -Eeuo pipefail
+exec fnox exec -P netbird -- node scripts/netbird-invite.ts "$@"

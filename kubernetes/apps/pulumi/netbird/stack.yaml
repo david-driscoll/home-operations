@@ -34,9 +34,10 @@ spec:
   destroyOnFinalize: false
   workspaceReclaimPolicy: Delete
   # netbird-edge bootstraps the owner PAT this stack's first run authenticates
-  # with (later runs use the automation PAT it mints, components/netbird/tokens.ts);
-  # system creates the Authentik client (netbird-edge/definition.yaml) it
-  # hands to NetBird's Dex.
+  # with (later runs use the automation PAT it mints, components/netbird/tokens.ts).
+  # system used to create the Authentik login client this stack handed to
+  # NetBird's Dex; login is NetBird's built-in one now, and system stays a
+  # prerequisite only until nothing else this stack reads is shown to need it.
   prerequisites:
     - name: netbird-edge
     - name: system

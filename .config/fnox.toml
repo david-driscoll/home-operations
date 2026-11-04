@@ -93,3 +93,17 @@ ARM_TENANT_ID = { provider = "openbao", value = "secrets/third-party-tokens/azur
 ARM_SUBSCRIPTION_ID = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#subscription_id", if_missing = "warn" }
 ARM_CLIENT_ID = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#client_id", if_missing = "warn" }
 ARM_CLIENT_SECRET = { provider = "openbao", value = "secrets/third-party-tokens/azure/netbird-edge#client_secret", if_missing = "warn" }
+
+# The NetBird API credential for `mise run netbird:invite` (scripts/netbird-invite.ts),
+# in a profile so that no other `fnox exec` carries a NetBird PAT: the task runs
+# `fnox exec -P netbird --`. The three PATs globals.netbirdApi chooses between,
+# in its order (components/netbird/tokens.ts); the script picks the first that
+# exists and has not expired. Only the URL is required: on a fresh server the
+# automation and owner-pat paths do not exist yet.
+[profiles.netbird.secrets]
+NETBIRD_URL = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner#url", if_missing = "error" }
+NETBIRD_AUTOMATION_PAT = { provider = "openbao", value = "secrets/third-party-tokens/netbird/automation#personal_access_token", if_missing = "ignore" }
+NETBIRD_AUTOMATION_EXPIRES = { provider = "openbao", value = "secrets/third-party-tokens/netbird/automation#expires", if_missing = "ignore" }
+NETBIRD_OWNER_PAT = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner-pat#personal_access_token", if_missing = "ignore" }
+NETBIRD_OWNER_PAT_EXPIRES = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner-pat#expires", if_missing = "ignore" }
+NETBIRD_SETUP_PAT = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner#personal_access_token", if_missing = "ignore" }

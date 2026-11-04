@@ -52,7 +52,7 @@ From the 2026-11-02 reachability sweep:
 ```
                 ┌──── OCI Ashburn (Always Free, primary) ────┐      ┌──── Azure East US 2 (VS credits) ───┐
  netbird.<root  │ A1 2 OCPU/12 GB · netbird-server + dashboard│      │ relay (always on)                   │
- domain> ──DNS──┤ + Traefik + embedded Dex→Authentik          │      │ server compose ready, idle (fenced) │
+ domain> ──DNS──┤ + Traefik + built-in IdP (embedded Dex)     │      │ server compose ready, idle (fenced) │
   (60s TTL)     │ memory ballast · tailscaled (admin)         │      │ tailscaled (admin)                  │
                 └──────────────┬──────────────────────────────┘      └──────────────┬──────────────────────┘
                                │ backup every 15 min → Garage (over tailnet) ◀── restore on promotion
@@ -185,11 +185,12 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
 - **Deployment:** the same compose and config go to both OCI and Azure through `remote.Command`.
 - **Overlay range: `10.100.0.0/16`,** set before any peer enrols. It avoids Tailscale's 100.64/10 on dual-mesh
   desktops and stays inside `internal-network`'s 10/8.
-- **IdP:**
-  - embedded Dex with **Authentik as a connector**. `stacks/authentik` gets an OAuth2 provider `netbird` with
-    `groups` in the id_token;
-  - **JWT group sync** on, with allow groups admins/family/friends/media-managers;
-  - one **local break-glass admin**.
+- **IdP:** NetBird's **built-in** one (embedded Dex, local users), decided 2026-11-03 (D25):
+  - no external connector. Authentik is LAN/tailnet-only and the server runs in the cloud, so the server could
+    not reach Authentik's issuer, and nor could a NetBird-only phone away from home;
+  - people join by **invite** (`mise run netbird:invite`, D27), set their own NetBird password, and are placed
+    in one Pulumi-created user group (D26). JWT group sync is off;
+  - one **local break-glass admin**, the owner `/api/setup` created.
 - **Secrets:** the store encryption key, relay secret and local admin are generated once. They go to OpenBao and
   1Password and are recorded in `bootstrap/INVENTORY.md`, but are not part of any recovery path.
 - **Backups:** an **every-15-minutes** SQLite online backup (`.backup`, no stack stop) plus config and Traefik's
@@ -243,10 +244,10 @@ authenticates with an admin service-user PAT from OpenBao.
 
 **The stack manages:**
 
-- **Account:** the range, peer DNS domain (`nb.<root domain>`), login expiry and JWT settings; the `Default` policy
-  deleted.
-- **Groups and setup keys:** one key per gateway and per operator, plus a reusable `apple-tv` key, stored in
-  OpenBao.
+- **Account:** the range, peer DNS domain (`nb.<root domain>`), peer login expiry off (D28) and JWT group sync off;
+  the `Default` policy deleted.
+- **Groups and setup keys:** the four user groups invites place people in; one key per gateway and per operator,
+  plus a reusable `apple-tv` key, stored in OpenBao.
 - **Networks:** site LAN resources, routing peers and exit routes.
 - **DNS:** the Technitium nameserver group.
 - **Policy:** the client-access policy (§J).
@@ -286,8 +287,8 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 **As built (#2891).** Code: `components/netbird/nbidp.ts` (the chain, Dex's config), `stacks/netbird/nbidp.ts`
 (the private service), `components/authentik/flows.ts` (the source), `kubernetes/apps/netbird-system/nbidp`.
 
-- **`members` is the four JWT-synced groups.** The private service's `access_groups` are admins, family, friends and
-  media-managers, never `All` or a device group.
+- **`members` is the four user groups** stacks/netbird creates. The private service's `access_groups` are admins,
+  family, friends and media-managers, never `All` or a device group.
 - **The proxy registers with an account-scoped token** (`POST /api/reverse-proxies/proxy-tokens`, minted by
   `dynamic/netbird/NetbirdProxyToken`, stored at `third-party-tokens/netbird/nbidp-proxy`). Its cluster address is
   `nbidp.<root domain>`, which is also the service's domain, so no custom domain is registered.
@@ -310,17 +311,20 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 - **No groups come back from Dex.** Authentik stays the source of groups.
 - **Enrollment works like the Tailscale source** (decided 2026-11-03). An identity whose email matches nobody goes
   through the shared enrollment flow. Ownerless peers never get that far, because the private service admits only the
-  four JWT-synced user groups.
+  four user groups.
+- **It survives the built-in login** (D25). The proxy stamps the NetBird user's email, and everyone is invited under
+  their Authentik email, so `email_link` still finds the right Authentik user.
 
 ## L. Devices and onboarding
 
 - **Apple TVs:** all of them enrol with the `apple-tv` **setup key**. The tvOS app is beta, and SSO device-code
   login needs a Dex device grant that is **(unverified)**.
-- **Phones and laptops:** a one-page guide in `docs/`:
-  1. Install NetBird.
-  2. Change the server to `https://netbird.<root domain>`.
-  3. Log in through Authentik.
-  4. Turn Tailscale off on that device.
+- **Phones and laptops:** by invite, with a one-page guide in
+  [`docs/runbooks/netbird-client-onboarding.md`](../runbooks/netbird-client-onboarding.md):
+  1. An admin runs `mise run netbird:invite <email> "<name>" <group>` and sends the printed link.
+  2. The person opens it from anywhere and sets a NetBird password.
+  3. Turn Tailscale off on that device, install NetBird, and change the server to `https://netbird.<root domain>`.
+  4. Log in with the NetBird email and password.
 
 ## M. Decision log
 
@@ -334,7 +338,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D6 | 11-02 | **Automated failover**: Equestria watchdog flips DNS; DNS is the lease (each server self-fences) |
 | D7 | 11-02 | Backups every 15 minutes to Garage; automatic restore |
 | D8 | 11-02 | Manual, runbooked failback |
-| D9 | 11-02 | Login via Authentik connector + JWT group sync + local break-glass admin |
+| D9 | 11-02 | Login via Authentik connector + JWT group sync + local break-glass admin (superseded by D25–D29) |
 | D10 | 11-02 | Relays: OCI embedded, Azure, and a Docker relay on every Dockge host |
 | D11 | 11-02 | Gateways: Docker stacks on each site's Dockge host(s), each an exit node |
 | D12 | 11-02 | Equestria operator = a second route to the internal Gateway + Authentik |
@@ -350,6 +354,11 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D22 | 11-03 | Tailscale stays on the OCI/Azure VMs for admin and backup traffic; NetBird is for clients only |
 | D23 | 11-03 | Pure seams tested with `node --test`; Pulumi wiring validated by `pulumi preview`, live behaviour by each ticket's acceptance criteria |
 | D24 | 11-03 | One PR per ticket, stacked in dependency order |
+| D25 | 11-03 | **NetBird's built-in IdP** (embedded Dex, local users) replaces the Authentik login: the cloud server could not reach Authentik's issuer, and nor could NetBird-only devices away from home |
+| D26 | 11-03 | User groups (admins, family, friends, media-managers) are NetBird API groups that `stacks/netbird` creates; JWT group sync is off |
+| D27 | 11-03 | People join by invite: `mise run netbird:invite <email> "<name>" <group>` prints a 72-hour link; invite under the person's Authentik email so nbidp's `email_link` matches |
+| D28 | 11-03 | No peer login expiry; a device is removed by deleting its peer |
+| D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
 
 ### Azure primary (#3001, 2026-11-03)
 
@@ -449,14 +458,16 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 - **Rotating.** In `stacks/netbird/index.ts`, set `AUTOMATION_TOKEN_GENERATION` or `OWNER_TOKEN_GENERATION` to the current month and merge. The generation is in the Pulumi name, so the run creates the new token, rewrites its OpenBao path, and deletes the old token last. The operator's ExternalSecret picks the new automation PAT up on its next refresh. Rotate one token at a time, in a run that changes nothing else: the run authenticates with the token it is deleting, so a delete scheduled after that one fails, and the next run (which reads the new token) completes it.
 - **Both expired.** Log in to the dashboard as the owner (email and password at `third-party-tokens/netbird/owner`) and create a PAT for the owner. Write it with `bao kv patch secrets/third-party-tokens/netbird/owner-pat personal_access_token=<pat> expires=<RFC 3339>`, then bump `OWNER_TOKEN_GENERATION` so Pulumi takes over again.
 
-**Authentik groups are never created by Pulumi.**
-- JWT group sync creates them from the `groups` claim the first time one of their members logs in.
-- Sync only puts users into groups it created itself (`issued: jwt`), so a same-named group made through the API would grant nobody.
-- Policies therefore look the groups up live, and a rule waits until its group exists.
-- The plan's separate `members` group is dropped: the four synced groups are the membership.
+**User groups are Pulumi's** (D26, replacing the JWT-synced groups of D9).
+- `stacks/netbird` creates admins, family, friends and media-managers as ordinary API groups, so every rule and the nbidp private service have their groups from the first run; nothing is looked up live or waits for a login.
+- An invite names one of them as the user's auto group, and with group propagation on, every peer the user registers joins it. Moving someone is an edit of their groups in the dashboard.
+- `stacks/netbird` refuses to run if `policy.ts` names a source group it does not create (`unresolvedSources`).
+- The plan's separate `members` group is dropped: the four user groups are the membership.
+
+**Invites** (D27). `mise run netbird:invite` (`.config/mise/tasks/netbird/invite`, `scripts/netbird-invite.ts`, pure half in `stacks/netbird/invite.ts`) calls `POST /api/users/invites` with role `user`, the group's id as the only auto group and `expires_in` 259200. The response's `invite_token` is a bare token; the link is the dashboard's `/invite?token=<token>` on the management host. The credential comes from fnox's `netbird` profile, in `globals.netbirdApi`'s order. Invites exist only with the embedded IdP (HTTP 412 otherwise).
 
 **Gateways are keyed per Dockge host.** Each host gets a `gateway-<cluster key>` setup key and group; `stacks/netbird/sites.ts` decides which hosts route which site LAN. Today all four hosts (alpha-site, celestia, luna and skystar) sit on the home LAN, so `home` is the only routed site.
 
-**Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or login connector exists, so no peer can take an address from the default range.
+**Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or invite exists, so no peer can take an address from the default range.
 
 **The CrossGuard pack does not run in-cluster.** Pulumi Kubernetes Operator v2.10 has no policy-pack support (pulumi/pulumi-kubernetes-operator#366). The pack runs in CI as unit tests plus a smoke test, and locally with `--policy-pack`. In-cluster, the component check, OCI quotas and the budget remain.

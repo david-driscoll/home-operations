@@ -7,9 +7,9 @@
  * every user-facing Tailscale grant is either mirrored here or listed in
  * TAILSCALE_ONLY with a reason.
  *
- * Sources are names: the Authentik groups (JWT-synced, so they exist only once
- * someone in them has logged in) and the device groups stacks/netbird creates.
- * Destinations are resource or peer groups:
+ * Sources are names of groups stacks/netbird creates: the four user groups
+ * (USER_GROUPS, which invites place people in) and the device groups setup
+ * keys place peers in (DEVICE_GROUPS). Destinations are resource or peer groups:
  *
  *   home-web     the addresses member-home-subnet-access allows: the cluster's
  *                LAN IPs, every exported host's internalIp, the Authentik VIP
@@ -34,8 +34,16 @@ export interface AccessRule {
   mirrors: string[];
 }
 
-/** The Authentik groups that may log in at all (kubernetes/apps/pulumi/netbird-edge/definition.yaml). */
+/**
+ * The user groups. stacks/netbird creates them as ordinary API groups, and an
+ * invite (`mise run netbird:invite`) puts its person in exactly one, as the
+ * user's auto group: every peer that person registers joins it. Same names as
+ * the Authentik groups they used to come from, so the rules below read the same.
+ */
 export const USER_GROUPS = ["admins", "family", "friends", "media-managers"];
+
+/** The device groups stacks/netbird creates for setup-key peers, which rules may also name as sources. */
+export const DEVICE_GROUPS = ["apple-tv", "gateways", "k8s-routers"];
 
 /** Tailscale.ports.web, as ports: 80/443 plus 8443 and 7687, each on TCP and UDP (HTTP/3). */
 const WEB_PORTS = [80, 443, 8443, 7687];
@@ -145,29 +153,11 @@ export function homeResourceGroups(args: { clusterIps: string[]; hostIps: string
   return Object.fromEntries(Object.entries(groups).map(([ip, set]) => [ip, [...set].sort()]));
 }
 
-export interface LiveGroup {
-  id: string;
-  name: string;
-  /** `jwt` for groups JWT sync created, `api` for ones made through the API, `integration` otherwise. */
-  issued?: string;
-}
-
 /**
- * Map Authentik group names to the live groups JWT sync created.
- *
- * A group exists only once one of its members has logged in. A same-named
- * group made through the API is a conflict: sync silently skips it, so its id
- * would grant nobody.
+ * The rule sources that name no group in `created`, as `rule: source`. Empty
+ * when every source resolves; stacks/netbird refuses to run otherwise, since a
+ * source it cannot resolve would silently grant nobody.
  */
-export function resolveGroups(live: LiveGroup[], names: string[]): { ids: Record<string, string>; missing: string[]; conflicts: string[] } {
-  const ids: Record<string, string> = {};
-  const missing: string[] = [];
-  const conflicts: string[] = [];
-  for (const name of names) {
-    const match = live.find(group => group.name === name && group.issued === "jwt");
-    if (match) ids[name] = match.id;
-    else if (live.some(group => group.name === name)) conflicts.push(name);
-    else missing.push(name);
-  }
-  return { ids, missing, conflicts };
+export function unresolvedSources(rules: AccessRule[], created: string[]): string[] {
+  return rules.flatMap(rule => rule.sources.filter(source => !created.includes(source)).map(source => `${rule.name}: ${source}`));
 }

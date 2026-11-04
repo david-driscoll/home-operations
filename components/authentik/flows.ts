@@ -297,16 +297,17 @@ return {}`,
    *
    * Enrollment matches the Tailscale source (decided by David, 2026-11-03): an
    * identity with no matching email goes through the shared enrollment flow.
-   * In practice every NetBird user logged into NetBird through Authentik, so
+   * In practice every NetBird user is invited under their Authentik email
+   * (NetBird's own login is its built-in one, `mise run netbird:invite`), so
    * email_link finds them; ownerless peers (whose PEER NAME the proxy would
    * stamp as the user) never reach Dex, because the private service admits
-   * only the four JWT-synced user groups (stacks/netbird/nbidp.ts).
+   * only the four user groups (stacks/netbird/nbidp.ts).
    *
    * One deliberate difference from the Tailscale source:
    *
-   * - No `groups` scope. Authentik is where the groups come from (NetBird's
-   *   are JWT-synced from it); taking them back would let an edit to a peer's
-   *   groups in NetBird change someone's Authentik groups. name_link is set to
+   * - No `groups` scope. Authentik is where app groups come from; taking
+   *   NetBird's back would let an edit to a peer's groups in NetBird change
+   *   someone's Authentik groups. name_link is set to
    *   match the Tailscale source and is inert while Dex sends no groups.
    *
    * Skipped without OpenBao credentials: Dex could not get the client, so the

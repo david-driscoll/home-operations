@@ -13,9 +13,16 @@
  *
  * The Terraform provider (0.0.11) has no `private` or `access_groups` on
  * netbird_reverse_proxy_service, hence dynamic/netbird/NetbirdPrivateService.
+ *
+ * NetBird's own login is its built-in one (embedded Dex, local users), not
+ * Authentik, and nbidp still works: everyone is invited under their Authentik
+ * account's email (`mise run netbird:invite`), so the X-NetBird-User the proxy
+ * stamps is that email and the Authentik source's email_link matches it to
+ * the right Authentik user. Someone invited under any other email reaches
+ * Authentik as a stranger and goes through enrollment instead.
  */
 import { DEX_NAMESPACE, DEX_PORT, DEX_SERVICE } from "components/netbird/nbidp.ts";
-import { type LiveGroup, resolveGroups, USER_GROUPS } from "./policy.ts";
+import { USER_GROUPS } from "./policy.ts";
 
 /** GET /api/reverse-proxies/clusters, the fields used here. */
 export interface LiveCluster {
@@ -34,14 +41,16 @@ export interface LiveService {
 }
 
 /**
- * The groups whose peers the proxy lets through to Dex: the JWT-synced
- * Authentik groups, and only those. Never `All`, never a device group: a peer
- * with no owner gets its peer name stamped as X-NetBird-User, which Dex would
- * pass to Authentik as a verified email.
+ * The groups whose peers the proxy lets through to Dex: the four user groups
+ * stacks/netbird creates, and only those (`ids` maps every group it made,
+ * name to id). Never `All`, never a device group: a peer with no owner gets
+ * its peer name stamped as X-NetBird-User, which Dex would pass to Authentik
+ * as a verified email.
  */
-export function privateServiceAccessGroups(live: LiveGroup[]): { ids: string[]; missing: string[]; conflicts: string[] } {
-  const { ids, missing, conflicts } = resolveGroups(live, USER_GROUPS);
-  return { ids: USER_GROUPS.map(name => ids[name]).filter((id): id is string => id !== undefined), missing, conflicts };
+export function privateServiceAccessGroups(ids: Record<string, string>): string[] {
+  const missing = USER_GROUPS.filter(name => !ids[name]);
+  if (missing.length > 0) throw new Error(`nbidp: no id for user groups ${missing.join(", ")}; stacks/netbird creates all four`);
+  return USER_GROUPS.map(name => ids[name]);
 }
 
 /**

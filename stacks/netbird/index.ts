@@ -8,7 +8,7 @@
  *
  *   1. account settings, the overlay range first, before anything can enrol;
  *   2. the built-in allow-all `Default` policy removed;
- *   3. Authentik as the login connector, with JWT group sync;
+ *   3. the user groups invites place people in;
  *   4. device groups and the setup keys that place peers in them;
  *   5. site LANs routed through the gateway containers, and each gateway an
  *      exit node (#2887);
@@ -19,14 +19,15 @@
  *  10. nbidp: the private reverse proxy's token, and the private service in
  *      front of Dex (#2891, nbidp.ts).
  *
- * User groups (admins, family, friends, media-managers) are NOT created here:
- * JWT group sync creates them from Authentik's `groups` claim on first login,
- * and a same-named group made through the API would collide with it. Policies
- * that name them (#2888) look them up instead.
+ * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
+ * the server runs on Azure and Authentik is LAN/tailnet-only, so neither the
+ * management server nor a NetBird-only phone away from home could reach it.
+ * People join by invite (`mise run netbird:invite`, scripts/netbird-invite.ts),
+ * which puts each of them in one of the user groups below.
  */
 import * as netbird from "@pulumi/netbird";
 import * as pulumi from "@pulumi/pulumi";
-import { baoKvSecret, baoProvenance, oidcBaoPath } from "components/bao.ts";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
@@ -36,15 +37,14 @@ import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolic
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
 import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
-import { ACCESS_RULES, homeResourceGroups, type LiveGroup, resolveGroups, USER_GROUPS } from "./policy.ts";
+import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
 
-/** Who may log in at all; one list, shared with the client-access policy. */
+/** The groups invites place people in; one list, shared with the client-access policy. */
 export { USER_GROUPS };
 
 /** NetBird's overlay. Clear of Tailscale's 100.64/10 on dual-mesh desktops and of the 10.10/16 LAN. */
 const NETWORK_RANGE = "10.100.0.0/16";
-const DAY = 24 * 60 * 60;
 
 const globals = new GlobalResources({}, {});
 const provider = globals.netbirdProvider;
@@ -53,21 +53,20 @@ const owner = globals.netbirdOwner;
 const opts = { provider };
 
 // ── 1. Account ───────────────────────────────────────────────────────────
-// Before any setup key or login connector exists, so no peer can ever take an
-// address from the default range.
+// Before any setup key or invite exists, so no peer can ever take an address
+// from the default range.
 const settings = new netbird.AccountSettings(
   "account",
   {
     networkRange: NETWORK_RANGE,
     dnsDomain: `nb.${rootDomain()}`,
-    // Client devices re-authenticate through Authentik monthly. Setup-key
-    // peers (gateways, routers, Apple TVs) never expire.
-    peerLoginExpirationEnabled: true,
-    peerLoginExpiration: 30 * DAY,
-    jwtGroupsEnabled: true,
-    jwtGroupsClaimName: "groups",
-    jwtAllowGroups: USER_GROUPS,
-    // A user's groups also follow onto the peers they register.
+    // No re-login, ever (David, 2026-11-03): a device stays on until its
+    // peer is deleted, which is how one is removed.
+    peerLoginExpirationEnabled: false,
+    // Groups are NetBird's own (3, below), not claims from an IdP.
+    jwtGroupsEnabled: false,
+    // A user's auto groups also follow onto the peers they register, so
+    // moving someone between groups moves their devices with them.
     groupsPropagationEnabled: true,
     regularUsersViewBlocked: true,
     routingPeerDnsResolutionEnabled: true,
@@ -78,19 +77,16 @@ const settings = new netbird.AccountSettings(
 // ── 2. No allow-all ──────────────────────────────────────────────────────
 const defaultPolicyRemoval = new NetbirdDefaultPolicyRemoval("default-policy", api, { dependsOn: [settings] });
 
-// ── 3. Login ─────────────────────────────────────────────────────────────
-// The OAuth2 client stacks/system created from
-// kubernetes/apps/pulumi/netbird-edge/definition.yaml. Its callback is the
-// embedded Dex's `<issuer>/callback`.
-const authentik = globals.store.getSecretByPath<{ client_id: string; client_secret: string; issuer: string }>(oidcBaoPath("equestria", "netbird"));
-new netbird.IdentityProvider(
-  "authentik",
-  { type: "oidc", name: "Authentik", issuer: authentik.issuer, clientId: authentik.client_id, clientSecret: authentik.client_secret },
-  { ...opts, dependsOn: [settings, defaultPolicyRemoval] },
-);
+// ── 3. User groups ───────────────────────────────────────────────────────
+// Plain API groups. An invite names one as the user's auto group, so every
+// peer that person registers lands in it; the policies (9) and nbidp (10)
+// use them directly. Moving someone is an edit of their auto groups in the
+// dashboard (Team → Users).
+const group = (name: string) => new netbird.Group(name, { name }, { ...opts, dependsOn: [defaultPolicyRemoval] });
+const userGroups: Record<string, netbird.Group> = Object.fromEntries(USER_GROUPS.map(name => [name, group(name)]));
+const userGroupIds = USER_GROUPS.map(name => userGroups[name].id);
 
 // ── 4. Device groups and setup keys ──────────────────────────────────────
-const group = (name: string) => new netbird.Group(name, { name }, { ...opts, dependsOn: [defaultPolicyRemoval] });
 const groups = {
   gateways: group("gateways"),
   k8sRouters: group("k8s-routers"),
@@ -307,74 +303,66 @@ entryResource("equestria-internal-gateway", `${internalGatewayIp()}/32`);
 entryResource("authentik-vip", `${authentikVip}/32`);
 
 // ── 9. Client-access policy (#2888) ───────────────────────────────────────
-// policy.ts says who reaches what by NAME. Device groups are this stack's own;
-// Authentik groups exist only once JWT sync has seen a member log in, so they
-// are looked up live and a rule waits (with a warning) until its group exists.
-// The operator re-runs this stack, so a rule appears on the first run after.
-const deviceGroupIds: Record<string, pulumi.Output<string>> = { "apple-tv": groups.appleTv.id, gateways: groups.gateways.id, "k8s-routers": groups.k8sRouters.id };
-const userGroupNames = [...new Set(ACCESS_RULES.flatMap(rule => rule.sources))].filter(name => !(name in deviceGroupIds));
+// policy.ts says who reaches what by NAME, and every name is a group this
+// stack creates (3 and 4). Checked before anything is declared: a source
+// that resolved to nothing would grant nobody.
+const sourceGroupIds: Record<string, pulumi.Output<string>> = {
+  ...Object.fromEntries(USER_GROUPS.map(name => [name, userGroups[name].id])),
+  "apple-tv": groups.appleTv.id,
+  gateways: groups.gateways.id,
+  "k8s-routers": groups.k8sRouters.id,
+};
+const unresolved = [...unresolvedSources(ACCESS_RULES, Object.keys(sourceGroupIds)), ...DEVICE_GROUPS.filter(name => !(name in sourceGroupIds))];
+if (unresolved.length > 0) throw new Error(`stacks/netbird/policy.ts names groups this stack does not create:\n  - ${unresolved.join("\n  - ")}`);
 
-pulumi.output(api).apply(async ({ managementUrl, token }) => {
-  const response = await fetch(`${managementUrl.replace(/\/+$/, "")}/api/groups`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
-  if (!response.ok) throw new Error(`NetBird GET /api/groups: HTTP ${response.status}`);
-  const { ids, missing, conflicts } = resolveGroups((await response.json()) as LiveGroup[], userGroupNames);
-  if (missing.length > 0) pulumi.log.warn(`NetBird groups not created yet (nobody in them has logged in): ${missing.join(", ")}. Their rules wait.`);
-  if (conflicts.length > 0) pulumi.log.error(`NetBird groups ${conflicts.join(", ")} exist but were not made by JWT sync, so sync never adds users to them. Delete them in NetBird.`);
+// Every gateway is an exit node the user groups can pick (never applied by
+// default). Exit nodes are still legacy routes: offered only to the user
+// groups, and the route's own ACL is what lets their traffic out. The
+// `users-exit-nodes` rule below is what connects them to the gateway.
+for (const host of GATEWAY_HOSTS) {
+  new netbird.Route(
+    `exit-${host}`,
+    {
+      networkId: `exit-${host}`,
+      description: `Exit through ${host}`,
+      network: "0.0.0.0/0",
+      peerGroups: [gatewayHostGroups[host].id],
+      groups: userGroupIds,
+      accessControlGroups: userGroupIds,
+      masquerade: true,
+      skipAutoApply: true,
+      enabled: true,
+    },
+    { ...opts, dependsOn: [defaultPolicyRemoval] },
+  );
+}
 
-  // Every gateway is an exit node the user groups can pick (never applied by
-  // default). Exit nodes are still legacy routes: offered only to the user
-  // groups, and the route's own ACL is what lets their traffic out. The
-  // `users-exit-nodes` rule below is what connects them to the gateway.
-  const userGroupIds = USER_GROUPS.map(name => ids[name]).filter(id => id !== undefined);
-  if (userGroupIds.length > 0) {
-    for (const host of GATEWAY_HOSTS) {
-      new netbird.Route(
-        `exit-${host}`,
+const destinationGroups: Record<string, netbird.Group | undefined> = { ...endpointGroups, gateways: groups.gateways, "lan-home": siteResourceGroups.home, "equestria-entry": equestriaEntry };
+for (const rule of ACCESS_RULES) {
+  const destination = destinationGroups[rule.destination];
+  if (!destination) throw new Error(`policy.ts rule ${rule.name} targets ${rule.destination}, which this stack does not create`);
+  new netbird.Policy(
+    `client-${rule.name}`,
+    {
+      name: `client-${rule.name}`,
+      description: rule.description,
+      enabled: true,
+      rules: [
         {
-          networkId: `exit-${host}`,
-          description: `Exit through ${host}`,
-          network: "0.0.0.0/0",
-          peerGroups: [gatewayHostGroups[host].id],
-          groups: userGroupIds,
-          accessControlGroups: userGroupIds,
-          masquerade: true,
-          skipAutoApply: true,
+          name: rule.name,
+          action: "accept",
+          bidirectional: false,
+          protocol: rule.protocol,
+          ports: rule.protocol === "icmp" ? undefined : rule.ports?.map(String),
+          sources: rule.sources.map(name => sourceGroupIds[name]),
+          destinations: [destination.id],
           enabled: true,
         },
-        { ...opts, dependsOn: [defaultPolicyRemoval] },
-      );
-    }
-  }
-
-  const destinationGroups: Record<string, netbird.Group | undefined> = { ...endpointGroups, gateways: groups.gateways, "lan-home": siteResourceGroups.home, "equestria-entry": equestriaEntry };
-  for (const rule of ACCESS_RULES) {
-    const sources = rule.sources.map(name => deviceGroupIds[name] ?? ids[name]).filter(id => id !== undefined);
-    if (sources.length === 0) continue;
-    const destination = destinationGroups[rule.destination];
-    if (!destination) throw new Error(`policy.ts rule ${rule.name} targets ${rule.destination}, which this stack does not create`);
-    new netbird.Policy(
-      `client-${rule.name}`,
-      {
-        name: `client-${rule.name}`,
-        description: rule.description,
-        enabled: true,
-        rules: [
-          {
-            name: rule.name,
-            action: "accept",
-            bidirectional: false,
-            protocol: rule.protocol,
-            ports: rule.protocol === "icmp" ? undefined : rule.ports?.map(String),
-            sources,
-            destinations: [destination.id],
-            enabled: true,
-          },
-        ],
-      },
-      { ...opts, dependsOn: [defaultPolicyRemoval] },
-    );
-  }
-});
+      ],
+    },
+    { ...opts, dependsOn: [defaultPolicyRemoval] },
+  );
+}
 
 // ── 10. nbidp (#2891) ─────────────────────────────────────────────────────
 // Passwordless "log in with NetBird" in Authentik (plan §K). The NetBird
@@ -385,12 +373,13 @@ pulumi.output(api).apply(async ({ managementUrl, token }) => {
 //     scoped: it can serve this account's services and nothing else. Its
 //     cluster address is NB_PROXY_DOMAIN, `nbidp.<root domain>`;
 //   - the private service: `nbidp.<root domain>` to Dex, NetBird-only, open to
-//     the four Authentik groups and nothing else (nbidp.ts says why).
+//     the four user groups and nothing else (nbidp.ts says why, and why it
+//     still finds people's Authentik accounts with NetBird's built-in login).
 //
 // Management only accepts the service once that proxy is connected (it
 // derives the service's cluster from the live proxies), so on the run that
-// mints the token the service waits, like a policy whose group does not exist
-// yet. The next run after the proxy comes up declares it.
+// mints the token the service waits. The next run after the proxy comes up
+// declares it.
 // A token change is an update, not a replace (NetbirdProxyToken.diff), so
 // moving from the owner's PAT to automation's keeps the minted proxy token.
 const nbidpProxyToken = new NetbirdProxyToken("nbidp-proxy", { ...api, name: "nbidp-equestria" }, { dependsOn: [settings] });
@@ -408,23 +397,14 @@ baoKvSecret(
 );
 
 const nbidpDomain = nbidpHost();
-pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
-  const [liveGroups, clusters, services] = await Promise.all([
-    netbirdGet<LiveGroup[]>(url, token, "/api/groups"),
-    netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"),
-    netbirdGet<LiveService[]>(url, token, "/api/reverse-proxies/services"),
-  ]);
+pulumi.all([pulumi.output(api), pulumi.output(sourceGroupIds)]).apply(async ([{ managementUrl: url, token }, groupIds]) => {
+  const [clusters, services] = await Promise.all([netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"), netbirdGet<LiveService[]>(url, token, "/api/reverse-proxies/services")]);
   if (!privateServiceReady(clusters, services, nbidpDomain)) {
     pulumi.log.warn(`nbidp: no private proxy online for ${nbidpDomain} yet (kubernetes/apps/netbird-system/nbidp). The private service waits for it.`);
     return;
   }
-  const access = privateServiceAccessGroups(liveGroups);
-  if (access.conflicts.length > 0) pulumi.log.error(`nbidp: groups ${access.conflicts.join(", ")} were not made by JWT sync, so they are left out of the private service.`);
-  if (access.ids.length === 0) {
-    pulumi.log.warn("nbidp: none of the Authentik groups exists in NetBird yet (nobody in them has logged in). The private service waits.");
-    return;
-  }
-  new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds: access.ids }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
+  const accessGroupIds = privateServiceAccessGroups(groupIds);
+  new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
 });
 
 /** GET a NetBird API path with `globals.netbirdApi`'s token. */
