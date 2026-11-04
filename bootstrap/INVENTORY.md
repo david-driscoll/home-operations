@@ -117,8 +117,8 @@ GitHub when the repo is archived.
   provider credentials — all of it belongs in OpenBao under `secrets/`.
 - **NetBird.** Client access only, never in a recovery path (docs/plans/netbird-mirror.md).
   `stacks/netbird-edge` generates its secrets and writes them to OpenBao:
-  `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret,
-  the session-cookie key, and `resticPassword`, which decrypts the 15-minute backups) and
+  `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret
+  that celestia's home relay also reads, the session-cookie key, and `resticPassword`, which decrypts the 15-minute backups) and
   `third-party-tokens/netbird/owner` (the break-glass owner's login and its setup PAT,
   which is never rotated and lapses a year after setup). `stacks/netbird` then mints
   the PATs Pulumi actually uses, `third-party-tokens/netbird/automation` and the owner's
