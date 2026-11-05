@@ -56,9 +56,28 @@ export const NBIDP_BAO = {
   proxyToken: "third-party-tokens/netbird/nbidp-proxy",
 } as const;
 
-/** `nbidp.<root domain>`: Dex's issuer host, the proxy's cluster address, and the private service's domain. */
+/**
+ * `nbidp.<root domain>`: Dex's issuer host and the private service's domain,
+ * registered as a custom domain on the proxy's cluster (nbidpClusterAddress).
+ * It used to be the cluster address too; it is no longer.
+ */
 export function nbidpHost(root: string = rootDomain()): string {
   return `nbidp.${root}`;
+}
+
+/** The label of the private proxy's cluster address under the root domain. */
+export const NBIDP_CLUSTER_LABEL = "ek";
+
+/**
+ * `ek.<root domain>`: the private reverse proxy's cluster address
+ * (NB_PROXY_DOMAIN in kubernetes/apps/netbird-system/nbidp/helmrelease.yaml),
+ * which every service on that proxy targets (`target_id`) and every custom
+ * domain on it names (`target_cluster`, and the `validation.<domain>` CNAME).
+ * Kept apart from nbidpHost so the proxy can serve more than nbidp under
+ * custom domains (docs/plans/netbird-mirror.md D38).
+ */
+export function nbidpClusterAddress(root: string = rootDomain()): string {
+  return `${NBIDP_CLUSTER_LABEL}.${root}`;
 }
 
 export function nbidpIssuer(root: string = rootDomain()): string {

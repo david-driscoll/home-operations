@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { candidatesFromEnv, findGroupId, INVITE_EXPIRES_SECONDS, inviteRequest, inviteUrl, parseInviteArgs } from "./invite.ts";
+import { candidatesFromEnv, findGroupId, INVITE_EXPIRES_SECONDS, inviteRequest, inviteRole, inviteUrl, parseInviteArgs } from "./invite.ts";
 
 describe("parseInviteArgs", () => {
   it("takes an email, a name and one of the four user groups", () => {
@@ -65,7 +65,7 @@ describe("findGroupId", () => {
 
 describe("inviteRequest", () => {
   it("is a regular user in the one group, valid for 72 hours", () => {
-    assert.deepEqual(inviteRequest({ email: "a@example.test", name: "A", groupId: "g-family" }), {
+    assert.deepEqual(inviteRequest({ email: "a@example.test", name: "A", group: "family", groupId: "g-family" }), {
       email: "a@example.test",
       name: "A",
       role: "user",
@@ -73,6 +73,11 @@ describe("inviteRequest", () => {
       expires_in: 259200,
     });
     assert.equal(INVITE_EXPIRES_SECONDS, 72 * 60 * 60);
+  });
+
+  it("makes admins NetBird admins, and nobody else", () => {
+    assert.equal(inviteRequest({ email: "a@example.test", name: "A", group: "admins", groupId: "g-admins" }).role, "admin");
+    for (const group of ["family", "friends", "media-managers"]) assert.equal(inviteRole(group), "user");
   });
 });
 

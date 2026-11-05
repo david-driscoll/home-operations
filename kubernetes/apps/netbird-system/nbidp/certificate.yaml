@@ -17,9 +17,12 @@
 # directory only in ACME mode, and ACME would then try to issue nbidp's name
 # over an inbound challenge that cannot reach it. So:
 #
-#   - nbidp.<root domain>   Dex's issuer and the proxy's cluster address;
-#   - *.app.<root domain>   every tailnet app's NetBird twin
-#                           (docs/plans/netbird-mirror.md §N).
+#   - nbidp.<root domain>   Dex's issuer: the nbidp service, a custom domain
+#                           on the cluster below;
+#   - ek.<root domain>      the cluster address (NB_PROXY_DOMAIN), which no
+#                           service uses today; listed so one may;
+#   - *.app.<root domain>   every tailnet app's NetBird twin, under the `app`
+#                           custom domain (docs/plans/netbird-mirror.md §N).
 #
 # The copy other hosts may pull from OpenBao is ./app-wildcard-certificate.yaml,
 # a separate certificate without nbidp's name, so this key never leaves the
@@ -36,4 +39,5 @@ spec:
   commonName: nbidp.${ROOT_DOMAIN}
   dnsNames:
     - nbidp.${ROOT_DOMAIN}
+    - ek.${ROOT_DOMAIN}
     - "*.app.${ROOT_DOMAIN}"

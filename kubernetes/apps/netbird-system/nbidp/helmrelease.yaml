@@ -65,11 +65,15 @@ spec:
               tag: 0.82.0@sha256:cc0deaed250ca1332e28f40caca780055cdda7871750cb020478f6fe96e1f6d7
             env:
               NB_PROXY_MANAGEMENT_ADDRESS: https://netbird.${ROOT_DOMAIN}:443
-              # The cluster address, and the private service's domain
-              # (stacks/netbird/nbidp.ts). Management derives the service's
-              # cluster from it and synthesizes the DNS zone for exactly this
-              # name, so no custom domain is registered.
-              NB_PROXY_DOMAIN: nbidp.${ROOT_DOMAIN}
+              # The cluster address, `ek.<root domain>`
+              # (components/netbird/nbidp.ts nbidpClusterAddress). NOT nbidp's
+              # name any more (docs/plans/netbird-mirror.md D38): stacks/netbird
+              # registers `nbidp.<root domain>` as a custom domain on this
+              # cluster, so the proxy can serve other names the same way.
+              # Changing this strands every service on the old address
+              # (management pins a service's cluster at create); stacks/netbird
+              # deletes and re-creates them, with an outage in between.
+              NB_PROXY_DOMAIN: ek.${ROOT_DOMAIN}
               NB_PROXY_PRIVATE: "true"
               # Static certs from certificate.yaml; no ACME, no port 80.
               NB_PROXY_ACME_CERTIFICATES: "false"
