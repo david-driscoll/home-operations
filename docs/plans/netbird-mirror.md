@@ -291,13 +291,21 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
   family, friends and media-managers, never `All` or a device group.
 - **The proxy registers with an account-scoped token** (`POST /api/reverse-proxies/proxy-tokens`, minted by
   `dynamic/netbird/NetbirdProxyToken`, stored at `third-party-tokens/netbird/nbidp-proxy`). Its cluster address is
-  `nbidp.<root domain>`, which is also the service's domain, so no custom domain is registered.
+  `ek.<root domain>` (D38). `nbidp.<root domain>` is a custom domain on that cluster, validated by a public
+  Cloudflare CNAME `validation.nbidp` → `ek.<root domain>` (`stacks/netbird/proxyDomains.ts`). Until D38 the cluster
+  address was `nbidp.<root domain>` itself, which left the proxy able to serve that one name only.
+- **A cluster change re-creates the services.** Management pins a service's proxy cluster at create and keeps it on
+  every update with the same domain, so `NetbirdPrivateService` replaces a service whose target cluster changed,
+  deleting first, and its create deletes one it finds stranded on another cluster. Custom domains replace the same
+  way (`replaceOnChanges: targetCluster`). While the old and new clusters are both connected, a create that lands on
+  the old one is deleted again and the run fails, to be retried.
 - **No public DNS name and no inbound path.** A private service is served only on the proxy's WireGuard listener.
   Management pushes the record (to the proxy peers' tunnel IPs) only to peers in the access groups, and creates the
   80/443 policy itself. The certificate is DNS-01.
 - **The provider cannot declare a private service** (0.0.11 has no `private`/`access_groups`), so
-  `dynamic/netbird/NetbirdPrivateService` calls the API. Management only accepts it once the proxy is connected, so it
-  appears on the first `stacks/netbird` run after the proxy comes up.
+  `dynamic/netbird/NetbirdPrivateService` calls the API. Management only accepts it once the proxy is connected and
+  the domain validated. The stack always declares it, so a run that has to create it while the proxy is down fails
+  and the Stack retries within a minute.
 - **Every Dex identity header is `X-NetBird-User`.** Dex's authproxy connector reads five headers and four default to
   names the proxy passes through, which would let a user name someone else's email.
 - **Authentik's server calls Dex over a LAN back-channel** (decided 2026-11-03). Authentik isn't a NetBird peer, and
@@ -359,12 +367,16 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D27 | 11-03 | People join by invite: `mise run netbird:invite <email> "<name>" <group>` prints a 72-hour link; invite under the person's Authentik email so nbidp's `email_link` matches |
 | D28 | 11-03 | No peer login expiry; a device is removed by deleting its peer |
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
-| D32 | 11-04 | Every tailnet app is also a NetBird **private** service at `<app>.app.<root domain>`, same `<app>` as its tailnet name, on the nbidp proxy (§N) |
-| D33 | 11-04 | `app.<root domain>` is a custom domain on the nbidp cluster; public DNS is Cloudflare-only grey CNAMEs `*.app` and `validation.app` to `nbidp.<root domain>` |
-| D34 | 11-04 | The proxy serves `*.app` from its one static certificate (nbidp's plus `*.app`); `NB_PROXY_WILDCARD_CERT_DIR` is ACME-mode only. A separate `*.app` certificate is copied to OpenBao (`apps/netbird/app-wildcard-tls`) by `stacks/netbird`, not pushed by ESO |
-| D35 | 11-04 | Services target Traefik's new ClusterIP-only `netbird` entrypoint with Host kept; a deny-only CiliumNetworkPolicy admits only the proxy pods, and `netbird-as-<TAILSCALE_MIDDLEWARE>` mirrors each app's tailnet chain |
-| D36 | 11-04 | Access groups are the definition's `access_policy.groups` plus `admins`; none listed or `users` means all four; unknown groups are skipped; no definition means admins only |
-| D37 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC, and resyncs hourly |
+| D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
+| D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
+| D38 | 11-04 | The private proxy's cluster address is `ek.<root domain>`; `nbidp.<root domain>` becomes a custom domain on it (public CNAME `validation.nbidp` → `ek`), so the proxy can serve other names. The nbidp service is deleted and re-created on the new cluster: management never moves a service |
+| D39 | 11-04 | The `*.app` certificate (`netbird-system/netbird-app-wildcard-tls`) is pushed to OpenBao `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by an ESO PushSecret. `eso-equestria` is widened to create/read/update that one path's data and metadata, a deliberate exception to its read-only rule: a public, reissued certificate, not worth a second store and role. No Pulumi copy, so the key is not in Pulumi state |
+| D40 | 11-04 | A tailnet app whose definition grants NetBird user groups is also a NetBird **private** service at `<app>.app.<root domain>`, same `<app>` as its tailnet name, on the ek proxy (§N) |
+| D41 | 11-04 | `app.<root domain>` is a custom domain on the ek cluster; public DNS is Cloudflare-only grey CNAMEs `*.app` and `validation.app` to `ek.<root domain>` |
+| D42 | 11-04 | The proxy serves `*.app` from its one static certificate (`nbidp-tls`: nbidp, ek, `*.app`); `NB_PROXY_WILDCARD_CERT_DIR` is ACME-mode only. The separate `*.app`-only certificate is what D39 pushes |
+| D43 | 11-04 | Services target Traefik's new ClusterIP-only `netbird` entrypoint with Host kept; a deny-only CiliumNetworkPolicy admits only the proxy pods, and `netbird-as-<TAILSCALE_MIDDLEWARE>` mirrors each app's tailnet chain |
+| D44 | 11-04 | Access groups are exactly the definition's `access_policy.groups` that are NetBird user groups; `admins` is not added. `users` means all four (no app lists it today). No service, with a warning, for an app with no ApplicationDefinition, no `access_policy`, or no group that maps |
+| D45 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC; the Stack keeps its daily resync, so a new app appears on the next run (daily, or the next merge) |
 
 ### Azure primary (#3001, 2026-11-03)
 

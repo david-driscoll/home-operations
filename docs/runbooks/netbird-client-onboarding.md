@@ -16,7 +16,11 @@ mise run netbird:invite <email> "<name>" <group>
 
 - **`<group>`** is one of `admins`, `family`, `friends` or `media-managers`. It decides
   what the person's devices can reach (`stacks/netbird/policy.ts`). Each person gets
-  exactly one.
+  exactly one. `admins` invites are NetBird **admins** and get the dashboard; everyone
+  else is a regular user with no dashboard.
+- A person's own devices reach each other, and nobody else's: `stacks/netbird` gives
+  every user a `self-<name>` group and policy on its next run (`selfAccess.ts`). Until
+  that run, a new person's phone and laptop cannot see each other.
 - **`<email>`** should be the person's **Authentik email**. NetBird doesn't need it,
   but the passwordless **NetBird** button on Authentik's login page matches people by
   that email (nbidp, #2891). With any other email they would arrive at Authentik as a
