@@ -23,6 +23,17 @@
  * Only netbird-server and the dashboard are fenced. Traefik and the relay run
  * whatever the lease says, so a standby keeps relaying. The backup timer
  * follows management: only the lease holder uploads snapshots.
+ *
+ * Every stop of a running management (demote, and stop on a shared or
+ * unknown lease) then restarts Traefik: the demotion drops its clients. In the
+ * #2892 drill, stopping netbird-server alone left ~32 clients on the old
+ * host for ~18 minutes. Their gRPC channel retries on the same TCP connection
+ * to Traefik, which still answers its keepalive pings, and only a new
+ * connection re-resolves the name. A Traefik restart closes those connections, so
+ * clients redial and follow the lease. It also cuts this host's relay clients
+ * for a moment; they reconnect to another relay. Traefik has no way to close
+ * one router's connections alone, so a fenced inner Traefik was the only
+ * relay-safe alternative, and it was turned down (2026-11-05).
  */
 import { ACME_FILE, BACKUP_INTERVAL_MINUTES, backupPaths, NETBIRD_DATA_VOLUME, REQUIRED_STORE_FILE, STORE_FILES, TRAEFIK_ACME_VOLUME } from "./backup.ts";
 import { NETBIRD_DIR } from "./server.ts";
@@ -168,6 +179,13 @@ stop_management() {
   compose stop ${fenced}
 }
 
+# Clients' gRPC connections outlive the server behind Traefik; only closing
+# them makes clients redial and follow the lease (see the header).
+drop_clients() {
+  compose restart traefik
+  log "restarted traefik to drop the demoted management's clients"
+}
+
 # The store and the certificate leave the volumes, so the next promotion of
 # this host restores the newest snapshot (whoever took it) and its acme.json.
 archive_store() {
@@ -216,6 +234,7 @@ case "$action" in
   demote)
     stop_management
     archive_store
+    drop_clients
     ;;
   # Also archives: a store left by a stop on an unknown lease is stale once
   # another host holds the lease.
@@ -223,7 +242,10 @@ case "$action" in
     timer_off
     archive_store
     ;;
-  stop) stop_management ;;
+  stop)
+    stop_management
+    drop_clients
+    ;;
   hold) log "the lease has been unknown for \${unresolved}s; holding until \${grace}s" ;;
   idle) timer_off ;;
 esac

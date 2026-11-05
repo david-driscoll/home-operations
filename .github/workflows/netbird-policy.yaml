@@ -7,6 +7,8 @@ name: "NetBird Policy"
 # NetBird twin in stacks/netbird/policy.ts and no TAILSCALE_ONLY reason.
 # Also the pure half of `mise run netbird:invite` (stacks/netbird/invite.ts)
 # and the Technitium nameserver selection (stacks/netbird/dns.ts).
+# And the dashboards' release check (components/netbird/dashboards.test.ts):
+# a NetBird image bump fails here until the vendored dashboard follows.
 # The tests import only pure modules, so no `npm ci`.
 
 on:
@@ -36,6 +38,11 @@ jobs:
             stacks/unifi-network/acl-manager.ts
             components/netbird/tokens.ts
             components/netbird/tokens.test.ts
+            components/netbird/compose.yaml
+            components/netbird/dashboards.test.ts
+            kubernetes/apps/observability/grafana/dashboards/netbird.yaml
+            kubernetes/apps/observability/grafana/dashboards/kustomization.yaml
+            kubernetes/apps/observability/grafana/dashboards/netbird/**
             .github/workflows/netbird-policy.yaml
 
   test:
@@ -54,7 +61,7 @@ jobs:
           node-version: "26"
 
       - name: Run policy tests
-        run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts stacks/netbird/invite.test.ts stacks/netbird/dns.test.ts components/netbird/tokens.test.ts
+        run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts stacks/netbird/invite.test.ts stacks/netbird/dns.test.ts components/netbird/tokens.test.ts components/netbird/dashboards.test.ts
 
   # The one check branch protection requires. `test` is skipped when nothing it
   # covers changed, and a skipped job never reports, so a required `Test`

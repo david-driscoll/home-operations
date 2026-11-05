@@ -389,6 +389,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D52 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC; the Stack keeps its daily resync, so a new app appears on the next run (daily, or the next merge) |
 | D53 | 11-05 | Gateway groups are per Dockge **site stack**, not per host: `gateway-home` (alpha-site, celestia), `gateway-gulf-of-mexico` (luna), `gateway-ocracoke` (skystar), with one exit node each (`exit-<site stack>`). Setup keys stay per host (`gateway-<host>`, same OpenBao fields) and place peers in `gateways` plus their stack's group; the already-enrolled peers are moved by the groups' declared `peers` (live members ∪ enrolled gateway peers, read each run). `gateways` stays, for policy and the health job. Supersedes the per-host groups and `exit-<host>` routes |
 | D54 | 11-05 | Equestria's in-cluster routing peers (`k8s-routers`, §G) also serve **`exit-home`**, beside the `gateway-home` gateways: one more way out of the same home WAN (via their node's Cilium SNAT) that keeps the home exit up while the Dockge gateways are down. Exit only: they are not in `gateway-home`, so they never route `lan-home`. `users-exit-equestria` (ICMP to `k8s-routers`) connects users to them. Briefly a separate `exit-equestria` route; folded into `exit-home` the same day. Mirrors the cluster's Tailscale exit node (`primary-connector`) |
+| D55 | 11-05 | **A demotion restarts Traefik.** Every fence stop of a running management (demote, and stop on a shared or unknown lease) ends in `compose restart traefik`, so clients redial and follow the lease; in the #2892 drill they otherwise stayed ~18 minutes on the old host. Accepts a moment's drop for that host's relay clients. A fenced inner Traefik behind an SNI TCP router (relay-safe) was turned down as more moving parts. Also from the drill: the first deploy step waits 5 minutes for a rebuilt VM to join the tailnet, and `fenceResults` is renamed `deployFenceResults`. OCI stays parked (D48) as a possible third host |
 
 ### Forward-auth apps on every name (D45, 2026-11-04)
 
@@ -488,6 +489,24 @@ Azure. §C, §D and §E describe the OCI-primary plan; this is what is built ins
 - **acme.json on promotion** (the open question from #3033): the snapshot's replaces the host's
   (`NETBIRD_RESTORE_ACME=replace`). See [the runbook](../runbooks/netbird-failback.md#acmejson-on-promotion).
 - **Runbook:** [`docs/runbooks/netbird-failback.md`](../runbooks/netbird-failback.md).
+
+#### Drill: combined failover and reclamation (#2892, 2026-11-05)
+
+Primary azure-eus2, standby azure-cus; David on a phone. The full log is on #2892.
+
+| Measure | Result |
+| --- | --- |
+| Failover: management stopped on eus2 to the API answering on cus | **5m11s** (lease moved at 4m28s) |
+| Failover: clients behind the home WAN checked in to cus | **~18m40s**, only after eus2's Traefik was restarted by hand |
+| Failover: nbidp proxies back (proxy watchdog, #3075) | 7m41s, unattended |
+| Rebuild of eus2 (`--replace` of the VM only) | came up passive: `standby (other)`, empty volume, backups off |
+| Failback: lease moved to the API answering on eus2 | **~44s** (cus's Traefik again restarted by hand) |
+| Data lost | none, both ways (final backups seconds old) |
+
+What changed because of it (D55): the fence's demotion now restarts Traefik, the first deploy step waits 5
+minutes for a rebuilt VM, `fenceResults` became `deployFenceResults`, and the runbook gained "Rebuilding a
+host". The next planned demotion checks the first fix: the demoted host's Traefik access log should stop showing
+404s on `/management.ManagementService/GetServerKey`, and clients should move within seconds.
 
 ### Home relay (D32, 2026-11-04)
 
@@ -685,4 +704,4 @@ Every check reaches Pushover. The flips page from the watchdog (§E), and each c
 - **The home relay is probed from Azure.** Its name is private (a Technitium record that points at the home WAN address), and Gatus at home could reach it only by hairpin NAT, which proves nothing about the WAN path. The Azure hosts run `--accept-dns=false`, so every run asks the Technitium nodes for the address directly over the tailnet (`dig @<dns-<cluster> tailnet IP>`, falling through node to node until one answers). `stacks/netbird-edge` reads the `tag:dns` devices' tailnet IPs at deploy time and writes them into the script, so a changed or added node is picked up on the next run. The address itself is never baked in: a new home WAN address is used on the next probe. A probe that cannot resolve the name or connect pushes nothing. A certificate inside 7 days pushes an explicit failure.
 - **The one grant it needs.** `tag:netbird-edge` is internet-facing and gets nothing from the tagged grants. `stacks/unifi-network` (`configureNetbirdEdgeAccess`, `netbird-edge-dns`) grants it `tag:dns` on `tcp:53` and `udp:53` only. Policy tests accept `tag:dns:53` and deny `tag:dns` on 22, 443, 853 and 5380, plus the other tagged services it still does not reach.
 - **Warnings are quiet.** Only the NetBird warnings are routed to `pushover-quiet`. Dropping the `alertname` matcher would quiet every warning in the estate; that is a separate decision.
-- **Turning the home probe on.** It is off by default. Once #3051 is merged and its first `stacks/unifi-network` run has written the record, run `pulumi config set netbird-edge:homeRelayProbe true` in `stacks/netbird-edge`. The flag stands in for the record: while the record is missing the probes find nothing and the heartbeats go stale, so turn it on only after that run. With no `tag:dns` device on the tailnet, a run warns and leaves the probes off. A home WAN address change needs no deploy.
+- **The home probe is on** (`netbird-edge:homeRelayProbe: "true"`, since 2026-11-05). It was off by default until #3051 had landed and its first `stacks/unifi-network` run had written the record. The flag stands in for the record: while the record is missing the probes find nothing and the heartbeats go stale, so turn it on only after that run. With no `tag:dns` device on the tailnet, a run warns and leaves the probes off. A home WAN address change needs no deploy.
