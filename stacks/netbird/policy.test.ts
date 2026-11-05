@@ -61,6 +61,12 @@ describe("client access, mirroring member-home-subnet-access", () => {
     assert.ok(!can("apple-tv", "gateways", 0, "icmp"));
   });
 
+  it("connects users to the in-cluster routers for exit-equestria, and nothing more", () => {
+    for (const group of USER_GROUPS) assert.ok(can(group, "k8s-routers", 0, "icmp"), group);
+    assert.ok(!can("family", "k8s-routers", 443));
+    assert.ok(!can("apple-tv", "k8s-routers", 0, "icmp"));
+  });
+
   it("gives an unknown group nothing", () => {
     assert.ok(!can("strangers", "home-web", 443));
   });

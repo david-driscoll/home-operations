@@ -18,6 +18,7 @@
  *   home-media   the cluster's LAN IPs (Jellyfin and the rest sit behind its Gateway)
  *   lan-home     the whole home LAN (admins only)
  *   gateways     the gateway peers themselves, for exit nodes
+ *   k8s-routers  the in-cluster routing peers, for the `exit-equestria` exit node
  *   equestria-entry  the cluster's two /32s via the in-cluster routers (#2889)
  */
 
@@ -121,6 +122,14 @@ export const ACCESS_RULES: AccessRule[] = [
     description: "Connects users to the gateways so their exit-node routes sync; the routes' own ACL carries the traffic",
     sources: USER_GROUPS,
     destination: "gateways",
+    protocol: "icmp",
+    mirrors: ["member-exit-node"],
+  },
+  {
+    name: "users-exit-equestria",
+    description: "Connects users to the in-cluster routers so the exit-equestria route syncs; the route's own ACL carries the traffic",
+    sources: USER_GROUPS,
+    destination: "k8s-routers",
     protocol: "icmp",
     mirrors: ["member-exit-node"],
   },
