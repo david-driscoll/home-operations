@@ -362,6 +362,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
 | D47 | 11-04 | NetBird health alerting: a separate `netbird-health` CronJob posts Alertmanager alerts for disconnected gateways/DNS peers, unvalidated proxy domains and an offline nbidp cluster; Gatus checks the Azure relays over TLS; the Azure hosts resolve the home relay live through the Technitium nodes (a port-53-only `tag:netbird-edge` -> `tag:dns` grant), probe it and push a Gatus heartbeat; NetBird warnings reach Pushover quietly (priority -1, no sound) (Monitoring) |
+| D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
 
 ### Azure primary (#3001, 2026-11-03)
 
