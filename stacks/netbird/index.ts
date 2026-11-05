@@ -18,7 +18,9 @@
  *   8. the `equestria` network the operator's routing peers serve (#2889);
  *   9. the client-access policy (#2888, policy.ts);
  *  10. nbidp: the private reverse proxy's token, and the private service in
- *      front of Dex (#2891, nbidp.ts).
+ *      front of Dex (#2891, nbidp.ts);
+ *  11. a `self-` group and policy per person, so their own devices reach
+ *      each other (selfAccess.ts).
  *
  * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
  * the server runs on Azure and Authentik is LAN/tailnet-only, so neither the
@@ -37,9 +39,11 @@ import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
+import { NetbirdUserAutoGroup } from "dynamic/netbird/NetbirdUserAutoGroup.ts";
 import { DNS_SERVER_GROUP, enrolledDnsPeers, type LivePeer, selectNameservers, technitiumLanIps } from "./dns.ts";
 import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
+import { type LiveUser, selfAccessPlan } from "./selfAccess.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
 
 /** The groups invites place people in; one list, shared with the client-access policy. */
@@ -466,6 +470,30 @@ pulumi.all([pulumi.output(api), pulumi.output(userGroupIdsByName)]).apply(async 
   }
   const accessGroupIds = privateServiceAccessGroups(groupIds);
   new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
+});
+
+// ── 11. Each person's own devices ──────────────────────────────────────────
+// NetBird has no `autogroup:self`. Instead every human user gets a `self-`
+// group in their auto groups (propagation, 1, puts their peers in it) and a
+// policy from it to itself. Read live, so someone who joined since the last
+// run gets theirs on this one; someone deleted drops out, and Pulumi takes
+// their group and policy away.
+pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
+  const users = await netbirdGet<LiveUser[]>(url, token, "/api/users");
+  for (const entry of selfAccessPlan(users)) {
+    const selfGroup = new netbird.Group(entry.resourceName, { name: entry.groupName }, { ...opts, dependsOn: [defaultPolicyRemoval] });
+    new NetbirdUserAutoGroup(entry.resourceName, { managementUrl: url, token, userId: entry.userId, groupId: selfGroup.id }, { dependsOn: [settings] });
+    new netbird.Policy(
+      entry.resourceName,
+      {
+        name: entry.groupName,
+        description: "One person's devices, to each other (stacks/netbird/selfAccess.ts)",
+        enabled: true,
+        rules: [{ name: "self", action: "accept", bidirectional: true, protocol: "all", sources: [selfGroup.id], destinations: [selfGroup.id], enabled: true }],
+      },
+      opts,
+    );
+  }
 });
 
 /** GET a NetBird API path with `globals.netbirdApi`'s token. */
