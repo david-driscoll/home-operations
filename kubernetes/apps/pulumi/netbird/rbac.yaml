@@ -9,9 +9,9 @@
 #
 # Cluster-wide only because a namespaced grant would need a RoleBinding in
 # `network`, which this kustomization cannot place (its targetNamespace is
-# `pulumi`); the program lists `network` alone. The one Secret it reads, the
-# `*.app` certificate, is granted by name in netbird-system
-# (apps/netbird-system/nbidp/app-wildcard-rbac.yaml).
+# `pulumi`); the program lists `network` alone. It reads no Secret: the `*.app`
+# certificate reaches OpenBao by an ESO PushSecret
+# (apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

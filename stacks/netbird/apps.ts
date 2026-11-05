@@ -13,9 +13,11 @@
  *                              the app's Service
  *
  * The same <host> the tailnet uses (`TAILSCALE_HOST`, default the app name),
- * under a custom domain registered on the proxy's cluster. Which apps: every
+ * under a custom domain registered on the proxy's cluster (`ek.<root domain>`).
+ * Which apps: every
  * one whose ks renders kubernetes/components/tailscale, found by its tailnet
- * Ingress. Who: the groups in its ApplicationDefinition's access_policy.
+ * Ingress, whose ApplicationDefinition grants a NetBird user group. Who:
+ * exactly those groups (appAccessGroups).
  */
 import type { PrivateServiceRequest } from "./nbidp.ts";
 import { USER_GROUPS } from "./policy.ts";
@@ -106,71 +108,48 @@ export function definitionFor(app: TailnetApp, definitions: LiveDefinition[]): L
  */
 const EVERYONE = "users";
 
-/** Always admitted. See appAccessGroups. */
-const ADMINS = "admins";
-
 export interface AppAccess {
-  /** NetBird user group names, in USER_GROUPS order. Never empty. */
+  /**
+   * NetBird user group names, in USER_GROUPS order. EMPTY means the app gets
+   * no NetBird service at all (and `warnings` says why).
+   */
   groups: string[];
   /** Why the result differs from the definition, one line each. */
   warnings: string[];
 }
 
 /**
- * Who may reach an app's NetBird twin: its definition's access_policy, which
- * names the same groups NetBird's user groups do (stacks/netbird/policy.ts).
+ * Who may reach an app's NetBird twin: exactly the groups its definition's
+ * access_policy names that are NetBird user groups (stacks/netbird/policy.ts
+ * creates them under the same names). David's decision, 2026-11-04 (D44):
  *
- *   - no access_policy groups: all four user groups. The app restricts no one
- *     in Authentik, and on Tailscale `default-apps-access` gives every member
- *     every tag:apps host, so this is no wider than the tailnet;
- *   - `users`: all four, for the reason above;
+ *   - the named groups that NetBird has, and nothing added: `admins` is in
+ *     only if the definition lists it;
+ *   - `users` (Authentik's parent of every group): all four. No app lists it
+ *     today;
  *   - a group NetBird does not have (`editors`): skipped, with a warning;
- *   - `admins`: always included. They administer every app, and this only
- *     opens the network path: the app's own login, or Authentik's policy on
- *     the forward-auth chain, still decides;
- *   - no ApplicationDefinition at all (thanos, meilisearch): admins only, with
- *     a warning. Fail closed.
+ *   - NO SERVICE, with a warning, for an app with no ApplicationDefinition
+ *     (thanos, meilisearch), a definition with no `access_policy`, or one
+ *     whose groups map to no NetBird group. The tailnet name still works.
  *
  * Never a device group: a peer without a user would have its peer name stamped
  * as X-NetBird-User (as nbidp.ts says).
  */
 export function appAccessGroups(definition: LiveDefinition | undefined, app: TailnetApp, userGroups: readonly string[] = USER_GROUPS): AppAccess {
   const label = `${app.namespace}/${app.app}`;
-  if (!userGroups.includes(ADMINS)) throw new Error(`appAccessGroups: the user groups must include ${ADMINS}`);
-  if (!definition) return { groups: [ADMINS], warnings: [`${label} has no ApplicationDefinition; its NetBird service is admins-only`] };
-
-  const named = definition.spec?.access_policy?.groups ?? [];
-  if (named.length === 0) return { groups: [...userGroups], warnings: [] };
+  if (!definition) return { groups: [], warnings: [`${label} has no ApplicationDefinition; no NetBird service`] };
+  const policy = definition.spec?.access_policy;
+  if (!policy) return { groups: [], warnings: [`${label}: its definition has no access_policy; no NetBird service`] };
 
   const warnings: string[] = [];
-  const admitted = new Set<string>([ADMINS]);
-  let kept = 0;
-  for (const name of named) {
+  const admitted = new Set<string>();
+  for (const name of policy.groups ?? []) {
     if (name === EVERYONE) userGroups.forEach(group => admitted.add(group));
     else if (userGroups.includes(name)) admitted.add(name);
-    else {
-      warnings.push(`${label}: access_policy group "${name}" is not a NetBird user group; skipped`);
-      continue;
-    }
-    kept++;
+    else warnings.push(`${label}: access_policy group "${name}" is not a NetBird user group; skipped`);
   }
-  if (kept === 0) warnings.push(`${label}: no NetBird user group left in access_policy; its NetBird service is admins-only`);
+  if (admitted.size === 0) warnings.push(`${label}: no access_policy group is a NetBird user group; no NetBird service`);
   return { groups: userGroups.filter(group => admitted.has(group)), warnings };
-}
-
-/** GET /api/reverse-proxies/domains, the fields used here. */
-export interface LiveDomain {
-  id: string;
-  domain: string;
-  validated: boolean;
-  /** `free` (a cluster address) or `custom`. */
-  type?: string;
-  target_cluster?: string;
-}
-
-/** The custom domain, if management has it. */
-export function liveCustomDomain(domains: LiveDomain[], domain: string): LiveDomain | undefined {
-  return domains.find(entry => entry.domain === domain && entry.type === "custom");
 }
 
 /**
@@ -214,12 +193,24 @@ export function appServiceRequest(args: { host: string; clusterAddress: string; 
 }
 
 /**
- * Whether an app's service can be declared on this run. As nbidp's
- * (privateServiceReady), plus the custom domain: management derives a
- * service's cluster from its domain, and a domain under `app.<root domain>`
- * resolves only once that custom domain is validated. A service that already
- * exists stays declared, so a run during a proxy restart deletes nothing.
+ * Where `app.<root domain>` stands on this run: validated; being created by
+ * this run (its create checks the CNAME, which the run creates first); or
+ * registered but still unvalidated after this run asked again.
  */
-export function appServiceReady(args: { serviceExists: boolean; clusterOnline: boolean; domainValidated: boolean }): boolean {
-  return args.serviceExists || (args.clusterOnline && args.domainValidated);
+export type AppDomainState = "validated" | "creating" | "unvalidated";
+
+/**
+ * Whether an app's service can be declared on this run. Management derives a
+ * service's cluster from its domain, which needs the custom domain validated,
+ * and a connected proxy. A service that already exists stays declared, so a
+ * run during a proxy restart deletes nothing.
+ *
+ * A domain this run creates counts as ready: the services depend on it, so if
+ * its create did not validate they fail with 412 and the Stack retries (and
+ * re-validates) within a minute, instead of waiting for the daily resync. A
+ * domain that exists and still did not validate holds new services back, so
+ * a wrong CNAME warns rather than failing every run.
+ */
+export function appServiceReady(args: { serviceExists: boolean; clusterOnline: boolean; domain: AppDomainState }): boolean {
+  return args.serviceExists || (args.clusterOnline && args.domain !== "unvalidated");
 }

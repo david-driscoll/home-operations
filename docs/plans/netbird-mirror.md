@@ -492,8 +492,8 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 
 ## N. Tailnet apps on NetBird: `<app>.app.<root domain>`
 
-The NetBird counterpart of `<app>.<tailnet>` (D32–D37). A NetBird-only device reaches every app that has a tailnet
-name, under the same `<app>`, without a route into the LAN.
+The NetBird counterpart of `<app>.<tailnet>` (D39–D45). A NetBird-only device reaches every app that has a tailnet
+name and grants its user's group, under the same `<app>`, without a route into the LAN.
 
 ```
 NetBird peer ─WireGuard─▶ private proxy (netbird-system/nbidp)     TLS: nbidp-tls, which also covers *.app
@@ -506,10 +506,10 @@ NetBird peer ─WireGuard─▶ private proxy (netbird-system/nbidp)     TLS: nb
                           the app's Service (TAILSCALE_SERVICE / TAILSCALE_PORT)
 ```
 
-**Code.** `stacks/netbird/apps.ts` (pure: discovery, naming, groups, the request) and `app-services.ts` (§11 of the
-stack); `kubernetes/components/tailscale/netbird-ingressroute.yaml` (and `api-key/`); Traefik's `ports.netbird`,
-`middleware/netbird.yaml` and `netbird-door.yaml`; `apps/netbird-system/nbidp` (certificates and the one-Secret grant);
-`apps/pulumi/netbird/rbac.yaml`.
+**Code.** `stacks/netbird/apps.ts` (pure: discovery, naming, groups, the request) and `app-services.ts` (§12 of the
+stack, using `proxyDomains.ts` for the domain); `kubernetes/components/tailscale/netbird-ingressroute.yaml` (and
+`api-key/`); Traefik's `ports.netbird`, `middleware/netbird.yaml` and `netbird-door.yaml`; `apps/netbird-system/nbidp`
+(certificates and the PushSecret); `apps/pulumi/netbird/rbac.yaml`.
 
 - **Host header.** The proxy rewrites Host to the target's unless the service sets `pass_host_header`
   (`rewriteFunc`, proxy/internal/proxy/reverseproxy.go, v0.82.0). Every app service sets it, so Traefik routes on
@@ -531,8 +531,9 @@ stack); `kubernetes/components/tailscale/netbird-ingressroute.yaml` (and `api-ke
   `spec.tailnetUrl`), but its Application has been disabled since 2026-09-15; `<app>.app` has neither yet. Until
   that is decided those apps answer 400 "no app for hostname" on the NetBird name: closed, not open. Their API
   carve-outs work.
-- **The domain.** `app.<root domain>` is a custom domain (`netbird.ReverseProxyDomain`) targeting the nbidp cluster.
-  Management validates it by a CNAME lookup on `validation.app.<root domain>`, which must name the cluster address,
+- **The domain.** `app.<root domain>` is a custom domain (`netbird.ReverseProxyDomain`) targeting the proxy's cluster,
+  `ek.<root domain>` (D38). Management validates it by a CNAME lookup on `validation.app.<root domain>`, which must
+  name the cluster address,
   once at create, and drops it if still unvalidated after 48 hours; the stack creates the two Cloudflare CNAMEs
   first and asks again on every `up` while it is unvalidated. Peers never use the public records: management
   synthesizes `app.<root domain>` (a match-only zone) with each service's name pointing at the proxy peers, for
@@ -541,22 +542,23 @@ stack); `kubernetes/components/tailscale/netbird-ingressroute.yaml` (and `api-ke
 - **Certificates.** With ACME off the proxy loads one certificate pair and serves it for every SNI, checking each
   service domain against its SANs (`staticCertCovers`); `NB_PROXY_WILDCARD_CERT_DIR` is read only in ACME mode,
   and ACME would try to issue nbidp's name over a challenge that cannot reach the proxy. So `nbidp-tls` carries
-  `nbidp` and `*.app`. A second certificate, `*.app` alone, is copied into OpenBao at
-  `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by `stacks/netbird`, which may read that one Secret;
-  ESO's OpenBao identity is read-only on purpose, and nbidp's key never leaves the cluster.
+  `nbidp`, `ek` and `*.app`. A second certificate, `*.app` alone, is pushed into OpenBao at
+  `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by an ESO PushSecret (D39): `eso-equestria` may write
+  that one path and nothing else. nbidp's key never leaves the cluster, and neither key is in Pulumi state.
 - **Discovery.** Live, from the Kubernetes API: the Ingresses in `network` whose Flux ks is `<APP>-tailnet-ingress`
   (app, namespace and resolved `TAILSCALE_HOST` are on the object) and every ApplicationDefinition, matched by
   namespace and name. That is what Flux applied, substitutions done, so no list or re-implemented substitution. In
   the cluster the Stack's ServiceAccount reads them (list only); locally, the tailnet kubeproxy. An empty answer
-  fails the run rather than delete every service. A new app appears on the next run (hourly resync); a removed
-  app's service is deleted.
-- **Access groups** (D36). `access_policy.groups` intersected with the four user groups, plus `admins`, who
-  administer every app (the app's own login or Authentik still decides; this opens only the network path). No
-  groups, or `users`, is all four, no wider than Tailscale's `default-apps-access`. An unknown
-  group (`editors`) is skipped with a warning; an app left with nothing, or with no definition (thanos,
-  meilisearch), is admins only. Never a device group, for nbidp's reason.
-- **Ordering.** Like nbidp's service: the domain waits for the proxy to be online, and the services wait for the
-  domain to be validated, so the first rollout takes two runs. A service that exists stays declared through a
-  proxy restart.
+  fails the run rather than delete every service. A new app appears on the next run (the daily resync, or the next
+  merge); a removed app's service is deleted.
+- **Access groups** (D44). Exactly the definition's `access_policy.groups` that are NetBird user groups; `admins` is
+  not added. `users` (Authentik's parent group) is all four; no app lists it today. An unknown group (`editors`) is
+  skipped with a warning. **No service**, with a warning, for an app with no ApplicationDefinition (thanos,
+  meilisearch), a definition with no `access_policy`, or one whose groups map to none; its tailnet name still works.
+  Never a device group, for nbidp's reason.
+- **Ordering.** The domain waits for the proxy to be online. Services are declared in the run that creates the
+  domain and depend on it, so if its create did not validate they fail with 412 and the Stack retries (and
+  re-validates) within a minute. A domain that is registered and still does not validate holds new services back
+  with a warning. A service that exists stays declared through a proxy restart.
 - **Native OIDC apps** list their redirect URIs per hostname in `definition.yaml`; a login started on
   `<app>.app` needs its own. See the stacks/system change that adds them centrally.

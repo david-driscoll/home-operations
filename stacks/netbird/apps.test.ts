@@ -7,20 +7,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  appAccessGroups,
-  appDomain,
-  appHost,
-  appServiceReady,
-  appServiceRequest,
-  definitionFor,
-  type LiveDefinition,
-  type LiveIngress,
-  liveCustomDomain,
-  type TailnetApp,
-  TRAEFIK_NETBIRD_DOOR,
-  tailnetApps,
-} from "./apps.ts";
+import { appAccessGroups, appDomain, appHost, appServiceReady, appServiceRequest, definitionFor, type LiveDefinition, type LiveIngress, type TailnetApp, TRAEFIK_NETBIRD_DOOR, tailnetApps } from "./apps.ts";
 
 const ROOT = "example.test";
 
@@ -74,37 +61,44 @@ describe("appAccessGroups", () => {
   const app: TailnetApp = { app: "sonarr", namespace: "equestria", host: "sonarr" };
   const definition = (groups?: string[]): LiveDefinition => ({ metadata: { name: "sonarr", namespace: "equestria" }, spec: groups ? { access_policy: { groups } } : {} });
 
-  it("is the definition's groups, plus admins, in USER_GROUPS order", () => {
-    assert.deepEqual(appAccessGroups(definition(["media-managers"]), app), { groups: ["admins", "media-managers"], warnings: [] });
-    assert.deepEqual(appAccessGroups(definition(["friends", "family"]), app).groups, ["admins", "family", "friends"]);
+  it("is exactly the definition's groups, in USER_GROUPS order, with nothing added", () => {
+    assert.deepEqual(appAccessGroups(definition(["media-managers"]), app), { groups: ["media-managers"], warnings: [] });
+    assert.deepEqual(appAccessGroups(definition(["friends", "family"]), app).groups, ["family", "friends"]);
+    assert.deepEqual(appAccessGroups(definition(["admins"]), app).groups, ["admins"]);
   });
 
-  it("opens an app with no access_policy to all four user groups, as Tailscale's default-apps-access does", () => {
-    assert.deepEqual(appAccessGroups(definition(), app), { groups: ["admins", "family", "friends", "media-managers"], warnings: [] });
-    assert.deepEqual(appAccessGroups(definition([]), app).groups, ["admins", "family", "friends", "media-managers"]);
+  it("does not add admins to an app that does not list them", () => {
+    assert.ok(!appAccessGroups(definition(["family"]), app).groups.includes("admins"));
   });
 
-  it("reads Authentik's `users`, the parent of every group, as everyone", () => {
+  it("reads Authentik's `users`, the parent of every group, as all four", () => {
     assert.deepEqual(appAccessGroups(definition(["users"]), app).groups, ["admins", "family", "friends", "media-managers"]);
   });
 
   it("skips a group NetBird does not have, and says so", () => {
     const access = appAccessGroups(definition(["editors", "family"]), app);
-    assert.deepEqual(access.groups, ["admins", "family"]);
+    assert.deepEqual(access.groups, ["family"]);
     assert.equal(access.warnings.length, 1);
     assert.match(access.warnings[0], /"editors" is not a NetBird user group/);
   });
 
-  it("fails closed to admins when nothing in access_policy maps", () => {
+  it("gives no service when nothing in access_policy maps", () => {
     const access = appAccessGroups(definition(["editors"]), app);
-    assert.deepEqual(access.groups, ["admins"]);
-    assert.match(access.warnings.at(-1) ?? "", /admins-only/);
+    assert.deepEqual(access.groups, []);
+    assert.match(access.warnings.at(-1) ?? "", /no NetBird service/);
+    assert.deepEqual(appAccessGroups(definition([]), app).groups, []);
   });
 
-  it("fails closed to admins for an app with no ApplicationDefinition", () => {
+  it("gives no service to a definition without an access_policy", () => {
+    const access = appAccessGroups(definition(), app);
+    assert.deepEqual(access.groups, []);
+    assert.match(access.warnings[0], /no access_policy; no NetBird service/);
+  });
+
+  it("gives no service to an app with no ApplicationDefinition", () => {
     const access = appAccessGroups(undefined, app);
-    assert.deepEqual(access.groups, ["admins"]);
-    assert.match(access.warnings[0], /no ApplicationDefinition/);
+    assert.deepEqual(access.groups, []);
+    assert.match(access.warnings[0], /no ApplicationDefinition; no NetBird service/);
   });
 
   it("finds the definition by the app's namespace and name, not just the name", () => {
@@ -115,7 +109,7 @@ describe("appAccessGroups", () => {
 });
 
 describe("appServiceRequest", () => {
-  const request = appServiceRequest({ host: "git.app.example.test", clusterAddress: "nbidp.example.test", accessGroupIds: ["g-admins"] });
+  const request = appServiceRequest({ host: "git.app.example.test", clusterAddress: "ek.example.test", accessGroupIds: ["g-admins"] });
 
   it("is a private service keeping the client's Host, so Traefik can route on it", () => {
     assert.equal(request.private, true);
@@ -128,7 +122,7 @@ describe("appServiceRequest", () => {
     assert.equal(request.targets.length, 1);
     const [target] = request.targets;
     assert.equal(target.target_type, "cluster");
-    assert.equal(target.target_id, "nbidp.example.test");
+    assert.equal(target.target_id, "ek.example.test");
     assert.equal(target.host, TRAEFIK_NETBIRD_DOOR.host);
     assert.equal(target.port, 8446);
     assert.equal(target.protocol, "http");
@@ -140,24 +134,22 @@ describe("appServiceRequest", () => {
   });
 
   it("refuses a service nobody may reach", () => {
-    assert.throws(() => appServiceRequest({ host: "x.app.example.test", clusterAddress: "nbidp.example.test", accessGroupIds: [] }), /at least one access group/);
+    assert.throws(() => appServiceRequest({ host: "x.app.example.test", clusterAddress: "ek.example.test", accessGroupIds: [] }), /at least one access group/);
   });
 });
 
 describe("readiness", () => {
   it("declares a service once the proxy is online and the domain validated, and keeps an existing one through an outage", () => {
-    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: true, domainValidated: true }), true);
-    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: true, domainValidated: false }), false);
-    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: false, domainValidated: true }), false);
-    assert.equal(appServiceReady({ serviceExists: true, clusterOnline: false, domainValidated: false }), true);
+    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: true, domain: "validated" }), true);
+    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: false, domain: "validated" }), false);
+    assert.equal(appServiceReady({ serviceExists: true, clusterOnline: false, domain: "unvalidated" }), true);
   });
 
-  it("finds the custom domain, not the free cluster address of the same name", () => {
-    const domains = [
-      { id: "free", domain: "app.example.test", validated: true, type: "free" },
-      { id: "d1", domain: "app.example.test", validated: false, type: "custom" },
-    ];
-    assert.equal(liveCustomDomain(domains, "app.example.test")?.id, "d1");
-    assert.equal(liveCustomDomain(domains, "other.example.test"), undefined);
+  it("declares services in the run that creates the domain, so the first rollout is one run, not two", () => {
+    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: true, domain: "creating" }), true);
+  });
+
+  it("holds new services back while a registered domain still does not validate", () => {
+    assert.equal(appServiceReady({ serviceExists: false, clusterOnline: true, domain: "unvalidated" }), false);
   });
 });

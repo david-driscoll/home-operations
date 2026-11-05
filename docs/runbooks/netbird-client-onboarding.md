@@ -78,7 +78,7 @@ in to the estate's apps without a password (#2891).
 
 - **App names:** the usual `<app>.<root domain>` names open: Jellyfin, Home Assistant,
   Authentik, and so on. Lookups go to the estate's DNS through the gateways.
-- **NetBird app names:** every app with a Tailscale name, `<app>.<tailnet>`, is also
+- **NetBird app names:** every app with a Tailscale name, `<app>.<tailnet>`, that your group may use is also
   at **`<app>.app.<root domain>`**, with the same `<app>` (for example `sonarr.app.<root domain>`,
   or `git.app.<root domain>` for Forgejo). These names work only with NetBird
   connected, and only for apps your group may use; any other name resolves to
@@ -102,6 +102,6 @@ TVs don't log in. An admin enrols them with the `apple-tv` setup key; see #2886.
 | Connected, but names don't resolve | The app's DNS setting must be on; reconnect |
 | Names resolve but pages time out | No gateway is up; tell an admin (gateways are the `netbird-gateway` stack on the Dockge hosts) |
 | Pages are blocked that others can open | Your group; an admin checks it under Team → Users |
-| `<app>.app.<root domain>` doesn't resolve or answers 403 | Your group isn't in that app's `access_policy` (its `definition.yaml`), or the app is new and `stacks/netbird` hasn't run since (hourly) |
+| `<app>.app.<root domain>` doesn't resolve or answers 403 | Your group isn't in that app's `access_policy` (its `definition.yaml`), or the app is new and `stacks/netbird` hasn't run since (daily, or after the next merge) |
 | `<app>.app.<root domain>` answers 400 "no app for hostname" | An Authentik-gated app with no proxy provider for the NetBird name yet; use `<app>.<root domain>` |
 | A phone shows Tailscale "connected" too | Turn Tailscale off; only one VPN can be active |
