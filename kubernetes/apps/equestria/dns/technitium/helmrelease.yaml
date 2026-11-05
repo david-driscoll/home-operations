@@ -273,6 +273,15 @@ spec:
               # technitium owns :53 in this namespace; NetBird's resolver would
               # collide with it. Clients get Technitium from management.
               NB_DISABLE_DNS: "true"
+              # ...but NB_DISABLE_DNS only stops NetBird rewriting the host's
+              # resolver config. Its own DNS server still starts, and binds
+              # <wt0 address>:53. On 2026-11-05 that bind (02:21:49Z, two
+              # seconds after Technitium came up) left Technitium with no IPv4
+              # :53 socket at all, only [::]:53 and the 0.0.0.0:853 DoT
+              # listener, so the pod answered nothing over IPv4 on net1, the
+              # tailnet or the pod IP (BlackboxProbeFailingCritical,
+              # dns-equestria). Park the unused resolver on loopback, off :53.
+              NB_DNS_RESOLVER_ADDRESS: "127.0.0.1:5053"
               # A nameserver, not a client.
               NB_DISABLE_CLIENT_ROUTES: "true"
               # Fixed so the tailscale-routing init container can DROP it on
