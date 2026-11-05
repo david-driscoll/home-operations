@@ -245,7 +245,7 @@ pulumi.all([pulumi.output(api), technitiumLan]).apply(async ([{ managementUrl: u
 // time, in a run that changes nothing else: the run authenticates with the
 // token it is deleting, so a delete scheduled after it would fail (the next
 // run reads the new token and finishes it).
-const AUTOMATION_TOKEN_GENERATION = "2026-11";
+const AUTOMATION_TOKEN_GENERATION = "2026-11b";
 const OWNER_TOKEN_GENERATION = "2026-11";
 
 const serviceUser = new netbird.User("automation", { name: "automation", isServiceUser: true, role: "admin" }, opts);
