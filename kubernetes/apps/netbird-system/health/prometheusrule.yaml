@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# The checks page from health.ts, straight to Alertmanager. This rule covers
+# the other case, as it does for the failover watchdog: a check that has
+# stopped running reports nothing.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: netbird-health
+spec:
+  groups:
+    - name: netbird-health
+      rules:
+        # One run every five minutes, so 30 minutes without a success means it
+        # is broken. health.ts exits non-zero when a management read or the
+        # Alertmanager post fails, so a management outage longer than this
+        # also fires the rule (the watchdog's NetbirdFailover covers the outage
+        # itself). The second branch covers a CronJob that has never succeeded.
+        - alert: NetbirdHealthNotRunning
+          annotations:
+            summary: The NetBird health checks have not succeeded in 30 minutes.
+            description: >-
+              netbird-health last succeeded {{ $value | humanizeDuration }} ago, so a disconnected
+              gateway, an unvalidated proxy domain or an offline nbidp proxy would not page.
+              Read the failed Job's log (`kubectl -n netbird-system logs job/<job>`).
+          expr: |
+            (
+              time() - max by (namespace, cronjob) (
+                kube_cronjob_status_last_successful_time{namespace="netbird-system", cronjob="netbird-health"}
+              )
+              or
+              (
+                time() - max by (namespace, cronjob) (
+                  kube_cronjob_created{namespace="netbird-system", cronjob="netbird-health"}
+                )
+              )
+              unless on (namespace, cronjob)
+              kube_cronjob_status_last_successful_time{namespace="netbird-system", cronjob="netbird-health"}
+            ) > 1800
+          for: 5m
+          labels:
+            severity: warning

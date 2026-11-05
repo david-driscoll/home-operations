@@ -28,13 +28,16 @@ import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { Tailscale } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
-import { addUptimeGatus, toGatusKey } from "components/helpers.ts";
+import { addUptimeGatus, awaitOutput, toGatusKey } from "components/helpers.ts";
 import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET, resticRepository } from "components/netbird/backup.ts";
 import { assertFenceFasterThanFlip } from "components/netbird/fence.ts";
+import { NetbirdRelayProbe } from "components/netbird/NetbirdRelayProbe.ts";
 import { NetbirdServer, type NetbirdServerArgs } from "components/netbird/NetbirdServer.ts";
+import { dnsResolvers, RELAY_GATUS_GROUP, relayProbeHeartbeat, relayTlsEndpoint } from "components/netbird/relayProbe.ts";
 import { instanceAlarms } from "components/oci/alarms.ts";
 import { BOOT_VOLUME_BACKUP_COPIES, bootVolumeBackupSchedule, FREE_TIER, freeTierQuotaStatements, retainedBackupCopies } from "components/oci/freeTier.ts";
 import { OciFreeTierInstance } from "components/oci/OciFreeTierInstance.ts";
+import { getDnsMachines } from "components/tailscale.ts";
 import { DnsLeaseAssignment } from "dynamic/cloudflare/DnsLeaseAssignment.ts";
 import { netbirdEdgeCloudInit, PUBLIC_TCP_PORTS, PUBLIC_UDP_PORTS } from "./cloudInit.ts";
 
@@ -496,6 +499,57 @@ function serverArgs(host: EdgeHost): NetbirdServerArgs {
 
 const servers = Object.fromEntries(hosts.map(host => [host.id, new NetbirdServer(host.hostname, serverArgs(host))]));
 const server = servers[setupHost.id];
+
+// ── Relay health (D47) ──────────────────────────────────────────────────
+// The Azure relays have public names, so Gatus checks them directly. The home
+// relay (#3051, `relay-home.<root domain>`) has only a private Technitium
+// record pointing at the home WAN address; Gatus at home would reach it by
+// hairpin NAT and prove nothing. So each Azure host probes it over the
+// internet and pushes a heartbeat that goes stale when it cannot connect
+// (components/netbird/relayProbe.ts).
+//
+// Off until #3051 has landed and its first stacks/unifi-network run has
+// written the record: `pulumi config set netbird-edge:homeRelayProbe true`.
+// The hosts run with --accept-dns=false and the name has no public record, so
+// the script resolves it on every run by asking the Technitium nodes directly
+// over the tailnet (`dig @<dns-* tailnet IP>`, falling back node to node;
+// stacks/unifi-network grants tag:netbird-edge -> tag:dns on port 53 only).
+// The node IPs are read from the tailnet here, so a changed or added node is
+// picked up on the next run. With no tag:dns device the run warns and leaves
+// the probes off.
+const homeRelayName = `relay-home.${root}`;
+const homeRelayResolvers = config.getBoolean("homeRelayProbe") ? await awaitOutput(getDnsMachines(globals).apply(dnsResolvers)) : [];
+if (config.getBoolean("homeRelayProbe") && homeRelayResolvers.length === 0) {
+  pulumi.log.warn("homeRelayProbe is on, but the tailnet lists no tag:dns device to resolve the home relay with; the home-relay probes stay off.");
+}
+const relayProbes =
+  homeRelayResolvers.length > 0
+    ? hosts
+        .filter(host => host.relayDomain)
+        .map(host => {
+          const name = `relay-home-from-${host.id}`;
+          return { host, name, token: toGatusKey(RELAY_GATUS_GROUP, name) };
+        })
+    : [];
+addUptimeGatus("netbird-relays", globals, {
+  endpoints: relays.map(relayTlsEndpoint),
+  "external-endpoints": relayProbes.map(probe => relayProbeHeartbeat({ name: probe.name, token: probe.token })),
+});
+for (const probe of relayProbes) {
+  new NetbirdRelayProbe(`${probe.host.hostname}-relay-probe`, {
+    connection: {
+      host: pulumi.interpolate`${probe.host.hostname}.${globals.tailscaleDomain}`,
+      user: "root",
+      privateKey: breakGlassKey.privateKeyOpenssh,
+    },
+    name: homeRelayName,
+    resolvers: homeRelayResolvers,
+    // Over the tailnet, the same uptime VIP the backup heartbeat uses.
+    heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: probe.token },
+    hostKey: probe.host.hostKey,
+    dependsOn: [probe.host.machine],
+  });
+}
 
 if (globals.baoDualWriteEnabled) {
   const bao = { provider: globals.baoProvider };
