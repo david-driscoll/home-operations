@@ -7,5 +7,6 @@ resources:
   - ./externalsecret.yaml
   - ./certificate.yaml
   - ./tailscale-authkey.yaml
+  - ./netbird-setup-key.yaml
   - ./definition.yaml
   - ./macvlan-nad.yaml

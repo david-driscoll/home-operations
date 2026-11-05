@@ -51,8 +51,8 @@ export const TRAEFIK_ACME_VOLUME = "netbird_netbird_traefik_letsencrypt";
  * already has instead of asking Let's Encrypt again (5 duplicate certificates
  * a week per name). It holds the ACME account key and, per resolver, each
  * certificate and its key, keyed by domain. Nothing in it names the host or
- * its address, so the same file is right on the OCI primary and the Azure
- * standby (#3001), which serve the same `netbird.<root domain>`; on a host
+ * its address, so the same file is right on every edge host (the Azure
+ * primary and standby, and OCI when it rejoins), which serve the same `netbird.<root domain>`; on a host
  * serving another name its certificates would simply go unused.
  *
  * Traefik refuses a store readable by anyone but its owner, so it is staged

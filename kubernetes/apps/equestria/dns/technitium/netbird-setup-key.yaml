@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/external-secrets.io/externalsecret_v1.json
+#
+# The `dns-servers` setup key stacks/netbird mints for the Technitium NetBird
+# sidecars: reusable, not ephemeral, never expires, auto-group `dns-servers`.
+# The same key every Dockge Technitium node reads (docker/_common/technitium).
+# The netbird container in helmrelease.yaml takes it (envFrom) as NB_SETUP_KEY, and only
+# its first start enrols with it; the peer lives on the config volume after.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ${APP}-netbird
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  target:
+    name: ${APP}-netbird
+    creationPolicy: Owner
+  data:
+    - secretKey: NB_SETUP_KEY
+      remoteRef:
+        key: third-party-tokens/netbird/setup-keys
+        property: dns
