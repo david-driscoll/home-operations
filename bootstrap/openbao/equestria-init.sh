@@ -309,11 +309,35 @@ path "database/static-creds/*" {
 EOF
   ok "wrote policy eso-postgres-rotation"
 
-  local cluster
+  local cluster push_grants
   for cluster in equestria sgc; do
+    # THE ONE WRITE. equestria's ESO pushes the NetBird `*.app` certificate
+    # (kubernetes/apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml,
+    # docs/plans/netbird-mirror.md D39) to this single path, and may write
+    # nothing else. A deliberate exception to the read-only rule below, made
+    # on 2026-11-04 (stacks/system/applications.ts outpostKubeConfig records
+    # why the rule stands everywhere else): the alternative was a second
+    # store and role for one certificate that cert-manager reissues anyway.
+    #
+    # Exact paths, so they replace the apps/* globs for this path rather than
+    # add to them: hence `read` is spelled out. data/ holds the value;
+    # metadata/ is where ESO reads and writes its managed-by mark, which is how
+    # it refuses to overwrite a secret it does not own. No delete, no list:
+    # the PushSecret's deletionPolicy is None.
+    push_grants=""
+    if [[ "${cluster}" == "equestria" ]]; then
+      push_grants='
+path "secrets/data/apps/netbird/app-wildcard-tls" {
+  capabilities = ["create", "read", "update"]
+}
+path "secrets/metadata/apps/netbird/app-wildcard-tls" {
+  capabilities = ["create", "read", "update"]
+}'
+    fi
     bao policy write "eso-${cluster}" - >/dev/null <<EOF
 # ESO ClusterSecretStore/openbao in ${cluster}: read-only over shared plus EVERY
-# cluster subtree. kv-v2 data reads hit data/, LIST hits metadata/.
+# cluster subtree. kv-v2 data reads hit data/, LIST hits metadata/. In
+# equestria, one exception at the end: the PushSecret's single path.
 #
 # This was once \`clusters/${cluster}/*\` -- each cluster confined to its own
 # subtree. That invariant only holds while every consumer of a secret runs on
@@ -413,6 +437,7 @@ path "database/static-creds/*" {
 # one prefix set over. Converged up to match live: if the \`list\` really is
 # dead it should be removed deliberately, in its own change, with the
 # ExternalSecrets watched -- not dropped by a re-run.
+${push_grants}
 EOF
     ok "wrote policy eso-${cluster}"
   done
