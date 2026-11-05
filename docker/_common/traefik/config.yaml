@@ -170,7 +170,7 @@ certificatesResolvers:
         # authoritative for dns.<root domain> — lego would then pick that as the
         # ACME zone and ask Cloudflare for a zone that does not exist there.
         resolvers:
-          - "1.1.1.1:53"
+          - "9.9.9.9:53"
           - "8.8.8.8:53"
 
   cloudflare:
@@ -181,5 +181,5 @@ certificatesResolvers:
       dnsChallenge:
         provider: cloudflare
         resolvers:
-          - "1.1.1.1:53"
+          - "9.9.9.9:53"
           - "8.8.8.8:53"

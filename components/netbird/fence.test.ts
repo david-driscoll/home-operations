@@ -121,7 +121,7 @@ describe("the fence asks the zone's own nameservers", () => {
   it("falls back to the second resolver for the NS set", () => {
     // Every NS lookup fails here, so the lease is unknown; both were asked.
     const r = run({ FAKE_NS_RC: "9" });
-    assert.ok(r.calls.some(c => c.endsWith("@1.1.1.1")));
+    assert.ok(r.calls.some(c => c.endsWith("@9.9.9.9")));
     assert.ok(r.calls.some(c => c.endsWith("@8.8.8.8")));
     assert.equal(r.last, "netbird-fence: idle (unknown)");
   });

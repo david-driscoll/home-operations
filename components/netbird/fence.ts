@@ -48,7 +48,7 @@ export const FENCE_INTERVAL_SECONDS = 15;
 export const FENCE_GRACE_SECONDS = 120;
 
 /** Recursive resolvers asked only for the zone's NS set. The A record itself is asked of those nameservers. */
-export const FENCE_NS_RESOLVERS = ["1.1.1.1", "8.8.8.8"] as const;
+export const FENCE_NS_RESOLVERS = ["9.9.9.9", "8.8.8.8"] as const;
 
 /** Demoted stores kept on the host, newest first. Only for forensics: Garage has the snapshots. */
 export const FENCE_ARCHIVES_KEPT = 3;
