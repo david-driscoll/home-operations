@@ -33,7 +33,7 @@ A shared secret that enrols a device without a person logging in, placing it in 
 _Avoid_: Auth key (that is the Tailscale word), enrolment token
 
 **Gateway**:
-A NetBird peer on a Dockge host that carries client traffic into its site's LAN, and can serve as an exit node.
+A NetBird peer on a Dockge host that carries client traffic into its site's LAN. The gateways of one Dockge site stack (home, gulf-of-mexico, ocracoke) form one group and together serve as one exit node.
 _Avoid_: Subnet router, routing peer (when you mean a home gateway), bridge
 
 **In-cluster router**:
@@ -45,7 +45,7 @@ The local network at one physical site (home, ocracoke, alpha-site's), reached t
 _Avoid_: Subnet, VLAN
 
 **Exit node**:
-A gateway that a client device may choose to send all of its internet traffic through.
+A site stack's gateways, which a client device may choose to send all of its internet traffic through; the client uses whichever of them it reaches best.
 _Avoid_: VPN server, egress
 
 **Relay**:

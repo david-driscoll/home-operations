@@ -213,7 +213,8 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
   listed is **(unverified)**.
 - **Gateways:**
   - a **`netbird-gateway` Docker stack** (`netbirdio/netbird`, host networking, `NET_ADMIN`, `/dev/net/tun`) on each
-    site's Dockge host(s). Each is a routing peer for its site LAN and an **exit node**;
+    site's Dockge host(s). Each is a routing peer for its site LAN, and the gateways of one Dockge site stack form
+    one group and one **exit node** (D53);
   - home has two Dockge hosts (alpha-site and celestia), so home gets two gateways at different metrics, which
     gives HA;
   - the gulf-of-mexico subnet is not in the repo yet; the gateway ticket finds it;
@@ -386,6 +387,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
 | D51 | 11-04 | The nameserver group is chosen live each run (`stacks/netbird/dns.ts`): enrolled sidecars' overlay IPs first, then the other nodes' LAN IPs, in the order equestria, celestia, alpha-site, luna, skystar; at most three, the limit management v0.82.0 enforces (`validateNSList`) |
 | D52 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC; the Stack keeps its daily resync, so a new app appears on the next run (daily, or the next merge) |
+| D53 | 11-05 | Gateway groups are per Dockge **site stack**, not per host: `gateway-home` (alpha-site, celestia), `gateway-gulf-of-mexico` (luna), `gateway-ocracoke` (skystar), with one exit node each (`exit-<site stack>`). Setup keys stay per host (`gateway-<host>`, same OpenBao fields) and place peers in `gateways` plus their stack's group; the already-enrolled peers are moved by the groups' declared `peers` (live members ∪ enrolled gateway peers, read each run). `gateways` stays, for policy and the health job. Supersedes the per-host groups and `exit-<host>` routes |
 
 ### Forward-auth apps on every name (D45, 2026-11-04)
 
@@ -582,7 +584,10 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 
 **Invites** (D27). `mise run netbird:invite` (`.config/mise/tasks/netbird/invite`, `scripts/netbird-invite.ts`, pure half in `stacks/netbird/invite.ts`) calls `POST /api/users/invites` with role `user`, the group's id as the only auto group and `expires_in` 259200. The response's `invite_token` is a bare token; the link is the dashboard's `/invite?token=<token>` on the management host. The credential comes from fnox's `netbird` profile, in `globals.netbirdApi`'s order. Invites exist only with the embedded IdP (HTTP 412 otherwise).
 
-**Gateways are keyed per Dockge host.** Each host gets a `gateway-<cluster key>` setup key and group; `stacks/netbird/sites.ts` decides which hosts route which site LAN. Today all four hosts (alpha-site, celestia, luna and skystar) sit on the home LAN, so `home` is the only routed site.
+**Gateways are grouped per Dockge site stack** (D53). Each host keeps its own `gateway-<cluster key>` setup key (OpenBao `setup-keys#/gateway-<cluster key>`, read by `docker/_common/netbird-gateway/.env`), and that key places its peer in `gateways` and in its site stack's group: `gateway-home` (alpha-site, celestia: `stacks/home`), `gateway-gulf-of-mexico` (luna: `stacks/gulf-of-mexico`), `gateway-ocracoke` (skystar: `stacks/ocracoke`). `stacks/netbird/sites.ts` holds that mapping (`GATEWAY_SITE_STACKS`) and decides which stacks route which site LAN (`SITES`). Today all four hosts sit on the home LAN, so `home` is the only routed site and all three groups route it.
+- **Membership.** A setup key's auto groups apply only at enrolment, so the gateways enrolled before D53 stayed in the old per-host groups. Each site-stack group declares `peers`: its live members (GET `/api/groups`) plus every peer named `gateway-<host>` in `gateways` for the stack's hosts (GET `/api/peers`), live order first (`gatewayGroupPeers`). It never declares less than the live membership, because the provider's Update PUTs exactly the declared list: a peer a setup key placed since the last run would otherwise be removed by the next update or refresh. A host with no enrolled peer is left out and joins through its key.
+- **Exit nodes.** One `exit-<site stack>` route per group (`exit-home`, `exit-gulf-of-mexico`, `exit-ocracoke`), replacing `exit-<host>`. A client's exit-node choice is stored by route network ID (`routeselector`, client v0.82.0), so a device that had picked `exit-<host>` loses it when that route is deleted and falls back to no exit node until its user picks the new one: `skipAutoApply` keeps the new routes from applying on their own.
+- **Cut-over order.** One run: the new groups (with their peers) and `exit-<site stack>` routes are created, the setup keys and the `lan-home` router are updated to the new groups, and only then, at the end of the run, are the old `exit-<host>` routes and then the old groups deleted. NetBird refuses to delete a group a route, setup key or network router still names (`validateDeleteGroup`), and the swaps come first because Pulumi deletes removed resources last, dependents before what they depend on.
 
 **Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or invite exists, so no peer can take an address from the default range.
 
