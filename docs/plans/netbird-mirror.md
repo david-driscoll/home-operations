@@ -478,7 +478,7 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 
 ### Monitoring (D47, 2026-11-04)
 
-Every check reaches Pushover. The flips page from the watchdog (§E), and each check below has its own route. NetBird criticals page as before; NetBird warnings (`alertname=~"Netbird.*"`, `severity="warning"`) go to the `pushover-quiet` receiver in `kubernetes/apps/observability/alertmanager/config.yaml`, at priority -1 with no sound.
+Every check reaches Pushover. The flips page from the watchdog (§E), and each check below has its own route. NetBird critical alerts page as before; NetBird warnings (`alertname=~"Netbird.*"`, `severity="warning"`) go to the `pushover-quiet` receiver in `kubernetes/apps/observability/alertmanager/config.yaml`, at priority -1 with no sound.
 
 | What | Where it runs | How it pages |
 | --- | --- | --- |

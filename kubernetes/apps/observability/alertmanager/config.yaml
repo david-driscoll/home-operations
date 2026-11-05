@@ -23,7 +23,7 @@ spec:
       # NetBird warnings (D47, docs/plans/netbird-mirror.md "Monitoring"): a
       # peer down for 10 minutes, a custom domain not validated, the health
       # job not running. Worth seeing, not worth a sound: Pushover priority -1
-      # with no sound. NetBird criticals fall through to `pushover` and page as
+      # with no sound. NetBird critical alerts fall through to `pushover` and page as
       # before. Scoped by alertname on purpose; dropping the alertname matcher
       # would make every warning in the estate quiet.
       - receiver: pushover-quiet
