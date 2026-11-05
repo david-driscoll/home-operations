@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Every five minutes: read management and post an Alertmanager alert for each
+# problem (health.ts). Each alert lapses 15 minutes after the last run that
+# posted it. No ServiceAccount token: the job never calls the Kubernetes API.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: netbird-health
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 120
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: health
+              image: node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+              # Node strips the types itself.
+              command: ["node", "/app/health.ts"]
+              env:
+                - name: NETBIRD_URL
+                  value: https://netbird.${ROOT_DOMAIN}
+                # A group or domain that does not exist is skipped, so these
+                # can name what other PRs add (dns-servers in #3055, the app
+                # domain in #3053).
+                - name: NETBIRD_PEER_GROUPS
+                  value: gateways,dns-servers
+                - name: NETBIRD_CUSTOM_DOMAINS
+                  value: app.${ROOT_DOMAIN},nbidp.${ROOT_DOMAIN}
+                # nbidp's NB_PROXY_DOMAIN (stacks/netbird/nbidp.ts).
+                - name: NETBIRD_PROXY_CLUSTER
+                  value: nbidp.${ROOT_DOMAIN}
+                - name: ALERTMANAGER_URL
+                  value: http://alertmanager-operated.observability.svc.cluster.local:9093
+              envFrom:
+                - secretRef:
+                    name: netbird-health-api-key
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: app
+              configMap:
+                name: netbird-health
