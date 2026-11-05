@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+#
+# ./ingressroute.yaml's carve-out on the NetBird twin
+# (../netbird-ingressroute.yaml): API clients skip the authentik hop on
+# `<host>.app.<root domain>` exactly as they do on the tailnet name.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${APP}-netbird-api
+  annotations:
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - netbird
+  routes:
+    - kind: Rule
+      priority: 20
+      match: Host(`${TAILSCALE_HOST:=${APP}}.app.${ROOT_DOMAIN}`) && (HeaderRegexp(`X-Api-Key`, `.+`) || QueryRegexp(`apikey`, `.+`))
+      middlewares:
+        - name: netbird-as-tailscale-local
+          namespace: network
+      services:
+        - name: ${TAILSCALE_SERVICE:=${APP}}
+          port: ${TAILSCALE_PORT:=http}

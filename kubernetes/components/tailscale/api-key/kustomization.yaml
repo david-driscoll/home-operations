@@ -39,3 +39,5 @@ commonLabels:
   driscoll.dev/name: "${APP}"
 resources:
   - ./ingressroute.yaml
+  # The same carve-out on the NetBird twin (../netbird-ingressroute.yaml).
+  - ./netbird-ingressroute.yaml

@@ -117,14 +117,16 @@ GitHub when the repo is archived.
   provider credentials — all of it belongs in OpenBao under `secrets/`.
 - **NetBird.** Client access only, never in a recovery path (docs/plans/netbird-mirror.md).
   `stacks/netbird-edge` generates its secrets and writes them to OpenBao:
-  `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret,
-  the session-cookie key, and `resticPassword`, which decrypts the 15-minute backups) and
+  `apps/netbird/server` (the SQLite store's `datastoreEncryptionKey`, the relay secret
+  that celestia's home relay also reads, the session-cookie key, and `resticPassword`, which decrypts the 15-minute backups) and
   `third-party-tokens/netbird/owner` (the break-glass owner's login and its setup PAT,
   which is never rotated and lapses a year after setup). `stacks/netbird` then mints
   the PATs Pulumi actually uses, `third-party-tokens/netbird/automation` and the owner's
   `third-party-tokens/netbird/owner-pat`, both 365 days, alerted 30 days out and
   rotated by a one-line change (docs/plans/netbird-mirror.md, "PATs and their
-  rotation"). If both lapse, the owner's password still logs in. The
+  rotation"). If both lapse, the owner's password still logs in.
+  `apps/netbird/relay-home-tls` is the home relay's certificate, which `stacks/unifi-network`
+  copies from cert-manager's Secret; cert-manager reissues it, so nothing here needs keeping. The
   backups (store, config, and Traefik's `acme.json` with the TLS and ACME account keys) live in
   Garage's `netbird-backups` bucket, which TrueNAS also pulls; `stacks/system` records its key at
   `apps/netbird/garage-backup`. Pulumi state holds a second copy of all of it. Losing the
@@ -141,6 +143,10 @@ GitHub when the repo is archived.
   `third-party-tokens/netbird/nbidp-proxy` (the private reverse proxy's token, from
   `stacks/netbird`) and `apps/nbidp/dex` (Dex's config with its Authentik client, from
   `stacks/authentik`).
+  `apps/netbird/app-wildcard-tls` is the `*.app.<root domain>` certificate for the
+  NetBird app names (docs/plans/netbird-mirror.md §N), pushed there by an ESO PushSecret
+  from cert-manager's Secret (D39, the one path `eso-equestria` may write); cert-manager
+  reissues it, so nothing here needs keeping.
 - **1Password.** It is retained for browser-fill logins, recovery codes, and
   personal-scope credentials. It is no longer infrastructure source of truth. The one
   remaining personal-scope reference in code is `dashboard/.mise.toml`

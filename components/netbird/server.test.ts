@@ -117,6 +117,18 @@ describe("renderServerConfig with standalone relays (#3001)", () => {
     assert.deepEqual(embedded.stunPorts, [3478]);
   });
 
+  it("lists a relay without STUN for relaying only (D32)", () => {
+    const mixed = parse(renderServerConfig({ domain: "netbird.example.test", ...secrets, relays: ["relay-eus2.example.test", { host: "relay-home.example.test", stun: false }] })).server;
+    assert.deepEqual(mixed.relays.addresses, ["rels://relay-eus2.example.test:443", "rels://relay-home.example.test:443"]);
+    assert.deepEqual(mixed.stuns, [{ uri: "stun:relay-eus2.example.test:3478" }]);
+  });
+
+  // The embedded STUN is off as soon as any relay is listed, so a list where
+  // none serves it would leave clients with no STUN at all.
+  it("refuses a relay list with no STUN", () => {
+    assert.throws(() => renderServerConfig({ domain: "netbird.example.test", ...secrets, relays: [{ host: "relay-home.example.test", stun: false }] }), /must serve STUN/);
+  });
+
   it("refuses a relay name that is not a bare hostname", () => {
     assert.throws(() => relayAddress("rels://relay.example.test"), /bare hostname/);
     assert.throws(() => stunUri("relay.example.test:3478"), /bare hostname/);

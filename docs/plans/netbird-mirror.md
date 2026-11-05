@@ -348,7 +348,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D7 | 11-02 | Backups every 15 minutes to Garage; automatic restore |
 | D8 | 11-02 | Manual, runbooked failback |
 | D9 | 11-02 | Login via Authentik connector + JWT group sync + local break-glass admin (superseded by D25–D29) |
-| D10 | 11-02 | Relays: OCI embedded, Azure, and a Docker relay on every Dockge host |
+| D10 | 11-02 | Relays: OCI embedded, Azure, and a Docker relay on every Dockge host (as built: the two Azure relays, plus one at home per D32) |
 | D11 | 11-02 | Gateways: Docker stacks on each site's Dockge host(s), each an exit node |
 | D12 | 11-02 | Equestria operator = a second route to the internal Gateway + Authentik |
 | D13 | 11-02 | Clients run NetBird only; admin work stays on Tailscale |
@@ -370,13 +370,22 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
+| D32 | 11-04 | **One home relay**: `netbirdio/relay` on celestia's Dockge host as `relay-home.<root domain>`, WAN 443 (TCP and UDP) forwarded to it, listed by every server beside the Azure relays. A private Technitium record for the home WAN address, no public record; a DNS-01 certificate from Equestria, copied to OpenBao. Reverses the earlier call to skip home relays: Azure egress is capped by the subscription's spending limit. Only celestia, not every Dockge host |
 | D38 | 11-04 | The private proxy's cluster address is `ek.<root domain>`; `nbidp.<root domain>` becomes a custom domain on it (public CNAME `validation.nbidp` → `ek`), so the proxy can serve other names. The nbidp service is deleted and re-created on the new cluster: management never moves a service |
+| D39 | 11-04 | The `*.app` certificate (`netbird-system/netbird-app-wildcard-tls`) is pushed to OpenBao `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by an ESO PushSecret. `eso-equestria` is widened to create/read/update that one path's data and metadata, a deliberate exception to its read-only rule: a public, reissued certificate, not worth a second store and role. No Pulumi copy, so the key is not in Pulumi state |
+| D40 | 11-04 | A tailnet app whose definition grants NetBird user groups is also a NetBird **private** service at `<app>.app.<root domain>`, same `<app>` as its tailnet name, on the ek proxy (§N) |
+| D41 | 11-04 | `app.<root domain>` is a custom domain on the ek cluster; public DNS is Cloudflare-only grey CNAMEs `*.app` and `validation.app` to `ek.<root domain>` |
+| D42 | 11-04 | The proxy serves `*.app` from its one static certificate (`nbidp-tls`: nbidp, ek, `*.app`); `NB_PROXY_WILDCARD_CERT_DIR` is ACME-mode only. The separate `*.app`-only certificate is what D39 pushes |
+| D43 | 11-04 | Services target Traefik's new ClusterIP-only `netbird` entrypoint with Host kept; a deny-only CiliumNetworkPolicy admits only the proxy pods, and `netbird-as-<TAILSCALE_MIDDLEWARE>` mirrors each app's tailnet chain |
+| D44 | 11-04 | Access groups are exactly the definition's `access_policy.groups` that are NetBird user groups; `admins` is not added. `users` means all four (no app lists it today). No service, with a warning, for an app with no ApplicationDefinition, no `access_policy`, or no group that maps |
 | D45 | 11-04 | Forward-auth apps answer on all three names (`<app>.<root domain>`, `<app>.<tailnet>`, `<app>.app.<root domain>`): each extra name gets its own ProxyProvider and Application, **generated** from the same definition and `access_policy`, with `meta_hide` so the Library shows one entry per app (`components/authentik/proxyHostTwins.ts`) |
 | D46 | 11-04 | Technitium server settings are code (`stacks/unifi-network/technitium-settings.ts`, imported singleton); recursion goes `Allow` → `AllowOnlyForPrivateNetworks` (RFC 1918, CGNAT, link-local, loopback, non-global IPv6), every other provider-defaulted field pinned to its live value. Follow-up: `allowTxtBlockingReport` goes `true` → `false`; the forwarders (Quad9 DoQ), block-list URLs and custom allowed zones move from the UI into code at their live values, so hand edits show as drift |
+| D47 | 11-04 | NetBird health alerting: a separate `netbird-health` CronJob posts Alertmanager alerts for disconnected gateways/DNS peers, unvalidated proxy domains and an offline nbidp cluster; Gatus checks the Azure relays over TLS; the Azure hosts resolve the home relay live through the Technitium nodes (a port-53-only `tag:netbird-edge` -> `tag:dns` grant), probe it and push a Gatus heartbeat; NetBird warnings reach Pushover quietly (priority -1, no sound) (Monitoring) |
 | D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
 | D49 | 11-04 | Every Technitium node (equestria, celestia, alpha-site, luna, skystar) gets a NetBird sidecar in its network namespace, as it has a Tailscale one, so clients resolve over the overlay without the home gateways. One reusable, non-ephemeral, non-expiring `dns-servers` setup key (OpenBao `setup-keys#/dns`) places all five in the `dns-servers` peer group |
 | D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
 | D51 | 11-04 | The nameserver group is chosen live each run (`stacks/netbird/dns.ts`): enrolled sidecars' overlay IPs first, then the other nodes' LAN IPs, in the order equestria, celestia, alpha-site, luna, skystar; at most three, the limit management v0.82.0 enforces (`validateNSList`) |
+| D52 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC; the Stack keeps its daily resync, so a new app appears on the next run (daily, or the next merge) |
 
 ### Forward-auth apps on every name (D45, 2026-11-04)
 
@@ -477,6 +486,69 @@ Azure. §C, §D and §E describe the OCI-primary plan; this is what is built ins
   (`NETBIRD_RESTORE_ACME=replace`). See [the runbook](../runbooks/netbird-failback.md#acmejson-on-promotion).
 - **Runbook:** [`docs/runbooks/netbird-failback.md`](../runbooks/netbird-failback.md).
 
+### Home relay (D32, 2026-11-04)
+
+The closest NetBird has to Tailscale's peer relays: a relay at home, so relayed traffic with a home peer stays
+off Azure, whose egress the spending limit caps.
+
+- **What runs.** `docker/celestia/netbird-relay`: `netbirdio/relay`, the Azure relays' release (one Renovate
+  group, `NetBird`, keeps the server, relays and gateways together). Its auth secret is the shared one,
+  `ref+openbao://secrets/apps/netbird/server#/relayAuthSecret`. The name, ports and certificate paths are in
+  `components/netbird/homeRelay.ts`, and `homeRelay.test.ts` checks the compose file, `.env`, `tls/`, `init.sh`
+  and the Certificate against them.
+- **Listed by every server.** `stacks/netbird-edge` adds `relay-home.<root domain>` to `server.relays` on the
+  primary and the standby alike (the list is per stack, not per host). It is not in `server.stuns`: the home
+  relay runs no STUN and its site forwards 443 only. `renderServerConfig` refuses a relay list where no relay
+  serves STUN, because the embedded STUN is off as soon as any relay is listed.
+- **WAN 443, TCP and UDP**, forwarded by `stacks/unifi-network/netbird-relay.ts` to celestia-dockge's 33443
+  (443 there is the shared Traefik's). The target is the host's LAN address from the tailscale exports, the one
+  `local-dns.ts` pins with a DHCP reservation. Nothing at home forwarded 443 before. Why 443 and not a high
+  port: a pair is relayed through the controlling peer's own relay (`client/internal/peer/worker_relay.go`
+  `preferredRelayServer`, v0.82.0), so a client away from home must reach this relay whenever the home peer
+  is the controller. Networks that only let 80 and 443 out would otherwise lose the relay path, which is the
+  path they depend on.
+- **A private name.** `relay-home.<root domain>` is a Technitium A record and nothing in public DNS.
+  `stacks/unifi-network` writes it on every run, from the gateway's WAN IPv4 in the controller's device list
+  (`gatewayWanIpv4`). An empty lookup, a private address or a CGNAT address fails the run, so the record
+  keeps its last value. An address change reaches the record within one resync (five minutes). Technitium
+  is the resolver for the LAN, for the tailnet, and for NetBird's primary nameserver group. LAN and tailnet
+  clients get the same WAN address and reach the relay by the gateway's hairpin NAT. The repo has no
+  split-horizon pattern, and a LAN answer would need port 443 on the LAN, where the relay listens on 33443.
+- **TLS: DNS-01, delivered as files.** Let's Encrypt cannot resolve a private name, so TLS-ALPN on the relay
+  is out.
+  - cert-manager issues `netbird-relay-home-tls` in `netbird-system`
+    (`kubernetes/apps/netbird-system/relay-home`) with the estate's `letsencrypt-production` DNS-01 issuer.
+  - `stacks/unifi-network` copies the Secret to OpenBao at `apps/netbird/relay-home-tls` (`tls_crt`,
+    `tls_key`), as `stacks/netbird` does for its `*.app` certificate. ESO's OpenBao identity is read-only.
+    This stack already reaches Equestria and writes OpenBao.
+  - `docker/celestia/netbird-relay/tls/` holds two `ref+openbao://` files that DockgeLxc renders into the
+    PEMs.
+  - The relay reads them once (`encryption.LoadTLSConfig`) and never reloads them. The stack's `init.sh`
+    hashes them on every run and restarts the relay when they change, the same fix as
+    `docker/_common/traefik/init.sh`.
+  - A renewal is live within about one `unifi-network` resync plus one `home-operations` run.
+  - The relay terminates TLS itself, with no Traefik in front, unlike Azure. So it also serves QUIC on
+    443/udp.
+  - The compose file carries no Traefik labels on purpose: a `Host()` rule there would make DockgeLxc publish
+    the name as a CNAME to celestia's LAN address, in Cloudflare too.
+- **Resolving the name.** The client dials relays with `client/net`'s dialer, which resolves through
+  `net.DefaultResolver`, the OS resolver. When NetBird manages DNS, the OS resolver points at NetBird's local
+  resolver, which forwards to the nameserver groups over the tunnel.
+  - **Remote clients** cannot resolve the name until their tunnel to a Technitium nameserver is up. The Azure
+    relays have public names and carry the client until then.
+  - **The client's own relay.** Each client takes the first relay in its list that connects
+    (`shared/relay/client/picker.go`). If a name fails to resolve, that relay just fails to connect, and
+    another one wins. A client that started before its DNS worked keeps an Azure relay until it reconnects.
+  - **The relay that matters.** A remote client mostly uses this relay as the *foreign* one, the home peer's.
+    For that, the offer carries the home peer's relay address and server IP. `Manager.OpenConn` dials that IP
+    when the name does not resolve, and still verifies TLS for the name by SNI. So the private name does not
+    stop it.
+  - **Home peers** resolve through the host or LAN resolver, which is Technitium. That covers the gateways
+    (`NB_DISABLE_DNS`) and the Technitium sidecars. They pick this relay as their own.
+- **Which relay a pair uses.** A pair with a home peer is relayed here when the home peer is the controller.
+  Otherwise it goes through the remote peer's relay, which may be Azure's. So this keeps roughly half of
+  those pairs at home, not all of them.
+
 ### Implementation notes (2026-11-03)
 
 These came out of building #3000, #2885, #2887 and #2888, and they amend the sections above.
@@ -515,3 +587,95 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 **Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or invite exists, so no peer can take an address from the default range.
 
 **The CrossGuard pack does not run in-cluster.** Pulumi Kubernetes Operator v2.10 has no policy-pack support (pulumi/pulumi-kubernetes-operator#366). The pack runs in CI as unit tests plus a smoke test, and locally with `--policy-pack`. In-cluster, the component check, OCI quotas and the budget remain.
+
+## N. Tailnet apps on NetBird: `<app>.app.<root domain>`
+
+The NetBird counterpart of `<app>.<tailnet>` (D39–D44, D52). A NetBird-only device reaches every app that has a tailnet
+name and grants its user's group, under the same `<app>`, without a route into the LAN.
+
+```
+NetBird peer ─WireGuard─▶ private proxy (netbird-system/nbidp)     TLS: nbidp-tls, which also covers *.app
+                            │ peer in the service's access groups, or 403
+                            │ X-NetBird-User / X-NetBird-Groups deleted and re-stamped
+                            ▼ Host kept (pass_host_header), direct_upstream from the proxy pod
+                          traefik-netbird.network:8446 (`netbird` entrypoint, ClusterIP only)
+                            │ CiliumNetworkPolicy: only the proxy pods may connect
+                            ▼ IngressRoute <app>-netbird: Host(<app>.app.<root domain>), netbird-as-<TAILSCALE_MIDDLEWARE>
+                          the app's Service (TAILSCALE_SERVICE / TAILSCALE_PORT)
+```
+
+**Code.** `stacks/netbird/apps.ts` (pure: discovery, naming, groups, the request) and `app-services.ts` (§12 of the
+stack, using `proxyDomains.ts` for the domain); `kubernetes/components/tailscale/netbird-ingressroute.yaml` (and
+`api-key/`); Traefik's `ports.netbird`, `middleware/netbird.yaml` and `netbird-door.yaml`; `apps/netbird-system/nbidp`
+(certificates and the PushSecret); `apps/pulumi/netbird/rbac.yaml`.
+
+- **Host header.** The proxy rewrites Host to the target's unless the service sets `pass_host_header`
+  (`rewriteFunc`, proxy/internal/proxy/reverseproxy.go, v0.82.0). Every app service sets it, so Traefik routes on
+  the client's name exactly as on the tailnet (the Tailscale operator keeps Host too). nbidp's own service does not
+  need it and keeps `false`.
+- **Forwarded headers.** With `NB_PROXY_TRUSTED_PROXIES` empty the proxy SETS `X-Forwarded-For` to the client's
+  tunnel address and `X-Forwarded-Proto` to `https`. The `netbird` entrypoint trusts forwarded headers from the pod
+  CIDR, and `netbird-network` allow-lists `10.100.0.0/16` at depth 1, the shape `tailscale-network` has.
+- **Identity headers.** The proxy deletes and re-stamps `X-NetBird-User` / `X-NetBird-Groups` on every request,
+  and the door's CiliumNetworkPolicy (deny-only, port 8446, as the Funnel door's) keeps every other source off the
+  entrypoint, so on that path they are the proxy's. No app reads them today; Authentik identity on the
+  forward-auth chain comes from the outpost, as on the tailnet.
+- **Gates mirror the tailnet.** The route names `netbird-as-${TAILSCALE_MIDDLEWARE:=tailscale-local}`, one Middleware
+  per tailnet chain with `tailscale-network` swapped for `netbird-network`, so no app needs a second variable. The
+  api-key component and the two hand-written tailnet carve-outs (navidrome `/rest/`, lazylibrarian `/api`) have
+  NetBird twins.
+- **Forward-auth apps.** `netbird-as-tailscale-user` puts the Authentik outpost in front, which answers only for a
+  hostname a proxy provider and Application are registered against. D45 (#3060) generates hidden twins for both the
+  tailnet and `<app>.app` names, so these apps sign in on the NetBird name exactly as on `<root domain>`.
+- **The domain.** `app.<root domain>` is a custom domain (`netbird.ReverseProxyDomain`) targeting the proxy's cluster,
+  `ek.<root domain>` (D38). Management validates it by a CNAME lookup on `validation.app.<root domain>`, which must
+  name the cluster address,
+  once at create, and drops it if still unvalidated after 48 hours; the stack creates the two Cloudflare CNAMEs
+  first and asks again on every `up` while it is unvalidated. Peers never use the public records: management
+  synthesizes `app.<root domain>` (a match-only zone) with each service's name pointing at the proxy peers, for
+  peers in that service's groups only. The CNAMEs point at a name with no public address, so on the internet they
+  resolve to nothing.
+- **Certificates.** With ACME off the proxy loads one certificate pair and serves it for every SNI, checking each
+  service domain against its SANs (`staticCertCovers`); `NB_PROXY_WILDCARD_CERT_DIR` is read only in ACME mode,
+  and ACME would try to issue nbidp's name over a challenge that cannot reach the proxy. So `nbidp-tls` carries
+  `nbidp`, `ek` and `*.app`. A second certificate, `*.app` alone, is pushed into OpenBao at
+  `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by an ESO PushSecret (D39): `eso-equestria` may write
+  that one path and nothing else. nbidp's key never leaves the cluster, and neither key is in Pulumi state.
+- **Discovery.** Live, from the Kubernetes API: the Ingresses in `network` whose Flux ks is `<APP>-tailnet-ingress`
+  (app, namespace and resolved `TAILSCALE_HOST` are on the object) and every ApplicationDefinition, matched by
+  namespace and name. That is what Flux applied, substitutions done, so no list or re-implemented substitution. In
+  the cluster the Stack's ServiceAccount reads them (list only); locally, the tailnet kubeproxy. An empty answer
+  fails the run rather than delete every service. A new app appears on the next run (the daily resync, or the next
+  merge); a removed app's service is deleted.
+- **Access groups** (D44). Exactly the definition's `access_policy.groups` that are NetBird user groups; `admins` is
+  not added. `users` (Authentik's parent group) is all four; no app lists it today. An unknown group (`editors`) is
+  skipped with a warning. **No service**, with a warning, for an app with no ApplicationDefinition (thanos,
+  meilisearch), a definition with no `access_policy`, or one whose groups map to none; its tailnet name still works.
+  Never a device group, for nbidp's reason.
+- **Ordering.** The domain waits for the proxy to be online. Services are declared in the run that creates the
+  domain and depend on it, so if its create did not validate they fail with 412 and the Stack retries (and
+  re-validates) within a minute. A domain that is registered and still does not validate holds new services back
+  with a warning. A service that exists stays declared through a proxy restart.
+- **Native OIDC apps** list their redirect URIs per hostname in `definition.yaml`; a login started on
+  `<app>.app` needs its own. See the stacks/system change that adds them centrally.
+
+### Monitoring (D47, 2026-11-04)
+
+Every check reaches Pushover. The flips page from the watchdog (§E), and each check below has its own route. NetBird critical alerts page as before; NetBird warnings (`alertname=~"Netbird.*"`, `severity="warning"`) go to the `pushover-quiet` receiver in `kubernetes/apps/observability/alertmanager/config.yaml`, at priority -1 with no sound.
+
+| What | Where it runs | How it pages |
+| --- | --- | --- |
+| A `gateways` or `dns-servers` peer disconnected for over 10 minutes (warning); every peer in one of those groups disconnected (critical) | `kubernetes/apps/netbird-system/health`, a CronJob every 5 minutes | `health.ts` posts to Alertmanager `/api/v2/alerts`, as the watchdog does |
+| A reverse-proxy custom domain (`app.`, `nbidp.`) registered but not validated (warning) | the same CronJob | the same |
+| The `nbidp.<root domain>` proxy cluster offline or missing (critical) | the same CronJob | the same |
+| The health CronJob itself has not succeeded in 30 minutes | PrometheusRule `NetbirdHealthNotRunning` (`kube_cronjob_*`) | Alertmanager |
+| `relay-eus2` and `relay-cus` answer TLS on 443, certificate more than 7 days from expiry | Gatus on alpha-site (`stacks/netbird-edge`, `addUptimeGatus("netbird-relays")`) | Gatus |
+| The home relay (`relay-home.<root domain>`, #3051), looked up live, answers verified TLS over the internet | a systemd timer on each Azure host (`components/netbird/relayProbe.ts`), every 5 minutes | a Gatus heartbeat that goes stale after 15 minutes without a push |
+
+- **Not inside the watchdog.** The health job is a separate CronJob in its own Flux Kustomization. A bug in it can never block a failover, and the watchdog's file is untouched. Both are short single-file scripts that run by type stripping. They share their conventions (the Alertmanager payload, the `endsAt` lapse, the staleness rule) but no code, so changing one never redeploys the other.
+- **Alerts resolve by lapsing.** Every run re-posts the problems it sees with `endsAt` 15 minutes ahead. A fixed problem stops being posted and resolves on its own.
+- **Missing is not an alert.** The health job skips a watched group or custom domain that does not exist, so `dns-servers` (#3055) and the `app.` domain (#3053) are covered once they land. A missing proxy cluster does count as offline.
+- **The home relay is probed from Azure.** Its name is private (a Technitium record that points at the home WAN address), and Gatus at home could reach it only by hairpin NAT, which proves nothing about the WAN path. The Azure hosts run `--accept-dns=false`, so every run asks the Technitium nodes for the address directly over the tailnet (`dig @<dns-<cluster> tailnet IP>`, falling through node to node until one answers). `stacks/netbird-edge` reads the `tag:dns` devices' tailnet IPs at deploy time and writes them into the script, so a changed or added node is picked up on the next run. The address itself is never baked in: a new home WAN address is used on the next probe. A probe that cannot resolve the name or connect pushes nothing. A certificate inside 7 days pushes an explicit failure.
+- **The one grant it needs.** `tag:netbird-edge` is internet-facing and gets nothing from the tagged grants. `stacks/unifi-network` (`configureNetbirdEdgeAccess`, `netbird-edge-dns`) grants it `tag:dns` on `tcp:53` and `udp:53` only. Policy tests accept `tag:dns:53` and deny `tag:dns` on 22, 443, 853 and 5380, plus the other tagged services it still does not reach.
+- **Warnings are quiet.** Only the NetBird warnings are routed to `pushover-quiet`. Dropping the `alertname` matcher would quiet every warning in the estate; that is a separate decision.
+- **Turning the home probe on.** It is off by default. Once #3051 is merged and its first `stacks/unifi-network` run has written the record, run `pulumi config set netbird-edge:homeRelayProbe true` in `stacks/netbird-edge`. The flag stands in for the record: while the record is missing the probes find nothing and the heartbeats go stale, so turn it on only after that run. With no `tag:dns` device on the tailnet, a run warns and leaves the probes off. A home WAN address change needs no deploy.

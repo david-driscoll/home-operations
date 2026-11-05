@@ -919,6 +919,37 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
   // The accept is a policy test, and assertGrantPath() checks each service in
   // the rendered policy before it is written.
   manager.setGrant("netbird-edge-backups", { src: [tag.netbirdEdge], dst: [...NETBIRD_EDGE_BACKUP_SERVICES], ip: ports.garageS3Vip }, { accept: [tag.netbirdEdge] });
+
+  // The home-relay probe on the Azure hosts (components/netbird/relayProbe.ts,
+  // D47) resolves `relay-home.<root domain>` on every run by asking the
+  // Technitium nodes directly: the hosts run --accept-dns=false and the name
+  // is private. Plain DNS on port 53 and nothing else -- not DoT (853), DoH
+  // (443), the Technitium web UI (5380) or SSH, which `default-dns` and the
+  // admin grants hand to the other tagged devices.
+  //
+  // The tests replace netbird-edge-backups' own: tests are keyed by `src`
+  // (manager.ts getTestName), so tag:netbird-edge gets ONE test object, and it
+  // carries the backup accepts too. Being one object it has one proto, tcp, so
+  // udp:53 is granted but not tested. The deny list also pins the rest of what
+  // the VM still does not reach, as member-funnel-access does for tag:funnel.
+  manager.setGrant("netbird-edge-dns", { src: [tag.netbirdEdge], dst: [tag.dns], ip: ["tcp:53", "udp:53"] }, () => [
+    {
+      src: tag.netbirdEdge,
+      proto: "tcp",
+      accept: [...NETBIRD_EDGE_BACKUP_SERVICES.map(service => `${service}:443`), `${tag.dns}:53`],
+      deny: [
+        `${tag.dns}:22`,
+        `${tag.dns}:853`, // DoT, default-dns
+        `${tag.dns}:443`, // DoH, default-dns
+        `${tag.dns}:5380`, // Technitium web UI
+        `${tag.apps}:443`, // default-apps-access
+        `${tag.dockge}:443`, // default-apps-access, member-dockge-web
+        `${tag.idp}:443`, // default-apps-access
+        "idp:443", // member-idp
+        `${tag.equestria}:443`, // member-cluster-web
+      ],
+    } as TailscaleTest,
+  ]);
 }
 
 /**

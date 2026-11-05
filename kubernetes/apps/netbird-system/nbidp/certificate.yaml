@@ -9,14 +9,24 @@
 # Mounted as static certs (NB_PROXY_CERTIFICATE_DIRECTORY, tls.crt/tls.key).
 # The proxy watches the files, so a renewal needs no restart.
 #
-# With ACME off the proxy serves this one pair for every SNI and checks each
-# service's domain against its SANs (staticCertCovers, v0.82.0), so it lists
-# every name the proxy serves:
+# ONE certificate for every name the proxy serves, because with ACME off the
+# proxy loads exactly one pair and serves it for every SNI (configureTLS in
+# proxy/server.go, v0.82.0). It checks each service's domain against this
+# leaf's SANs (staticCertCovers), and a covered domain is certificate-ready at
+# once. NB_PROXY_WILDCARD_CERT_DIR is NOT an alternative: the proxy reads that
+# directory only in ACME mode, and ACME would then try to issue nbidp's name
+# over an inbound challenge that cannot reach it. So:
 #
 #   - nbidp.<root domain>   Dex's issuer: the nbidp service, a custom domain
 #                           on the cluster below;
 #   - ek.<root domain>      the cluster address (NB_PROXY_DOMAIN), which no
-#                           service uses today; listed so one may.
+#                           service uses today; listed so one may;
+#   - *.app.<root domain>   every tailnet app's NetBird twin, under the `app`
+#                           custom domain (docs/plans/netbird-mirror.md §N).
+#
+# The copy other hosts may pull from OpenBao is ./app-wildcard-certificate.yaml,
+# a separate certificate without nbidp's name, so this key never leaves the
+# cluster.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -30,3 +40,4 @@ spec:
   dnsNames:
     - nbidp.${ROOT_DOMAIN}
     - ek.${ROOT_DOMAIN}
+    - "*.app.${ROOT_DOMAIN}"

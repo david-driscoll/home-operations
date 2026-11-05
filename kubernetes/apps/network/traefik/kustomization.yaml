@@ -11,6 +11,8 @@ resources:
   - ./external-gateway.yaml
   - ./error-pages.yaml
   - ./rules
+  # Who may connect to the `netbird` entrypoint: the NetBird private proxy only.
+  - ./netbird-door.yaml
 
 patches:
   - target:

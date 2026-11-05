@@ -567,6 +567,27 @@
       },
     },
     {
+      // NetBird's server, relays and client are tagged from one upstream
+      // release: the combined server and the Azure relays
+      // (components/netbird/compose.yaml), the home relay
+      // (docker/celestia/netbird-relay) and the site gateways
+      // (docker/_common/netbird-gateway). A split PR would leave a relay a
+      // release behind its management server, or the home relay behind the
+      // Azure ones. Not the dashboard: it is versioned on its own.
+      description: "NetBird Group",
+      groupName: "NetBird",
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "netbirdio/netbird",
+        "netbirdio/netbird-server",
+        "netbirdio/relay"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
       // Everything Stacklok ships for ToolHive, in one PR: the operator chart
       // and its CRDs chart (kubernetes/apps/agents/toolhive-operator{,-crds}),
       // which must move together -- an operator on CRDs from another release

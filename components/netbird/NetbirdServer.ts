@@ -3,7 +3,7 @@ import { remote, type types } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, type Output, output, type Resource, secret } from "@pulumi/pulumi";
 import { backupPaths, renderBackupScript, renderBackupUnits, renderResticEnv, renderRestoreScript } from "./backup.ts";
 import { FENCED_SERVICES, fencePaths, renderFenceScript, renderFenceUnits } from "./fence.ts";
-import { NETBIRD_DIR, parseSetupResponse, renderDashboardEnv, renderRelayEnv, renderServerConfig, type ServerSecrets, type SetupResult } from "./server.ts";
+import { NETBIRD_DIR, parseSetupResponse, type RelayEndpoint, renderDashboardEnv, renderRelayEnv, renderServerConfig, type ServerSecrets, type SetupResult } from "./server.ts";
 
 export { NETBIRD_DIR } from "./server.ts";
 
@@ -16,11 +16,11 @@ export interface NetbirdServerArgs {
   domain: Input<string>;
   secrets: { [K in keyof ServerSecrets]: Input<string> };
   /**
-   * Standalone relays listed for clients, by hostname (server.ts
-   * renderServerConfig). Every host gets the same list. Empty: the embedded
-   * relay and STUN.
+   * Standalone relays listed for clients, by hostname or as a RelayEndpoint
+   * (server.ts renderServerConfig). Every host gets the same list. Empty: the
+   * embedded relay and STUN.
    */
-  relays?: Input<string>[];
+  relays?: Input<string | RelayEndpoint>[];
   /** Run `netbirdio/relay` on this host, served as this name (#3001). Not fenced. */
   relay?: { domain: Input<string> };
   /**

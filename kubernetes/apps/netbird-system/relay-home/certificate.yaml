@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/cert-manager.io/certificate_v1.json
+#
+# The home relay's certificate (D32), issued by DNS-01 like nbidp's: the name
+# has no public record, only a Technitium one, so TLS-ALPN on the relay itself
+# cannot work. Nothing in the cluster mounts it. stacks/unifi-network reads
+# this Secret by name (components/netbird/homeRelay.ts `tlsSecret`) and copies
+# it to OpenBao at apps/netbird/relay-home-tls; docker/celestia/netbird-relay
+# renders it from there, and its init.sh restarts the relay on a renewal.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: netbird-relay-home-tls
+spec:
+  secretName: netbird-relay-home-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-production
+  commonName: relay-home.${ROOT_DOMAIN}
+  dnsNames:
+    - relay-home.${ROOT_DOMAIN}

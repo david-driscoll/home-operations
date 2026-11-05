@@ -20,7 +20,9 @@
  *  10. nbidp: the private reverse proxy's token, its custom domain, and the private service in
  *      front of Dex (#2891, nbidp.ts);
  *  11. a `self-` group and policy per person, so their own devices reach
- *      each other (selfAccess.ts).
+ *      each other (selfAccess.ts);
+ *  12. every tailnet app's NetBird twin, `<host>.app.<root domain>`, on the
+ *      same proxy (app-services.ts, apps.ts).
  *
  * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
  * the server runs on Azure and Authentik is LAN/tailnet-only, so neither the
@@ -40,6 +42,7 @@ import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolic
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
 import { NetbirdUserAutoGroup } from "dynamic/netbird/NetbirdUserAutoGroup.ts";
+import { declareAppServices } from "./app-services.ts";
 import { DNS_SERVER_GROUP, enrolledDnsPeers, type LivePeer, selectNameservers, technitiumLanIps } from "./dns.ts";
 import { type LiveCluster, type LiveDomain, type LiveService, liveCustomDomain, privateServiceAccessGroups, privateServiceRequest, serviceOnCluster } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
@@ -245,7 +248,7 @@ pulumi.all([pulumi.output(api), technitiumLan]).apply(async ([{ managementUrl: u
 // time, in a run that changes nothing else: the run authenticates with the
 // token it is deleting, so a delete scheduled after it would fail (the next
 // run reads the new token and finishes it).
-const AUTOMATION_TOKEN_GENERATION = "2026-11";
+const AUTOMATION_TOKEN_GENERATION = "2026-11b";
 const OWNER_TOKEN_GENERATION = "2026-11";
 
 const serviceUser = new netbird.User("automation", { name: "automation", isServiceUser: true, role: "admin" }, opts);
@@ -528,6 +531,21 @@ pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
       opts,
     );
   }
+});
+
+// ── 12. Tailnet apps on NetBird ─────────────────────────────────────────────
+// An app with a tailnet name and an access_policy naming NetBird user groups
+// gets `<host>.app.<root domain>` as a private service on the same proxy,
+// open to exactly those groups (app-services.ts, apps.ts;
+// docs/plans/netbird-mirror.md §N).
+declareAppServices({
+  globals,
+  api,
+  provider,
+  userGroupIds: Object.fromEntries(USER_GROUPS.map(name => [name, userGroups[name].id])),
+  clusterAddress: proxyCluster,
+  root: rootDomain(),
+  dependsOn: [defaultPolicyRemoval, nbidpProxyToken],
 });
 
 /** GET a NetBird API path with `globals.netbirdApi`'s token. */

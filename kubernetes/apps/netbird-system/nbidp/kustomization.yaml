@@ -4,6 +4,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./certificate.yaml
+  # *.app.<root domain> alone, and the PushSecret that puts it in OpenBao.
+  - ./app-wildcard-certificate.yaml
+  - ./app-wildcard-pushsecret.yaml
   - ./externalsecret.yaml
   - ./helmrelease.yaml
   - ./ciliumnetworkpolicy.yaml
