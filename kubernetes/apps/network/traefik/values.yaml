@@ -70,6 +70,13 @@ service:
     funnel:
       spec:
         type: ClusterIP
+    # `traefik-netbird`, for the `netbird` entrypoint only, the same way: the
+    # NetBird private proxy (apps/netbird-system/nbidp) dials it from its pod
+    # for every `<app>.app.<root domain>` service stacks/netbird declares.
+    # ClusterIP, so the NetBird door is not on the LAN at all.
+    netbird:
+      spec:
+        type: ClusterIP
 additionalArguments:
   - '--providers.file.filename=/config/store.yaml'
   - '--serversTransport.insecureSkipVerify=true'
@@ -350,6 +357,45 @@ ports:
       # X_Forwarded_For and friends: underscore aliases of managed headers
       # that tailscaled does not strip (pkg/config/static/entrypoints.go:105).
       aliasHeadersStrategy: delete
+  # THE NETBIRD DOOR: `<app>.app.<root domain>`, the NetBird counterpart of
+  # `<app>.<tailnet>` (docs/plans/netbird-mirror.md §N). The NetBird private
+  # reverse proxy (apps/netbird-system/nbidp) terminates TLS for every app
+  # service with the `*.app` certificate, checks the peer is in the service's
+  # access groups, and dials http://traefik-netbird:8446 from its pod
+  # (`direct_upstream`) with the client's Host kept (`pass_host_header`). Every
+  # tailnet app gets a router here from components/tailscale
+  # (netbird-ingressroute.yaml), so the two paths stay identical.
+  #
+  # PLAIN HTTP, no redirections, for the reason `tailscale` gives: the proxy
+  # owns the TLS, and a redirect to https would loop back through it.
+  #
+  # NOT on the LoadBalancer: expose.default false, expose.netbird true puts the
+  # port on Service traefik-netbird (service.additionalServices) only. Who may
+  # CONNECT is netbird-door.yaml (a CiliumNetworkPolicy): the proxy pods, and
+  # nothing else. That is what makes X-NetBird-User / X-NetBird-Groups, which the
+  # proxy deletes and re-stamps, trustworthy on this entrypoint.
+  #
+  # No asDefault: a router that names no entrypoint stays off this door.
+  netbird:
+    port: 8446
+    exposedPort: 8446
+    protocol: TCP
+    expose:
+      default: false
+      netbird: true
+    # The proxy SETS X-Forwarded-For to the client's NetBird tunnel address
+    # (setUntrustedForwardingHeaders in proxy/internal/proxy/reverseproxy.go,
+    # v0.82.0, since NB_PROXY_TRUSTED_PROXIES is empty), and X-Forwarded-Proto
+    # to https. network/netbird-network reads the former at depth 1, and apps
+    # need the latter to build https URLs; Traefik keeps both only from a
+    # trusted source. The proxy pods are in the pod CIDR, and netbird-door.yaml
+    # keeps every other pod off this port, so nothing else can present one.
+    forwardedHeaders:
+      trustedIPs:
+        - "${CLUSTER_NETWORK}"
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   postgres:
     expose:
       default: true

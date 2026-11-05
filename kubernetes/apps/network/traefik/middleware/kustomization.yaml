@@ -11,6 +11,9 @@ resources:
   - ./authenticated-user.yaml
   - ./tailscale-user.yaml
   - ./tailscale-local.yaml
+  # The NetBird door's gate and its counterparts of the three tailnet chains
+  # (components/tailscale/netbird-ingressroute.yaml).
+  - ./netbird.yaml
   - ./strip-query-string.yaml
   - ./host-header.yaml
   - ./error-pages.yaml

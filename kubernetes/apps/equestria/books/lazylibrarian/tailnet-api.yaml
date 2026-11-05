@@ -32,3 +32,27 @@ spec:
       services:
         - name: ${APP}
           port: http
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+#
+# The same carve-out on the NetBird twin, `<host>.app.<root domain>`
+# (components/tailscale/netbird-ingressroute.yaml).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${APP}-netbird-api
+  annotations:
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - netbird
+  routes:
+    - kind: Rule
+      priority: 20
+      match: Host(`${TAILSCALE_HOST:=${APP}}.app.${ROOT_DOMAIN}`) && Path(`/api`) && QueryRegexp(`apikey`, `.+`)
+      middlewares:
+        - name: netbird-as-tailscale-local
+          namespace: network
+      services:
+        - name: ${APP}
+          port: http

@@ -28,15 +28,35 @@ export interface ServerConfigArgs extends ServerSecrets {
   /** The public management name, `netbird.<root domain>`. */
   domain: string;
   /**
-   * Standalone relays (`netbirdio/relay`, #3001), by hostname. Listing any
-   * turns the combined server's embedded relay AND its embedded STUN off
-   * (combined/cmd/config.go applyRelayDefaults, v0.82.0), so the relays' STUN
-   * is listed for clients too. Empty or absent: the embedded relay and STUN.
+   * Standalone relays (`netbirdio/relay`, #3001), by hostname or as a
+   * {@link RelayEndpoint}. Listing any turns the combined server's embedded
+   * relay AND its embedded STUN off (combined/cmd/config.go
+   * applyRelayDefaults, v0.82.0), so the relays' STUN is listed for clients
+   * too. Empty or absent: the embedded relay and STUN.
    */
-  relays?: readonly string[];
+  relays?: readonly (string | RelayEndpoint)[];
 }
 
-/** Every relay listens behind its host's Traefik on 443; its STUN is direct on 3478/udp. */
+/** A standalone relay as the management server lists it. A bare hostname is `{ host, stun: true }`. */
+export interface RelayEndpoint {
+  host: string;
+  /**
+   * Whether it also answers STUN on 3478/udp and is listed in `server.stuns`.
+   * Default true: the Azure relays do. The home relay does not (D32): its
+   * site forwards 443 only.
+   */
+  stun?: boolean;
+}
+
+function relayEndpoint(relay: string | RelayEndpoint): Required<RelayEndpoint> {
+  return typeof relay === "string" ? { host: relay, stun: true } : { host: relay.host, stun: relay.stun ?? true };
+}
+
+/**
+ * Every relay is reached on 443: the Azure relays behind their host's Traefik,
+ * the home relay through its site's port forward (homeRelay.ts). STUN, where
+ * a relay serves it, is direct on 3478/udp.
+ */
 export const RELAY_TLS_PORT = 443;
 
 function bareHostname(host: string): string {
@@ -44,7 +64,7 @@ function bareHostname(host: string): string {
   return host;
 }
 
-/** `rels://<host>:443`: WebSocket over TLS, terminated by the relay host's Traefik. */
+/** `rels://<host>:443`: WebSocket over TLS (on Azure terminated by the host's Traefik; at home by the relay itself, which adds QUIC). */
 export function relayAddress(host: string): string {
   return `rels://${bareHostname(host)}:${RELAY_TLS_PORT}`;
 }
@@ -59,18 +79,22 @@ const q = (value: string) => JSON.stringify(value);
 /** `/etc/netbird/config.yaml` for the combined server. */
 export function renderServerConfig(args: ServerConfigArgs): string {
   const origin = `https://${args.domain}`;
-  const relays = args.relays ?? [];
+  const relays = (args.relays ?? []).map(relayEndpoint);
+  const stuns = relays.filter(relay => relay.stun);
+  // With the embedded STUN off, a list without one would leave clients no
+  // STUN at all, and so no server-reflexive candidates for direct paths.
+  if (relays.length > 0 && stuns.length === 0) throw new Error("At least one standalone relay must serve STUN: listing relays turns the embedded STUN off");
   // The relays share the embedded relay's secret; the TTL is upstream's default.
   const relayBlock =
     relays.length > 0
       ? `  # Standalone relays: the embedded relay and STUN are off.
   relays:
     addresses:
-${relays.map(host => `      - ${q(relayAddress(host))}`).join("\n")}
+${relays.map(relay => `      - ${q(relayAddress(relay.host))}`).join("\n")}
     secret: ${q(args.relayAuthSecret)}
     credentialsTTL: "12h"
   stuns:
-${relays.map(host => `    - uri: ${q(stunUri(host))}`).join("\n")}
+${stuns.map(relay => `    - uri: ${q(stunUri(relay.host))}`).join("\n")}
 `
       : `  stunPorts:
     - ${STUN_PORT}

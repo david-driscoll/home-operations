@@ -322,6 +322,13 @@ async function kubernetesApplications(globals: GlobalResources, outputs: Authent
  *     `eso-<cluster>` policy to allow writes, making every consuming cluster a
  *     writer of the shared store, and would have kept a second copy of the
  *     credential forever. This keeps zero copies in either store.
+ *
+ * That still holds here. `eso-equestria` has since gained exactly ONE write,
+ * by decision on 2026-11-04 (docs/plans/netbird-mirror.md D39): the NetBird
+ * `*.app` certificate's path, `secrets/apps/netbird/app-wildcard-tls`, pushed
+ * by kubernetes/apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml. A
+ * public certificate that cert-manager reissues is not this credential, and
+ * the grant names that path alone (bootstrap/openbao/equestria-init.sh).
  */
 async function outpostKubeConfig(coreApi: kubernetes.CoreV1Api, clusterDefinition: KubernetesCluster) {
   // Created by the authentik-remote-cluster HelmRelease in the target cluster,

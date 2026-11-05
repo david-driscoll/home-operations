@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/cert-manager.io/certificate_v1.json
+#
+# `*.app.<root domain>` on its own, for hosts OTHER than this proxy that serve
+# NetBird app names (docs/plans/netbird-mirror.md §N). The proxy itself uses
+# ./certificate.yaml, which has to carry nbidp's name as well.
+#
+# ./app-wildcard-pushsecret.yaml pushes this Secret to OpenBao at
+# `secrets/apps/netbird/app-wildcard-tls` (D39). cert-manager renews 30 days
+# before expiry and the PushSecret refreshes hourly, so the copy is never
+# stale for long.
+#
+# No apex: `app.<root domain>` is a registered NetBird custom domain, not a
+# service, so nothing serves it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: netbird-app-wildcard
+spec:
+  secretName: netbird-app-wildcard-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-production
+  commonName: "*.app.${ROOT_DOMAIN}"
+  dnsNames:
+    - "*.app.${ROOT_DOMAIN}"
