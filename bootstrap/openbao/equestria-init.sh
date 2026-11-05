@@ -8,6 +8,10 @@
 #   ./equestria-init.sh init      initialise, mount kv, enable auth, write policies
 #   ./equestria-init.sh resume    finish a run that died after init — regenerates
 #                                 a root token from the recovery shares first
+#   ./equestria-init.sh policies  (re)write every policy below and nothing else;
+#                                 needs an admin BAO_TOKEN. `policies --check`
+#                                 diffs each against the server and writes
+#                                 nothing. Run via `mise run bao:policies`.
 #   ./equestria-init.sh oidc      enable OIDC login against Authentik: viewer
 #                                 policy, oidc auth method, admin + family roles.
 #                                 Needs OPENBAO_OIDC_CLIENT_ID,
@@ -80,6 +84,8 @@ preflight() {
   for c in bao sops jq; do command -v "$c" >/dev/null || missing+=("$c"); done
   [[ ${#missing[@]} -eq 0 ]] || die "missing command(s): ${missing[*]}"
   [[ -n "${BAO_ADDR:-}" ]] || die "BAO_ADDR is not set — port-forward openbao-0 or use the gateway route (see header)"
+  # `policies` writes nothing to the repo, so it needs neither sops nor an age key.
+  if [[ "${1:-}" == "policies" ]]; then cd "${REPO_ROOT}"; return 0; fi
   # sops needs a key to encrypt for; the recipients come from .sops.yaml.
   [[ -n "${SOPS_AGE_KEY_FILE:-}" && -f "${SOPS_AGE_KEY_FILE}" ]] \
     || die "SOPS_AGE_KEY_FILE is unset or missing — required to write the bootstrap files"
@@ -949,11 +955,51 @@ Done. Next:
 NEXT
 }
 
-preflight
+# `policies --check`: shadow `bao policy write NAME -` so each policy is diffed
+# against the server's copy instead of written. Every other bao call (none in
+# write_policies today) passes straight through.
+POLICY_DRIFT=0
+policy_check_shim() {
+  bao() {
+    if [[ "${1:-}" == "policy" && "${2:-}" == "write" && "${4:-}" == "-" ]]; then
+      local name="$3" want have
+      want="$(cat)"
+      have="$(command bao policy read "${name}" 2>/dev/null || true)"
+      if [[ "${want}" == "${have}" ]]; then
+        printf '  = %s unchanged\n' "${name}" >&2
+      else
+        POLICY_DRIFT=1
+        printf '  ~ %s differs from the server:\n' "${name}" >&2
+        diff -u --label "server/${name}" --label "repo/${name}" <(printf '%s\n' "${have}") <(printf '%s\n' "${want}") | sed 's/^/      /' >&2 || true
+      fi
+      return 0
+    fi
+    command bao "$@"
+  }
+  # write_policies sends each `bao policy write` to /dev/null, so the shim
+  # reports on stderr. Its "wrote policy X" lines would be misleading here.
+  ok() { :; }
+}
+
+policies() {
+  [[ -n "${BAO_TOKEN:-}" ]] || die "policies needs an admin BAO_TOKEN (mise run bao:policies logs you in with OIDC role=admin)"
+  command bao token lookup >/dev/null 2>&1 || die "BAO_TOKEN is not valid against ${BAO_ADDR}"
+  if [[ "${2:-}" == "--check" ]]; then
+    policy_check_shim
+    write_policies
+    if [[ "${POLICY_DRIFT}" -eq 1 ]]; then printf '\n  policies differ; run without --check to write them\n'; exit 3; fi
+    printf '\n  every policy matches the server\n'
+  else
+    write_policies
+  fi
+}
+
+preflight "${1:-}"
 case "${1:-}" in
   status) status ;;
+  policies) policies "$@" ;;
   init)   init ;;
   resume) resume ;;
   oidc)   oidc ;;
-  *)      die "usage: $0 status|init|resume|oidc" ;;
+  *)      die "usage: $0 status|init|resume|oidc|policies [--check]" ;;
 esac

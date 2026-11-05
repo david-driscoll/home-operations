@@ -172,3 +172,17 @@ secret_id: "<uuid>"
 `PULUMI_CONFIG_PASSPHRASE` lives in its own file, `pulumi-passphrase.sops.yaml`
 (`save-pulumi-passphrase.sh`) — it is needed before OpenBao is reachable, so it cannot
 come from OpenBao.
+
+## Changing a policy
+
+Every OpenBao policy (`admin`, `pulumi`, `eso-equestria`, `eso-sgc`, `eso-postgres-rotation`, ...) is
+written by `write_policies` in `equestria-init.sh`, not by Pulumi: they are what Pulumi and ESO authenticate
+with. After editing one, apply it with an admin token:
+
+```bash
+mise run bao:policies --check   # diff every policy against the server; writes nothing (exit 3 = differs)
+mise run bao:policies           # write them all; idempotent
+```
+
+With `BAO_TOKEN` unset the task logs in through Authentik (`bao login -method=oidc role=admin`, which opens a
+browser) and keeps the token in the task's process only. It needs no sops or age key.
