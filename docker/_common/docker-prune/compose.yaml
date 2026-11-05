@@ -46,7 +46,7 @@
 # already uses.
 services:
   docker-prune:
-    image: docker:29.9.3-cli@sha256:4d742ab934c2149b628bf26369ac3ec51cb91e2e28fe6722a0e86a6d6efc4bd5
+    image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
     container_name: docker-prune
     restart: unless-stopped
     # A sleep loop, not cron: this image ships no cron daemon, and one
