@@ -8,6 +8,10 @@ The estate: the clusters, Dockge hosts and networks this repo runs, and how peop
 A person's phone, laptop or TV that reaches the estate as a user, not as a server.
 _Avoid_: Endpoint, node (when you mean a person's device)
 
+**Device name**:
+A NetBird device's own name, `<device>.nbd.<root domain>`, which other NetBird devices can reach it by.
+_Avoid_: Peer FQDN, NetBird hostname
+
 **Backplane**:
 The servers and the traffic between them (storage, secrets, monitoring, admin). It stays on Tailscale and is never offered to client devices.
 _Avoid_: Infrastructure network, server mesh
