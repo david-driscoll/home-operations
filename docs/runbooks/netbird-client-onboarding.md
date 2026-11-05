@@ -53,6 +53,11 @@ then delete their peers.
 
 ## For the person: set it up
 
+The family-facing version of these steps, with iPhone and Android
+tabs, is the setup guide's **NetBird** page (`https://setup.<root domain>/setup/netbird/`,
+Forgejo `docs/setup`). Send people there with the invite; the steps below are
+the admin's reference.
+
 1. **Open the invite link** and choose a password. This is your NetBird password; it
    is not your Authentik one. Any network works.
 2. **Turn Tailscale off on this device.** Phones and tablets only allow one VPN at a

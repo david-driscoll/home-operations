@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# The holm-config ConfigMap, from the setup guide's `deploy/holm` branch
+# (../source.yaml): config.yml plus the kustomization.yaml the guide's CI
+# writes beside it. It re-applies when CI pushes a new config, and Holm rereads
+# the file within seconds.
+#
+# Acts as the `holm-config` ServiceAccount (./rbac.yaml) and has no postBuild
+# substitution, because it is rendered by `holm-guide` rather than cluster-apps
+# (../ks.yaml says why both matter). Every dollar-brace variable in config.yml
+# is Holm's own, expanded at startup from its container's environment.
+#
+# This took over the holm-config ConfigMap from `holm`, which used to generate
+# it from a copy of the file in this repo. Same name, so the mount is
+# unchanged. The owner labels move here on the first apply, and `holm` (which
+# waits on this) then drops the ConfigMap from its inventory without deleting
+# it: Flux garbage-collects only objects still labelled as its own.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: holm-config
+  labels:
+    app.kubernetes.io/name: holm
+    driscoll.dev/name: holm
+spec:
+  serviceAccountName: holm-config
+  targetNamespace: equestria
+  path: ./
+  # Never prune: removing the ConfigMap stops Holm, and a config that is wrong
+  # is better than none.
+  prune: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 2m
+  sourceRef:
+    kind: GitRepository
+    name: setup-guide

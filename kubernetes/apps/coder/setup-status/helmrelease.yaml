@@ -74,6 +74,9 @@ spec:
               # set NAVIDROME_ADMIN_USERNAME to pin it instead.
               NAVIDROME_URL: http://navidrome.equestria.svc.cluster.local:4533
               TAILSCALE_API_KEY_FILE: /secrets/tailscale/api-key
+              # The public management server, as netbird-health reads it
+              # (../../netbird-system/health/cronjob.yaml).
+              NETBIRD_URL: https://netbird.${ROOT_DOMAIN}
             envFrom:
               - secretRef:
                   name: *app

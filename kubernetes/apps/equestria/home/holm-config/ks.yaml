@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Holm's config comes from the family setup guide (Forgejo docs/setup), not
+# from this repo (docs/kubernetes/holm.md). This Kustomization applies ./app/:
+# the `holm-config` Kustomization that reads the guide, and the
+# ServiceAccount it acts as.
+#
+# WHY TWO LEVELS. docs/setup has more writers than this repo (its CI token,
+# claude-code, renovate), and holm-config applies whatever its `deploy/holm`
+# branch holds. Two things keep that to one ConfigMap:
+#
+#   - holm-config impersonates `holm-config`, a ServiceAccount that can create
+#     ConfigMaps in equestria and change only holm-config (./app/rbac.yaml).
+#   - holm-config is rendered HERE rather than by cluster-apps, so the
+#     cluster-wide patch (kubernetes/flux/cluster/ks.yaml) never reaches it: no
+#     postBuild substitution, so nothing pushed to the guide can expand
+#     cluster-secrets or shared-secrets into the ConfigMap, and no SOPS
+#     decryption. This Kustomization does get the patch, and needs nothing
+#     from it.
+#
+# An ArtifactGenerator copying only config.yml would be tighter still, but the
+# pinned flate (0.6.5) cannot resolve a Kustomization fed by an
+# ExternalArtifact, and the `flate` hk step then fails every Kustomization in
+# the repo.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app holm-guide
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: holm
+    driscoll.dev/name: holm
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: holm
+      driscoll.dev/name: holm
+  path: ./kubernetes/apps/equestria/home/holm-config/app
+  prune: true
+  # Not waited on: holm-config cannot be ready before stacks/system has written
+  # the forge credential (./source.yaml), and `holm` already waits for it.
+  wait: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
