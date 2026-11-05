@@ -249,7 +249,8 @@ authenticates with an admin service-user PAT from OpenBao.
 - **Groups and setup keys:** the four user groups invites place people in; one key per gateway and per operator,
   plus a reusable `apple-tv` key, stored in OpenBao.
 - **Networks:** site LAN resources, routing peers and exit routes.
-- **DNS:** the Technitium nameserver group.
+- **DNS:** the Technitium nameserver group. Technitium recurses only for private sources (D46), and the overlay
+  `10.100.0.0/16` is inside `10/8`, so NetBird clients keep recursion.
 - **Policy:** the client-access policy (§J).
 
 ## J. Client-access policy
@@ -371,6 +372,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
 | D38 | 11-04 | The private proxy's cluster address is `ek.<root domain>`; `nbidp.<root domain>` becomes a custom domain on it (public CNAME `validation.nbidp` → `ek`), so the proxy can serve other names. The nbidp service is deleted and re-created on the new cluster: management never moves a service |
 | D45 | 11-04 | Forward-auth apps answer on all three names (`<app>.<root domain>`, `<app>.<tailnet>`, `<app>.app.<root domain>`): each extra name gets its own ProxyProvider and Application, **generated** from the same definition and `access_policy`, with `meta_hide` so the Library shows one entry per app (`components/authentik/proxyHostTwins.ts`) |
+| D46 | 11-04 | Technitium server settings are code (`stacks/unifi-network/technitium-settings.ts`, imported singleton); recursion goes `Allow` → `AllowOnlyForPrivateNetworks` (RFC 1918, CGNAT, link-local, loopback, non-global IPv6), every other provider-defaulted field pinned to its live value |
 | D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
 | D49 | 11-04 | Every Technitium node (equestria, celestia, alpha-site, luna, skystar) gets a NetBird sidecar in its network namespace, as it has a Tailscale one, so clients resolve over the overlay without the home gateways. One reusable, non-ephemeral, non-expiring `dns-servers` setup key (OpenBao `setup-keys#/dns`) places all five in the `dns-servers` peer group |
 | D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
