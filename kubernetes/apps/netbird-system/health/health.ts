@@ -11,7 +11,7 @@
  *   (a) a peer in a watched group (gateways, dns-servers) disconnected for
  *       longer than PEER_DISCONNECTED_MINUTES; a group whose every peer is;
  *   (b) a reverse-proxy custom domain (app., nbidp.) that is not validated;
- *   (c) the nbidp proxy cluster offline.
+ *   (c) the private proxy's cluster (ek., which serves nbidp and the app. services) offline.
  * Each alert is re-posted every run with endsAt ALERT_TTL_MINUTES ahead, so it
  * resolves on its own once a run stops posting it. A watched group or domain
  * that does not exist yet is skipped, not alerted: `dns-servers` and the
