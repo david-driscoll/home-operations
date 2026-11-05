@@ -230,6 +230,15 @@ spec:
               - name: registries
                 mountPath: /etc/docker/certs.d
                 readOnly: true
+              # The read-only github.com token every job container gets at
+              # /run/secrets/github (`options` in ./resources/config.yml). It
+              # is mounted here, in dind, because the job containers are
+              # dind's, so a bind mount's source path resolves in this
+              # container. A whole-volume mount with no subPath, so the
+              # kubelet's refresh reaches running and later jobs alike.
+              - name: github-token
+                mountPath: /run/forge-github-token
+                readOnly: true
           # Prepulls the job image on a pod that is still waiting, and clears
           # Docker between jobs on a reused one (./resources/janitor.sh,
           # ./resources/prepull.sh). The dind image, for its docker CLI: the
@@ -361,6 +370,15 @@ spec:
           - name: scripts
             configMap:
               name: forgejo-runner-scripts
+          # kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret-readonly.yaml,
+          # reflected into this namespace. Optional, so a missing reflection
+          # costs jobs their token rather than the runner its pods.
+          - name: github-token
+            secret:
+              secretName: github-token-readonly
+              optional: true
+              items:
+                - { key: token, path: token }
           - name: registries
             configMap:
               name: forgejo-runner-registries
