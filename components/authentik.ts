@@ -9,6 +9,7 @@ import type { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
 import type { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
+import { PROXY_TWIN_LABEL, type ProxyHostVariant, proxyHostTwins, twinSlug } from "./authentik/proxyHostTwins.ts";
 import { baoKvSecret, baoProvenance, oidcBaoPath } from "./bao.ts";
 import type { Roles } from "./constants.ts";
 import type { GlobalResources } from "./globals.ts";
@@ -26,7 +27,9 @@ export interface AuthentikResourcesArgs {
    * Set where the apps also have NetBird names (equestria, stacks/system):
    * every OAuth2 redirect URI on a `<host>.<tailnet>` name gets its
    * `<host>.app.<root domain>` twin (components/netbird/appRedirectUris.ts,
-   * docs/plans/netbird-mirror.md §N).
+   * docs/plans/netbird-mirror.md §N), and every forward-auth app with a
+   * `spec.tailnetUrl` gets a hidden provider/application pair for that name
+   * too (components/authentik/proxyHostTwins.ts, D45).
    */
   netbirdApps?: { tailnet: pulumi.Input<string>; root: string };
 }
@@ -52,11 +55,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     ((
       | {
           provider: ProviderProxy;
-          // The twin registered against spec.tailnetUrl. Present only for a
-          // proxy app that declares one. It has to travel alongside `provider`
-          // because the outpost is built from this list -- a provider the
+          // One provider per extra hostname (spec.tailnetUrl, and its NetBird
+          // `.app` name where netbirdApps is set), each with its own hidden
+          // application. They travel alongside `provider` because the outpost
+          // is built from this list (outpostProxyProviders) -- a provider the
           // outpost does not carry is a provider that answers nothing.
-          tailnetProvider?: ProviderProxy;
+          twins: { variant: ProxyHostVariant; provider: ProviderProxy; app?: Application }[];
           isProxy: true;
           config?: undefined;
           oidcCredentials?: undefined;
@@ -125,6 +129,18 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
+        // A ProxyProvider is only reachable through an Application -- the outpost
+        // serves `ProxyProvider.objects.filter(application__isnull=False)` -- so
+        // each twin gets its own, or its hostname answers "no app for hostname".
+        // Hidden from the Library (meta_hide) so a person sees one entry per app;
+        // same access_policy bindings, because createAuthentikApplication reads
+        // them off the same definition. 2ee326c1 removed the visible
+        // "(Tailnet)" entries; meta_hide is what lets them come back unseen.
+        if (result.isProxy) {
+          for (const twin of result.twins) {
+            twin.app = this.createAuthentikApplication(application, twin.provider, { variant: twin.variant, primary: app });
+          }
+        }
         const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply(defs => {
           const r = Object.assign(result, {
             definition: application,
@@ -194,10 +210,20 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       // whole cookie domain with one policy, and these apps each carry their own
       // spec.access_policy groups. Splitting per app is the only shape that keeps
       // those distinct.
-      const tailnetProvider = definition.spec.tailnetUrl ? new authentik.ProviderProxy(`${resourceName}-tailnet`, proxyArgs(definition.spec.tailnetUrl), opts) : undefined;
+      //
+      // The `-tailnet` resource name is the one the tailnet twins already carry
+      // in state; `-app` is the NetBird name (D45).
+      const netbird = this.args.netbirdApps;
+      // unsecret: the tailnet name arrives from OpenBao as a secret; the
+      // definitions already spell it in the clear (spec.tailnetUrl), in state too.
+      const tailnet = netbird ? await awaitOutput(pulumi.unsecret(pulumi.output(netbird.tailnet))) : undefined;
+      const twins = proxyHostTwins(proxy.externalHost, definition.spec.tailnetUrl, netbird && tailnet ? { tailnet, root: netbird.root } : undefined).map(twin => ({
+        variant: twin.variant,
+        provider: new authentik.ProviderProxy(`${resourceName}-${twin.variant}`, proxyArgs(twin.externalHost), opts),
+      }));
 
       return {
-        tailnetProvider,
+        twins: twins as { variant: ProxyHostVariant; provider: ProviderProxy; app?: Application }[],
         provider: new authentik.ProviderProxy(resourceName, proxyArgs(proxy.externalHost), opts),
         isProxy: true as const,
       };
@@ -533,24 +559,28 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   /**
-   * @param variant Set for the tailnet twin. It keys the Pulumi resource name and
-   *   the authentik slug apart from the primary application -- both are unique per
-   *   authentik instance, so reusing them would have the two fight over one object.
-   *   It also renames the app in the portal and points its launch URL at the tailnet
-   *   name, so the two entries are tellable apart by a human choosing between them.
+   * @param twin Set for a hostname twin (D45). Its variant keys the Pulumi resource
+   *   name apart from the primary application, and its slug is the primary's with
+   *   the variant appended -- slugs are unique per authentik instance, so reusing
+   *   the primary's would have the two fight over one object. The application is
+   *   hidden from the Library (`metaHide`), so the portal keeps one entry per app;
+   *   the "(Tailnet)"/"(NetBird)" name is for an admin reading the list. Its launch
+   *   URL stays the primary's, so a hidden entry that surfaces anyway (search,
+   *   admin) still opens the canonical name.
    */
-  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
+  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource, twin?: { variant: ProxyHostVariant; primary: Application }) {
     const baseName = this.resolveResourceName(definition);
-    const resourceName = baseName;
+    const resourceName = twin ? `${baseName}-${twin.variant}` : baseName;
     const args: authentik.ApplicationArgs = {
-      name: definition.spec.name,
-      slug: new random.RandomPet(resourceName, { prefix: resourceName, length: 1 }, { parent: this }).id,
+      name: twin ? `${definition.spec.name} (${PROXY_TWIN_LABEL[twin.variant]})` : definition.spec.name,
+      slug: twin ? twin.primary.slug.apply(slug => twinSlug(slug, twin.variant)) : new random.RandomPet(resourceName, { prefix: resourceName, length: 1 }, { parent: this }).id,
       group: this.cluster.apply(cluster => (definition.spec.category === "System" || cluster.title === definition.spec.category ? `System: ${cluster.title}` : definition.spec.category)),
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",
       metaLaunchUrl: this.resolveLaunchUrl(definition),
       openInNewTab: true,
+      ...(twin ? { metaHide: true } : {}),
     };
 
     if (provider) {

@@ -27,6 +27,7 @@ import type { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition 
 import * as authentik from "@pulumi/authentik";
 import * as pk8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
+import { outpostProxyProviders } from "components/authentik/proxyHostTwins.ts";
 import { AuthentikApplicationManager, type AuthentikOutputs } from "components/authentik.ts";
 import { BackupPlanOrchestrator } from "components/BackupPlanOrchestrator.ts";
 import { rootDomain } from "components/domains.ts";
@@ -235,16 +236,11 @@ async function kubernetesApplications(globals: GlobalResources, outputs: Authent
     kubeconfig: outpostCredential,
     verifySsl: true,
   });
-  // Both hostnames' providers. A tailnet twin that is not attached to the
-  // outpost is a provider the outpost will not answer for, which is exactly the
-  // 400 "no app for hostname" this pair exists to fix -- so it has to be
-  // collected here and not just created.
-  const proxyProviders = createdApplications.apply(apps =>
-    apps
-      .filter(z => z.isProxy)
-      .flatMap(z => [z.provider, z.tailnetProvider])
-      .filter(p => p !== undefined),
-  );
+  // Every hostname's provider: the primary, the tailnet twin and the NetBird
+  // `.app` twin (components/authentik/proxyHostTwins.ts, D45). A twin that is not
+  // attached to the outpost is a provider the outpost will not answer for --
+  // exactly the 400 "no app for hostname" the twins exist to fix.
+  const proxyProviders = createdApplications.apply(apps => outpostProxyProviders(apps));
 
   const _outpost = new authentik.Outpost(
     clusterDefinition.key,

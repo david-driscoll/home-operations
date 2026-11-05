@@ -369,6 +369,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
+| D45 | 11-04 | Forward-auth apps answer on all three names (`<app>.<root domain>`, `<app>.<tailnet>`, `<app>.app.<root domain>`): each extra name gets its own ProxyProvider and Application, **generated** from the same definition and `access_policy`, with `meta_hide` so the Library shows one entry per app (`components/authentik/proxyHostTwins.ts`) |
 | D38 | 11-04 | The private proxy's cluster address is `ek.<root domain>`; `nbidp.<root domain>` becomes a custom domain on it (public CNAME `validation.nbidp` → `ek`), so the proxy can serve other names. The nbidp service is deleted and re-created on the new cluster: management never moves a service |
 | D39 | 11-04 | The `*.app` certificate (`netbird-system/netbird-app-wildcard-tls`) is pushed to OpenBao `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by an ESO PushSecret. `eso-equestria` is widened to create/read/update that one path's data and metadata, a deliberate exception to its read-only rule: a public, reissued certificate, not worth a second store and role. No Pulumi copy, so the key is not in Pulumi state |
 | D40 | 11-04 | A tailnet app whose definition grants NetBird user groups is also a NetBird **private** service at `<app>.app.<root domain>`, same `<app>` as its tailnet name, on the ek proxy (§N) |
@@ -381,6 +382,32 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D49 | 11-04 | Every Technitium node (equestria, celestia, alpha-site, luna, skystar) gets a NetBird sidecar in its network namespace, as it has a Tailscale one, so clients resolve over the overlay without the home gateways. One reusable, non-ephemeral, non-expiring `dns-servers` setup key (OpenBao `setup-keys#/dns`) places all five in the `dns-servers` peer group |
 | D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
 | D51 | 11-04 | The nameserver group is chosen live each run (`stacks/netbird/dns.ts`): enrolled sidecars' overlay IPs first, then the other nodes' LAN IPs, in the order equestria, celestia, alpha-site, luna, skystar; at most three, the limit management v0.82.0 enforces (`validateNSList`) |
+
+### Forward-auth apps on every name (D45, 2026-11-04)
+
+authentik's `ProxyProvider.external_host` is one string, and the outpost serves only providers an Application is
+bound to (`ProxyProvider.objects.filter(application__isnull=False)`). So an app on the `tailscale-user` chain (and,
+with #3052, `netbird-as-tailscale-user`) needs a provider **and** an application per hostname, or that name answers
+400 "no app for hostname". `forward_domain` would need only one provider, but it puts one policy on the whole cookie
+domain and these apps each carry their own `access_policy`.
+
+- **Generated, not declared.** For every proxy app with a `spec.tailnetUrl`, `components/authentik.ts` creates
+  `<name>-tailnet` and, where the manager has `netbirdApps` (stacks/system only), `<name>-app`. The `.app` host is
+  derived from the tailnet one by `netbirdAppUrl` (`components/netbird/appRedirectUris.ts`), the same function the
+  OAuth redirect URIs use, so the two can't disagree. The Dockge hosts get the tailnet twin only.
+- **Hidden.** Each twin's Application has `meta_hide: true` (authentik 2026.5+). The slug is the primary's plus
+  `-tailnet` / `-app`; the name gets " (Tailnet)" / " (NetBird)" for admins. The launch URL stays the primary's.
+- **Same policy.** The twin Applications are built by the same `createAuthentikApplication` from the same definition,
+  so their group bindings are the primary's. Both outposts (stacks/system and `DockgeLxc`) collect providers through
+  `outpostProxyProviders`, so a twin can't be created without being served.
+- **Nothing else changes.** All the providers are `forward_single`, with an empty cookie domain: the session cookie
+  is per hostname, and each name signs in once through the shared Authentik session. The outpost's
+  `authentik_host_browser` is Authentik's root-domain name, which NetBird clients reach over the LAN route (§B). The
+  outpost's own Ingress/HTTPRoute gains the extra hosts. The `netbird` entrypoint has no `asDefault`, so that Ingress
+  doesn't bind there, and on the NetBird name `/outpost.goauthentik.io/*` goes through the `<app>-netbird`
+  IngressRoute and its forward-auth like every other path.
+- This restores what `2ee326c1` (2026-09-15) removed. That commit removed the visible "(Tailnet)" duplicates, but it
+  also left the tailnet providers without an application, so the tailnet names were answering 400.
 
 ### Azure primary (#3001, 2026-11-03)
 
@@ -531,10 +558,8 @@ stack, using `proxyDomains.ts` for the domain); `kubernetes/components/tailscale
   api-key component and the two hand-written tailnet carve-outs (navidrome `/rest/`, lazylibrarian `/api`) have
   NetBird twins.
 - **Forward-auth apps.** `netbird-as-tailscale-user` puts the Authentik outpost in front, which answers only for a
-  hostname a proxy provider is registered against. The tailnet name has a provider twin (`components/authentik.ts`,
-  `spec.tailnetUrl`), but its Application has been disabled since 2026-09-15; `<app>.app` has neither yet. Until
-  that is decided those apps answer 400 "no app for hostname" on the NetBird name: closed, not open. Their API
-  carve-outs work.
+  hostname a proxy provider and Application are registered against. D45 (#3060) generates hidden twins for both the
+  tailnet and `<app>.app` names, so these apps sign in on the NetBird name exactly as on `<root domain>`.
 - **The domain.** `app.<root domain>` is a custom domain (`netbird.ReverseProxyDomain`) targeting the proxy's cluster,
   `ek.<root domain>` (D38). Management validates it by a CNAME lookup on `validation.app.<root domain>`, which must
   name the cluster address,
