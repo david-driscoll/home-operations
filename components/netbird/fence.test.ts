@@ -114,7 +114,7 @@ const withStore = (box: Run["box"]) => {
 describe("the fence asks the zone's own nameservers", () => {
   it("looks up the NS set through a public resolver and the record without recursion", () => {
     const r = run({ FAKE_A: OWN });
-    assert.ok(r.calls.some(c => /^dig \+short .*NS example\.test @1\.1\.1\.1$/.test(c)));
+    assert.ok(r.calls.some(c => /^dig \+short .*NS example\.test @9\.9\.9\.9$/.test(c)));
     assert.ok(r.calls.some(c => /^dig \+norecurse .*A netbird\.example\.test @ns1\.example\.test$/.test(c)));
   });
 
