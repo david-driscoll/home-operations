@@ -325,7 +325,7 @@ async function kubernetesApplications(globals: GlobalResources, outputs: Authent
  *
  * That still holds here. `eso-equestria` has since gained exactly ONE write,
  * by decision on 2026-11-04 (docs/plans/netbird-mirror.md D39): the NetBird
- * `*.app` certificate's path, `secrets/apps/netbird/app-wildcard-tls`, pushed
+ * `*.nb` certificate's path, `secrets/apps/netbird/app-wildcard-tls`, pushed
  * by kubernetes/apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml. A
  * public certificate that cert-manager reissues is not this credential, and
  * the grant names that path alone (bootstrap/openbao/equestria-init.sh).

@@ -3,7 +3,7 @@
 #
 # ./ingressroute.yaml's carve-out on the NetBird twin
 # (../netbird-ingressroute.yaml): API clients skip the authentik hop on
-# `<host>.app.<root domain>` exactly as they do on the tailnet name.
+# `<host>.nb.<root domain>` exactly as they do on the tailnet name.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -16,7 +16,7 @@ spec:
   routes:
     - kind: Rule
       priority: 20
-      match: Host(`${TAILSCALE_HOST:=${APP}}.app.${ROOT_DOMAIN}`) && (HeaderRegexp(`X-Api-Key`, `.+`) || QueryRegexp(`apikey`, `.+`))
+      match: Host(`${TAILSCALE_HOST:=${APP}}.nb.${ROOT_DOMAIN}`) && (HeaderRegexp(`X-Api-Key`, `.+`) || QueryRegexp(`apikey`, `.+`))
       middlewares:
         - name: netbird-as-tailscale-local
           namespace: network

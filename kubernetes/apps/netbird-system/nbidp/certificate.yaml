@@ -21,7 +21,7 @@
 #                           on the cluster below;
 #   - ek.<root domain>      the cluster address (NB_PROXY_DOMAIN), which no
 #                           service uses today; listed so one may;
-#   - *.app.<root domain>   every tailnet app's NetBird twin, under the `app`
+#   - *.nb.<root domain>    every tailnet app's NetBird twin, under the `nb`
 #                           custom domain (docs/plans/netbird-mirror.md §N).
 #
 # The copy other hosts may pull from OpenBao is ./app-wildcard-certificate.yaml,
@@ -40,4 +40,4 @@ spec:
   dnsNames:
     - nbidp.${ROOT_DOMAIN}
     - ek.${ROOT_DOMAIN}
-    - "*.app.${ROOT_DOMAIN}"
+    - "*.nb.${ROOT_DOMAIN}"

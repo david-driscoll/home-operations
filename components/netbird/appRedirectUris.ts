@@ -1,17 +1,17 @@
 /**
  * OAuth redirect URIs for the NetBird app names (docs/plans/netbird-mirror.md
- * §N). Every tailnet app is also at `<host>.app.<root domain>`, the same <host>
+ * §N). Every tailnet app is also at `<host>.nb.<root domain>`, the same <host>
  * as `<host>.<tailnet>`, and an app with native OIDC that lists its tailnet
  * name's redirect URI builds the redirect from the request's host, so a login
  * started on the NetBird name comes back to it. Rather than add a third URI to
  * every definition.yaml, stacks/system derives it here: for each strict URI on
- * a `<host>.<tailnet>` name, the same URI on `<host>.app.<root domain>`.
+ * a `<host>.<tailnet>` name, the same URI on `<host>.nb.<root domain>`.
  *
  * `app` must match stacks/netbird/apps.ts APP_SUBDOMAIN.
  */
 
 /** The label under the root domain that holds every NetBird app name. */
-export const NETBIRD_APP_SUBDOMAIN = "app";
+export const NETBIRD_APP_SUBDOMAIN = "nb";
 
 export interface RedirectUri {
   matching_mode?: string;
@@ -23,7 +23,7 @@ const ABSOLUTE_URL = /^(https?:\/\/)([^/:?#]+)(.*)$/i;
 
 /**
  * The NetBird twin of an absolute http(s) URL on a `<host>.<tailnet>` name:
- * the same scheme, port, path and query on `<host>.app.<root domain>`. Only a
+ * the same scheme, port, path and query on `<host>.nb.<root domain>`. Only a
  * host that is a single label under the tailnet has one (`a.b.<tailnet>` does
  * not); anything else, including a non-URL, gives `undefined`.
  *

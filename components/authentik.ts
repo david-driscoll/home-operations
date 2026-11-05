@@ -26,7 +26,7 @@ export interface AuthentikResourcesArgs {
   /**
    * Set where the apps also have NetBird names (equestria, stacks/system):
    * every OAuth2 redirect URI on a `<host>.<tailnet>` name gets its
-   * `<host>.app.<root domain>` twin (components/netbird/appRedirectUris.ts,
+   * `<host>.nb.<root domain>` twin (components/netbird/appRedirectUris.ts,
    * docs/plans/netbird-mirror.md §N), and every forward-auth app with a
    * `spec.tailnetUrl` gets a hidden provider/application pair for that name
    * too (components/authentik/proxyHostTwins.ts, D45).

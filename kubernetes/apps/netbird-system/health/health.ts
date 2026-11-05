@@ -15,7 +15,7 @@
  * Each alert is re-posted every run with endsAt ALERT_TTL_MINUTES ahead, so it
  * resolves on its own once a run stops posting it. A watched group or domain
  * that does not exist yet is skipped, not alerted: `dns-servers` and the
- * `app.` domain arrive in their own PRs.
+ * `nb.` domain arrive in their own PRs.
  *
  * A run that cannot read management exits non-zero, which the
  * NetbirdHealthNotRunning rule turns into an alert after 30 minutes.

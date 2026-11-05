@@ -111,7 +111,7 @@ An app's name on the tailnet (`<app>.<tailnet>`), reached only from Tailscale.
 _Avoid_: Tailscale URL, MagicDNS name (when you mean an app)
 
 **App service**:
-An app's NetBird-only name (`<app>.app.<root domain>`), reachable only from NetBird devices in the app's access policy groups.
+An app's NetBird-only name (`<app>.nb.<root domain>`), reachable only from NetBird devices in the app's access policy groups.
 _Avoid_: NetBird URL, private service (NetBird's general mechanism, of which this is one use)
 
 **Access policy**:

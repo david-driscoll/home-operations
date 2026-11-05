@@ -1,20 +1,20 @@
 /**
  * Section 12 of stacks/netbird: every tailnet app's NetBird twin,
- * `<host>.app.<root domain>` (docs/plans/netbird-mirror.md §N). apps.ts holds
+ * `<host>.nb.<root domain>` (docs/plans/netbird-mirror.md §N). apps.ts holds
  * the pure half and the picture; this declares:
  *
- *   1. the public DNS NetBird's custom-domain check needs: `*.app` and
- *      `validation.app`, CNAMEs to the proxy's cluster address
+ *   1. the public DNS NetBird's custom-domain check needs: `*.nb` and
+ *      `validation.nb`, CNAMEs to the proxy's cluster address
  *      (`ek.<root domain>`; proxyDomains.ts). Technitium's <root domain> zone
  *      forwards anything it has no override for, and NetBird peers get their
  *      records from management (private-service zones), not from here;
- *   2. `app.<root domain>` as a custom domain on that cluster;
+ *   2. `nb.<root domain>` as a custom domain on that cluster;
  *   3. one private service per tailnet app whose definition.yaml grants a
  *      NetBird user group, open to exactly those groups, pointed at Traefik's
  *      netbird door. An app with no definition, no access_policy, or no group
  *      that maps gets none, with a warning (D44).
  *
- * The `*.app` certificate's OpenBao copy is not here: an ESO PushSecret owns
+ * The `*.nb` certificate's OpenBao copy is not here: an ESO PushSecret owns
  * it (kubernetes/apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml, D39),
  * so the key never passes through Pulumi state.
  *

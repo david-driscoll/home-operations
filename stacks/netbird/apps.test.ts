@@ -7,7 +7,21 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { appAccessGroups, appDomain, appHost, appServiceReady, appServiceRequest, definitionFor, type LiveDefinition, type LiveIngress, type TailnetApp, TRAEFIK_NETBIRD_DOOR, tailnetApps } from "./apps.ts";
+import { NETBIRD_APP_SUBDOMAIN } from "components/netbird/appRedirectUris.ts";
+import {
+  APP_SUBDOMAIN,
+  appAccessGroups,
+  appDomain,
+  appHost,
+  appServiceReady,
+  appServiceRequest,
+  definitionFor,
+  type LiveDefinition,
+  type LiveIngress,
+  type TailnetApp,
+  TRAEFIK_NETBIRD_DOOR,
+  tailnetApps,
+} from "./apps.ts";
 
 const ROOT = "example.test";
 
@@ -24,9 +38,9 @@ function tailnetIngress(app: string, namespace: string, host = app): LiveIngress
 }
 
 describe("names", () => {
-  it("puts every app under app.<root domain>, on its tailnet host label", () => {
-    assert.equal(appDomain(ROOT), "app.example.test");
-    assert.equal(appHost("git", ROOT), "git.app.example.test");
+  it("puts every app under nb.<root domain>, on its tailnet host label", () => {
+    assert.equal(appDomain(ROOT), "nb.example.test");
+    assert.equal(appHost("git", ROOT), "git.nb.example.test");
   });
 });
 
@@ -109,11 +123,11 @@ describe("appAccessGroups", () => {
 });
 
 describe("appServiceRequest", () => {
-  const request = appServiceRequest({ host: "git.app.example.test", clusterAddress: "ek.example.test", accessGroupIds: ["g-admins"] });
+  const request = appServiceRequest({ host: "git.nb.example.test", clusterAddress: "ek.example.test", accessGroupIds: ["g-admins"] });
 
   it("is a private service keeping the client's Host, so Traefik can route on it", () => {
     assert.equal(request.private, true);
-    assert.equal(request.domain, "git.app.example.test");
+    assert.equal(request.domain, "git.nb.example.test");
     assert.equal(request.pass_host_header, true);
     assert.deepEqual(request.access_groups, ["g-admins"]);
   });
@@ -134,7 +148,7 @@ describe("appServiceRequest", () => {
   });
 
   it("refuses a service nobody may reach", () => {
-    assert.throws(() => appServiceRequest({ host: "x.app.example.test", clusterAddress: "ek.example.test", accessGroupIds: [] }), /at least one access group/);
+    assert.throws(() => appServiceRequest({ host: "x.nb.example.test", clusterAddress: "ek.example.test", accessGroupIds: [] }), /at least one access group/);
   });
 });
 
@@ -151,5 +165,13 @@ describe("readiness", () => {
 
   it("holds new services back while a registered domain still does not validate", () => {
     assert.equal(appServiceReady({ serviceExists: false, clusterOnline: true, domain: "unvalidated" }), false);
+  });
+});
+
+describe("the app-service label", () => {
+  it("is the same in stacks/netbird (services, DNS) and components (Authentik twins, redirect URIs)", () => {
+    assert.equal(APP_SUBDOMAIN, NETBIRD_APP_SUBDOMAIN);
+    // D56: `nbd` is the device names' domain; the apps own `nb`.
+    assert.equal(APP_SUBDOMAIN, "nb");
   });
 });

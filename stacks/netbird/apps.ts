@@ -3,12 +3,12 @@
  * half, tested in apps.test.ts. app-services.ts does the API calls.
  *
  *   NetBird peer ──WireGuard──▶ private proxy (netbird-system/nbidp)
- *     <host>.app.<root domain>   │ TLS: nbidp-tls covers *.app
+ *     <host>.nb.<root domain>   │ TLS: nbidp-tls covers *.nb
  *                                │ peer in the service's access groups, or 403
  *                                │ X-NetBird-User / -Groups re-stamped
  *                                ▼ Host kept (pass_host_header)
  *                              Traefik `netbird` door (traefik-netbird:8446)
- *                                │ IngressRoute <app>-netbird, Host(<host>.app.<root domain>)
+ *                                │ IngressRoute <app>-netbird, Host(<host>.nb.<root domain>)
  *                                ▼ netbird-as-<TAILSCALE_MIDDLEWARE>
  *                              the app's Service
  *
@@ -22,10 +22,10 @@
 import type { PrivateServiceRequest } from "./nbidp.ts";
 import { USER_GROUPS } from "./policy.ts";
 
-/** The label under the root domain that holds every app: `<host>.app.<root domain>`. */
-export const APP_SUBDOMAIN = "app";
+/** The label under the root domain that holds every app: `<host>.nb.<root domain>`. */
+export const APP_SUBDOMAIN = "nb";
 
-/** The custom domain registered on the proxy's cluster: `app.<root domain>`. */
+/** The custom domain registered on the proxy's cluster: `nb.<root domain>`. */
 export function appDomain(root: string): string {
   return `${APP_SUBDOMAIN}.${root}`;
 }
@@ -193,7 +193,7 @@ export function appServiceRequest(args: { host: string; clusterAddress: string; 
 }
 
 /**
- * Where `app.<root domain>` stands on this run: validated; being created by
+ * Where `nb.<root domain>` stands on this run: validated; being created by
  * this run (its create checks the CNAME, which the run creates first); or
  * registered but still unvalidated after this run asked again.
  */

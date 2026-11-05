@@ -48,7 +48,7 @@ spec:
 #
 # netbird-as-tailscale-user: the authentik outpost hop, as on the tailnet.
 # The outpost answers only for a hostname one of its proxy providers is
-# registered against, so `<app>.app.<root domain>` needs its own provider
+# registered against, so `<app>.nb.<root domain>` needs its own provider
 # twin (components/authentik.ts), exactly as the tailnet name does. Until it
 # has one this answers 400 "no app for hostname": closed, not open.
 apiVersion: traefik.io/v1alpha1
