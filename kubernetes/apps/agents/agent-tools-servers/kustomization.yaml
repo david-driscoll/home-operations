@@ -99,3 +99,16 @@ configMapGenerator:
       disableNameSuffixHash: true
       annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled
+  # The four docker-<host> MCPServers' entry point: mcp-server-docker plus an
+  # exec_container tool (see the script's docstring). Generated HERE, not in
+  # ./docker/base, because the base is built once per host overlay and four
+  # identically named ConfigMaps would collide. Literal name, mounted by name
+  # in ./docker/base/mcpserver.yaml. Substitution off so a future f-string
+  # brace is never read as a Flux variable.
+  - name: toolhive-docker-mcp-server
+    files:
+      - server.py=./resources/docker-mcp-server.py
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
