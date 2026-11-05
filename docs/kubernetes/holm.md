@@ -61,11 +61,25 @@ container's environment (`ROOT_DOMAIN`, `OIDC_*`), so a new variable needs an
    applies the branch. Holm rereads the file within seconds, and Reloader
    restarts the pod, which `auth.oidc` and `database` need.
 
-`holm` waits on `holm-config`, so a broken pipeline leaves Holm on the last
-good ConfigMap; `holm-config` never prunes. A config that gets past the
+`holm-config` never prunes, so a broken pipeline leaves Holm on the last good
+ConfigMap. `holm` waits on `holm-config`, so the app never starts before its
+config exists, and changes to `holm` itself wait while `holm-config` is
+failing. A config that gets past the
 generator but that Holm can't load makes every request fail and the probes
 restart the pod: check `kubectl -n equestria logs deploy/holm`, fix it in
 `docs/setup`, and the next push replaces it.
+
+### The first rollout (2026-11-05)
+
+Moving the ConfigMap from `holm` to `holm-config` pruned it for about a
+minute. Both changes, and `holm`'s new `dependsOn`, were in one commit. `holm`
+reconciled that revision with its old spec, before `cluster-apps` applied the
+`dependsOn`. Holm kept serving from the files already mounted in its pod. The
+ConfigMap was re-created by hand with `holm-config`'s owner labels, and
+`holm-config` adopted it once the forge credential existed. Moving a live
+object between Kustomizations needs two PRs, or a
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation on it in the old
+owner first.
 
 ### The trust boundary
 
