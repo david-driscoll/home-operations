@@ -97,6 +97,37 @@ services:
       # TLS validation (App Store, DoT forwarders) with UntrustedRoot errors.
       - /opt/stacks/traefik/certs:/etc/technitium/certs
 
+  # NetBird sidecar (docs/plans/netbird-mirror.md D30): this node joins the
+  # NetBird overlay as dns-<cluster>, the way the tailscale service joins the
+  # tailnet, so NetBird clients resolve through it directly instead of only
+  # via the home gateways' LAN routes. It shares the tailscale service's
+  # network namespace, so Technitium's listeners (53, 853) answer on the
+  # node's overlay address too, and stacks/netbird's policy opens exactly
+  # those ports to the user groups and Apple TVs.
+  #
+  # No hostname here: a container in another's namespace cannot set one;
+  # NB_HOSTNAME (netbird.env) names the peer. Its own env file, so that
+  # tailscale and technitium (which read .env) are not recreated for it.
+  # Nothing depends on it: a NetBird outage leaves DNS on this host untouched.
+  netbird:
+    image: netbirdio/netbird:0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
+    container_name: technitium-nb
+    restart: unless-stopped
+    network_mode: service:tailscale
+    depends_on:
+      tailscale:
+        condition: service_healthy
+    env_file:
+      - netbird.env
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - /opt/stacks-data/${APP}/netbird:/var/lib/netbird
+
 networks:
   dockge_default:
     external: true
