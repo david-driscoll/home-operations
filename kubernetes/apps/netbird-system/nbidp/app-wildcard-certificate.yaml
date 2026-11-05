@@ -5,13 +5,10 @@
 # NetBird app names (docs/plans/netbird-mirror.md §N). The proxy itself uses
 # ./certificate.yaml, which has to carry nbidp's name as well.
 #
-# stacks/netbird copies this Secret into OpenBao at
-# `secrets/apps/netbird/app-wildcard-tls` on every run (it already writes
-# OpenBao; ESO's identity here is read-only on purpose), and the stack's
-# ServiceAccount may read this one Secret and no other
-# (kubernetes/apps/pulumi/netbird/rbac.yaml). cert-manager renews 30 days
-# before expiry and the stack runs at least daily, so the copy is never stale
-# for long.
+# ./app-wildcard-pushsecret.yaml pushes this Secret to OpenBao at
+# `secrets/apps/netbird/app-wildcard-tls` (D39). cert-manager renews 30 days
+# before expiry and the PushSecret refreshes hourly, so the copy is never
+# stale for long.
 #
 # No apex: `app.<root domain>` is a registered NetBird custom domain, not a
 # service, so nothing serves it.

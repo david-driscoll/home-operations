@@ -370,6 +370,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
 | D38 | 11-04 | The private proxy's cluster address is `ek.<root domain>`; `nbidp.<root domain>` becomes a custom domain on it (public CNAME `validation.nbidp` → `ek`), so the proxy can serve other names. The nbidp service is deleted and re-created on the new cluster: management never moves a service |
+| D39 | 11-04 | The `*.app` certificate (`netbird-system/netbird-app-wildcard-tls`) is pushed to OpenBao `secrets/apps/netbird/app-wildcard-tls` (`tls_crt`, `tls_key`) by an ESO PushSecret. `eso-equestria` is widened to create/read/update that one path's data and metadata, a deliberate exception to its read-only rule: a public, reissued certificate, not worth a second store and role. No Pulumi copy, so the key is not in Pulumi state |
 
 ### Azure primary (#3001, 2026-11-03)
 
