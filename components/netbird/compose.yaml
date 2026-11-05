@@ -30,8 +30,8 @@ services:
     # --accept-dns=false). For any other name quad-100 has no upstream and
     # answers SERVFAIL, and Docker's resolver moves on to the next server on
     # SERVFAIL or REFUSED (libnetwork resolver.go forwardExtDNS), so ACME and
-    # the plugin download still resolve.
-    dns: [100.100.100.100, 1.1.1.1]
+    # the plugin download still resolve, through Quad9.
+    dns: [100.100.100.100, 9.9.9.9]
     command:
       - "--log.level=INFO"
       - "--accesslog=true"
@@ -190,9 +190,9 @@ services:
     container_name: netbird-crowdsec
     restart: unless-stopped
     networks: [netbird, crowdsec-socket]
-    # MagicDNS for the LAPI's tailnet name, falling through to a public
-    # resolver for the hub (see traefik above).
-    dns: [100.100.100.100, 1.1.1.1]
+    # MagicDNS for the LAPI's tailnet name, falling through to Quad9 for the
+    # hub (see traefik above).
+    dns: [100.100.100.100, 9.9.9.9]
     environment:
       COLLECTIONS: >-
         crowdsecurity/traefik
