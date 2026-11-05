@@ -245,7 +245,7 @@ authenticates with an admin service-user PAT from OpenBao.
 
 **The stack manages:**
 
-- **Account:** the range, peer DNS domain (`nb.<root domain>`), peer login expiry off (D28) and JWT group sync off;
+- **Account:** the range, peer DNS domain (`nbd.<root domain>`, D56; `nb` until 2026-11-05), peer login expiry off (D28) and JWT group sync off;
   the `Default` policy deleted.
 - **Groups and setup keys:** the four user groups invites place people in; one key per gateway and per operator,
   plus a reusable `apple-tv` key, stored in OpenBao.
@@ -358,7 +358,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D16 | 11-02 | Client-access policy + tests + drift check on user-facing grants |
 | D17 | 11-02 | All Apple TVs enrol by setup key |
 | D18 | 11-02 | nbidp kept (private proxy + Dex authproxy → Authentik source) |
-| D19 | 11-02 | Overlay `10.100.0.0/16`; peer domain `nb.<root domain>` |
+| D19 | 11-02 | Overlay `10.100.0.0/16`; peer domain `nb.<root domain>` (moved to `nbd`, D56) |
 | D20 | 11-02 | Manual onboarding with a one-page guide |
 | D21 | 11-03 | Server deployment is **pushed over SSH** from the in-cluster operator via a `netbird-edge` tailnet egress Service. `tag:egress` may SSH to `tag:netbird-edge` as root (`accept`) |
 | D22 | 11-03 | Tailscale stays on the OCI/Azure VMs for admin and backup traffic; NetBird is for clients only |
@@ -390,6 +390,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D53 | 11-05 | Gateway groups are per Dockge **site stack**, not per host: `gateway-home` (alpha-site, celestia), `gateway-gulf-of-mexico` (luna), `gateway-ocracoke` (skystar), with one exit node each (`exit-<site stack>`). Setup keys stay per host (`gateway-<host>`, same OpenBao fields) and place peers in `gateways` plus their stack's group; the already-enrolled peers are moved by the groups' declared `peers` (live members ∪ enrolled gateway peers, read each run). `gateways` stays, for policy and the health job. Supersedes the per-host groups and `exit-<host>` routes |
 | D54 | 11-05 | Equestria's in-cluster routing peers (`k8s-routers`, §G) also serve **`exit-home`**, beside the `gateway-home` gateways: one more way out of the same home WAN (via their node's Cilium SNAT) that keeps the home exit up while the Dockge gateways are down. Exit only: they are not in `gateway-home`, so they never route `lan-home`. `users-exit-equestria` (ICMP to `k8s-routers`) connects users to them. Briefly a separate `exit-equestria` route; folded into `exit-home` the same day. Mirrors the cluster's Tailscale exit node (`primary-connector`) |
 | D55 | 11-05 | **A demotion restarts Traefik.** Every fence stop of a running management (demote, and stop on a shared or unknown lease) ends in `compose restart traefik`, so clients redial and follow the lease; in the #2892 drill they otherwise stayed ~18 minutes on the old host. Accepts a moment's drop for that host's relay clients. A fenced inner Traefik behind an SNI TCP router (relay-safe) was turned down as more moving parts. Also from the drill: the first deploy step waits 5 minutes for a rebuilt VM to join the tailnet, and `fenceResults` is renamed `deployFenceResults`. OCI stays parked (D48) as a possible third host |
+| D56 | 11-05 | **Names: `nbd` for devices, `nb` for apps.** The peer DNS domain moves from `nb.<root domain>` to `nbd.<root domain>` (device names `<device>.nbd`). Then the app services move from `<app>.app.<root domain>` to `<app>.nb.<root domain>`, in a second PR once every client has the new peer domain: until then a client answers `*.nb` itself. Hard cutover; the old `app` names stop resolving. Only the DNS label changes: identifiers keep "app" (`APP_SUBDOMAIN`, `netbird-app-wildcard-tls`, OpenBao `apps/netbird/app-wildcard-tls`), meaning app service |
 
 ### Forward-auth apps on every name (D45, 2026-11-04)
 

@@ -69,7 +69,11 @@ const settings = new netbird.AccountSettings(
   "account",
   {
     networkRange: NETWORK_RANGE,
-    dnsDomain: `nb.${rootDomain()}`,
+    // Device names, `<device>.nbd.<root domain>` (D56). `nb` belongs to the
+    // app services (apps.ts APP_SUBDOMAIN), which only take it once every
+    // client has this domain: while `nb` is the peer domain, clients answer
+    // `*.nb` themselves.
+    dnsDomain: `nbd.${rootDomain()}`,
     // No re-login, ever (David, 2026-11-03): a device stays on until its
     // peer is deleted, which is how one is removed.
     peerLoginExpirationEnabled: false,
