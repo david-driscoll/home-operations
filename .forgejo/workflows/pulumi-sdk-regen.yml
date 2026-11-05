@@ -32,6 +32,8 @@
 #   * The pull request's author is a forge account, not `renovate[bot]`, so the
 #     "is this Renovate's" test is the branch name (`renovate/`) instead.
 #   * The status is posted with the forge's API, as flate.yml posts its comment.
+#   * `pulumi install` gets its github.com token from a file the forge runner
+#     mounts, not from the job token, which here is a Forgejo one.
 name: pulumi-sdk-regen
 
 on:
@@ -90,8 +92,24 @@ jobs:
           TS_VERSION: ${{ steps.pins.outputs.typescript }}
         run: scripts/sdk-typecheck > "$RUNNER_TEMP/before.txt"
 
+      # Pulumi downloads provider plugins from GitHub releases, and without a
+      # token it shares GitHub's anonymous limit of 60 requests an hour with
+      # every other forge job (a `403 rate limit exceeded` on a plugin). The
+      # runner mounts a read-only github.com token for every job
+      # (kubernetes/apps/coder/forgejo-runner/resources/config.yml); it is
+      # read here, at the moment it is used, because it lives an hour.
+      # github.token is a Forgejo token and github.com would refuse it. With
+      # no file the step runs anonymously, as it did before.
       - name: Regenerate SDKs
-        run: pulumi install
+        run: |
+          token_file=/run/secrets/github/token
+          if [[ -s "$token_file" ]]; then
+            GITHUB_TOKEN="$(<"$token_file")"
+            export GITHUB_TOKEN
+          else
+            echo "::warning::no github.com token at $token_file; plugin downloads are anonymous"
+          fi
+          pulumi install
 
       - name: Commit regenerated SDKs
         id: commit

@@ -83,8 +83,21 @@ container:
   # workflow, including one from a pull request, control of the daemon.
   docker_host: "-"
   workdir_parent: /workspace
-  # Empty means no host path may be bind-mounted into a job container.
-  valid_volumes: []
+  # A github.com token for every job, as a FILE at /run/secrets/github/token:
+  # `github-token-readonly` (metadata: read only), mounted into the dind
+  # sidecar by ../scaledjob.yaml and bind-mounted from there. It exists so jobs
+  # stop sharing GitHub's anonymous API limit; `pulumi install` downloading
+  # provider plugins was hitting it. A file and not an env var because the
+  # token lives one hour and a pod can wait six for its job; the kubelet
+  # updates the mount in place, so a job that reads the file when it needs it
+  # gets a current token. The job's own github.token is a FORGEJO token and
+  # github.com rejects it.
+  options: "-v /run/forge-github-token:/run/secrets/github:ro"
+  # The one host path a job container may bind-mount, which is the token
+  # directory above and nothing else. Listed here as well as in `options` so
+  # the mount is not dropped by the volume check.
+  valid_volumes:
+    - /run/forge-github-token
   force_pull: false
   force_rebuild: false
 
