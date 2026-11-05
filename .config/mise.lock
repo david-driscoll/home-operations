@@ -826,50 +826,50 @@ url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/PowerSh
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675639558"
 
 [[tools.pulumi]]
-version = "3.273.0"
+version = "3.274.0"
 backend = "aqua:pulumi/pulumi"
-specifiers = ["3.273.0"]
+specifiers = ["3.274.0"]
 
 [tools.pulumi."platforms.linux-arm64"]
-checksum = "sha256:c2e1b600b37d9d84551259b6f391f5035e336dfe63c49412f22d855a91995ed5"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615480"
+checksum = "sha256:8992dbe3ea47f3d7bda723d7ea2e09344e566ef0135aec5bccefb7cf58f59605"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707171524"
 provenance = "cosign"
 
 [tools.pulumi."platforms.linux-arm64-musl"]
-checksum = "sha256:c2e1b600b37d9d84551259b6f391f5035e336dfe63c49412f22d855a91995ed5"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615480"
+checksum = "sha256:8992dbe3ea47f3d7bda723d7ea2e09344e566ef0135aec5bccefb7cf58f59605"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707171524"
 provenance = "cosign"
 
 [tools.pulumi."platforms.linux-x64"]
-checksum = "sha256:ec08f86671fd58f0a186540e1cee00066393beaf5c6716b0075f690919800432"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615955"
+checksum = "sha256:4d8fcc13a3bc6c2bcfbb45fcea422a62b7173f3d62d3f51d66da701e5aa578da"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707171692"
 provenance = "cosign"
 
 [tools.pulumi."platforms.linux-x64-musl"]
-checksum = "sha256:ec08f86671fd58f0a186540e1cee00066393beaf5c6716b0075f690919800432"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615955"
+checksum = "sha256:4d8fcc13a3bc6c2bcfbb45fcea422a62b7173f3d62d3f51d66da701e5aa578da"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707171692"
 provenance = "cosign"
 
 [tools.pulumi."platforms.macos-arm64"]
-checksum = "sha256:e47239e0fbfc6602c22f1c298abc4758a23fb1c0a37a69348cbebe6eccb817f8"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685614955"
+checksum = "sha256:ddda97a108484985876464745eb63070593fd2ba350ebdf241e98a4cdab0c1dc"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707171118"
 provenance = "cosign"
 
 [tools.pulumi."platforms.macos-x64"]
-checksum = "sha256:ce6be877da705f622750427b5c1bbf1f9b188eb37d1d175ebedbfab1745b4191"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-darwin-x64.tar.gz"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615132"
+checksum = "sha256:7c04c7e4d35de2582dd37fe30031ede38eedef8c6c56f061e497b2f593b33eaf"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707171313"
 provenance = "cosign"
 
 [tools.pulumi."platforms.windows-x64"]
-checksum = "sha256:8e0f7c4014dc9dc206605cc82fcecc20e49e8acb283259f260e77f6f8f006fd1"
-url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-windows-x64.zip"
-url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685616641"
+checksum = "sha256:6c386b90cd8864b8857ed24629dc63ee46cbd9a671edcf31ca323565c9406f1c"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.274.0/pulumi-v3.274.0-windows-x64.zip"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/707172038"
 provenance = "cosign"
 
 [[tools.python]]
