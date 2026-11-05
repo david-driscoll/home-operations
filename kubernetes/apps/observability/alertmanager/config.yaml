@@ -20,6 +20,20 @@ spec:
           - name: alertname
             value: InfoInhibitor|Watchdog
             matchType: "=~"
+      # NetBird warnings (D47, docs/plans/netbird-mirror.md "Monitoring"): a
+      # peer down for 10 minutes, a custom domain not validated, the health
+      # job not running. Worth seeing, not worth a sound: Pushover priority -1
+      # with no sound. NetBird criticals fall through to `pushover` and page as
+      # before. Scoped by alertname on purpose; dropping the alertname matcher
+      # would make every warning in the estate quiet.
+      - receiver: pushover-quiet
+        matchers:
+          - name: severity
+            value: warning
+            matchType: '='
+          - name: alertname
+            value: Netbird.*
+            matchType: "=~"
       - receiver: pushover
         continue: true
         matchers:
@@ -46,7 +60,7 @@ spec:
     - name: pushover
       pushoverConfigs:
         - html: true
-          message: |-
+          message: &pushoverMessage |-
             {{- range .Alerts }}
               {{- if ne .Annotations.description "" }}
                 {{ .Annotations.description }}
@@ -69,6 +83,25 @@ spec:
             {{ if eq .Status "firing" }}1{{ else }}0{{ end }}
           sendResolved: true
           sound: gamelan
+          title: >-
+            [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]
+            {{ .CommonLabels.alertname }}
+          ttl: 86400s
+          token:
+            name: alertmanager-secret
+            key: pushover_api_token
+          userKey:
+            name: alertmanager-secret
+            key: pushover_user_key
+          urlTitle: View in Alertmanager
+    # `pushover` turned down: same message, no sound, low priority.
+    - name: pushover-quiet
+      pushoverConfigs:
+        - html: true
+          message: *pushoverMessage
+          priority: "-1"
+          sendResolved: true
+          sound: none
           title: >-
             [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]
             {{ .CommonLabels.alertname }}
