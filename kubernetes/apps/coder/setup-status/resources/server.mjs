@@ -30,6 +30,7 @@
 //   - Nextcloud's database: oc_authtoken, which names each connected device
 //     (phone app, calendar app password, DAVx5, desktop client).
 //   - Tailscale's API: the visitor's devices on the tailnet.
+//   - NetBird's management API: the visitor's NetBird login and devices.
 //   - Navidrome's native API: the account, and which music apps have played.
 // Each source fails on its own; the page shows "couldn't check" for that app.
 //
@@ -64,6 +65,8 @@ const SEERR_TOKEN = env("SEERR_TOKEN");
 // kubelet refreshes the mounted Secret in place, with no restart.
 const TAILSCALE_API_KEY_FILE = env("TAILSCALE_API_KEY_FILE");
 const TAILSCALE_API_URL = (process.env.TAILSCALE_API_URL ?? "https://api.tailscale.com").replace(/\/$/, "");
+const NETBIRD_URL = env("NETBIRD_URL").replace(/\/$/, "");
+const NETBIRD_TOKEN = env("NETBIRD_TOKEN");
 const NAVIDROME_URL = env("NAVIDROME_URL").replace(/\/$/, "");
 // Optional. Unset, the admin is found among authentik's `admins` group.
 const NAVIDROME_ADMIN_USERNAME = process.env.NAVIDROME_ADMIN_USERNAME ?? "";
@@ -464,11 +467,57 @@ async function tailscaleDevices(email) {
     .sort((a, b) => Number(b.online) - Number(a.online) || String(b.lastSeen).localeCompare(String(a.lastSeen)));
 }
 
+/** The client address Traefik saw, from the forwarding headers. */
+const clientIp = req => (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "";
+
 /** True when this request came over the tailnet (100.64.0.0/10); null when we can't tell. */
 function viaTailscale(req) {
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "";
-  const m = ip.match(/^100\.(\d+)\./);
+  const m = clientIp(req).match(/^100\.(\d+)\./);
   return m && Number(m[1]) >= 64 && Number(m[1]) <= 127 ? true : null;
+}
+
+// --- NetBird -------------------------------------------------------------------
+//
+// The other way onto the estate (docs/runbooks/netbird-client-onboarding.md).
+// The management API, read with the `automation` service user's PAT -- the
+// token netbird-health and the operator already GET with. NetBird logins are
+// separate from authentik, so a person is matched by email: the invite task
+// asks for their authentik email for exactly this reason (nbidp matches on it
+// too).
+
+const netbirdApi = path => getJson(`${NETBIRD_URL}/api${path}`, { authorization: `Token ${NETBIRD_TOKEN}`, accept: "application/json" });
+
+const netbirdUsers = cached(60_000, () => netbirdApi("/users"));
+const netbirdPeers = cached(60_000, () => netbirdApi("/peers"));
+
+async function netbirdDevices(email) {
+  if (!email) return { account: false, devices: [] };
+  const users = await netbirdUsers("all");
+  const user = users.find(u => !u.is_service_user && String(u.email).toLowerCase() === email.toLowerCase());
+  if (!user) return { account: false, devices: [] };
+  const peers = await netbirdPeers("all");
+  const devices = peers
+    .filter(p => p.user_id === user.id)
+    .map(p => ({
+      name: p.name || p.hostname,
+      // NetBird says "iOS 18.1" or "Android 14"; the page matches the bare
+      // platform, as Tailscale reports it.
+      os: String(p.os ?? "").split(" ")[0],
+      online: Boolean(p.connected),
+      lastSeen: p.last_seen ?? null,
+    }))
+    .sort((a, b) => Number(b.online) - Number(a.online) || String(b.lastSeen).localeCompare(String(a.lastSeen)));
+  return { account: true, devices };
+}
+
+/**
+ * True when this request came from a NetBird peer address (the account's
+ * 10.100.0.0/16, stacks/netbird NETWORK_RANGE); null when we can't tell.
+ * Through a gateway the address is masqueraded to the site's LAN, so this is
+ * usually null rather than false -- the page treats it as "don't know".
+ */
+function viaNetbird(req) {
+  return /^10\.100\.\d+\.\d+$/.test(clientIp(req)) ? true : null;
 }
 
 // --- the answer ----------------------------------------------------------------
@@ -484,11 +533,12 @@ async function me(req, visitor) {
   const { username } = visitor;
   const user = await authentikUser(username, visitor.uid);
   if (!user) return json({ error: "unknown user" }, 403);
-  const [apps, jellyfin, devices, tailnet, music] = await Promise.all([
+  const [apps, jellyfin, devices, tailnet, netbird, music] = await Promise.all([
     attempt("authentik apps", () => authentikApps("all")),
     attempt("jellyfin", () => jellyfinAccount(visitor)),
     attempt("nextcloud", () => nextcloudDevices(username)),
     attempt("tailscale", () => tailscaleDevices(visitor.email)),
+    attempt("netbird", () => netbirdDevices(visitor.email)),
     attempt("navidrome", () => navidromeStatus(username)),
   ]);
   // Seerr is looked up by Jellyfin account, so it waits for that one.
@@ -527,6 +577,9 @@ async function me(req, visitor) {
     password: user.attributes?.[ATTRIBUTES_KEY]?.navidrome_password ?? null,
   };
   result.apps.tailscale = { checked: tailnet !== undefined, devices: tailnet ?? [], viaTailscale: viaTailscale(req) };
+  // `account`: whether they have accepted a NetBird invite at all. Most of the
+  // family uses Tailscale instead, and the page says so rather than "to do".
+  result.apps.netbird = { checked: netbird !== undefined, account: netbird?.account ?? false, devices: netbird?.devices ?? [], viaNetbird: viaNetbird(req) };
   return json(result);
 }
 

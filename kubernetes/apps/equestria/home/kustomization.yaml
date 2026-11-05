@@ -6,9 +6,11 @@ resources:
   - ./immich/ks.yaml
   - ./n8n/ks.yaml
   - ./dynacat/ks.yaml
-  # The family's home page. Its app list mirrors the setup guide
-  # (docs/kubernetes/holm.md).
+  # The family's home page. Its config is built by the setup guide (Forgejo
+  # docs/setup) and applied by ./holm-config (docs/kubernetes/holm.md).
   - ./holm/ks.yaml
+  - ./holm-config/source.yaml
+  - ./holm-config/ks.yaml
   - ./obsidian-sync/ks.yaml
   # Super Productivity's web app is retired: the family's to-do list is ./tududi
   # now, and the setup guide's Tasks page points there. Unlisting it makes Flux

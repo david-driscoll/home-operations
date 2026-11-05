@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# Basic auth for the GitRepository below: the forge's `flux` account, which
+# can read docs/setup and nothing else (restricted, one read collaborator
+# grant, a `read:repository` token). stacks/system/forgejo-renovate.ts creates
+# it and writes this path.
+#
+# FIRST DEPLOY: the path exists only after that stacks/system run. Until then
+# this fails to sync, the GitRepository stays not-ready, and Holm keeps the
+# config it already has (holm waits on holm-config).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: setup-guide-forgejo
+  namespace: equestria
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: setup-guide-forgejo
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        username: "{{ .username }}"
+        password: "{{ .token }}"
+  data:
+    - secretKey: username
+      remoteRef:
+        key: clusters/equestria/apps/forgejo/flux
+        property: username
+    - secretKey: token
+      remoteRef:
+        key: clusters/equestria/apps/forgejo/flux
+        property: token
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
+#
+# The family setup guide (Forgejo docs/setup), as a Flux source. Not its main
+# branch: `deploy/holm`, which the guide's CI rewrites after every push to main
+# whose build and checks pass. It holds Holm's generated config.yml and the
+# kustomization.yaml that makes it the holm-config ConfigMap, so a page added
+# to the guide reaches Holm with no change in this repo.
+#
+# The in-cluster Service, not git.<root domain>: no hairpin through the
+# gateway's `local-user` middleware, and no TLS to trust. Forgejo has
+# REQUIRE_SIGNIN_VIEW, hence the credential above.
+#
+# 2m: Forgejo sends Flux no webhook, so this is how fast a guide change reaches
+# Holm. One `git ls-remote` against an in-cluster Service.
+#
+# HERE, applied straight from home/kustomization.yaml, and not inside
+# ./app/: flate (the `flate` hk step) resolves only sources it finds before
+# rendering. A GitRepository it first meets inside a Kustomization's render
+# is aliased to this working tree, which makes holm-config look like it
+# renders the whole repo.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: setup-guide
+  namespace: equestria
+spec:
+  interval: 2m
+  timeout: 1m
+  url: http://forgejo-http.coder.svc.cluster.local:3000/docs/setup.git
+  ref:
+    branch: deploy/holm
+  secretRef:
+    name: setup-guide-forgejo

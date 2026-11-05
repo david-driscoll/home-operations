@@ -6,68 +6,101 @@ wallpaper, built from a catalog of apps the operator publishes. Its search bar
 also searches inside Immich, Nextcloud, Jellyfin, Seerr, Navidrome, Mealie and
 the Nextcloud calendar, each with that person's own login.
 
-- **Deployed at** `https://apps.<root domain>`, internal only (LAN and
-  Tailscale, where the device is `apps` too), behind the `local-user`
+- **Deployed at** `https://apps.<root domain>`, internal only (LAN, Tailscale,
+  where the device is `apps` too, or NetBird), behind the `local-user`
   middleware. Holm signs people in itself over OIDC; access is limited to the
   `family` group, the same audience as the setup guide.
 - **Alias:** `https://holm.<root domain>` 302-redirects to the apps address,
   keeping the path. It is a redirect rather than a second served hostname
   because Holm's sign-in only works on its `redirect_base` host: the OIDC state
-  cookies and the session cookie are per-host. Moving the main address means
-  changing `redirect_base` (`config.yml`), `ORIGIN` and both routes
-  (`helmrelease.yaml`), the redirect URI (`definition.yaml`) and
-  `TAILSCALE_HOST` (`ks.yaml`) together.
+  cookies and the session cookie are per-host. Moving the main address is
+  under "Changing an address or the main host" below.
 - **Manifests:** [`kubernetes/apps/equestria/home/holm/`](../../kubernetes/apps/equestria/home/holm/).
-- **Configuration:** one file,
-  [`resources/config.yml`](../../kubernetes/apps/equestria/home/holm/resources/config.yml),
-  started from upstream's
-  [`config.example.yml`](https://github.com/man15h/holm/blob/main/config.example.yml).
-  All options are in upstream's
+- **Configuration:** not in this repo. Holm's `config.yml` is built by the
+  family setup guide, Forgejo repo **`docs/setup`**
+  (`https://git.<root domain>/docs/setup`), from the guide's own data. See the
+  next section. All options are in upstream's
   [`docs/configuration.md`](https://github.com/man15h/holm/blob/main/docs/configuration.md#reference).
 
-## The app list comes from the setup guide
+## The config comes from the setup guide
 
-Holm's apps are the family setup guide's apps. Each tile's `id` is the guide
-page's slug. Each tile's store links and **Getting started** card come from that
-page. The onboarding slides reuse the guide's blurbs.
+Holm's apps are the setup guide's pages, one tile per page, so the guide
+builds Holm's config. A page added there becomes a tile here with no change
+in this repo. The guide is published at `https://setup.<root domain>`; see
+"the family setup guide" in [git-pages.md](git-pages.md).
 
-The guide lives in the **Forgejo repo `docs/setup`**, at
-`https://git.<root domain>/docs/setup` (branch `main`). It is published at
-`https://setup.<root domain>`; see "the family setup guide" in
-[git-pages.md](git-pages.md).
-
-| In `docs/setup` | Feeds in `config.yml` |
+| In `docs/setup` | Becomes in Holm's config |
 | --- | --- |
-| `src/data/services.ts`: slug, title, address, blurb | `apps[].id` / `name` / `url`, `onboarding.services[].desc` |
-| `src/data/apps.ts`: every App Store / Play Store link | `apps[].app_store` |
-| `src/content/docs/<slug>.mdx`: the page | `apps[].setup_guide` (3 to 5 steps plus a "Full guide" link back to the page) |
-| `astro.config.mjs`: sidebar order | order of `apps` |
+| `src/data/services.ts`: slug, title, address, blurb, group | `apps[].id` / `name` / `url`, tile order, `onboarding.services`, the "Do these first" slide |
+| `src/data/apps.ts`: App Store / Google Play links | `apps[].app_store` |
+| `src/data/holm.ts`: icon, tags, 3 to 5 card steps per page | `apps[].icon` / `tags` / `on_click` / `setup_guide` (plus a "Full guide" step) |
+| `holm/base.yml`: branding, auth, search, integrations, onboarding text | everything else, as is |
 
-### Reviewing after a guide change
+`npm run holm` (`scripts/holm-config.ts` there) joins them and refuses to write
+a config with a page missing from `holm.ts`, a `${VAR}` that Holm's container
+doesn't set, Markdown in a card step, or the root domain or a tailnet name
+written out. Every `${VAR}` in it is Holm's own, expanded at startup from the
+container's environment (`ROOT_DOMAIN`, `OIDC_*`), so a new variable needs an
+`env:` entry in `helmrelease.yaml` first.
 
-1. List what changed in `docs/setup` since `config.yml` was last updated.
-   `git log -1 --format=%cs -- kubernetes/apps/equestria/home/holm/resources/config.yml`
-   gives that date.
-2. **New or removed page:** add or remove the matching entry under `apps:`, and
-   under `onboarding.services` if it is an app. Never reuse or rename an
-   existing `id`, because each person's layout is keyed on it.
-3. **Changed address:** update `url`. If the app has an integration, also
-   update `integrations.<id>.default_url`, because Holm's server sends each
-   person's credentials there.
-4. **Changed store link:** copy it from `apps.ts` into `app_store`. Holm takes
-   only `ios` and `android`.
-5. **Changed steps:** re-condense the page into `setup_guide.steps`. Keep the
-   steps plain text with no Markdown. Write addresses as
-   `<name>.${ROOT_DOMAIN}`, which Holm expands itself, and never use a tailnet
-   address.
-6. Holm rereads the file within seconds of the ConfigMap updating. A bad edit
-   (invalid YAML, or an unset `${VAR}`) makes every request fail and the
-   probes restart the pod. Check `kubectl -n equestria logs deploy/holm` after
-   merging.
+### How a guide change reaches Holm
 
-The guide writes its own copy of the steps with pictures. Holm's cards are a
-summary that always ends by linking to the page, so small wording changes in
-the guide do not need a Holm change.
+1. A push to `docs/setup` `main` runs its CI: build, checks, `npm run holm`.
+   If the result changed, CI force-pushes a single parentless commit to the
+   **`deploy/holm`** branch holding `config.yml` and the `kustomization.yaml`
+   that turns it into the `holm-config` ConfigMap (`holm/kustomization.yaml`
+   there).
+2. The `setup-guide` GitRepository
+   ([`holm-config/source.yaml`](../../kubernetes/apps/equestria/home/holm-config/source.yaml))
+   polls that branch every 2 minutes over the in-cluster Forgejo Service, as
+   the forge's read-only `flux` account. `stacks/system/forgejo-renovate.ts`
+   creates that account, restricted, with a read grant on `docs/setup` only, and
+   writes its token to `clusters/equestria/apps/forgejo/flux`.
+3. The `holm-config` Kustomization
+   ([`holm-config/app/holm-config.yaml`](../../kubernetes/apps/equestria/home/holm-config/app/holm-config.yaml))
+   applies the branch. Holm rereads the file within seconds, and Reloader
+   restarts the pod, which `auth.oidc` and `database` need.
+
+`holm` waits on `holm-config`, so a broken pipeline leaves Holm on the last
+good ConfigMap; `holm-config` never prunes. A config that gets past the
+generator but that Holm can't load makes every request fail and the probes
+restart the pod: check `kubectl -n equestria logs deploy/holm`, fix it in
+`docs/setup`, and the next push replaces it.
+
+### The trust boundary
+
+`docs/setup` has more writers than this repo (its CI token, the `claude-code`
+and `renovate` accounts), and `holm-config` applies whatever `deploy/holm`
+holds. Two things keep a bad push to the contents of one ConfigMap:
+
+- **`holm-config` impersonates the `holm-config` ServiceAccount**
+  ([`rbac.yaml`](../../kubernetes/apps/equestria/home/holm-config/app/rbac.yaml)),
+  which can create ConfigMaps in `equestria` and change only `holm-config`.
+  Any other kind, or any other existing ConfigMap, is refused.
+- **`holm-config` gets no postBuild substitution.** It is rendered by the
+  `holm-guide` Kustomization, not `cluster-apps`, so the cluster-wide patch in
+  `kubernetes/flux/cluster/ks.yaml` (substituteFrom `cluster-secrets` and
+  `shared-secrets`, SOPS decryption) never reaches it. Otherwise a push could
+  expand those secrets into the ConfigMap, where Holm would show them.
+
+An ArtifactGenerator copying only `config.yml` next to a `kustomization.yaml`
+from this repo would be tighter, but the pinned flate (0.6.5) cannot resolve a
+Kustomization fed by an ExternalArtifact, and then the `flate` hk step fails
+every Kustomization in the repo. For the same reason the GitRepository is in
+`holm-config/source.yaml`, applied straight from `home/kustomization.yaml`:
+flate aliases a source it only meets inside a render to the working tree.
+
+### Changing an address or the main host
+
+`url`s come from `services.ts`. If an app with an integration moves, also
+update its `integrations.<id>.default_url` in `holm/base.yml`: Holm's server
+sends each person's credentials there. Moving Holm's own address means
+changing `redirect_base` (`holm/base.yml` in `docs/setup`), `ORIGIN` and both
+routes (`helmrelease.yaml`), the redirect URI (`definition.yaml`) and
+`TAILSCALE_HOST` (`ks.yaml`) together.
+
+Never rename a guide slug: it is the tile `id`, and each person's layout is
+keyed on it.
 
 ## Secrets
 
@@ -85,9 +118,11 @@ and has to reconnect their integrations.
 
 ## Things upstream defaults that are changed here
 
+All in `holm/base.yml` in `docs/setup`.
+
 - **Search** falls back to Degoog (`search.<root domain>`), not Google.
 - **Update notice is off**, because Renovate owns the image tag.
 - **Privacy notice is off.** Upstream's sections are promises about backups and
   retention, so they need writing for this estate before being turned on.
 - **The security onboarding slide is dropped.** Its password-manager and 2FA
-  advice does not fit a family sign-in that is one Tailscale tap.
+  advice does not fit a family sign-in that is one Tailscale (or NetBird) tap.

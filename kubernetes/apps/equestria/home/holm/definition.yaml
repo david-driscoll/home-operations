@@ -19,9 +19,9 @@ spec:
     oauth2:
       clientType: confidential
       # One URI, on the apps host. Holm builds its callback from
-      # `auth.oidc.redirect_base` in resources/config.yml, never from the host
-      # the visitor used, so a sign-in started on the tailnet name still
-      # returns here. holm.<root domain> only redirects (helmrelease.yaml).
+      # `auth.oidc.redirect_base` in its config (holm/base.yml in Forgejo
+      # docs/setup), never from the host the visitor used, so a sign-in
+      # started on the tailnet name still returns here. holm.<root domain> only redirects (helmrelease.yaml).
       allowedRedirectUris:
         - url: https://apps.${ROOT_DOMAIN}/auth/callback
       # `profile` is authentik's built-in mapping, which already carries the

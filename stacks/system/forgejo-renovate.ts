@@ -156,6 +156,18 @@ const RENOVATE_LOGIN = "renovate";
 /** The Claude Code account's login, also the name of its per-org team. */
 const CLAUDE_CODE_LOGIN = "claude-code";
 
+/** The read-only account in-cluster Flux clones with. */
+const FLUX_LOGIN = "flux";
+
+/**
+ * The only repositories {@link FLUX_LOGIN} can read, as `[owner, name]`. Each
+ * one is a GitRepository source somewhere under kubernetes/apps.
+ *
+ *   docs/setup  the family setup guide; its `deploy/holm` branch carries
+ *               Holm's generated config (kubernetes/apps/equestria/home/holm-config).
+ */
+const FLUX_READABLE_REPOSITORIES: readonly (readonly [string, string])[] = [["docs", "setup"]];
+
 /**
  * The organization that owns the forge's copy of this repository
  * (./forgejo-github-mirror.ts). It gets Renovate's team like every other
@@ -339,6 +351,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
   public forgejoToken;
   public renovateBot;
   public claudeCode;
+  public fluxReader;
   /** The operator's webhook bearer. ./forgejo-github-mirror.ts hands it to the sync workflow. */
   public webhookToken: pulumi.Output<string>;
 
@@ -744,6 +757,74 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       { provider: args.globals.baoProvider, parent: this },
     );
 
+    // Flux's read-only way into the forge, for the one repository the cluster
+    // deploys from: docs/setup, whose CI generates Holm's config onto the
+    // `deploy/holm` branch (kubernetes/apps/equestria/home/holm-config/,
+    // docs/kubernetes/holm.md). Forgejo has REQUIRE_SIGNIN_VIEW, so a
+    // GitRepository needs SOME login, and none of the existing ones fit:
+    // claude-code and renovate can write.
+    //
+    // `restricted: true` and a single read collaborator grant mean the token
+    // sees docs/setup and nothing else -- not the rest of the `docs` org, not
+    // any user's repositories. A per-repo grant rather than an org team:
+    // Forgejo teams are per-org, and a team would also cover every repository
+    // created there later. `read:repository` is the only scope: clone and
+    // fetch over HTTP.
+    this.fluxReader = this.createUser(
+      {
+        fullName: "Flux",
+        login: FLUX_LOGIN,
+        description: "Read-only GitRepository credential for in-cluster Flux. Managed by stacks/system.",
+        active: true,
+        admin: false,
+        mustChangePassword: false,
+        visibility: "private",
+        deactivateOnDestroy: true,
+        location: "Equestria",
+        prohibitLogin: false,
+        allowGitHook: false,
+        maxRepoCreation: 0,
+        restricted: true,
+      },
+      ["read:repository"] as TOKEN_SCOPES[],
+      args.globals,
+      this.forgejoProvider,
+      { resourcePrefix: "forgejo-flux", tokenName: "Flux GitRepository Token", versionTokenName: true },
+    );
+
+    for (const [owner, name] of FLUX_READABLE_REPOSITORIES) {
+      const repository = forgejo.getRepositoryOutput({ owner, name }, { provider: this.forgejoProvider, parent: this });
+      new forgejo.Collaborator(
+        `forgejo-flux-collaborator-${owner}-${name}`,
+        {
+          repositoryId: repository.id,
+          user: this.fluxReader.user.login,
+          permission: "read",
+        },
+        { provider: this.forgejoProvider, parent: this.fluxReader.user },
+      );
+    }
+
+    // Read by kubernetes/apps/equestria/home/holm-config/source.yaml
+    // as basic auth: `username` + the token as the password.
+    const fluxCredentials = baoKvSecret(
+      "forgejo-flux-credentials",
+      {
+        mount: "secrets",
+        path: "clusters/equestria/apps/forgejo/flux",
+        data: {
+          username: this.fluxReader.user.login,
+          token: this.fluxReader.token.token,
+        },
+        concealedFields: ["token"],
+        customMetadata: baoProvenance({
+          source_title: "Forgejo Flux read-only account",
+          source_tags: "forgejo,flux",
+        }),
+      },
+      { provider: args.globals.baoProvider, parent: this },
+    );
+
     // The operator's UI session key. Not a Forgejo credential at all, and it
     // lands under a DIFFERENT app prefix (`renovate-operator`, matching the
     // Kubernetes app of that name) -- but it is generated, has no meaning outside
@@ -802,6 +883,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       sessionSecret,
       renovateCredentials,
       claudeCodeCredentials,
+      fluxCredentials,
     });
   }
 

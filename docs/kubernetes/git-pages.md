@@ -70,10 +70,11 @@ Requirements on the site:
 (`setup-guide`) gives the guide a Gatus check and a family tile in authentik.
 The check fails until `docs/setup` has been published.
 
-**Holm mirrors this guide.** The family home page at `apps.<root domain>` has
-one tile per guide page, with the guide's store links and a condensed copy of
-each page's steps. When a page, address or store link changes here, update
-Holm's config too: [holm.md](holm.md).
+**Holm's config is built from this guide.** The family home page at
+`apps.<root domain>` has one tile per guide page, with the guide's store links
+and a condensed copy of each page's steps. The guide's CI generates Holm's
+`config.yml` and pushes it to the `deploy/holm` branch, which Flux applies:
+[holm.md](holm.md).
 
 ### My apps: the guide's API (`setup-status`)
 
@@ -110,6 +111,11 @@ image.
     connected device.
   - Tailscale's API: the visitor's devices, using the rotating
     `third-party-tokens/tailscale/api-key`, mounted as a file.
+  - NetBird's management API: the visitor's NetBird login (matched by email)
+    and peers, with the `automation` service user's PAT
+    (`third-party-tokens/netbird/automation`). The guide offers NetBird as
+    the alternative to Tailscale; My apps counts whichever one the person
+    uses and marks the other "not needed".
   - Navidrome's native API.
 - **Writes: one.** `POST /setup/api/music/password` generates a password and
   sets it on the visitor's Navidrome account. It creates the account first if

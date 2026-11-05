@@ -11,7 +11,7 @@
 #
 # Selecting the pod puts it into default-deny for ingress. Kubelet probes come
 # from the node (`host`), allowed explicitly. Egress is untouched (authentik,
-# Jellyfin, Postgres, api.tailscale.com).
+# Jellyfin, Postgres, api.tailscale.com, NetBird's management server).
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
