@@ -49,7 +49,7 @@ spec:
               # GHCR, which upstream publishes alongside gotson/komga on Docker
               # Hub (same index digest). Multi-arch: amd64, arm64, arm/v7.
               repository: ghcr.io/gotson/komga
-              tag: 1.29.2@sha256:1d89b79f6cee732438c0c51f876373ad1c6a0d6cdae47c008bfa24e1d1bed748
+              tag: 1.30.0@sha256:3ae42f88511211e0ec2637d88f3df1b709d07cfb093427e58444ae200a62608e
               pullPolicy: IfNotPresent
             envFrom:
               # The whole spring.security.oauth2.client.* registration. Optional
