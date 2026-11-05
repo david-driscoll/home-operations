@@ -8,12 +8,19 @@
  *   - The home relay (`relay-home.<root domain>`, #3051) has a private name
  *     that resolves to the home WAN address. Gatus at home could only reach it
  *     by hairpin NAT, which proves nothing about the WAN path. So each Azure
- *     host probes it from outside: a systemd timer does a verified TLS
- *     connect (chain and name, SNI = the relay's name) to the WAN address and,
- *     only when that works, pushes a Gatus external-endpoint heartbeat, the
- *     mechanism the NetBird backup uses (backup.ts). A probe that cannot
- *     connect pushes nothing, so the heartbeat goes stale and Gatus pages.
- *     A certificate inside RELAY_CERT_MIN_DAYS pushes an explicit failure.
+ *     host probes it from outside: a systemd timer looks the name up live,
+ *     does a verified TLS connect (chain and name, SNI = the relay's name) to
+ *     the address it got and, only when that works, pushes a Gatus
+ *     external-endpoint heartbeat, the mechanism the NetBird backup uses
+ *     (backup.ts). A probe that cannot resolve or connect pushes nothing, so
+ *     the heartbeat goes stale and Gatus pages. A certificate inside
+ *     RELAY_CERT_MIN_DAYS pushes an explicit failure.
+ *
+ *     The lookup: the hosts run `--accept-dns=false` and the name is private,
+ *     so every run asks the Technitium nodes directly over the tailnet
+ *     (`dig @<dns-<cluster> tailnet IP>`, one after another until one
+ *     answers). The node list is read at deploy time (dnsResolvers); a home
+ *     WAN address change is picked up on the next probe, not the next deploy.
  *
  * Pure, so `node --test` covers it (relayProbe.test.ts).
  */
@@ -54,33 +61,52 @@ export function relayProbeHeartbeat(args: { name: string; token: string }): Exte
   };
 }
 
+/** Per-resolver `dig` budget: one try, two seconds. A handful of dead nodes still fits the unit's timeout. */
+export const RELAY_PROBE_DNS_TIMEOUT_SECONDS = 2;
+
 export interface RelayProbeScriptArgs {
-  /** The relay's name: SNI, the certificate's name, and tried in DNS first. */
+  /** The relay's name: SNI, the certificate's name, and what the probe resolves. */
   name: string;
   /**
-   * Its address when the name does not resolve on the host (the Azure hosts
-   * run with --accept-dns=false, and the name is private). Empty: the name
-   * must resolve, or the probe fails.
+   * Technitium nodes to ask for the name's A record, in order (their tailnet
+   * IPv4 addresses; dnsResolvers). The first that answers wins. At least one.
    */
-  address?: string;
+  resolvers: string[];
   heartbeat: { url: string; token: string };
+}
+
+/** A tag:dns device as components/tailscale.ts getDnsMachines returns it. */
+export interface DnsMachine {
+  key: string;
+  ip: string;
+}
+
+/**
+ * The resolvers a probe asks, from the tag:dns devices: IPv4 only, no
+ * duplicates, in cluster-key order. Offline nodes stay in (the script falls
+ * through to the next), so a node blipping does not rewrite the script.
+ */
+export function dnsResolvers(machines: readonly DnsMachine[]): string[] {
+  const ordered = [...machines].sort((a, b) => a.key.localeCompare(b.key));
+  return [...new Set(ordered.map(machine => machine.ip).filter(ip => /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)))];
 }
 
 export function relayProbePaths(dir: string = RELAY_PROBE_DIR) {
   return { dir, script: `${dir}/netbird-relay-probe.sh` };
 }
 
-/** netbird-relay-probe.sh, run by the timer. Uses only curl, openssl and getent (Ubuntu base). */
+/** netbird-relay-probe.sh, run by the timer. Uses only curl, openssl and dig (bind9-dnsutils is in the cloud-init packages). */
 export function renderRelayProbeScript(args: RelayProbeScriptArgs): string {
   const name = shellWord(args.name, "relay name");
-  const address = args.address ? shellWord(args.address, "relay address") : "";
+  if (args.resolvers.length === 0) throw new Error("relay probe: no resolvers to look the relay's name up with");
+  const resolvers = args.resolvers.map(resolver => shellWord(resolver, "resolver")).join(" ");
   const url = shellWord(args.heartbeat.url.replace(/\/+$/, ""), "heartbeat url");
   const token = shellWord(args.heartbeat.token, "heartbeat token");
   return `#!/usr/bin/env bash
 # Rendered by components/netbird/relayProbe.ts (Pulumi). Edits on the VM are overwritten.
 set -uo pipefail
 name=${name}
-fallback=${address}
+resolvers="${resolvers}"
 min_seconds=${RELAY_CERT_MIN_DAYS * 86400}
 
 report() {
@@ -91,10 +117,16 @@ report() {
     || echo "netbird-relay-probe: WARN: could not report success=$1 to Gatus" >&2
 }
 
-address=$(getent ahostsv4 "$name" 2>/dev/null | awk 'NR == 1 { print $1 }')
-[ -n "$address" ] || address=$fallback
+# Live lookup, every run: ask each Technitium node over the tailnet until one
+# gives an A record. The host's own resolver cannot see the private name.
+address=
+for resolver in $resolvers; do
+  address=$(dig +short +time=${RELAY_PROBE_DNS_TIMEOUT_SECONDS} +tries=1 "@$resolver" "$name" A 2>/dev/null | grep -E '^[0-9]+(.[0-9]+){3}$' | head -n 1)
+  [ -n "$address" ] && break
+  echo "netbird-relay-probe: $resolver gave no A record for $name" >&2
+done
 if [ -z "$address" ]; then
-  echo "netbird-relay-probe: $name does not resolve and no address is configured; not reporting" >&2
+  echo "netbird-relay-probe: no resolver ($resolvers) answered for $name; not reporting" >&2
   exit 1
 fi
 
@@ -113,7 +145,7 @@ if ! openssl s_client -connect "$address:443" -servername "$name" </dev/null 2>/
 fi
 
 report true
-echo "netbird-relay-probe: $name at $address ok"
+echo "netbird-relay-probe: $name at $address (via $resolver) ok"
 `;
 }
 

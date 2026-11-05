@@ -7,8 +7,8 @@ export interface NetbirdRelayProbeArgs {
   connection: types.input.remote.ConnectionArgs;
   /** The relay's name (SNI and certificate), e.g. `relay-home.<root domain>`. */
   name: Input<string>;
-  /** Its address when the name does not resolve on the host. Empty: the name must resolve. */
-  address?: Input<string | undefined>;
+  /** Technitium tailnet IPs the script asks for the name on every run (relayProbe.ts dnsResolvers). */
+  resolvers: Input<string[]>;
   heartbeat: { url: Input<string>; token: string };
   /** As NetbirdServer's: a new value reinstalls on a replacement VM. */
   hostKey?: Input<string>;
@@ -27,9 +27,7 @@ export class NetbirdRelayProbe extends ComponentResource {
     const { connection, hostKey } = args;
     const paths = relayProbePaths(RELAY_PROBE_DIR);
     const units = renderRelayProbeUnits(RELAY_PROBE_DIR);
-    const script = all([args.name, output(args.address), args.heartbeat.url]).apply(([relay, address, url]) =>
-      renderRelayProbeScript({ name: relay, address: address ?? undefined, heartbeat: { url, token: args.heartbeat.token } }),
-    );
+    const script = all([args.name, output(args.resolvers), args.heartbeat.url]).apply(([relay, resolvers, url]) => renderRelayProbeScript({ name: relay, resolvers, heartbeat: { url, token: args.heartbeat.token } }));
 
     // [resource suffix, path, content, mode]
     const install: [string, string, Input<string>, string][] = [
