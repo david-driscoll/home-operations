@@ -119,3 +119,85 @@ groups:
         labels:
           severity: warning
           component: netbird
+
+  # CrowdSec on the netbird-edge hosts (components/netbird/crowdsec.ts): an
+  # agent and AppSec per host, reporting to Equestria's LAPI over the tailnet.
+  # Their metrics arrive by remote-write as job="crowdsec" with `host` and
+  # `lapi_name` (components/netbird/metrics.ts); the LAPI's per-machine counter
+  # comes from the in-cluster Prometheus. Every one of these fails OPEN at the
+  # edge -- nothing user-visible breaks -- so these are the only signal.
+  # Warnings, like the rest of the `Netbird.*` route.
+  - name: netbird-crowdsec
+    rules:
+      - alert: NetbirdCrowdsecDown
+        annotations:
+          summary: "{{ $labels.host }}: the edge CrowdSec container is down."
+          description: >-
+            Alloy has not scraped netbird-crowdsec on {{ $labels.host }} for 15 minutes. While it is
+            down AppSec is unreachable, so the edge Traefik lets dashboard and /api requests through
+            uninspected (fail-open), and the host's Traefik log goes unparsed. Check
+            `docker compose -f /opt/netbird/compose.yaml ps crowdsec` and `docker logs netbird-crowdsec`
+            on the host; a hub download failing at first start is the usual cause.
+        expr: up{cluster="netbird-edge", job="crowdsec"} == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: netbird
+      - alert: NetbirdCrowdsecNotReporting
+        annotations:
+          summary: "{{ $labels.host }}: the edge CrowdSec agent is not talking to the LAPI."
+          description: >-
+            netbird-crowdsec on {{ $labels.host }} is running, but machine {{ $labels.lapi_name }} has
+            made no request to Equestria's LAPI in 30 minutes, so its alerts never become bans. In
+            order: the LAPI log for CROWDSEC_EDGE_REGISTER (the machine registered?), the
+            crowdsec-netbird-edge Secret in `network`, the `netbird-edge-crowdsec` tailnet grant, and
+            `docker logs netbird-crowdsec` on the host for the login error.
+        expr: |
+          up{cluster="netbird-edge", job="crowdsec"} == 1
+            unless on (lapi_name)
+          label_replace(sum by (machine) (increase(cs_lapi_machine_requests_total[30m])) > 0, "lapi_name", "$1", "machine", "(.+)")
+        for: 30m
+        labels:
+          severity: warning
+          component: netbird
+      # Traefik's bouncer polls even with the middleware's kill switch off: the
+      # plugin starts its stream ticker in New() whatever `enabled` says
+      # (bouncer.go, v1.7.1), and only ServeHTTP checks it. So this holds in
+      # rollout step 1 too. Keyed on the crowdsec container's `up` for the
+      # host list; the bouncer itself lives in Traefik. A bouncer polling from a
+      # new address gets a row named <name>@<ip> (api_key.go authPlain), hence
+      # the regex. GET only: AppSec validates the same key with HEAD.
+      - alert: NetbirdCrowdsecBouncerNotPolling
+        annotations:
+          summary: "{{ $labels.host }}: the edge Traefik bouncer is not fetching decisions."
+          description: >-
+            Bouncer {{ $labels.lapi_name }} has not fetched the decision stream from Equestria's LAPI
+            in 30 minutes. It keeps enforcing its last copy (fail-open), so new bans are not reaching
+            {{ $labels.host }}. Check `cscli bouncers list` in the LAPI pod (registered from
+            BOUNCER_KEY_{{ $labels.lapi_name }} in the crowdsec-netbird-edge Secret), the
+            `netbird-edge-crowdsec` tailnet grant, and `docker logs netbird-traefik` on the host for
+            handleStreamTicker errors.
+        expr: |
+          up{cluster="netbird-edge", job="crowdsec"} == 1
+            unless on (lapi_name)
+          label_replace(sum by (bouncer) (increase(cs_lapi_bouncer_requests_total{route="/v1/decisions/stream", method="GET"}[30m])) > 0, "lapi_name", "$1", "bouncer", "([^@]+)(@.+)?")
+        for: 30m
+        labels:
+          severity: warning
+          component: netbird
+      - alert: NetbirdCrowdsecAcquisitionStalled
+        annotations:
+          summary: "{{ $labels.host }}: the edge CrowdSec agent is reading no Traefik log."
+          description: >-
+            netbird-crowdsec on {{ $labels.host }} has read no line from netbird-traefik in an hour.
+            Every public IP draws scanners within minutes, so this is the docker datasource failing:
+            check the netbird-crowdsec-socket proxy (`docker logs netbird-crowdsec-socket`), and the
+            agent's log for "failed to get docker info".
+        expr: |
+          up{cluster="netbird-edge", job="crowdsec"} == 1
+            unless on (host)
+          sum by (host) (rate(cs_dockersource_hits_total{cluster="netbird-edge"}[1h])) > 0
+        for: 1h
+        labels:
+          severity: warning
+          component: netbird

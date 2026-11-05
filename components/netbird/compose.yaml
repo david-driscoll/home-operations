@@ -3,10 +3,13 @@
 # components/netbird/NetbirdServer.ts; Renovate keeps the image tags here current.
 #
 # Adapted from upstream's getting-started.sh (v0.82.0), built-in Traefik mode,
-# without the optional reverse proxy and CrowdSec. The .env file written beside
-# this one sets NETBIRD_DOMAIN and, on a relay host, NETBIRD_RELAY_DOMAIN and
+# without the optional reverse proxy. CrowdSec is upstream's dashboard AppSec
+# guide, reporting to Equestria's LAPI instead of a local one
+# (components/netbird/crowdsec.ts). The .env file written beside this one sets
+# NETBIRD_DOMAIN and, on a relay host, NETBIRD_RELAY_DOMAIN and
 # COMPOSE_PROFILES=relay; config.yaml, dashboard.env and relay.env are rendered
-# by components/netbird/server.ts.
+# by components/netbird/server.ts, the crowdsec-* files and
+# traefik-dynamic.yaml by components/netbird/crowdsec.ts.
 #
 # A fenced host (#3001, components/netbird/fence.ts) runs Traefik and the relay
 # always, and netbird-server and the dashboard only while it holds the DNS
@@ -23,6 +26,12 @@ services:
       netbird:
         # renderServerConfig trusts exactly this address for client IPs.
         ipv4_address: 172.30.0.10
+    # MagicDNS first, for the CrowdSec LAPI's tailnet name (the VM runs
+    # --accept-dns=false). For any other name quad-100 has no upstream and
+    # answers SERVFAIL, and Docker's resolver moves on to the next server on
+    # SERVFAIL or REFUSED (libnetwork resolver.go forwardExtDNS), so ACME and
+    # the plugin download still resolve.
+    dns: [100.100.100.100, 1.1.1.1]
     command:
       - "--log.level=INFO"
       - "--accesslog=true"
@@ -50,12 +59,28 @@ services:
       - "--certificatesresolvers.relay.acme.tlschallenge=true"
       - "--serverstransport.forwardingtimeouts.responseheadertimeout=0s"
       - "--serverstransport.forwardingtimeouts.idleconntimeout=0s"
+      # The CrowdSec bouncer (components/netbird/crowdsec.ts), pinned like
+      # home's (kubernetes/apps/network/traefik/values.yaml). Downloaded at
+      # startup; abortOnPluginFailure makes a failed download a crash, which
+      # `restart: unless-stopped` retries, rather than a Traefik that runs with
+      # every plugin disabled and 404s each route naming the middleware. The
+      # cost, accepted: while the download fails, gRPC and the relay are down
+      # with it.
+      - "--experimental.abortOnPluginFailure=true"
+      - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.7.1"
+      # The `netbird-crowdsec` middleware. A file, not labels, so it exists on
+      # every host whichever containers are running.
+      - "--providers.file.filename=/etc/traefik/dynamic.yaml"
+      - "--providers.file.watch=true"
     ports:
       - "443:443"
       - "80:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - netbird_traefik_letsencrypt:/letsencrypt
+      - ./traefik-dynamic.yaml:/etc/traefik/dynamic.yaml:ro
+      - ./crowdsec-bouncer.key:/etc/traefik/crowdsec-bouncer.key:ro
     logging: &logging
       driver: json-file
       options:
@@ -77,6 +102,7 @@ services:
       - traefik.http.routers.netbird-dashboard.tls.certresolver=letsencrypt
       - traefik.http.routers.netbird-dashboard.service=dashboard
       - traefik.http.routers.netbird-dashboard.priority=1
+      - traefik.http.routers.netbird-dashboard.middlewares=netbird-crowdsec@file
       - traefik.http.services.dashboard.loadbalancer.server.port=80
     logging: *logging
 
@@ -112,6 +138,17 @@ services:
       - traefik.http.routers.netbird-backend.tls.certresolver=letsencrypt
       - traefik.http.routers.netbird-backend.service=netbird-server
       - traefik.http.routers.netbird-backend.priority=100
+      # /api and /oauth2 again, above netbird-backend, through CrowdSec
+      # (upstream's dashboard AppSec guide). /relay and /ws-proxy/ stay on
+      # netbird-backend and the gRPC router stays bare: a false positive there
+      # would take peers off the mesh.
+      - traefik.http.routers.netbird-api.rule=Host(`${NETBIRD_DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/oauth2`))
+      - traefik.http.routers.netbird-api.entrypoints=websecure
+      - traefik.http.routers.netbird-api.tls=true
+      - traefik.http.routers.netbird-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.netbird-api.service=netbird-server
+      - traefik.http.routers.netbird-api.priority=110
+      - traefik.http.routers.netbird-api.middlewares=netbird-crowdsec@file
       - traefik.http.services.netbird-server.loadbalancer.server.port=80
       - traefik.http.services.netbird-server-h2c.loadbalancer.server.port=80
       - traefik.http.services.netbird-server-h2c.loadbalancer.server.scheme=h2c
@@ -140,6 +177,70 @@ services:
       - traefik.http.routers.netbird-relay.tls.certresolver=relay
       - traefik.http.routers.netbird-relay.service=netbird-relay
       - traefik.http.services.netbird-relay.loadbalancer.server.port=80
+    logging: *logging
+
+  # ── CrowdSec: components/netbird/crowdsec.ts ────────────────────────────
+  # An agent and an AppSec listener, NOT a LAPI: it logs in to Equestria's
+  # LAPI over the tailnet as this host's machine (crowdsec.env), so bans are
+  # shared with home both ways. Not fenced: a standby's Traefik still takes
+  # internet traffic. No ports: Traefik reaches AppSec on 7422 and Alloy the
+  # metrics on 6060 over the compose network.
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.8.2@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4
+    container_name: netbird-crowdsec
+    restart: unless-stopped
+    networks: [netbird, crowdsec-socket]
+    # MagicDNS for the LAPI's tailnet name, falling through to a public
+    # resolver for the hub (see traefik above).
+    dns: [100.100.100.100, 1.1.1.1]
+    environment:
+      COLLECTIONS: >-
+        crowdsecurity/traefik
+        crowdsecurity/base-http-scenarios
+        crowdsecurity/http-cve
+        crowdsecurity/appsec-virtual-patching
+        crowdsecurity/appsec-generic-rules
+    env_file:
+      - ./crowdsec.env
+    volumes:
+      # Volumes, so a restart skips the hub download (docker_start.sh only
+      # refreshes an index older than 24h).
+      - netbird_crowdsec_config:/etc/crowdsec
+      - netbird_crowdsec_data:/var/lib/crowdsec/data
+      - ./crowdsec-config.yaml.local:/etc/crowdsec/config.yaml.local:ro
+      - ./crowdsec-acquis-traefik.yaml:/etc/crowdsec/acquis.d/traefik.yaml:ro
+      - ./crowdsec-acquis-appsec.yaml:/etc/crowdsec/acquis.d/appsec.yaml:ro
+      - ./crowdsec-whitelist.yaml:/etc/crowdsec/postoverflows/s01-whitelist/driscoll-internal-networks.yaml:ro
+    healthcheck:
+      # AppSec listening is what Traefik needs; the LAPI being reachable is
+      # not (everything fails open), so `cscli lapi status` is not the check.
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 7422"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    depends_on: [crowdsec-socket]
+    logging: *logging
+
+  # The Docker API the agent reads netbird-traefik's log through: GETs only,
+  # no exec, no POST. CONTAINERS for list, inspect and logs; INFO because the
+  # docker datasource calls /info once at startup to detect Swarm (CrowdSec
+  # 1.8.2 pkg/acquisition/modules/docker/source.go) and fails without it;
+  # events, ping and version are the proxy's defaults. On a network of its own
+  # with no route out, shared with the crowdsec container alone, so the one
+  # container parsing attacker-controlled input never holds the socket itself.
+  crowdsec-socket:
+    image: tecnativa/docker-socket-proxy:v0.5.0@sha256:1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459
+    container_name: netbird-crowdsec-socket
+    restart: unless-stopped
+    networks: [crowdsec-socket]
+    environment:
+      CONTAINERS: "1"
+      INFO: "1"
+      POST: "0"
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     logging: *logging
 
   # ── Metrics: components/netbird/metrics.ts ──────────────────────────────
@@ -207,6 +308,8 @@ volumes:
   netbird_traefik_letsencrypt:
   netbird_restic_cache:
   netbird_alloy_data:
+  netbird_crowdsec_config:
+  netbird_crowdsec_data:
 
 networks:
   netbird:
@@ -215,3 +318,7 @@ networks:
       config:
         - subnet: 172.30.0.0/24
           gateway: 172.30.0.1
+  # The socket proxy's only client is the crowdsec container.
+  crowdsec-socket:
+    driver: bridge
+    internal: true

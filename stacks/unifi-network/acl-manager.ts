@@ -665,6 +665,13 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         NETBIRD_EDGE_METRICS_PORTS.map(String),
         "That is how the NetBird hosts' metrics reach Thanos (components/netbird/metrics.ts) -- restore the `netbird-edge-metrics` grant.",
       );
+      assertGrantPath(
+        json,
+        tag.netbirdEdge,
+        NETBIRD_EDGE_CROWDSEC_SERVICE,
+        NETBIRD_EDGE_CROWDSEC_PORTS.map(String),
+        "That is how the NetBird hosts' CrowdSec agents and bouncers reach Equestria's LAPI (components/netbird/crowdsec.ts) -- restore the `netbird-edge-crowdsec` grant.",
+      );
       return json;
     });
 
@@ -934,6 +941,14 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
   // the Prometheus UIs too. The test object below carries its accept.
   manager.setGrant("netbird-edge-metrics", { src: [tag.netbirdEdge], dst: [NETBIRD_EDGE_METRICS_SERVICE], ip: NETBIRD_EDGE_METRICS_PORTS }, { accept: [tag.netbirdEdge] });
 
+  // The hosts' CrowdSec (components/netbird/crowdsec.ts): each agent logs in to
+  // Equestria's LAPI and pushes its alerts, and each Traefik bouncer streams
+  // decisions from it. The one service on the one port. The LAPI authenticates
+  // every caller (a machine password or a bouncer key per host), but its
+  // auto-registration accepts a token from 100.64.0.0/10, which is why the
+  // token never goes to these hosts.
+  manager.setGrant("netbird-edge-crowdsec", { src: [tag.netbirdEdge], dst: [NETBIRD_EDGE_CROWDSEC_SERVICE], ip: NETBIRD_EDGE_CROWDSEC_PORTS }, { accept: [tag.netbirdEdge] });
+
   // The home-relay probe on the Azure hosts (components/netbird/relayProbe.ts,
   // D47) resolves `relay-home.<root domain>` on every run by asking the
   // Technitium nodes directly: the hosts run --accept-dns=false and the name
@@ -950,7 +965,7 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
     {
       src: tag.netbirdEdge,
       proto: "tcp",
-      accept: [...NETBIRD_EDGE_BACKUP_SERVICES.map(service => `${service}:443`), `${NETBIRD_EDGE_METRICS_SERVICE}:19291`, `${tag.dns}:53`],
+      accept: [...NETBIRD_EDGE_BACKUP_SERVICES.map(service => `${service}:443`), `${NETBIRD_EDGE_METRICS_SERVICE}:19291`, `${NETBIRD_EDGE_CROWDSEC_SERVICE}:8080`, `${tag.dns}:53`],
       deny: [
         `${tag.dns}:22`,
         `${tag.dns}:853`, // DoT, default-dns
@@ -978,6 +993,10 @@ const NETBIRD_EDGE_BACKUP_SERVICES: readonly TailscaleService[] = ["svc:garage-s
 /** Thanos receive's remote-write door (kubernetes/apps/observability/thanos/tailnet-service.yaml), for the VM's metrics. */
 const NETBIRD_EDGE_METRICS_SERVICE: TailscaleService = "svc:thanos-receive";
 const NETBIRD_EDGE_METRICS_PORTS: TailscaleNetworkCapability[] = ["tcp:19291"];
+
+/** CrowdSec's LAPI (kubernetes/apps/network/crowdsec/tailnet-service.yaml), for the VM's agent and bouncer. */
+const NETBIRD_EDGE_CROWDSEC_SERVICE: TailscaleService = "svc:crowdsec-lapi";
+const NETBIRD_EDGE_CROWDSEC_PORTS: TailscaleNetworkCapability[] = ["tcp:8080"];
 
 function configurePbsAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;

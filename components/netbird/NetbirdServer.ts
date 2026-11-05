@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { remote, type types } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, type Output, output, type Resource, secret } from "@pulumi/pulumi";
 import { backupPaths, renderBackupScript, renderBackupUnits, renderResticEnv, renderRestoreScript } from "./backup.ts";
+import { renderAppsecAcquisition, renderBouncerKeyFile, renderCrowdsecConfigLocal, renderCrowdsecEnv, renderCrowdsecWhitelist, renderTraefikAcquisition, renderTraefikDynamic, TRAEFIK_DYNAMIC_FILE } from "./crowdsec.ts";
 import { FENCED_SERVICES, fencePaths, renderFenceScript, renderFenceUnits } from "./fence.ts";
 import { renderAlloyConfig } from "./metrics.ts";
 import { dialAttemptsFor, NETBIRD_DIR, parseSetupResponse, type RelayEndpoint, renderDashboardEnv, renderRelayEnv, renderServerConfig, type ServerSecrets, type SetupResult, VM_READY_WAIT_SECONDS } from "./server.ts";
@@ -55,6 +56,25 @@ export interface NetbirdServerArgs {
    * container (metrics.ts). Not fenced. Without it nothing scrapes them.
    */
   metrics?: NetbirdMetricsArgs;
+  /**
+   * The CrowdSec agent, AppSec and Traefik bouncer (crowdsec.ts). Required:
+   * compose.yaml's routers name the middleware and Traefik mounts the key, so
+   * a host without it would not serve the dashboard at all.
+   */
+  crowdsec: NetbirdCrowdsecArgs;
+}
+
+export interface NetbirdCrowdsecArgs {
+  /** The tailnet's DNS name: the LAPI is `crowdsec-lapi.<tailnet>:8080`, over the `netbird-edge-crowdsec` grant. */
+  tailnet: Input<string>;
+  /** The host's tailnet name. Its machine and bouncer on the LAPI are crowdsecLapiName of it. */
+  host: string;
+  /** This host's machine password, which the LAPI registers (edge-register.sh). */
+  machinePassword: Input<string>;
+  /** This host's bouncer key, which the LAPI registers as BOUNCER_KEY_<host>. Also AppSec's key. */
+  bouncerKey: Input<string>;
+  /** The middleware's kill switch (crowdsec.ts renderTraefikDynamic). False: everything runs, nothing is enforced. */
+  enforce: boolean;
 }
 
 export interface NetbirdMetricsArgs {
@@ -89,7 +109,8 @@ export interface NetbirdBackupArgs {
  * The NetBird combined server, deployed onto an existing Docker host.
  *
  * Writes compose.yaml, .env, config.yaml and dashboard.env (and relay.env on a
- * relay host, alloy.alloy with `metrics`) into NETBIRD_DIR and runs `docker compose up` whenever any of
+ * relay host, alloy.alloy with `metrics`, and CrowdSec's files and Traefik's
+ * dynamic config, crowdsec.ts) into NETBIRD_DIR and runs `docker compose up` whenever any of
  * them changes. Rerunning is safe: the files are rewritten whole and compose
  * only recreates what changed.
  *
@@ -140,6 +161,7 @@ export class NetbirdServer extends ComponentResource {
       ),
     );
     const metrics = args.metrics;
+    const crowdsec = args.crowdsec;
     const profiles = [...(args.relay ? ["relay"] : []), ...(metrics ? ["metrics"] : [])];
     const dotEnv = all([args.domain, args.relay?.domain]).apply(([domain, relayDomain]) =>
       [
@@ -158,7 +180,18 @@ export class NetbirdServer extends ComponentResource {
       "dashboard.env": output(args.domain).apply(domain => renderDashboardEnv({ domain })),
       ...(metrics ? { "alloy.alloy": all([metrics.remoteWriteUrl, metrics.region]).apply(([remoteWriteUrl, region]) => renderAlloyConfig({ host: metrics.host, remoteWriteUrl, region, relay: !!args.relay })) } : {}),
       ...(args.relay ? { "relay.env": secret(all([args.relay.domain, args.secrets.relayAuthSecret]).apply(([domain, authSecret]) => renderRelayEnv({ domain, authSecret }))) } : {}),
+      // CrowdSec (crowdsec.ts). The two secrets go by stdin like the rest.
+      [TRAEFIK_DYNAMIC_FILE]: output(crowdsec.tailnet).apply(tailnet => renderTraefikDynamic({ tailnet, enforce: crowdsec.enforce })),
+      "crowdsec-bouncer.key": secret(output(crowdsec.bouncerKey).apply(renderBouncerKeyFile)),
+      "crowdsec.env": secret(all([crowdsec.tailnet, crowdsec.machinePassword]).apply(([tailnet, machinePassword]) => renderCrowdsecEnv({ host: crowdsec.host, tailnet, machinePassword }))),
+      "crowdsec-config.yaml.local": renderCrowdsecConfigLocal(),
+      "crowdsec-acquis-traefik.yaml": renderTraefikAcquisition(),
+      "crowdsec-acquis-appsec.yaml": renderAppsecAcquisition(),
+      "crowdsec-whitelist.yaml": renderCrowdsecWhitelist(),
     };
+    // What the crowdsec container reads only at start, through bind mounts
+    // compose cannot see into (crowdsec.env is an env_file, which it can).
+    const crowdsecMounted = ["crowdsec-config.yaml.local", "crowdsec-acquis-traefik.yaml", "crowdsec-acquis-appsec.yaml", "crowdsec-whitelist.yaml"].map(file => files[file]);
 
     const written = Object.entries(files).map(
       ([file, content]) =>
@@ -184,10 +217,12 @@ export class NetbirdServer extends ComponentResource {
     // decides about management. A management already running is recreated, so
     // it picks up a changed config.yaml (compose cannot see a bind mount's
     // content), under the fence's lock so the two never race.
-    const alwaysOn = ["traefik", ...(args.relay ? ["relay"] : []), ...(metrics ? ["alloy"] : [])].join(" ");
+    const alwaysOn = ["traefik", "crowdsec", "crowdsec-socket", ...(args.relay ? ["relay"] : []), ...(metrics ? ["alloy"] : [])].join(" ");
     // Alloy reads its config once, and compose cannot see a bind mount's
     // content change, so every deploy (which only runs when a file changed)
-    // restarts it.
+    // restarts it. CrowdSec likewise reads its acquisitions and whitelist once;
+    // it restarts only when one of those changed (its own command below).
+    // Traefik needs neither: it watches its dynamic file.
     const restartAlloy = metrics ? " && docker compose restart alloy" : "";
     const fenced = FENCED_SERVICES.join(" ");
     const up = new remote.Command(
@@ -203,6 +238,8 @@ export class NetbirdServer extends ComponentResource {
       // snapshot was about to fill.
       { ...cro, dependsOn: [...written, ...(backup?.restore ? [backup.restore] : [])] },
     );
+
+    new remote.Command(`${name}-crowdsec-restart`, { connection, create: `cd ${NETBIRD_DIR} && docker compose restart crowdsec`, triggers: [...crowdsecMounted, hostKey] }, { ...cro, dependsOn: [up] });
 
     // The first fence pass, synchronous so the deploy sees its outcome (and
     // setup, below, waits for it); then the timer takes over.

@@ -223,6 +223,12 @@ lapi:
         secretKeyRef:
           name: ${APP}-secrets
           key: apikey_bouncer
+    # The LAPI-side allowlist edge-register.sh keeps (helmrelease.yaml,
+    # ./edge-register.sh): the same CIDRs as the agents' s01-whitelist above,
+    # space-separated. Here rather than in the script because the script's
+    # ConfigMap has Flux substitution off and the cluster ranges need it.
+    - name: EDGE_ALLOWLIST_CIDRS
+      value: "${CLUSTER_NETWORK} ${SERVICE_NETWORK} 127.0.0.1/32 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10"
     # The crowdsec-ui watcher machine is NOT registered from here: the chart
     # replaces the upstream entrypoint with files/docker-start-custom.sh, which
     # has no AGENT_USERNAME/AGENT_PASSWORD passthrough. crowdsec-ui registers
@@ -270,6 +276,26 @@ lapi:
     # non-fatal, so step 2 can no longer re-arm this outage: a key that dies
     # later degrades to a log line. Read that comment before deleting it.
     # ---- end console enrolment --------------------------------------------
+  # The netbird-edge hosts' identities (./netbird-edge-externalsecret.yaml):
+  # BOUNCER_KEY_<name>, which the chart entrypoint registers like
+  # BOUNCER_KEY_traefik above, and EDGE_MACHINE_PASSWORD_<name>, which
+  # edge-register.sh registers. Optional: until stacks/netbird-edge has
+  # written them the Secret does not exist, and the LAPI must start anyway.
+  envFrom:
+    - secretRef:
+        name: crowdsec-netbird-edge
+        optional: true
+  # edge-register.sh, run in the background by the container command
+  # (helmrelease.yaml postRenderers).
+  extraVolumes:
+    - name: edge-register
+      configMap:
+        name: crowdsec-edge-register
+        defaultMode: 0555
+  extraVolumeMounts:
+    - name: edge-register
+      mountPath: /edge-register
+      readOnly: true
   # D2: `lapi.dashboard` removed -- it is not a key in the chart schema in
   # 0.21.1 or 0.24.0. The bundled Metabase dashboard is gone; crowdsec-ui
   # replaces it.

@@ -146,6 +146,15 @@ spec:
         # while Traefik's stream poll -- the thing that actually delivers bans
         # -- was dead. HEAD creates no bouncer row and moves no last_pull
         # (middlewares/v1/api_key.go:149-164).
+        #
+        # Only the `traefik` bouncer, because the netbird-edge hosts' bouncers
+        # poll the same LAPI (components/netbird/crowdsec.ts), and their polls
+        # would keep a sum over every bouncer non-zero while home's was dead.
+        # Both home middlewares share the `traefik` key; each Traefik pod polling
+        # with it from its own IP gets a row named traefik@<ip>
+        # (middlewares/v1/api_key.go authPlain, v1.8.2), hence the regex. The
+        # edge hosts' CrowdSec rules are in
+        # ../../observability/thanos/resources/ruler.yml, beside their metrics.
         - alert: CrowdsecBouncerNotPolling
           annotations:
             description: >-
@@ -156,7 +165,7 @@ spec:
               a rotated apikey_bouncer does NOT re-register itself.
             summary: Traefik's CrowdSec bouncer has stopped fetching decisions.
           expr: |
-            (sum(rate(cs_lapi_bouncer_requests_total{route="/v1/decisions/stream", method="GET"}[15m])) or vector(0)) == 0
+            (sum(rate(cs_lapi_bouncer_requests_total{bouncer=~"traefik(@.+)?", route="/v1/decisions/stream", method="GET"}[15m])) or vector(0)) == 0
               and
             count(up{job="crowdsec-service"} == 1) > 0
           for: 15m

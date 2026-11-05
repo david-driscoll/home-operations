@@ -26,8 +26,17 @@
  * On a standby the fence keeps netbird-server stopped, so its target is down
  * (`up == 0`) and only the relay reports. That is the expected state there.
  *
+ * The CrowdSec agent (crowdsec.ts) runs on every host and is scraped as job
+ * `crowdsec`, outside the NetBird relabelling: its series are CrowdSec's own
+ * `cs_*`, which the `netbird-crowdsec` rules in
+ * kubernetes/apps/observability/thanos/resources/ruler.yml read as they are.
+ * `lapi_name` is the host's machine and bouncer name on the LAPI, for joining
+ * to the LAPI's per-machine series.
+ *
  * Pure, with no Pulumi imports, so `node --test` covers it.
  */
+
+import { CROWDSEC_CONTAINER, CROWDSEC_METRICS_PORT, crowdsecLapiName } from "./crowdsec.ts";
 
 /** The port both images serve /metrics on: the combined server's `server.metricsPort` (server.ts) and the relay's `--metrics-port` default. */
 export const NETBIRD_METRICS_PORT = 9090;
@@ -63,6 +72,23 @@ ${targets.join("\n")}
   ]
   scrape_interval = "60s"
   forward_to      = [prometheus.relabel.netbird.receiver]
+}
+
+prometheus.scrape "crowdsec" {
+  targets = [
+    {"__address__" = ${q(`${CROWDSEC_CONTAINER}:${CROWDSEC_METRICS_PORT}`)}, "job" = "crowdsec", "host" = ${q(args.host)}, "lapi_name" = ${q(crowdsecLapiName(args.host))}},
+  ]
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.crowdsec.receiver]
+}
+
+prometheus.relabel "crowdsec" {
+  forward_to = [prometheus.remote_write.thanos.receiver]
+
+  rule {
+    source_labels = ["host"]
+    target_label  = "instance"
+  }
 }
 
 prometheus.relabel "netbird" {

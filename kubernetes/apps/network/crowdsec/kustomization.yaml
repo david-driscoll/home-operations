@@ -5,6 +5,8 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./externalsecret.yaml
+  - ./netbird-edge-externalsecret.yaml
+  - ./tailnet-service.yaml
   - ./volsync.yaml
   - ./definition.yaml
   - ./prometheusrule.yaml
@@ -15,3 +17,41 @@ configMapGenerator:
       - values.yaml=./values.yaml
     options:
       disableNameSuffixHash: true
+  # The LAPI's edge-registration script (./edge-register.sh), mounted through
+  # lapi.extraVolumes in values.yaml. disableNameSuffixHash: the volume names
+  # it literally. The annotation: Flux postBuild envsubst would otherwise read
+  # the script's shell expansions as substitution variables, exactly as in
+  # ../../volsync-system/lock-canceller/kustomization.yaml. It switches off
+  # substitution for the whole object, its own name included, hence the
+  # literal `crowdsec-` rather than the APP variable.
+  - name: crowdsec-edge-register
+    files:
+      - edge-register.sh=./edge-register.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+# The postgres component (ks.yaml) uses `commonLabels`, which also writes
+# driscoll.dev/name into every Service SELECTOR. The chart's LAPI pods do not
+# carry it, so ./tailnet-service.yaml would select nothing and the operator
+# would stop advertising svc:crowdsec-lapi -- what happened to thanos-receive
+# on 2026-10-15 (../../observability/thanos/kustomization.yaml). Patches run
+# after the components' labels, so this puts the chart's own selector back. A
+# strategic-merge replace rather than thanos's JSON remove, so it also renders
+# without the component (plain `kubectl kustomize`, where there is nothing to
+# remove).
+patches:
+  - target:
+      kind: Service
+      name: crowdsec-lapi-tailnet
+    patch: |-
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: crowdsec-lapi-tailnet
+      spec:
+        selector:
+          $patch: replace
+          k8s-app: crowdsec
+          type: lapi
+          version: v1
