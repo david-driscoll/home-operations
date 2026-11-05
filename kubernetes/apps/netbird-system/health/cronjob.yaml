@@ -43,7 +43,7 @@ spec:
                 - name: NETBIRD_PEER_GROUPS
                   value: gateways,dns-servers
                 - name: NETBIRD_CUSTOM_DOMAINS
-                  value: app.${ROOT_DOMAIN},nbidp.${ROOT_DOMAIN}
+                  value: nb.${ROOT_DOMAIN},nbidp.${ROOT_DOMAIN}
                 # The proxy's cluster address, NB_PROXY_DOMAIN in ../nbidp
                 # (components/netbird/nbidp.ts nbidpClusterAddress; D38).
                 - name: NETBIRD_PROXY_CLUSTER

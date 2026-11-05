@@ -143,7 +143,7 @@ GitHub when the repo is archived.
   `third-party-tokens/netbird/nbidp-proxy` (the private reverse proxy's token, from
   `stacks/netbird`) and `apps/nbidp/dex` (Dex's config with its Authentik client, from
   `stacks/authentik`).
-  `apps/netbird/app-wildcard-tls` is the `*.app.<root domain>` certificate for the
+  `apps/netbird/app-wildcard-tls` is the `*.nb.<root domain>` certificate for the
   NetBird app names (docs/plans/netbird-mirror.md §N), pushed there by an ESO PushSecret
   from cert-manager's Secret (D39, the one path `eso-equestria` may write); cert-manager
   reissues it, so nothing here needs keeping.

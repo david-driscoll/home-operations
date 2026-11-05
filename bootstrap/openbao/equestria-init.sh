@@ -317,7 +317,7 @@ EOF
 
   local cluster push_grants
   for cluster in equestria sgc; do
-    # THE ONE WRITE. equestria's ESO pushes the NetBird `*.app` certificate
+    # THE ONE WRITE. equestria's ESO pushes the NetBird `*.nb` certificate
     # (kubernetes/apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml,
     # docs/plans/netbird-mirror.md D39) to this single path, and may write
     # nothing else. A deliberate exception to the read-only rule below, made

@@ -21,7 +21,7 @@
  *      front of Dex (#2891, nbidp.ts);
  *  11. a `self-` group and policy per person, so their own devices reach
  *      each other (selfAccess.ts);
- *  12. every tailnet app's NetBird twin, `<host>.app.<root domain>`, on the
+ *  12. every tailnet app's NetBird twin, `<host>.nb.<root domain>`, on the
  *      same proxy (app-services.ts, apps.ts).
  *
  * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
@@ -583,7 +583,7 @@ pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
 
 // ── 12. Tailnet apps on NetBird ─────────────────────────────────────────────
 // An app with a tailnet name and an access_policy naming NetBird user groups
-// gets `<host>.app.<root domain>` as a private service on the same proxy,
+// gets `<host>.nb.<root domain>` as a private service on the same proxy,
 // open to exactly those groups (app-services.ts, apps.ts;
 // docs/plans/netbird-mirror.md §N).
 declareAppServices({

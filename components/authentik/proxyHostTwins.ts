@@ -12,7 +12,7 @@
  * entry per app and the policy cannot drift between names.
  *
  * - `tailnet`: `spec.tailnetUrl`, `<app>.<tailnet>`.
- * - `app`: the NetBird name `<app>.app.<root domain>`, derived from the tailnet
+ * - `app`: the NetBird name `<app>.nb.<root domain>`, derived from the tailnet
  *   one the same way the OAuth redirect URIs are (../netbird/appRedirectUris.ts),
  *   only where the manager is given `netbirdApps` (stacks/system).
  *

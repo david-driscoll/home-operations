@@ -25,12 +25,12 @@ describe("proxyHostTwins", () => {
     // immich-style: the tailnet label differs from the root-domain one.
     assert.deepEqual(proxyHostTwins("https://immich.example.test", "https://photos.tail-example.ts.net", NETBIRD), [
       { variant: "tailnet", externalHost: "https://photos.tail-example.ts.net" },
-      { variant: "app", externalHost: "https://photos.app.example.test" },
+      { variant: "app", externalHost: "https://photos.nb.example.test" },
     ]);
   });
 
   it("matches the tailnet suffix case-insensitively", () => {
-    assert.equal(proxyHostTwins("https://a.example.test", "https://Lidarr.TAIL-example.ts.net", NETBIRD).at(-1)?.externalHost, "https://Lidarr.app.example.test");
+    assert.equal(proxyHostTwins("https://a.example.test", "https://Lidarr.TAIL-example.ts.net", NETBIRD).at(-1)?.externalHost, "https://Lidarr.nb.example.test");
   });
 
   it("gives no NetBird twin to a name more than one label under the tailnet", () => {

@@ -10,7 +10,7 @@ import { ALERT_TTL_MINUTES, evaluate, type HealthConfig, type LivePeer, minutesS
 
 const now = new Date("2026-11-04T20:00:00Z");
 const ago = (minutes: number) => new Date(now.getTime() - minutes * 60000).toISOString();
-const config: HealthConfig = { peerGroups: ["gateways", "dns-servers"], customDomains: ["app.example.test", "nbidp.example.test"], proxyCluster: "nbidp.example.test" };
+const config: HealthConfig = { peerGroups: ["gateways", "dns-servers"], customDomains: ["nb.example.test", "nbidp.example.test"], proxyCluster: "nbidp.example.test" };
 const groups = [
   { id: "g1", name: "gateways" },
   { id: "g2", name: "dns-servers" },
@@ -85,8 +85,8 @@ describe("evaluate: domains and the proxy cluster", () => {
   const cluster = [{ address: "nbidp.example.test", online: true }];
 
   it("warns on an unvalidated custom domain and skips an absent one", () => {
-    const { alerts, skipped } = evaluate(config, { domains: [{ domain: "app.example.test", validated: false, type: "custom" }], clusters: cluster, now });
-    assert.deepEqual(names(alerts), ["NetbirdCustomDomainUnvalidated:app.example.test"]);
+    const { alerts, skipped } = evaluate(config, { domains: [{ domain: "nb.example.test", validated: false, type: "custom" }], clusters: cluster, now });
+    assert.deepEqual(names(alerts), ["NetbirdCustomDomainUnvalidated:nb.example.test"]);
     assert.equal(alerts[0].labels.severity, "warning");
     assert.deepEqual(skipped, ["domain nbidp.example.test is not registered"]);
   });

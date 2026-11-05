@@ -72,7 +72,7 @@ service:
         type: ClusterIP
     # `traefik-netbird`, for the `netbird` entrypoint only, the same way: the
     # NetBird private proxy (apps/netbird-system/nbidp) dials it from its pod
-    # for every `<app>.app.<root domain>` service stacks/netbird declares.
+    # for every `<app>.nb.<root domain>` service stacks/netbird declares.
     # ClusterIP, so the NetBird door is not on the LAN at all.
     netbird:
       spec:
@@ -357,10 +357,10 @@ ports:
       # X_Forwarded_For and friends: underscore aliases of managed headers
       # that tailscaled does not strip (pkg/config/static/entrypoints.go:105).
       aliasHeadersStrategy: delete
-  # THE NETBIRD DOOR: `<app>.app.<root domain>`, the NetBird counterpart of
+  # THE NETBIRD DOOR: `<app>.nb.<root domain>`, the NetBird counterpart of
   # `<app>.<tailnet>` (docs/plans/netbird-mirror.md §N). The NetBird private
   # reverse proxy (apps/netbird-system/nbidp) terminates TLS for every app
-  # service with the `*.app` certificate, checks the peer is in the service's
+  # service with the `*.nb` certificate, checks the peer is in the service's
   # access groups, and dials http://traefik-netbird:8446 from its pod
   # (`direct_upstream`) with the client's Host kept (`pass_host_header`). Every
   # tailnet app gets a router here from components/tailscale

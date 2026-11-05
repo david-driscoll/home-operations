@@ -15,12 +15,12 @@ const ROOT = "example.test";
 describe("withNetbirdRedirectUris", () => {
   it("adds the <host>.app twin right after each tailnet URI, path and query kept", () => {
     const uris = [{ url: "https://sonarr.example.test/signin-oidc" }, { url: "https://sonarr.tail-example.ts.net/signin-oidc?x=1" }];
-    assert.deepEqual(withNetbirdRedirectUris(uris, TAILNET, ROOT), [...uris, { url: "https://sonarr.app.example.test/signin-oidc?x=1" }]);
+    assert.deepEqual(withNetbirdRedirectUris(uris, TAILNET, ROOT), [...uris, { url: "https://sonarr.nb.example.test/signin-oidc?x=1" }]);
   });
 
   it("keeps a port and the URI's matching mode", () => {
     assert.deepEqual(withNetbirdRedirectUris([{ url: "https://git.tail-example.ts.net:8443/cb", matching_mode: "strict" }], TAILNET, ROOT).at(-1), {
-      url: "https://git.app.example.test:8443/cb",
+      url: "https://git.nb.example.test:8443/cb",
       matching_mode: "strict",
     });
   });
@@ -31,11 +31,11 @@ describe("withNetbirdRedirectUris", () => {
   });
 
   it("does not repeat a twin a definition already lists", () => {
-    const uris = [{ url: "https://romm.tail-example.ts.net/cb" }, { url: "https://romm.app.example.test/cb" }];
+    const uris = [{ url: "https://romm.tail-example.ts.net/cb" }, { url: "https://romm.nb.example.test/cb" }];
     assert.deepEqual(withNetbirdRedirectUris(uris, TAILNET, ROOT), uris);
   });
 
   it("matches the tailnet case-insensitively", () => {
-    assert.equal(withNetbirdRedirectUris([{ url: "https://Home.TAIL-example.ts.net/auth" }], TAILNET, ROOT).at(-1)?.url, "https://Home.app.example.test/auth");
+    assert.equal(withNetbirdRedirectUris([{ url: "https://Home.TAIL-example.ts.net/auth" }], TAILNET, ROOT).at(-1)?.url, "https://Home.nb.example.test/auth");
   });
 });

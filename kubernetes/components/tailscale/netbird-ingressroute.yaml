@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
 #
-# The app's NetBird front door: `<host>.app.<root domain>`, the NetBird
+# The app's NetBird front door: `<host>.nb.<root domain>`, the NetBird
 # counterpart of `<host>.<tailnet>` and the same <host>
 # (docs/plans/netbird-mirror.md §N). Every app that publishes a tailnet name
 # gets this from the same component, so a new tailnet app is a NetBird app too.
@@ -27,7 +27,7 @@ spec:
   routes:
     - kind: Rule
       priority: 10
-      match: Host(`${TAILSCALE_HOST:=${APP}}.app.${ROOT_DOMAIN}`)
+      match: Host(`${TAILSCALE_HOST:=${APP}}.nb.${ROOT_DOMAIN}`)
       middlewares:
         - name: netbird-as-${TAILSCALE_MIDDLEWARE:=tailscale-local}
           namespace: network
