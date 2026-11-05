@@ -460,7 +460,7 @@ Azure. §C, §D and §E describe the OCI-primary plan; this is what is built ins
   - **STUN** is the relay container's, on 3478/udp; `netbird-server` no longer binds it.
   - **QUIC** isn't served, because the relay would need its own certificate on 443/udp. Clients use WebSocket.
 - **Fence** (`components/netbird/fence.ts`, a systemd timer every 15 s on every host). It asks the zone's NS set
-  (through 1.1.1.1, then 8.8.8.8), then each nameserver without recursion, and accepts only an authoritative
+  (through Quad9 9.9.9.9, then 8.8.8.8), then each nameserver without recursion, and accepts only an authoritative
   NOERROR. The outcomes:
 
   | The record says | Running | Not running |
