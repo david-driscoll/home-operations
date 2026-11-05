@@ -522,8 +522,9 @@ const server = servers[setupHost.id];
 // internet and pushes a heartbeat that goes stale when it cannot connect
 // (components/netbird/relayProbe.ts).
 //
-// Off until #3051 has landed and its first stacks/unifi-network run has
-// written the record: `pulumi config set netbird-edge:homeRelayProbe true`.
+// `netbird-edge:homeRelayProbe`, on since 2026-11-05 (the record from #3051
+// exists: celestia's relay serves peers). Turn it off only while the record
+// is gone, or the heartbeats go stale.
 // The hosts run with --accept-dns=false and the name has no public record, so
 // the script resolves it on every run by asking the Technitium nodes directly
 // over the tailnet (`dig @<dns-* tailnet IP>`, falling back node to node;
@@ -615,6 +616,12 @@ export const hostAddresses = Object.fromEntries(hosts.map(h => [h.hostname, h.pu
 export const relayDomains = relays.map(r => r.host);
 export const availabilityDomain = homeAd;
 export const freeTier = FREE_TIER;
-/** Each host's first fence pass on the last deploy: `netbird-fence: <action> (<lease>)`. */
-export const fenceResults = Object.fromEntries(Object.entries(servers).map(([id, s]) => [id, s.restoreResult]));
+/**
+ * Each host's first fence pass ON THE LAST DEPLOY: `netbird-fence: <action> (<lease>)`.
+ * Not the live role. It goes stale at the next failover (#2892 finding 3: it
+ * showed cus as `standby (other)` while cus was serving). For the live role,
+ * read the DNS lease (`leaseAddress` is also deploy-time) or the fence's journal
+ * on each host.
+ */
+export const deployFenceResults = Object.fromEntries(Object.entries(servers).map(([id, s]) => [id, s.restoreResult]));
 export const breakGlassPrivateKey = pulumi.secret(breakGlassKey.privateKeyOpenssh);

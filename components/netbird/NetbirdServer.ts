@@ -4,7 +4,7 @@ import { all, ComponentResource, type ComponentResourceOptions, type Input, inte
 import { backupPaths, renderBackupScript, renderBackupUnits, renderResticEnv, renderRestoreScript } from "./backup.ts";
 import { FENCED_SERVICES, fencePaths, renderFenceScript, renderFenceUnits } from "./fence.ts";
 import { renderAlloyConfig } from "./metrics.ts";
-import { NETBIRD_DIR, parseSetupResponse, type RelayEndpoint, renderDashboardEnv, renderRelayEnv, renderServerConfig, type ServerSecrets, type SetupResult } from "./server.ts";
+import { dialAttemptsFor, NETBIRD_DIR, parseSetupResponse, type RelayEndpoint, renderDashboardEnv, renderRelayEnv, renderServerConfig, type ServerSecrets, type SetupResult, VM_READY_WAIT_SECONDS } from "./server.ts";
 
 export { NETBIRD_DIR } from "./server.ts";
 
@@ -121,10 +121,16 @@ export class NetbirdServer extends ComponentResource {
     if (fence && !args.backup) throw new Error(`NetbirdServer ${name}: a fenced server needs backup, which its promotion restores from`);
 
     // cloud-init installs Docker; on a fresh VM the first SSH session can
-    // arrive before it finishes.
+    // arrive before it finishes. And before that, the VM must join the
+    // tailnet: this step alone keeps dialling for VM_READY_WAIT_SECONDS
+    // (#2892 finding 2). Later steps run once it has answered.
     const ready = new remote.Command(
       `${name}-ready`,
-      { connection, create: "cloud-init status --wait >/dev/null 2>&1 || true; docker version --format '{{.Server.Version}}'", triggers: [hostKey] },
+      {
+        connection: { ...connection, dialErrorLimit: dialAttemptsFor(VM_READY_WAIT_SECONDS) },
+        create: "cloud-init status --wait >/dev/null 2>&1 || true; docker version --format '{{.Server.Version}}'",
+        triggers: [hostKey],
+      },
       { ...cro, dependsOn: args.dependsOn },
     );
 

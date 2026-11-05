@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { parse } from "yaml";
-import { parseSetupResponse, relayAddress, renderDashboardEnv, renderRelayEnv, renderServerConfig, stunUri } from "./server.ts";
+import { dialAttemptsFor, parseSetupResponse, relayAddress, renderDashboardEnv, renderRelayEnv, renderServerConfig, stunUri } from "./server.ts";
 
 const secrets = {
   relayAuthSecret: "relay+secret/with=chars",
@@ -194,5 +194,34 @@ describe("compose.yaml", () => {
     const command: string[] = services.traefik.command;
     assert.ok(command.includes("--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"));
     assert.ok(command.includes("--certificatesresolvers.relay.acme.storage=/letsencrypt/relay-acme.json"));
+  });
+});
+
+describe("dialAttemptsFor", () => {
+  // The provider's backoff: 100 ms, x1.5, capped at 5 s.
+  const waited = (attempts: number) => {
+    let total = 0;
+    let delay = 0.1;
+    for (let i = 1; i < attempts; i++) {
+      total += delay;
+      delay = Math.min(delay * 1.5, 5);
+    }
+    return total;
+  };
+
+  it("explains the drill: the default 10 attempts back off for under 8 s (the failed lookups made it ~11 s)", () => {
+    assert.ok(waited(10) < 8, `${waited(10)}`);
+  });
+
+  it("waits at least the asked time, and at most one extra 5 s retry", () => {
+    for (const seconds of [60, 300, 600]) {
+      const attempts = dialAttemptsFor(seconds);
+      assert.ok(waited(attempts) >= seconds, `${seconds}: ${waited(attempts)}`);
+      assert.ok(waited(attempts - 1) < seconds, `${seconds}: one fewer already waits long enough`);
+    }
+  });
+
+  it("is about 68 attempts for five minutes", () => {
+    assert.ok(dialAttemptsFor(300) >= 65 && dialAttemptsFor(300) <= 70, `${dialAttemptsFor(300)}`);
   });
 });

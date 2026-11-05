@@ -37,7 +37,7 @@ A NetBird peer on a Dockge host that carries client traffic into its site's LAN.
 _Avoid_: Subnet router, routing peer (when you mean a home gateway), bridge
 
 **In-cluster router**:
-A NetBird peer running inside Equestria that offers a second way to the cluster's entry points when the gateways are down.
+A NetBird peer running inside Equestria that offers a second way to the cluster's entry points when the gateways are down, and a further way out through the home exit node.
 _Avoid_: Operator, k8s gateway
 
 **Site LAN**:
@@ -45,7 +45,7 @@ The local network at one physical site (home, ocracoke, alpha-site's), reached t
 _Avoid_: Subnet, VLAN
 
 **Exit node**:
-A site stack's gateways, which a client device may choose to send all of its internet traffic through; the client uses whichever of them it reaches best.
+A site's way out to the internet that a client device may choose to send all of its internet traffic through: that site stack's gateways, plus the in-cluster routers for home. The client uses whichever of them it reaches best.
 _Avoid_: VPN server, egress
 
 **Relay**:
@@ -79,6 +79,14 @@ _Avoid_: Guard, lockout
 **Failover**:
 Moving the DNS lease from the primary host to the standby host because the primary has failed. It happens automatically.
 _Avoid_: Switchover (a planned move)
+
+**Promotion**:
+A host starting its management server because the DNS lease now points at it, after first restoring the newest snapshot.
+_Avoid_: Takeover, election
+
+**Demotion**:
+A host stopping its management server, and dropping the client connections it held, because the DNS lease no longer points at it. Part of every failover and failback.
+_Avoid_: Shutdown, fail-out
 
 **Failback**:
 The deliberate, manual return of the DNS lease to the primary host after a failover.

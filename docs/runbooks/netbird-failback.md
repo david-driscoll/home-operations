@@ -15,7 +15,11 @@ design is in [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md) §E an
   new holder serves the old holder's certificate (see "acme.json" below).
 - **Demotion.** A fence that sees the lease leave stops management and the backups, and moves its store and
   `acme.json` to `/opt/netbird/backup/demoted/<time>/` (the newest three are kept). A demoted host therefore
-  always restores the newest snapshot the next time it is promoted, never its own stale copy.
+  always restores the newest snapshot the next time it is promoted, never its own stale copy. Then it restarts
+  Traefik, which closes the clients' connections so they redial and follow the lease. Without that, clients
+  kept retrying on their open connection to the old host: about 18 minutes in the #2892 drill. The restart
+  also drops that host's relay clients for a moment; they reconnect to another relay. Every other stop of a
+  running management (`stop (shared)`, `stop (unknown)`) restarts Traefik too.
 - **Not knowing.** If no nameserver answers, a running management holds for 120 s, then stops. A stopped one
   never starts on an unknown lease.
 - **The watchdog** (`kubernetes/apps/netbird-system/failover-watchdog`, a CronJob every minute in Equestria)
@@ -120,5 +124,23 @@ resolver) and never leaves its host.
   one of them can.
 - **`restore failed; management stays stopped`.** The new holder can't read Garage over the tailnet. Check its
   Tailscale (`tailscale status`) and the `netbird-edge-backups` grant. The fence retries every 15 s.
+- **Clients still on the old host after a demotion.** Its fence log should show `restarted traefik to drop the
+  demoted management's clients` right after `demote (other)`. If it doesn't, restart Traefik there yourself
+  (`docker restart netbird-traefik`), then check the fence script on that host is the current one.
+
 - **`NetbirdFailoverWatchdogNotRunning`.** Read the last failed Job's log in `netbird-system`. While it's broken,
   nothing fails over automatically.
+
+## Rebuilding a host
+
+As done in the #2892 drill, with the host demoted (the lease elsewhere):
+
+1. **Delete the host's old tailnet device** first, so the rebuilt VM can take its name. Toolport's Tailscale tool
+   needs the admin risk level for this, so use the Tailscale OAuth client (admin console or API) instead.
+2. **Replace only the VM** from a local checkout of main: `pulumi up --replace
+   '<...>EdgeVm$azure-native:compute:VirtualMachine::netbird-<host>-vm'` in `stacks/netbird-edge`. The public IP
+   is protected and survives.
+3. **Expect the deploy to wait.** A rebuilt VM takes about 2 minutes to join the tailnet. The first deploy step
+   keeps dialling for 5 minutes (`VM_READY_WAIT_SECONDS`, `components/netbird/server.ts`) before it fails.
+4. **Check it came up passive:** its fence logs `standby (other)`, `docker ps` lists no `netbird-server`, and its
+   backup timer is off.

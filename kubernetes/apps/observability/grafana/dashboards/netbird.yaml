@@ -1,6 +1,7 @@
 ---
 # NetBird's own dashboards (docs.netbird.io/selfhosted/observability/dashboards),
-# from the netbird repo at the release the estate runs. Bump the tag with the
+# from the netbird repo at the release the estate runs. Management is vendored
+# (see its object below); Signal and Relay are pulled by URL. Bump the tag with the
 # NetBird Renovate group (components/netbird/compose.yaml), so the panels track
 # the metric names the servers actually export.
 #
@@ -37,7 +38,15 @@ spec:
     matchLabels:
       dashboards: "grafana"
   folder: "netbird"
-  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.0/infrastructure_files/observability/grafana/dashboards/management.json
+  # Vendored, not by URL: upstream's panel "Percentage of Recreated channels"
+  # names its expression datasource `${DS_EXPRESSION}`, an input nothing
+  # fills, so it errored. ./netbird/management-<release>.json is upstream's file
+  # at that release with that one uid set to `__expr__`. Refresh it with the
+  # NetBird Renovate group: components/netbird/dashboards.test.ts fails while
+  # its release differs from the netbird-server image.
+  configMapRef:
+    name: netbird-management-dashboard
+    key: management.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard

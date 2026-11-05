@@ -73,6 +73,32 @@ export function stunUri(host: string): string {
   return `stun:${bareHostname(host)}:${STUN_PORT}`;
 }
 
+/**
+ * How long the first SSH step waits for a fresh VM to join the tailnet. A
+ * rebuilt Azure VM took about 2 minutes in the #2892 drill; the provider's
+ * default of 10 dial attempts is about 11 s.
+ */
+export const VM_READY_WAIT_SECONDS = 300;
+
+/**
+ * The `dialErrorLimit` that makes @pulumi/command keep dialling for at least
+ * `seconds`. Its retries (pulumi sdk util/retry, used by
+ * provider/pkg/provider/remote/connection.go v1.3.0) wait 100 ms, then 1.5x
+ * longer each time, capped at 5 s. Only the waits are counted; each failed
+ * lookup adds a little, so the real wait is somewhat longer.
+ */
+export function dialAttemptsFor(seconds: number): number {
+  let elapsed = 0;
+  let delay = 0.1;
+  let attempts = 1;
+  while (elapsed < seconds) {
+    elapsed += delay;
+    delay = Math.min(delay * 1.5, 5);
+    attempts++;
+  }
+  return attempts;
+}
+
 /** A YAML double-quoted scalar. JSON's escaping is a subset of YAML's, so this is always valid. */
 const q = (value: string) => JSON.stringify(value);
 

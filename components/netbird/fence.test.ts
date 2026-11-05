@@ -186,7 +186,8 @@ describe("lease is another host's", () => {
     const r = run({ FAKE_A: OTHER, FAKE_RUNNING: "true", FAKE_TIMER_ENABLED: "1" }, withStore);
     assert.equal(r.last, "netbird-fence: demote (other)");
     assert.ok(r.calls.includes("systemctl disable --now netbird-backup.timer"));
-    assert.deepEqual(composeCalls(r), ["stop netbird-server dashboard"]);
+    // Traefik last: its restart is what makes the clients redial and follow the lease.
+    assert.deepEqual(composeCalls(r), ["stop netbird-server dashboard", "restart traefik"]);
     assert.ok(!existsSync(join(r.box.volume, "store.db")));
     assert.ok(!existsSync(join(r.box.volume, "store.db-wal")));
     assert.ok(!existsSync(join(r.box.acme, "acme.json")));
@@ -222,7 +223,7 @@ describe("lease is another host's", () => {
   it("stops, without archiving, when the record lists this host among others", () => {
     const r = run({ FAKE_A: `${OTHER} ${OWN}`, FAKE_RUNNING: "true", FAKE_TIMER_ENABLED: "1" }, withStore);
     assert.equal(r.last, "netbird-fence: stop (shared)");
-    assert.deepEqual(composeCalls(r), ["stop netbird-server dashboard"]);
+    assert.deepEqual(composeCalls(r), ["stop netbird-server dashboard", "restart traefik"]);
     assert.ok(existsSync(join(r.box.volume, "store.db")));
   });
 });
@@ -246,7 +247,7 @@ describe("lease is unknown", () => {
       writeFileSync(join(box.dir, "fence", "unresolved-since"), `${Math.floor(Date.now() / 1000) - 600}\n`);
     });
     assert.equal(r.last, "netbird-fence: stop (unknown)");
-    assert.deepEqual(composeCalls(r), ["stop netbird-server dashboard"]);
+    assert.deepEqual(composeCalls(r), ["stop netbird-server dashboard", "restart traefik"]);
     // Not archived: nobody is known to hold the lease.
     assert.ok(!existsSync(join(r.box.dir, "backup", "demoted")));
   });
