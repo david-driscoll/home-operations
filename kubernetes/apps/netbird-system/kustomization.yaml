@@ -24,3 +24,5 @@ resources:
   - ./failover-watchdog/ks.yaml
   # The home relay's certificate (D32); the relay itself runs on celestia.
   - ./relay-home/ks.yaml
+  # Health checks (D47): gateways, proxy domains, the nbidp proxy.
+  - ./health/ks.yaml

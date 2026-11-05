@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# NetBird health checks (D47, docs/plans/netbird-mirror.md "Monitoring"): a
+# CronJob that reads the management API and posts Alertmanager alerts for
+# disconnected gateways and DNS peers, unvalidated reverse-proxy domains and an
+# offline nbidp proxy cluster. Its own Kustomization, apart from the failover
+# watchdog's, so nothing here can hold up or break a failover.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app netbird-health
+  namespace: &namespace netbird-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/netbird-system/health
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    # The automation PAT.
+    - name: external-secrets
+      namespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

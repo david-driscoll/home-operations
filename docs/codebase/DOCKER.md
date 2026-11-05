@@ -109,6 +109,8 @@ SFTP access for remote backups. Presents Rclone-mounted storage as an SFTP targe
 
 Self-hosted DNS server. Provides DNS filtering, zone management, recursive resolution, and query logging. Configured as authoritative DNS for clusters and integrates with AdGuard for failover.
 
+Server-wide settings are managed in code by `stacks/unifi-network/technitium-settings.ts` (a `technitium.ServerSettings` singleton on the cluster primary, synced to the secondaries). Every field the provider defaults is pinned to its live value; recursion is `AllowOnlyForPrivateNetworks` (D46 in `docs/plans/netbird-mirror.md`), so LAN, NetBird, Tailscale and pod clients recurse and public sources do not. Web-service, certificate and TSIG settings stay hand-managed in the UI.
+
 ---
 
 ### Traefik (`traefik/`)

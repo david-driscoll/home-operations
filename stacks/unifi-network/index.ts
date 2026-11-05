@@ -8,6 +8,7 @@ import { configureNetbirdHomeRelay } from "./netbird-relay.ts";
 import { createTailnetEgressServices, discoverServerKinds } from "./tailnet-egress.ts";
 import { configureTailscaleApiToken } from "./tailscale-api-token.ts";
 import { createTailscaleAttDropFirewallRule } from "./tailscale-drop-firewall-rule.ts";
+import { configureTechnitiumServerSettings } from "./technitium-settings.ts";
 import { configureTechnitiumZones } from "./technitium-zone.ts";
 
 const globals = new GlobalResources({}, {});
@@ -16,6 +17,7 @@ assignTailscaleAcls(globals);
 configureLocalDns(globals);
 configureTechnitiumZones(globals);
 configureNetbirdHomeRelay(globals);
+configureTechnitiumServerSettings(globals);
 // Re-mints on every run of this stack (every 5 minutes,
 // kubernetes/apps/pulumi/unifi-network/stack.yaml's resyncFrequencySeconds)
 // -- see tailscale-api-token.ts's own header for why THIS stack, not
