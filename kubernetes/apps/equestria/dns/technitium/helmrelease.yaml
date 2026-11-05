@@ -38,7 +38,8 @@ spec:
           annotations:
             k8s.v1.cni.cncf.io/networks: technitium-dns-net
         initContainers:
-          # Gives the tailscale sidecar ONE path to peers inside the cluster.
+          # Gives the tailscale and netbird sidecars ONE path each to peers
+          # inside the cluster.
           #
           # This pod has two interfaces: Cilium eth0 and the ipvlan net1 on
           # the LAN. tailscaled advertised and used both, so a peer such as
@@ -50,7 +51,7 @@ spec:
           #
           # 1. tailscaled marks its own sockets with 0x80000/0xff0000 and
           #    installs its rules from priority 5210 up
-          #    (wgengine/router/osrouter/router_linux.go). Rule 5200 sends those
+          #    (wgengine/router/osrouter/router_linux.go). Rule 100 sends those
           #    packets through table 100, which holds only eth0's routes, so
           #    tailscale traffic never leaves via net1. LAN peers then reach
           #    this node through the node IP (Cilium masquerade) and stay direct.
@@ -60,6 +61,20 @@ spec:
           #    (wgengine/magicsock/endpoint.go handlePongConnLocked), so the
           #    second path would survive. It needs the fixed --port set on the
           #    sidecar below.
+          #
+          # The netbird sidecar has the same two paths, and gets the same fix:
+          #
+          # 3. NetBird marks its WireGuard and control sockets with 0x1BD00
+          #    (client/net/fwmark.go, ControlPlaneMark) and installs its own
+          #    rules at priority 105 (main, suppress_prefixlength 0) and 110
+          #    (client/internal/routemanager/systemops/systemops_linux.go).
+          #    Rule 105 would send tailscale's marked LAN traffic out net1
+          #    again, so both marks go to table 100 BEFORE it, at 100 and 101.
+          #    (Tailscale's rule was 5200; tailscaled only needs it below 5210.)
+          # 4. The same DROP for NetBird's fixed WireGuard port, 51821
+          #    (NB_WIREGUARD_PORT below). The sidecar also leaves net1 out of
+          #    its ICE candidates (NB_EXTRA_IFACE_BLACKLIST), so peers are
+          #    never offered that address in the first place.
           #
           # Fails open on purpose: every step logs and continues. A crashing
           # init container would keep the pod down and take LAN DNS with it,
@@ -78,11 +93,15 @@ spec:
                 ip -4 route show table main dev eth0 | xargs -I{} sh -c 'ip route replace {} dev eth0 table 100 2>/dev/null'
                 ip -4 route show table main dev eth0 | xargs -I{} sh -c 'ip route replace {} dev eth0 table 100' || echo "WARN: copying eth0 routes into table 100 failed"
                 ip rule del priority 5200 2>/dev/null
-                ip rule add priority 5200 fwmark 0x80000/0xff0000 lookup 100 || echo "WARN: ip rule 5200 failed"
+                ip rule del priority 100 2>/dev/null
+                ip rule add priority 100 fwmark 0x80000/0xff0000 lookup 100 || echo "WARN: ip rule 100 (tailscale) failed"
+                ip rule del priority 101 2>/dev/null
+                ip rule add priority 101 fwmark 0x1bd00 lookup 100 || echo "WARN: ip rule 101 (netbird) failed"
                 # iptables-nft, not iptables: the image points `iptables` at
                 # the legacy backend, and the Talos kernel has no legacy tables
                 # ("can't initialize iptables table `filter'").
                 iptables-nft -C INPUT -i net1 -p udp --dport 41641 -j DROP 2>/dev/null || iptables-nft -I INPUT 1 -i net1 -p udp --dport 41641 -j DROP || echo "WARN: net1 tailscale DROP failed"
+                iptables-nft -C INPUT -i net1 -p udp --dport 51821 -j DROP 2>/dev/null || iptables-nft -I INPUT 1 -i net1 -p udp --dport 51821 -j DROP || echo "WARN: net1 netbird DROP failed"
                 echo "table 100:"; ip -4 route show table 100
                 echo "rules:"; ip rule show
                 echo "INPUT:"; iptables-nft -S INPUT
@@ -222,6 +241,63 @@ spec:
                 memory: 64Mi
               limits:
                 memory: 256Mi
+          netbird:
+            # The NetBird twin of the tailscale sidecar (docs/plans/netbird-mirror.md
+            # D30), as on every Dockge Technitium node
+            # (docker/_common/technitium): the pod joins the NetBird overlay as
+            # dns-<cluster>, so NetBird clients resolve through technitium's
+            # listeners on its overlay address, with no home gateway in the path.
+            image:
+              repository: netbirdio/netbird
+              tag: 0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
+            # The image's entrypoint exits when `netbird up` fails (management
+            # unreachable, say), and a crashlooping sidecar would take the pod
+            # out of the dns Service. So it is rerun in place instead, and it
+            # idles if there is no setup key yet. Neither line uses a shell
+            # dollar sign: Flux post-build substitution would rewrite it.
+            command:
+              - /bin/bash
+              - -c
+              - |
+                if ! printenv NB_SETUP_KEY | grep -q . && ! test -s /var/lib/netbird/default.json; then
+                  echo "no NetBird setup key yet (secrets/third-party-tokens/netbird/setup-keys, property dns); idling"
+                  exec sleep infinity
+                fi
+                while true; do
+                  /usr/local/bin/netbird-entrypoint.sh || echo "netbird exited; restarting in 30s"
+                  sleep 30
+                done
+            env:
+              NB_MANAGEMENT_URL: https://netbird.${ROOT_DOMAIN}
+              NB_HOSTNAME: dns-${CLUSTER_CNAME}
+              # technitium owns :53 in this namespace; NetBird's resolver would
+              # collide with it. Clients get Technitium from management.
+              NB_DISABLE_DNS: "true"
+              # A nameserver, not a client.
+              NB_DISABLE_CLIENT_ROUTES: "true"
+              # Fixed so the tailscale-routing init container can DROP it on
+              # net1, and clear of tailscale's 41641. Change both together.
+              NB_WIREGUARD_PORT: "51821"
+              # Never offer the ipvlan LAN address as an ICE candidate: the
+              # same dual-path flapping the init container fixes for tailscale.
+              NB_EXTRA_IFACE_BLACKLIST: net1
+              NB_LOG_LEVEL: info
+              NB_LOG_FILE: console
+            # NB_SETUP_KEY (netbird-setup-key.yaml). envFrom, because only it
+            # takes `optional`: until stacks/netbird has written the key, the
+            # pod still starts and the sidecar idles (above).
+            envFrom:
+              - secretRef:
+                  name: ${APP}-netbird
+                  optional: true
+            securityContext:
+              privileged: true
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
 
     defaultPodOptions:
       securityContext:
@@ -310,6 +386,11 @@ spec:
             tailscale:
               - path: /var/lib/tailscale
                 subPath: .tailscale-state
+            # Same for the netbird peer: its key and overlay address survive
+            # a restore, so the nameserver group keeps pointing at it.
+            netbird:
+              - path: /var/lib/netbird
+                subPath: .netbird-state
       tls:
         type: secret
         name: technitium-tls
