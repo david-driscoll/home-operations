@@ -63,7 +63,7 @@ services:
         max-file: "2"
 
   dashboard:
-    image: netbirdio/dashboard:v2.96.0
+    image: netbirdio/dashboard:v2.96.0@sha256:340b13c00b84349572a2acc5605e907cb09250a9e6461c757097eabdb8e02f2c
     container_name: netbird-dashboard
     restart: unless-stopped
     networks: [netbird]
@@ -149,7 +149,7 @@ services:
   # SQLite's online `.backup` of the live store into ./backup/staging. Root,
   # because the store is root's and a WAL reader must write the -shm file.
   backup-sqlite:
-    image: keinos/sqlite3:3.54.1
+    image: keinos/sqlite3:3.54.1@sha256:b577e65892c6468d94b390097eda4488e05253470c161bdea68a05abb961fa17
     profiles: [backup]
     user: "0:0"
     network_mode: none
@@ -162,7 +162,7 @@ services:
   # an empty volume. MagicDNS directly: the VM runs tailscale with
   # --accept-dns=false, and the garage-s3 and uptime VIPs are tailnet names.
   backup-restic:
-    image: restic/restic:0.19.1
+    image: restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
     profiles: [backup]
     dns: [100.100.100.100]
     env_file:
