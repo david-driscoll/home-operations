@@ -68,7 +68,7 @@ export class PortForward extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Taken from the controller when not set, so adopting a `tcp`-only rule does not widen it to UDP (#544).
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. A new rule is created with `tcp_udp` when not set; an existing rule keeps the controller's value, so adopting a `tcp`-only rule does not widen it to UDP (#544).
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -153,7 +153,7 @@ export interface PortForwardState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Taken from the controller when not set, so adopting a `tcp`-only rule does not widen it to UDP (#544).
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. A new rule is created with `tcp_udp` when not set; an existing rule keeps the controller's value, so adopting a `tcp`-only rule does not widen it to UDP (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -198,7 +198,7 @@ export interface PortForwardArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Taken from the controller when not set, so adopting a `tcp`-only rule does not widen it to UDP (#544).
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. A new rule is created with `tcp_udp` when not set; an existing rule keeps the controller's value, so adopting a `tcp`-only rule does not widen it to UDP (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**

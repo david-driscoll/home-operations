@@ -130,7 +130,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly poeMode: pulumi.Output<string>;
     /**
-     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with `unifi.DevicePort`; do not declare the same port in both places, the last write wins and the other one drifts.
      */
     declare public readonly portOverrides: pulumi.Output<outputs.DevicePortOverride[] | undefined>;
     /**
@@ -341,7 +341,7 @@ export interface DeviceState {
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with `unifi.DevicePort`; do not declare the same port in both places, the last write wins and the other one drifts.
      */
     portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[] | undefined>;
     /**
@@ -460,7 +460,7 @@ export interface DeviceArgs {
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with `unifi.DevicePort`; do not declare the same port in both places, the last write wins and the other one drifts.
      */
     portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[] | undefined>;
     /**

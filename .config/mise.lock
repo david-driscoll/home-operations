@@ -160,43 +160,36 @@ specifiers = ["2.10.0"]
 
 [tools.flux2."platforms.linux-arm64"]
 checksum = "sha256:c3c435052e5e18156858bc73f26bcadb62821a6e30951b4b302beb4e65a532c2"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609576"
 
 [tools.flux2."platforms.linux-arm64-musl"]
 checksum = "sha256:c3c435052e5e18156858bc73f26bcadb62821a6e30951b4b302beb4e65a532c2"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609576"
 
 [tools.flux2."platforms.linux-x64"]
 checksum = "sha256:208dd7012c04fedeed5b2d0b6e63df3b15b1c34a381527811685c098bc9f8659"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609567"
 
 [tools.flux2."platforms.linux-x64-musl"]
 checksum = "sha256:208dd7012c04fedeed5b2d0b6e63df3b15b1c34a381527811685c098bc9f8659"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609567"
 
 [tools.flux2."platforms.macos-arm64"]
 checksum = "sha256:339c5dba218e2b0a04a0841d1dace6c00d65736dc3286038463fa86754ff6c53"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_darwin_arm64.tar.gz"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609572"
 
 [tools.flux2."platforms.macos-x64"]
 checksum = "sha256:23fc019f5b682c1ff6841a2ce06798b3c8e17452998cb9c2dd57a6440e6340ff"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_darwin_amd64.tar.gz"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609570"
 
 [tools.flux2."platforms.windows-x64"]
 checksum = "sha256:750250d4dcc828c395d7edaf72c1787d34af697fc3d7bc310d32955a5269823d"
-checksum_source = "mise-versions"
 url = "https://github.com/fluxcd/flux2/releases/download/v2.10.0/flux_2.10.0_windows_amd64.zip"
 url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/678609573"
 
@@ -475,43 +468,36 @@ specifiers = ["v0.59.0"]
 
 [tools."github:stacklok/toolhive"."platforms.linux-arm64"]
 checksum = "sha256:a4e790ae5b661f8250f75ab82c86a9bd237453b3166bf82e9b2bc7f305169bf9"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365674"
 
 [tools."github:stacklok/toolhive"."platforms.linux-arm64-musl"]
 checksum = "sha256:a4e790ae5b661f8250f75ab82c86a9bd237453b3166bf82e9b2bc7f305169bf9"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365674"
 
 [tools."github:stacklok/toolhive"."platforms.linux-x64"]
 checksum = "sha256:2bdfe1b22f9c7d9d6ac9e8ae17fdcb62ee59f95067779918d35886136d08ac40"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365673"
 
 [tools."github:stacklok/toolhive"."platforms.linux-x64-musl"]
 checksum = "sha256:2bdfe1b22f9c7d9d6ac9e8ae17fdcb62ee59f95067779918d35886136d08ac40"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365673"
 
 [tools."github:stacklok/toolhive"."platforms.macos-arm64"]
 checksum = "sha256:172d9ab12ef04b693fcfc62c583d74d7a17cf884c8bbdd994822f3e8dfef1e2b"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_darwin_arm64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365763"
 
 [tools."github:stacklok/toolhive"."platforms.macos-x64"]
 checksum = "sha256:bed97e624da28395929765d063074644ee97e1efb39c913e153bf023aceeedfc"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_darwin_amd64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365769"
 
 [tools."github:stacklok/toolhive"."platforms.windows-x64"]
 checksum = "sha256:a68881bcf25a105efa7cd3f587555de58eaaeacc0d1836017e3311345dbf9691"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.59.0/toolhive_0.59.0_windows_amd64.zip"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/686365663"
 
@@ -708,37 +694,31 @@ specifiers = ["1.18.11"]
 
 [tools.pipx."platforms.linux-arm64"]
 checksum = "sha256:37282fd4fad8700169a718f2ca8c469dbf4ffbf004972670cb468cf255106f07"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.11/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/693756457"
 
 [tools.pipx."platforms.linux-arm64-musl"]
 checksum = "sha256:37282fd4fad8700169a718f2ca8c469dbf4ffbf004972670cb468cf255106f07"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.11/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/693756457"
 
 [tools.pipx."platforms.linux-x64"]
 checksum = "sha256:37282fd4fad8700169a718f2ca8c469dbf4ffbf004972670cb468cf255106f07"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.11/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/693756457"
 
 [tools.pipx."platforms.linux-x64-musl"]
 checksum = "sha256:37282fd4fad8700169a718f2ca8c469dbf4ffbf004972670cb468cf255106f07"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.11/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/693756457"
 
 [tools.pipx."platforms.macos-arm64"]
 checksum = "sha256:37282fd4fad8700169a718f2ca8c469dbf4ffbf004972670cb468cf255106f07"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.11/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/693756457"
 
 [tools.pipx."platforms.macos-x64"]
 checksum = "sha256:37282fd4fad8700169a718f2ca8c469dbf4ffbf004972670cb468cf255106f07"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.11/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/693756457"
 
@@ -799,43 +779,36 @@ specifiers = ["7.6.9"]
 
 [tools.powershell-core."platforms.linux-arm64"]
 checksum = "sha256:02eb9991af447c7e7fe881acde195961afd397c40b8eb1c2b3856b84ec2d85f2"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-arm64.tar.gz"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675637777"
 
 [tools.powershell-core."platforms.linux-arm64-musl"]
 checksum = "sha256:02eb9991af447c7e7fe881acde195961afd397c40b8eb1c2b3856b84ec2d85f2"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-arm64.tar.gz"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675637777"
 
 [tools.powershell-core."platforms.linux-x64"]
 checksum = "sha256:1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-x64.tar.gz"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675638183"
 
 [tools.powershell-core."platforms.linux-x64-musl"]
 checksum = "sha256:1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-x64.tar.gz"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675638183"
 
 [tools.powershell-core."platforms.macos-arm64"]
 checksum = "sha256:a1c7e98ac403da4be5ba75c1c5855af272de7787a91d478c4267466fe58fc1af"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-osx-arm64.tar.gz"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675638480"
 
 [tools.powershell-core."platforms.macos-x64"]
 checksum = "sha256:a5aa2308a7e9664510a5c93d5b337fd524ff7dc14b8a637fb6144a2bbaa298ae"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-osx-x64.tar.gz"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675638726"
 
 [tools.powershell-core."platforms.windows-x64"]
 checksum = "sha256:ce7484804c0f0ad4dda10c958e71acdaf7eebfb22505c1b480f89e0e9f1da94d"
-checksum_source = "mise-versions"
 url = "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/PowerShell-7.6.9-win-x64.zip"
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/675639558"
 
@@ -1086,43 +1059,36 @@ specifiers = ["1.52.0"]
 
 [tools.typos."platforms.linux-arm64"]
 checksum = "sha256:63b7d4478d467a61fe47cdb3162f720c6797856e61a04f7e125d1cdc282488b8"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703151522"
 
 [tools.typos."platforms.linux-arm64-musl"]
 checksum = "sha256:63b7d4478d467a61fe47cdb3162f720c6797856e61a04f7e125d1cdc282488b8"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-aarch64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703151522"
 
 [tools.typos."platforms.linux-x64"]
 checksum = "sha256:6155d4114f9a0f5b8f6d4fda96266c9d5f6add71df80da7f684ee5e72eb14588"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703158772"
 
 [tools.typos."platforms.linux-x64-musl"]
 checksum = "sha256:6155d4114f9a0f5b8f6d4fda96266c9d5f6add71df80da7f684ee5e72eb14588"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703158772"
 
 [tools.typos."platforms.macos-arm64"]
 checksum = "sha256:90724dd2905cb1ce033343c71ed60e52fe898674f882803e3110cd228e09e1c5"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703166489"
 
 [tools.typos."platforms.macos-x64"]
 checksum = "sha256:8de057f425909b02c0184892539755d70ecc3244c4b214ae9382cedd691127e0"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-x86_64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703158123"
 
 [tools.typos."platforms.windows-x64"]
 checksum = "sha256:7da6eb1932ad86921420a7198dbc9e62a10bcd995144704dc19b81d3fb802182"
-checksum_source = "mise-versions"
 url = "https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-x86_64-pc-windows-msvc.zip"
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/703159242"
 

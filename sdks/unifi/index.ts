@@ -40,6 +40,11 @@ export type Device = import("./device").Device;
 export const Device: typeof import("./device").Device = null as any;
 utilities.lazyLoad(exports, ["Device"], () => require("./device"));
 
+export { DevicePortArgs, DevicePortState } from "./devicePort";
+export type DevicePort = import("./devicePort").DevicePort;
+export const DevicePort: typeof import("./devicePort").DevicePort = null as any;
+utilities.lazyLoad(exports, ["DevicePort"], () => require("./devicePort"));
+
 export { DnsRecordArgs, DnsRecordState } from "./dnsRecord";
 export type DnsRecord = import("./dnsRecord").DnsRecord;
 export const DnsRecord: typeof import("./dnsRecord").DnsRecord = null as any;
@@ -266,6 +271,8 @@ const _module = {
                 return new ContentFilter(name, <any>undefined, { urn })
             case "unifi:index/device:Device":
                 return new Device(name, <any>undefined, { urn })
+            case "unifi:index/devicePort:DevicePort":
+                return new DevicePort(name, <any>undefined, { urn })
             case "unifi:index/dnsRecord:DnsRecord":
                 return new DnsRecord(name, <any>undefined, { urn })
             case "unifi:index/dynamicDns:DynamicDns":
@@ -328,6 +335,7 @@ pulumi.runtime.registerResourceModule("unifi", "index/client", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/clientQosRate", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/contentFilter", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/device", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/devicePort", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallGroup", _module)

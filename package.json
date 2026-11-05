@@ -59,6 +59,7 @@
     "file:sdks/authentik": true,
     "file:sdks/coderd": true,
     "file:sdks/forgejo": true,
+    "file:sdks/netbird": true,
     "file:sdks/pbs": true,
     "file:sdks/tailscale": true,
     "file:sdks/technitium": true,

@@ -340,6 +340,39 @@ export interface DeviceOutletOverride {
     relayState?: pulumi.Input<boolean | undefined>;
 }
 
+export interface DevicePortDot1x {
+    /**
+     * 802.1X control mode.
+     */
+    ctrl?: pulumi.Input<string | undefined>;
+    /**
+     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     */
+    idleTimeout?: pulumi.Input<string | undefined>;
+}
+
+export interface DevicePortEgressRateLimit {
+    /**
+     * Enable egress rate limiting.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Egress rate limit in kbps.
+     */
+    kbps?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortLldpmed {
+    /**
+     * Enable LLDP-MED.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Enable LLDP-MED topology change notifications.
+     */
+    notifyEnabled?: pulumi.Input<boolean | undefined>;
+}
+
 export interface DevicePortOverride {
     /**
      * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
@@ -453,6 +486,10 @@ export interface DevicePortOverride {
      * Storm control settings.
      */
     stormctrl?: pulumi.Input<inputs.DevicePortOverrideStormctrl | undefined>;
+    /**
+     * STP edge port mode; valid values are `enabled`, `disabled`, and `auto`. An edge port (the UI's Edge port mode, `enabled`) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. `auto` detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
+     */
+    stpEdgeState?: pulumi.Input<string | undefined>;
     /**
      * STP port mode.
      */
@@ -577,6 +614,100 @@ export interface DevicePortOverrideStormctrlUcast {
      * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
      */
     rate?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortPortSecurity {
+    /**
+     * Enable port security.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * List of MAC addresses allowed when port security is enabled.
+     */
+    macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+}
+
+export interface DevicePortStormctrl {
+    /**
+     * Broadcast storm control.
+     */
+    bcast?: pulumi.Input<inputs.DevicePortStormctrlBcast | undefined>;
+    /**
+     * Multicast storm control.
+     */
+    mcast?: pulumi.Input<inputs.DevicePortStormctrlMcast | undefined>;
+    /**
+     * Storm control type; `level` or `rate`.
+     */
+    type?: pulumi.Input<string | undefined>;
+    /**
+     * Unknown unicast storm control.
+     */
+    ucast?: pulumi.Input<inputs.DevicePortStormctrlUcast | undefined>;
+}
+
+export interface DevicePortStormctrlBcast {
+    /**
+     * Enable Broadcast storm control.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Broadcast storm control level (percent), used when `type` is `level`.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * Broadcast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortStormctrlMcast {
+    /**
+     * Enable Multicast storm control.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Multicast storm control level (percent), used when `type` is `level`.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * Multicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortStormctrlUcast {
+    /**
+     * Enable Unknown unicast storm control.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Unknown unicast storm control level (percent), used when `type` is `level`.
+     */
+    level?: pulumi.Input<number | undefined>;
+    /**
+     * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate?: pulumi.Input<number | undefined>;
+}
+
+export interface DevicePortTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: pulumi.Input<string | undefined>;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceRadioTable {
@@ -1558,7 +1689,7 @@ export interface NetworkDhcpV6ServerDns {
 
 export interface NetworkIpv6 {
     /**
-     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     * List of additional IPv6 addresses for the network, in CIDR notation (e.g. a ULA prefix `fd7a:6c9e:4b28:4::1/64`). An empty list clears the aliases; when not set, the controller's aliases are kept (#699).
      */
     aliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -1577,6 +1708,10 @@ export interface NetworkIpv6 {
      * IPv6 Router Advertisement (RA) settings.
      */
     ra?: pulumi.Input<inputs.NetworkIpv6Ra | undefined>;
+    /**
+     * Whether the controller manages the IPv6 settings itself (`auto`) or uses the configured values (`manual`). The UniFi UI requires `manual` before IPv6 `aliases` can be set. Taken from the controller when not set (#699).
+     */
+    settingPreference?: pulumi.Input<string | undefined>;
     /**
      * The IPv6 static subnet of the network. Only used when `interface_type` is `static`.
      */

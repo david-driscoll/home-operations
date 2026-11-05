@@ -340,6 +340,39 @@ export interface DeviceOutletOverride {
     relayState: boolean;
 }
 
+export interface DevicePortDot1x {
+    /**
+     * 802.1X control mode.
+     */
+    ctrl: string;
+    /**
+     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     */
+    idleTimeout: string;
+}
+
+export interface DevicePortEgressRateLimit {
+    /**
+     * Enable egress rate limiting.
+     */
+    enabled: boolean;
+    /**
+     * Egress rate limit in kbps.
+     */
+    kbps: number;
+}
+
+export interface DevicePortLldpmed {
+    /**
+     * Enable LLDP-MED.
+     */
+    enabled: boolean;
+    /**
+     * Enable LLDP-MED topology change notifications.
+     */
+    notifyEnabled: boolean;
+}
+
 export interface DevicePortOverride {
     /**
      * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
@@ -453,6 +486,10 @@ export interface DevicePortOverride {
      * Storm control settings.
      */
     stormctrl: outputs.DevicePortOverrideStormctrl;
+    /**
+     * STP edge port mode; valid values are `enabled`, `disabled`, and `auto`. An edge port (the UI's Edge port mode, `enabled`) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. `auto` detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
+     */
+    stpEdgeState?: string;
     /**
      * STP port mode.
      */
@@ -577,6 +614,100 @@ export interface DevicePortOverrideStormctrlUcast {
      * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
      */
     rate: number;
+}
+
+export interface DevicePortPortSecurity {
+    /**
+     * Enable port security.
+     */
+    enabled: boolean;
+    /**
+     * List of MAC addresses allowed when port security is enabled.
+     */
+    macAddresses: string[];
+}
+
+export interface DevicePortStormctrl {
+    /**
+     * Broadcast storm control.
+     */
+    bcast: outputs.DevicePortStormctrlBcast;
+    /**
+     * Multicast storm control.
+     */
+    mcast: outputs.DevicePortStormctrlMcast;
+    /**
+     * Storm control type; `level` or `rate`.
+     */
+    type: string;
+    /**
+     * Unknown unicast storm control.
+     */
+    ucast: outputs.DevicePortStormctrlUcast;
+}
+
+export interface DevicePortStormctrlBcast {
+    /**
+     * Enable Broadcast storm control.
+     */
+    enabled: boolean;
+    /**
+     * Broadcast storm control level (percent), used when `type` is `level`.
+     */
+    level: number;
+    /**
+     * Broadcast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate: number;
+}
+
+export interface DevicePortStormctrlMcast {
+    /**
+     * Enable Multicast storm control.
+     */
+    enabled: boolean;
+    /**
+     * Multicast storm control level (percent), used when `type` is `level`.
+     */
+    level: number;
+    /**
+     * Multicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate: number;
+}
+
+export interface DevicePortStormctrlUcast {
+    /**
+     * Enable Unknown unicast storm control.
+     */
+    enabled: boolean;
+    /**
+     * Unknown unicast storm control level (percent), used when `type` is `level`.
+     */
+    level: number;
+    /**
+     * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
+     */
+    rate: number;
+}
+
+export interface DevicePortTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
 }
 
 export interface DeviceRadioTable {
@@ -1856,7 +1987,7 @@ export interface GetNetworkDhcpV6ServerDns {
 
 export interface GetNetworkIpv6 {
     /**
-     * List of IPv6 aliases for the network.
+     * List of additional IPv6 addresses for the network, in CIDR notation.
      */
     aliases: string[];
     /**
@@ -1871,6 +2002,10 @@ export interface GetNetworkIpv6 {
      * IPv6 Router Advertisement (RA) settings.
      */
     ra: outputs.GetNetworkIpv6Ra;
+    /**
+     * Whether the controller manages the IPv6 settings itself (`auto`) or uses the configured values (`manual`).
+     */
+    settingPreference: string;
     /**
      * The static IPv6 subnet (when `interface_type` is `static`).
      */
@@ -2291,9 +2426,9 @@ export interface NetworkDhcpV6ServerDns {
 
 export interface NetworkIpv6 {
     /**
-     * List of IPv6 aliases for the network. Not currently supported: the underlying UniFi API client has no field for this value, so a non-empty list is rejected at plan time (#413).
+     * List of additional IPv6 addresses for the network, in CIDR notation (e.g. a ULA prefix `fd7a:6c9e:4b28:4::1/64`). An empty list clears the aliases; when not set, the controller's aliases are kept (#699).
      */
-    aliases?: string[];
+    aliases: string[];
     /**
      * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
      */
@@ -2310,6 +2445,10 @@ export interface NetworkIpv6 {
      * IPv6 Router Advertisement (RA) settings.
      */
     ra: outputs.NetworkIpv6Ra;
+    /**
+     * Whether the controller manages the IPv6 settings itself (`auto`) or uses the configured values (`manual`). The UniFi UI requires `manual` before IPv6 `aliases` can be set. Taken from the controller when not set (#699).
+     */
+    settingPreference: string;
     /**
      * The IPv6 static subnet of the network. Only used when `interface_type` is `static`.
      */

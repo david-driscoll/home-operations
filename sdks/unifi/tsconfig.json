@@ -28,6 +28,7 @@
         "config/vars.ts",
         "contentFilter.ts",
         "device.ts",
+        "devicePort.ts",
         "dnsRecord.ts",
         "dynamicDns.ts",
         "firewallGroup.ts",
