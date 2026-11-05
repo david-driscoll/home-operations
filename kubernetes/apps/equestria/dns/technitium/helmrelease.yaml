@@ -281,6 +281,17 @@ spec:
               # listener, so the pod answered nothing over IPv4 on net1, the
               # tailnet or the pod IP (BlackboxProbeFailingCritical,
               # dns-equestria). Park the unused resolver on loopback, off :53.
+              #
+              # THIS ENV ONLY TAKES EFFECT ON A FRESH ENROLMENT. With a profile
+              # already on the config PVC, `netbird service run` reconnects
+              # from it and the entrypoint's `netbird up` prints "Already
+              # connected" and applies nothing, NB_* settings included. An
+              # existing peer takes a change like this only through a one-off
+              #   netbird down; netbird up --dns-resolver-address 127.0.0.1:5053
+              # in the netbird container, which writes CustomDNSAddress into
+              # /var/lib/netbird/default.json. Then restart the technitium
+              # container so it rebinds 0.0.0.0:53. Done on this pod
+              # 2026-11-05.
               NB_DNS_RESOLVER_ADDRESS: "127.0.0.1:5053"
               # A nameserver, not a client.
               NB_DISABLE_CLIENT_ROUTES: "true"
