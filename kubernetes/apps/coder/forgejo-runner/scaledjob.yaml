@@ -171,7 +171,7 @@ spec:
           # container has.
           - name: dind
             restartPolicy: Always
-            image: data.forgejo.org/oci/docker:29-dind@sha256:9e79b879b177fbd72c34376a3dd3d91747da5db49e1f560f76aea59561471977
+            image: data.forgejo.org/oci/docker:29-dind@sha256:d035bd30886e451b2727ef3cdb9af9a5c537a10d4bc5d18c08d0ffa597e46aeb
             env:
               - name: DOCKER_TLS_CERTDIR
                 value: /certs
@@ -238,7 +238,7 @@ spec:
           # status never fails the Job.
           - name: janitor
             restartPolicy: Always
-            image: data.forgejo.org/oci/docker:29-dind@sha256:9e79b879b177fbd72c34376a3dd3d91747da5db49e1f560f76aea59561471977
+            image: data.forgejo.org/oci/docker:29-dind@sha256:d035bd30886e451b2727ef3cdb9af9a5c537a10d4bc5d18c08d0ffa597e46aeb
             command: ["sh", "/scripts/janitor.sh"]
             env:
               # What `ubuntu-latest`, `ubuntu-24.04` and `docker` resolve to
