@@ -153,7 +153,9 @@ describe("compose.yaml CrowdSec wiring", () => {
     assert.ok(traefik.command.includes("--providers.file.filename=/etc/traefik/dynamic.yaml"));
     assert.ok(traefik.volumes.includes("./traefik-dynamic.yaml:/etc/traefik/dynamic.yaml:ro"));
     assert.ok(traefik.volumes.includes(`./crowdsec-bouncer.key:${TRAEFIK_BOUNCER_KEY_PATH}:ro`));
-    assert.deepEqual(traefik.dns, ["100.100.100.100", "1.1.1.1"]);
+    // MagicDNS for the LAPI's tailnet name, then Quad9 for everything else.
+    assert.deepEqual(traefik.dns, ["100.100.100.100", "9.9.9.9"]);
+    assert.deepEqual(crowdsec.dns, ["100.100.100.100", "9.9.9.9"]);
   });
 
   it("puts the dashboard, /api and /oauth2 through the middleware, and nothing else", () => {
