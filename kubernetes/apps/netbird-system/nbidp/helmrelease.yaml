@@ -93,6 +93,13 @@ spec:
                   secretKeyRef:
                     name: nbidp-proxy
                     key: NB_PROXY_TOKEN
+            # Declared so ./podmonitor.yaml can name it: the health server
+            # also serves /metrics (docs.netbird.io/selfhosted/observability/proxy).
+            # No Service: nothing but the kubelet and Prometheus dials it.
+            ports:
+              - name: telemetry
+                containerPort: 8080
+                protocol: TCP
             probes:
               liveness:
                 enabled: true

@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/podmonitor_v1.json
+#
+# The private reverse proxy's metrics (`proxy_*`,
+# docs.netbird.io/selfhosted/observability/proxy), from the health server on
+# :8080 that the probes already use. A PodMonitor, not a ServiceMonitor: the
+# proxy deliberately has no Service (helmrelease.yaml). Dex is not selected.
+# ciliumnetworkpolicy.yaml selects only Dex, so the proxy pods take this scrape.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: nbidp-proxy
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nbidp
+      app.kubernetes.io/controller: proxy
+  podMetricsEndpoints:
+    - port: telemetry
+      path: /metrics
+      interval: 60s

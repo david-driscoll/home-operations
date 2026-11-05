@@ -5,7 +5,7 @@
  */
 
 import { writeFileSync } from "node:fs";
-import type { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags, TailscaleTest } from "@openapi/tailscale-grants.js";
+import type { TailscaleCidr, TailscaleIp, TailscaleNetworkCapability, TailscaleService, TailscaleTags, TailscaleTest } from "@openapi/tailscale-grants.js";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
 import { authentikVip, type KubernetesCluster, kubernetesClusters, Roles } from "../../components/constants.ts";
@@ -658,6 +658,13 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           "That is how the NetBird server's 15-minute backups reach Garage and report to Gatus (components/netbird/backup.ts) -- restore the `netbird-edge-backups` grant.",
         );
       }
+      assertGrantPath(
+        json,
+        tag.netbirdEdge,
+        NETBIRD_EDGE_METRICS_SERVICE,
+        NETBIRD_EDGE_METRICS_PORTS.map(String),
+        "That is how the NetBird hosts' metrics reach Thanos (components/netbird/metrics.ts) -- restore the `netbird-edge-metrics` grant.",
+      );
       return json;
     });
 
@@ -920,6 +927,13 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
   // the rendered policy before it is written.
   manager.setGrant("netbird-edge-backups", { src: [tag.netbirdEdge], dst: [...NETBIRD_EDGE_BACKUP_SERVICES], ip: ports.garageS3Vip }, { accept: [tag.netbirdEdge] });
 
+  // The VM's Alloy remote-writes the NetBird server's and relay's metrics to
+  // Thanos (components/netbird/metrics.ts). The one service on the one port,
+  // not tag:observability on ports.observability as the Dockge and Proxmox
+  // hosts get: that would hand an internet-facing VM Loki, Alertmanager and
+  // the Prometheus UIs too. The test object below carries its accept.
+  manager.setGrant("netbird-edge-metrics", { src: [tag.netbirdEdge], dst: [NETBIRD_EDGE_METRICS_SERVICE], ip: NETBIRD_EDGE_METRICS_PORTS }, { accept: [tag.netbirdEdge] });
+
   // The home-relay probe on the Azure hosts (components/netbird/relayProbe.ts,
   // D47) resolves `relay-home.<root domain>` on every run by asking the
   // Technitium nodes directly: the hosts run --accept-dns=false and the name
@@ -936,7 +950,7 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
     {
       src: tag.netbirdEdge,
       proto: "tcp",
-      accept: [...NETBIRD_EDGE_BACKUP_SERVICES.map(service => `${service}:443`), `${tag.dns}:53`],
+      accept: [...NETBIRD_EDGE_BACKUP_SERVICES.map(service => `${service}:443`), `${NETBIRD_EDGE_METRICS_SERVICE}:19291`, `${tag.dns}:53`],
       deny: [
         `${tag.dns}:22`,
         `${tag.dns}:853`, // DoT, default-dns
@@ -947,6 +961,8 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
         `${tag.idp}:443`, // default-apps-access
         "idp:443", // member-idp
         `${tag.equestria}:443`, // member-cluster-web
+        `${tag.observability}:3100`, // Loki: metrics only, not the observability ports
+        `${tag.observability}:9093`, // Alertmanager
       ],
     } as TailscaleTest,
   ]);
@@ -958,6 +974,10 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
  * Gatus, published by DockgeLxc from its `uptime.<tailnet>` Host() rule.
  */
 const NETBIRD_EDGE_BACKUP_SERVICES: readonly TailscaleService[] = ["svc:garage-s3", "svc:uptime"];
+
+/** Thanos receive's remote-write door (kubernetes/apps/observability/thanos/tailnet-service.yaml), for the VM's metrics. */
+const NETBIRD_EDGE_METRICS_SERVICE: TailscaleService = "svc:thanos-receive";
+const NETBIRD_EDGE_METRICS_PORTS: TailscaleNetworkCapability[] = ["tcp:19291"];
 
 function configurePbsAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;

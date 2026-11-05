@@ -9,6 +9,7 @@ resources:
   - ./gpu.yaml
   - ./kubernetes.yaml
   - ./media.yaml
+  - ./netbird.yaml
   - ./network.yaml
   - ./node-monitoring.yaml
   - ./pecron.yaml

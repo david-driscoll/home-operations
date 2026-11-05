@@ -21,8 +21,10 @@
 # labels either: a Host() rule here would make DockgeLxc publish the name as a
 # CNAME to this host's LAN address, in Cloudflare too.
 #
-# No STUN (the server lists only the Azure relays' STUN), and its health and
-# metrics ports stay inside the container.
+# No STUN (the server lists only the Azure relays' STUN). Its health and
+# metrics ports are not published: celestia's Prometheus scrapes
+# netbird-relay:9090 over dockge_default
+# (docker/celestia/prometheus/config/scrape/netbird-relay.yml).
 services:
   netbird-relay:
     # Same release as the Azure relays and the gateways (the NetBird Renovate group).
@@ -36,6 +38,8 @@ services:
       - 33443:443/udp
     volumes:
       - ./tls:/etc/netbird-relay/tls:ro
+    networks:
+      - dockge_default
     labels:
       traefik.enable: false
     logging:
@@ -43,3 +47,6 @@ services:
       options:
         max-size: "50m"
         max-file: "2"
+networks:
+  dockge_default:
+    external: true

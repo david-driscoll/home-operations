@@ -1,0 +1,65 @@
+---
+# NetBird's own dashboards (docs.netbird.io/selfhosted/observability/dashboards),
+# from the netbird repo at the release the estate runs. Bump the tag with the
+# NetBird Renovate group (components/netbird/compose.yaml), so the panels track
+# the metric names the servers actually export.
+#
+# Where the series come from:
+#   - Management and Signal: the combined netbird-server on each netbird-edge
+#     host, shipped by its Alloy (components/netbird/metrics.ts) with
+#     cluster="netbird-edge", job="netbird-server", host=<tailnet name>. Alloy
+#     strips the combined server's `signal_` prefix and renames management's
+#     `endpoint` label to `exported_endpoint`, which is what these boards query.
+#     A standby's netbird-server is stopped by the fence, so only the primary
+#     shows up here.
+#   - Relay: job="netbird-relay" from the Azure hosts (cluster="netbird-edge")
+#     and from celestia (cluster="celestia",
+#     docker/celestia/prometheus/config/scrape/netbird-relay.yml).
+#
+# Not imported: management-enterprise.json (Enterprise only) and client.json
+# (reads a client's local metrics endpoint, off by default).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: netbird
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  title: "NetBird"
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: netbird-management
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "netbird"
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.0/infrastructure_files/observability/grafana/dashboards/management.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: netbird-signal
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "netbird"
+  datasources:
+    - datasourceName: Prometheus
+      inputName: DS_PROMETHEUS
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.0/infrastructure_files/observability/grafana/dashboards/signal.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: netbird-relay
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "netbird"
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.0/infrastructure_files/observability/grafana/dashboards/relay.json
