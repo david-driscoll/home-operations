@@ -13,7 +13,8 @@
  *
  *   home-web     the addresses member-home-subnet-access allows: the cluster's
  *                LAN IPs, every exported host's internalIp, the Authentik VIP
- *   home-dns     Technitium's LAN IPs
+ *   home-dns     every Technitium node's LAN IP (the fallback path, via the gateways)
+ *   dns-servers  the Technitium nodes' NetBird sidecars, a peer group (dns.ts)
  *   home-media   the cluster's LAN IPs (Jellyfin and the rest sit behind its Gateway)
  *   lan-home     the whole home LAN (admins only)
  *   gateways     the gateway peers themselves, for exit nodes
@@ -43,7 +44,10 @@ export interface AccessRule {
 export const USER_GROUPS = ["admins", "family", "friends", "media-managers"];
 
 /** The device groups stacks/netbird creates for setup-key peers, which rules may also name as sources. */
-export const DEVICE_GROUPS = ["apple-tv", "gateways", "k8s-routers"];
+export const DEVICE_GROUPS = ["apple-tv", "dns-servers", "gateways", "k8s-routers"];
+
+/** Tailscale.ports.dns less 443: Do53 and DoT/DoQ. DoH is each host's Traefik, outside the Technitium netns the sidecars share. */
+const DNS_PORTS = [53, 853];
 
 /** Tailscale.ports.web, as ports: 80/443 plus 8443 and 7687, each on TCP and UDP (HTTP/3). */
 const WEB_PORTS = [80, 443, 8443, 7687];
@@ -83,6 +87,24 @@ export const ACCESS_RULES: AccessRule[] = [
     destination: "home-dns",
     protocol: "tcp",
     ports: [53],
+    mirrors: ["default-dns"],
+  },
+  {
+    name: "dns-servers-udp",
+    description: "Technitium over the overlay, on each node's NetBird sidecar (Do53, DoQ)",
+    sources: [...USER_GROUPS, "apple-tv"],
+    destination: "dns-servers",
+    protocol: "udp",
+    ports: DNS_PORTS,
+    mirrors: ["default-dns"],
+  },
+  {
+    name: "dns-servers-tcp",
+    description: "Technitium over the overlay, on each node's NetBird sidecar (Do53 over TCP, DoT)",
+    sources: [...USER_GROUPS, "apple-tv"],
+    destination: "dns-servers",
+    protocol: "tcp",
+    ports: DNS_PORTS,
     mirrors: ["default-dns"],
   },
   {

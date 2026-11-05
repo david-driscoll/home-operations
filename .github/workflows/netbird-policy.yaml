@@ -5,7 +5,8 @@ name: "NetBird Policy"
 # The NetBird client-access policy and its drift guard (#2888). Fails when a
 # user-facing Tailscale grant in stacks/unifi-network/acl-manager.ts has no
 # NetBird twin in stacks/netbird/policy.ts and no TAILSCALE_ONLY reason.
-# Also the pure half of `mise run netbird:invite` (stacks/netbird/invite.ts).
+# Also the pure half of `mise run netbird:invite` (stacks/netbird/invite.ts)
+# and the Technitium nameserver selection (stacks/netbird/dns.ts).
 # The tests import only pure modules, so no `npm ci`.
 
 on:
@@ -53,7 +54,7 @@ jobs:
           node-version: "24"
 
       - name: Run policy tests
-        run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts stacks/netbird/invite.test.ts components/netbird/tokens.test.ts
+        run: node --test stacks/netbird/policy.test.ts stacks/netbird/policyDrift.test.ts stacks/netbird/sites.test.ts stacks/netbird/invite.test.ts stacks/netbird/dns.test.ts components/netbird/tokens.test.ts
 
   # The one check branch protection requires. `test` is skipped when nothing it
   # covers changed, and a skipped job never reports, so a required `Test`
