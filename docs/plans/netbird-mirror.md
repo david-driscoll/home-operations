@@ -249,7 +249,8 @@ authenticates with an admin service-user PAT from OpenBao.
 - **Groups and setup keys:** the four user groups invites place people in; one key per gateway and per operator,
   plus a reusable `apple-tv` key, stored in OpenBao.
 - **Networks:** site LAN resources, routing peers and exit routes.
-- **DNS:** the Technitium nameserver group.
+- **DNS:** the Technitium nameserver group. Technitium recurses only for private sources (D46), and the overlay
+  `10.100.0.0/16` is inside `10/8`, so NetBird clients keep recursion.
 - **Policy:** the client-access policy (§J).
 
 ## J. Client-access policy
@@ -291,13 +292,21 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
   family, friends and media-managers, never `All` or a device group.
 - **The proxy registers with an account-scoped token** (`POST /api/reverse-proxies/proxy-tokens`, minted by
   `dynamic/netbird/NetbirdProxyToken`, stored at `third-party-tokens/netbird/nbidp-proxy`). Its cluster address is
-  `nbidp.<root domain>`, which is also the service's domain, so no custom domain is registered.
+  `ek.<root domain>` (D38). `nbidp.<root domain>` is a custom domain on that cluster, validated by a public
+  Cloudflare CNAME `validation.nbidp` → `ek.<root domain>` (`stacks/netbird/proxyDomains.ts`). Until D38 the cluster
+  address was `nbidp.<root domain>` itself, which left the proxy able to serve that one name only.
+- **A cluster change re-creates the services.** Management pins a service's proxy cluster at create and keeps it on
+  every update with the same domain, so `NetbirdPrivateService` replaces a service whose target cluster changed,
+  deleting first, and its create deletes one it finds stranded on another cluster. Custom domains replace the same
+  way (`replaceOnChanges: targetCluster`). While the old and new clusters are both connected, a create that lands on
+  the old one is deleted again and the run fails, to be retried.
 - **No public DNS name and no inbound path.** A private service is served only on the proxy's WireGuard listener.
   Management pushes the record (to the proxy peers' tunnel IPs) only to peers in the access groups, and creates the
   80/443 policy itself. The certificate is DNS-01.
 - **The provider cannot declare a private service** (0.0.11 has no `private`/`access_groups`), so
-  `dynamic/netbird/NetbirdPrivateService` calls the API. Management only accepts it once the proxy is connected, so it
-  appears on the first `stacks/netbird` run after the proxy comes up.
+  `dynamic/netbird/NetbirdPrivateService` calls the API. Management only accepts it once the proxy is connected and
+  the domain validated. The stack always declares it, so a run that has to create it while the proxy is down fails
+  and the Stack retries within a minute.
 - **Every Dex identity header is `X-NetBird-User`.** Dex's authproxy connector reads five headers and four default to
   names the proxy passes through, which would let a user name someone else's email.
 - **Authentik's server calls Dex over a LAN back-channel** (decided 2026-11-03). Authentik isn't a NetBird peer, and
@@ -361,8 +370,40 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
+| D38 | 11-04 | The private proxy's cluster address is `ek.<root domain>`; `nbidp.<root domain>` becomes a custom domain on it (public CNAME `validation.nbidp` → `ek`), so the proxy can serve other names. The nbidp service is deleted and re-created on the new cluster: management never moves a service |
+| D45 | 11-04 | Forward-auth apps answer on all three names (`<app>.<root domain>`, `<app>.<tailnet>`, `<app>.app.<root domain>`): each extra name gets its own ProxyProvider and Application, **generated** from the same definition and `access_policy`, with `meta_hide` so the Library shows one entry per app (`components/authentik/proxyHostTwins.ts`) |
+| D46 | 11-04 | Technitium server settings are code (`stacks/unifi-network/technitium-settings.ts`, imported singleton); recursion goes `Allow` → `AllowOnlyForPrivateNetworks` (RFC 1918, CGNAT, link-local, loopback, non-global IPv6), every other provider-defaulted field pinned to its live value |
 | D47 | 11-04 | NetBird health alerting: a separate `netbird-health` CronJob posts Alertmanager alerts for disconnected gateways/DNS peers, unvalidated proxy domains and an offline nbidp cluster; Gatus checks the Azure relays over TLS; the Azure hosts resolve the home relay live through the Technitium nodes (a port-53-only `tag:netbird-edge` -> `tag:dns` grant), probe it and push a Gatus heartbeat; NetBird warnings reach Pushover quietly (priority -1, no sound) (Monitoring) |
 | D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
+| D49 | 11-04 | Every Technitium node (equestria, celestia, alpha-site, luna, skystar) gets a NetBird sidecar in its network namespace, as it has a Tailscale one, so clients resolve over the overlay without the home gateways. One reusable, non-ephemeral, non-expiring `dns-servers` setup key (OpenBao `setup-keys#/dns`) places all five in the `dns-servers` peer group |
+| D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
+| D51 | 11-04 | The nameserver group is chosen live each run (`stacks/netbird/dns.ts`): enrolled sidecars' overlay IPs first, then the other nodes' LAN IPs, in the order equestria, celestia, alpha-site, luna, skystar; at most three, the limit management v0.82.0 enforces (`validateNSList`) |
+
+### Forward-auth apps on every name (D45, 2026-11-04)
+
+authentik's `ProxyProvider.external_host` is one string, and the outpost serves only providers an Application is
+bound to (`ProxyProvider.objects.filter(application__isnull=False)`). So an app on the `tailscale-user` chain (and,
+with #3052, `netbird-as-tailscale-user`) needs a provider **and** an application per hostname, or that name answers
+400 "no app for hostname". `forward_domain` would need only one provider, but it puts one policy on the whole cookie
+domain and these apps each carry their own `access_policy`.
+
+- **Generated, not declared.** For every proxy app with a `spec.tailnetUrl`, `components/authentik.ts` creates
+  `<name>-tailnet` and, where the manager has `netbirdApps` (stacks/system only), `<name>-app`. The `.app` host is
+  derived from the tailnet one by `netbirdAppUrl` (`components/netbird/appRedirectUris.ts`), the same function the
+  OAuth redirect URIs use, so the two can't disagree. The Dockge hosts get the tailnet twin only.
+- **Hidden.** Each twin's Application has `meta_hide: true` (authentik 2026.5+). The slug is the primary's plus
+  `-tailnet` / `-app`; the name gets " (Tailnet)" / " (NetBird)" for admins. The launch URL stays the primary's.
+- **Same policy.** The twin Applications are built by the same `createAuthentikApplication` from the same definition,
+  so their group bindings are the primary's. Both outposts (stacks/system and `DockgeLxc`) collect providers through
+  `outpostProxyProviders`, so a twin can't be created without being served.
+- **Nothing else changes.** All the providers are `forward_single`, with an empty cookie domain: the session cookie
+  is per hostname, and each name signs in once through the shared Authentik session. The outpost's
+  `authentik_host_browser` is Authentik's root-domain name, which NetBird clients reach over the LAN route (§B). The
+  outpost's own Ingress/HTTPRoute gains the extra hosts. The `netbird` entrypoint has no `asDefault`, so that Ingress
+  doesn't bind there, and on the NetBird name `/outpost.goauthentik.io/*` goes through the `<app>-netbird`
+  IngressRoute and its forward-auth like every other path.
+- This restores what `2ee326c1` (2026-09-15) removed. That commit removed the visible "(Tailnet)" duplicates, but it
+  also left the tailnet providers without an application, so the tailnet names were answering 400.
 
 ### Azure primary (#3001, 2026-11-03)
 
