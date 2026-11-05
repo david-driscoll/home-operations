@@ -249,7 +249,8 @@ authenticates with an admin service-user PAT from OpenBao.
 - **Groups and setup keys:** the four user groups invites place people in; one key per gateway and per operator,
   plus a reusable `apple-tv` key, stored in OpenBao.
 - **Networks:** site LAN resources, routing peers and exit routes.
-- **DNS:** the Technitium nameserver group.
+- **DNS:** the Technitium nameserver group. Technitium recurses only for private sources (D46), and the overlay
+  `10.100.0.0/16` is inside `10/8`, so NetBird clients keep recursion.
 - **Policy:** the client-access policy (§J).
 
 ## J. Client-access policy
@@ -361,6 +362,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
+| D46 | 11-04 | Technitium server settings are code (`stacks/unifi-network/technitium-settings.ts`, imported singleton); recursion goes `Allow` → `AllowOnlyForPrivateNetworks` (RFC 1918, CGNAT, link-local, loopback, non-global IPv6), every other provider-defaulted field pinned to its live value |
 
 ### Azure primary (#3001, 2026-11-03)
 
