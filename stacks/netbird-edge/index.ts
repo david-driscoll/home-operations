@@ -31,9 +31,11 @@ import { GlobalResources } from "components/globals.ts";
 import { addUptimeGatus, awaitOutput, toGatusKey } from "components/helpers.ts";
 import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET, resticRepository } from "components/netbird/backup.ts";
 import { assertFenceFasterThanFlip } from "components/netbird/fence.ts";
+import { homeRelayDomain } from "components/netbird/homeRelay.ts";
 import { NetbirdRelayProbe } from "components/netbird/NetbirdRelayProbe.ts";
 import { NetbirdServer, type NetbirdServerArgs } from "components/netbird/NetbirdServer.ts";
 import { dnsResolvers, RELAY_GATUS_GROUP, relayProbeHeartbeat, relayTlsEndpoint } from "components/netbird/relayProbe.ts";
+import type { RelayEndpoint } from "components/netbird/server.ts";
 import { instanceAlarms } from "components/oci/alarms.ts";
 import { BOOT_VOLUME_BACKUP_COPIES, bootVolumeBackupSchedule, FREE_TIER, freeTierQuotaStatements, retainedBackupCopies } from "components/oci/freeTier.ts";
 import { OciFreeTierInstance } from "components/oci/OciFreeTierInstance.ts";
@@ -357,8 +359,11 @@ const hosts: EdgeHost[] = [
   ...azureVms.map(a => ({ id: a.spec.id, hostname: a.hostname, publicIpAddress: a.machine.publicIpAddress, hostKey: a.machine.vmId, machine: a.machine.vm, relayDomain: a.relayDomain })),
 ];
 // Every server lists every relay (and their STUN): the embedded ones are off
-// once any is listed (components/netbird/server.ts).
-const relays = hosts.flatMap(h => (h.relayDomain ? [h.relayDomain] : []));
+// once any is listed (components/netbird/server.ts). Plus the home relay on
+// celestia (D32, components/netbird/homeRelay.ts), which no host here serves
+// and which has no STUN: its site forwards 443 only.
+const homeRelay: RelayEndpoint = { host: homeRelayDomain(root), stun: false };
+const relays: RelayEndpoint[] = [...hosts.flatMap(h => (h.relayDomain ? [{ host: h.relayDomain }] : [])), homeRelay];
 // The failover watchdog flips after five failed one-minute checks
 // (kubernetes/apps/netbird-system/failover-watchdog/watchdog.ts); a host that
 // lost DNS must have stopped its management before then.
@@ -596,7 +601,7 @@ export const publicIpAddress = primary.publicIpAddress;
 export const primaryHost = primary.hostname;
 export const leaseAddress = liveLease.content;
 export const hostAddresses = Object.fromEntries(hosts.map(h => [h.hostname, h.publicIpAddress]));
-export const relayDomains = relays;
+export const relayDomains = relays.map(r => r.host);
 export const availabilityDomain = homeAd;
 export const freeTier = FREE_TIER;
 /** Each host's first fence pass on the last deploy: `netbird-fence: <action> (<lease>)`. */

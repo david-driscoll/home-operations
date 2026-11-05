@@ -1,0 +1,45 @@
+# The NetBird relay at home (docs/plans/netbird-mirror.md, D32).
+#
+# `relay-home.<root domain>`, beside the two on the Azure hosts
+# (components/netbird/compose.yaml). Every management server lists it
+# (stacks/netbird-edge), so relayed traffic with a home peer on the controlling
+# side stays here instead of crossing Azure's metered egress.
+#
+# Reached from the internet on WAN 443, TCP and UDP, through the UniFi port
+# forward in stacks/unifi-network/netbird-relay.ts, which lands on this
+# host's 33443. The name is private: a Technitium record for the home WAN
+# address, also from that file, and nothing in public DNS. The name and ports
+# live in components/netbird/homeRelay.ts; homeRelay.test.ts checks this file
+# against them.
+#
+# Unlike the Azure relays there is no Traefik in front. The relay terminates
+# TLS itself, so it serves QUIC on 443/udp as well as WebSocket. Its
+# certificate is DNS-01, since Let's Encrypt cannot resolve a private name:
+# cert-manager issues it in Equestria (kubernetes/apps/netbird-system/relay-home),
+# stacks/unifi-network copies it to OpenBao, and ./tls renders it from there.
+# init.sh restarts the relay when a renewal changes those files. No Traefik
+# labels either: a Host() rule here would make DockgeLxc publish the name as a
+# CNAME to this host's LAN address, in Cloudflare too.
+#
+# No STUN (the server lists only the Azure relays' STUN), and its health and
+# metrics ports stay inside the container.
+services:
+  netbird-relay:
+    # Same release as the Azure relays and the gateways (the NetBird Renovate group).
+    image: netbirdio/relay:0.82.0@sha256:8f6b9e4193653ede89e83dd4aa4e2cf2562579b3e2481dcf259a7ab28bcd5fa1
+    container_name: netbird-relay
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - 33443:443/tcp
+      - 33443:443/udp
+    volumes:
+      - ./tls:/etc/netbird-relay/tls:ro
+    labels:
+      traefik.enable: false
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "2"
