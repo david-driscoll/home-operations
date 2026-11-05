@@ -45,7 +45,9 @@ spec:
         #
         # An app whose definition has no authentik `proxy:` block MUST NOT use
         # `tailscale-user` -- the outpost has no application for that hostname
-        # and answers 400 "no app for hostname".
+        # and answers 400 "no app for hostname". The same goes for one with no
+        # `tailnetUrl`: that is what makes components/authentik generate the
+        # hidden provider/application pair for the tailnet name (D45).
         #
         # Cross-namespace is allowed: providers.kubernetesCRD.allowCrossNamespace.
         - name: ${TAILSCALE_MIDDLEWARE:=tailscale-local}
