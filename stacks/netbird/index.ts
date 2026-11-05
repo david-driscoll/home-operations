@@ -42,8 +42,8 @@ import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolic
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
 import { NetbirdUserAutoGroup } from "dynamic/netbird/NetbirdUserAutoGroup.ts";
-import { DNS_SERVER_GROUP, enrolledDnsPeers, type LivePeer, selectNameservers, technitiumLanIps } from "./dns.ts";
 import { declareAppServices } from "./app-services.ts";
+import { DNS_SERVER_GROUP, enrolledDnsPeers, type LivePeer, selectNameservers, technitiumLanIps } from "./dns.ts";
 import { type LiveCluster, type LiveDomain, type LiveService, liveCustomDomain, privateServiceAccessGroups, privateServiceRequest, serviceOnCluster } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { clusterCnames, declareCustomDomain, validationCname } from "./proxyDomains.ts";
