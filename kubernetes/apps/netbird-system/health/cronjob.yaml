@@ -44,9 +44,10 @@ spec:
                   value: gateways,dns-servers
                 - name: NETBIRD_CUSTOM_DOMAINS
                   value: app.${ROOT_DOMAIN},nbidp.${ROOT_DOMAIN}
-                # nbidp's NB_PROXY_DOMAIN (stacks/netbird/nbidp.ts).
+                # The proxy's cluster address, NB_PROXY_DOMAIN in ../nbidp
+                # (components/netbird/nbidp.ts nbidpClusterAddress; D38).
                 - name: NETBIRD_PROXY_CLUSTER
-                  value: nbidp.${ROOT_DOMAIN}
+                  value: ek.${ROOT_DOMAIN}
                 - name: ALERTMANAGER_URL
                   value: http://alertmanager-operated.observability.svc.cluster.local:9093
               envFrom:
