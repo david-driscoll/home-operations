@@ -390,30 +390,6 @@ const entryResource = (name: string, address: string) => new netbird.NetworkReso
 entryResource("equestria-internal-gateway", `${internalGatewayIp()}/32`);
 entryResource("authentik-vip", `${authentikVip}/32`);
 
-// Equestria as an exit node too, through the same three routing peers: the
-// counterpart of the cluster's Tailscale exit node (the `primary-connector`
-// Connector). Shaped like the site stacks' `exit-<stack>` routes (D53):
-// offered to the user groups, never applied by default, and the route's own
-// ACL lets the traffic out. `users-exit-equestria` (policy.ts) is what
-// connects users to the routers. Internet traffic leaves through the pod's
-// node, SNATed by Cilium, so it exits on the home WAN like `exit-home`, but
-// stays up while the Dockge gateways are down.
-new netbird.Route(
-  "exit-equestria",
-  {
-    networkId: "exit-equestria",
-    description: "Exit through Equestria's in-cluster routing peers (kubernetes/apps/netbird-system/router)",
-    network: "0.0.0.0/0",
-    peerGroups: [groups.k8sRouters.id],
-    groups: userGroupIds,
-    accessControlGroups: userGroupIds,
-    masquerade: true,
-    skipAutoApply: true,
-    enabled: true,
-  },
-  { ...opts, dependsOn: [defaultPolicyRemoval] },
-);
-
 // ── 9. Client-access policy (#2888) ───────────────────────────────────────
 // policy.ts says who reaches what by NAME, and every name is a group this
 // stack creates (3 and 4). Checked before anything is declared: a source
@@ -434,14 +410,25 @@ if (unresolved.length > 0) throw new Error(`stacks/netbird/policy.ts names group
 // routes: offered only to the user groups, and the route's own ACL is what
 // lets their traffic out. The `users-exit-nodes` rule below is what connects
 // them to the gateway.
+//
+// `exit-home` is also served by Equestria's in-cluster routing peers
+// (`k8s-routers`, kubernetes/apps/netbird-system/router; D54). They leave on
+// the same home WAN, through their node's Cilium SNAT, so they are one more
+// way out of the same site and keep the home exit up while the Dockge
+// gateways are down. `users-exit-equestria` (policy.ts) connects users to
+// them. Exit only: they are not in `gateway-home`, so they never route `lan-home`.
+const EXIT_EXTRA_PEER_GROUPS: Record<string, { label: string; group: netbird.Group }[]> = {
+  home: [{ label: "Equestria's routers", group: groups.k8sRouters }],
+};
 for (const [stack, hosts] of Object.entries(GATEWAY_SITE_STACKS)) {
+  const extra = EXIT_EXTRA_PEER_GROUPS[stack] ?? [];
   new netbird.Route(
     `exit-${stack}`,
     {
       networkId: `exit-${stack}`,
-      description: `Exit through the ${stack} site stack's gateways (${hosts.join(", ")})`,
+      description: `Exit through the ${stack} site stack's gateways (${[...hosts, ...extra.map(e => e.label)].join(", ")})`,
       network: "0.0.0.0/0",
-      peerGroups: [gatewayStackGroups[stack].id],
+      peerGroups: [gatewayStackGroups[stack].id, ...extra.map(e => e.group.id)],
       groups: userGroupIds,
       accessControlGroups: userGroupIds,
       masquerade: true,
