@@ -57,6 +57,13 @@ spec:
       type: Literal
       literal:
         value: "${INTERNAL_IP}"
+    # Equestria Technitium's LAN VIP, for home-dns and the LAN nameserver
+    # fallback. Same mechanism, from cluster-secrets (SOPS); stacks/netbird
+    # fails closed without it.
+    TECHNITIUM_VIP:
+      type: Literal
+      literal:
+        value: "${TECHNITIUM_VIP}"
     AWS_ACCESS_KEY_ID:
       type: Secret
       secret:

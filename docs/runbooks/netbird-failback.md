@@ -74,8 +74,9 @@ Do it when the original primary is healthy again, at a quiet time: clients lose 
    ssh root@netbird-azure-eus2.<tailnet> 'ls /opt/netbird/backup/demoted/; docker volume inspect -f "{{ .Mountpoint }}" netbird_netbird_data | xargs ls'
    ```
 
-   `demoted/` should hold a recent directory and the volume no `store.db`. If `store.db` is there (the primary
-   was rebuilt, or never got the demotion), move it aside yourself before step 3: `mv <mountpoint>/*.db*
+   `demoted/` should hold a recent directory and the volume no `store.db`. A rebuilt primary has an empty
+   volume and needs nothing here. If `store.db` is there, the primary never got the demotion (for example its
+   fence timer was stopped, as in a drill), so move it aside yourself before step 3: `mv <mountpoint>/*.db*
    /opt/netbird/backup/demoted/manual/`.
 3. **Flip the lease with the config switch.** Set `netbird-edge:primary: azure-eus2` in
    `stacks/netbird-edge/Pulumi.netbird-edge.yaml` and merge it. The Stack run patches the record.
