@@ -4,6 +4,10 @@ sourceTitle: "Cluster: Skystar"
 key: skystar
 title: Skystar
 type: dockge
+# Remote on purpose even while skystar sits on the home LAN: it is expected to go
+# back off-site, and this also picks its dockge address, authentik domain and
+# relaxed alerting. The temporary home-LAN state is skystarOnHomeLan in
+# stacks/ocracoke/index.ts.
 location: remote
 domainPrefix: skystar
 authentikPrefix: canterlot

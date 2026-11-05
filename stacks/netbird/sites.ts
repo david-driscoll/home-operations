@@ -1,27 +1,58 @@
 /**
- * Which gateway hosts route which site LAN for NetBird clients (#2887,
+ * Which gateways route which site LAN for NetBird clients (#2887, D53,
  * docs/plans/netbird-mirror.md §G). Pure, so `node --test` covers the rules.
  *
- * Gateways are per Dockge host (`gateway-<cluster key>`), and a host's site is
- * decided here, not by its setup key: moving a host is a one-line edit.
+ * Gateways are grouped per Dockge SITE STACK (`gateway-<site stack>`): the
+ * Pulumi stack that deploys the hosts (stacks/home, stacks/gulf-of-mexico,
+ * stacks/ocracoke). Each host keeps its own setup key, `gateway-<cluster key>`,
+ * which places its peer in its stack's group. Which stack routes which site
+ * LAN is decided here, not by the setup keys: moving a stack is a one-line edit.
  */
+
+/** Each Dockge site stack and the cluster keys of the hosts it deploys, each running a netbird-gateway container. */
+export const GATEWAY_SITE_STACKS: Record<string, string[]> = {
+  // stacks/home: Cluster: Celestia and Cluster: Alpha Site.
+  home: ["alpha-site", "celestia"],
+  // stacks/gulf-of-mexico: Cluster: Luna.
+  "gulf-of-mexico": ["luna"],
+  // stacks/ocracoke: Cluster: Skystar.
+  ocracoke: ["skystar"],
+};
+
+/** The NetBird group a site stack's gateway peers sit in. */
+export const gatewayGroupName = (siteStack: string): string => `gateway-${siteStack}`;
+
+/** The name a gateway peer enrols with (NB_HOSTNAME in docker/_common/netbird-gateway/.env), and its setup key's. */
+export const gatewayPeerName = (host: string): string => `gateway-${host}`;
+
+/** Every gateway host, by cluster key, in site-stack order. */
+export function gatewayHosts(siteStacks: Record<string, string[]>): string[] {
+  return Object.values(siteStacks).flat();
+}
+
+/** The site stack that deploys `host`, or undefined. */
+export function siteStackOf(siteStacks: Record<string, string[]>, host: string): string | undefined {
+  return Object.entries(siteStacks).find(([, hosts]) => hosts.includes(host))?.[0];
+}
 
 export interface Site {
   /** LAN prefixes this site's gateways route. */
   cidrs: string[];
-  /** Dockge cluster keys whose netbird-gateway container routes them. */
-  gateways: string[];
+  /** Site stacks (GATEWAY_SITE_STACKS keys) whose gateway group routes them. */
+  gatewayStacks: string[];
 }
 
 /**
- * Where each gateway physically is today. luna and skystar sit on the home LAN
- * (`lunaIsRemote = false` in stacks/gulf-of-mexico, `skystarOnHomeLan = true`
- * in stacks/ocracoke); when one moves, move it here too. gulf-of-mexico's LAN
- * is not recorded in this repo, so it gets a site once luna goes back there.
+ * Where each site stack's gateways physically are today. Every gateway host
+ * is on the home LAN: luna (`lunaIsRemote = false` in stacks/gulf-of-mexico)
+ * and skystar (`skystarOnHomeLan = true` in stacks/ocracoke) too, so the home
+ * LAN is routed by all three groups. When one moves, move its stack here.
+ * gulf-of-mexico's LAN is not recorded in this repo, so it gets a site once
+ * luna goes back there.
  */
 export const SITES: Record<string, Site> = {
-  home: { cidrs: ["10.10.0.0/16"], gateways: ["alpha-site", "celestia", "luna", "skystar"] },
-  ocracoke: { cidrs: ["192.168.1.0/24"], gateways: [] },
+  home: { cidrs: ["10.10.0.0/16"], gatewayStacks: ["home", "gulf-of-mexico", "ocracoke"] },
+  ocracoke: { cidrs: ["192.168.1.0/24"], gatewayStacks: [] },
 };
 
 function toRange(cidr: string): [number, number] {
@@ -32,16 +63,25 @@ function toRange(cidr: string): [number, number] {
   return [start, start + size - 1];
 }
 
-/** Every reason `sites` cannot be applied. Empty means it is consistent. */
-export function siteProblems(sites: Record<string, Site>, gatewayHosts: readonly string[]): string[] {
+/** Every reason `sites` and `siteStacks` cannot be applied. Empty means they are consistent. */
+export function siteProblems(sites: Record<string, Site>, siteStacks: Record<string, string[]>): string[] {
   const problems: string[] = [];
+  const stackOfHost = new Map<string, string>();
+  for (const [stack, hosts] of Object.entries(siteStacks)) {
+    if (hosts.length === 0) problems.push(`site stack ${stack} has no gateway hosts`);
+    for (const host of hosts) {
+      const other = stackOfHost.get(host);
+      if (other) problems.push(`${host} is in both site stacks ${other} and ${stack}`);
+      else stackOfHost.set(host, stack);
+    }
+  }
   const owner = new Map<string, string>();
   for (const [name, site] of Object.entries(sites)) {
-    for (const host of site.gateways) {
-      if (!gatewayHosts.includes(host)) problems.push(`${host} has no gateway setup key (add it to GATEWAY_HOSTS)`);
-      const other = owner.get(host);
-      if (other) problems.push(`${host} routes both ${other} and ${name}`);
-      else owner.set(host, name);
+    for (const stack of site.gatewayStacks) {
+      if (!(stack in siteStacks)) problems.push(`${stack} is not a gateway site stack (add it to GATEWAY_SITE_STACKS)`);
+      const other = owner.get(stack);
+      if (other) problems.push(`${stack} routes both ${other} and ${name}`);
+      else owner.set(stack, name);
     }
   }
   const prefixes = Object.entries(sites).flatMap(([name, site]) => site.cidrs.map(cidr => ({ name, cidr, range: toRange(cidr) })));
@@ -54,7 +94,30 @@ export function siteProblems(sites: Record<string, Site>, gatewayHosts: readonly
   return problems;
 }
 
-/** Sites with at least one gateway: the only ones that get a Network and router. */
+/** Sites with at least one gateway stack: the only ones that get a Network and router. */
 export function routedSites(sites: Record<string, Site>): [string, Site][] {
-  return Object.entries(sites).filter(([, site]) => site.gateways.length > 0);
+  return Object.entries(sites).filter(([, site]) => site.gatewayStacks.length > 0);
+}
+
+/** The fields of a GET /api/peers entry gatewayGroupPeers reads. */
+export interface LiveGatewayPeer {
+  id: string;
+  name: string;
+  groups?: { name: string }[];
+}
+
+/**
+ * The peer ids a site stack's gateway group should hold: the ids it already
+ * holds live, in their live order, then every enrolled gateway peer of the
+ * stack's hosts that is missing. Setup keys add a newly enrolled peer to the
+ * group outside Pulumi, so the declared list must never drop a live member,
+ * or the next update (or a refresh) would take that peer out again. A gateway
+ * peer is a peer named `gateway-<host>` in the `gateways` group, which only
+ * the gateway setup keys place peers in; a host with none enrolled is left
+ * out and joins through its key.
+ */
+export function gatewayGroupPeers(hosts: readonly string[], peers: readonly LiveGatewayPeer[], liveMembers: readonly string[], gatewaysGroup = "gateways"): string[] {
+  const names = new Set(hosts.map(gatewayPeerName));
+  const enrolled = peers.filter(peer => names.has(peer.name) && (peer.groups ?? []).some(group => group.name === gatewaysGroup)).map(peer => peer.id);
+  return [...new Set([...liveMembers, ...enrolled])];
 }

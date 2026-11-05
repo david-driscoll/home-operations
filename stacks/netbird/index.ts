@@ -10,8 +10,8 @@
  *   2. the built-in allow-all `Default` policy removed;
  *   3. the user groups invites place people in;
  *   4. device groups and the setup keys that place peers in them;
- *   5. site LANs routed through the gateway containers, and each gateway an
- *      exit node (#2887);
+ *   5. site LANs routed through the gateway containers, and each site
+ *      stack's gateways an exit node (#2887, D53);
  *   6. Technitium as every peer's nameserver: each node's NetBird sidecar
  *      once it has enrolled, its LAN address until then (dns.ts);
  *   7. a service user whose PAT the in-cluster operator uses (#2889);
@@ -48,7 +48,7 @@ import { type LiveCluster, type LiveDomain, type LiveService, liveCustomDomain, 
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { clusterCnames, declareCustomDomain, validationCname } from "./proxyDomains.ts";
 import { type LiveUser, selfAccessPlan } from "./selfAccess.ts";
-import { routedSites, SITES, siteProblems } from "./sites.ts";
+import { GATEWAY_SITE_STACKS, gatewayGroupName, gatewayGroupPeers, gatewayHosts, type LiveGatewayPeer, routedSites, SITES, siteProblems, siteStackOf } from "./sites.ts";
 
 /** The groups invites place people in; one list, shared with the client-access policy. */
 export { USER_GROUPS };
@@ -106,21 +106,53 @@ const groups = {
 };
 
 /**
- * The Dockge hosts that run a gateway container (#2887), by cluster key. Keyed
- * per HOST, not per site: hosts move between sites (luna and skystar are both
- * on the home LAN today), and a peer keeps the groups its setup key gave it.
- * Which host routes which site is decided by the Network routers instead.
+ * The Dockge hosts that run a gateway container (#2887), by cluster key. Each
+ * keeps its own setup key, `gateway-<host>`; the peers are grouped per Dockge
+ * site stack instead (D53, sites.ts), one `gateway-<site stack>` group for the
+ * hosts stacks/home, stacks/gulf-of-mexico and stacks/ocracoke deploy.
  */
-export const GATEWAY_HOSTS = ["alpha-site", "celestia", "luna", "skystar"];
+export const GATEWAY_HOSTS = gatewayHosts(GATEWAY_SITE_STACKS);
+
+const problems = siteProblems(SITES, GATEWAY_SITE_STACKS);
+if (problems.length > 0) throw new Error(`stacks/netbird/sites.ts is inconsistent:\n  - ${problems.join("\n  - ")}`);
 
 const setupKey = (name: string, autoGroup: netbird.Group, extra: Partial<netbird.SetupKeyArgs> = {}) =>
   new netbird.SetupKey(name, { name, type: "reusable", autoGroups: [autoGroup.id], expirySeconds: 0, usageLimit: 0, ...extra }, { ...opts, dependsOn: [defaultPolicyRemoval] });
 
-const gatewayHostGroups = Object.fromEntries(GATEWAY_HOSTS.map(host => [host, group(`gateway-${host}`)]));
+// The live peers and groups, read on every run: a setup key's auto groups
+// apply only at enrolment, so the peers enrolled before D53 sit in the old
+// per-host groups, and this is how they reach the site-stack ones.
+const liveGateways = pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
+  const [peers, liveGroups] = await Promise.all([netbirdGet<LiveGatewayPeer[]>(url, token, "/api/peers"), netbirdGet<{ name: string; peers?: { id: string }[] }[]>(url, token, "/api/groups")]);
+  return { peers, liveGroups };
+});
+
+// One group per site stack. `peers` is declared, so it moves the enrolled
+// gateways in; it is the live membership plus every enrolled gateway peer of
+// the stack's hosts (gatewayGroupPeers), never less, so a peer a setup key
+// placed since the last run is not taken out again by this one.
+const gatewayStackGroups: Record<string, netbird.Group> = Object.fromEntries(
+  Object.entries(GATEWAY_SITE_STACKS).map(([stack, hosts]) => {
+    const name = gatewayGroupName(stack);
+    // Peer ids are not secret; only the token that read them is.
+    const memberIds = pulumi.unsecret(liveGateways).apply(({ peers, liveGroups }) => {
+      const members = liveGroups.find(live => live.name === name)?.peers?.map(peer => peer.id) ?? [];
+      const ids = gatewayGroupPeers(hosts, peers, members);
+      pulumi.log.info(`${name}: ${ids.length} gateway peer(s) for ${hosts.join(", ")}`);
+      return ids;
+    });
+    return [stack, new netbird.Group(name, { name, peers: memberIds }, { ...opts, dependsOn: [defaultPolicyRemoval] })];
+  }),
+);
+const gatewayGroupOf = (host: string): netbird.Group => {
+  const stack = siteStackOf(GATEWAY_SITE_STACKS, host);
+  if (!stack) throw new Error(`${host} is in no gateway site stack`);
+  return gatewayStackGroups[stack];
+};
 
 const setupKeys = {
   // Read by docker/_common/netbird-gateway/.env as `#/gateway-${CLUSTER_KEY}`.
-  ...Object.fromEntries(GATEWAY_HOSTS.map(host => [`gateway-${host}`, setupKey(`gateway-${host}`, groups.gateways, { autoGroups: [groups.gateways.id, gatewayHostGroups[host].id] }).key])),
+  ...Object.fromEntries(GATEWAY_HOSTS.map(host => [`gateway-${host}`, setupKey(`gateway-${host}`, groups.gateways, { autoGroups: [groups.gateways.id, gatewayGroupOf(host).id] }).key])),
   // Router pods come and go; ephemeral peers are cleaned up when they do.
   k8s_router: setupKey("k8s-router", groups.k8sRouters, { ephemeral: true }).key,
   // TVs have no user to log in with SSO, so they enrol by key (#2886).
@@ -134,8 +166,6 @@ const setupKeys = {
 // ── 5. Site LANs and exit nodes (#2887) ─────────────────────────────────
 // NetBird's built-in group of every peer.
 const all = netbird.getGroupOutput({ name: "All" }, { provider });
-const problems = siteProblems(SITES, GATEWAY_HOSTS);
-if (problems.length > 0) throw new Error(`stacks/netbird/sites.ts is inconsistent:\n  - ${problems.join("\n  - ")}`);
 
 // One resource group per site LAN (`lan-<site>`, admins only), plus the home
 // LAN's specific endpoints, the groups #2888's member rules target.
@@ -152,7 +182,7 @@ for (const [site, config] of routedSites(SITES)) {
   // Equal metrics: each client picks the lowest-latency gateway, and the
   // others take over when it goes. Masquerade, so LAN services see the
   // gateway host and need no return route to 10.100.0.0/16.
-  new netbird.NetworkRouter(`lan-${site}`, { networkId: network.id, peerGroups: config.gateways.map(host => gatewayHostGroups[host].id), masquerade: true, metric: 9999, enabled: true }, opts);
+  new netbird.NetworkRouter(`lan-${site}`, { networkId: network.id, peerGroups: config.gatewayStacks.map(stack => gatewayStackGroups[stack].id), masquerade: true, metric: 9999, enabled: true }, opts);
 }
 
 /**
@@ -374,18 +404,20 @@ const sourceGroupIds: Record<string, pulumi.Output<string>> = {
 const unresolved = [...unresolvedSources(ACCESS_RULES, Object.keys(sourceGroupIds)), ...DEVICE_GROUPS.filter(name => !(name in sourceGroupIds))];
 if (unresolved.length > 0) throw new Error(`stacks/netbird/policy.ts names groups this stack does not create:\n  - ${unresolved.join("\n  - ")}`);
 
-// Every gateway is an exit node the user groups can pick (never applied by
-// default). Exit nodes are still legacy routes: offered only to the user
-// groups, and the route's own ACL is what lets their traffic out. The
-// `users-exit-nodes` rule below is what connects them to the gateway.
-for (const host of GATEWAY_HOSTS) {
+// Each site stack's gateways are one exit node the user groups can pick
+// (never applied by default), `exit-<site stack>`; the client uses whichever
+// of the group's peers it reaches best (D53). Exit nodes are still legacy
+// routes: offered only to the user groups, and the route's own ACL is what
+// lets their traffic out. The `users-exit-nodes` rule below is what connects
+// them to the gateway.
+for (const [stack, hosts] of Object.entries(GATEWAY_SITE_STACKS)) {
   new netbird.Route(
-    `exit-${host}`,
+    `exit-${stack}`,
     {
-      networkId: `exit-${host}`,
-      description: `Exit through ${host}`,
+      networkId: `exit-${stack}`,
+      description: `Exit through the ${stack} site stack's gateways (${hosts.join(", ")})`,
       network: "0.0.0.0/0",
-      peerGroups: [gatewayHostGroups[host].id],
+      peerGroups: [gatewayStackGroups[stack].id],
       groups: userGroupIds,
       accessControlGroups: userGroupIds,
       masquerade: true,
@@ -557,6 +589,7 @@ async function netbirdGet<T>(url: string, token: string, path: string): Promise<
 
 export const networkRange = settings.networkRange;
 export const deviceGroups = pulumi.output(Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.id])));
-export const gatewayGroups = pulumi.output(Object.fromEntries(Object.entries(gatewayHostGroups).map(([key, value]) => [key, value.id])));
+/** Each site stack's gateway group id, by site stack (D53). */
+export const gatewayGroups = pulumi.output(Object.fromEntries(Object.entries(gatewayStackGroups).map(([key, value]) => [key, value.id])));
 /** The Equestria entry's destination group (#2889), which policy.ts's `equestria-entry` rules target. */
 export const equestriaEntryGroup = equestriaEntry.id;
