@@ -12,10 +12,14 @@
 # is Holm's own, expanded at startup from its container's environment.
 #
 # This took over the holm-config ConfigMap from `holm`, which used to generate
-# it from a copy of the file in this repo. Same name, so the mount is
-# unchanged. The owner labels move here on the first apply, and `holm` (which
-# waits on this) then drops the ConfigMap from its inventory without deleting
-# it: Flux garbage-collects only objects still labelled as its own.
+# it from a copy of the file in this repo (same name, so the mount is
+# unchanged). The `dependsOn` that `holm` gained in the same commit did NOT
+# protect that hand-over: on 2026-11-05 `holm` reconciled the new revision
+# with its old spec, before cluster-apps applied the dependsOn, and pruned
+# the ConfigMap. It was re-created by hand with this Kustomization's owner
+# labels and adopted on the next apply. Moving ownership of a live object
+# between Kustomizations needs two PRs, or a prune-disabled annotation on the
+# old owner first.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
