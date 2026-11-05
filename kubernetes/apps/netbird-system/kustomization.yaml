@@ -26,3 +26,5 @@ resources:
   - ./relay-home/ks.yaml
   # Health checks (D47): gateways, proxy domains, the nbidp proxy.
   - ./health/ks.yaml
+  # Restarts the nbidp proxy when its management stream stalls (watchdog.ts).
+  - ./proxy-watchdog/ks.yaml

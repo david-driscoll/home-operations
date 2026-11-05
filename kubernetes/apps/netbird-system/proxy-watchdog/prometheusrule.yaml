@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# Restarts page from the watchdog, straight to Alertmanager
+# (NetbirdProxyRestarted; watchdog.ts alertFor), and netbird-health's
+# NetbirdProxyClusterOffline covers an outage a restart did not fix. This is
+# the other half, as for the failover watchdog: a watchdog that stopped
+# running restarts nothing, silently.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: netbird-proxy-watchdog
+spec:
+  groups:
+    - name: netbird-proxy-watchdog
+      rules:
+        # One run a minute; ten without a success means it is broken (it
+        # exits non-zero only when a Kubernetes call fails: the management API
+        # being down is a hold, not a failure). The second branch covers a
+        # CronJob that has never succeeded.
+        - alert: NetbirdProxyWatchdogNotRunning
+          annotations:
+            summary: The nbidp proxy watchdog has not succeeded in 10 minutes.
+            description: >-
+              netbird-proxy-watchdog last succeeded {{ $value | humanizeDuration }} ago, so an nbidp
+              proxy whose management stream stalled would stay down until someone restarts it.
+              Read the failed Job's log (`kubectl -n netbird-system logs job/<job>`).
+          expr: |
+            (
+              time() - max by (namespace, cronjob) (
+                kube_cronjob_status_last_successful_time{namespace="netbird-system", cronjob="netbird-proxy-watchdog"}
+              )
+              or
+              (
+                time() - max by (namespace, cronjob) (
+                  kube_cronjob_created{namespace="netbird-system", cronjob="netbird-proxy-watchdog"}
+                )
+              )
+              unless on (namespace, cronjob)
+              kube_cronjob_status_last_successful_time{namespace="netbird-system", cronjob="netbird-proxy-watchdog"}
+            ) > 600
+          for: 1m
+          labels:
+            severity: warning

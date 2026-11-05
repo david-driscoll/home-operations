@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Every minute: ask management whether the nbidp proxy's cluster is online,
+# and after OFFLINE_RUNS_TO_RESTART offline runs in a row rollout-restart
+# nbidp-proxy (watchdog.ts). Forbid: two runs at once would both count, and
+# could both restart.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: netbird-proxy-watchdog
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 50
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 55
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: netbird-proxy-watchdog
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: watchdog
+              image: node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+              # Node strips the types itself.
+              command: ["node", "/app/watchdog.ts"]
+              env:
+                - name: NETBIRD_URL
+                  value: https://netbird.${ROOT_DOMAIN}
+                # The proxy's cluster address, NB_PROXY_DOMAIN in ../nbidp
+                # (components/netbird/nbidp.ts nbidpClusterAddress; D38).
+                - name: NETBIRD_PROXY_CLUSTER
+                  value: ek.${ROOT_DOMAIN}
+                # The proxy controller of the nbidp HelmRelease; rbac.yaml
+                # names it too.
+                - name: PROXY_DEPLOYMENT
+                  value: nbidp-proxy
+                - name: STATE_CONFIGMAP
+                  value: netbird-proxy-watchdog-state
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: ALERTMANAGER_URL
+                  value: http://alertmanager-operated.observability.svc.cluster.local:9093
+                # The API server's CA, for the Kubernetes calls.
+                - name: NODE_EXTRA_CA_CERTS
+                  value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              envFrom:
+                - secretRef:
+                    name: netbird-proxy-watchdog-api-key
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: app
+              configMap:
+                name: netbird-proxy-watchdog

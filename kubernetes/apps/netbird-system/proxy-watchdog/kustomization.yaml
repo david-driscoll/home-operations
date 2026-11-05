@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./rbac.yaml
+  - ./state.yaml
+  - ./cronjob.yaml
+  - ./prometheusrule.yaml
+configMapGenerator:
+  # The watchdog itself, a real .ts file so tsc, biome and node --test see it
+  # (watchdog.test.ts beside it is not shipped). The content-hash suffix stays,
+  # so an edit rolls out on the next run.
+  - name: netbird-proxy-watchdog
+    files:
+      - ./watchdog.ts
+    options:
+      # Flux envsubst must not read the code (as for failover-watchdog).
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

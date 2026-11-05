@@ -1,0 +1,9 @@
+---
+# The watchdog's memory between runs: consecutive offline runs and the last
+# restart. No `data` here on purpose (as for failover-watchdog): Flux applies
+# this server-side and owns only the fields it sets, so the watchdog's own
+# writes survive every reconcile. Deleting it resets the count, harmlessly.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netbird-proxy-watchdog-state
