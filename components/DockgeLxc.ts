@@ -20,6 +20,7 @@ import { installTailscaleLxc, type TailscaleMonitor } from "components/tailscale
 import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
 import { unique } from "moderndash";
 import * as yaml from "yaml";
+import { outpostProxyProviders } from "./authentik/proxyHostTwins.ts";
 import type { AuthentikApplicationManager } from "./authentik.ts";
 import { type PostgresTenantDeclaration, type PostgresTenantResources, parseDatabasesFile, parseStackPostgresDeclaration, renderPostgresEnvLocal, validatePostgresTenants } from "./dockerStackPostgres.ts";
 import type { GlobalResources } from "./globals.ts";
@@ -929,14 +930,8 @@ export class DockgeLxc extends ComponentResource {
 
   private async createOutpost(depends: ApplicationReturn[]) {
     const applicationManager = this.args.host.applicationManager;
-    // Both hostnames' providers. A tailnet twin that is not attached to the
-    // outpost is a provider the outpost will not answer for, which is exactly the
-    // 400 "no app for hostname" this pair exists to fix -- so it has to be
-    // collected here and not just created.
-    const proxyProviders = depends
-      .filter(z => z.isProxy)
-      .flatMap(z => [z.provider, z.tailnetProvider])
-      .filter(p => p !== undefined);
+    // Every hostname's provider, twins included (components/authentik/proxyHostTwins.ts).
+    const proxyProviders = outpostProxyProviders(depends);
 
     if (proxyProviders.length === 0) {
       return;

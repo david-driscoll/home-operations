@@ -362,10 +362,37 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
 | D32 | 11-04 | **One home relay**: `netbirdio/relay` on celestia's Dockge host as `relay-home.<root domain>`, WAN 443 (TCP and UDP) forwarded to it, listed by every server beside the Azure relays. A private Technitium record for the home WAN address, no public record; a DNS-01 certificate from Equestria, copied to OpenBao. Reverses the earlier call to skip home relays: Azure egress is capped by the subscription's spending limit. Only celestia, not every Dockge host |
+| D45 | 11-04 | Forward-auth apps answer on all three names (`<app>.<root domain>`, `<app>.<tailnet>`, `<app>.app.<root domain>`): each extra name gets its own ProxyProvider and Application, **generated** from the same definition and `access_policy`, with `meta_hide` so the Library shows one entry per app (`components/authentik/proxyHostTwins.ts`) |
 | D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
 | D49 | 11-04 | Every Technitium node (equestria, celestia, alpha-site, luna, skystar) gets a NetBird sidecar in its network namespace, as it has a Tailscale one, so clients resolve over the overlay without the home gateways. One reusable, non-ephemeral, non-expiring `dns-servers` setup key (OpenBao `setup-keys#/dns`) places all five in the `dns-servers` peer group |
 | D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
 | D51 | 11-04 | The nameserver group is chosen live each run (`stacks/netbird/dns.ts`): enrolled sidecars' overlay IPs first, then the other nodes' LAN IPs, in the order equestria, celestia, alpha-site, luna, skystar; at most three, the limit management v0.82.0 enforces (`validateNSList`) |
+
+### Forward-auth apps on every name (D45, 2026-11-04)
+
+authentik's `ProxyProvider.external_host` is one string, and the outpost serves only providers an Application is
+bound to (`ProxyProvider.objects.filter(application__isnull=False)`). So an app on the `tailscale-user` chain (and,
+with #3052, `netbird-as-tailscale-user`) needs a provider **and** an application per hostname, or that name answers
+400 "no app for hostname". `forward_domain` would need only one provider, but it puts one policy on the whole cookie
+domain and these apps each carry their own `access_policy`.
+
+- **Generated, not declared.** For every proxy app with a `spec.tailnetUrl`, `components/authentik.ts` creates
+  `<name>-tailnet` and, where the manager has `netbirdApps` (stacks/system only), `<name>-app`. The `.app` host is
+  derived from the tailnet one by `netbirdAppUrl` (`components/netbird/appRedirectUris.ts`), the same function the
+  OAuth redirect URIs use, so the two can't disagree. The Dockge hosts get the tailnet twin only.
+- **Hidden.** Each twin's Application has `meta_hide: true` (authentik 2026.5+). The slug is the primary's plus
+  `-tailnet` / `-app`; the name gets " (Tailnet)" / " (NetBird)" for admins. The launch URL stays the primary's.
+- **Same policy.** The twin Applications are built by the same `createAuthentikApplication` from the same definition,
+  so their group bindings are the primary's. Both outposts (stacks/system and `DockgeLxc`) collect providers through
+  `outpostProxyProviders`, so a twin can't be created without being served.
+- **Nothing else changes.** All the providers are `forward_single`, with an empty cookie domain: the session cookie
+  is per hostname, and each name signs in once through the shared Authentik session. The outpost's
+  `authentik_host_browser` is Authentik's root-domain name, which NetBird clients reach over the LAN route (§B). The
+  outpost's own Ingress/HTTPRoute gains the extra hosts. The `netbird` entrypoint has no `asDefault`, so that Ingress
+  doesn't bind there, and on the NetBird name `/outpost.goauthentik.io/*` goes through the `<app>-netbird`
+  IngressRoute and its forward-auth like every other path.
+- This restores what `2ee326c1` (2026-09-15) removed. That commit removed the visible "(Tailnet)" duplicates, but it
+  also left the tailnet providers without an application, so the tailnet names were answering 400.
 
 ### Azure primary (#3001, 2026-11-03)
 
