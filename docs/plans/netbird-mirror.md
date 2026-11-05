@@ -388,7 +388,8 @@ domain and these apps each carry their own `access_policy`.
   IngressRoute and its forward-auth like every other path.
 - This restores what `2ee326c1` (2026-09-15) removed. That commit removed the visible "(Tailnet)" duplicates, but it
   also left the tailnet providers without an application, so the tailnet names were answering 400.
-
+| D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
+ 
 ### Azure primary (#3001, 2026-11-03)
 
 OCI's Ashburn has had no free-tier compute for this tenancy in any AD (#3037), so David moved the primary to
