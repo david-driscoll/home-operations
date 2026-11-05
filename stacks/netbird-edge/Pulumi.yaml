@@ -1,5 +1,5 @@
 name: netbird-edge
-description: Self-hosted NetBird control plane on OCI Always Free, with the Azure fallback (docs/plans/netbird-mirror.md)
+description: Self-hosted NetBird control plane on Azure (primary + fenced standby), with OCI Always Free parked as a future standby (docs/plans/netbird-mirror.md, docs/adr/0002)
 runtime:
   name: nodejs
   options:

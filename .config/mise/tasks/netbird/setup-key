@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Print a NetBird setup key to type into a device: netbird:setup-key apple-tv"
+#MISE dir="{{config_root}}"
+#
+# Apple TVs have no user to log in as, so they enrol with the shared,
+# reusable `apple-tv` setup key (#2886, stacks/netbird section 4): open the
+# NetBird app on the TV, choose setup key, and type what this prints. The key
+# comes from OpenBao through the `netbird-setup-keys` fnox profile and is
+# printed only, never written anywhere.
+set -Eeuo pipefail
+usage() { echo "usage: mise run netbird:setup-key apple-tv" >&2; exit 2; }
+[[ $# -eq 1 ]] || usage
+case "$1" in
+  apple-tv) var=NETBIRD_SETUP_KEY_APPLE_TV ;;
+  *) echo "netbird:setup-key: no hand-entered key named \"$1\" (only apple-tv; the others are read by machines)" >&2; usage ;;
+esac
+# shellcheck disable=SC2016 # expanded by the inner shell, inside fnox's environment
+exec fnox exec -P netbird-setup-keys -- bash -c 'printf "%s\n" "${!1:?not set}"' _ "$var"

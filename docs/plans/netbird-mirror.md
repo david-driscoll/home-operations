@@ -376,7 +376,11 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D42 | 11-04 | The proxy serves `*.app` from its one static certificate (`nbidp-tls`: nbidp, ek, `*.app`); `NB_PROXY_WILDCARD_CERT_DIR` is ACME-mode only. The separate `*.app`-only certificate is what D39 pushes |
 | D43 | 11-04 | Services target Traefik's new ClusterIP-only `netbird` entrypoint with Host kept; a deny-only CiliumNetworkPolicy admits only the proxy pods, and `netbird-as-<TAILSCALE_MIDDLEWARE>` mirrors each app's tailnet chain |
 | D44 | 11-04 | Access groups are exactly the definition's `access_policy.groups` that are NetBird user groups; `admins` is not added. `users` means all four (no app lists it today). No service, with a warning, for an app with no ApplicationDefinition, no `access_policy`, or no group that maps |
-| D45 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC; the Stack keeps its daily resync, so a new app appears on the next run (daily, or the next merge) |
+| D52 | 11-04 | `stacks/netbird` discovers the apps live (tailnet Ingresses in `network`, ApplicationDefinitions) with read-only RBAC; the Stack keeps its daily resync, so a new app appears on the next run (daily, or the next merge) |
+| D48 | 11-03 | **Azure primary, OCI parked**: OCI never had A1 capacity in the only region a free-only tenancy can use, so azure-eus2 runs management and azure-cus is the fenced standby; `ociVm: false` keeps OCI's quota, budget and network ready to rejoin as a standby (supersedes D3's host choice; [ADR 0002](../adr/0002-netbird-azure-primary-dns-lease-fence.md)) |
+| D49 | 11-04 | Every Technitium node (equestria, celestia, alpha-site, luna, skystar) gets a NetBird sidecar in its network namespace, as it has a Tailscale one, so clients resolve over the overlay without the home gateways. One reusable, non-ephemeral, non-expiring `dns-servers` setup key (OpenBao `setup-keys#/dns`) places all five in the `dns-servers` peer group |
+| D50 | 11-04 | Users and Apple TVs reach `dns-servers` on tcp/udp 53 and 853, mirroring `default-dns` less 443 (DoH is each host's Traefik, outside the netns). `home-dns`, the LAN fallback, holds all five nodes' LAN IPs; Equestria's is `TECHNITIUM_VIP`, passed into the Stack from cluster-secrets like `INTERNAL_IP` |
+| D51 | 11-04 | The nameserver group is chosen live each run (`stacks/netbird/dns.ts`): enrolled sidecars' overlay IPs first, then the other nodes' LAN IPs, in the order equestria, celestia, alpha-site, luna, skystar; at most three, the limit management v0.82.0 enforces (`validateNSList`) |
 
 ### Azure primary (#3001, 2026-11-03)
 
@@ -492,7 +496,7 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 
 ## N. Tailnet apps on NetBird: `<app>.app.<root domain>`
 
-The NetBird counterpart of `<app>.<tailnet>` (D39–D45). A NetBird-only device reaches every app that has a tailnet
+The NetBird counterpart of `<app>.<tailnet>` (D39–D44, D52). A NetBird-only device reaches every app that has a tailnet
 name and grants its user's group, under the same `<app>`, without a route into the LAN.
 
 ```
