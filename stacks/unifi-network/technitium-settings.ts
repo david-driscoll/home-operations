@@ -35,10 +35,12 @@
  *   provider at all;
  * - TSIG keys (external-dns, the cluster catalog key): not modelled by this
  *   resource -- they stay in Technitium;
- * - zone-transfer / notify networks, the blocking bypass list and the custom
- *   blocking addresses: empty live (and unused with `NxDomain` blocking), and
- *   per-zone policy lives on the zone (technitium-zone.ts); the custom
- *   blocked-zone list is empty too;
+ * - zone-transfer / notify networks: empty live, and per-zone policy lives
+ *   on the zone (technitium-zone.ts);
+ * - the custom blocked-zone list: empty live, and `technitium.BlockedZones`
+ *   cannot pin it empty -- its refresh checks only the entries in code and
+ *   drops a resource with none from state, so `[]` would detect nothing and
+ *   plan a create on every run;
  * - `recursionNetworkAcls`: unused with `AllowOnlyForPrivateNetworks`.
  */
 
@@ -78,6 +80,10 @@ export function configureTechnitiumServerSettings(globals: GlobalResources) {
       blockingType: "NxDomain",
       blockingAnswerTtl: 30,
       blockListUpdateIntervalHours: 24,
+      // Empty live. Pinned empty so an entry added in the UI shows as drift;
+      // the provider sends `[]` as "false", which Technitium reads as empty.
+      blockingBypassLists: [],
+      customBlockingAddresses: [], // unused with NxDomain blocking
       blockListUrls: [
         "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews/hosts",
         "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/nrd7.txt",
@@ -126,8 +132,8 @@ export function configureTechnitiumServerSettings(globals: GlobalResources) {
   // `/api/allowed/export` lists them (keep the `*.` where it has one).
   // The provider has no import for this resource; its create adds only
   // entries the server does not already have, so on first `up` it adopts
-  // these three without writing. Its refresh checks only the entries listed
-  // here, so an entry added by hand in the UI is not reported as drift.
+  // these three without writing.
+  // Drift: refresh checks only these entries, so UI-only additions are not detected.
   const allowedZones = new technitium.AllowedZones(
     "allowed-zones",
     { domains: ["*.awstrack.me", "*.sofi.org", "webplayer.online"] },
