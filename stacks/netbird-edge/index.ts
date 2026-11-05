@@ -352,11 +352,13 @@ interface EdgeHost {
   machine: Resource;
   /** The relay this host serves, if any. */
   relayDomain?: string;
+  /** The cloud region, for the metrics' `region` label. */
+  region: Input<string>;
 }
 const hosts: EdgeHost[] = [
   // OCI, when it is back, is a second standby: fenced, no relay of its own.
-  ...(vm ? [{ id: "oci" as const, hostname, publicIpAddress: vm.publicIpAddress, hostKey: vm.instance.id, machine: vm.instance }] : []),
-  ...azureVms.map(a => ({ id: a.spec.id, hostname: a.hostname, publicIpAddress: a.machine.publicIpAddress, hostKey: a.machine.vmId, machine: a.machine.vm, relayDomain: a.relayDomain })),
+  ...(vm ? [{ id: "oci" as const, hostname, publicIpAddress: vm.publicIpAddress, hostKey: vm.instance.id, machine: vm.instance, region: globals.ociCredential.region }] : []),
+  ...azureVms.map(a => ({ id: a.spec.id, hostname: a.hostname, publicIpAddress: a.machine.publicIpAddress, hostKey: a.machine.vmId, machine: a.machine.vm, relayDomain: a.relayDomain, region: a.spec.region })),
 ];
 // Every server lists every relay (and their STUN): the embedded ones are off
 // once any is listed (components/netbird/server.ts). Plus the home relay on
@@ -494,6 +496,13 @@ function serverArgs(host: EdgeHost): NetbirdServerArgs {
       resticPassword,
       host: host.hostname,
       heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: heartbeatToken },
+    },
+    // Over the tailnet to thanos-receive on 19291 (the `netbird-edge-metrics`
+    // grant). Labelled for upstream's dashboards (components/netbird/metrics.ts).
+    metrics: {
+      remoteWriteUrl: pulumi.interpolate`http://thanos-receive.${globals.tailscaleDomain}:19291/api/v1/receive`,
+      host: host.hostname,
+      region: host.region,
     },
     // A replacement VM reruns every deploy step.
     hostKey: host.hostKey,

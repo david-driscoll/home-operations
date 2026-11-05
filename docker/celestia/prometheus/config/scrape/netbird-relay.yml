@@ -1,0 +1,17 @@
+---
+# The home NetBird relay (docker/celestia/netbird-relay), loaded via the
+# `scrape_config_files` glob in docker/_common/prometheus/config/prometheus.yml.
+# Its metrics port is not published; both containers sit on dockge_default.
+#
+# `job` and `host` are the labels upstream's relay dashboard filters on
+# (kubernetes/apps/observability/grafana/dashboards/netbird.yaml), the same
+# ones the Azure relays carry (components/netbird/metrics.ts).
+scrape_configs:
+  - job_name: 'netbird-relay'
+    static_configs:
+      - targets: ['netbird-relay:9090']
+        labels:
+          host: '${host}'
+    relabel_configs:
+      - source_labels: [host]
+        target_label: instance

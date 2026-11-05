@@ -87,3 +87,35 @@ groups:
         for: 10m
         labels:
           severity: warning
+  # The netbird-edge hosts' metrics (components/netbird/metrics.ts) arrive by
+  # remote-write only, so the in-cluster Prometheus never sees them and the
+  # rule lives here. Every Azure host runs a relay whatever its lease, so the
+  # relay's `up` is the one series that should always be there; management's
+  # is down on a standby by design and is not alerted on. Warnings, so the
+  # `Netbird.*` route sends them to pushover-quiet.
+  - name: netbird-metrics
+    rules:
+      - alert: NetbirdMetricsMissing
+        annotations:
+          summary: No NetBird metrics from the netbird-edge hosts in 15 minutes.
+          description: >-
+            Nothing has remote-written up{cluster="netbird-edge", job="netbird-relay"}. Check the
+            netbird-alloy container on each host (`docker logs netbird-alloy`) and the
+            `netbird-edge-metrics` tailnet grant to svc:thanos-receive.
+        expr: absent_over_time(up{cluster="netbird-edge", job="netbird-relay"}[15m])
+        for: 5m
+        labels:
+          severity: warning
+          component: netbird
+      - alert: NetbirdRelayScrapeDown
+        annotations:
+          summary: "{{ $labels.host }}: Alloy cannot scrape the NetBird relay."
+          description: >-
+            up{job="netbird-relay"} has been 0 on {{ $labels.host }} ({{ $labels.cluster }}) for 15 minutes:
+            the netbird-relay container is down or its metrics port moved. Gatus checks the relay's
+            TLS separately (netbird-relays).
+        expr: up{job="netbird-relay"} == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: netbird

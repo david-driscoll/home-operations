@@ -3,6 +3,7 @@ import { remote, type types } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, type Output, output, type Resource, secret } from "@pulumi/pulumi";
 import { backupPaths, renderBackupScript, renderBackupUnits, renderResticEnv, renderRestoreScript } from "./backup.ts";
 import { FENCED_SERVICES, fencePaths, renderFenceScript, renderFenceUnits } from "./fence.ts";
+import { renderAlloyConfig } from "./metrics.ts";
 import { NETBIRD_DIR, parseSetupResponse, type RelayEndpoint, renderDashboardEnv, renderRelayEnv, renderServerConfig, type ServerSecrets, type SetupResult } from "./server.ts";
 
 export { NETBIRD_DIR } from "./server.ts";
@@ -49,6 +50,20 @@ export interface NetbirdServerArgs {
   hostKey?: Input<string>;
   /** Anything that must exist first, e.g. the DNS record Let's Encrypt validates against. */
   dependsOn?: Input<Resource>[];
+  /**
+   * Ship the server's and the relay's metrics to Thanos from an `alloy`
+   * container (metrics.ts). Not fenced. Without it nothing scrapes them.
+   */
+  metrics?: NetbirdMetricsArgs;
+}
+
+export interface NetbirdMetricsArgs {
+  /** `http://thanos-receive.<tailnet>:19291/api/v1/receive`, reached over the `netbird-edge-metrics` grant. */
+  remoteWriteUrl: Input<string>;
+  /** The `host` label: the tailnet name. */
+  host: string;
+  /** The `region` label. */
+  region?: Input<string>;
 }
 
 export interface NetbirdBackupArgs {
@@ -74,7 +89,7 @@ export interface NetbirdBackupArgs {
  * The NetBird combined server, deployed onto an existing Docker host.
  *
  * Writes compose.yaml, .env, config.yaml and dashboard.env (and relay.env on a
- * relay host) into NETBIRD_DIR and runs `docker compose up` whenever any of
+ * relay host, alloy.alloy with `metrics`) into NETBIRD_DIR and runs `docker compose up` whenever any of
  * them changes. Rerunning is safe: the files are rewritten whole and compose
  * only recreates what changed.
  *
@@ -118,10 +133,13 @@ export class NetbirdServer extends ComponentResource {
         ([domain, relayAuthSecret, datastoreEncryptionKey, sessionCookieEncryptionKey, relays]) => renderServerConfig({ domain, relayAuthSecret, datastoreEncryptionKey, sessionCookieEncryptionKey, relays }),
       ),
     );
+    const metrics = args.metrics;
+    const profiles = [...(args.relay ? ["relay"] : []), ...(metrics ? ["metrics"] : [])];
     const dotEnv = all([args.domain, args.relay?.domain]).apply(([domain, relayDomain]) =>
       [
         `NETBIRD_DOMAIN=${domain}`,
-        ...(relayDomain ? [`NETBIRD_RELAY_DOMAIN=${relayDomain}`, "COMPOSE_PROFILES=relay"] : []),
+        ...(relayDomain ? [`NETBIRD_RELAY_DOMAIN=${relayDomain}`] : []),
+        ...(profiles.length > 0 ? [`COMPOSE_PROFILES=${profiles.join(",")}`] : []),
         // A reboot must not start management before the fence checks the lease.
         ...(fence ? ["NETBIRD_SERVER_RESTART=no"] : []),
         "",
@@ -132,6 +150,7 @@ export class NetbirdServer extends ComponentResource {
       ".env": dotEnv,
       "config.yaml": config,
       "dashboard.env": output(args.domain).apply(domain => renderDashboardEnv({ domain })),
+      ...(metrics ? { "alloy.alloy": all([metrics.remoteWriteUrl, metrics.region]).apply(([remoteWriteUrl, region]) => renderAlloyConfig({ host: metrics.host, remoteWriteUrl, region, relay: !!args.relay })) } : {}),
       ...(args.relay ? { "relay.env": secret(all([args.relay.domain, args.secrets.relayAuthSecret]).apply(([domain, authSecret]) => renderRelayEnv({ domain, authSecret }))) } : {}),
     };
 
@@ -159,15 +178,19 @@ export class NetbirdServer extends ComponentResource {
     // decides about management. A management already running is recreated, so
     // it picks up a changed config.yaml (compose cannot see a bind mount's
     // content), under the fence's lock so the two never race.
-    const alwaysOn = ["traefik", ...(args.relay ? ["relay"] : [])].join(" ");
+    const alwaysOn = ["traefik", ...(args.relay ? ["relay"] : []), ...(metrics ? ["alloy"] : [])].join(" ");
+    // Alloy reads its config once, and compose cannot see a bind mount's
+    // content change, so every deploy (which only runs when a file changed)
+    // restarts it.
+    const restartAlloy = metrics ? " && docker compose restart alloy" : "";
     const fenced = FENCED_SERVICES.join(" ");
     const up = new remote.Command(
       `${name}-up`,
       {
         connection,
         create: fence
-          ? `cd ${NETBIRD_DIR} && docker compose pull --quiet && install -d -m 700 ${fencePaths().dir} && flock ${fencePaths().lock} sh -c 'docker compose up -d --remove-orphans ${alwaysOn} && if [ "$(docker inspect -f "{{.State.Running}}" netbird-server 2>/dev/null)" = true ]; then docker compose up -d --force-recreate ${fenced}; fi'`
-          : `cd ${NETBIRD_DIR} && docker compose pull --quiet && docker compose up -d --remove-orphans`,
+          ? `cd ${NETBIRD_DIR} && docker compose pull --quiet && install -d -m 700 ${fencePaths().dir} && flock ${fencePaths().lock} sh -c 'docker compose up -d --remove-orphans ${alwaysOn} && if [ "$(docker inspect -f "{{.State.Running}}" netbird-server 2>/dev/null)" = true ]; then docker compose up -d --force-recreate ${fenced}; fi'${restartAlloy}`
+          : `cd ${NETBIRD_DIR} && docker compose pull --quiet && docker compose up -d --remove-orphans${restartAlloy}`,
         triggers: [...Object.values(files), hostKey],
       },
       // After the restore: the server must never open an empty store that a

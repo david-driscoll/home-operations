@@ -142,6 +142,31 @@ services:
       - traefik.http.services.netbird-relay.loadbalancer.server.port=80
     logging: *logging
 
+  # ── Metrics: components/netbird/metrics.ts ──────────────────────────────
+  # Scrapes netbird-server:9090 and netbird-relay:9090 over this network and
+  # remote-writes to thanos-receive over the tailnet. Not fenced: on a standby
+  # it reports the relay and a down management target. No ports: its UI
+  # listens on loopback and the host is internet-facing. Root, because
+  # alloy.alloy is written mode 600 like every file here. MagicDNS directly,
+  # as for backup-restic; Docker's resolver still answers the container names.
+  alloy:
+    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
+    container_name: netbird-alloy
+    profiles: [metrics]
+    restart: unless-stopped
+    user: "0:0"
+    networks: [netbird]
+    dns: [100.100.100.100]
+    command:
+      - run
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy.alloy:/etc/alloy/config.alloy:ro
+      - netbird_alloy_data:/var/lib/alloy
+    logging: *logging
+
   # ── Backups (#2884): components/netbird/backup.ts ───────────────────────
   # Profile services: `docker compose up` never starts them. The 15-minute
   # timer and the pre-start restore run them with `docker compose run`.
@@ -181,6 +206,7 @@ volumes:
   netbird_data:
   netbird_traefik_letsencrypt:
   netbird_restic_cache:
+  netbird_alloy_data:
 
 networks:
   netbird:

@@ -11,3 +11,4 @@ resources:
   - ./helmrelease.yaml
   - ./ciliumnetworkpolicy.yaml
   - ./middleware.yaml
+  - ./podmonitor.yaml
