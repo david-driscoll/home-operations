@@ -537,7 +537,9 @@ const relayProbes =
         })
     : [];
 addUptimeGatus("netbird-relays", globals, {
-  endpoints: relays.map(relayTlsEndpoint),
+  // Public relays only: the home relay has no public name, so the Azure hosts
+  // probe it (relayProbes) instead of Gatus at home.
+  endpoints: relays.filter(relay => relay !== homeRelay).map(relay => relayTlsEndpoint(relay.host)),
   "external-endpoints": relayProbes.map(probe => relayProbeHeartbeat({ name: probe.name, token: probe.token })),
 });
 for (const probe of relayProbes) {
