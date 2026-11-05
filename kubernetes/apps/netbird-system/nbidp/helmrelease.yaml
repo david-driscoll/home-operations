@@ -105,7 +105,10 @@ spec:
                   failureThreshold: 3
               # Ready once management is connected. No startup probe: its
               # check includes management, and a management outage must not
-              # restart-loop the proxy.
+              # restart-loop the proxy. Neither probe sees a mapping stream
+              # that stalled open across a netbird-server restart (v0.82.0
+              # keeps management_connected true); ../proxy-watchdog restarts
+              # the pods for that, from management's side.
               readiness:
                 enabled: true
                 custom: true

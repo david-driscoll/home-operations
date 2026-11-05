@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The nbidp proxy watchdog: a CronJob that rollout-restarts the NetBird private
+# reverse proxy (../nbidp) when management has listed its cluster offline for
+# three minutes while management itself answers (watchdog.ts has the policy
+# and the upstream bug behind it). Its own Kustomization, apart from
+# netbird-health's: that job only reads, and nothing in it can restart a pod.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app netbird-proxy-watchdog
+  namespace: &namespace netbird-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/netbird-system/proxy-watchdog
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    # The automation PAT.
+    - name: external-secrets
+      namespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
