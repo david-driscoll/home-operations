@@ -187,3 +187,70 @@ jobs:
           if [ "$pinned" != "$wanted" ]; then
             echo "::notice::kubernetes/components/pulumi-workspace pins ${pinned:-nothing}; to roll this image out set image: git.\${ROOT_DOMAIN}/${wanted}"
           fi
+
+      # RETENTION. Every build is ~600 MB of layers that share nothing with the
+      # last one, and the registry's blobs live in forgejo-garage's 20Gi data
+      # volume (kubernetes/apps/coder/forgejo-garage). With no pruning, 29
+      # builds in 16 days took it to 94% on 2026-11-04. Forgejo's own cleanup
+      # rules are UI-only, so retention lives here, where it is in git.
+      #
+      # Kept: the tag kubernetes/components/pulumi-workspace pins (on main --
+      # this checkout -- which is what the Stacks run), this run's tag, and the
+      # KEEP_NEWEST most recent. Everything else is deleted. That is safe: a
+      # tag is a hash of its inputs (images/pulumi-workspace/tag.sh), so any
+      # deleted version is rebuilt by re-running this workflow at its commit.
+      # Forgejo's nightly cleanup_packages cron then drops the orphaned blobs
+      # and Garage reclaims the space.
+      #
+      # Runs on every trigger, including the no-op schedule, so a missed or
+      # cancelled run is caught up the next morning.
+      - name: Prune old versions
+        if: ${{ !cancelled() && steps.exists.outcome == 'success' }}
+        env:
+          KEEP_NEWEST: "3"
+          CURRENT_TAG: ${{ steps.tag.outputs.tag }}
+          # The in-cluster URL is fine here: this is the REST API over plain
+          # HTTP, not crane talking to a registry (see ROOT_DOMAIN above).
+          API: ${{ github.server_url }}/api/v1
+          TOKEN: ${{ secrets.ESTATE_IMAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          pinned="$(sed -nE 's#.*image: git\.\$\{ROOT_DOMAIN\}/estate-images/pulumi-workspace:([^@[:space:]]+).*#\1#p' kubernetes/components/pulumi-workspace/kustomization.yaml | head -n1)"
+          if [ -z "$pinned" ]; then
+            # Without the pin there is no telling which version the Stacks
+            # need, so delete nothing rather than guess.
+            echo "::error::could not read the pinned tag from kubernetes/components/pulumi-workspace; not pruning"
+            exit 1
+          fi
+          echo "pinned: ${pinned}"
+          echo "current: ${CURRENT_TAG}"
+          # `node`, not jq: pulumi-nodejs has node and not jq (inputs.sh).
+          # One entry per version; `q` is a substring match, so the name is
+          # checked exactly.
+          page=1
+          : > "$RUNNER_TEMP/versions.jsonl"
+          while :; do
+            body="$(curl -fsS -H "Authorization: token ${TOKEN}" \
+              "${API}/packages/${IMAGE_OWNER}?type=container&q=${IMAGE_NAME}&limit=50&page=${page}")"
+            count="$(printf '%s' "$body" | node -e '
+              const all = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+              for (const p of all) if (p.name === process.argv[1]) console.log(JSON.stringify({v: p.version, at: p.created_at}));
+              console.error(all.length);
+            ' "$IMAGE_NAME" 2>&1 >>"$RUNNER_TEMP/versions.jsonl")"
+            [ "$count" -lt 50 ] && break
+            page=$((page + 1))
+          done
+          mapfile -t doomed < <(node -e '
+            const fs = require("node:fs");
+            const [file, keepNewest, ...keep] = process.argv.slice(1);
+            const versions = fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map(JSON.parse)
+              .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+            const kept = new Set([...keep, ...versions.slice(0, Number(keepNewest)).map(x => x.v)]);
+            for (const { v } of versions) if (!kept.has(v)) console.log(v);
+          ' "$RUNNER_TEMP/versions.jsonl" "$KEEP_NEWEST" "$pinned" "$CURRENT_TAG")
+          echo "$(wc -l < "$RUNNER_TEMP/versions.jsonl") versions, deleting ${#doomed[@]}"
+          for v in "${doomed[@]}"; do
+            echo "delete ${IMAGE_NAME}:${v}"
+            curl -fsS -X DELETE -H "Authorization: token ${TOKEN}" \
+              "${API}/packages/${IMAGE_OWNER}/container/${IMAGE_NAME}/${v}"
+          done

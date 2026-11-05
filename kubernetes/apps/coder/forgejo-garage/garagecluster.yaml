@@ -48,7 +48,13 @@ spec:
       # admission webhook and Kubernetes cannot shrink a PVC anyway, so the only
       # route down is deleting the claims and rebuilding the layout from empty.
       # Start small.
-      size: 20Gi
+      #
+      # 40Gi, up from 20Gi. On 2026-11-04 it was at 94% (1.1 GiB left), and
+      # 16.7 GiB of that was 29 builds of estate-images/pulumi-workspace that
+      # nothing ever pruned. Retention now lives in
+      # .forgejo/workflows/pulumi-workspace-image.yml (pinned + newest 3, about
+      # 2-3 GiB). This headroom covers that and the next registry user.
+      size: 40Gi
       # longhorn-critical, NOT the longhorn-local that garage-system uses.
       #
       # This is the one place a single-node Garage must diverge from the estate
@@ -84,7 +90,7 @@ spec:
     # Consequence, stated plainly: object-storage IO now lands on the
     # control-plane trio's SATA disks, which garage-system deliberately avoids.
     # That call was made for a 180Gi general-purpose store shared with Plex and
-    # Immich; this is 20Gi for one forge's LFS, which is a different animal. If
+    # Immich; this is 40Gi for one forge's LFS and packages, a different animal. If
     # it ever stops being one, the fix is to demote this cluster to `longhorn`
     # and take Forgejo's LFS off S3 in the same change — not to leave a Tier-1
     # app depending on a Tier-2 store.
