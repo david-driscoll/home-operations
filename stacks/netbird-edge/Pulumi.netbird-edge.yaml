@@ -4,4 +4,4 @@ config:
     secure: v1:ma94FcEAXbuNTscU:hqQ1JqnvrY81TxMzncK0FEofICixqSYcOehv1zuABdz+iuL3iTCy6g==
   netbird-edge:availabilityDomainIndex: "0"
   netbird-edge:ociVm: "false"
-  netbird-edge:primary: azure-cus
+  netbird-edge:primary: azure-eus2
