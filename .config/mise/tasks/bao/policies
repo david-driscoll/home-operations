@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#MISE description="Write (or --check) every OpenBao policy from bootstrap/openbao/equestria-init.sh: bao:policies [--check]"
+#MISE dir="{{config_root}}"
+#
+# The OpenBao policies (admin, pulumi, eso-equestria, eso-sgc, ...) live in
+# bootstrap/openbao/equestria-init.sh's write_policies, not in Pulumi: they are
+# what Pulumi and ESO authenticate WITH. Changing one needs an admin token.
+#
+#   mise run bao:policies --check   diff every policy against the server, write nothing
+#   mise run bao:policies           write them all (idempotent)
+#
+# With BAO_TOKEN unset it logs you in through Authentik (`bao login
+# -method=oidc role=admin`; a browser opens). The token stays in this process:
+# it is not written to ~/.vault-token and dies when the task exits. BAO_ADDR
+# comes from .config/mise.toml.
+set -Eeuo pipefail
+case "${1:-}" in "" | --check) ;; *) echo "usage: mise run bao:policies [--check]" >&2; exit 2 ;; esac
+: "${BAO_ADDR:?BAO_ADDR is not set (it comes from .config/mise.toml)}"
+if [[ -z "${BAO_TOKEN:-}" ]]; then
+  echo "bao:policies: logging in to ${BAO_ADDR} with OIDC role=admin (a browser will open)" >&2
+  BAO_TOKEN="$(bao login -method=oidc -no-store -token-only role=admin)"
+  export BAO_TOKEN
+fi
+exec bootstrap/openbao/equestria-init.sh policies "$@"
