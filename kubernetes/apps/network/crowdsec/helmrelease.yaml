@@ -131,6 +131,14 @@ spec:
   #
   # Deliberately no dollar signs anywhere in the command: this file is subject
   # to Flux postBuild envsubst, and a bare or braced name would be eaten.
+  # ---- edge registration ---------------------------------------------------
+  # The same LAPI command also starts ./edge-register.sh in the background,
+  # before the chart's entrypoint: it waits for `cscli lapi status`, then adds
+  # the netbird-edge hosts' machines and the LAPI-side allowlist
+  # (components/netbird/crowdsec.ts). A subshell, so its exit status is never
+  # the container's, and the entrypoint below stays the foreground process
+  # exactly as before. It can log a failure; it cannot stop the LAPI starting.
+  # Grep CROWDSEC_EDGE_REGISTER in the LAPI log.
   # ---- re-registration guard ----------------------------------------------
   # Makes a node reboot unable to wedge an agent or the AppSec pod.
   #
@@ -178,6 +186,7 @@ spec:
                             cp -nR /staging/etc/crowdsec/* /etc/crowdsec_data/
                             && ln -s /etc/crowdsec_data /etc/crowdsec
                             && sed 's#^\( *\)cscli console enroll \(.*\)#\1cscli console enroll \2 || echo CROWDSEC_CONSOLE_ENROLL_FAILED_NONFATAL#' /docker_start.sh > /tmp/docker_start.sh
+                            && (bash /edge-register/edge-register.sh &)
                             && bash /tmp/docker_start.sh
           - target:
               kind: DaemonSet

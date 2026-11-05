@@ -30,6 +30,7 @@ import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { addUptimeGatus, awaitOutput, toGatusKey } from "components/helpers.ts";
 import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET, resticRepository } from "components/netbird/backup.ts";
+import { CROWDSEC_EDGE_BAO_PATH, crowdsecLapiEnv } from "components/netbird/crowdsec.ts";
 import { assertFenceFasterThanFlip } from "components/netbird/fence.ts";
 import { homeRelayDomain } from "components/netbird/homeRelay.ts";
 import { NetbirdRelayProbe } from "components/netbird/NetbirdRelayProbe.ts";
@@ -465,6 +466,27 @@ addUptimeGatus("netbird-backup", globals, {
   "external-endpoints": [backupHeartbeat({ name: heartbeatName, group: BACKUP_HEARTBEAT_GROUP, token: heartbeatToken })],
 });
 
+// ── CrowdSec (components/netbird/crowdsec.ts) ────────────────────────────
+// One machine and one bouncer per host on Equestria's LAPI, pre-provisioned:
+// the LAPI's auto-registration token never leaves the cluster, since anyone
+// holding it could register a machine and push bans estate-wide. Generated
+// once, written below to CROWDSEC_EDGE_BAO_PATH under the env var names the
+// LAPI reads (kubernetes/apps/network/crowdsec/netbird-edge-externalsecret.yaml).
+// Alphanumeric: the bouncer plugin's key alphabet, and no quoting in the env file.
+//
+// Enforcement is rollout step 2: `pulumi config set netbird-edge:crowdsecEnforce
+// true` once the checks in docs/runbooks/netbird-crowdsec.md pass.
+const crowdsecEnforce = config.getBoolean("crowdsecEnforce") ?? false;
+const crowdsecIdentities = Object.fromEntries(
+  hosts.map(host => [
+    host.id,
+    {
+      machinePassword: new random.RandomPassword(`netbird-crowdsec-machine-${host.id}`, { length: 48, special: false }).result,
+      bouncerKey: new random.RandomPassword(`netbird-crowdsec-bouncer-${host.id}`, { length: 48, special: false }).result,
+    },
+  ]),
+);
+
 /** The parts of NetbirdServerArgs every host shares; only the machine differs. */
 function serverArgs(host: EdgeHost): NetbirdServerArgs {
   return {
@@ -503,6 +525,15 @@ function serverArgs(host: EdgeHost): NetbirdServerArgs {
       remoteWriteUrl: pulumi.interpolate`http://thanos-receive.${globals.tailscaleDomain}:19291/api/v1/receive`,
       host: host.hostname,
       region: host.region,
+    },
+    // Over the tailnet to svc:crowdsec-lapi on 8080 (the `netbird-edge-crowdsec`
+    // grant). The machine is the host's tailnet name.
+    crowdsec: {
+      tailnet: globals.tailscaleDomain,
+      host: host.hostname,
+      machinePassword: crowdsecIdentities[host.id].machinePassword,
+      bouncerKey: crowdsecIdentities[host.id].bouncerKey,
+      enforce: crowdsecEnforce,
     },
     // A replacement VM reruns every deploy step.
     hostKey: host.hostKey,
@@ -578,6 +609,30 @@ if (globals.baoDualWriteEnabled) {
       // are unreadable.
       data: { ...serverSecrets, resticPassword },
       concealedFields: [...Object.keys(serverSecrets), "resticPassword"],
+      customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
+    },
+    bao,
+  );
+  // Read by Equestria's LAPI (lapi.envFrom): BOUNCER_KEY_* registers each
+  // host's bouncer, EDGE_MACHINE_PASSWORD_* each host's machine
+  // (kubernetes/apps/network/crowdsec/edge-register.sh).
+  const crowdsecData = Object.fromEntries(
+    hosts.flatMap(host => {
+      const env = crowdsecLapiEnv(host.hostname);
+      const identity = crowdsecIdentities[host.id];
+      return [
+        [env.bouncerKey, identity.bouncerKey],
+        [env.machinePassword, identity.machinePassword],
+      ];
+    }),
+  );
+  baoKvSecret(
+    "netbird-crowdsec-edge",
+    {
+      mount: "secrets",
+      path: CROWDSEC_EDGE_BAO_PATH,
+      data: crowdsecData,
+      concealedFields: Object.keys(crowdsecData),
       customMetadata: baoProvenance({ source: "stacks/netbird-edge" }),
     },
     bao,

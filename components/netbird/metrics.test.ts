@@ -37,6 +37,13 @@ describe("renderAlloyConfig", () => {
     assert.match(withRelay, /action = "labeldrop"\n\s+regex += "endpoint"/);
   });
 
+  it("scrapes the CrowdSec agent on every host, labelled with its LAPI name, outside the NetBird relabelling", () => {
+    for (const config of [withRelay, withoutRelay]) {
+      assert.match(config, /"__address__" = "netbird-crowdsec:6060", "job" = "crowdsec", "host" = "netbird-azure-eus2", "lapi_name" = "netbird_azure_eus2"/);
+      assert.match(config, /prometheus\.scrape "crowdsec" \{[\s\S]*?forward_to += \[prometheus\.relabel\.crowdsec\.receiver\]/);
+    }
+  });
+
   it("refuses a host or URL that would break the config", () => {
     assert.throws(() => renderAlloyConfig({ ...base, host: 'bad"host', relay: true }), /not a bare hostname/);
     assert.throws(() => renderAlloyConfig({ ...base, remoteWriteUrl: "thanos:19291", relay: true }), /not http/);

@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/v1/service.json
+#
+# THE TAILNET NAME `crowdsec-lapi`, on the tailnet-outbound ProxyGroup. The
+# netbird-edge hosts' CrowdSec agents and Traefik bouncers reach the LAPI at
+# crowdsec-lapi.<tailnet>:8080 (components/netbird/crowdsec.ts), over the
+# `netbird-edge-crowdsec` grant (stacks/unifi-network/acl-manager.ts), which
+# names svc:crowdsec-lapi on tcp:8080 and nothing else.
+#
+# The LAPI port only, not metrics (6060). Every caller authenticates: a machine
+# password or a bouncer key, one of each per edge host, pre-provisioned by
+# stacks/netbird-edge and registered by ./edge-register.sh. The auto-registration
+# token the cluster agents use is never sent to those hosts.
+#
+# A separate LoadBalancer Service, not annotations on the chart's ClusterIP one,
+# for the reason in kubernetes/apps/observability/loki/tailnet-service.yaml: the
+# operator writes load-balancer status that a ClusterIP Service may not carry.
+# No node ports, so the LAPI is not opened on the LAN. The selector is the
+# chart's own (templates/lapi-service.yaml); commonMetadata in ks.yaml labels
+# metadata only, so no label is added to it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: crowdsec-lapi-tailnet
+  annotations:
+    tailscale.com/hostname: crowdsec-lapi
+    tailscale.com/tags: tag:apps
+    tailscale.com/proxy-group: tailnet-outbound
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  allocateLoadBalancerNodePorts: false
+  selector:
+    k8s-app: crowdsec
+    type: lapi
+    version: v1
+  ports:
+    - name: lapi
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
