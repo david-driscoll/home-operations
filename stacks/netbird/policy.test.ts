@@ -67,6 +67,19 @@ describe("client access, mirroring member-home-subnet-access", () => {
     assert.ok(!can("apple-tv", "k8s-routers", 0, "icmp"));
   });
 
+  it("lets every user group out through an exit node, and no device group (member-exit-node)", () => {
+    for (const group of USER_GROUPS) {
+      assert.ok(can(group, "exit-internet", 443), group);
+      assert.ok(can(group, "exit-internet", 53, "udp"), group);
+    }
+    assert.ok(!can("apple-tv", "exit-internet", 443));
+    assert.ok(!can("gateways", "exit-internet", 443));
+  });
+
+  it("never targets a user group, which would open users' devices to each other", () => {
+    for (const rule of ACCESS_RULES) assert.ok(!USER_GROUPS.includes(rule.destination), rule.name);
+  });
+
   it("gives an unknown group nothing", () => {
     assert.ok(!can("strangers", "home-web", 443));
   });

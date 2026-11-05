@@ -19,6 +19,11 @@
  *   lan-home     the whole home LAN (admins only)
  *   gateways     the gateway peers themselves, for exit nodes
  *   k8s-routers  the in-cluster routing peers, which also serve `exit-home`
+ *   exit-internet  the `exit-*` routes' access-control group. It has no peers:
+ *                NetBird lets traffic through a route with access-control
+ *                groups only for policies whose DESTINATION is one of them
+ *                (management getPeerRoutesFirewallRules, v0.82.0), so this
+ *                group exists to be that destination and nothing else
  *   equestria-entry  the cluster's two /32s via the in-cluster routers (#2889)
  */
 
@@ -119,15 +124,23 @@ export const ACCESS_RULES: AccessRule[] = [
   },
   {
     name: "users-exit-nodes",
-    description: "Connects users to the gateways so their exit-node routes sync; the routes' own ACL carries the traffic",
+    description: "Connects users to the gateways so their exit-node routes sync; users-internet carries the traffic",
     sources: USER_GROUPS,
     destination: "gateways",
     protocol: "icmp",
     mirrors: ["member-exit-node"],
   },
   {
+    name: "users-internet",
+    description: "The internet through an exit node: the exit-* routes' access-control group, which is what their routing peers forward for",
+    sources: USER_GROUPS,
+    destination: "exit-internet",
+    protocol: "all",
+    mirrors: ["member-exit-node"],
+  },
+  {
     name: "users-exit-equestria",
-    description: "Connects users to the in-cluster routers so exit-home's routes through them sync; the route's own ACL carries the traffic",
+    description: "Connects users to the in-cluster routers so exit-home's routes through them sync; users-internet carries the traffic",
     sources: USER_GROUPS,
     destination: "k8s-routers",
     protocol: "icmp",

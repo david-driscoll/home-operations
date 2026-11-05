@@ -107,6 +107,8 @@ const groups = {
   appleTv: group("apple-tv"),
   // Every Technitium node's NetBird sidecar (6, below).
   dnsServers: group(DNS_SERVER_GROUP),
+  // The exit routes' access-control group (5, below). No peers, ever.
+  exitInternet: group("exit-internet"),
 };
 
 /**
@@ -411,9 +413,19 @@ if (unresolved.length > 0) throw new Error(`stacks/netbird/policy.ts names group
 // Each site stack's gateways are one exit node the user groups can pick
 // (never applied by default), `exit-<site stack>`; the client uses whichever
 // of the group's peers it reaches best (D53). Exit nodes are still legacy
-// routes: offered only to the user groups, and the route's own ACL is what
-// lets their traffic out. The `users-exit-nodes` rule below is what connects
-// them to the gateway.
+// routes, offered only to the user groups (`groups`).
+//
+// What lets their traffic OUT is the access-control group, and it is matched
+// against policy DESTINATIONS, not sources: a routing peer forwards for a
+// route with access-control groups only what a policy targeting one of those
+// groups allows (management getPeerRoutesFirewallRules, v0.82.0), and a route
+// without any gets allow-all instead. Until this was `exit-internet` it was
+// the user groups themselves, which no policy targets, so every routing peer
+// got no forwarding rule and dropped all exit traffic. The `users-internet`
+// rule (policy.ts) is the one that targets it; a users -> users policy would
+// have worked too, and opened every user's devices to every other user.
+// `users-exit-nodes` only connects users to the gateway peers so the routes
+// sync.
 //
 // `exit-home` is also served by Equestria's in-cluster routing peers
 // (`k8s-routers`, kubernetes/apps/netbird-system/router; D54). They leave on
@@ -434,7 +446,7 @@ for (const [stack, hosts] of Object.entries(GATEWAY_SITE_STACKS)) {
       network: "0.0.0.0/0",
       peerGroups: [gatewayStackGroups[stack].id, ...extra.map(e => e.group.id)],
       groups: userGroupIds,
-      accessControlGroups: userGroupIds,
+      accessControlGroups: [groups.exitInternet.id],
       masquerade: true,
       skipAutoApply: true,
       enabled: true,
@@ -450,6 +462,7 @@ const destinationGroups: Record<string, netbird.Group | undefined> = {
   "lan-home": siteResourceGroups.home,
   "equestria-entry": equestriaEntry,
   "k8s-routers": groups.k8sRouters,
+  "exit-internet": groups.exitInternet,
 };
 for (const rule of ACCESS_RULES) {
   const destination = destinationGroups[rule.destination];
