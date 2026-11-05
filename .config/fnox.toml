@@ -107,3 +107,9 @@ NETBIRD_AUTOMATION_EXPIRES = { provider = "openbao", value = "secrets/third-part
 NETBIRD_OWNER_PAT = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner-pat#personal_access_token", if_missing = "ignore" }
 NETBIRD_OWNER_PAT_EXPIRES = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner-pat#expires", if_missing = "ignore" }
 NETBIRD_SETUP_PAT = { provider = "openbao", value = "secrets/third-party-tokens/netbird/owner#personal_access_token", if_missing = "ignore" }
+
+# The one setup key a person types by hand: the Apple TVs' (#2886), for
+# `mise run netbird:setup-key apple-tv`. In its own profile so no other
+# `fnox exec` carries it. The other setup keys are read by machines only.
+[profiles.netbird-setup-keys.secrets]
+NETBIRD_SETUP_KEY_APPLE_TV = { provider = "openbao", value = "secrets/third-party-tokens/netbird/setup-keys#apple_tv", if_missing = "error" }
