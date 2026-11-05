@@ -36,7 +36,7 @@
     "@pulumi/authentik": "file:sdks/authentik",
     "@pulumi/coderd": "file:sdks/coderd",
     "@pulumi/forgejo": "file:sdks/forgejo",
-    "@pulumi/github": "^6.15.0",
+    "@pulumi/github": "^6.15.1",
     "@pulumi/http": "^0.3.7",
     "@pulumi/kubernetes": "^4.34.2",
     "@pulumi/netbird": "file:sdks/netbird",
