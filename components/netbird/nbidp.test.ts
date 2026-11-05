@@ -14,7 +14,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { DEX_CONNECTOR_ID, NETBIRD_IDENTITY_HEADERS, nbidpBackchannelUrl, nbidpHost, renderDexConfig, sourceEndpoints } from "./nbidp.ts";
+import { DEX_CONNECTOR_ID, NETBIRD_IDENTITY_HEADERS, nbidpBackchannelUrl, nbidpClusterAddress, nbidpHost, renderDexConfig, sourceEndpoints } from "./nbidp.ts";
 
 const args = {
   issuer: "https://nbidp.example.test",
@@ -124,5 +124,12 @@ describe("sourceEndpoints", () => {
 describe("nbidpHost", () => {
   it("is one label under the root domain", () => {
     assert.equal(nbidpHost("example.test"), "nbidp.example.test");
+  });
+});
+
+describe("nbidpClusterAddress", () => {
+  it("is the proxy's own label, not nbidp's: nbidp is a custom domain on that cluster", () => {
+    assert.equal(nbidpClusterAddress("example.test"), "ek.example.test");
+    assert.notEqual(nbidpClusterAddress("example.test"), nbidpHost("example.test"));
   });
 });

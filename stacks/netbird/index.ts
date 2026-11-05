@@ -16,7 +16,7 @@
  *   7. a service user whose PAT the in-cluster operator uses (#2889);
  *   8. the `equestria` network the operator's routing peers serve (#2889);
  *   9. the client-access policy (#2888, policy.ts);
- *  10. nbidp: the private reverse proxy's token, and the private service in
+ *  10. nbidp: the private reverse proxy's token, its custom domain, and the private service in
  *      front of Dex (#2891, nbidp.ts);
  *  11. a `self-` group and policy per person, so their own devices reach
  *      each other (selfAccess.ts).
@@ -33,14 +33,15 @@ import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
-import { NBIDP_BAO, nbidpHost } from "components/netbird/nbidp.ts";
+import { NBIDP_BAO, nbidpClusterAddress, nbidpHost } from "components/netbird/nbidp.ts";
 import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
 import { NetbirdUserAutoGroup } from "dynamic/netbird/NetbirdUserAutoGroup.ts";
-import { type LiveCluster, type LiveService, privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
+import { type LiveCluster, type LiveDomain, type LiveService, liveCustomDomain, privateServiceAccessGroups, privateServiceRequest, serviceOnCluster } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
+import { clusterCnames, declareCustomDomain, validationCname } from "./proxyDomains.ts";
 import { type LiveUser, selfAccessPlan } from "./selfAccess.ts";
 import { routedSites, SITES, siteProblems } from "./sites.ts";
 
@@ -375,15 +376,28 @@ for (const rule of ACCESS_RULES) {
 //
 //   - a token to register with management as a bring-your-own proxy. Account
 //     scoped: it can serve this account's services and nothing else. Its
-//     cluster address is NB_PROXY_DOMAIN, `nbidp.<root domain>`;
+//     cluster address is NB_PROXY_DOMAIN, `ek.<root domain>`
+//     (nbidpClusterAddress);
+//   - `nbidp.<root domain>` as a custom domain on that cluster, with the
+//     public `validation.nbidp` CNAME management checks it by
+//     (proxyDomains.ts). Until D38 the cluster address WAS nbidp's name; it is
+//     its own now, so the proxy can serve other names under custom domains;
 //   - the private service: `nbidp.<root domain>` to Dex, NetBird-only, open to
 //     the four user groups and nothing else (nbidp.ts says why, and why it
 //     still finds people's Authentik accounts with NetBird's built-in login).
 //
-// Management only accepts the service once that proxy is connected (it
-// derives the service's cluster from the live proxies), so on the run that
-// mints the token the service waits. The next run after the proxy comes up
-// declares it.
+// The domain and the service are always declared. Management takes a custom
+// domain only for a connected cluster, and a service only under a validated
+// domain, so while the proxy is down a run that has to CREATE either fails,
+// and the Stack retries within a minute until it is up: nbidp is live and
+// backs Authentik's passwordless login, so a missing service is an outage to
+// fix, not a state to wait in. A service that exists is left alone.
+//
+// Management pins a service to its cluster at create. A service on another
+// cluster (the old `nbidp.<root domain>` address) is deleted and re-created
+// (NetbirdPrivateService replaces on a cluster change, deleting first), after
+// the domain exists. nbidp is down from that delete until the new service is
+// up.
 // A token change is an update, not a replace (NetbirdProxyToken.diff), so
 // moving from the owner's PAT to automation's keeps the minted proxy token.
 const nbidpProxyToken = new NetbirdProxyToken("nbidp-proxy", { ...api, name: "nbidp-equestria" }, { dependsOn: [settings] });
@@ -401,14 +415,34 @@ baoKvSecret(
 );
 
 const nbidpDomain = nbidpHost();
+const proxyCluster = nbidpClusterAddress();
+const nbidpCnames = clusterCnames(globals, proxyCluster, [validationCname("netbird-nbidp-validation", nbidpDomain, "nbidp")]);
 pulumi.all([pulumi.output(api), pulumi.output(sourceGroupIds)]).apply(async ([{ managementUrl: url, token }, groupIds]) => {
-  const [clusters, services] = await Promise.all([netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"), netbirdGet<LiveService[]>(url, token, "/api/reverse-proxies/services")]);
-  if (!privateServiceReady(clusters, services, nbidpDomain)) {
-    pulumi.log.warn(`nbidp: no private proxy online for ${nbidpDomain} yet (kubernetes/apps/netbird-system/nbidp). The private service waits for it.`);
-    return;
-  }
+  const [clusters, services, domains] = await Promise.all([
+    netbirdGet<LiveCluster[]>(url, token, "/api/reverse-proxies/clusters"),
+    netbirdGet<LiveService[]>(url, token, "/api/reverse-proxies/services"),
+    netbirdGet<LiveDomain[]>(url, token, "/api/reverse-proxies/domains"),
+  ]);
+  if (!clusters.some(cluster => cluster.address === proxyCluster && cluster.online && cluster.private === true))
+    pulumi.log.warn(`nbidp: no private proxy online for ${proxyCluster} (kubernetes/apps/netbird-system/nbidp). Creating nbidp's domain or service fails until there is; the Stack retries.`);
+  if (services.some(service => service.domain === nbidpDomain) && !serviceOnCluster(services, nbidpDomain, proxyCluster))
+    pulumi.log.warn(`nbidp: the live service is on another proxy cluster; it is deleted and re-created on ${proxyCluster}. Passwordless login is down in between.`);
+  const { resource: nbidpCustomDomain } = await declareCustomDomain({
+    name: "nbidp-domain",
+    domain: nbidpDomain,
+    clusterAddress: proxyCluster,
+    provider,
+    managementUrl: url,
+    token,
+    live: liveCustomDomain(domains, nbidpDomain),
+    dependsOn: [settings, nbidpProxyToken, ...nbidpCnames],
+  });
   const accessGroupIds = privateServiceAccessGroups(groupIds);
-  new NetbirdPrivateService("nbidp", { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, accessGroupIds }) }, { dependsOn: [defaultPolicyRemoval, nbidpProxyToken] });
+  new NetbirdPrivateService(
+    "nbidp",
+    { managementUrl: url, token, request: privateServiceRequest({ host: nbidpDomain, clusterAddress: proxyCluster, accessGroupIds }) },
+    { dependsOn: [defaultPolicyRemoval, nbidpProxyToken, nbidpCustomDomain] },
+  );
 });
 
 // ── 11. Each person's own devices ──────────────────────────────────────────

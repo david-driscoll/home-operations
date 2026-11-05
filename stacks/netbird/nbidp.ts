@@ -38,6 +38,8 @@ export interface LiveCluster {
 export interface LiveService {
   id: string;
   domain: string;
+  /** The cluster management pinned the service to when it was created. */
+  proxy_cluster?: string;
 }
 
 /**
@@ -54,16 +56,39 @@ export function privateServiceAccessGroups(ids: Record<string, string>): string[
 }
 
 /**
- * Whether the service can be declared on this run.
- *
- * Creating one needs a live private proxy for its domain: management derives
- * the service's cluster from the domain, matched against the clusters whose
- * proxies are connected. But once it exists it stays declared even while the
- * proxy is down, or a run during a proxy restart would delete it.
+ * Whether a live service is on the cluster it must be on. Management fixes a
+ * service's proxy cluster when the service is created (an update with the
+ * same domain keeps it: resolveEffectiveCluster, v0.82.0), so a service left
+ * on another cluster after the proxy's address changes is stranded: no proxy
+ * serves it, and no PUT can move it. NetbirdPrivateService deletes and
+ * re-creates it instead.
  */
-export function privateServiceReady(clusters: LiveCluster[], services: LiveService[], host: string): boolean {
-  if (services.some(service => service.domain === host)) return true;
-  return clusters.some(cluster => cluster.address === host && cluster.online && cluster.private === true);
+export function serviceOnCluster(services: LiveService[], domain: string, clusterAddress: string): boolean {
+  return services.some(service => service.domain === domain && service.proxy_cluster === clusterAddress);
+}
+
+/** GET /api/reverse-proxies/domains, the fields used here. */
+export interface LiveDomain {
+  id: string;
+  domain: string;
+  validated: boolean;
+  /** `free` (a cluster address) or `custom`. */
+  type?: string;
+  target_cluster?: string;
+}
+
+/** The custom domain, if management has it (not the free cluster address of the same name). */
+export function liveCustomDomain(domains: LiveDomain[], domain: string): LiveDomain | undefined {
+  return domains.find(entry => entry.domain === domain && entry.type === "custom");
+}
+
+/**
+ * The name management looks up to validate a custom domain: a CNAME at
+ * `validation.<domain>` naming the target cluster's address (Validator.Validate,
+ * management/internals/modules/reverseproxy/domain/validator.go, v0.82.0).
+ */
+export function validationRecordName(domain: string): string {
+  return `validation.${domain}`;
 }
 
 /** POST/PUT /api/reverse-proxies/services body (api.ServiceRequest). */
@@ -90,15 +115,19 @@ export interface PrivateServiceRequest {
 }
 
 /**
- * The service. The domain is the proxy's own cluster address
- * (NB_PROXY_DOMAIN), so no custom domain has to be registered or validated,
- * and management's synthesized DNS zone is exactly that one name.
+ * The service. Its domain, `nbidp.<root domain>`, is a custom domain
+ * registered on the proxy's cluster, whose address is `ek.<root domain>`
+ * (NB_PROXY_DOMAIN; components/netbird/nbidp.ts nbidpClusterAddress). The
+ * domain used to BE the cluster address, which made this a one-service proxy;
+ * D38 split the two, so other services can share the cluster under their own
+ * custom domains. Management's synthesized DNS zone is still exactly the
+ * service's name.
  *
  * The target is a `cluster` target with `direct_upstream`: the proxy dials
  * Dex's Service from its pod, not through the mesh. Both need a private
  * cluster, which management checks.
  */
-export function privateServiceRequest(args: { host: string; accessGroupIds: string[] }): PrivateServiceRequest {
+export function privateServiceRequest(args: { host: string; clusterAddress: string; accessGroupIds: string[] }): PrivateServiceRequest {
   if (args.accessGroupIds.length === 0) throw new Error("the nbidp private service needs at least one access group");
   return {
     name: "nbidp",
@@ -114,7 +143,7 @@ export function privateServiceRequest(args: { host: string; accessGroupIds: stri
     targets: [
       {
         target_type: "cluster",
-        target_id: args.host,
+        target_id: args.clusterAddress,
         host: `${DEX_SERVICE}.${DEX_NAMESPACE}.svc.cluster.local`,
         port: DEX_PORT,
         protocol: "http",

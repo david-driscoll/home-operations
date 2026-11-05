@@ -2,7 +2,7 @@
  * node --test stacks/netbird/nbidp.test.ts
  *
  * The NetBird side of nbidp (#2891): which peers the private proxy admits to
- * Dex, and when stacks/netbird may declare the service at all.
+ * Dex, on which cluster, and how the custom domain is found and validated.
  *
  * Only user peers may reach it. A tagged or setup-key peer (gateways, k8s
  * routers, Apple TVs) has no owner, so the proxy would stamp its PEER NAME as
@@ -11,9 +11,10 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { privateServiceAccessGroups, privateServiceReady, privateServiceRequest } from "./nbidp.ts";
+import { liveCustomDomain, privateServiceAccessGroups, privateServiceRequest, serviceOnCluster, validationRecordName } from "./nbidp.ts";
 
 const HOST = "nbidp.example.test";
+const CLUSTER = "ek.example.test";
 
 /** Every group stacks/netbird creates, by name, plus NetBird's built-in `All`. */
 const ids: Record<string, string> = {
@@ -43,34 +44,35 @@ describe("privateServiceAccessGroups", () => {
   });
 });
 
-describe("privateServiceReady", () => {
-  const cluster = { address: HOST, online: true, private: true, type: "account" };
-
-  it("waits until the proxy has connected: management derives the service's cluster from a live proxy", () => {
-    assert.equal(privateServiceReady([], [], HOST), false);
-    assert.equal(privateServiceReady([{ ...cluster, online: false }], [], HOST), false);
+describe("serviceOnCluster", () => {
+  it("is true only for the domain's service on the expected cluster", () => {
+    assert.equal(serviceOnCluster([{ id: "s1", domain: HOST, proxy_cluster: CLUSTER }], HOST, CLUSTER), true);
   });
 
-  it("waits for a proxy running in private mode", () => {
-    assert.equal(privateServiceReady([{ ...cluster, private: false }], [], HOST), false);
-    assert.equal(privateServiceReady([{ ...cluster, private: undefined }], [], HOST), false);
+  it("calls a service left on the old cluster address stranded, so it is re-created", () => {
+    assert.equal(serviceOnCluster([{ id: "s1", domain: HOST, proxy_cluster: HOST }], HOST, CLUSTER), false);
+    assert.equal(serviceOnCluster([{ id: "s1", domain: HOST }], HOST, CLUSTER), false);
+    assert.equal(serviceOnCluster([], HOST, CLUSTER), false);
+  });
+});
+
+describe("custom domains", () => {
+  it("finds the custom domain, not a free cluster address of the same name", () => {
+    const domains = [
+      { id: "free", domain: HOST, validated: true, type: "free" },
+      { id: "d1", domain: HOST, validated: false, type: "custom", target_cluster: CLUSTER },
+    ];
+    assert.equal(liveCustomDomain(domains, HOST)?.id, "d1");
+    assert.equal(liveCustomDomain(domains, "other.example.test"), undefined);
   });
 
-  it("ignores other clusters", () => {
-    assert.equal(privateServiceReady([{ ...cluster, address: "proxy.example.test" }], [], HOST), false);
-  });
-
-  it("declares once the private cluster is online", () => {
-    assert.equal(privateServiceReady([cluster], [], HOST), true);
-  });
-
-  it("keeps declaring a service that exists while the proxy is down, or Pulumi would delete it", () => {
-    assert.equal(privateServiceReady([{ ...cluster, online: false }], [{ id: "s1", domain: HOST }], HOST), true);
+  it("is validated by a CNAME at validation.<domain>", () => {
+    assert.equal(validationRecordName(HOST), "validation.nbidp.example.test");
   });
 });
 
 describe("privateServiceRequest", () => {
-  const request = privateServiceRequest({ host: HOST, accessGroupIds: ["g-admins"] });
+  const request = privateServiceRequest({ host: HOST, clusterAddress: CLUSTER, accessGroupIds: ["g-admins"] });
 
   it("is a NetBird-only HTTP service gated on the access groups", () => {
     assert.equal(request.private, true);
@@ -84,11 +86,11 @@ describe("privateServiceRequest", () => {
     assert.equal(request.auth, undefined);
   });
 
-  it("forwards to Dex's Service directly from the proxy pod, not over the tunnel", () => {
+  it("forwards to Dex's Service directly from the proxy pod, on the proxy's cluster, not over the tunnel", () => {
     assert.deepEqual(request.targets, [
       {
         target_type: "cluster",
-        target_id: HOST,
+        target_id: CLUSTER,
         host: "nbidp-dex.netbird-system.svc.cluster.local",
         port: 5556,
         protocol: "http",
@@ -100,6 +102,6 @@ describe("privateServiceRequest", () => {
   });
 
   it("refuses to open the service to nobody", () => {
-    assert.throws(() => privateServiceRequest({ host: HOST, accessGroupIds: [] }), /access group/);
+    assert.throws(() => privateServiceRequest({ host: HOST, clusterAddress: CLUSTER, accessGroupIds: [] }), /access group/);
   });
 });
