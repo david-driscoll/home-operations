@@ -215,8 +215,8 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
   - a **`netbird-gateway` Docker stack** (`netbirdio/netbird`, host networking, `NET_ADMIN`, `/dev/net/tun`) on each
     site's Dockge host(s). Each is a routing peer for its site LAN, and the gateways of one Dockge site stack form
     one group and one **exit node** (D53);
-  - home has two Dockge hosts (alpha-site and celestia), so home gets two gateways at different metrics, which
-    gives HA;
+  - home has two Dockge hosts (alpha-site and celestia), so home gets two gateways at equal metrics: each client
+    picks the lowest-latency one and the other takes over when it goes;
   - the gulf-of-mexico subnet is not in the repo yet; the gateway ticket finds it;
   - gateways advertise routes but never accept them.
 - **Equestria:** the NetBird operator runs `NetworkRouter` pods as a second route to the `internal` Gateway IP and
