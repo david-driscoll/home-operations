@@ -20,7 +20,7 @@
     "refresh": "fnox exec -- pulumi refresh --yes"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^2.0.1",
+    "@kubernetes/client-node": "^2.0.2",
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
     "@pulumi/command": "^1.3.0",
     "@pulumi/kubernetes": "^4.34.2",
