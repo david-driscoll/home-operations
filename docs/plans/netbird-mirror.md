@@ -361,6 +361,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D29 | 11-03 | The Authentik `netbird` OAuth2 provider and application (`netbird-edge/definition.yaml`) and NetBird's Authentik connector are removed; nbidp stays |
 | D30 | 11-04 | `admins` invites create NetBird admin-role users; the other groups stay regular users with no dashboard |
 | D31 | 11-04 | A person's own devices reach each other (NetBird has no `autogroup:self`): `stacks/netbird` reads users live and gives each human user a `self-<name>` auto group and a group-to-itself policy (`selfAccess.ts`, `NetbirdUserAutoGroup`) |
+| D47 | 11-04 | NetBird health alerting: a separate `netbird-health` CronJob posts Alertmanager alerts for disconnected gateways/DNS peers, unvalidated proxy domains and an offline nbidp cluster; Gatus checks the Azure relays over TLS; the Azure hosts probe the home relay and push a Gatus heartbeat (Monitoring) |
 
 ### Azure primary (#3001, 2026-11-03)
 
@@ -473,3 +474,22 @@ These came out of building #3000, #2885, #2887 and #2888, and they amend the sec
 **Overlay range ordering.** `10.100.0.0/16` is applied before any setup key or invite exists, so no peer can take an address from the default range.
 
 **The CrossGuard pack does not run in-cluster.** Pulumi Kubernetes Operator v2.10 has no policy-pack support (pulumi/pulumi-kubernetes-operator#366). The pack runs in CI as unit tests plus a smoke test, and locally with `--policy-pack`. In-cluster, the component check, OCI quotas and the budget remain.
+
+### Monitoring (D47, 2026-11-04)
+
+Every check pages through Pushover. The flips page from the watchdog (§E), and each check below has its own route.
+
+| What | Where it runs | How it pages |
+| --- | --- | --- |
+| A `gateways` or `dns-servers` peer disconnected for over 10 minutes (warning); every peer in one of those groups disconnected (critical) | `kubernetes/apps/netbird-system/health`, a CronJob every 5 minutes | `health.ts` posts to Alertmanager `/api/v2/alerts`, as the watchdog does |
+| A reverse-proxy custom domain (`app.`, `nbidp.`) registered but not validated (warning) | the same CronJob | the same |
+| The `nbidp.<root domain>` proxy cluster offline or missing (critical) | the same CronJob | the same |
+| The health CronJob itself has not succeeded in 30 minutes | PrometheusRule `NetbirdHealthNotRunning` (`kube_cronjob_*`) | Alertmanager |
+| `relay-eus2` and `relay-cus` answer TLS on 443, certificate more than 7 days from expiry | Gatus on alpha-site (`stacks/netbird-edge`, `addUptimeGatus("netbird-relays")`) | Gatus |
+| The home relay (`relay-home.<root domain>`, #3051) answers verified TLS over the internet | a systemd timer on each Azure host (`components/netbird/relayProbe.ts`), every 5 minutes | a Gatus heartbeat that goes stale after 15 minutes without a push |
+
+- **Not inside the watchdog.** The health job is a separate CronJob in its own Flux Kustomization. A bug in it can never block a failover, and the watchdog's file is untouched. Both are short single-file scripts that run by type stripping. They share their conventions (the Alertmanager payload, the `endsAt` lapse, the staleness rule) but no code, so changing one never redeploys the other.
+- **Alerts resolve by lapsing.** Every run re-posts the problems it sees with `endsAt` 15 minutes ahead. A fixed problem stops being posted and resolves on its own.
+- **Missing is not an alert.** The health job skips a watched group or custom domain that does not exist, so `dns-servers` (#3055) and the `app.` domain (#3053) are covered once they land. A missing proxy cluster does count as offline.
+- **The home relay is probed from Azure.** Its name is private (a Technitium record that points at the home WAN address), and Gatus at home could reach it only by hairpin NAT, which proves nothing about the WAN path. The Azure hosts run `--accept-dns=false`, so `stacks/netbird-edge` reads the address from Technitium at deploy time and bakes it into the script. The script still tries DNS first. A probe that cannot connect pushes nothing. A certificate inside 7 days pushes an explicit failure.
+- **Turning the home probe on.** It is off by default. Once #3051 is merged and its first `stacks/unifi-network` run has written the record, run `pulumi config set netbird-edge:homeRelayProbe true` in `stacks/netbird-edge`. While the record is missing, a run warns and leaves the probes off. If the home WAN address changes, the probes fail until the next `stacks/netbird-edge` run (daily), because the address is baked in at deploy time.

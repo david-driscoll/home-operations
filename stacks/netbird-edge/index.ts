@@ -21,6 +21,7 @@ import type { Input, Output, Resource } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import { TailnetKey } from "@pulumi/tailscale";
+import * as technitium from "@pulumi/technitium";
 import * as tls from "@pulumi/tls";
 import { AzureEdgeVm } from "components/azure/AzureEdgeVm.ts";
 import { AZURE_EDGE_REGIONS } from "components/azure/edgeVm.ts";
@@ -31,7 +32,9 @@ import { GlobalResources } from "components/globals.ts";
 import { addUptimeGatus, toGatusKey } from "components/helpers.ts";
 import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBIRD_BACKUP_BUCKET, resticRepository } from "components/netbird/backup.ts";
 import { assertFenceFasterThanFlip } from "components/netbird/fence.ts";
+import { NetbirdRelayProbe } from "components/netbird/NetbirdRelayProbe.ts";
 import { NetbirdServer, type NetbirdServerArgs } from "components/netbird/NetbirdServer.ts";
+import { RELAY_GATUS_GROUP, relayProbeHeartbeat, relayTlsEndpoint } from "components/netbird/relayProbe.ts";
 import { instanceAlarms } from "components/oci/alarms.ts";
 import { BOOT_VOLUME_BACKUP_COPIES, bootVolumeBackupSchedule, FREE_TIER, freeTierQuotaStatements, retainedBackupCopies } from "components/oci/freeTier.ts";
 import { OciFreeTierInstance } from "components/oci/OciFreeTierInstance.ts";
@@ -496,6 +499,57 @@ function serverArgs(host: EdgeHost): NetbirdServerArgs {
 
 const servers = Object.fromEntries(hosts.map(host => [host.id, new NetbirdServer(host.hostname, serverArgs(host))]));
 const server = servers[setupHost.id];
+
+// ── Relay health (D47) ──────────────────────────────────────────────────
+// The Azure relays have public names, so Gatus checks them directly. The home
+// relay (#3051, `relay-home.<root domain>`) has only a private Technitium
+// record pointing at the home WAN address; Gatus at home would reach it by
+// hairpin NAT and prove nothing. So each Azure host probes it over the
+// internet and pushes a heartbeat that goes stale when it cannot connect
+// (components/netbird/relayProbe.ts).
+//
+// Off until #3051 has landed and its first stacks/unifi-network run has
+// written the record: `pulumi config set netbird-edge:homeRelayProbe true`.
+// The hosts run with --accept-dns=false and the name has no public record, so
+// the address comes from Technitium at deploy time and is baked into the
+// script. A run that cannot read it warns and leaves the probes off.
+const homeRelayName = `relay-home.${root}`;
+const homeRelayAddress = config.getBoolean("homeRelayProbe")
+  ? await technitium
+      .getRecord({ zone: root, name: homeRelayName, type: "A" }, { provider: globals.technitiumProvider })
+      .then(record => record.value || record.records[0]?.value || undefined)
+      .catch((error: unknown) => {
+        pulumi.log.warn(`homeRelayProbe is on, but Technitium has no A record for ${homeRelayName} (${String(error)}); the home-relay probes stay off. Has #3051's stacks/unifi-network run?`);
+        return undefined;
+      })
+  : undefined;
+const relayProbes = homeRelayAddress
+  ? hosts
+      .filter(host => host.relayDomain)
+      .map(host => {
+        const name = `relay-home-from-${host.id}`;
+        return { host, name, token: toGatusKey(RELAY_GATUS_GROUP, name) };
+      })
+  : [];
+addUptimeGatus("netbird-relays", globals, {
+  endpoints: relays.map(relayTlsEndpoint),
+  "external-endpoints": relayProbes.map(probe => relayProbeHeartbeat({ name: probe.name, token: probe.token })),
+});
+for (const probe of relayProbes) {
+  new NetbirdRelayProbe(`${probe.host.hostname}-relay-probe`, {
+    connection: {
+      host: pulumi.interpolate`${probe.host.hostname}.${globals.tailscaleDomain}`,
+      user: "root",
+      privateKey: breakGlassKey.privateKeyOpenssh,
+    },
+    name: homeRelayName,
+    address: homeRelayAddress,
+    // Over the tailnet, the same uptime VIP the backup heartbeat uses.
+    heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: probe.token },
+    hostKey: probe.host.hostKey,
+    dependsOn: [probe.host.machine],
+  });
+}
 
 if (globals.baoDualWriteEnabled) {
   const bao = { provider: globals.baoProvider };

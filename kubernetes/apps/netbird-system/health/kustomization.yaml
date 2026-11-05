@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./cronjob.yaml
+  - ./prometheusrule.yaml
+configMapGenerator:
+  # The checks, a real .ts file so tsc, biome and node --test see it
+  # (health.test.ts beside it is not shipped). The content-hash suffix stays,
+  # so an edit rolls out on the next run.
+  - name: netbird-health
+    files:
+      - ./health.ts
+    options:
+      # Flux envsubst must not read the code (as for failover-watchdog).
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
