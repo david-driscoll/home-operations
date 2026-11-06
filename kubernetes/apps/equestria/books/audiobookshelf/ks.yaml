@@ -42,9 +42,6 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      # Keep serving on the tailnet and NetBird names instead of redirecting to
-      # the app route (docs/adr/0004): the mobile app may not follow a redirect.
-      TAILSCALE_ROUTE: serve
       NAMESPACE: *namespace
       # No TAILSCALE_MIDDLEWARE override: login is Audiobookshelf's own OIDC,
       # and the mobile apps talk to the API with their own tokens, so the

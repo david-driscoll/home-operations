@@ -13,8 +13,8 @@ Every app had up to three working names: its app route (`<app>.<root domain>`), 
 
 ## Consequences
 
-- An app can keep serving with `TAILSCALE_ROUTE: serve` in its ks.yaml. That covers apps with no app route (crowdsec-ui, meilisearch) and native clients that may not follow a redirect (plex, jellyfin, immich, obsidian-sync, audiobookshelf). An app that keeps serving through authentik forward-auth needs its `tailnetUrl` back.
+- Every cluster app redirects, with no opt-out: nobody uses the overlay names directly. crowdsec-ui and meilisearch have no app route, so their overlay names now lead nowhere. An app that ever needs to serve on an overlay name again needs a non-redirecting router and, for authentik forward-auth, its `tailnetUrl` back.
 - The *arr API-key route on the tailnet (`components/tailscale/api-key`) keeps serving, so API clients configured with a tailnet name are unaffected.
 - Dockge: only the user-facing UI routers redirect (backrest, garage, alloy, prometheus, the Traefik dashboard, uptime, zwave). Backplane and API names keep serving: OpenBao (`bao-standby`, `bao-transit`), `garage-s3` and `garage-admin`, the registry, authentik and its outposts, and the llama APIs.
-- `TAILSCALE_MIDDLEWARE: tailscale-user` in a ks.yaml now matters only to an app that keeps serving.
+- `TAILSCALE_MIDDLEWARE` in a ks.yaml no longer has any effect: its gate sits behind the redirect, and the API-key route names its own.
 - The NetBird private service still checks each app's access policy before the redirect; the app route then applies its own login.
