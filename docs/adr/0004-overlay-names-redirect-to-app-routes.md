@@ -15,7 +15,7 @@ Every app had up to three working names: its app route (`<app>.<root domain>`), 
 
 - Every cluster app redirects, with no opt-out: nobody uses the overlay names directly. crowdsec-ui and meilisearch have no app route, so their overlay names now lead nowhere. An app that ever needs to serve on an overlay name again needs a non-redirecting router and, for authentik forward-auth, its `tailnetUrl` back.
 - The *arr API-key route on the tailnet (`components/tailscale/api-key`) keeps serving, so API clients configured with a tailnet name are unaffected.
-- Dockge: only the user-facing UI routers redirect (backrest, garage, alloy, prometheus, the Traefik dashboard, uptime, zwave). Backplane and API names keep serving: OpenBao (`bao-standby`, `bao-transit`), `garage-s3` and `garage-admin`, the registry, authentik and its outposts, and the llama APIs.
+- Dockge: only the user-facing UI routers redirect (backrest, garage, alloy, prometheus, the Traefik dashboard, uptime, zwave). Backplane and API names keep serving: OpenBao (`bao-standby`, `bao-transit`), `garage-s3` and `garage-admin`, the registry, authentik and its outposts, and the llama APIs. Gatus (`uptime`) redirects its UI but keeps serving its heartbeat push API (`/api/v1/endpoints/<key>/external`) on the tailnet name, because tailnet-only pushers such as the NetBird edge hosts cannot follow the redirect.
 - `TAILSCALE_MIDDLEWARE` in a ks.yaml no longer has any effect: its gate sits behind the redirect, and the API-key route names its own.
 - The NetBird private service still checks each app's access policy before the redirect; the app route then applies its own login.
 - The redirects are permanent (301, or 308 for a non-GET), so browsers cache them.
