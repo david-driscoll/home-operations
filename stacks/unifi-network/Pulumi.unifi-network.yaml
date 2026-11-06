@@ -1,1 +1,5 @@
 encryptionsalt: v1:YVS6wu133Ic=:v1:IETNlCbV3VeXF1rk:kokhjvW3rbfqDMmUHZQPbdvAHPh2eQ==
+config:
+  # Advertise the Technitium hosts' fixed ULA addresses as Home's IPv6 DNS
+  # (local-dns.ts). Turned on 2026-11-06 once each answered on its ULA.
+  unifi-network:homeIpv6Dns: "true"
