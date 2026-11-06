@@ -23,7 +23,7 @@ services:
       traefik.http.routers.zwave-tailscale.middlewares: zwave-app-route
       traefik.http.middlewares.zwave-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.zwave-app-route.redirectregex.replacement: "https://zwave.${searchDomain}$${1}"
-      traefik.http.middlewares.zwave-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.zwave-app-route.redirectregex.permanent: "true"
       traefik.http.routers.zwave-tailscale.entrypoints: tailscale
       traefik.http.routers.zwave-tailscale.service: zwave
 

@@ -27,7 +27,7 @@ services:
       traefik.http.routers.uptime-tailscale.middlewares: uptime-app-route
       traefik.http.middlewares.uptime-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.uptime-app-route.redirectregex.replacement: "https://uptime.${searchDomain}$${1}"
-      traefik.http.middlewares.uptime-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.uptime-app-route.redirectregex.permanent: "true"
       traefik.http.routers.uptime-tailscale.entrypoints: tailscale
       traefik.http.routers.uptime-tailscale.service: uptime
 

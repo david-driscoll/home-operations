@@ -16,4 +16,5 @@ Typing an app's short name (`jellyfin`) should work on the LAN, on Tailscale and
 - MagicDNS always puts `<tailnet>` first in the search list, and it does answer an app's short name with that app's Tailscale Service. So every tailnet Ingress also serves port 80, and Traefik redirects that to the app route too (docs/plans/short-names.md, C2b). On Tailscale the short name still means the app route; it just gets there through the Service.
 - Tailscale search paths cannot be scoped by device, so servers that accept tailnet DNS get the search domain too. The NetBird search domain is scoped to client devices.
 - Names that are not behind Traefik (the UniFi console, TrueNAS, the Proxmox hosts) resolve as short names but get no redirect.
+- The redirects are permanent (301, or 308 for a non-GET) since 2026-11-06; they started as 302s. Browsers cache them, so renaming an app leaves the old target on devices that used it until their cache is cleared.
 - Plan and phases: `docs/plans/short-names.md`.

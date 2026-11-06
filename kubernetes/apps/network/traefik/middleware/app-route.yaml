@@ -17,8 +17,8 @@
 # middleware serves both overlays. There is no opt-out: nobody uses the overlay
 # names directly.
 #
-# 302, not 301: a renamed app must not leave a cached redirect behind. Traefik
-# answers a non-GET with 307, which keeps the method and body for API clients.
+# Permanent: 301 for GET, 308 for anything else, which keeps the method and
+# body for API clients. Browsers cache it (ADR 0004).
 # The `$$` keeps the capture groups away from Flux's postBuild substitution.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -28,4 +28,4 @@ spec:
   redirectRegex:
     regex: "^https?://([a-zA-Z0-9-]+)\\.[^/]*(/.*)?$"
     replacement: "https://$${1}.${ROOT_DOMAIN}$${2}"
-    permanent: false
+    permanent: true

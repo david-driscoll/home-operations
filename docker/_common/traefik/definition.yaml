@@ -23,13 +23,12 @@ spec:
       conditions:
         - "[STATUS] == 200"
     # Short names (docs/plans/short-names.md C6): a dotless Host on :80 must
-    # get the short-name 302 from dynamic/short-names.yaml.
+    # be redirected (301) to its app route by dynamic/short-names.yaml. The
+    # check follows it to https://uptime.<root domain> and expects a 200.
     - name: short-name redirect
       url: http://internal.${CLUSTER_DOMAIN}/
       method: GET
       headers:
-        Host: gatus-short-name
-      client:
-        ignore-redirect: true
+        Host: uptime
       conditions:
-        - "[STATUS] == 302"
+        - "[STATUS] == 200"

@@ -58,7 +58,7 @@ services:
       traefik.http.routers.backrest-tailscale.middlewares: backrest-app-route
       traefik.http.middlewares.backrest-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.backrest-app-route.redirectregex.replacement: "https://backrest.${CLUSTER_DOMAIN}$${1}"
-      traefik.http.middlewares.backrest-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.backrest-app-route.redirectregex.permanent: "true"
       traefik.http.routers.backrest-tailscale.entrypoints: tailscale
       traefik.http.routers.backrest-tailscale.service: backrest
 

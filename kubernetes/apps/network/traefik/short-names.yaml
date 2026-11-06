@@ -11,8 +11,9 @@
 # the default certificate and a 404). So a dotless host on :80 is sent to its
 # full name here instead, and the app's own router takes it from there.
 #
-# 302, ON PURPOSE AND FOR GOOD. Browsers cache a 301 indefinitely, and a renamed
-# app would leave every device that had used its short name with a stale one.
+# PERMANENT (301; 308 for a non-GET, which keeps the method and body). Browsers
+# cache it, so a renamed app leaves devices that used its short name with the
+# old target until their cache is cleared. Chosen anyway (ADR 0003).
 #
 # The `$$` keeps Traefik's capture groups away from Flux's postBuild
 # substitution; only ROOT_DOMAIN is substituted. `(?i)` because the URL keeps
@@ -25,7 +26,7 @@ spec:
   redirectRegex:
     regex: "^(?i)https?://([a-z0-9-]+)(:[0-9]+)?(/.*)?$"
     replacement: "https://$${1}.${ROOT_DOMAIN}$${3}"
-    permanent: false
+    permanent: true
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
 #

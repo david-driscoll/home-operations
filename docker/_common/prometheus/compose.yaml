@@ -32,7 +32,7 @@ services:
       traefik.http.routers.alloy-tailscale.middlewares: alloy-app-route
       traefik.http.middlewares.alloy-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.alloy-app-route.redirectregex.replacement: "https://alloy.${CLUSTER_DOMAIN}$${1}"
-      traefik.http.middlewares.alloy-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.alloy-app-route.redirectregex.permanent: "true"
       traefik.http.routers.alloy-tailscale.entrypoints: tailscale
       traefik.http.routers.alloy-tailscale.service: alloy
       traefik.http.services.alloy.loadbalancer.server.port: 12345
@@ -77,7 +77,7 @@ services:
       traefik.http.routers.prometheus-tailscale.middlewares: prometheus-app-route
       traefik.http.middlewares.prometheus-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.prometheus-app-route.redirectregex.replacement: "https://prometheus.${CLUSTER_DOMAIN}$${1}"
-      traefik.http.middlewares.prometheus-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.prometheus-app-route.redirectregex.permanent: "true"
       traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
       traefik.http.routers.prometheus-tailscale.service: prometheus
       traefik.http.services.prometheus.loadbalancer.server.port: 9090
