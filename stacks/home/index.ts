@@ -215,8 +215,8 @@ const celestiaHost = new ProxmoxHost("celestia", {
   },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: { start: 302, end: 399 },
-  // 15 GiB host carrying celestia-dockge (5 GiB) plus the milky-way control
-  // plane (7 GiB). ZFS's default of half of RAM left no room for the VM, and
+  // 15 GiB host carrying celestia-dockge (4 GiB) plus the milky-way control
+  // plane (8 GiB). ZFS's default of half of RAM left no room for the VM, and
   // even 1.5 GiB left ~6.9 GiB available, short of the VM plus QEMU overhead.
   zfsArcMaxBytes: 1 * 1024 ** 3,
 });
@@ -231,7 +231,11 @@ const _milkyWayVm = new TalosVm(
     host: celestiaHost,
     vmId: 210,
     cores: 4,
-    memoryMiB: 7 * 1024,
+    // 8 GiB, not 7: at 7 the node idled with 1-1.5 GB available, and a dip to
+    // 0.6 GB on 2026-11-06 took its Longhorn instance-manager with it (every
+    // replica here rebuilt). The GiB came from celestia-dockge, which uses ~2.7.
+    // A change needs a VM restart: let Longhorn's rebuilds settle first.
+    memoryMiB: 8 * 1024,
     diskGiB: 64,
     storage: "local-lvm",
     bridge: "vmbr0",
@@ -241,8 +245,8 @@ const _milkyWayVm = new TalosVm(
     isoUrl: "https://factory.talos.dev/image/847c39de8e6eda418acf32739379b76b06f1f82f8fcae9fa64bd78bb3e19b3e5/v1.14.4/metal-amd64.iso",
     // The spare Samsung 990 EVO Plus, alone in IOMMU group 16. Longhorn's disk.
     pciDevices: ["0000:05:00.0"],
-    // Fits since celestia-dockge dropped to 5 GiB / 12 cores (#2986) and the
-    // PBS LXC went (#2982).
+    // Fits since celestia-dockge dropped to 4 GiB / 12 cores (#2986, then
+    // 2026-11-06) and the PBS LXC went (#2982).
     start: true,
   },
   { dependsOn: [celestiaHost] },
@@ -273,8 +277,9 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   vmId: 300,
   // celestia (16 threads, 15 GB) also hosts the 4 vCPU milky-way
   // control-plane VM, so this LXC gets the other 12. The containers here use
-  // ~3 GB RSS since hermes and neo4j left (2026-11-01).
-  memory: 5120,
+  // ~3 GB RSS since hermes and neo4j left (2026-11-01); 2.7 GB on
+  // 2026-11-06, when 1 GiB of the limit moved to milky-way.
+  memory: 4096,
   cores: 12,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
