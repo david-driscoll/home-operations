@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   dnsResolvers,
+  MAGIC_DNS,
   RELAY_CERT_MIN_DAYS,
   RELAY_GATUS_GROUP,
   RELAY_PROBE_INTERVAL_MINUTES,
@@ -31,6 +32,8 @@ const TOKEN = "netbird-relays_relay-home-from-azure-eus2";
 const URL = "https://uptime.example.ts.net";
 const DNS_A = "100.64.0.11";
 const DNS_B = "100.64.0.12";
+const GATUS_HOST = "uptime.example.ts.net";
+const GATUS_VIP = "100.64.0.20";
 
 function box() {
   const dir = mkdtempSync(join(tmpdir(), "relay-probe-"));
@@ -72,7 +75,8 @@ function run(script: string, env: Record<string, string> = {}) {
 
 const script = (resolvers: string[] = [DNS_A, DNS_B]) => renderRelayProbeScript({ name: NAME, resolvers, heartbeat: { url: `${URL}/`, token: TOKEN } });
 const curlCalls = (calls: string[]) => calls.filter(c => c.startsWith("curl "));
-const digCalls = (calls: string[]) => calls.filter(c => c.startsWith("dig "));
+/** The relay lookups only: the report's MagicDNS lookup for the Gatus VIP is asserted on its own. */
+const digCalls = (calls: string[]) => calls.filter(c => c.startsWith("dig ") && c.endsWith(` ${NAME} A`));
 
 describe("renderRelayProbeScript", () => {
   it("is valid bash", () => {
@@ -83,10 +87,21 @@ describe("renderRelayProbeScript", () => {
   });
 
   it("asks the first Technitium node for the name, connects to its answer with the relay's name, and reports success", () => {
-    const { status, calls, reports } = run(script(), { FAKE_DNS: `${DNS_A}=203.0.113.7` });
+    const { status, calls, reports } = run(script(), { FAKE_DNS: `${DNS_A}=203.0.113.7 ${MAGIC_DNS}=${GATUS_VIP}` });
     assert.equal(status, 0);
     assert.deepEqual(digCalls(calls), [`dig +short +time=2 +tries=1 @${DNS_A} ${NAME} A`]);
     assert.ok(calls.some(c => c.includes(`--connect-to ${NAME}:443:203.0.113.7:443 https://${NAME}/`)));
+    assert.deepEqual(reports, [`curl -sS -o /dev/null --max-time 15 --resolve ${GATUS_HOST}:443:${GATUS_VIP} -X POST -H Authorization: Bearer ${TOKEN} ${URL}/api/v1/endpoints/${TOKEN}/external?success=true`]);
+  });
+
+  it("looks the Gatus VIP up through MagicDNS, since the host resolver cannot see tailnet names", () => {
+    const { calls } = run(script(), { FAKE_DNS: `${DNS_A}=203.0.113.7 ${MAGIC_DNS}=${GATUS_VIP}` });
+    assert.ok(calls.includes(`dig +short +time=2 +tries=1 @${MAGIC_DNS} ${GATUS_HOST} A`));
+  });
+
+  it("still reports, unpinned, when MagicDNS gives no answer", () => {
+    const { status, reports } = run(script(), { FAKE_DNS: `${DNS_A}=203.0.113.7 ${MAGIC_DNS}=timeout` });
+    assert.equal(status, 0);
     assert.deepEqual(reports, [`curl -sS -o /dev/null --max-time 15 -X POST -H Authorization: Bearer ${TOKEN} ${URL}/api/v1/endpoints/${TOKEN}/external?success=true`]);
   });
 

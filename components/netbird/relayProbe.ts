@@ -21,6 +21,8 @@
  *     (`dig @<dns-<cluster> tailnet IP>`, one after another until one
  *     answers). The node list is read at deploy time (dnsResolvers); a home
  *     WAN address change is picked up on the next probe, not the next deploy.
+ *     The report has the same problem with the Gatus VIP, a tailnet name: it
+ *     asks MagicDNS (MAGIC_DNS) and pins curl to the answer with --resolve.
  *
  * Pure, so `node --test` covers it (relayProbe.test.ts).
  */
@@ -63,6 +65,8 @@ export function relayProbeHeartbeat(args: { name: string; token: string }): Exte
 
 /** Per-resolver `dig` budget: one try, two seconds. A handful of dead nodes still fits the unit's timeout. */
 export const RELAY_PROBE_DNS_TIMEOUT_SECONDS = 2;
+/** Tailscale's MagicDNS resolver: the only thing that answers tailnet names on a host joined with --accept-dns=false. */
+export const MAGIC_DNS = "100.100.100.100";
 
 export interface RelayProbeScriptArgs {
   /** The relay's name: SNI, the certificate's name, and what the probe resolves. */
@@ -102,17 +106,26 @@ export function renderRelayProbeScript(args: RelayProbeScriptArgs): string {
   const resolvers = args.resolvers.map(resolver => shellWord(resolver, "resolver")).join(" ");
   const url = shellWord(args.heartbeat.url.replace(/\/+$/, ""), "heartbeat url");
   const token = shellWord(args.heartbeat.token, "heartbeat token");
+  const gatus = new URL(args.heartbeat.url);
+  const gatusHost = shellWord(gatus.hostname, "heartbeat host");
+  const gatusPort = gatus.port || (gatus.protocol === "http:" ? "80" : "443");
   return `#!/usr/bin/env bash
 # Rendered by components/netbird/relayProbe.ts (Pulumi). Edits on the VM are overwritten.
 set -uo pipefail
 name=${name}
 resolvers="${resolvers}"
 min_seconds=${RELAY_CERT_MIN_DAYS * 86400}
+gatus_host=${gatusHost}
 
 report() {
-  local query="success=$1"
+  local query="success=$1" gatus_address pin=()
   [ "$1" = true ] || query="$query&error=$2"
-  curl -sS -o /dev/null --max-time 15 -X POST -H "Authorization: Bearer ${token}" \\
+  # The Gatus VIP is a tailnet name and the host's resolver cannot see it
+  # (--accept-dns=false), so ask MagicDNS and pin curl to the answer. The
+  # backup's report gets the same from its containers' dns: ${MAGIC_DNS}.
+  gatus_address=$(dig +short +time=${RELAY_PROBE_DNS_TIMEOUT_SECONDS} +tries=1 @${MAGIC_DNS} "$gatus_host" A 2>/dev/null | grep -E '^[0-9]+(.[0-9]+){3}$' | head -n 1)
+  [ -n "$gatus_address" ] && pin=(--resolve "$gatus_host:${gatusPort}:$gatus_address")
+  curl -sS -o /dev/null --max-time 15 "\${pin[@]}" -X POST -H "Authorization: Bearer ${token}" \\
     "${url}/api/v1/endpoints/${token}/external?$query" \\
     || echo "netbird-relay-probe: WARN: could not report success=$1 to Gatus" >&2
 }
