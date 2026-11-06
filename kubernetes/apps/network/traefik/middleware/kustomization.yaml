@@ -11,6 +11,9 @@ resources:
   - ./authenticated-user.yaml
   - ./tailscale-user.yaml
   - ./tailscale-local.yaml
+  # The overlay names' first middleware: redirect to the app route, or the
+  # `serve` opt-out (components/tailscale, docs/adr/0004).
+  - ./app-route.yaml
   # The NetBird door's gate and its counterparts of the three tailnet chains
   # (components/tailscale/netbird-ingressroute.yaml).
   - ./netbird.yaml

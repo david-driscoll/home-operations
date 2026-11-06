@@ -18,6 +18,12 @@ services:
       traefik.http.routers.zwave.service: zwave
 
       traefik.http.routers.zwave-tailscale.rule: Host(`zwave.${tailscaleDomain}`)
+      # Redirects to the app route, https://zwave.${searchDomain} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.zwave-tailscale.middlewares: zwave-app-route
+      traefik.http.middlewares.zwave-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.zwave-app-route.redirectregex.replacement: "https://zwave.${searchDomain}$${1}"
+      traefik.http.middlewares.zwave-app-route.redirectregex.permanent: "false"
       traefik.http.routers.zwave-tailscale.entrypoints: tailscale
       traefik.http.routers.zwave-tailscale.service: zwave
 

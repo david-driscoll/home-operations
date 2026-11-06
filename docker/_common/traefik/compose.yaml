@@ -25,6 +25,12 @@ services:
       traefik.http.routers.dashboard.tls.certresolver: le
 
       traefik.http.routers.dashboard-tailscale.rule: Host(`internal-${host}.${tailscaleDomain}`)
+      # Redirects to the app route, https://internal.${CLUSTER_DOMAIN} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.dashboard-tailscale.middlewares: dashboard-app-route
+      traefik.http.middlewares.dashboard-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.dashboard-app-route.redirectregex.replacement: "https://internal.${CLUSTER_DOMAIN}$${1}"
+      traefik.http.middlewares.dashboard-app-route.redirectregex.permanent: "false"
       traefik.http.routers.dashboard-tailscale.entrypoints: tailscale
       traefik.http.routers.dashboard-tailscale.service: api@internal
 

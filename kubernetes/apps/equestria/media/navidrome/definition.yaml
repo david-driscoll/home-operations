@@ -9,10 +9,6 @@ spec:
   category: Applications
   description: Navidrome is a self-hosted music server and Subsonic-compatible streamer
   url: &url https://${APP}.${ROOT_DOMAIN}
-  # authentik's ProxyProvider holds ONE external host; this is what gives the
-  # outpost an application for the tailnet name too. Pairs with
-  # TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml -- see media/lidarr.
-  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/navidrome.svg
   access_policy:
     groups:

@@ -9,10 +9,6 @@ spec:
   category: Media Management
   description: Search YouTube, SoundCloud, Monochrome and more, and grab single tracks straight into the music library
   url: &url https://${APP}.${ROOT_DOMAIN}
-  # authentik's ProxyProvider holds ONE external host; this gives the outpost
-  # an application for the tailnet name too. Pairs with
-  # TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml -- see media/lidarr.
-  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   # Not in homarr-labs/dashboard-icons; upstream's own icon.
   icon: https://gitlab.com/g33kphr33k/musicgrabber/-/raw/main/static/favicon.png
   access_policy:

@@ -29,6 +29,11 @@ spec:
       priority: 10
       match: Host(`${TAILSCALE_HOST:=${APP}}.nb.${ROOT_DOMAIN}`)
       middlewares:
+        # By default a redirect to the app route, the same as the tailnet route
+        # (./ingressroute.yaml, docs/adr/0004). The NetBird proxy has already
+        # checked the app's access policy; the app route does the rest.
+        - name: app-route-${TAILSCALE_ROUTE:=redirect}
+          namespace: network
         - name: netbird-as-${TAILSCALE_MIDDLEWARE:=tailscale-local}
           namespace: network
       services:

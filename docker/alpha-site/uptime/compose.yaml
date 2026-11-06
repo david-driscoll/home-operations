@@ -22,6 +22,12 @@ services:
       traefik.http.routers.uptime.tls.certresolver: le
 
       traefik.http.routers.uptime-tailscale.rule: Host(`uptime.${tailscaleDomain}`)
+      # Redirects to the app route, https://uptime.${searchDomain} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.uptime-tailscale.middlewares: uptime-app-route
+      traefik.http.middlewares.uptime-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.uptime-app-route.redirectregex.replacement: "https://uptime.${searchDomain}$${1}"
+      traefik.http.middlewares.uptime-app-route.redirectregex.permanent: "false"
       traefik.http.routers.uptime-tailscale.entrypoints: tailscale
       traefik.http.routers.uptime-tailscale.service: uptime
 

@@ -9,9 +9,6 @@ spec:
   category: Media Management
   description: Listenarr is an *arr-style audiobook collection manager, with Audible/Audnexus metadata
   url: &url https://${APP}.${ROOT_DOMAIN}
-  # The same app under its tailnet name, so authentik has a provider for that
-  # hostname too. Paired with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml.
-  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/listenarr.svg
   access_policy:
     groups:
