@@ -115,11 +115,13 @@ export const ACCESS_RULES: AccessRule[] = [
   },
   {
     name: "apple-tv-media",
-    description: "Jellyfin and the other media apps, HTTPS through the cluster's Gateway",
+    description: "Jellyfin and the other media apps through the cluster's Gateway: HTTPS, and HTTP for the short-name redirect",
     sources: ["apple-tv"],
     destination: "home-media",
     protocol: "tcp",
-    ports: [443],
+    // 80 only reaches Traefik's redirects: a short name to its app route
+    // (docs/plans/short-names.md C5), anything else to HTTPS.
+    ports: [80, 443],
     mirrors: [],
   },
   {
@@ -161,7 +163,8 @@ export const ACCESS_RULES: AccessRule[] = [
     sources: ["apple-tv"],
     destination: "equestria-entry",
     protocol: "tcp",
-    ports: [443],
+    // The same as apple-tv-media, so a down home gateway changes nothing.
+    ports: [80, 443],
     mirrors: [],
   },
   {

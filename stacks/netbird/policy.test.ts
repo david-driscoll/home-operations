@@ -49,10 +49,12 @@ describe("client access, mirroring member-home-subnet-access", () => {
     assert.ok(can("admins", "lan-home", 8006));
   });
 
-  it("limits Apple TVs to HTTPS on the cluster's gateways (media)", () => {
+  it("limits Apple TVs to the cluster's gateways (media), HTTPS and the HTTP redirects", () => {
     assert.ok(can("apple-tv", "home-media", 443));
+    assert.ok(can("apple-tv", "home-media", 80));
     assert.ok(!can("apple-tv", "home-web", 443));
-    assert.ok(!can("apple-tv", "home-media", 80));
+    assert.ok(!can("apple-tv", "home-web", 80));
+    assert.ok(!can("apple-tv", "home-media", 8443));
   });
 
   it("connects users to the gateways for exit nodes, and nothing more (member-exit-node)", () => {
@@ -118,10 +120,11 @@ describe("client access through the Equestria entry (#2889)", () => {
   it("gives the same web access as the LAN path, so a down home gateway changes nothing", () => {
     for (const group of ["admins", "family", "friends", "media-managers"]) assert.ok(via(group, 443), group);
     assert.ok(via("apple-tv", 443));
+    assert.ok(via("apple-tv", 80));
   });
 
   it("is web only: the entry is two /32s, the Gateway and the Authentik VIP", () => {
     assert.ok(!via("admins", 22));
-    assert.ok(!via("apple-tv", 80));
+    assert.ok(!via("apple-tv", 22));
   });
 });
