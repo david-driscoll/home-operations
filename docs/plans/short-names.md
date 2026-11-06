@@ -1,6 +1,6 @@
 # Short names: `jellyfin` works on the LAN, Tailscale and NetBird
 
-**Status:** plan, 2026-11-05. C1 (the short-name redirect) is the first PR, together with this plan. Owner: David. Decisions marked ✅ were taken
+**Status:** in progress, 2026-11-06. Live: C1 (cluster Traefik, and luna, skystar and alpha-site; celestia waits on a stalled `home-operations` Stack run), C2 (#3105), C3 and C5 (#3106). C2b is the next PR. Owner: David. Decisions marked ✅ were taken
 by David on 2026-11-05, after a read-only look at the live UniFi, Tailscale and NetBird DNS
 settings and a probe of the cluster Traefik (§A):
 
@@ -131,6 +131,39 @@ tailnet domain stays first in the search list.
 Verify on a Mac with Tailscale up, away from home: `dscacheutil -q host -a name jellyfin` returns
 10.10.206.101, and `curl -sI http://jellyfin/` returns the C1 redirect.
 
+**Result (2026-11-06):** it doesn't, for any app with a tailnet route. MagicDNS answers
+`jellyfin` itself with the app's Tailscale Service (`jellyfin.<tailnet>`, a 100.x address), so the
+search path is never reached (E1). The browser tried `https://jellyfin/`, the Service's TLS
+refused the name (`SSL_ERROR_INTERNAL_ERROR_ALERT`), and there was nothing on :80 to fall back to.
+C2b fixes it at the Service.
+
+### C2b. Tailscale Services serve port 80, and Traefik redirects it
+
+✅ Decided 2026-11-06: port 80 on every tailnet Ingress, redirected to the app route (ADR 0003
+unchanged).
+
+- `kubernetes/components/tailscale/ingress/ingress.yaml`: `tailscale.com/http-endpoint: enabled`.
+  tailscaled (v1.104.4) completes a dotless plain-HTTP `Host` with `.<tailnet>` to find the
+  Service, then forwards it to the same backend, Traefik's `tailscale` entrypoint, with the Host
+  kept. Not `tailscale.com/http-redirect`: that redirects to `https://<same host>`, which is
+  `https://jellyfin/` again.
+- `kubernetes/apps/network/traefik/short-names.yaml`, IngressRoute `short-names-tailscale`: on the
+  `tailscale` entrypoint, any request without `X-Forwarded-Proto: https` came in on :80. tailscaled
+  sets that header only over TLS, and the entrypoint trusts the proxy pods' headers. A short name
+  is redirected to its app route, anything else to https on the same host. Nothing is ever served
+  over plain HTTP.
+- The ACL needs nothing: `default-apps-access` already gives members `ports.web` (80 included)
+  on `tag:apps`.
+
+Verify, on a Mac with Tailscale up: `curl -sI http://jellyfin/` returns 302 to
+`https://jellyfin.<root domain>/`; `curl -sI http://jellyfin.<tailnet>/` returns a redirect to
+`https://jellyfin.<tailnet>/`; the browser opens `jellyfin/`.
+
+**Dockge apps** are Tailscale Services too (`svc:<app>`, `components/DockgeLxc.ts`, 443 only), so
+`uptime` on Tailscale has the same problem. Not in C2b: adding a port to a `tailscale.Service`
+there replaces it (`replaceOnChanges: ["*"]`, delete before replace), which recreates every Dockge
+Service at once. Decide separately (E5).
+
 ### C3. NetBird search domain
 
 NetBird hands out search domains only from nameserver groups with match domains, so the existing
@@ -199,10 +232,12 @@ later.
 
 ## E. Open questions
 
-- E1. The C0.1 result: does MagicDNS answer short names for Tailscale Services, and if so, what
-  does a short name on Tailscale do?
+- ~~E1. Does MagicDNS answer short names for Tailscale Services?~~ Yes (2026-11-06): `jellyfin`
+  resolves to its Tailscale Service before the search path is tried. C2b.
 - E2. Does the NetBird client keep `nbd`/`nb` names on its local resolver once a `<root domain>`
   match domain exists (C3)?
 - ~~E3. Does NetBird ship a tvOS client?~~ Yes: Apple TVs enrol into the `apple-tv` device group
   (docs/runbooks/netbird-client-onboarding.md, #2886).
 - E4. Does Gatus treat a `Host` header as the request host (C6)?
+- E5. Dockge apps' Tailscale Services: add :80 (recreates every Dockge Service) or leave short
+  names unsupported for Dockge apps on Tailscale?

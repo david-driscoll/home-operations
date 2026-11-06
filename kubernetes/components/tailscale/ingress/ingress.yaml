@@ -15,6 +15,16 @@ metadata:
     tailscale.com/proxy-group: tailnet-outbound
     tailscale.com/experimental-forward-cluster-traffic-via-ingress: "true"
     tailscale.com/tags: "tag:apps"
+    # Port 80 too, for short names. MagicDNS answers `jellyfin` with this
+    # Service before the root-domain search path is ever tried, so a browser
+    # typing a short name lands here, and its plain-HTTP fallback needs
+    # something on :80. tailscaled forwards it to the same backend with the
+    # Host kept (`jellyfin`). Traefik's `tailscale` entrypoint then redirects
+    # every plain-HTTP request and serves none: a short name to its app route,
+    # a full name to https (apps/network/traefik/short-names.yaml).
+    # Not `tailscale.com/http-redirect`: that redirects to https://<same host>,
+    # which for a short name is https://jellyfin/, a name no certificate covers.
+    tailscale.com/http-endpoint: enabled
 spec:
   ingressClassName: tailscale
   defaultBackend:
