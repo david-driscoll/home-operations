@@ -85,8 +85,7 @@ in to the estate's apps without a password (#2891).
   Authentik, and so on. Lookups go to the estate's DNS through the gateways.
 - **NetBird app names:** `<app>.nb.<root domain>` (for example `sonarr.nb.<root domain>`) still
   works with NetBird connected, for apps your group may use, but it just sends you on to the usual
-  `<app>.<root domain>`. Bookmark that one instead. A few apps (Plex, Jellyfin, Immich, Obsidian
-  sync, Audiobookshelf) still answer on the NetBird name for their mobile and TV apps.
+  `<app>.<root domain>`. Bookmark that one instead.
 - **Short names:** type just the app's name: `jellyfin/` (with the trailing slash) or
   `http://jellyfin` opens Jellyfin, and the same works for every other app. A bare `jellyfin` in a
   browser's address bar searches the web instead. On a TV, enter the full

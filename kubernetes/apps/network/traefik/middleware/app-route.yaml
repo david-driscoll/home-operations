@@ -4,17 +4,18 @@
 # THE OVERLAY NAMES SEND PEOPLE TO THE APP ROUTE (docs/adr/0004).
 #
 # The routers for every app's tailnet route (`<label>.<tailnet>`) and NetBird
-# app service (`<label>.nb.<root domain>`) start with `app-route-<mode>`
-# (components/tailscale), where the mode is the app's TAILSCALE_ROUTE and
-# defaults to `redirect`: this middleware. The request goes to
-# `https://<label>.<root domain>`, path and query kept, before any gate runs. The authentik outpost never sees an
+# app service (`<label>.nb.<root domain>`) start with this middleware
+# (components/tailscale). The request goes to `https://<label>.<root domain>`,
+# path and query kept, before any gate runs. The authentik outpost never sees an
 # overlay name, which is why the hidden "(Tailnet)"/"(NetBird)" twin apps are
 # gone. Both overlays already reach every app route (Technitium answers it;
 # the Tailscale subnet routes and NetBird gateways carry it).
 #
 # The label is the first DNS label of the host, which is the app route's label
-# for every app that redirects (checked against Technitium, 2026-11-06). The
-# regex is domain-agnostic, so one middleware serves both overlays.
+# for every live app except crowdsec-ui and meilisearch, which have no app route
+# (checked against Technitium, 2026-11-06). The regex is domain-agnostic, so one
+# middleware serves both overlays. There is no opt-out: nobody uses the overlay
+# names directly.
 #
 # 302, not 301: a renamed app must not leave a cached redirect behind. Traefik
 # answers a non-GET with 307, which keeps the method and body for API clients.
@@ -28,16 +29,3 @@ spec:
     regex: "^https?://([a-zA-Z0-9-]+)\\.[^/]*(/.*)?$"
     replacement: "https://$${1}.${ROOT_DOMAIN}$${2}"
     permanent: false
----
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
-#
-# The opt-out: an app whose ks.yaml sets `TAILSCALE_ROUTE: serve` keeps serving
-# on its overlay names. An empty headers middleware is Traefik's no-op. For apps
-# with no app route (crowdsec-ui, meilisearch) and native clients that may not
-# follow a redirect (plex, jellyfin, immich, obsidian-sync, audiobookshelf).
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: app-route-serve
-spec:
-  headers: {}
