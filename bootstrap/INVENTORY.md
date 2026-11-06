@@ -122,7 +122,8 @@ GitHub when the repo is archived.
   `third-party-tokens/netbird/owner` (the break-glass owner's login and its setup PAT,
   which is never rotated and lapses a year after setup). `stacks/netbird` then mints
   the PATs Pulumi actually uses, `third-party-tokens/netbird/automation` and the owner's
-  `third-party-tokens/netbird/owner-pat`, both 365 days, alerted 30 days out and
+  `third-party-tokens/netbird/owner-pat`, plus the operator's (`k8s-operator`) and the
+  MCP's (`mcp`, read-only), all 365 days, alerted 30 days out and
   rotated by a one-line change (docs/plans/netbird-mirror.md, "PATs and their
   rotation"). If both lapse, the owner's password still logs in.
   `apps/netbird/relay-home-tls` is the home relay's certificate, which `stacks/unifi-network`

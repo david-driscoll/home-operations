@@ -37,7 +37,8 @@ import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { NBIDP_BAO, nbidpClusterAddress, nbidpHost } from "components/netbird/nbidp.ts";
-import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_MCP_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
+import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_MCP_BAO_PATH, NETBIRD_OPERATOR_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
+import { NetbirdAccountSettingsOverrides } from "dynamic/netbird/NetbirdAccountSettingsOverrides.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
@@ -55,6 +56,12 @@ export { USER_GROUPS };
 
 /** NetBird's overlay. Clear of Tailscale's 100.64/10 on dual-mesh desktops and of the 10.10/16 LAN. */
 const NETWORK_RANGE = "10.100.0.0/16";
+/**
+ * The overlay's IPv6 range: the one set in the dashboard on 2026-11-04, kept
+ * so peers keep their addresses. Pinned because NetBird allocates a random
+ * /64 whenever the overlay comes on without one.
+ */
+const NETWORK_RANGE_V6 = "fdaf:5d5b:8d43:1330::/64";
 
 const globals = new GlobalResources({}, {});
 const provider = globals.netbirdProvider;
@@ -173,6 +180,32 @@ const setupKeys = {
 // NetBird's built-in group of every peer.
 const all = netbird.getGroupOutput({ name: "All" }, { provider });
 
+// The account settings `settings` (1) cannot carry, put back after it. Every
+// provider update PUTs the account with those fields missing, which NetBird
+// reads as zero: the IPv6 overlay went off on the first run (2026-11-03), and
+// on 2026-11-05 the range was cleared and the dashboard's MFA and
+// hostname-collision settings undone (dynamic/netbird/NetbirdAccountSettingsOverrides.ts).
+//
+// IPv6 for every peer is what lets an exit node carry IPv6 at all: management
+// adds the `::/0` half of a `0.0.0.0/0` exit only for peers with an overlay
+// IPv6 address (filterAndExpandRoutes, v0.82.0). Without it a dual-stack
+// client sends IPv6 straight out of its own uplink, around the exit. A peer
+// that cannot take IPv6 (a v4-only container) logs "continuing v4-only" and
+// carries on, and IPv6 into an exit with no IPv6 uplink is dropped, so apps
+// fall back to IPv4 rather than leaking.
+new NetbirdAccountSettingsOverrides(
+  "account-overrides",
+  {
+    ...api,
+    ipv6EnabledGroups: [all.id],
+    networkRangeV6: NETWORK_RANGE_V6,
+    // Both as set in the dashboard on 2026-11-04.
+    localMfaEnabled: true,
+    peerHostnameCollisionRejected: true,
+  },
+  { dependsOn: [settings] },
+);
+
 // One resource group per site LAN (`lan-<site>`, admins only), plus the home
 // LAN's specific endpoints, the groups #2888's member rules target.
 export const siteResourceGroups: Record<string, netbird.Group> = {};
@@ -287,6 +320,7 @@ pulumi.all([pulumi.output(api), technitiumLan]).apply(async ([{ managementUrl: u
 const AUTOMATION_TOKEN_GENERATION = "2026-11b";
 const OWNER_TOKEN_GENERATION = "2026-11";
 const MCP_TOKEN_GENERATION = "2026-11";
+const OPERATOR_TOKEN_GENERATION = "2026-11";
 
 const serviceUser = new netbird.User("automation", { name: "automation", isServiceUser: true, role: "admin" }, opts);
 const serviceToken = new netbird.Token(
@@ -302,6 +336,18 @@ const serviceToken = new netbird.Token(
 // next run put it back (David, 2026-11-05).
 const mcpUser = new netbird.User("mcp", { name: "mcp", isServiceUser: true, role: "auditor" }, opts);
 const mcpToken = new netbird.Token(`mcp-${MCP_TOKEN_GENERATION}`, { userId: mcpUser.id, name: `mcp-${MCP_TOKEN_GENERATION}`, expirationDays: TOKEN_LIFETIME_DAYS }, { ...opts, additionalSecretOutputs: ["token"] });
+// The NetBird operator's (kubernetes/apps/netbird-system/operator), which used
+// to hold automation's PAT, so its writes read as this stack's in the audit
+// log. Its own identity now, revocable on its own. Still `admin`: NetBird has
+// no custom roles, and `network_admin` cannot create setup keys, which the
+// operator's NetworkRouter controller does on every reconcile (operator
+// v0.9.0); it would stop there and never reach the router Deployment.
+const operatorUser = new netbird.User("k8s-operator", { name: "k8s-operator", isServiceUser: true, role: "admin" }, opts);
+const operatorToken = new netbird.Token(
+  `k8s-operator-${OPERATOR_TOKEN_GENERATION}`,
+  { userId: operatorUser.id, name: `k8s-operator-${OPERATOR_TOKEN_GENERATION}`, expirationDays: TOKEN_LIFETIME_DAYS },
+  { ...opts, additionalSecretOutputs: ["token"] },
+);
 // The owner's break-glass PAT, minted by the owner (only a user can mint its
 // own), so the setup PAT stacks/netbird-edge got from /api/setup is used just
 // once, by the first run. That one is never rotated and lapses on its own.
@@ -349,6 +395,17 @@ baoKvSecret(
   bao,
 );
 baoKvSecret(
+  "netbird-k8s-operator",
+  {
+    mount: "secrets",
+    path: NETBIRD_OPERATOR_BAO_PATH,
+    data: { url: owner.url, user_id: operatorUser.id, personal_access_token: operatorToken.token, expires: operatorToken.expirationDate, generation: OPERATOR_TOKEN_GENERATION },
+    concealedFields: ["personal_access_token"],
+    customMetadata: baoProvenance({ source: "stacks/netbird" }),
+  },
+  bao,
+);
+baoKvSecret(
   "netbird-owner-pat",
   {
     mount: "secrets",
@@ -366,8 +423,8 @@ baoKvSecret(
 // PulumiStackTokenExpiring alert pages EXPIRY_WARNING_DAYS before either
 // (kubernetes/apps/pulumi/pulumi-operator/prometheusrule.yaml).
 export const tokenExpiresAtSeconds = pulumi.unsecret(
-  pulumi.all({ automation: serviceToken.expirationDate, owner: ownerToken.expirationDate, mcp: mcpToken.expirationDate }).apply(dates => {
-    const expiry = { automation: expiresAtSeconds(dates.automation), owner: expiresAtSeconds(dates.owner), mcp: expiresAtSeconds(dates.mcp) };
+  pulumi.all({ automation: serviceToken.expirationDate, owner: ownerToken.expirationDate, mcp: mcpToken.expirationDate, k8sOperator: operatorToken.expirationDate }).apply(dates => {
+    const expiry = { automation: expiresAtSeconds(dates.automation), owner: expiresAtSeconds(dates.owner), mcp: expiresAtSeconds(dates.mcp), k8sOperator: expiresAtSeconds(dates.k8sOperator) };
     for (const { name, daysLeft } of expiringTokens(expiry, new Date())) {
       pulumi.log.warn(`NetBird ${name} PAT expires in ${daysLeft} days. Rotate it: bump its generation in stacks/netbird/index.ts (docs/plans/netbird-mirror.md).`);
     }
