@@ -292,14 +292,39 @@ pulumi.all([pulumi.output(api), technitiumLan]).apply(async ([{ managementUrl: u
   const nameservers = selectNameservers({ overlay: enrolledDnsPeers(peers), lan });
   if (nameservers.length === 0) throw new Error("Technitium: no nameserver address at all, neither an enrolled sidecar nor a LAN address.");
   pulumi.log.info(`Technitium nameservers: ${nameservers.map(ns => `${ns.cluster} ${ns.ip} (${ns.via})`).join(", ")}`);
+  const technitiumServers = nameservers.map(ns => ({ ip: ns.ip, nsType: "udp", port: 53 }));
   new netbird.NameserverGroup(
     "technitium",
     {
       name: "Technitium",
       description: "Estate DNS: the Technitium sidecars over the overlay, LAN routes as fallback (stacks/netbird)",
-      nameservers: nameservers.map(ns => ({ ip: ns.ip, nsType: "udp", port: 53 })),
+      nameservers: technitiumServers,
       groups: [all.id],
       primary: true,
+      enabled: true,
+    },
+    { ...opts, dependsOn: [settings] },
+  );
+  // Short names (GLOSSARY.md, ADR 0003): `jellyfin` completes to the app
+  // route, `jellyfin.<root domain>`, which Traefik redirects to
+  // (kubernetes/apps/network/traefik/short-names.yaml). NetBird hands out a
+  // search domain only from a group with match domains, so the primary group
+  // above cannot carry one. This group uses the same servers, so the two can
+  // never disagree, and goes to client devices only (the user groups and
+  // apple-tv). Gateways, in-cluster routers and DNS sidecars are servers and
+  // keep resolving as before. The client's own zones, `nbd.<root domain>`
+  // (device names) and `nb.<root domain>` (app services), are more specific
+  // and should still win. docs/plans/short-names.md C3 says how to check.
+  new netbird.NameserverGroup(
+    "technitium-search",
+    {
+      name: "Technitium (search domain)",
+      description: "Short names: the root domain as a search domain for client devices, same servers as Technitium (stacks/netbird)",
+      nameservers: technitiumServers,
+      domains: [rootDomain()],
+      searchDomainsEnabled: true,
+      groups: [...userGroupIds, groups.appleTv.id],
+      primary: false,
       enabled: true,
     },
     { ...opts, dependsOn: [settings] },
