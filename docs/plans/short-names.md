@@ -1,6 +1,6 @@
 # Short names: `jellyfin` works on the LAN, Tailscale and NetBird
 
-**Status:** in progress, 2026-11-06. Live: C1 (cluster Traefik, and luna, skystar and alpha-site; celestia waits on a stalled `home-operations` Stack run), C2 (#3105), C3 and C5 (#3106). C2b is the next PR. Owner: David. Decisions marked ✅ were taken
+**Status:** live, 2026-11-06. C1 on every Traefik (#3104), C2 (#3105), C3 and C5 (#3106), C2b (#3109); C4, C6 and C7 in this PR. Left: E5 (Dockge apps on Tailscale). Owner: David. Decisions marked ✅ were taken
 by David on 2026-11-05, after a read-only look at the live UniFi, Tailscale and NetBird DNS
 settings and a probe of the cluster Traefik (§A):
 
@@ -193,11 +193,16 @@ Tailscale grant, so `policyDrift.ts` is unaffected.
 
 ### C6. Gatus watches the redirect
 
-One endpoint per Traefik (the cluster's and every Dockge host's), next to the existing Gatus
-definitions (`stacks/home/index.ts`): `http://<traefik address>/` with `Host: <app>`, redirects not
-followed, expecting `[STATUS] == 302` and a `Location` of `https://<app>.<root domain>/`. Verify
-first that Gatus sends a `Host` header as the request host rather than an ordinary header; if it
-does not, probe through a short name that resolves on the Gatus host instead.
+In each Traefik's own definition, so every Dockge host gets its check from `_common`:
+
+- `kubernetes/apps/network/traefik/definition.yaml`: `http://internal.<cluster domain>/` and
+  `:8443/` (the tailnet entrypoint);
+- `docker/_common/traefik/definition.yaml`: `http://internal.<cluster domain>/` on each host.
+
+Each sends `Host: gatus-short-name` (any dotless name works) with `client.ignore-redirect`, and
+expects `[STATUS] == 302`. Gatus can't check a header, but 302 alone tells them apart: on `web` the
+entrypoint's own redirect is a 301, so a 301 means the short-name route stopped matching. All six
+probes returned 302 when this was written.
 
 ### C7. Tell people (last, after C1–C6 are verified on each platform)
 
@@ -238,6 +243,7 @@ later.
   match domain exists (C3)?
 - ~~E3. Does NetBird ship a tvOS client?~~ Yes: Apple TVs enrol into the `apple-tv` device group
   (docs/runbooks/netbird-client-onboarding.md, #2886).
-- E4. Does Gatus treat a `Host` header as the request host (C6)?
+- ~~E4. Does Gatus treat a `Host` header as the request host (C6)?~~ Yes: `request.Host` is set from it
+  (TwiN/gatus `config/endpoint/endpoint.go`).
 - E5. Dockge apps' Tailscale Services: add :80 (recreates every Dockge Service) or leave short
   names unsupported for Dockge apps on Tailscale?

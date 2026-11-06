@@ -89,6 +89,10 @@ in to the estate's apps without a password (#2891).
   connected, and only for apps your group may use; any other name resolves to
   nothing or answers 403. Apps that log you in themselves need their login
   allowed for the new name first; until an admin has done that, use `<app>.<root domain>`.
+- **Short names:** type just the app's name: `jellyfin/` (with the trailing slash) or
+  `http://jellyfin` opens Jellyfin, and the same works for every other app. A bare `jellyfin` in a
+  browser's address bar searches the web instead. On a TV, enter the full
+  `https://<app>.<root domain>` in the app once. Short names work the same at home and on NetBird.
 - **Exit nodes (optional):** under **Exit node**, pick a gateway to send all traffic
   through home, e.g. on hotel Wi-Fi. Leave it off otherwise.
 - **Staying signed in:** NetBird never asks you to log in again on a connected device.
@@ -105,6 +109,8 @@ TVs don't log in. An admin enrols them with the `apple-tv` setup key; see #2886.
 | The app opens NetBird's cloud login | The server wasn't changed (step 4) |
 | Login rejected | You're using your Authentik password; use the NetBird one from step 1 |
 | Connected, but names don't resolve | The app's DNS setting must be on; reconnect |
+| Typing `jellyfin` searches the web instead of opening the app | Add the trailing slash (`jellyfin/`) or type `http://jellyfin` |
+| A short name doesn't resolve, but `<app>.<root domain>` does | Reconnect NetBird. If Tailscale is also on, turn one of them off: both take over DNS |
 | Names resolve but pages time out | No gateway is up; tell an admin (gateways are the `netbird-gateway` stack on the Dockge hosts) |
 | Pages are blocked that others can open | Your group; an admin checks it under Team → Users |
 | `<app>.nb.<root domain>` doesn't resolve or answers 403 | Your group isn't in that app's `access_policy` (its `definition.yaml`), or the app is new and `stacks/netbird` hasn't run since (daily, or after the next merge) |
