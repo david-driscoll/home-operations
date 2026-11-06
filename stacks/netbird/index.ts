@@ -37,7 +37,7 @@ import { authentikVip, dns, kubernetesClusters } from "components/constants.ts";
 import { rootDomain } from "components/domains.ts";
 import { GlobalResources } from "components/globals.ts";
 import { NBIDP_BAO, nbidpClusterAddress, nbidpHost } from "components/netbird/nbidp.ts";
-import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
+import { expiresAtSeconds, expiringTokens, NETBIRD_AUTOMATION_BAO_PATH, NETBIRD_MCP_BAO_PATH, NETBIRD_OWNER_PAT_BAO_PATH, TOKEN_LIFETIME_DAYS } from "components/netbird/tokens.ts";
 import { NetbirdDefaultPolicyRemoval } from "dynamic/netbird/NetbirdDefaultPolicyRemoval.ts";
 import { NetbirdPrivateService } from "dynamic/netbird/NetbirdPrivateService.ts";
 import { NetbirdProxyToken } from "dynamic/netbird/NetbirdProxyToken.ts";
@@ -286,6 +286,7 @@ pulumi.all([pulumi.output(api), technitiumLan]).apply(async ([{ managementUrl: u
 // run reads the new token and finishes it).
 const AUTOMATION_TOKEN_GENERATION = "2026-11b";
 const OWNER_TOKEN_GENERATION = "2026-11";
+const MCP_TOKEN_GENERATION = "2026-11";
 
 const serviceUser = new netbird.User("automation", { name: "automation", isServiceUser: true, role: "admin" }, opts);
 const serviceToken = new netbird.Token(
@@ -293,6 +294,14 @@ const serviceToken = new netbird.Token(
   { userId: serviceUser.id, name: `automation-${AUTOMATION_TOKEN_GENERATION}`, expirationDays: TOKEN_LIFETIME_DAYS },
   { ...opts, additionalSecretOutputs: ["token"] },
 );
+// The NetBird MCP's (kubernetes/apps/agents/agent-tools-servers/netbird.yaml).
+// Its own service user, never automation's PAT, and `auditor`: NetBird
+// refuses every create, update and delete from it (management
+// permissions/roles/auditor.go, v0.82.0). Everything the MCP could write is
+// declared in this stack, so a write through it would only drift until the
+// next run put it back (David, 2026-11-05).
+const mcpUser = new netbird.User("mcp", { name: "mcp", isServiceUser: true, role: "auditor" }, opts);
+const mcpToken = new netbird.Token(`mcp-${MCP_TOKEN_GENERATION}`, { userId: mcpUser.id, name: `mcp-${MCP_TOKEN_GENERATION}`, expirationDays: TOKEN_LIFETIME_DAYS }, { ...opts, additionalSecretOutputs: ["token"] });
 // The owner's break-glass PAT, minted by the owner (only a user can mint its
 // own), so the setup PAT stacks/netbird-edge got from /api/setup is used just
 // once, by the first run. That one is never rotated and lapses on its own.
@@ -329,6 +338,17 @@ baoKvSecret(
   bao,
 );
 baoKvSecret(
+  "netbird-mcp",
+  {
+    mount: "secrets",
+    path: NETBIRD_MCP_BAO_PATH,
+    data: { url: owner.url, user_id: mcpUser.id, personal_access_token: mcpToken.token, expires: mcpToken.expirationDate, generation: MCP_TOKEN_GENERATION },
+    concealedFields: ["personal_access_token"],
+    customMetadata: baoProvenance({ source: "stacks/netbird" }),
+  },
+  bao,
+);
+baoKvSecret(
   "netbird-owner-pat",
   {
     mount: "secrets",
@@ -346,8 +366,8 @@ baoKvSecret(
 // PulumiStackTokenExpiring alert pages EXPIRY_WARNING_DAYS before either
 // (kubernetes/apps/pulumi/pulumi-operator/prometheusrule.yaml).
 export const tokenExpiresAtSeconds = pulumi.unsecret(
-  pulumi.all({ automation: serviceToken.expirationDate, owner: ownerToken.expirationDate }).apply(dates => {
-    const expiry = { automation: expiresAtSeconds(dates.automation), owner: expiresAtSeconds(dates.owner) };
+  pulumi.all({ automation: serviceToken.expirationDate, owner: ownerToken.expirationDate, mcp: mcpToken.expirationDate }).apply(dates => {
+    const expiry = { automation: expiresAtSeconds(dates.automation), owner: expiresAtSeconds(dates.owner), mcp: expiresAtSeconds(dates.mcp) };
     for (const { name, daysLeft } of expiringTokens(expiry, new Date())) {
       pulumi.log.warn(`NetBird ${name} PAT expires in ${daysLeft} days. Rotate it: bump its generation in stacks/netbird/index.ts (docs/plans/netbird-mirror.md).`);
     }

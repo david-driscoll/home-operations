@@ -55,6 +55,9 @@ resources:
   - ./openbao.yaml
   - ./postgres.yaml
   - ./tailscale.yaml
+  # NetBird's own MCP, read-only (an `auditor` PAT stacks/netbird mints). Run
+  # from a pinned commit, as tdarr is: upstream publishes no package or image.
+  - ./netbird.yaml
   # No ToolHive proxy for Microsoft Learn, Home Assistant, ECM or arr-mcp
   # (Plex/Jellyfin): toolport calls those backends directly, with its own copy
   # of each bearer -- ../toolport/externalsecret.yaml. homelable keeps its
