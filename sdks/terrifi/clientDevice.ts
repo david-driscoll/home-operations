@@ -85,8 +85,10 @@ export class ClientDevice extends pulumi.CustomResource {
     declare public readonly networkOverrideId: pulumi.Output<string | undefined>;
     /**
      * A free-text note for the client device.
+     *
+     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing `note` from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
      */
-    declare public readonly note: pulumi.Output<string | undefined>;
+    declare public readonly note: pulumi.Output<string>;
     /**
      * The site to associate the client device with. Defaults to the provider site.
      */
@@ -186,6 +188,8 @@ export interface ClientDeviceState {
     networkOverrideId?: pulumi.Input<string | undefined>;
     /**
      * A free-text note for the client device.
+     *
+     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing `note` from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
      */
     note?: pulumi.Input<string | undefined>;
     /**
@@ -240,6 +244,8 @@ export interface ClientDeviceArgs {
     networkOverrideId?: pulumi.Input<string | undefined>;
     /**
      * A free-text note for the client device.
+     *
+     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing `note` from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
      */
     note?: pulumi.Input<string | undefined>;
     /**

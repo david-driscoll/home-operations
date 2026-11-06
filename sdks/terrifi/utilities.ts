@@ -101,7 +101,7 @@ export async function getPackage(): Promise<string | undefined> {
 		baseProviderVersion: "0.14.0",
 		baseProviderDownloadUrl: "",
 		packageName: "terrifi",
-		packageVersion: "0.11.0",
-		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2FsZXhrbGliaXN6L3RlcnJpZmkiLCJ2ZXJzaW9uIjoiMC4xMS4wIn19",
+		packageVersion: "0.12.0",
+		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2FsZXhrbGliaXN6L3RlcnJpZmkiLCJ2ZXJzaW9uIjoiMC4xMi4wIn19",
 	});
 }

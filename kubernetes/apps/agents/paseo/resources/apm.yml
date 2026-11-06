@@ -203,6 +203,7 @@ dependencies:
     - BagelHole/DevOps-Security-Agent-Skills/security/secrets/gcp-secret-manager
     - BagelHole/DevOps-Security-Agent-Skills/security/secrets/hashicorp-vault
     - BagelHole/DevOps-Security-Agent-Skills/security/secrets/sops-encryption
+    - cathrynlavery/diagram-design
   mcp:
     - name: mise
       registry: false

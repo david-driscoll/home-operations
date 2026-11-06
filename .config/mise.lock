@@ -468,43 +468,36 @@ specifiers = ["v0.62.0"]
 
 [tools."github:stacklok/toolhive"."platforms.linux-arm64"]
 checksum = "sha256:ab3c20cb434fbc52d86fb1ada58d61d0b3a1a5204e8c3b7cff14a37ca0005f39"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741494"
 
 [tools."github:stacklok/toolhive"."platforms.linux-arm64-musl"]
 checksum = "sha256:ab3c20cb434fbc52d86fb1ada58d61d0b3a1a5204e8c3b7cff14a37ca0005f39"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741494"
 
 [tools."github:stacklok/toolhive"."platforms.linux-x64"]
 checksum = "sha256:ada3b4eed3e8d183ccdd2b5463acb4092ecc87be26c5d2e3621b64dea426100f"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741518"
 
 [tools."github:stacklok/toolhive"."platforms.linux-x64-musl"]
 checksum = "sha256:ada3b4eed3e8d183ccdd2b5463acb4092ecc87be26c5d2e3621b64dea426100f"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741518"
 
 [tools."github:stacklok/toolhive"."platforms.macos-arm64"]
 checksum = "sha256:dcf18ae646a39c9480184f705c5a52d99df0922131fbb67f4a58dff228cb3cc4"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_darwin_arm64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741355"
 
 [tools."github:stacklok/toolhive"."platforms.macos-x64"]
 checksum = "sha256:156384d7b9c2f7ddea114d771936a04ef8444123ca70bf8b0a148475025e4e1f"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_darwin_amd64.tar.gz"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741353"
 
 [tools."github:stacklok/toolhive"."platforms.windows-x64"]
 checksum = "sha256:a9e0b4a4111c575a79d94c16f7303454a4474670a7ef6c2623f1eab08d3e479f"
-checksum_source = "mise-versions"
 url = "https://github.com/stacklok/toolhive/releases/download/v0.62.0/toolhive_0.62.0_windows_amd64.zip"
 url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/709741356"
 
@@ -694,6 +687,53 @@ version = "5.9.3"
 backend = "npm:typescript"
 specifiers = ["5.9.3"]
 
+[[tools.openbao]]
+version = "2.7.2"
+backend = "aqua:openbao/openbao/bao"
+specifiers = ["2.7.2"]
+
+[tools.openbao."platforms.linux-arm64"]
+checksum = "sha256:5b97bf816fa820e5e521abec1db19c6161fcca2f666cf4a84e335089c0e83edd"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267309"
+provenance = "cosign"
+
+[tools.openbao."platforms.linux-arm64-musl"]
+checksum = "sha256:5b97bf816fa820e5e521abec1db19c6161fcca2f666cf4a84e335089c0e83edd"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267309"
+provenance = "cosign"
+
+[tools.openbao."platforms.linux-x64"]
+checksum = "sha256:582b1f3c2fdc5afd443b2d57a225ef654de75adea609fdb66731fd582a9cbc96"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267064"
+provenance = "cosign"
+
+[tools.openbao."platforms.linux-x64-musl"]
+checksum = "sha256:582b1f3c2fdc5afd443b2d57a225ef654de75adea609fdb66731fd582a9cbc96"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267064"
+provenance = "cosign"
+
+[tools.openbao."platforms.macos-arm64"]
+checksum = "sha256:2b4fc131910f4b075b2e1c9a9de67c461489491a8f03fbdc73387294d67d9547"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679266561"
+provenance = "cosign"
+
+[tools.openbao."platforms.macos-x64"]
+checksum = "sha256:ea62ce00b81a2170a5daa8589f8420434e72d4d4ebcd2a4cbfa9add507a2602d"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679266497"
+provenance = "cosign"
+
+[tools.openbao."platforms.windows-x64"]
+checksum = "sha256:b058d30eac461e78e56305d3aa7371c061405a060f364aa20999dc3a309264f4"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_windows_amd64.zip"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679268686"
+provenance = "cosign"
+
 [[tools.pipx]]
 version = "1.18.13"
 backend = "aqua:pypa/pipx"
@@ -701,37 +741,31 @@ specifiers = ["1.18.13"]
 
 [tools.pipx."platforms.linux-arm64"]
 checksum = "sha256:542fbe91c994c12cf763e91cbb653501c1013a499a8cb2155db1556d40b07074"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.13/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/708316313"
 
 [tools.pipx."platforms.linux-arm64-musl"]
 checksum = "sha256:542fbe91c994c12cf763e91cbb653501c1013a499a8cb2155db1556d40b07074"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.13/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/708316313"
 
 [tools.pipx."platforms.linux-x64"]
 checksum = "sha256:542fbe91c994c12cf763e91cbb653501c1013a499a8cb2155db1556d40b07074"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.13/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/708316313"
 
 [tools.pipx."platforms.linux-x64-musl"]
 checksum = "sha256:542fbe91c994c12cf763e91cbb653501c1013a499a8cb2155db1556d40b07074"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.13/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/708316313"
 
 [tools.pipx."platforms.macos-arm64"]
 checksum = "sha256:542fbe91c994c12cf763e91cbb653501c1013a499a8cb2155db1556d40b07074"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.13/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/708316313"
 
 [tools.pipx."platforms.macos-x64"]
 checksum = "sha256:542fbe91c994c12cf763e91cbb653501c1013a499a8cb2155db1556d40b07074"
-checksum_source = "mise-versions"
 url = "https://github.com/pypa/pipx/releases/download/1.18.13/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/708316313"
 
@@ -876,6 +910,41 @@ provenance = "cosign"
 version = "3.15.2"
 backend = "core:python"
 specifiers = ["3.15.2"]
+
+[tools.python."platforms.linux-arm64"]
+checksum = "sha256:0f23351c03b39beb880de668976074fcc3c082d9c3b03d0b43185632b2b270a0"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.linux-arm64-musl"]
+checksum = "sha256:2996760114a56a9cbe9111f8a55e8a2e67735c1ff5b5da1bbdedf06ccc26dbb4"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-aarch64-unknown-linux-musl-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.linux-x64"]
+checksum = "sha256:7b03163a980c607ba8194709d4a4086735a7a9c488cc475b098157306927b36b"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.linux-x64-musl"]
+checksum = "sha256:9723f525ec21a52e5e3b18165ad3d553f1af38aba76125ddae25b156ed9c9202"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.macos-arm64"]
+checksum = "sha256:1b1b03fca8aa351698403f3d100ee83db7a5d99748fc7707681ac31a6a846ad9"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-aarch64-apple-darwin-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.macos-x64"]
+checksum = "sha256:6ec04346b578656b5d5597144cbe0f4773acea6af6048cb8fe0cac3e92c702ac"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-x86_64-apple-darwin-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.windows-x64"]
+checksum = "sha256:02e532b60e720aa3d77e757c349ae9cc945441c05851fa646336fc9ff0403041"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.15.2+20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+provenance = "github-attestations"
 
 [[tools.shellcheck]]
 version = "0.11.0"
