@@ -106,6 +106,10 @@ _Avoid_: DNS gateway, resolver peer
 An app's name under the root domain (`<app>.<root domain>`), reached on the LAN or through a gateway.
 _Avoid_: Internal URL, LAN URL
 
+**Short name**:
+An app's name on its own (`jellyfin`), which a client device completes to the app's app route on every network.
+_Avoid_: Hostname, single-label name, alias
+
 **Tailnet route**:
 An app's name on the tailnet (`<app>.<tailnet>`), reached only from Tailscale.
 _Avoid_: Tailscale URL, MagicDNS name (when you mean an app)

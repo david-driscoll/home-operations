@@ -80,6 +80,7 @@ services:
       - ./config.yaml:/config/config.yaml
       - /opt/stacks-data/${APP}/dynamic:/config/dynamic
       - ./dynamic/middlewares.yaml:/config/dynamic/middlewares.yaml
+      - ./dynamic/short-names.yaml:/config/dynamic/short-names.yaml
     networks:
       - dockge_default
   cert-extractor:

@@ -1,0 +1,32 @@
+# SHORT NAMES: `http://uptime/` -> `https://uptime.<root domain>/`.
+#
+# The Dockge twin of kubernetes/apps/network/traefik/short-names.yaml; read that
+# header for the why (GLOSSARY.md "Short name", ADR 0003,
+# docs/plans/short-names.md). A client completes a short name with the root
+# domain search domain and reaches this host's Traefik with `Host: uptime`. A
+# dotless host on :80 is sent to its full name, where the app's own router on
+# `websecure` takes it.
+#
+# 302 on purpose, never 301: a cached permanent redirect outlives a rename.
+#
+# `web` has no entrypoint-wide redirect here (config.yaml), so this only has to
+# outrank the app routers; it uses the highest user priority anyway, the same
+# as the cluster's. DockgeLxc substitutes only the variables it names, so the
+# capture groups `${1}` and `${3}` reach Traefik as written.
+http:
+  routers:
+    short-names:
+      entryPoints:
+        - web
+      rule: HostRegexp(`^[a-zA-Z0-9-]+$`) && !Host(`localhost`)
+      priority: 2147482647
+      middlewares:
+        - short-name-redirect
+      service: noop@internal
+
+  middlewares:
+    short-name-redirect:
+      redirectRegex:
+        regex: "^(?i)https?://([a-z0-9-]+)(:[0-9]+)?(/.*)?$"
+        replacement: "https://${1}.${ROOT_DOMAIN}${3}"
+        permanent: false

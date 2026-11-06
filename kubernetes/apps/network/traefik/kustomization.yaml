@@ -13,6 +13,8 @@ resources:
   - ./rules
   # Who may connect to the `netbird` entrypoint: the NetBird private proxy only.
   - ./netbird-door.yaml
+  # Short names: `http://<app>/` -> `https://<app>.<root domain>/` (docs/plans/short-names.md).
+  - ./short-names.yaml
 
 patches:
   - target:
