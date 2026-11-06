@@ -348,25 +348,52 @@ const azureVms = azureHosts.map(spec => {
 // cloud-init's own `eth0` (same id). accept-ra: networkd's own RA handling,
 // which works with forwarding on, unlike the kernel's accept_ra=1.
 //
+// cloud-init's eth0 sets `dhcp4-overrides.route-metric`, and networkd refuses
+// DHCPv6 on an interface whose dhcp6 metric differs ("route-metric has the same
+// value in both dhcp4_overrides and dhcp6_overrides"), so the drop-in copies
+// cloud-init's value. The script validates before it applies: a drop-in netplan
+// rejects is taken out again, since a bad file left in /etc/netplan would leave
+// the VM with no network config at its next boot. The first version
+// (2026-11-06) left exactly that behind when `netplan apply` refused it, so the
+// script starts by clearing its own file, and `netplan get` then reads
+// cloud-init's config alone.
+//
 // `netplan apply` reconfigures eth0 once: the NetBird and Tailscale
-// connections drop for a moment and reconnect. It reruns only when the file or
-// the VM changes.
-const IPV6_NETPLAN = `# Rendered by stacks/netbird-edge (Pulumi). Edits are overwritten.
+// connections drop for a moment and reconnect. It reruns only when the script
+// or the VM changes.
+const IPV6_NETPLAN_SCRIPT = `set -eu
+f=/etc/netplan/60-ipv6-dhcp.yaml
+rm -f "$f" "$f.tmp"
+m=$(netplan get ethernets.eth0.dhcp4-overrides.route-metric 2>/dev/null || true)
+case "$m" in ''|null) m=100 ;; esac
+umask 077
+cat > "$f.tmp" <<EOF
+# Rendered by stacks/netbird-edge (Pulumi). Edits are overwritten.
 network:
   version: 2
   ethernets:
     eth0:
       dhcp6: true
       accept-ra: true
+      dhcp6-overrides:
+        route-metric: $m
+EOF
+mv "$f.tmp" "$f"
+if ! netplan generate; then
+  rm -f "$f"
+  netplan generate
+  echo "netbird-edge: netplan rejected the IPv6 drop-in; took it out, eth0 is unchanged" >&2
+  exit 1
+fi
+netplan apply
 `;
 for (const a of azureVms) {
   new remote.Command(
     `${a.hostname}-ipv6-dhcp`,
     {
       connection: { host: pulumi.interpolate`${a.hostname}.${globals.tailscaleDomain}`, user: "root", privateKey: breakGlassKey.privateKeyOpenssh },
-      create: "set -eu; f=/etc/netplan/60-ipv6-dhcp.yaml; umask 077; cat > $f.tmp; chmod 600 $f.tmp; mv $f.tmp $f; netplan apply",
-      stdin: IPV6_NETPLAN,
-      triggers: [IPV6_NETPLAN, a.machine.vmId],
+      create: IPV6_NETPLAN_SCRIPT,
+      triggers: [IPV6_NETPLAN_SCRIPT, a.machine.vmId],
       logging: "stderr",
     },
     { dependsOn: [a.machine] },
