@@ -8,8 +8,9 @@
 #  2. Between jobs, clear what the last one left so the next starts clean.
 #     ./run-job.sh writes /data/.reuse/done-N when job N has finished and
 #     waits for clean-N before taking another. Pruned: stopped containers,
-#     networks, every unused volume, dangling images and build cache. Kept:
-#     the pulled images, which are the reason a pod is reused at all.
+#     networks, every unused volume, dangling images and build cache, and
+#     any git lock left in the action clones under /data/act. Kept: the
+#     pulled images, which are the reason a pod is reused at all.
 #
 # If the scratch volume is still above SCRATCH_PRUNE_PERCENT after that, the
 # pulled images go too; above SCRATCH_FULL_PERCENT even then, clean-N says
@@ -31,6 +32,14 @@ used_percent() {
 }
 
 clean() {
+  # A job killed during a `git fetch` of one of its actions (cancelled, or
+  # timed out) leaves that action's clone under /data/act locked, and every
+  # later job on this pod that uses the action fails before its first step:
+  # "Unable to create '/data/act/<..>/shallow.lock': File exists"
+  # (docs/setup, 2026-11-05: codeberg.org/git-pages/action). No job runs
+  # while this does (run-job.sh waits for clean-N), so any lock is stale.
+  locks=$(find /data/act -name '*.lock' -type f -print -exec rm -f {} + 2>/dev/null | wc -l)
+  [ "$locks" -gt 0 ] && echo "janitor: removed ${locks} stale git lock(s) under /data/act after job $1"
   docker container prune --force >/dev/null || true
   docker network prune --force >/dev/null || true
   docker volume prune --all --force >/dev/null || true
