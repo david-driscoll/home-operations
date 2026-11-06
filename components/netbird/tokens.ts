@@ -26,6 +26,8 @@
 export const NETBIRD_OWNER_BAO_PATH = "third-party-tokens/netbird/owner";
 export const NETBIRD_OWNER_PAT_BAO_PATH = "third-party-tokens/netbird/owner-pat";
 export const NETBIRD_AUTOMATION_BAO_PATH = "third-party-tokens/netbird/automation";
+/** The NetBird MCP's read-only PAT (stacks/netbird), read by kubernetes/apps/agents/agent-tools-servers/netbird.yaml. */
+export const NETBIRD_MCP_BAO_PATH = "third-party-tokens/netbird/mcp";
 
 /** NetBird's ceiling for a PAT's lifetime. */
 export const TOKEN_LIFETIME_DAYS = 365;

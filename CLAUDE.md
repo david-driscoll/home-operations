@@ -102,7 +102,7 @@ docker/         # Docker/Dockge stack configs per cluster
 Inside the agentboard pod (`env | grep -q STAKATER_AGENTBOARD`) reach the estate
 through the **`toolport-*` MCP servers**, one per profile: `toolport-infrastructure`
 (Kubernetes, Proxmox x4, Docker x3, GitHub, Forgejo, Pulumi, OpenBao),
-`toolport-networking` (UniFi, Tailscale, homelable), `toolport-home` (Home
+`toolport-networking` (UniFi, Tailscale, NetBird, homelable), `toolport-home` (Home
 Assistant), `toolport-media` (the *arr stack, ECM, Teamarr, Tdarr — IPTV in
 `docs/kubernetes/iptv.md`), `toolport-postgres` (every database) and
 `toolport-research` (docs search, Context7, Microsoft Learn). Load the `toolport`

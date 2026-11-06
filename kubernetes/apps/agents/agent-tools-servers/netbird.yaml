@@ -1,0 +1,130 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The NetBird MCP's credential: a PAT for the `mcp` service user, role
+# `auditor`, which stacks/netbird mints and rotates (its section 7,
+# MCP_TOKEN_GENERATION) and writes to third-party-tokens/netbird/mcp with the
+# management URL beside it. Read-only by NetBird's own permissions: every
+# create, update and delete is refused server-side, whatever tool is called.
+# Everything the MCP could write is declared in stacks/netbird, so a write
+# would only drift until the next run put it back.
+#
+# Before that stack's first run with the `mcp` user, this path does not exist,
+# the ExternalSecret errors and the pod waits on its Secret. Nothing else
+# depends on it.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-netbird
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: toolhive-netbird
+    creationPolicy: Owner
+    template:
+      data:
+        NETBIRD_API_TOKEN: "{{ .personal_access_token }}"
+        # The management origin (`https://netbird.<root domain>`); the client
+        # appends /api/... itself (src/netbird/client.ts).
+        NETBIRD_API_URL: "{{ .url }}"
+  dataFrom:
+    - extract:
+        key: third-party-tokens/netbird/mcp
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# netbird-mcp (github.com/netbirdio/netbird-mcp, NetBird's own) -- peers,
+# setup keys, groups, policies, networks, nameserver groups, posture checks and
+# the event log, against the self-hosted management server. A TypeScript
+# server on the official MCP SDK with a stdio entrypoint, so the operator's
+# proxy-runner turns it into Streamable HTTP, as for ./tailscale.yaml.
+# Toolport serves it in the networking profile, beside Tailscale
+# (../toolport/resources/registry.json).
+#
+# RUN FROM SOURCE, PINNED TO A COMMIT, the ./tdarr.yaml shape. Upstream
+# publishes nothing to run: `@netbird/mcp` (the name its README installs) is
+# not on npm, and there is no image on GHCR or Docker Hub, no release and no
+# tag (checked 2026-11-05; package.json says 0.1.0). Unlike tdarr-mcp it is
+# compiled with tsc (NodeNext, `.js` import specifiers that Node's type
+# stripping cannot follow), so the pod downloads the pinned commit's tarball,
+# `npm ci` against its package-lock.json, builds, and execs the stdio
+# entrypoint. `--ignore-scripts`: nothing it runs needs an install script (the
+# ones in its tree are esbuild's, for tsx and vitest, never run here), and a
+# dependency's postinstall is the usual way in.
+#
+# RENOVATE DOES NOT TRACK THE COMMIT, for the reason in ./tdarr.yaml's header.
+# To move it: read the diff, change the SHA in `args`. The node IMAGE is
+# tracked (kubernetes manager, digest-pinned).
+#
+# THE SCRIPT HAS NO DOLLAR SIGN IN IT: ./ks.yaml runs Flux postBuild.substitute
+# over this file. STDOUT IS THE MCP STREAM: npm's output goes to stderr
+# (`1>&2`), and the server's own logger writes to stderr only
+# (src/logger.ts).
+#
+# WRITES. Delete tools exist only with NETBIRD_ENABLE_DESTRUCTIVE, which is
+# left unset (off; upstream defaults it false and a misspelt value reads as
+# false). The create/update tools are listed, and each previews before it
+# applies (`confirm: true`), but the `auditor` role makes NetBird refuse them.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-netbird
+spec:
+  image: node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+  env:
+    - name: HOME
+      value: /tmp
+    - name: LOG_LEVEL
+      value: info
+    - name: NPM_CONFIG_UPDATE_NOTIFIER
+      value: "false"
+  podTemplateSpec:
+    # Reloader on the pod template, not the Secret: see ./tailscale.yaml.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: mcp
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              cd /tmp
+              rm -rf netbird-mcp
+              mkdir netbird-mcp
+              cd netbird-mcp
+              wget -qO- https://codeload.github.com/netbirdio/netbird-mcp/tar.gz/36e937182858860fda801935b482c39766448cee | tar -xz --strip-components=1
+              npm ci --ignore-scripts --no-audit --no-fund 1>&2
+              npm run build 1>&2
+              exec node dist/bin/stdio.js
+          envFrom:
+            - secretRef:
+                name: toolhive-netbird
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 768Mi
