@@ -905,17 +905,21 @@ function configureNetbirdEdgeAccess(manager: TailscaleAclManager) {
     },
     { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers },
   );
+  // The login users differ per cloud: `ubuntu` is the OCI image's default, and
+  // the Azure VMs' admin is `netbird-admin` (components/azure/AzureEdgeVm.ts
+  // adminUsername). Tailscale SSH answers port 22 on the tailnet itself, so this
+  // rule, not authorized_keys, is what lets an admin in.
   manager.setSshRule(
     {
       src: [autogroups.admin],
       dst: [tag.netbirdEdge],
-      users: ["root", "ubuntu"],
+      users: ["root", "ubuntu", "netbird-admin"],
       action: "check",
     },
     Object.fromEntries(
       testData.knownNormalUsers
-        .map(user => [user, { deny: ["root"] } as TailscaleSshTestInputItem] as const)
-        .concat(testData.knownAdminUsers.map(user => [user, { check: ["root"] } as TailscaleSshTestInputItem] as const)),
+        .map(user => [user, { deny: ["root", "netbird-admin"] } as TailscaleSshTestInputItem] as const)
+        .concat(testData.knownAdminUsers.map(user => [user, { check: ["root", "netbird-admin"] } as TailscaleSshTestInputItem] as const)),
     ),
   );
 
