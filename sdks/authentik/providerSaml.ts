@@ -60,6 +60,17 @@ export class ProviderSaml extends pulumi.CustomResource {
     declare public readonly authnContextClassRefMapping: pulumi.Output<string | undefined>;
     declare public readonly authorizationFlow: pulumi.Output<string>;
     /**
+     * Allowed values:
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
+     *      Defaults to `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`.
+     */
+    declare public readonly defaultNameIdPolicy: pulumi.Output<string | undefined>;
+    /**
      * Defaults to ``.
      */
     declare public readonly defaultRelayState: pulumi.Output<string | undefined>;
@@ -182,6 +193,7 @@ export class ProviderSaml extends pulumi.CustomResource {
             resourceInputs["authenticationFlow"] = state?.authenticationFlow;
             resourceInputs["authnContextClassRefMapping"] = state?.authnContextClassRefMapping;
             resourceInputs["authorizationFlow"] = state?.authorizationFlow;
+            resourceInputs["defaultNameIdPolicy"] = state?.defaultNameIdPolicy;
             resourceInputs["defaultRelayState"] = state?.defaultRelayState;
             resourceInputs["digestAlgorithm"] = state?.digestAlgorithm;
             resourceInputs["encryptionKp"] = state?.encryptionKp;
@@ -226,6 +238,7 @@ export class ProviderSaml extends pulumi.CustomResource {
             resourceInputs["authenticationFlow"] = args?.authenticationFlow;
             resourceInputs["authnContextClassRefMapping"] = args?.authnContextClassRefMapping;
             resourceInputs["authorizationFlow"] = args?.authorizationFlow;
+            resourceInputs["defaultNameIdPolicy"] = args?.defaultNameIdPolicy;
             resourceInputs["defaultRelayState"] = args?.defaultRelayState;
             resourceInputs["digestAlgorithm"] = args?.digestAlgorithm;
             resourceInputs["encryptionKp"] = args?.encryptionKp;
@@ -278,6 +291,17 @@ export interface ProviderSamlState {
     authenticationFlow?: pulumi.Input<string | undefined>;
     authnContextClassRefMapping?: pulumi.Input<string | undefined>;
     authorizationFlow?: pulumi.Input<string | undefined>;
+    /**
+     * Allowed values:
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
+     *      Defaults to `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`.
+     */
+    defaultNameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
@@ -402,6 +426,17 @@ export interface ProviderSamlArgs {
     authenticationFlow?: pulumi.Input<string | undefined>;
     authnContextClassRefMapping?: pulumi.Input<string | undefined>;
     authorizationFlow: pulumi.Input<string>;
+    /**
+     * Allowed values:
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName`
+     *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`
+     *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
+     *      Defaults to `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`.
+     */
+    defaultNameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */

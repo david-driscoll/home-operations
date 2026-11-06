@@ -60,6 +60,10 @@ export class SourceTelegram extends pulumi.CustomResource {
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     declare public readonly preAuthenticationFlow: pulumi.Output<string>;
+    /**
+     * Defaults to `false`.
+     */
+    declare public readonly promoted: pulumi.Output<boolean | undefined>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     declare public readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     /**
@@ -108,6 +112,7 @@ export class SourceTelegram extends pulumi.CustomResource {
             resourceInputs["name"] = state?.name;
             resourceInputs["policyEngineMode"] = state?.policyEngineMode;
             resourceInputs["preAuthenticationFlow"] = state?.preAuthenticationFlow;
+            resourceInputs["promoted"] = state?.promoted;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["requestMessageAccess"] = state?.requestMessageAccess;
@@ -138,6 +143,7 @@ export class SourceTelegram extends pulumi.CustomResource {
             resourceInputs["name"] = args?.name;
             resourceInputs["policyEngineMode"] = args?.policyEngineMode;
             resourceInputs["preAuthenticationFlow"] = args?.preAuthenticationFlow;
+            resourceInputs["promoted"] = args?.promoted;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["requestMessageAccess"] = args?.requestMessageAccess;
@@ -173,6 +179,10 @@ export interface SourceTelegramState {
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -222,6 +232,10 @@ export interface SourceTelegramArgs {
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**

@@ -73,6 +73,7 @@ export class Brand extends pulumi.CustomResource {
     declare public readonly flowRecovery: pulumi.Output<string | undefined>;
     declare public readonly flowUnenrollment: pulumi.Output<string | undefined>;
     declare public readonly flowUserSettings: pulumi.Output<string | undefined>;
+    declare public readonly flowUserSwitch: pulumi.Output<string | undefined>;
     declare public readonly webCertificate: pulumi.Output<string | undefined>;
 
     /**
@@ -106,6 +107,7 @@ export class Brand extends pulumi.CustomResource {
             resourceInputs["flowRecovery"] = state?.flowRecovery;
             resourceInputs["flowUnenrollment"] = state?.flowUnenrollment;
             resourceInputs["flowUserSettings"] = state?.flowUserSettings;
+            resourceInputs["flowUserSwitch"] = state?.flowUserSwitch;
             resourceInputs["webCertificate"] = state?.webCertificate;
         } else {
             const args = argsOrState as BrandArgs | undefined;
@@ -130,6 +132,7 @@ export class Brand extends pulumi.CustomResource {
             resourceInputs["flowRecovery"] = args?.flowRecovery;
             resourceInputs["flowUnenrollment"] = args?.flowUnenrollment;
             resourceInputs["flowUserSettings"] = args?.flowUserSettings;
+            resourceInputs["flowUserSwitch"] = args?.flowUserSwitch;
             resourceInputs["webCertificate"] = args?.webCertificate;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -171,6 +174,7 @@ export interface BrandState {
     flowRecovery?: pulumi.Input<string | undefined>;
     flowUnenrollment?: pulumi.Input<string | undefined>;
     flowUserSettings?: pulumi.Input<string | undefined>;
+    flowUserSwitch?: pulumi.Input<string | undefined>;
     webCertificate?: pulumi.Input<string | undefined>;
 }
 
@@ -208,5 +212,6 @@ export interface BrandArgs {
     flowRecovery?: pulumi.Input<string | undefined>;
     flowUnenrollment?: pulumi.Input<string | undefined>;
     flowUserSettings?: pulumi.Input<string | undefined>;
+    flowUserSwitch?: pulumi.Input<string | undefined>;
     webCertificate?: pulumi.Input<string | undefined>;
 }
