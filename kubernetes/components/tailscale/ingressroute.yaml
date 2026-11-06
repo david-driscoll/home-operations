@@ -37,6 +37,12 @@ spec:
       priority: 10
       match: Host(`${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}`)
       middlewares:
+        # FIRST, and by default a redirect to the app route,
+        # https://<label>.<root domain> (apps/network/traefik/middleware/app-route.yaml,
+        # docs/adr/0004). So the gate below only ever runs for an app that sets
+        # `TAILSCALE_ROUTE: serve` in its ks.yaml.
+        - name: app-route-${TAILSCALE_ROUTE:=redirect}
+          namespace: network
         # Mirrors whatever the app's own internal HTTPRoute uses:
         # `tailscale-local` is the counterpart of `local-user`/`local-api`
         # (network gate, no SSO) and is the default because that is what most

@@ -53,7 +53,12 @@ services:
       traefik.http.routers.backrest.tls.certresolver: le
 
       traefik.http.routers.backrest-tailscale.rule: Host(`backrest-${host}.${tailscaleDomain}`)
-      traefik.http.routers.backrest-tailscale.middlewares: authentik-outpost@docker
+      # Redirects to the app route, https://backrest.${CLUSTER_DOMAIN} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.backrest-tailscale.middlewares: backrest-app-route
+      traefik.http.middlewares.backrest-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.backrest-app-route.redirectregex.replacement: "https://backrest.${CLUSTER_DOMAIN}$${1}"
+      traefik.http.middlewares.backrest-app-route.redirectregex.permanent: "false"
       traefik.http.routers.backrest-tailscale.entrypoints: tailscale
       traefik.http.routers.backrest-tailscale.service: backrest
 

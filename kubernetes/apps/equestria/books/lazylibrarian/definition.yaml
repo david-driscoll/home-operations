@@ -9,11 +9,6 @@ spec:
   category: Media Management
   description: LazyLibrarian follows authors and series and grabs their ebooks, audiobooks and magazines
   url: &url https://${APP}.${ROOT_DOMAIN}
-  # The same app under its tailnet name. authentik's ProxyProvider.external_host
-  # holds ONE hostname, so without this the outpost has no application for
-  # ${APP}.${TAILSCALE_DOMAIN} and answers 400 "no app for hostname". Paired
-  # with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml; the two go together.
-  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/lazylibrarian.png
   access_policy:
     groups:

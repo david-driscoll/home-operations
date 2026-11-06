@@ -111,11 +111,11 @@ An app's name on its own (`jellyfin`), which a client device completes to the ap
 _Avoid_: Hostname, single-label name, alias
 
 **Tailnet route**:
-An app's name on the tailnet (`<app>.<tailnet>`), reached only from Tailscale.
+An app's name on the tailnet (`<app>.<tailnet>`), reached only from Tailscale. It redirects to the app's app route, except for the few apps that keep serving there.
 _Avoid_: Tailscale URL, MagicDNS name (when you mean an app)
 
 **App service**:
-An app's NetBird-only name (`<app>.nb.<root domain>`), reachable only from NetBird devices in the app's access policy groups.
+An app's NetBird-only name (`<app>.nb.<root domain>`), reachable only from NetBird devices in the app's access policy groups. Like a tailnet route, it redirects to the app route unless the app keeps serving there.
 _Avoid_: NetBird URL, private service (NetBird's general mechanism, of which this is one use)
 
 **Access policy**:

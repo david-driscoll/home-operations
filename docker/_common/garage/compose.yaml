@@ -221,7 +221,12 @@ services:
       traefik.http.routers.garage.service: garage
       traefik.http.routers.garage.tls.certresolver: le
       traefik.http.routers.garage-tailscale.rule: Host(`garage-${host}.${tailscaleDomain}`)
-      traefik.http.routers.garage-tailscale.middlewares: authentik-outpost@docker
+      # Redirects to the app route, https://garage.${CLUSTER_DOMAIN} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.garage-tailscale.middlewares: garage-app-route
+      traefik.http.middlewares.garage-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.garage-app-route.redirectregex.replacement: "https://garage.${CLUSTER_DOMAIN}$${1}"
+      traefik.http.middlewares.garage-app-route.redirectregex.permanent: "false"
       traefik.http.routers.garage-tailscale.entrypoints: tailscale
       traefik.http.routers.garage-tailscale.service: garage
       traefik.http.services.garage.loadbalancer.server.port: 3909

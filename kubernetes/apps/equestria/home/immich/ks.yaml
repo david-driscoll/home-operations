@@ -56,6 +56,9 @@ spec:
   postBuild:
     substitute:
       APP: *app
+      # Keep serving on the tailnet and NetBird names instead of redirecting to
+      # the app route (docs/adr/0004): the Immich mobile app may not follow a redirect.
+      TAILSCALE_ROUTE: serve
       NAMESPACE: *namespace
       VOLSYNC_ACCESSMODES: ReadWriteMany
       TAILSCALE_HOST: photos

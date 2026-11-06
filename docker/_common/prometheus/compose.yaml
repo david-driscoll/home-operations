@@ -27,6 +27,12 @@ services:
       # Same gap as prometheus above: x-dockge advertises
       # https://alloy-${host}.${tailscaleDomain} and nothing served it.
       traefik.http.routers.alloy-tailscale.rule: Host(`alloy-${host}.${tailscaleDomain}`)
+      # Redirects to the app route, https://alloy.${CLUSTER_DOMAIN} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.alloy-tailscale.middlewares: alloy-app-route
+      traefik.http.middlewares.alloy-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.alloy-app-route.redirectregex.replacement: "https://alloy.${CLUSTER_DOMAIN}$${1}"
+      traefik.http.middlewares.alloy-app-route.redirectregex.permanent: "false"
       traefik.http.routers.alloy-tailscale.entrypoints: tailscale
       traefik.http.routers.alloy-tailscale.service: alloy
       traefik.http.services.alloy.loadbalancer.server.port: 12345
@@ -66,6 +72,12 @@ services:
       # advertising that URL the whole time. It answered nothing (connection
       # refused), verified against celestia, luna and skystar.
       traefik.http.routers.prometheus-tailscale.rule: Host(`prometheus-${host}.${tailscaleDomain}`)
+      # Redirects to the app route, https://prometheus.${CLUSTER_DOMAIN} (docs/adr/0004);
+      # the app is no longer served on its tailnet name.
+      traefik.http.routers.prometheus-tailscale.middlewares: prometheus-app-route
+      traefik.http.middlewares.prometheus-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
+      traefik.http.middlewares.prometheus-app-route.redirectregex.replacement: "https://prometheus.${CLUSTER_DOMAIN}$${1}"
+      traefik.http.middlewares.prometheus-app-route.redirectregex.permanent: "false"
       traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
       traefik.http.routers.prometheus-tailscale.service: prometheus
       traefik.http.services.prometheus.loadbalancer.server.port: 9090

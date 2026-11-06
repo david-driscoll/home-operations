@@ -44,6 +44,9 @@ spec:
   postBuild:
     substitute:
       APP: *app
+      # Keep serving on the tailnet and NetBird names instead of redirecting to
+      # the app route (docs/adr/0004): native clients may not follow a redirect.
+      TAILSCALE_ROUTE: serve
       NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 60Gi
       VOLSYNC_STORAGECLASS: longhorn

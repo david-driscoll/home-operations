@@ -41,6 +41,9 @@ spec:
   postBuild:
     substitute:
       APP: *app
+      # Keep serving on the tailnet and NetBird names instead of redirecting to
+      # the app route (docs/adr/0004): no app route; its tailnet name is the only one.
+      TAILSCALE_ROUTE: serve
       NAMESPACE: *namespace
       # SQLite plus the GeoNames snapshot plus crowdsec.sync.lookback (168h of
       # alert history) is the size driver.
