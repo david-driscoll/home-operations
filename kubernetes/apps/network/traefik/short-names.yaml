@@ -57,3 +57,52 @@ spec:
       services:
         - name: noop@internal
           kind: TraefikService
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+#
+# THE TAILNET'S PORT 80. MagicDNS puts the tailnet first in every Tailscale
+# client's search list, so `jellyfin` resolves to the app's Tailscale Service,
+# not its app route. Each tailnet Ingress therefore also serves :80
+# (components/tailscale/ingress, `tailscale.com/http-endpoint`), and tailscaled
+# forwards that, Host kept, to this entrypoint, the same as :443.
+#
+# This entrypoint has no TLS of its own, so these two routes are what keep the
+# tailnet doors HTTPS-only. tailscaled sets `X-Forwarded-Proto: https` only on
+# requests that reached it over TLS (ipn/ipnlocal/serve.go, v1.104.4), and the
+# entrypoint trusts the proxy pods' forwarded headers (values.yaml), so a
+# request without it came in on :80, or from the LAN directly. Traefik replaces
+# an untrusted sender's header with its own `http`. Every such request is
+# redirected and never served:
+#   - a short name -> its app route, as on `web` (ADR 0003);
+#   - a full name  -> https, the same host, which tailscaled serves.
+# A client that sends its own `X-Forwarded-Proto: https` on :80 gets plain HTTP
+# inside its own WireGuard tunnel, which is no worse than before.
+#
+# Both outrank every app router here (theirs are 10); the short-name route is
+# checked first.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: short-names-tailscale
+  annotations:
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - tailscale
+  routes:
+    - kind: Rule
+      match: HostRegexp(`^[a-zA-Z0-9-]+$`) && !Host(`localhost`) && !Header(`X-Forwarded-Proto`, `https`)
+      priority: 2147482647
+      middlewares:
+        - name: short-name-redirect
+      services:
+        - name: noop@internal
+          kind: TraefikService
+    - kind: Rule
+      match: "!Header(`X-Forwarded-Proto`, `https`)"
+      priority: 2147482646
+      middlewares:
+        - name: https-redirect
+      services:
+        - name: noop@internal
+          kind: TraefikService
