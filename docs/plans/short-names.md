@@ -1,6 +1,6 @@
 # Short names: `jellyfin` works on the LAN, Tailscale and NetBird
 
-**Status:** live, 2026-11-06. C1 on every Traefik (#3104), C2 (#3105), C3 and C5 (#3106), C2b (#3109); C4, C6 and C7 in this PR. Left: E5 (Dockge apps on Tailscale). Owner: David. Decisions marked ✅ were taken
+**Status:** live, 2026-11-06. C1 on every Traefik (#3104), C2 (#3105), C3 and C5 (#3106), C2b (#3109); C4, C6 and C7 (#3111). E5 (Dockge apps on Tailscale) in this PR. Owner: David. Decisions marked ✅ were taken
 by David on 2026-11-05, after a read-only look at the live UniFi, Tailscale and NetBird DNS
 settings and a probe of the cluster Traefik (§A):
 
@@ -164,6 +164,14 @@ Verify, on a Mac with Tailscale up: `curl -sI http://jellyfin/` returns 302 to
 there replaces it (`replaceOnChanges: ["*"]`, delete before replace), which recreates every Dockge
 Service at once. Decide separately (E5).
 
+✅ Decided 2026-11-06: do it. Ten Dockge Services have plain names that collide with a short name
+(`authentik`, `uptime`, `zwave`, `registry`, `llama-agent`, `llama-voice`, `garage-admin`,
+`garage-s3`, `bao-standby`, `bao-transit`); the `<app>-${host}` ones don't, but share the code.
+`components/DockgeLxc.ts` gives every Service `tcp:80` and a second `tailscale serve --http=80`
+to the same loopback entrypoint, and `docker/_common/traefik/dynamic/short-names.yaml` adds the
+same two `tailscale`-entrypoint routes as the cluster. The port change replaces every Dockge
+Service once (a brief outage per app).
+
 ### C3. NetBird search domain
 
 NetBird hands out search domains only from nameserver groups with match domains, so the existing
@@ -245,5 +253,4 @@ later.
   (docs/runbooks/netbird-client-onboarding.md, #2886).
 - ~~E4. Does Gatus treat a `Host` header as the request host (C6)?~~ Yes: `request.Host` is set from it
   (TwiN/gatus `config/endpoint/endpoint.go`).
-- E5. Dockge apps' Tailscale Services: add :80 (recreates every Dockge Service) or leave short
-  names unsupported for Dockge apps on Tailscale?
+- ~~E5. Dockge apps' Tailscale Services: add :80?~~ Yes, see C2b.

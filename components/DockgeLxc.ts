@@ -734,7 +734,13 @@ export class DockgeLxc extends ComponentResource {
         {
           name: `svc:${opts.name}`,
           comment: `External service for ${opts.name} (${opts.backend})`,
-          ports: ["tcp:443"],
+          // :80 for short names (docs/plans/short-names.md E5). MagicDNS
+          // answers a short name with a Service of that name (`uptime`) before
+          // the root-domain search path, and a browser's plain-HTTP fallback
+          // needs something there. Traefik's `tailscale` entrypoint redirects
+          // every plain-HTTP request and serves none
+          // (docker/_common/traefik/dynamic/short-names.yaml).
+          ports: ["tcp:443", "tcp:80"],
           tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
         },
         {
@@ -750,8 +756,11 @@ export class DockgeLxc extends ComponentResource {
         `${opts.name}-tailscale-serve-${opts.backend}`,
         {
           connection: this.remoteConnection,
-          create: interpolate`tailscale serve  --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443`,
-          update: interpolate`tailscale serve  --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443`,
+          // Both ports go to the same loopback entrypoint; tailscaled sets
+          // X-Forwarded-Proto: https only on the TLS one, which is how Traefik
+          // tells them apart.
+          create: interpolate`tailscale serve  --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443 && tailscale serve  --service=svc:${opts.name} --yes --http=80 127.0.0.1:8443`,
+          update: interpolate`tailscale serve  --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443 && tailscale serve  --service=svc:${opts.name} --yes --http=80 127.0.0.1:8443`,
           delete: interpolate`tailscale serve clear svc:${opts.name}`,
         },
         {

@@ -24,7 +24,36 @@ http:
         - short-name-redirect
       service: noop@internal
 
+    # THE TAILNET'S PORT 80 (docs/plans/short-names.md E5). Each Dockge
+    # Tailscale Service also serves :80 (components/DockgeLxc.ts), and
+    # tailscaled forwards it, Host kept, to the loopback `tailscale` entrypoint,
+    # the same as :443. tailscaled sets `X-Forwarded-Proto: https` only over
+    # TLS, and that entrypoint trusts it (config.yaml), so a request without it
+    # came in on :80. Every such request is redirected and none is served: a
+    # short name to its app route, anything else to https on the same host.
+    # The twin of the cluster's short-names-tailscale IngressRoute.
+    short-names-tailscale:
+      entryPoints:
+        - tailscale
+      rule: HostRegexp(`^[a-zA-Z0-9-]+$`) && !Host(`localhost`) && !Header(`X-Forwarded-Proto`, `https`)
+      priority: 2147482647
+      middlewares:
+        - short-name-redirect
+      service: noop@internal
+    tailscale-plain-http:
+      entryPoints:
+        - tailscale
+      rule: "!Header(`X-Forwarded-Proto`, `https`)"
+      priority: 2147482646
+      middlewares:
+        - tailscale-https-redirect
+      service: noop@internal
+
   middlewares:
+    tailscale-https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
     short-name-redirect:
       redirectRegex:
         regex: "^(?i)https?://([a-z0-9-]+)(:[0-9]+)?(/.*)?$"
