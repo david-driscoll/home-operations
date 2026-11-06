@@ -12,15 +12,20 @@
  *   - Prefix delegation from Internet 1 (`wan`): Home takes the delegated /64.
  *     Only one network can, at that size; IoT and Guest stay IPv4-only.
  *   - SLAAC with router advertisements: every device numbers itself.
+ *   - A fixed private range beside it: Home's ULA /64
+ *     (components/homeLanIpv6.ts), with the gateway on HOME_ULA_GATEWAY as an
+ *     "Additional IP". The delegated prefix can be renumbered by the ISP; the
+ *     ULA never is, so Technitium is advertised on it.
  *   - DNS is NOT the gateway's (`dhcpdv6_dns_auto: false`): the default would
  *     advertise the gateway as every client's IPv6 resolver and send queries,
- *     internal names included, around Technitium. Technitium has no IPv6
- *     address yet, so for now no IPv6 resolver is advertised at all, and
- *     clients keep resolving through Technitium over IPv4 (AAAA answers
- *     included). Its IPv6 addresses go in `dnsServers` once it has them.
+ *     internal names included, around Technitium. `dnsServers` are the
+ *     Technitium hosts' ULA addresses, or none: then clients keep resolving
+ *     through Technitium over IPv4 (AAAA answers included).
  *
  * Pure, so `node --test` covers it.
  */
+
+import { HOME_ULA_GATEWAY, HOME_ULA_PREFIX } from "../../components/homeLanIpv6.ts";
 
 /** The controller's slots for IPv6 DNS servers, like DHCP's four for IPv4. */
 export const IPV6_DNS_SLOTS = 4;
@@ -31,7 +36,7 @@ export interface HomeIpv6Args {
 }
 
 /** The networkconf PUT body. Only these keys: the controller merges a partial PUT and keeps the rest. */
-export function homeIpv6Body(args: HomeIpv6Args): Record<string, string | boolean> {
+export function homeIpv6Body(args: HomeIpv6Args): Record<string, string | boolean | string[]> {
   if (args.dnsServers.length > IPV6_DNS_SLOTS) throw new Error(`home-ipv6: ${args.dnsServers.length} IPv6 DNS servers, but the controller has ${IPV6_DNS_SLOTS} slots`);
   for (const server of args.dnsServers) {
     if (!/^[0-9a-f:]+$/i.test(server) || !server.includes(":")) throw new Error(`home-ipv6: '${server}' is not an IPv6 address`);
@@ -43,7 +48,13 @@ export function homeIpv6Body(args: HomeIpv6Args): Record<string, string | boolea
     ipv6_pd_auto_prefixid_enabled: true,
     ipv6_client_address_assignment: "slaac",
     ipv6_ra_enabled: true,
+    ipv6_aliases: homeIpv6Aliases(),
     dhcpdv6_dns_auto: false,
     ...slots,
   };
+}
+
+/** The gateway's Additional IPs on Home: its ULA address, with the range's prefix length. */
+export function homeIpv6Aliases(): string[] {
+  return [`${HOME_ULA_GATEWAY}/${HOME_ULA_PREFIX.split("/")[1]}`];
 }

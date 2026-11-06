@@ -15,6 +15,7 @@ import { TailnetKey } from "@pulumi/tailscale";
 import { baoKvSecret, baoProvenance, dockgeBaoPath, postgresBaoPath } from "components/bao.ts";
 import { Tailscale } from "components/constants.ts";
 import { awaitOutput, copyFileToRemote, getTailscaleSection } from "components/helpers.ts";
+import { homeUlaAddress, renderHomeUlaUnit, renderIpv6Sysctl } from "components/homeLanIpv6.ts";
 import type { OPClient } from "components/op.ts";
 import { installTailscaleLxc, type TailscaleMonitor } from "components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "dynamic/1password/OnePasswordItem.ts";
@@ -245,6 +246,10 @@ export class DockgeLxc extends ComponentResource {
             nesting: 1,
             keyctl: 1,
             gpu: "yes",
+            // Left as it is: these vars are the create Command's inputs, and a
+            // change would replace (destroy and recreate) every existing LXC.
+            // IPv6 is configured inside the LXC instead, the same way on old
+            // and new hosts (`<name>-ipv6`, below).
             ipv6_method: "none",
             mount_fs: "nfs",
             ...(args.ipAddress ? { net: `${args.ipAddress}/16`, gateway: "10.10.0.1" } : {}),
@@ -667,6 +672,40 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: [journaldConfig, ...keyWrites] }),
     );
 
+    // IPv6 (components/homeLanIpv6.ts). SLAAC on eth0 for the site's public
+    // prefix, which is what lets a host's netbird-gateway (host networking)
+    // carry an exit node's IPv6. On Home, also a fixed ULA address derived from
+    // the LAN IPv4 one: Technitium is advertised on it, since Google Fiber can
+    // renumber the public prefix. Hosts off Home get the sysctl and a unit that
+    // does nothing.
+    const ipv6Sysctl = renderIpv6Sysctl();
+    const ipv6SysctlFile = copyFileToRemote(`${name}-ipv6-sysctl`, {
+      connection: this.remoteConnection,
+      remotePath: "/etc/sysctl.d/90-ipv6-slaac.conf",
+      content: ipv6Sysctl,
+      parent: this.dockerParent,
+      dependsOn: depends,
+      triggers: [ipv6Sysctl],
+    });
+    const homeUlaUnit = this.localIpAddress.apply(ip => renderHomeUlaUnit(homeUlaAddress(ip)));
+    const homeUlaUnitFile = copyFileToRemote(`${name}-home-ula-unit`, {
+      connection: this.remoteConnection,
+      remotePath: "/etc/systemd/system/home-ula.service",
+      content: homeUlaUnit,
+      parent: this.dockerParent,
+      dependsOn: depends,
+      triggers: [homeUlaUnit],
+    });
+    const ipv6Apply = new remote.Command(
+      `${name}-ipv6`,
+      {
+        connection: this.remoteConnection,
+        create: "sysctl -p /etc/sysctl.d/90-ipv6-slaac.conf && systemctl daemon-reload && systemctl enable home-ula.service && systemctl restart home-ula.service",
+        triggers: [ipv6SysctlFile.id, homeUlaUnitFile.id],
+      },
+      mergeOptions(cro, { dependsOn: [ipv6SysctlFile, homeUlaUnitFile] }),
+    );
+
     const stacksDirectory = new remote.Command(
       `${name}-stacks-directory`,
       {
@@ -676,7 +715,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.resources = [...depends, dockgeInfo, ...keyWrites, dockerDaemonReload, journaldApply, stacksDirectory];
+    this.resources = [...depends, dockgeInfo, ...keyWrites, dockerDaemonReload, journaldApply, ipv6Apply, stacksDirectory];
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {

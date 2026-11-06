@@ -29,8 +29,9 @@ import CIDRMatcher from "cidr-matcher";
 import { dns, Tailscale } from "../../components/constants.ts";
 import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
+import { homeUlaAddress } from "../../components/homeLanIpv6.ts";
 import { getDnsMachines } from "../../components/tailscale.ts";
-import { homeIpv6Body } from "./home-ipv6.ts";
+import { homeIpv6Body, IPV6_DNS_SLOTS } from "./home-ipv6.ts";
 
 export async function configureLocalDns(globals: GlobalResources) {
   const parent = new pulumi.ComponentResource("custom:unifi:LocalDns", "local-dns", {});
@@ -128,10 +129,26 @@ export async function configureLocalDns(globals: GlobalResources) {
     );
   }
 
-  // IPv6 on Home (home-ipv6.ts): Internet 1's delegated prefix, SLAAC, and no
-  // IPv6 resolver advertised until Technitium has addresses. The same partial
-  // PUT as the DHCP DNS above, and its own resource, so the two never send each
-  // other's fields.
+  // IPv6 on Home (home-ipv6.ts): Internet 1's delegated prefix, SLAAC, the
+  // gateway on Home's ULA range, and as IPv6 resolvers the online Technitium
+  // hosts' fixed ULA addresses (components/homeLanIpv6.ts, which DockgeLxc puts
+  // on each host). The same partial PUT as the DHCP DNS above, and its own
+  // resource, so the two never send each other's fields.
+  //
+  // The resolvers are advertised only with `unifi-network:homeIpv6Dns` true.
+  // The addresses live on hosts other stacks deploy (home, gulf-of-mexico,
+  // ocracoke), and a client told about an IPv6 resolver that does not answer
+  // waits on it before falling back (Windows prefers IPv6 DNS), slowing every
+  // lookup. Turn it on once `dig @<host ULA> <name>` answers from the LAN.
+  const advertiseIpv6Dns = new pulumi.Config().getBoolean("homeIpv6Dns") ?? false;
+  const ipv6Dns = dnsHosts.apply(hosts =>
+    advertiseIpv6Dns
+      ? hosts
+          .filter(host => host.online)
+          .flatMap(host => homeUlaAddress(host.internalIp) ?? [])
+          .slice(0, IPV6_DNS_SLOTS)
+      : [],
+  );
   new purrl.Purrl(
     "home-ipv6",
     {
@@ -143,7 +160,7 @@ export async function configureLocalDns(globals: GlobalResources) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(homeIpv6Body({ dnsServers: [] })),
+      body: ipv6Dns.apply(dnsServers => JSON.stringify(homeIpv6Body({ dnsServers }))),
       responseCodes: ["200"],
     },
     { parent },
