@@ -9,6 +9,7 @@ import type { TailscaleCidr, TailscaleIp, TailscaleNetworkCapability, TailscaleS
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
 import { authentikVip, type KubernetesCluster, kubernetesClusters, Roles } from "../../components/constants.ts";
+import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
@@ -731,6 +732,14 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           address,
           useWithExitNode: false,
         })),
+        // Short names (GLOSSARY.md, ADR 0003): `jellyfin` completes to the
+        // app route, `jellyfin.<root domain>`, which Technitium answers and
+        // Traefik redirects to (kubernetes/apps/network/traefik/short-names.yaml).
+        // MagicDNS keeps the tailnet domain first; this follows it. Tailscale
+        // cannot scope search paths, so servers that accept tailnet DNS get
+        // it too (no wildcard records exist under the root domain, so nothing
+        // they look up changes). docs/plans/short-names.md C2.
+        searchPaths: [rootDomain()],
       },
       cro,
     );
