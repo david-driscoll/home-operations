@@ -376,7 +376,6 @@ const TITLE_PATHS: Record<string, string> = {
   // third-party-tokens/ — issued by someone else's service
   "Tailscale Terraform OAuth Client": "third-party-tokens/tailscale/pulumi-oauth",
   "Unifi Api Key Eris Cluster": "third-party-tokens/unifi/api-key",
-  "Authentik Plex Source": "third-party-tokens/plex/authentik-source",
 
   // apps/ — estate infrastructure this repo operates
   "Technitium ApiKey": "apps/technitium/api-key",
