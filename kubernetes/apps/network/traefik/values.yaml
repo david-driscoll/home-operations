@@ -167,6 +167,13 @@ ports:
           to: websecure
           scheme: https
           permanent: true
+          # One below the short-name route (short-names.yaml), which is the
+          # highest priority a user router may have (MaxInt32 - 1000). Left at
+          # its default (MaxInt-1) this redirect outranks every user router, so
+          # `http://jellyfin/` went to `https://jellyfin/` instead of its full
+          # name. Still far above any other router here. A STRING: Helm prints
+          # a large YAML integer as 2.147482646e+09, which Traefik rejects.
+          priority: "2147482646"
   websecure:
     port: 443
     exposedPort: 443
