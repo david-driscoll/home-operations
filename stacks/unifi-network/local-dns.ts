@@ -30,6 +30,7 @@ import { dns, Tailscale } from "../../components/constants.ts";
 import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { getDnsMachines } from "../../components/tailscale.ts";
+import { homeIpv6Body } from "./home-ipv6.ts";
 
 export async function configureLocalDns(globals: GlobalResources) {
   const parent = new pulumi.ComponentResource("custom:unifi:LocalDns", "local-dns", {});
@@ -126,6 +127,27 @@ export async function configureLocalDns(globals: GlobalResources) {
       { parent },
     );
   }
+
+  // IPv6 on Home (home-ipv6.ts): Internet 1's delegated prefix, SLAAC, and no
+  // IPv6 resolver advertised until Technitium has addresses. The same partial
+  // PUT as the DHCP DNS above, and its own resource, so the two never send each
+  // other's fields.
+  new purrl.Purrl(
+    "home-ipv6",
+    {
+      name: "home network IPv6",
+      url: pulumi.interpolate`${globals.unifiCredential.hostname}/proxy/network/api/s/default/rest/networkconf/${homeNetwork.id}`,
+      method: "PUT",
+      headers: {
+        "X-API-KEY": globals.unifiCredential.credential,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(homeIpv6Body({ dnsServers: [] })),
+      responseCodes: ["200"],
+    },
+    { parent },
+  );
 
   // DHCP reservations pinning each dns host to its current LAN IP. LXC recreation
   // regenerates the MAC; the next up of the exporting stack refreshes the export
