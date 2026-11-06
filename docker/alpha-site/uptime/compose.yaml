@@ -31,6 +31,16 @@ services:
       traefik.http.routers.uptime-tailscale.entrypoints: tailscale
       traefik.http.routers.uptime-tailscale.service: uptime
 
+      # The heartbeat push API keeps serving on the tailnet name, unredirected.
+      # The NetBird edge hosts on Azure (backup and home-relay probe heartbeats,
+      # stacks/netbird-edge) are tailnet-only and push to uptime.<tailnet>; the
+      # redirect above sends them to a name they cannot reach and the heartbeats
+      # go stale. Same carve-out as the tailnet API-key routes in docs/adr/0004.
+      traefik.http.routers.uptime-tailscale-heartbeat.rule: Host(`uptime.${tailscaleDomain}`) && PathRegexp(`^/api/v1/endpoints/[^/]+/external$$`)
+      traefik.http.routers.uptime-tailscale-heartbeat.priority: 100
+      traefik.http.routers.uptime-tailscale-heartbeat.entrypoints: tailscale
+      traefik.http.routers.uptime-tailscale-heartbeat.service: uptime
+
       traefik.http.services.uptime.loadbalancer.server.port: 9595
     volumes:
       - /opt/stacks-data/${APP}/data/:/data/
