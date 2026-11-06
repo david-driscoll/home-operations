@@ -1,7 +1,7 @@
 services:
   backups:
     user: "65534:65534"
-    image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
+    image: mcr.microsoft.com/dotnet/sdk:11.0@sha256:59d092a889fbad09c1a0b0c5dd072c6315125b0294a5cddfa48ec892f63b2ab3
     volumes:
       - ./:/workspace
       - /opt/stacks-data/${APP}/keys:/keys:ro

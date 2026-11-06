@@ -29,7 +29,7 @@ kind: MCPServer
 metadata:
   name: toolhive-nuget
 spec:
-  image: mcr.microsoft.com/dotnet/sdk:10.0
+  image: mcr.microsoft.com/dotnet/sdk:11.0@sha256:59d092a889fbad09c1a0b0c5dd072c6315125b0294a5cddfa48ec892f63b2ab3
   transport: stdio
   proxyPort: 8080
   proxyMode: streamable-http
