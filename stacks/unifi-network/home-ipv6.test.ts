@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { homeIpv6Body, IPV6_DNS_SLOTS } from "./home-ipv6.ts";
+import { homeIpv6Aliases, homeIpv6Body, IPV6_DNS_SLOTS } from "./home-ipv6.ts";
 
 describe("homeIpv6Body", () => {
   it("takes Internet 1's delegated prefix and numbers clients by SLAAC", () => {
@@ -30,6 +30,11 @@ describe("homeIpv6Body", () => {
     assert.equal(body.dhcpdv6_dns_1, "fd00::53");
     assert.equal(body.dhcpdv6_dns_2, "fd00::54");
     assert.equal(body.dhcpdv6_dns_3, "");
+  });
+
+  it("puts the gateway on Home's ULA range, as its only Additional IP", () => {
+    assert.deepEqual(homeIpv6Aliases(), ["fd04:7815:6227:1::1/64"]);
+    assert.deepEqual(homeIpv6Body({ dnsServers: [] }).ipv6_aliases, ["fd04:7815:6227:1::1/64"]);
   });
 
   it("refuses more servers than slots, and anything that is not IPv6", () => {
