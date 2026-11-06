@@ -66,6 +66,13 @@ builder.Services.AddSingleton(sp => Observable.Create<IEnumerable<AuthentikAppli
                 : Observable.Empty<AuthentikApplicationResponse>())
                 .SelectMany(z => z.Results)
                 .Where(z => !string.IsNullOrWhiteSpace(z.MetaLaunchUrl?.ToString()))
+                // superuser_full_list (needed: the token's own user passes no
+                // app's policy) also returns apps hidden from authentik's
+                // Application Dashboard, which that dashboard drops server-side.
+                // Those are the hostname twins, "<App> (Tailnet)" and
+                // "<App> (NetBird)" (components/authentik/proxyHostTwins.ts),
+                // which carry their primary's launch URL. Drop them here too.
+                .Where(z => !z.MetaHide)
                 .ToArray())
                 .Switch()
                 .Publish()
