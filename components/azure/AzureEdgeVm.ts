@@ -29,8 +29,11 @@ export interface AzureEdgeVmArgs {
 export class AzureEdgeVm extends ComponentResource {
   public readonly resourceGroup: resources.ResourceGroup;
   public readonly publicIp: network.PublicIPAddress;
+  public readonly publicIp6: network.PublicIPAddress;
   public readonly vm: compute.VirtualMachine;
   public readonly publicIpAddress: Output<string>;
+  /** The VM's static public IPv6 address. */
+  public readonly publicIpv6Address: Output<string>;
   public readonly privateIpAddress: Output<string>;
   /** Changes when the VM is replaced: NetbirdServer's hostKey. */
   public readonly vmId: Output<string>;
@@ -58,15 +61,17 @@ export class AzureEdgeVm extends ComponentResource {
     );
 
     // The subnet inline: a separate Subnet resource and a VNet that does not
-    // list it fight over the VNet's subnets on every update.
+    // list it fight over the VNet's subnets on every update. Dual-stack: both
+    // families in the VNet's address space and in the one subnet
+    // (edgeVm.ts AZURE_EDGE_REGIONS says where the IPv6 ranges come from).
     const vnet = new network.VirtualNetwork(
       `${name}-vnet`,
       {
         resourceGroupName,
         location,
         virtualNetworkName: `${args.hostname}-vnet`,
-        addressSpace: { addressPrefixes: [region.vnetCidr] },
-        subnets: [{ name: "edge", addressPrefix: region.subnetCidr }],
+        addressSpace: { addressPrefixes: [region.vnetCidr, region.vnetCidr6] },
+        subnets: [{ name: "edge", addressPrefixes: [region.subnetCidr, region.subnetCidr6] }],
         tags,
       },
       cro,
@@ -89,6 +94,23 @@ export class AzureEdgeVm extends ComponentResource {
       { ...cro, protect: true },
     );
 
+    // The IPv6 twin: Standard, static, kept across a VM replacement like the
+    // IPv4 address. Inbound is closed until the NSG allows it, and the NSG's
+    // rules (source `*`) open the same public ports on both families.
+    this.publicIp6 = new network.PublicIPAddress(
+      `${name}-ip6`,
+      {
+        resourceGroupName,
+        location,
+        publicIpAddressName: `${args.hostname}-ip6`,
+        sku: { name: "Standard", tier: "Regional" },
+        publicIPAllocationMethod: "Static",
+        publicIPAddressVersion: "IPv6",
+        tags,
+      },
+      { ...cro, protect: true },
+    );
+
     const nic = new network.NetworkInterface(
       `${name}-nic`,
       {
@@ -103,6 +125,16 @@ export class AzureEdgeVm extends ComponentResource {
             privateIPAllocationMethod: "Dynamic",
             subnet: { id: vnet.subnets.apply(subnets => subnets?.[0]?.id ?? "") },
             publicIPAddress: { id: this.publicIp.id },
+          },
+          // A NIC's IPv6 configuration is never its primary; the guest takes
+          // the address by DHCPv6 (stacks/netbird-edge, `<host>-ipv6-dhcp`).
+          {
+            name: "ipv6",
+            primary: false,
+            privateIPAddressVersion: "IPv6",
+            privateIPAllocationMethod: "Dynamic",
+            subnet: { id: vnet.subnets.apply(subnets => subnets?.[0]?.id ?? "") },
+            publicIPAddress: { id: this.publicIp6.id },
           },
         ],
         tags,
@@ -158,9 +190,13 @@ export class AzureEdgeVm extends ComponentResource {
       if (!ip) throw new Error(`${args.hostname}: the static public IP has no address yet`);
       return ip;
     });
+    this.publicIpv6Address = this.publicIp6.ipAddress.apply(ip => {
+      if (!ip) throw new Error(`${args.hostname}: the static public IPv6 has no address yet`);
+      return ip;
+    });
     this.privateIpAddress = nic.ipConfigurations.apply(configs => configs?.[0]?.privateIPAddress ?? "");
     this.vmId = this.vm.vmId;
 
-    this.registerOutputs({ publicIpAddress: this.publicIpAddress, privateIpAddress: this.privateIpAddress });
+    this.registerOutputs({ publicIpAddress: this.publicIpAddress, publicIpv6Address: this.publicIpv6Address, privateIpAddress: this.privateIpAddress });
   }
 }
