@@ -8,7 +8,7 @@ import { AZURE_EDGE_REGIONS, azureEdgeMonthlyCost, nsgInboundRules } from "./edg
 describe("nsgInboundRules", () => {
   const rules = nsgInboundRules({ tcp: [80, 443], udp: [443, 3478] });
 
-  it("allows exactly the public ports, from the Internet", () => {
+  it("allows exactly the public ports, from anywhere on both address families", () => {
     assert.deepEqual(
       rules.map(r => `${r.protocol}/${r.destinationPortRange}`),
       ["Tcp/80", "Tcp/443", "Udp/443", "Udp/3478"],
@@ -16,7 +16,8 @@ describe("nsgInboundRules", () => {
     for (const rule of rules) {
       assert.equal(rule.direction, "Inbound");
       assert.equal(rule.access, "Allow");
-      assert.equal(rule.sourceAddressPrefix, "Internet");
+      // `*`: the `Internet` tag is not documented to cover IPv6 sources.
+      assert.equal(rule.sourceAddressPrefix, "*");
     }
   });
 
@@ -43,6 +44,18 @@ describe("Azure edge regions", () => {
       assert.ok(!seen.has(prefix), `${region.vnetCidr} is used twice`);
       seen.add(prefix);
       assert.ok(region.subnetCidr.startsWith(prefix), `${region.subnetCidr} is outside ${region.vnetCidr}`);
+    }
+  });
+
+  it("give each VNet its own ULA /48, with the subnet's /64 inside it and clear of Home's range", () => {
+    const seen = new Set<string>();
+    for (const region of Object.values(AZURE_EDGE_REGIONS)) {
+      assert.match(region.vnetCidr6, /^fd[0-9a-f]{2}:[0-9a-f]{4}:[0-9a-f]{4}::\/48$/);
+      const globalId = region.vnetCidr6.replace(/::\/48$/, "");
+      assert.equal(region.subnetCidr6, `${globalId}:1::/64`);
+      assert.notEqual(globalId, "fd04:7815:6227", `${region.vnetCidr6} is Home's range`);
+      assert.ok(!seen.has(globalId), `${region.vnetCidr6} is used twice`);
+      seen.add(globalId);
     }
   });
 

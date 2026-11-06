@@ -22,10 +22,15 @@ export const AZURE_EDGE_OS_DISK_TYPE = "StandardSSD_LRS";
  * VNet: the hosts never talk to each other directly (backups go to Garage over
  * the tailnet), and the ranges stay outside the home LAN (10.10/16), NetBird's
  * overlay (10.100/16) and OCI's VCN (10.250/16).
+ *
+ * Dual-stack: Azure gives a VNet IPv6 only from a range the customer picks, a
+ * /48 with a /64 per subnet; these are ULAs (RFC 4193), each global ID drawn at
+ * random (2026-11-06) and apart from Home's (fd04:7815:6227::/48). The VM's
+ * public IPv6 is a separate static address on top (AzureEdgeVm).
  */
 export const AZURE_EDGE_REGIONS = {
-  eastus2: { short: "eus2", vnetCidr: "10.251.0.0/16", subnetCidr: "10.251.1.0/24" },
-  centralus: { short: "cus", vnetCidr: "10.252.0.0/16", subnetCidr: "10.252.1.0/24" },
+  eastus2: { short: "eus2", vnetCidr: "10.251.0.0/16", subnetCidr: "10.251.1.0/24", vnetCidr6: "fdba:80f9:7c16::/48", subnetCidr6: "fdba:80f9:7c16:1::/64" },
+  centralus: { short: "cus", vnetCidr: "10.252.0.0/16", subnetCidr: "10.252.1.0/24", vnetCidr6: "fd87:eb46:7ef7::/48", subnetCidr6: "fd87:eb46:7ef7:1::/64" },
 } as const;
 export type AzureEdgeRegion = keyof typeof AZURE_EDGE_REGIONS;
 
@@ -46,7 +51,7 @@ export interface NsgRule {
   direction: "Inbound";
   access: "Allow";
   protocol: "Tcp" | "Udp";
-  sourceAddressPrefix: "Internet";
+  sourceAddressPrefix: "*";
   sourcePortRange: "*";
   destinationAddressPrefix: "*";
   destinationPortRange: string;
@@ -73,7 +78,11 @@ export function nsgInboundRules(ports: { tcp: readonly number[]; udp: readonly n
         direction: "Inbound",
         access: "Allow",
         protocol,
-        sourceAddressPrefix: "Internet",
+        // `*`, not the `Internet` service tag: Microsoft documents that tag as
+        // "all public IP address space outside your virtual network" without
+        // saying it covers IPv6, and its own dual-stack walkthrough opens ports
+        // with `*`. These ports are for everyone either way.
+        sourceAddressPrefix: "*",
         sourcePortRange: "*",
         destinationAddressPrefix: "*",
         destinationPortRange: `${port}`,

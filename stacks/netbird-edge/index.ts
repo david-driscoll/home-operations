@@ -16,6 +16,7 @@
  * restored by whichever host takes the lease (#2884).
  */
 import * as cloudflare from "@pulumi/cloudflare";
+import { remote } from "@pulumi/command";
 import * as oci from "@pulumi/oci";
 import type { Input, Output, Resource } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
@@ -337,6 +338,40 @@ const azureVms = azureHosts.map(spec => {
   );
   return { spec, hostname: vmHostname, machine, relayDomain };
 });
+
+// IPv6 inside the guest. AzureEdgeVm makes each VM dual-stack (a ULA /64 on its
+// subnet, an IPv6 ipConfiguration on its NIC, a static public IPv6 that Azure
+// maps 1:1 onto it), and Azure hands the private address out by DHCPv6 and the
+// default route by RA. cloud-init only reads the NIC's configuration at first
+// boot, and customData is frozen after create, so the running VMs get it here,
+// over the same SSH the deploy uses. A netplan drop-in merges into
+// cloud-init's own `eth0` (same id). accept-ra: networkd's own RA handling,
+// which works with forwarding on, unlike the kernel's accept_ra=1.
+//
+// `netplan apply` reconfigures eth0 once: the NetBird and Tailscale
+// connections drop for a moment and reconnect. It reruns only when the file or
+// the VM changes.
+const IPV6_NETPLAN = `# Rendered by stacks/netbird-edge (Pulumi). Edits are overwritten.
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp6: true
+      accept-ra: true
+`;
+for (const a of azureVms) {
+  new remote.Command(
+    `${a.hostname}-ipv6-dhcp`,
+    {
+      connection: { host: pulumi.interpolate`${a.hostname}.${globals.tailscaleDomain}`, user: "root", privateKey: breakGlassKey.privateKeyOpenssh },
+      create: "set -eu; f=/etc/netplan/60-ipv6-dhcp.yaml; umask 077; cat > $f.tmp; chmod 600 $f.tmp; mv $f.tmp $f; netplan apply",
+      stdin: IPV6_NETPLAN,
+      triggers: [IPV6_NETPLAN, a.machine.vmId],
+      logging: "stderr",
+    },
+    { dependsOn: [a.machine] },
+  );
+}
 
 // ── NetBird server (#3000) ───────────────────────────────────────────────
 
@@ -668,6 +703,8 @@ export const publicIpAddress = primary.publicIpAddress;
 export const primaryHost = primary.hostname;
 export const leaseAddress = liveLease.content;
 export const hostAddresses = Object.fromEntries(hosts.map(h => [h.hostname, h.publicIpAddress]));
+/** Each Azure host's static public IPv6. No DNS yet: the lease (DnsLeaseAssignment) and the relay records are A only. */
+export const hostIpv6Addresses = Object.fromEntries(azureVms.map(a => [a.hostname, a.machine.publicIpv6Address]));
 export const relayDomains = relays.map(r => r.host);
 export const availabilityDomain = homeAd;
 export const freeTier = FREE_TIER;
