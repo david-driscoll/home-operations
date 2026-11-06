@@ -30,7 +30,7 @@ services:
       traefik.http.routers.dashboard-tailscale.middlewares: dashboard-app-route
       traefik.http.middlewares.dashboard-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.dashboard-app-route.redirectregex.replacement: "https://internal.${CLUSTER_DOMAIN}$${1}"
-      traefik.http.middlewares.dashboard-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.dashboard-app-route.redirectregex.permanent: "true"
       traefik.http.routers.dashboard-tailscale.entrypoints: tailscale
       traefik.http.routers.dashboard-tailscale.service: api@internal
 

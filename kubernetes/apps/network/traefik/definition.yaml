@@ -21,28 +21,25 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
-    # Short names (docs/plans/short-names.md C6). A dotless Host must get the
-    # short-name redirect, a 302; the `web` entrypoint's own redirect is a 301,
-    # so a 301 here means short-names.yaml stopped matching (a priority change,
-    # a Traefik upgrade). The probe name need not be an app: any dotless host
-    # is redirected.
+    # Short names (docs/plans/short-names.md C6). A dotless Host must be
+    # redirected to its app route. Both this redirect and the `web`
+    # entrypoint's own one are 301s, so the check follows it: `uptime` lands
+    # on https://uptime.<root domain> (200). If the short-name route stopped
+    # matching, the entrypoint's redirect would send it to https://uptime/,
+    # which no certificate covers, and the check fails.
     - name: short-name redirect
       url: http://internal.${CLUSTER_DOMAIN}/
       method: GET
       headers:
-        Host: gatus-short-name
-      client:
-        ignore-redirect: true
+        Host: uptime
       conditions:
-        - "[STATUS] == 302"
+        - "[STATUS] == 200"
     # The same on the tailnet doors' entrypoint (C2b): a request without
     # X-Forwarded-Proto: https came in on :80, so it must be redirected too.
     - name: short-name redirect (tailnet)
       url: http://internal.${CLUSTER_DOMAIN}:8443/
       method: GET
       headers:
-        Host: gatus-short-name
-      client:
-        ignore-redirect: true
+        Host: uptime
       conditions:
-        - "[STATUS] == 302"
+        - "[STATUS] == 200"

@@ -14,8 +14,9 @@ Taken in a second review the same day (decision 1 is also
 
 - ✅ Traefik redirects any dotless host on port 80, not a list of apps. A name that does not exist
   never resolves, so it never reaches Traefik.
-- ✅ The redirect stays a 302. It is never made permanent, so a renamed app never leaves a stale
-  redirect cached in a browser.
+- ~~✅ The redirect stays a 302.~~ Reversed 2026-11-06: every short-name and overlay redirect is
+  permanent (301, or 308 for a non-GET). Browsers cache it, so a renamed app leaves a stale
+  redirect on devices that used the old one until their cache is cleared.
 - ✅ NetBird hands the search domain to client devices only: the four user groups and `apple-tv`,
   not the gateways, in-cluster routers or DNS sidecars.
 - ✅ The Tailscale search path is tailnet-wide (it cannot be scoped). Servers that accept tailnet
@@ -105,7 +106,7 @@ it, and a search domain without the redirect only changes what a lookup resolves
   route and still far above every other router. It has to be a string, because Helm prints a
   large YAML integer as `2.147482646e+09`. The route matches only hosts without a dot, so every
   existing router is untouched.
-- `permanent: false` (302), for good. Browsers cache a 301 indefinitely.
+- `permanent: true` (301; 308 for a non-GET), since 2026-11-06. It started as a 302.
 - Exclude `localhost` from the match, in case anything on the node calls Traefik by it.
 
 **Dockge Traefik** (`docker/_common/traefik/dynamic/`): the same router and middleware as file
@@ -155,7 +156,7 @@ unchanged).
 - The ACL needs nothing: `default-apps-access` already gives members `ports.web` (80 included)
   on `tag:apps`.
 
-Verify, on a Mac with Tailscale up: `curl -sI http://jellyfin/` returns 302 to
+Verify, on a Mac with Tailscale up: `curl -sI http://jellyfin/` returns 301 to
 `https://jellyfin.<root domain>/`; `curl -sI http://jellyfin.<tailnet>/` returns a redirect to
 `https://jellyfin.<tailnet>/`; the browser opens `jellyfin/`.
 
@@ -207,10 +208,12 @@ In each Traefik's own definition, so every Dockge host gets its check from `_com
   `:8443/` (the tailnet entrypoint);
 - `docker/_common/traefik/definition.yaml`: `http://internal.<cluster domain>/` on each host.
 
-Each sends `Host: gatus-short-name` (any dotless name works) with `client.ignore-redirect`, and
-expects `[STATUS] == 302`. Gatus can't check a header, but 302 alone tells them apart: on `web` the
-entrypoint's own redirect is a 301, so a 301 means the short-name route stopped matching. All six
-probes returned 302 when this was written.
+Each sends `Host: uptime`, follows the redirect and expects `[STATUS] == 200` from
+`https://uptime.<root domain>`. Since the redirects went permanent, the short-name redirect and the
+`web` entrypoint's own one are both 301s, so the status alone can't tell them apart. But if the
+short-name route stopped matching, the entrypoint would send the probe to `https://uptime/`, which no
+certificate covers, and it fails. All six probes returned 200 that way on 2026-11-06. (Until then
+they sent `Host: gatus-short-name` and expected the 302.)
 
 ### C7. Tell people (last, after C1–C6 are verified on each platform)
 

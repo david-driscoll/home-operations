@@ -18,3 +18,4 @@ Every app had up to three working names: its app route (`<app>.<root domain>`), 
 - Dockge: only the user-facing UI routers redirect (backrest, garage, alloy, prometheus, the Traefik dashboard, uptime, zwave). Backplane and API names keep serving: OpenBao (`bao-standby`, `bao-transit`), `garage-s3` and `garage-admin`, the registry, authentik and its outposts, and the llama APIs.
 - `TAILSCALE_MIDDLEWARE` in a ks.yaml no longer has any effect: its gate sits behind the redirect, and the API-key route names its own.
 - The NetBird private service still checks each app's access policy before the redirect; the app route then applies its own login.
+- The redirects are permanent (301, or 308 for a non-GET), so browsers cache them.

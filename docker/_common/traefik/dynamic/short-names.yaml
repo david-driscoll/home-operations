@@ -7,7 +7,7 @@
 # dotless host on :80 is sent to its full name, where the app's own router on
 # `websecure` takes it.
 #
-# 302 on purpose, never 301: a cached permanent redirect outlives a rename.
+# Permanent (301, or 308 for a non-GET), like the cluster's (ADR 0003).
 #
 # `web` has no entrypoint-wide redirect here (config.yaml), so this only has to
 # outrank the app routers; it uses the highest user priority anyway, the same
@@ -58,4 +58,4 @@ http:
       redirectRegex:
         regex: "^(?i)https?://([a-z0-9-]+)(:[0-9]+)?(/.*)?$"
         replacement: "https://${1}.${ROOT_DOMAIN}${3}"
-        permanent: false
+        permanent: true

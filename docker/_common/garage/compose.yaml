@@ -226,7 +226,7 @@ services:
       traefik.http.routers.garage-tailscale.middlewares: garage-app-route
       traefik.http.middlewares.garage-app-route.redirectregex.regex: "^https?://[^/]+(/.*)?$$"
       traefik.http.middlewares.garage-app-route.redirectregex.replacement: "https://garage.${CLUSTER_DOMAIN}$${1}"
-      traefik.http.middlewares.garage-app-route.redirectregex.permanent: "false"
+      traefik.http.middlewares.garage-app-route.redirectregex.permanent: "true"
       traefik.http.routers.garage-tailscale.entrypoints: tailscale
       traefik.http.routers.garage-tailscale.service: garage
       traefik.http.services.garage.loadbalancer.server.port: 3909
