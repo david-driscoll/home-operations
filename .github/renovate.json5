@@ -412,6 +412,21 @@
       allowedVersions: "/^3\\./",
     },
     {
+      // The Dockge prometheus stack (docker/_common/prometheus) runs on the
+      // arm64 host too, and the v0.95.1 image index ships only amd64 (plus
+      // attestation) manifests: the pull fails with "no matching manifest for
+      // linux/arm64/v8" and the home Pulumi Stack stalls. Held on 0.94.x;
+      // lift it once a release's index lists linux/arm64 again.
+      description: "prometheus-config-reloader: skip v0.95.1 (no arm64 image)",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/prometheus-operator/prometheus-config-reloader"
+      ],
+      allowedVersions: "!/^v?0\\.95\\.1$/",
+    },
+    {
       description: "CoreDNS Group",
       groupName: "CoreDNS",
       matchDatasources: [
