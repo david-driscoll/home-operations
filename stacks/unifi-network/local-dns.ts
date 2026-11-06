@@ -113,6 +113,12 @@ export async function configureLocalDns(globals: GlobalResources) {
             dhcpd_dns_2: list[1] ?? "",
             dhcpd_dns_3: list[2] ?? "",
             dhcpd_dns_4: list[3] ?? "",
+            // Home's DHCP domain (option 15) is the LAN's search domain, so a
+            // short name (`jellyfin`) completes to its app route
+            // (docs/plans/short-names.md C4, ADR 0003). It was already set by
+            // hand; pinning it here makes a hand edit drift. IoT keeps its own
+            // `iot.<root domain>`, deliberately untouched.
+            ...(key === "home" ? { domain_name: rootDomain() } : {}),
           }),
         ),
         responseCodes: ["200"],
