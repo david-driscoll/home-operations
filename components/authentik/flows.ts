@@ -90,13 +90,12 @@ export class FlowsManager extends pulumi.ComponentResource {
     // Create sources
     const tailscaleSource = this.createTailscaleSource(enrollmentFlow, sourceAuthenticationFlow);
     const netbirdSource = this.createNetbirdSource(enrollmentFlow, sourceAuthenticationFlow);
-    const plexSource = this.createPlexSource(enrollmentFlow, sourceAuthenticationFlow);
 
     // Create source identification stage
     const sourceIdentificationStage = new authentik.StageIdentification(
       "source-identification",
       {
-        sources: [tailscaleSource.uuid, ...(netbirdSource ? [netbirdSource.uuid] : []), plexSource.uuid],
+        sources: [tailscaleSource.uuid, ...(netbirdSource ? [netbirdSource.uuid] : [])],
         showSourceLabels: true,
         enableRememberMe: true,
         showMatchedUser: true,
@@ -157,34 +156,6 @@ export class FlowsManager extends pulumi.ComponentResource {
       { parent: this.flowsComponent },
     );
     return flow;
-  }
-
-  private createPlexSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourcePlex {
-    const plexDetails = this.vault.getSecretByTitle<{
-      username: string;
-      credential: string;
-      servers: { [key: string]: string };
-    }>("Authentik Plex Source");
-
-    return new authentik.SourcePlex(
-      "plex",
-      {
-        name: "Plex",
-        slug: "plex",
-        enabled: true,
-        policyEngineMode: "any",
-        userPathTemplate: "driscoll.dev/plex/%(slug)s",
-        userMatchingMode: "email_link",
-        groupMatchingMode: "name_link",
-        clientId: plexDetails.apply(z => z.username),
-        plexToken: plexDetails.apply(z => z.credential),
-        allowedServers: plexDetails.apply(z => Object.entries(z.servers || {}).map(z => z[1])),
-        allowFriends: true,
-        authenticationFlow: authenticationFlow.uuid,
-        enrollmentFlow: enrollmentFlow.uuid,
-      },
-      { parent: this.sourcesComponent },
-    );
   }
 
   /**
