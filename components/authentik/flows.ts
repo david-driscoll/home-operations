@@ -123,6 +123,7 @@ export class FlowsManager extends pulumi.ComponentResource {
     addFlowStageBinding(authenticationFlow, identificationStage.stageIdentificationId);
     addFlowStageBinding(authenticationFlow, this.authenticationStages.mfa.stageAuthenticatorValidateId);
     addFlowStageBinding(authenticationFlow, this.authenticationStages.login.stageUserLoginId);
+    this.addPasskeySetupIfMissing(authenticationFlow);
 
     return {
       logoutFlow,
@@ -352,8 +353,20 @@ return {}`,
 
     addPolicyBindingToFlow(flow, this.policies.sourceAuthenticationIfSingleSignOn.policyExpressionId);
     addFlowStageBinding(flow, this.authenticationStages.sourceLogin.stageUserLoginId);
+    this.addPasskeySetupIfMissing(flow);
 
     return flow;
+  }
+
+  /**
+   * Bind the passkey setup stage to `flow`, gated so it only runs for users
+   * without a confirmed WebAuthn device. Call it LAST for a flow: binding
+   * resource names come from their order, so appending leaves the existing
+   * bindings' names (and their resources) untouched.
+   */
+  private addPasskeySetupIfMissing(flow: authentik.Flow): void {
+    const passkeyBinding = addFlowStageBinding(flow, this.authenticatorStages.passkey.stageAuthenticatorWebauthnId);
+    addPolicyBindingToFlow(passkeyBinding, this.policies.userHasNoPasskey.policyExpressionId);
   }
 
   private createEnrollmentFlow(): authentik.Flow {
@@ -378,6 +391,7 @@ return {}`,
     addPolicyBindingToFlow(enrollmentBinding as any, this.policies.defaultGroups.policyExpressionId);
     addFlowStageBinding(flow, this.stagePrompts.internalEnrollmentWrite.stageUserWriteId);
     addFlowStageBinding(flow, this.authenticationStages.sourceLogin.stageUserLoginId);
+    this.addPasskeySetupIfMissing(flow);
 
     return flow;
   }

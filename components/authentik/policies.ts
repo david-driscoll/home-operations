@@ -10,6 +10,7 @@ export class Policies extends SharedComponentResource {
   private _userSettingsAuthorization?: authentik.PolicyExpression;
   private _defaultGroups?: authentik.PolicyExpression;
   private _defaultSourceGroups?: authentik.PolicyExpression;
+  private _userHasNoPasskey?: authentik.PolicyExpression;
 
   constructor(opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikPolicies", "authentik-policies", opts);
@@ -45,6 +46,30 @@ export class Policies extends SharedComponentResource {
       );
     }
     return this._sourceAuthenticationIfSingleSignOn;
+  }
+
+  /**
+   * Passes while the flow's user has no confirmed WebAuthn device, so a
+   * passkey setup stage bound with it only runs for users without one.
+   * `pending_user` is the user being enrolled or authenticated; after a
+   * user-login stage `request.user` is the same account.
+   */
+  public get userHasNoPasskey(): authentik.PolicyExpression {
+    if (!this._userHasNoPasskey) {
+      this._userHasNoPasskey = new authentik.PolicyExpression(
+        "user-has-no-passkey",
+        {
+          expression: `from authentik.stages.authenticator_webauthn.models import WebAuthnDevice
+
+user = request.context.get("pending_user") or request.user
+if not user or not user.pk:
+    return True
+return not WebAuthnDevice.objects.filter(user=user, confirmed=True).exists()`,
+        },
+        this.parent,
+      );
+    }
+    return this._userHasNoPasskey;
   }
 
   public get sourceEnrollmentIfSingleSignOn(): authentik.PolicyExpression {
