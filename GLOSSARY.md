@@ -52,6 +52,18 @@ _Avoid_: Subnet, VLAN
 A site's way out to the internet that a client device may choose to send all of its internet traffic through: that site stack's gateways, plus the in-cluster routers for home. The client uses whichever of them it reaches best.
 _Avoid_: VPN server, egress
 
+**Region exit**:
+An exit node that leaves the internet through Mullvad, in a region family choose, rather than through a site. There are five, named after the Wonderbolts (spitfire, soarin, fleetfoot, misty-fly, high-winds), each offered on both NetBird and Tailscale. Friends and family may use them; only family and admins change their region. A region exit fails closed: while its tunnel is down, nothing leaves. On NetBird, DNS still resolves at home and IPv6 bypasses it (ADR 0005).
+_Avoid_: VPN exit node, Mullvad exit (that was Tailscale's add-on), Wonderbolt (the name of one, not the kind)
+
+**Region**:
+The Mullvad country, optionally narrowed to a city, that a region exit currently leaves from. It is shared: changing it moves everyone using that region exit.
+_Avoid_: Location, server (a region spans many Mullvad servers)
+
+**Region picker**:
+The page at `wonderbolts.<root domain>` where family see every region exit's region and change one, at `/<name>`.
+_Avoid_: VPN UI, Mullvad UI
+
 **Relay**:
 A server that forwards encrypted traffic between two peers that cannot connect directly.
 _Avoid_: TURN server, DERP (Tailscale's equivalent)
