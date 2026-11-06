@@ -135,7 +135,7 @@ export async function configureLocalDns(globals: GlobalResources) {
   // on each host). The same partial PUT as the DHCP DNS above, and its own
   // resource, so the two never send each other's fields.
   //
-  // The resolvers are advertised only with `unifi-network:homeIpv6Dns` true.
+  // The resolvers are advertised only with `applications:homeIpv6Dns` (this project is named `applications`) true.
   // The addresses live on hosts other stacks deploy (home, gulf-of-mexico,
   // ocracoke), and a client told about an IPv6 resolver that does not answer
   // waits on it before falling back (Windows prefers IPv6 DNS), slowing every
