@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { assertGrantPath, missingGrantPorts } from "./policyGuards.ts";
+import { assertExitNodeAccess, assertGrantPath, canUseExitNode, missingGrantPorts } from "./policyGuards.ts";
 
 const policy = (grants: object[]) => `{
   // HuJSON, as the live policy is
@@ -60,5 +60,61 @@ describe("assertGrantPath", () => {
 
   it("throws, naming the path and the reason, when it is not", () => {
     assert.throws(() => assertGrantPath(policy([]), "tag:egress", "tag:dockge", ["tcp:443"], "state lives there."), /tag:egress -> tag:dockge tcp:443\. state lives there\. Refusing/);
+  });
+});
+
+// Exit-node use is a grant to autogroup:internet. `via` narrows it to exit nodes
+// carrying one of the listed tags; with no `via` any exit node will do. Grants
+// are a union, so one grant without `via` reopens every exit node.
+describe("canUseExitNode", () => {
+  const fnfUser = ["autogroup:member", "group:fnf"];
+  const otherMember = ["autogroup:member"];
+  const memberExit = { src: ["autogroup:member"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:exit-node"] };
+  const regionExit = { src: ["group:fnf", "autogroup:admin"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:region-exit"] };
+
+  it("lets a grant without via use any exit node", () => {
+    const open = { src: ["autogroup:member"], dst: ["autogroup:internet"], ip: ["*"] };
+    assert.equal(canUseExitNode(policy([open]), otherMember, ["tag:region-exit"]), true);
+  });
+
+  it("limits a via grant to exit nodes carrying one of its tags", () => {
+    assert.equal(canUseExitNode(policy([memberExit]), otherMember, ["tag:exit-node", "tag:proxmox"]), true);
+    assert.equal(canUseExitNode(policy([memberExit]), otherMember, ["tag:region-exit"]), false);
+  });
+
+  it("unions grants, so friends and family reach both kinds and other members only one", () => {
+    const both = policy([memberExit, regionExit]);
+    assert.equal(canUseExitNode(both, fnfUser, ["tag:region-exit"]), true);
+    assert.equal(canUseExitNode(both, fnfUser, ["tag:exit-node"]), true);
+    assert.equal(canUseExitNode(both, otherMember, ["tag:region-exit"]), false);
+  });
+
+  it("ignores grants to anything but autogroup:internet", () => {
+    const toTag = { src: ["autogroup:member"], dst: ["tag:region-exit"], ip: ["*"] };
+    assert.equal(canUseExitNode(policy([toTag]), otherMember, ["tag:region-exit"]), false);
+  });
+
+  it("treats an empty via as no restriction, as Tailscale does", () => {
+    assert.equal(canUseExitNode(policy([{ ...memberExit, via: [] }]), otherMember, ["tag:region-exit"]), true);
+  });
+});
+
+describe("assertExitNodeAccess", () => {
+  const regionExit = { src: ["group:fnf"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:region-exit"] };
+
+  it("returns quietly when access matches what is expected", () => {
+    assertExitNodeAccess(policy([regionExit]), "friends and family", ["group:fnf"], ["tag:region-exit"], true, "why.");
+    assertExitNodeAccess(policy([regionExit]), "other members", ["autogroup:member"], ["tag:region-exit"], false, "why.");
+  });
+
+  it("throws, naming who and which exit node, when access is missing or leaks", () => {
+    assert.throws(
+      () => assertExitNodeAccess(policy([]), "friends and family", ["group:fnf"], ["tag:region-exit"], true, "why."),
+      /friends and family can no longer use an exit node tagged tag:region-exit\. why\. Refusing/,
+    );
+    assert.throws(
+      () => assertExitNodeAccess(policy([regionExit]), "friends and family", ["group:fnf"], ["tag:region-exit"], false, "why."),
+      /friends and family can use an exit node tagged tag:region-exit\. why\. Refusing/,
+    );
   });
 });

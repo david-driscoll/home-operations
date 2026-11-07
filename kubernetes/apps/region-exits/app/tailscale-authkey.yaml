@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/secret.json
+#
+# The tag:region-exit auth key stacks/unifi-network mints
+# (region-exit-authkey.ts), mirrored here by emberstack reflector: the source
+# Secret in tailscale-system carries reflection-allowed=true.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tailscale-region-exit-authkey
+  annotations:
+    reflector.v1.k8s.emberstack.com/reflects: tailscale-system/tailscale-region-exit-authkey

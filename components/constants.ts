@@ -238,6 +238,11 @@ export const Tailscale = {
     // likewise kept out of every autogroup:tagged grant: admins reach it, it
     // reaches nothing it is not explicitly granted.
     netbirdEdge: "tag:netbird-edge" as TailscaleTags,
+    // The region exits (GLOSSARY.md, ADR 0005): exit nodes that leave through
+    // Mullvad, one pod each in kubernetes/apps/region-exits. Only friends and
+    // family and admins may use them (the `region-exit` grant); member-exit-node's
+    // `via` keeps every other member on the tag:exit-node exit nodes.
+    regionExit: "tag:region-exit" as TailscaleTags,
 
     // Tailscale PAM (Border0). NOT a tag this repo applies to anything -- the
     // Tailscale control plane creates it the moment PAM is enabled in the admin

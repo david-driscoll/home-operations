@@ -1,0 +1,242 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# The region exits (docs/plans/region-exits.md §D, ADR 0005). One controller
+# per region exit; spitfire (United States) is the prototype. In its pod:
+#
+#   routing (init)  sysctls, the eth0 bypass for tailscaled's own packets, the
+#                   kill switch (resources/routing.sh)
+#   gluetun         Mullvad WireGuard on tun0; its firewall, its DNS-over-TLS on
+#                   127.0.0.1:53 (resources/post-rules.txt)
+#   tailscale       containerboot, advertising an exit node
+#
+# The NetBird sidecar (#3139) and the region picker (#3140) join later.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app region-exits
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    serviceAccount:
+      spitfire: {}
+
+    # containerboot keeps tailscaled's state in a Secret (TS_KUBE_SECRET), so a
+    # restart keeps the node's identity. It needs create (which cannot be
+    # scoped by name) and get/update/patch on its own Secret, and posts events.
+    rbac:
+      roles:
+        spitfire:
+          type: Role
+          rules:
+            - apiGroups: [""]
+              resources: ["secrets"]
+              verbs: ["create"]
+            - apiGroups: [""]
+              resources: ["secrets"]
+              resourceNames: ["region-exit-spitfire-tailscale"]
+              verbs: ["get", "update", "patch"]
+            - apiGroups: [""]
+              resources: ["events"]
+              verbs: ["get", "create", "patch"]
+      bindings:
+        spitfire:
+          type: RoleBinding
+          roleRef:
+            identifier: spitfire
+          subjects:
+            - identifier: spitfire
+
+    controllers:
+      spitfire:
+        replicas: 1
+        # Two pods would be two exit nodes on one tailscaled identity and one
+        # Mullvad key.
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        serviceAccount:
+          identifier: spitfire
+        pod:
+          automountServiceAccountToken: true
+          # Everything in the pod resolves through gluetun's DNS-over-TLS, over
+          # the tunnel. tailscaled answers exit-node clients' DNS from this
+          # resolver, so their DNS follows the region (§D2).
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 127.0.0.1
+        initContainers:
+          routing:
+            image:
+              repository: tailscale/tailscale
+              tag: v1.104.4@sha256:ed6480b33c6eb67c9cbd203ed42b9fb57e361986725b6856def71b7a3d9e276c
+            command: ["/bin/sh", "/scripts/routing.sh"]
+            securityContext:
+              # sysctls under /proc/sys/net need a privileged container on Talos.
+              privileged: true
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+        containers:
+          gluetun:
+            image:
+              repository: qmcgaw/gluetun
+              tag: v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+            env:
+              VPN_SERVICE_PROVIDER: mullvad
+              VPN_TYPE: wireguard
+              # The name routing.sh and post-rules.txt match on (gluetun's
+              # WireGuard default is wg0).
+              VPN_INTERFACE: tun0
+              # DNS-over-TLS on 127.0.0.1:53, upstream over the tunnel.
+              DNS_SERVER: "on"
+              DNS_UPSTREAM_RESOLVER_TYPE: dot
+              DNS_UPSTREAM_IPV6: "off"
+              # Never off the pod. The picker (#3140) calls it on loopback.
+              HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
+              # Equestria's pods and Services, and its control planes: the
+              # kubernetes Service is socket-load-balanced to a control-plane
+              # address before routing, and containerboot needs the API for
+              # TS_KUBE_SECRET.
+              FIREWALL_OUTBOUND_SUBNETS: "10.206.0.0/16,10.196.0.0/16,10.10.206.0/24"
+              # tailscaled's fixed WireGuard port (TS_TAILSCALED_EXTRA_ARGS
+              # below), on eth0, for peers dialling in directly. Only on the
+              # default interface: gluetun opens these per default route.
+              # The picker's port (8080, #3140) belongs here too; routing.sh
+              # already drops it on tailscale0 and wt0.
+              FIREWALL_INPUT_PORTS: "41641"
+            envFrom:
+              # WIREGUARD_PRIVATE_KEY, WIREGUARD_ADDRESSES (IPv4 /32 only, so
+              # the tunnel is IPv4 only).
+              - secretRef:
+                  name: region-exit-spitfire-mullvad
+              # SERVER_COUNTRIES: the default region, then the picked one,
+              # which wins because it comes later.
+              - configMapRef:
+                  name: region-exit-spitfire-defaults
+              - configMapRef:
+                  name: region-exit-spitfire-state
+                  optional: true
+            probes:
+              # exec, not httpGet: gluetun's INPUT policy drops the kubelet.
+              liveness: &gluetun-probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["/gluetun-entrypoint", "healthcheck"]
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *gluetun-probe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["/gluetun-entrypoint", "healthcheck"]
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 30
+            securityContext:
+              privileged: true
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+          tailscale:
+            image:
+              repository: tailscale/tailscale
+              tag: v1.104.4@sha256:ed6480b33c6eb67c9cbd203ed42b9fb57e361986725b6856def71b7a3d9e276c
+            env:
+              TS_HOSTNAME: spitfire
+              TS_AUTHKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: tailscale-region-exit-authkey
+                    key: authkey
+              TS_AUTH_ONCE: "true"
+              TS_KUBE_SECRET: region-exit-spitfire-tailscale
+              TS_USERSPACE: "false"
+              # The image points `iptables` at the legacy backend, which the
+              # Talos kernel lacks (as for Technitium's sidecar).
+              TS_DEBUG_FIREWALL_MODE: nftables
+              # gluetun owns resolv.conf (127.0.0.1); tailscaled forwards
+              # clients' DNS to it.
+              TS_ACCEPT_DNS: "false"
+              TS_EXTRA_ARGS: "--advertise-exit-node --accept-routes=false"
+              # Fixed, for gluetun's FIREWALL_INPUT_PORTS. Change both together.
+              TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
+              TS_ENABLE_HEALTH_CHECK: "true"
+              TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+            probes:
+              liveness: &tailscale-probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9002/healthz"]
+                  initialDelaySeconds: 15
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *tailscale-probe
+            securityContext:
+              privileged: true
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      routing:
+        type: configMap
+        name: region-exit-routing
+        advancedMounts:
+          spitfire:
+            routing:
+              - path: /scripts/routing.sh
+                subPath: routing.sh
+                readOnly: true
+            gluetun:
+              - path: /iptables/post-rules.txt
+                subPath: post-rules.txt
+                readOnly: true
