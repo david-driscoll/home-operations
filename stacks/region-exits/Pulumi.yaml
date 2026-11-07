@@ -1,0 +1,11 @@
+name: region-exits
+description: Mullvad WireGuard devices for the region exits, keys written to OpenBao (docs/plans/region-exits.md, docs/adr/0005)
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript
