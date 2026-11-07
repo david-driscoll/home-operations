@@ -30,7 +30,7 @@ spec:
     namespace: flux-system
   components:
     # ON-DEMAND SET. Scales to zero after 30m idle and wakes on request, instead
-    # of go-kube-downscaler's nightly 02:00-09:00 window. The component sets both
+    # of go-kube-downscaler's nightly 01:00-07:00 window. The component sets both
     # `sablier.enable` and `downscaler/exclude` together -- see its header for
     # why a workload in both sets flaps every 30 seconds rather than degrading.
     #

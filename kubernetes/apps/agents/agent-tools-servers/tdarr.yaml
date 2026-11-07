@@ -96,10 +96,9 @@
 # TDARR_URL is the ClusterIP Service for the web/API port (8265), not the
 # node-facing `tdarr-server` Service on 8266 -- /api/v2 is served on 8265.
 #
-# EXPECTED TO BE UNREACHABLE 02:00-09:00: Tdarr sheds nightly with the rest of
-# `equestria` (docs/cluster-consolidation/24-power-states.md), exactly like
-# ./teamarr.yaml's backend. This pod stays up through the window; a tool call
-# in it returns "Connection error (is Tdarr running?)".
+# Tdarr is excluded from the nightly 01:00-07:00 `equestria` shed (#2177), so
+# transcodes use the night and this answers then too. When Tdarr is down, a
+# tool call returns "Connection error (is Tdarr running?)".
 #
 # NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
 # header. This server joins ../agent-tools-mcp's MCPGroup instead, and is in

@@ -11,7 +11,7 @@ components:
 # namespace. UPDATED 2026-09-05 -- there are now TWO of them, and this block is
 # more load-bearing than before, not less.
 #
-#   go-kube-downscaler  scheduled shed, 02:00-09:00, everything by default
+#   go-kube-downscaler  scheduled shed, 01:00-07:00, everything by default
 #   sablier             on-demand sleep/wake, only apps carrying
 #                       `sablier.enable` (which also carry
 #                       `downscaler/exclude`, so exactly one controller owns

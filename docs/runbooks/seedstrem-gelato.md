@@ -218,9 +218,9 @@ playback hangs on "loading", raise `filters.min_seeders`, lower
 retries sooner. Rather than lowering `PROWLARR_SEARCH_TIMEOUT`, narrow
 `SEEDSTREM_PROWLARR_INDEXER_IDS` to the fast indexers.
 
-**Overnight.** seedstrem, AIOStreams, qBittorrent and Prowlarr are all shed
-02:00–09:00 while Jellyfin stays up. Gelato search and playback of undownloaded
-items fail in that window. That is expected.
+**Overnight.** seedstrem is shed 01:00–07:00. AIOStreams, qBittorrent, Prowlarr
+and Jellyfin stay up, but Gelato search and playback of undownloaded items go
+through seedstrem, so they fail in that window. That is expected.
 
 ## Rollback
 

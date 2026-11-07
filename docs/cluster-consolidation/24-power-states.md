@@ -15,6 +15,44 @@ tagging) and amends [20-low-power-tier.md](20-low-power-tier.md) (§1 Tier-1
 namespace list, §4 placement model) — read this file *and* 20 together; 20 is
 not being rewritten, this file records what changed and why.
 
+## Revision, 2026-11-07 — the window is 01:00–07:00, and the keep-list is no longer eleven
+
+Nothing below this heading is rewritten, so read every `02:00–09:00`, "09:00 upscale" and
+"seven hours" below as **01:00–07:00**, **07:00** and **six hours**.
+
+**The window moved on 2026-09-24** (26735f38): `DEFAULT_DOWNTIME` is
+`Mon-Sun 01:00-07:00 ${TIMEZONE}`. The Gatus `maintenance-windows` did not move with it
+until 2026-10-29 (859646cf), so every shed app paged 01:00–02:00 nightly in between. The
+hours are still hardcoded in each `definition.yaml` (`start: "01:00"`, `duration: 6h`):
+moving the window means moving all of them in the same commit.
+
+**The keep-list is now whatever carries `downscaler/exclude: "true"`, not the table
+below.** The eleven entries were the starting set. Since then:
+
+- [#2177](https://github.com/david-driscoll/home-operations/pull/2177): qBittorrent, SABnzbd,
+  autobrr, Prowlarr, Tdarr (server and nodes), Maintainerr, WatchState, Teamarr, Seerr,
+  Jellyseerr and the SuperSync coordinator.
+- [#2194](https://github.com/david-driscoll/home-operations/pull/2194): Navidrome.
+- [#3160](https://github.com/david-driscoll/home-operations/pull/3160): Sonarr and Radarr
+  (requests had nowhere to land overnight while Seerr stayed up), Chaptarr, Listenarr,
+  Audiobookshelf, Sure, Actual Budget, Windmill (every Deployment and its CronJob) and
+  n8n-sandbox.
+- `netbird-system` joined `excludedNamespaces` (b8cb34e9).
+
+Apps that ship always-up from day one (Tracearr, AIOStreams, Postiz, …) are not listed
+anywhere else. To see what actually sheds, read the cluster rather than this file:
+
+```bash
+for ns in equestria github-actions region-exits; do
+  kubectl get deploy,sts,cronjob -n "$ns" -o json | jq -r '.items[]
+    | select(.metadata.annotations["downscaler/exclude"] != "true")
+    | "\(.kind)/\(.metadata.namespace)/\(.metadata.name)"'
+done
+```
+
+Those three are the only non-excluded namespaces with workloads today. A new namespace
+sheds by default unless it is added to `excludedNamespaces`.
+
 ## Revision, 2026-09-05 — two controllers now: a clock and a request
 
 Low Power's mechanism has been split in two. Nothing below this heading is

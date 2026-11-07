@@ -53,7 +53,7 @@ spec:
     #
     # The annotation vocabulary is UNCHANGED: `downscaler/exclude`,
     # `downscaler/force-downtime`, `downscaler/original-replicas` all keep their names
-    # and meanings, so the nine keep-list workloads and every runbook that says
+    # and meanings, so the keep-list workloads and every runbook that says
     # `kubectl annotate namespace equestria downscaler/force-downtime=true` still work.
     #
     # WHAT DID CHANGE, and each one is load-bearing below:

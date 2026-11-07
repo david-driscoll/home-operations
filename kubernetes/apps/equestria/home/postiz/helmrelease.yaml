@@ -50,9 +50,9 @@ spec:
           reloader.stakater.com/auto: "true"
           # ⚠️ Low Power keep-list -- NOT optional for this app. `equestria` is
           # the shed-list namespace: `downscaler/force-downtime` scales every
-          # non-excluded workload to 0, and the scheduled shed runs 02:00-09:00.
+          # non-excluded workload to 0, and the scheduled shed runs 01:00-07:00.
           # This pod is the scheduler (RUN_CRON) and the Temporal worker, so a
-          # shed window is not a pause -- it is seven hours in which every post
+          # shed window is not a pause -- it is six hours in which every post
           # due to publish silently does not, and a missed publish window
           # cannot be recovered by waking back up.
           # Per-workload exclude beats the namespace toggle (scaler.py

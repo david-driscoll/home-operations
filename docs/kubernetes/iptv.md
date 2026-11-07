@@ -16,9 +16,10 @@ after the 2026-09-24 clean-up, when all three had happened at once. Updated
 | xcproxy | [`kubernetes/apps/equestria/pvr/xcproxy/`](../../kubernetes/apps/equestria/pvr/xcproxy/) | Besides the VOD proxy, serves static M3Us from [`playlists.sops.yaml`](../../kubernetes/apps/equestria/pvr/xcproxy/playlists.sops.yaml) at `/playlists/<key>`, one file per Secret key. Dispatcharr's USNewsON account reads `http://xcproxy.equestria.svc.cluster.local:8080/playlists/usnewson.m3u`. |
 | Teamarr MCP | [`kubernetes/apps/agents/agent-tools-servers/teamarr.yaml`](../../kubernetes/apps/agents/agent-tools-servers/teamarr.yaml) | `ghcr.io/lukeeexd/teamarr-mcp`; writes allowed, destructive tools off. |
 
-All of `equestria` is shed nightly 02:00-09:00 local
-([power states](../cluster-consolidation/24-power-states.md)); ECM, Teamarr and
-both MCPs are unreachable then. Dispatcharr is excluded from the shed.
+`equestria` is shed nightly 01:00-07:00 local
+([power states](../cluster-consolidation/24-power-states.md)); ECM and its MCP
+are unreachable then. Dispatcharr, Teamarr, game-thumbs and xcproxy are excluded
+from the shed and stay up.
 
 ## Inputs
 
