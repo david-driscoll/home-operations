@@ -29,6 +29,9 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: ${APP}-ai-resource
+  annotations:
+    # Always up with the rest of Windmill: not suspended 01:00-07:00.
+    downscaler/exclude: "true"
 spec:
   schedule: "*/15 * * * *"
   concurrencyPolicy: Forbid

@@ -36,6 +36,9 @@ spec:
       app:
         # No reloader annotation: the pod references no Secret or ConfigMap.
         # OIDC is configured in the UI (./externalsecret.yaml).
+        annotations:
+          # Always up: excluded from the nightly 01:00-07:00 shed.
+          downscaler/exclude: "true"
         strategy: Recreate
         containers:
           app:

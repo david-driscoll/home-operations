@@ -317,6 +317,20 @@ spec:
   postRenderers:
     - kustomize:
         patches:
+          # Always up: excluded from the nightly 01:00-07:00 shed, so scheduled
+          # flows run overnight. Untargeted by name: every Deployment the chart
+          # renders (app, extra, operator and both worker groups).
+          - target:
+              version: v1
+              group: apps
+              kind: Deployment
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: not-used
+                annotations:
+                  downscaler/exclude: "true"
           # The app component has no deploymentAnnotations value, so its
           # Reloader annotation has to arrive by patch -- the same route
           # network/crowdsec and equestria/pinepods already use.
