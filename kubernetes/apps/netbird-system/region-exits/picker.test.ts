@@ -159,6 +159,7 @@ describe("GET /status", () => {
       egress: { country: "Japan", city: "Tokyo", ip: "198.51.100.7" },
       activeClients: 0,
       overlays: { tailscale: true, netbird: true },
+      availability: { state: "online" },
     });
   });
 
@@ -188,7 +189,15 @@ describe("GET /status", () => {
     const { handle } = picker({});
     const response = await handle(get("/status"));
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { name: "spitfire", region: null, tunnel: { up: false, status: null }, egress: null, activeClients: 0, overlays: { tailscale: true, netbird: true } });
+    assert.deepEqual(await response.json(), {
+      name: "spitfire",
+      region: null,
+      tunnel: { up: false, status: null },
+      egress: null,
+      activeClients: 0,
+      overlays: { tailscale: true, netbird: true },
+      availability: { state: "offline", reason: "tunnel" },
+    });
   });
 
   it("reports the tunnel down while gluetun is reconnecting, and no egress until it has a public IP", async () => {
@@ -237,6 +246,56 @@ describe("GET /spitfire", () => {
     const html = await (await picker({}).handle(get("/spitfire", "text/html"))).text();
     assert.match(html, /not connected/);
   });
+
+  /** Where `text` sits on the page, which must be before the form. */
+  const beforeForm = (html: string, text: RegExp) => {
+    const at = html.search(text);
+    assert.ok(at >= 0, "missing " + text);
+    assert.ok(at < html.indexOf("<form"), text + " should come before the form");
+  };
+
+  it("says it is online, above the form, when the tunnel and both overlays are up", async () => {
+    const html = await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text();
+    beforeForm(html, />Online</);
+  });
+
+  it("says it is offline on NetBird, what still works, and still offers the form", async () => {
+    const original = files[config.netbirdFlagsPath];
+    delete files[config.netbirdFlagsPath];
+    try {
+      const html = await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text();
+      beforeForm(html, /Offline on NetBird, Tailscale works/);
+      assert.match(html, /People on Tailscale can still use spitfire/);
+      assert.match(html, /<form method="post" action="\/spitfire\/region"/);
+    } finally {
+      files[config.netbirdFlagsPath] = original;
+    }
+  });
+
+  it("says it is offline on Tailscale, and that NetBird still works", async () => {
+    const html = await (await picker(gluetunUp, { BackendState: "NeedsLogin", Self: { Online: false } }).handle(get("/spitfire", "text/html"))).text();
+    beforeForm(html, /Offline on Tailscale, NetBird works/);
+    assert.match(html, /People on NetBird can still use spitfire/);
+  });
+
+  it("says it is offline when the tunnel is down, that nothing gets out, and suggests moving it", async () => {
+    const html = await (await picker({ ...gluetunUp, ["GET " + G + "/v1/vpn/status"]: () => json({ status: "stopped" }) }).handle(get("/spitfire", "text/html"))).text();
+    beforeForm(html, /Offline: not connected to Mullvad/);
+    assert.match(html, /Nothing gets out through spitfire/);
+    assert.match(html, /Picking a region below reconnects/);
+    assert.match(html, /<form method="post" action="\/spitfire\/region"/);
+  });
+
+  it("says it is offline when neither overlay is connected", async () => {
+    const original = files[config.netbirdFlagsPath];
+    delete files[config.netbirdFlagsPath];
+    try {
+      const html = await (await picker(gluetunUp, null).handle(get("/spitfire", "text/html"))).text();
+      beforeForm(html, /Offline: not connected to NetBird or Tailscale/);
+    } finally {
+      files[config.netbirdFlagsPath] = original;
+    }
+  });
 });
 
 describe("GET /healthz", () => {
@@ -261,7 +320,9 @@ describe("the overlays on /status", () => {
   ] as const) {
     it("reports Tailscale offline when " + what + ", and NetBird still connected", async () => {
       const { handle } = picker(gluetunUp, status);
-      assert.deepEqual((await (await handle(get("/status"))).json()).overlays, { tailscale: false, netbird: true });
+      const body = await (await handle(get("/status"))).json();
+      assert.deepEqual(body.overlays, { tailscale: false, netbird: true });
+      assert.deepEqual(body.availability, { state: "degraded", offlineOn: "tailscale" });
     });
   }
 
@@ -275,7 +336,9 @@ describe("the overlays on /status", () => {
       else files[config.netbirdFlagsPath] = flags;
       try {
         const { handle } = picker(gluetunUp);
-        assert.deepEqual((await (await handle(get("/status"))).json()).overlays, { tailscale: true, netbird: false });
+        const body = await (await handle(get("/status"))).json();
+        assert.deepEqual(body.overlays, { tailscale: true, netbird: false });
+        assert.deepEqual(body.availability, { state: "degraded", offlineOn: "netbird" });
       } finally {
         files[config.netbirdFlagsPath] = original;
       }
@@ -442,15 +505,24 @@ describe("POST /spitfire/region", () => {
 describe("GET /", () => {
   it("shows the overview, built from every region exit's /status, one that is down included", async () => {
     const { handle, calls } = picker({
-      "GET http://spitfire.peer:8080/status": () => json({ name: "spitfire", region: { country: "USA", city: null }, tunnel: { up: true, status: "running" }, egress: null }),
+      "GET http://spitfire.peer:8080/status": () =>
+        json({
+          name: "spitfire",
+          region: { country: "USA", city: null },
+          tunnel: { up: true, status: "running" },
+          egress: null,
+          overlays: { tailscale: true, netbird: false },
+          availability: { state: "degraded", offlineOn: "netbird" },
+        }),
       "GET http://soarin.peer:8080/status": () => new Response("upstream connect error", { status: 503 }),
     });
     const response = await handle(get("/", "text/html"));
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type") ?? "", /text\/html/);
     const html = await response.text();
-    assert.match(html, /href="\/spitfire"[\s\S]*USA[\s\S]*tunnel up/);
-    assert.match(html, /href="\/soarin"[\s\S]*not answering/);
+    assert.match(html, /href="\/spitfire"[\s\S]*Offline on NetBird, Tailscale works[\s\S]*USA/);
+    assert.match(html, /href="\/soarin"[\s\S]*Not responding/);
+    assert.match(html, /Last checked <time/);
     assert.deepEqual(calls.map(c => c.url).sort(), ["http://soarin.peer:8080/status", "http://spitfire.peer:8080/status"]);
   });
 });

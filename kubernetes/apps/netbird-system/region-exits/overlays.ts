@@ -63,6 +63,31 @@ async function netbirdConnected(config: OverlayConfig, deps: OverlayDeps): Promi
   }
 }
 
+export type Overlay = keyof OverlayState;
+
+/**
+ * Whether family can use a region exit, the one verdict /status, the pages
+ * and the overview share (docs/plans/region-exits.md §D4):
+ *
+ *   online       the tunnel is up and both overlays are connected
+ *   degraded     the tunnel is up and one overlay is not (offlineOn); people
+ *                on the other still get out, as for ~10 minutes on NetBird
+ *                after a restart (§F)
+ *   offline      the tunnel is down, so the kill switch lets nothing out
+ *                (reason "tunnel"), or neither overlay is connected
+ *                (reason "overlays")
+ *   unreachable  its /status did not answer; only the overview sees this
+ */
+export type Availability = { state: "online" } | { state: "degraded"; offlineOn: Overlay } | { state: "offline"; reason: "tunnel" | "overlays" } | { state: "unreachable" };
+
+export function availabilityOf(tunnelUp: boolean, overlays: OverlayState): Availability {
+  if (!tunnelUp) return { state: "offline", reason: "tunnel" };
+  if (overlays.tailscale && overlays.netbird) return { state: "online" };
+  if (overlays.tailscale) return { state: "degraded", offlineOn: "netbird" };
+  if (overlays.netbird) return { state: "degraded", offlineOn: "tailscale" };
+  return { state: "offline", reason: "overlays" };
+}
+
 export async function overlayState(config: OverlayConfig, deps: OverlayDeps): Promise<OverlayState> {
   const [tailscale, netbird] = await Promise.all([tailscaleConnected(config, deps), netbirdConnected(config, deps)]);
   return { tailscale, netbird };
