@@ -1,12 +1,22 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
 #
-# The region picker (GLOSSARY.md): family and admins only. Friends may use the
-# region exits but not move them (ADR 0005).
+# The region picker (GLOSSARY.md): family, admins and friends may open it;
+# only family and admins move a region exit, which the app itself enforces
+# from forward auth's X-authentik-groups (ADR 0006). Friends could only be let
+# in once the region exits' own pages, which had no group check, were gone.
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
   name: wonderbolts
+  annotations:
+    # Step one of moving this file to ../wonderbolts (docs/plans/wonderbolts-nuxt.md,
+    # phase 7). stacks/system reads ApplicationDefinitions live from the cluster
+    # on every run, and every merge runs it: if this Kustomization pruned the
+    # object before the wonderbolts one re-applied it, a run in between would
+    # delete the Authentik application and lock the site. With this on the live
+    # object first, the move's prune skips it.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   name: Region exits
   category: Applications
@@ -17,6 +27,7 @@ spec:
     groups:
       - family
       - admins
+      - friends
   authentik:
     proxy:
       mode: "forward_single"

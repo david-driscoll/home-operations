@@ -50,6 +50,9 @@ than your normal connection.
 another region exit or ask first. The move takes a few seconds. Your region exit stays where you
 put it until someone moves it again.
 
+**Friends** can open the same page to see where each region exit is, how many people are on it
+and who moved it last, but can't move one. If you need one somewhere else, ask David or family.
+
 ## If something seems wrong
 
 - **No internet while a region exit is on:** its tunnel is down or still reconnecting. It
