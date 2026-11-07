@@ -198,6 +198,10 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
     );
 
+    // DRIFT-GUARD DEMO (#2888), reverted in the next commit: a user-facing
+    // grant with no NetBird twin and no TAILSCALE_ONLY reason.
+    manager.setGrant("drift-guard-demo", { src: [groups.friendsAndFamily], dst: [tag.proxmox], ip: [...ports.web] }, { accept: [] });
+
     // Split out of `default-apps-access` when Forgejo's git SSH moved from 2222
     // to 22. `ports.git` is now the same port as `ports.ssh`, and the grant
     // above reaches tag:dockge and tag:dns — hosts that run a REAL sshd and
