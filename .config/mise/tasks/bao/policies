@@ -2,7 +2,7 @@
 #MISE description="Write (or --check) every OpenBao policy from bootstrap/openbao/equestria-init.sh: bao:policies [--check]"
 #MISE dir="{{config_root}}"
 #
-# The OpenBao policies (admin, pulumi, eso-equestria, eso-sgc, ...) live in
+# The OpenBao policies (admin, pulumi, eso-equestria, viewer, ...) live in
 # bootstrap/openbao/equestria-init.sh's write_policies, not in Pulumi: they are
 # what Pulumi and ESO authenticate WITH. Changing one needs an admin token.
 #
