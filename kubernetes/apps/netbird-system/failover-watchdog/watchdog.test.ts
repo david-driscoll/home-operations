@@ -6,16 +6,23 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+// The hosts' side of the second view. Only the test imports it: watchdog.ts
+// ships alone in a ConfigMap, so the two agree through this test.
+import { FAILOVER_VIEW_HEALTH_PATH, FAILOVER_VIEW_PREFIX } from "../../../../components/netbird/failoverView.ts";
 import {
   alertFor,
   CONSECUTIVE_RUN_GAP_MINUTES,
   type Decision,
   decide,
   FLIP_COOLDOWN_MINUTES,
+  HEALTH_PATH,
   type Observation,
+  PEER_VIEW_FRESH_MINUTES,
+  PEER_VIEW_PREFIX,
   parseCandidates,
   parseState,
   run,
+  signS3,
   WATCHDOG_FAILURES_TO_FLIP,
   type WatchdogIo,
   type WatchdogState,
@@ -29,7 +36,10 @@ const hosts = (standbyReachable = true) => [
   { name: "azure-eus2", ip: PRIMARY, reachable: false },
   { name: "azure-cus", ip: STANDBY, reachable: standbyReachable },
 ];
-const down = (standbyReachable = true) => ({ leaseIp: PRIMARY, activeHealthy: false, activeReachable: true, candidates: hosts(standbyReachable), now });
+/** What another host published about `ip`, `minutesAgo` before now (Garage's Last-Modified). */
+const view = (observer: string, ip: string, healthy: boolean, minutesAgo = 0.5) => ({ observer, ip, healthy, at: new Date(now.getTime() - minutesAgo * 60000).toISOString() });
+/** The primary is down, and the standby sees it down too. */
+const down = (standbyReachable = true) => ({ leaseIp: PRIMARY, activeHealthy: false, views: [view("azure-cus", PRIMARY, false)], candidates: hosts(standbyReachable), now });
 
 describe("decide", () => {
   it("resets the count while management answers, and remembers it did", () => {
@@ -68,8 +78,9 @@ describe("decide", () => {
   // #3161 item 3: only failures in a row count, and anything else breaks the streak.
   describe("consecutive failures only", () => {
     const minute = (i: number) => new Date(now.getTime() + i * 60000);
-    const blind = (at: Date): Observation => ({ leaseIp: null, activeHealthy: false, activeReachable: false, candidates: [], now: at });
-    const failed = (at: Date): Observation => ({ ...down(), now: at });
+    const blind = (at: Date): Observation => ({ leaseIp: null, activeHealthy: false, views: [], candidates: [], now: at });
+    // The standby keeps publishing as the minutes pass: its view is always 30 s old.
+    const failed = (at: Date): Observation => ({ ...down(), views: [{ observer: "azure-cus", ip: PRIMARY, healthy: false, at: new Date(at.getTime() - 30000).toISOString() }], now: at });
     const ok = (at: Date): Observation => ({ ...down(), activeHealthy: true, now: at });
     /** Runs the observations a minute apart from a healthy start and returns every decision. */
     const play = (pattern: string): Decision[] => {
@@ -128,7 +139,7 @@ describe("decide", () => {
   // "Cutting the watchdog's own internet does not trigger a flip" (#3161 item 1).
   it("never flips while Cloudflare cannot be read, counts the blind runs, and drops the failure count", () => {
     const state = { failures: WATCHDOG_FAILURES_TO_FLIP + 2, everHealthy: true, blindRuns: 1, lastRunAt: minuteAgo };
-    const { decision, next } = decide(state, { leaseIp: null, activeHealthy: false, activeReachable: false, candidates: [], now });
+    const { decision, next } = decide(state, { leaseIp: null, activeHealthy: false, views: [], candidates: [], now });
     assert.deepEqual(decision, { action: "blind", runs: 2 });
     assert.equal(next.failures, 0);
     assert.equal(next.blindRuns, 2);
@@ -145,23 +156,52 @@ describe("decide", () => {
     assert.deepEqual(decision, { action: "hold", reason: "no standby answers on 443", failures: WATCHDOG_FAILURES_TO_FLIP + 1 });
   });
 
-  // #3161 item 2: Equestria's view alone is not evidence. A holder that still
-  // answers TLS on 443 proves the route works, so its management is what failed.
-  it("holds, and pages, when the holder does not answer on 443 at all: that is also what Equestria losing its route looks like", () => {
-    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP - 1, everHealthy: true, lastRunAt: minuteAgo }, { ...down(), activeReachable: false });
-    assert.equal(decision.action, "hold");
-    assert.match((decision as { reason: string }).reason, /does not answer on 443 from Equestria/);
-    const alerts = alertFor(decision, "netbird.example.test", now) as { labels: Record<string, string> }[];
-    assert.equal(alerts[0].labels.alertname, "NetbirdFailoverBlocked");
+  // #3161 item 2: a flip needs two views of the holder, Equestria's streak and
+  // a fresh report from another host (components/netbird/failoverView.ts).
+  describe("the second view", () => {
+    const streak = { failures: WATCHDOG_FAILURES_TO_FLIP - 1, everHealthy: true, lastRunAt: minuteAgo };
+
+    it("flips when the standby saw the holder down within the window, whether or not the holder answers TLS (a dead VM)", () => {
+      assert.equal(decide(streak, down()).decision.action, "flip");
+    });
+
+    it("holds, and pages, when no other host has published a view", () => {
+      const { decision } = decide(streak, { ...down(), views: [] });
+      assert.equal(decision.action, "hold");
+      assert.match((decision as { reason: string }).reason, /no fresh view/);
+      const alerts = alertFor(decision, "netbird.example.test", now) as { labels: Record<string, string> }[];
+      assert.equal(alerts[0].labels.alertname, "NetbirdFailoverBlocked");
+    });
+
+    it("holds when the standby's view is older than the window", () => {
+      const stale = view("azure-cus", PRIMARY, false, PEER_VIEW_FRESH_MINUTES + 1);
+      assert.match((decide(streak, { ...down(), views: [stale] }).decision as { reason: string }).reason, /no fresh view/);
+    });
+
+    it("holds when the standby still sees management answer: the failure is on Equestria's path", () => {
+      const { decision } = decide(streak, { ...down(), views: [view("azure-cus", PRIMARY, true)] });
+      assert.equal(decision.action, "hold");
+      assert.match((decision as { reason: string }).reason, /azure-cus still sees/);
+    });
+
+    it("ignores a view of another address, and the holder's view of itself", () => {
+      const views = [view("azure-cus", STANDBY, false), view("azure-eus2", PRIMARY, false)];
+      assert.equal(decide(streak, { ...down(), views }).decision.action, "hold");
+    });
+
+    it("ignores a view stamped in the future", () => {
+      const future = view("azure-cus", PRIMARY, false, -5);
+      assert.equal(decide(streak, { ...down(), views: [future] }).decision.action, "hold");
+    });
+
+    it("one fresh down view is enough, even beside an older healthy one", () => {
+      const views = [view("azure-cus", PRIMARY, true, PEER_VIEW_FRESH_MINUTES + 2), view("azure-cus", PRIMARY, false)];
+      assert.equal(decide(streak, { ...down(), views }).decision.action, "flip");
+    });
   });
 
-  it("flips when the holder answers on 443 but management does not (the #2892 drill)", () => {
-    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP - 1, everHealthy: true, lastRunAt: minuteAgo }, { ...down(), activeReachable: true });
-    assert.equal(decision.action, "flip");
-  });
-
-  it("with neither host answering on 443, names the standby: Equestria's internet is the likelier cause", () => {
-    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP, everHealthy: true, lastRunAt: minuteAgo }, { ...down(false), activeReachable: false });
+  it("with no standby answering on 443, says so before anything about views", () => {
+    const { decision } = decide({ failures: WATCHDOG_FAILURES_TO_FLIP, everHealthy: true, lastRunAt: minuteAgo }, { ...down(false), views: [] });
     assert.deepEqual(decision, { action: "hold", reason: "no standby answers on 443", failures: WATCHDOG_FAILURES_TO_FLIP + 1 });
   });
 
@@ -185,7 +225,7 @@ describe("decide", () => {
       {
         leaseIp: STANDBY,
         activeHealthy: false,
-        activeReachable: true,
+        views: [view("azure-eus2", STANDBY, false)],
         candidates: [
           { name: "azure-eus2", ip: PRIMARY, reachable: true },
           { name: "azure-cus", ip: STANDBY, reachable: false },
@@ -209,6 +249,33 @@ describe("decide", () => {
       },
     );
     assert.equal((decision as { to: { name: string } }).to.name, "oci");
+  });
+});
+
+describe("agreement with the hosts (components/netbird/failoverView.ts)", () => {
+  it("reads the objects they write, and checks management the way they do", () => {
+    assert.equal(PEER_VIEW_PREFIX, FAILOVER_VIEW_PREFIX);
+    assert.equal(HEALTH_PATH, FAILOVER_VIEW_HEALTH_PATH);
+  });
+});
+
+describe("signS3", () => {
+  it("matches AWS's published GET Object example", () => {
+    const headers = signS3({
+      method: "GET",
+      url: "https://examplebucket.s3.amazonaws.com/test.txt",
+      region: "us-east-1",
+      accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+      secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      now: new Date("2013-05-24T00:00:00Z"),
+      headers: { range: "bytes=0-9" },
+      payloadHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    });
+    assert.equal(
+      headers.authorization,
+      "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
+    );
+    assert.equal(headers["x-amz-date"], "20130524T000000Z");
   });
 });
 
@@ -280,6 +347,10 @@ describe("run", () => {
     POD_NAMESPACE: "netbird-system",
     STATE_CONFIGMAP: "netbird-failover-watchdog-state",
     ALERTMANAGER_URL: "http://alertmanager.test:9093",
+    S3_ENDPOINT: "https://garage.test",
+    S3_BUCKET: "netbird-backups",
+    AWS_ACCESS_KEY_ID: "GKexample",
+    AWS_SECRET_ACCESS_KEY: "secret",
   };
   const A: Record<string, string> = { [LEASE]: PRIMARY, "relay-eus2.example.test": PRIMARY, "relay-cus.example.test": STANDBY };
 
@@ -299,6 +370,13 @@ describe("run", () => {
     alertmanager?: boolean;
     /** Cloudflare answers a PATCH with the old address. */
     keepRecord?: boolean;
+    /**
+     * What each host published to Garage: its view object's body and how old
+     * it is. Absent: 404. Default: azure-cus saw the primary down 30 s ago.
+     */
+    published?: Record<string, { targets: Record<string, boolean>; minutesAgo: number }>;
+    /** false: Garage refuses connections. */
+    garage?: boolean;
   }
   function world(opts: World = {}) {
     const calls: Call[] = [];
@@ -315,6 +393,17 @@ describe("run", () => {
         const name = new URL(url).searchParams.get("name");
         if (method === "GET" && name) return json({ success: true, result: [{ id: `id-${name}`, content: A[name] }] });
         if (method === "PATCH") return json({ success: true, result: { content: opts.keepRecord ? PRIMARY : (body as { content: string }).content } });
+      }
+      if (url.startsWith(`${ENV.S3_ENDPOINT}/`)) {
+        if (opts.garage === false) throw new TypeError("fetch failed");
+        const match = /^\/netbird-backups\/failover-view\/([a-z0-9-]+)\.json$/.exec(new URL(url).pathname);
+        const published = opts.published ?? { "azure-cus": { targets: { [PRIMARY]: false }, minutesAgo: 0.5 } };
+        const object = match ? published[match[1]] : undefined;
+        if (method !== "GET" || !object) return new Response("<Error><Code>NoSuchKey</Code></Error>", { status: 404 });
+        return new Response(JSON.stringify({ observer: match?.[1], targets: object.targets }), {
+          status: 200,
+          headers: { "Last-Modified": new Date(now.getTime() - object.minutesAgo * 60000).toUTCString() },
+        });
       }
       if (url === `${ENV.ALERTMANAGER_URL}/api/v2/alerts`) {
         if (opts.alertmanager === false) throw new TypeError("fetch failed");
@@ -367,17 +456,51 @@ describe("run", () => {
     assert.equal(w.alerts()[0].labels.alertname, "NetbirdFailover");
     assert.equal(w.written()?.data.failures, "0");
     assert.equal(w.written()?.data.lastFlipAt, now.toISOString());
-    // The holder is probed under the lease's name, the standby under its relay's.
-    assert.ok(w.probes.includes(`reachable ${PRIMARY} ${LEASE}`));
-    assert.ok(w.probes.includes(`reachable ${STANDBY} relay-cus.example.test`));
+    // Management at the holder under the lease's name; the standby's TLS under its relay's.
+    assert.deepEqual(w.probes, [`healthy ${PRIMARY} ${LEASE}`, `reachable ${STANDBY} relay-cus.example.test`]);
   });
 
-  it("does not flip when only Equestria's route to the holder is gone", async () => {
-    const w = world({ state: streak(WATCHDOG_FAILURES_TO_FLIP - 1), reachable: { [PRIMARY]: false, [STANDBY]: true } });
+  it("reads every other host's view from Garage, signed with the bucket key", async () => {
+    const w = world({ state: streak(WATCHDOG_FAILURES_TO_FLIP - 1) });
+    await run(w.io);
+    const reads = w.calls.filter(c => c.url.startsWith(ENV.S3_ENDPOINT));
+    assert.deepEqual(
+      reads.map(c => c.url),
+      [`${ENV.S3_ENDPOINT}/netbird-backups/failover-view/azure-cus.json`],
+    );
+    assert.match(String(reads[0].authorization), /^AWS4-HMAC-SHA256 Credential=GKexample\/20261103\/garage\/s3\/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=[0-9a-f]{64}$/);
+  });
+
+  it("does not flip when the standby still sees the primary answer: only Equestria's route is gone", async () => {
+    const w = world({ state: streak(WATCHDOG_FAILURES_TO_FLIP - 1), published: { "azure-cus": { targets: { [PRIMARY]: true }, minutesAgo: 0.5 } } });
     assert.equal((await run(w.io)).action, "hold");
     assert.deepEqual(w.recordWrites(), []);
     assert.equal(w.alerts()[0].labels.alertname, "NetbirdFailoverBlocked");
     assert.equal(w.written()?.data.failures, String(WATCHDOG_FAILURES_TO_FLIP));
+  });
+
+  it("does not flip when the standby's view is missing, stale, or Garage is down", async () => {
+    const cases: World[] = [{ published: {} }, { published: { "azure-cus": { targets: { [PRIMARY]: false }, minutesAgo: PEER_VIEW_FRESH_MINUTES + 1 } } }, { garage: false }];
+    for (const opts of cases) {
+      const w = world({ state: streak(WATCHDOG_FAILURES_TO_FLIP - 1), ...opts });
+      assert.equal((await run(w.io)).action, "hold");
+      assert.deepEqual(w.recordWrites(), []);
+      assert.equal(w.alerts()[0].labels.alertname, "NetbirdFailoverBlocked");
+    }
+  });
+
+  it("flips a dead primary, one that answers nothing at all, once the standby confirms it", async () => {
+    const w = world({ state: streak(WATCHDOG_FAILURES_TO_FLIP - 1), reachable: { [PRIMARY]: false, [STANDBY]: true } });
+    assert.equal((await run(w.io)).action, "flip");
+  });
+
+  it("does not ask Garage while management answers", async () => {
+    const w = world({ state: streak(0), healthy: true });
+    await run(w.io);
+    assert.deepEqual(
+      w.calls.filter(c => c.url.startsWith(ENV.S3_ENDPOINT)),
+      [],
+    );
   });
 
   it("with no internet, probes nothing, never writes the record, and warns once blind long enough", async () => {

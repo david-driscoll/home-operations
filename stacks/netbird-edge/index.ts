@@ -34,6 +34,7 @@ import { BACKUP_HEARTBEAT_GROUP, backupHeartbeat, NETBIRD_BACKUP_BAO_PATH, NETBI
 import { CROWDSEC_EDGE_BAO_PATH, crowdsecLapiEnv } from "components/netbird/crowdsec.ts";
 import { assertFenceFasterThanFlip } from "components/netbird/fence.ts";
 import { homeRelayDomain } from "components/netbird/homeRelay.ts";
+import { NetbirdFailoverView } from "components/netbird/NetbirdFailoverView.ts";
 import { NetbirdRelayProbe } from "components/netbird/NetbirdRelayProbe.ts";
 import { NetbirdServer, type NetbirdServerArgs } from "components/netbird/NetbirdServer.ts";
 import { dnsResolvers, RELAY_GATUS_GROUP, relayProbeHeartbeat, relayTlsEndpoint } from "components/netbird/relayProbe.ts";
@@ -658,6 +659,35 @@ for (const probe of relayProbes) {
     heartbeat: { url: pulumi.interpolate`https://uptime.${globals.tailscaleDomain}`, token: probe.token },
     hostKey: probe.host.hostKey,
     dependsOn: [probe.host.machine],
+  });
+}
+
+// ── Failover views (#3161, ADR 0002) ─────────────────────────────────────
+// The watchdog in Equestria flips only when a second host, outside home, saw
+// the lease holder's management fail too. Every host probes every other one
+// every 30 s and PUTs what it saw to the backup bucket in Garage
+// (components/netbird/failoverView.ts), with the key and the tailnet path the
+// backups already use. A host alone, with nothing to watch, gets none.
+for (const host of hosts) {
+  const others = hosts.filter(other => other.id !== host.id);
+  if (others.length === 0) continue;
+  new NetbirdFailoverView(`${host.hostname}-failover-view`, {
+    connection: {
+      host: pulumi.interpolate`${host.hostname}.${globals.tailscaleDomain}`,
+      user: "root",
+      privateKey: breakGlassKey.privateKeyOpenssh,
+    },
+    observer: host.id,
+    lease: domain,
+    targets: others.map(other => other.publicIpAddress),
+    s3: {
+      endpoint: backupKey.endpoint,
+      bucket: backupKey.bucket,
+      accessKeyId: pulumi.secret(backupKey.username),
+      secretAccessKey: pulumi.secret(backupKey.password),
+    },
+    hostKey: host.hostKey,
+    dependsOn: [host.machine],
   });
 }
 

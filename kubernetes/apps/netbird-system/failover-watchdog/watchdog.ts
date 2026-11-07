@@ -12,10 +12,11 @@
  *     (CONSECUTIVE_RUN_GAP_MINUTES) starts the count over;
  *   - a standby answers TLS on 443: so a home-internet outage, where nothing
  *     outside answers, never flips;
- *   - the holder itself still answers TLS on 443, so the route from here is
- *     proven and only management failed. A holder that does not answer at all
- *     looks the same as Equestria losing its route to it, and no second
- *     vantage point exists (ADR 0002, #3161), so that holds and pages;
+ *   - another host saw the holder's management fail too, within the last
+ *     PEER_VIEW_FRESH_MINUTES. Each host probes the others and publishes what
+ *     it saw to Garage (components/netbird/failoverView.ts); without that
+ *     second view, Equestria losing only its route to the holder would look
+ *     like the holder dying (ADR 0002, #3161). Missing, stale or healthy: hold;
  *   - no flip happened in the last FLIP_COOLDOWN_MINUTES: no ping-pong;
  *   - management has answered at least once: nothing fails over from a
  *     server that never came up.
@@ -30,6 +31,7 @@
  * part (decide, alertFor, the parsers) and run(), the I/O around it, with the
  * network faked through WatchdogIo.
  */
+import { createHash, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import * as https from "node:https";
 import * as tls from "node:tls";
@@ -43,6 +45,17 @@ export const FLIP_COOLDOWN_MINUTES = 60;
  * run means runs were missed or crashed, and that breaks the streak.
  */
 export const CONSECUTIVE_RUN_GAP_MINUTES = 3;
+/**
+ * How recent another host's view of the holder must be (by Garage's
+ * Last-Modified) to count. The hosts publish every 30 s, so this allows a few
+ * missed runs; and it is shorter than the failure streak, so the view and
+ * Equestria's failures overlap in time.
+ */
+export const PEER_VIEW_FRESH_MINUTES = 3;
+/** Where each host's view lives in the backup bucket: failover-view/<host>.json (components/netbird/failoverView.ts). */
+export const PEER_VIEW_PREFIX = "failover-view/";
+/** Garage signs as its own region (components/netbird/backup.ts). */
+export const GARAGE_REGION = "garage";
 /** How long a flip alert stays firing in Alertmanager. */
 export const FLIP_ALERT_HOURS = 6;
 /** Management's embedded IdP answers this only while netbird-server runs. */
@@ -76,11 +89,24 @@ export interface Observation {
   leaseIp: string | null;
   /** Whether management answered at leaseIp. Unused when leaseIp is null. */
   activeHealthy: boolean;
-  /** Whether leaseIp answers TLS on 443 at all: Equestria's route to the holder works. */
-  activeReachable: boolean;
+  /**
+   * What other hosts published about management at an address: `at` is
+   * Garage's Last-Modified, so the host's clock cannot make a view look fresh.
+   */
+  views: PeerView[];
   /** Every candidate host with its address and whether it answers TLS on 443. */
   candidates: { name: string; ip: string; reachable: boolean }[];
   now: Date;
+}
+
+export interface PeerView {
+  /** The host that probed, e.g. azure-cus. */
+  observer: string;
+  /** The address it probed. */
+  ip: string;
+  /** Whether management answered there. */
+  healthy: boolean;
+  at: string;
 }
 
 export type Decision =
@@ -126,11 +152,20 @@ export function decide(state: WatchdogState, obs: Observation, failuresToFlip: n
     const reason = obs.candidates.some(c => c.ip !== obs.leaseIp) ? "no standby answers on 443" : "there is no standby";
     return { decision: { action: "hold", reason, failures }, next };
   }
-  if (!obs.activeReachable) {
-    // A dead VM and Equestria losing only its route to it look the same from
-    // here, and no second vantage point exists to tell them apart (ADR 0002).
-    // A holder that answers TLS but not management is the case that flips.
-    return { decision: { action: "hold", reason: obs.leaseIp + " does not answer on 443 from Equestria, which a route loss on Equestria's side also looks like", failures }, next };
+  // The second view: another host, probing the holder from outside home.
+  // A dead VM and Equestria losing only its route to it look the same from
+  // here; only a host elsewhere can tell them apart.
+  const holder = obs.candidates.find(c => c.ip === obs.leaseIp)?.name;
+  const fresh = obs.views.filter(v => {
+    const age = (obs.now.getTime() - Date.parse(v.at)) / 60000;
+    return v.ip === obs.leaseIp && v.observer !== holder && age >= -1 && age <= PEER_VIEW_FRESH_MINUTES;
+  });
+  if (!fresh.some(v => !v.healthy)) {
+    const seesIt = fresh.find(v => v.healthy);
+    const reason = seesIt
+      ? seesIt.observer + " still sees management at " + obs.leaseIp + " answer, so the failure is on Equestria's path"
+      : "no fresh view from another host (within " + PEER_VIEW_FRESH_MINUTES + " min) confirms " + obs.leaseIp + " is down";
+    return { decision: { action: "hold", reason, failures }, next };
   }
   return {
     decision: { action: "flip", from: obs.leaseIp, to: { name: target.name, ip: target.ip } },
@@ -231,6 +266,39 @@ export function alertFor(decision: Decision, lease: string, now: Date): object[]
   return undefined;
 }
 
+const sha256 = (data: string): string => createHash("sha256").update(data).digest("hex");
+const hmac = (key: string | Buffer, data: string): Buffer => createHmac("sha256", key).update(data).digest();
+
+/**
+ * AWS Signature Version 4 for one S3 request, enough for a GET from Garage.
+ * Returns the headers to send (host is signed but left to fetch to set).
+ */
+export function signS3(args: { method: string; url: string; region: string; accessKeyId: string; secretAccessKey: string; now: Date; headers?: Record<string, string>; payloadHash?: string }): Record<string, string> {
+  const url = new URL(args.url);
+  const amzDate = args.now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
+  const day = amzDate.slice(0, 8);
+  const payloadHash = args.payloadHash ?? sha256("");
+  const headers: Record<string, string> = { ...args.headers, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate };
+  const all: Record<string, string> = { host: url.host, ...headers };
+  const names = Object.keys(all)
+    .map(n => n.toLowerCase())
+    .sort();
+  const lower = Object.fromEntries(Object.entries(all).map(([n, v]) => [n.toLowerCase(), v.trim()]));
+  const query = [...url.searchParams.entries()]
+    .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
+    .sort()
+    .join("&");
+  const canonical = [args.method, url.pathname, query, names.map(n => n + ":" + lower[n] + "\n").join(""), names.join(";"), payloadHash].join("\n");
+  const scope = day + "/" + args.region + "/s3/aws4_request";
+  const toSign = ["AWS4-HMAC-SHA256", amzDate, scope, sha256(canonical)].join("\n");
+  const key = hmac(hmac(hmac(hmac("AWS4" + args.secretAccessKey, day), args.region), "s3"), "aws4_request");
+  const signature = createHmac("sha256", key).update(toSign).digest("hex");
+  return { ...headers, authorization: "AWS4-HMAC-SHA256 Credential=" + args.accessKeyId + "/" + scope + ", SignedHeaders=" + names.join(";") + ", Signature=" + signature };
+}
+
 // ── I/O ──────────────────────────────────────────────────────────────────
 
 /** Everything run() touches outside the process, so watchdog.test.ts can fake it. */
@@ -280,6 +348,38 @@ async function kube(io: WatchdogIo, method: "GET" | "PATCH", path: string, body?
   return response.json();
 }
 
+/**
+ * Every other host's published view, from Garage. A missing object, an
+ * unreadable one or Garage being down all read as no view, which holds.
+ */
+async function peerViews(io: WatchdogIo, observers: string[], now: Date): Promise<PeerView[]> {
+  const endpoint = required(io, "S3_ENDPOINT").replace(/\/+$/, "");
+  const bucket = required(io, "S3_BUCKET");
+  const views = await Promise.all(
+    observers.map(async (observer): Promise<PeerView[]> => {
+      const url = endpoint + "/" + bucket + "/" + PEER_VIEW_PREFIX + observer + ".json";
+      try {
+        const headers = signS3({ method: "GET", url, region: GARAGE_REGION, accessKeyId: required(io, "AWS_ACCESS_KEY_ID"), secretAccessKey: required(io, "AWS_SECRET_ACCESS_KEY"), now });
+        const response = await io.fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+        if (!response.ok) {
+          io.log({ msg: "no view from " + observer, status: response.status });
+          return [];
+        }
+        // Garage's clock, not the host's: the host cannot make a view look fresh.
+        const at = new Date(response.headers.get("Last-Modified") ?? "").toISOString();
+        const body = (await response.json()) as { targets?: Record<string, unknown> };
+        return Object.entries(body.targets ?? {})
+          .filter(([, healthy]) => typeof healthy === "boolean")
+          .map(([ip, healthy]) => ({ observer, ip, healthy: healthy as boolean, at }));
+      } catch (error) {
+        io.log({ msg: "no view from " + observer, error: String(error) });
+        return [];
+      }
+    }),
+  );
+  return views.flat();
+}
+
 /** One watchdog run: read state and Cloudflare, probe, decide, act, record. Returns the decision. */
 export async function run(io: WatchdogIo): Promise<Decision> {
   const now = io.now();
@@ -299,10 +399,17 @@ export async function run(io: WatchdogIo): Promise<Decision> {
     record = null;
   }
   const activeHealthy = record ? await io.healthy(record.content, lease) : false;
-  // Only asked when management failed: does the holder answer at all, so the route from here works?
-  const activeReachable = record && !activeHealthy ? await io.reachable(record.content, lease) : false;
+  // Only asked when management failed: what the other hosts saw at the holder.
+  const views =
+    record && !activeHealthy
+      ? await peerViews(
+          io,
+          hosts.filter(h => h.ip !== record?.content).map(h => h.name),
+          now,
+        )
+      : [];
   const probed = record ? await Promise.all(hosts.map(async h => ({ name: h.name, ip: h.ip, reachable: h.ip === record.content ? false : await io.reachable(h.ip, h.record) }))) : [];
-  const { decision, next } = decide(state, { leaseIp: record?.content ?? null, activeHealthy, activeReachable, candidates: probed, now });
+  const { decision, next } = decide(state, { leaseIp: record?.content ?? null, activeHealthy, views, candidates: probed, now });
 
   if (decision.action === "flip" && record) {
     const written = (await cloudflare(io, "/zones/" + zoneId + "/dns_records/" + record.id, { method: "PATCH", body: JSON.stringify({ content: decision.to.ip }) })) as { content: string };
@@ -334,7 +441,7 @@ export async function run(io: WatchdogIo): Promise<Decision> {
       lastLease: record?.content ?? "",
     },
   });
-  io.log({ msg: "netbird-failover-watchdog", lease: record?.content ?? null, activeHealthy, activeReachable, candidates: probed, decision });
+  io.log({ msg: "netbird-failover-watchdog", lease: record?.content ?? null, activeHealthy, views, candidates: probed, decision });
   return decision;
 }
 
