@@ -24,9 +24,14 @@ design is in [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md) §E an
   never starts on an unknown lease.
 - **The watchdog** (`kubernetes/apps/netbird-system/failover-watchdog`, a CronJob every minute in Equestria)
   probes management where the lease points. After 5 failed runs in a row it repoints the lease at the first
-  standby that answers TLS on 443, but only if Cloudflare answered too. It never flips twice within 60 minutes,
-  and never from a management it has not once seen answer (its state ConfigMap's `everHealthy`).
-  Every flip pages as `NetbirdFailover`; a flip it would make but may not pages as `NetbirdFailoverBlocked`.
+  standby that answers TLS on 443, but only if Cloudflare answered too and the old holder still answers TLS on
+  443. That last check proves Equestria's route to the holder works, so only management failed; a holder that
+  answers nothing could equally be Equestria's route to it gone, and the watchdog holds (ADR 0002, #3161). Only
+  failures in a row count: a healthy run, a run that couldn't read Cloudflare, or a gap of more than 3 minutes
+  since the last recorded run starts the count over. It never flips twice within 60 minutes, and never from a
+  management it has not once seen answer (its state ConfigMap's `everHealthy`).
+  Every flip pages as `NetbirdFailover`; a flip it would make but may not pages as `NetbirdFailoverBlocked`;
+  5 runs in a row without Cloudflare page as `NetbirdFailoverWatchdogBlind`.
 - **Pulumi and the lease.** `netbird-edge:primary` says which host config assigns the lease to.
   `DnsLeaseAssignment` writes the record only when that value (or that host's address) changes, so a run after a
   watchdog flip leaves the flip alone. It logs a warning until someone acknowledges it.
@@ -115,11 +120,20 @@ resolver) and never leaves its host.
 - **`NetbirdFailoverBlocked`.** Management has been down for 5 checks and the watchdog won't flip. The alert's
   reason says why:
   - "no standby answers on 443": the standby is down too, or Equestria's internet is.
+  - "does not answer on 443 from Equestria": the holder's VM (or region) is down, **or** only Equestria's route
+    to it is. The watchdog can't tell which, so it won't flip. Check from somewhere that isn't the home network:
+    a phone on cellular opening `https://netbird.<root domain>`, or the Azure portal for the VM. If the holder
+    is really down, promote the standby by hand. If it's up for everyone but Equestria, leave the lease alone
+    and fix the route.
   - "cooldown": it flipped less than an hour ago.
   - "never answered": the server hasn't come up once since the watchdog's state began (a first deploy, or
     someone deleted `netbird-failover-watchdog-state`).
 
   To promote by hand, use the config switch as in "Fail back", step 3, with the host you want.
+- **`NetbirdFailoverWatchdogBlind`** (warning). The watchdog couldn't read Cloudflare for 5 runs in a row:
+  Equestria's internet is down, or Cloudflare's API is. It hasn't checked management and won't flip while it's
+  blind. Nothing to do for NetBird; it clears by itself about 5 minutes after Cloudflare answers again. The state
+  ConfigMap's `blindRuns` and `lastDecision: blind` show it too.
 - **Both fences stopped (`stop (unknown)`).** Neither host can reach DNS. Management comes back by itself once
   one of them can.
 - **`restore failed; management stays stopped`.** The new holder can't read Garage over the tailnet. Check its
