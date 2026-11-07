@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app region-exits
+  namespace: &namespace pulumi
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  # pulumi-secrets holds everything this Stack's run needs from the cluster:
+  # the state S3 key, the config passphrase, the OpenBao AppRole, and the
+  # home-operations GitRepository the ArtifactGenerator cuts its source from.
+  # The program reads no other Stack's outputs, so nothing else gates it.
+  dependsOn:
+    - name: pulumi-secrets
+      namespace: pulumi
+  path: ./kubernetes/apps/pulumi/region-exits
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 20m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

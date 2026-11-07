@@ -1,0 +1,131 @@
+---
+# yaml-language-server: $schema=https://schemas.budimanjojo.com/pulumi.com/stack_v1.json
+# The region exits' Mullvad devices (stacks/region-exits, docs/plans/region-exits.md
+# §C1). Writes each device's key and tunnel address to OpenBao
+# third-party-tokens/mullvad/region-exits for the region exits' ExternalSecret.
+#
+# No Pulumi.region-exits.yaml: the program reads no stack config, and the
+# operator's `stack select --create` makes the stack on its first run. Secrets
+# in state carry their own passphrase salt, so a fresh workspace without the
+# file still decrypts them (checked against a file backend, pulumi 3.274).
+apiVersion: pulumi.com/v1
+kind: Stack
+metadata:
+  name: &stack region-exits
+spec:
+  fluxSource:
+    # The ExternalArtifact from ../../../components/pulumi-stack-artifact plus
+    # this kustomization.yaml's patch: it only moves when a file this program
+    # reads changes (docs/kubernetes/pulumi-stack-artifacts.md).
+    sourceRef:
+      apiVersion: source.toolkit.fluxcd.io/v1
+      kind: ExternalArtifact
+      name: ${APP}
+    dir: stacks/region-exits
+  serviceAccountName: ${APP}
+  stack: *stack
+  resyncFrequencySeconds: 86400
+  retryMaxBackoffDurationSeconds: 60
+  # Pulumi state on the dockge Garage cluster through the garage-s3 Tailscale
+  # VIP, one prefix per Stack, as netbird-edge. docs/garage-offsite-s3.md.
+  backend: s3://pulumi-state/region-exits?endpoint=garage-s3.${TAILSCALE_DOMAIN}&s3ForcePathStyle=true&region=garage
+  continueResyncOnCommitMatch: true
+  destroyOnFinalize: false
+  workspaceReclaimPolicy: Delete
+  # None. The program reads only hand-written OpenBao paths (the Mullvad
+  # account, and the credentials GlobalResources' constructor reads) and no
+  # other Stack's outputs; what the run needs from the cluster is gated by the
+  # Flux Kustomization's dependsOn on pulumi-secrets.
+  prerequisites: []
+  envRefs:
+    # components/domains.ts: GlobalResources' constructor calls rootDomain(),
+    # which fails closed without it. Flux substitutes it from shared-secrets.
+    ROOT_DOMAIN:
+      type: Literal
+      literal:
+        value: "${ROOT_DOMAIN}"
+    # State backend (Garage).
+    AWS_ACCESS_KEY_ID:
+      type: Secret
+      secret:
+        name: pulumi-state-s3
+        key: username
+    AWS_SECRET_ACCESS_KEY:
+      type: Secret
+      secret:
+        name: pulumi-state-s3
+        key: password
+    AWS_USE_PATH_STYLE_ENDPOINT:
+      type: Literal
+      literal:
+        value: "true"
+    AWS_REGION:
+      type: Literal
+      literal:
+        value: "garage"
+    # history/ already keeps the previous checkpoint (../history-pruner).
+    PULUMI_DIY_BACKEND_DISABLE_CHECKPOINT_BACKUPS:
+      type: Literal
+      literal:
+        value: "true"
+    # Same state format as .config/mise.toml, so CLI and operator runs agree.
+    PULUMI_DIY_BACKEND_GZIP:
+      type: Literal
+      literal:
+        value: "true"
+    # The device private keys are Pulumi secrets in state.
+    PULUMI_CONFIG_PASSPHRASE:
+      type: Secret
+      secret:
+        name: pulumi-operator-passphrase
+        key: password
+    # OpenBao: the store every credential is read from, and the
+    # third-party-tokens/mullvad/region-exits write, through
+    # GlobalResources.baoProvider, which throws without the AppRole.
+    # openbao-active, not openbao: standbys answer with a 307.
+    # No CONNECT_*: nothing in this program's import closure uses OPClient.
+    BAO_ADDR:
+      type: Literal
+      literal:
+        value: "http://openbao-active.kube-system.svc.cluster.local:8200"
+    BAO_ROLE_ID:
+      type: Secret
+      secret:
+        name: pulumi-operator-bao-approle
+        key: role-id
+    BAO_SECRET_ID:
+      type: Secret
+      secret:
+        name: pulumi-operator-bao-approle
+        key: secret-id
+  workspaceTemplate:
+    spec:
+      env:
+        # Plugin downloads from GitHub releases, without the anonymous rate limit.
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-token
+              key: token
+        # Cap V8's heap well under the 6Gi container limit so Node proactively GCs
+        # instead of ballooning until the kernel OOM-kills the whole process tree.
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=4096"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          memory: 6Gi
+      podTemplate:
+        spec:
+          # Image, pull secret and placement come from
+          # kubernetes/components/pulumi-workspace.
+          containers:
+            - name: pulumi
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  memory: 6Gi
