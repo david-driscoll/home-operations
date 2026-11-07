@@ -480,6 +480,10 @@ Azure. §C, §D and §E describe the OCI-primary plan; this is what is built ins
   `/oauth2/.well-known/openid-configuration` at the lease's address, with the certificate verified for the
   management name. It flips after 5 failures in a row, only if Cloudflare and a standby (TLS on 443) both answer,
   never twice within an hour, and never from a management it has not once seen answer.
+  - Since #3161 (2026-11-07): it also needs the old holder to answer TLS on 443, because a holder that answers
+    nothing may only have lost its route to Equestria (ADR 0002). A healthy run, a run without Cloudflare, or a
+    gap over 3 minutes resets the count. Five runs without Cloudflare page `NetbirdFailoverWatchdogBlind` and
+    never flip.
   - The count lives in a ConfigMap. Hosts are found through their relay records.
   - Flips page straight to Alertmanager. A PrometheusRule pages if the CronJob stops succeeding.
 - **Two writers on one record, no fight.** The `cloudflare.DnsRecord` ignores `content` after create.

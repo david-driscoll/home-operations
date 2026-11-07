@@ -3,8 +3,9 @@
 #
 # Every minute: probe the host the NetBird lease points at, and after
 # WATCHDOG_FAILURES_TO_FLIP failures in a row repoint the lease at a reachable
-# standby (watchdog.ts). Forbid: two runs at once would both count, and could
-# both flip.
+# standby, if the holder still answers TLS on 443 (watchdog.ts). Forbid: two
+# runs at once would both count, and could both flip. A run that starts late
+# or not at all breaks the streak (CONSECUTIVE_RUN_GAP_MINUTES).
 apiVersion: batch/v1
 kind: CronJob
 metadata:

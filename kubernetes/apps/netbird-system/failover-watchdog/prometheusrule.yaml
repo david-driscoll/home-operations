@@ -2,7 +2,10 @@
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
 #
 # The flips themselves page from the watchdog, straight to Alertmanager
-# (NetbirdFailover, NetbirdFailoverBlocked; watchdog.ts alertFor). This is the
+# (NetbirdFailover, NetbirdFailoverBlocked, and NetbirdFailoverWatchdogBlind
+# when it cannot read Cloudflare; watchdog.ts alertFor). They come from the
+# watchdog because Alertmanager is in-cluster: they still arrive when
+# Equestria has lost the internet, the case Blind is for (#3161). This is the
 # other half: a watchdog that stopped running fails over nothing, silently.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
