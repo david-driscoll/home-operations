@@ -61,6 +61,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history: the tag counts commits (below).
+          fetch-depth: 0
 
       - name: Work out the tag
         id: tag
@@ -76,11 +79,21 @@ jobs:
           fi
           BASE_IMAGE="docker.io/library/${pinned}"
           version="$(node -p "require('./${APP_DIR}/package.json').version")"
-          # The app's git tree and the base: the tag changes when either does
-          # and for nothing else, so a re-run on an unchanged tree is a no-op.
-          tree="$(git rev-parse "HEAD:${APP_DIR}")"
-          hash="$(printf '%s %s\n' "$tree" "$BASE_IMAGE" | sha256sum | cut -c1-12)"
-          tag="${version}-${hash}"
+          # <major>.<minor> from package.json, then how many commits on this
+          # branch touched the app or this file (which holds the base pin). The
+          # count only grows on main, so docker versioning can order the tags
+          # and Renovate can bump the HelmRelease's pin (.github/renovate.json5,
+          # "Estate images on the forge's registry"); a hash suffix, as the
+          # first tags had, is an incompatible suffix to it, so it never moved.
+          # A re-run at the same commit, or a commit touching neither path,
+          # gets the same tag and finds it already built.
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            echo "::error::shallow checkout: the tag needs the whole history to count commits"
+            exit 1
+          fi
+          IFS=. read -r major minor _ <<< "$version"
+          count="$(git rev-list --count HEAD -- "$APP_DIR" .forgejo/workflows/wonderbolts-image.yml)"
+          tag="${major}.${minor}.${count}"
           if [ -z "$ROOT_DOMAIN" ]; then
             echo "::error::PRIVATE_DOMAIN_ROOT is not set on this repository (stacks/system sets it)"
             exit 1
