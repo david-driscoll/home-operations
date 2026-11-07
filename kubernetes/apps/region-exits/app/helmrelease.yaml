@@ -312,7 +312,10 @@ spec:
             securityContext:
               runAsNonRoot: true
               runAsUser: 1000
-              runAsGroup: 1000
+              # Group 0, for /proc/net/nf_conntrack (0440 root:root), which
+              # activeClients.ts counts people from. No capability: NET_ADMIN
+              # for netlink would also reach the kill switch (plan §G6).
+              runAsGroup: 0
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
               capabilities:

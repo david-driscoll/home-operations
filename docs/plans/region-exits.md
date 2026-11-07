@@ -332,6 +332,34 @@ them.
    limit is reached.
 6. **Counting active clients.** Confirm conntrack is readable from the picker container (it needs
    `NET_ADMIN`, or a shared reader).
+
+   **Resolved (#3141):** neither. The picker reads `/proc/net/nf_conntrack` as **group 0**, with
+   no capability. The Talos kernel has `CONFIG_NF_CONNTRACK_PROCFS=y` (read from a 6.18 Talos
+   node's `/proc/config.gz`), and the picker shares the pod's network namespace, so the file is
+   that namespace's table: the clients' forwarded flows and nothing from the node. The kernel
+   creates it `0440` owned by the namespace's root uid and gid and makes no capability check on
+   read ([nf_conntrack_standalone.c](https://github.com/torvalds/linux/blob/v6.18/net/netfilter/nf_conntrack_standalone.c)),
+   so the picker keeps `runAsUser: 1000`, `runAsNonRoot`, all capabilities dropped and a
+   read-only root, and changes only `runAsGroup` to 0. Netlink (`conntrack -L`) would need
+   `NET_ADMIN` in this namespace, which also lets a process rewrite the mangle kill switch and
+   gluetun's firewall. A privileged sidecar writing a count file would put another privileged
+   container in the pod. Both cost more than a group.
+
+   The count (`kubernetes/apps/region-exits/app/activeClients.ts`) is the number of distinct IPv4
+   sources in `10.100.0.0/16` or `100.64.0.0/10` with an entry that is masqueraded, i.e. whose
+   reply goes to an address other than the client's. routing.sh masquerades overlay sources only
+   out `tun0`, and the mangle FORWARD drop discards everything else before conntrack confirms it,
+   so a masqueraded entry is a flow through the tunnel. Overlay connections to the pod itself are
+   not masqueraded and do not count. Conntrack keeps no last-seen time, but each packet resets an
+   entry's timeout to its state's full value, so an `ESTABLISHED` TCP entry counts only while
+   `nf_conntrack_tcp_timeout_established` minus its remaining timeout is under 180 seconds.
+   Every other state and protocol times out within a few minutes and counts while it exists.
+   When conntrack cannot be read, `/status` reports `activeClients: null` and a switch asks for
+   confirmation as if someone were on the region exit.
+
+   **To confirm live:** in the pod, `/proc/net/nf_conntrack` is readable by the picker, it is not
+   masked by the runtime, and the count follows one Tailscale and one NetBird client to 2 and
+   then back to 0.
 7. **tailscaled forwarding.** Check tailscaled's nftables `ts-forward` chain against gluetun's
    FORWARD policy.
 

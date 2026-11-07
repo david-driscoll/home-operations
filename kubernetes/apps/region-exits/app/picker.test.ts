@@ -9,6 +9,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { CONNTRACK_PATH, ESTABLISHED_TIMEOUT_PATH } from "./activeClients.ts";
 import { createHandler, type PickerConfig } from "./picker.ts";
 
 const config: PickerConfig = {
@@ -67,7 +68,24 @@ function fakeFetch(routes: Record<string, Route>) {
 }
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-const files: Record<string, string> = { [config.serversPath]: SERVERS, [config.tokenPath]: "sa-token\n" };
+// Nobody on the region exit, unless a test says otherwise.
+const files: Record<string, string> = { [config.serversPath]: SERVERS, [config.tokenPath]: "sa-token\n", [CONNTRACK_PATH]: "", [ESTABLISHED_TIMEOUT_PATH]: "432000\n" };
+/** One Tailscale and one NetBird client browsing through the tunnel. */
+const TWO_PEOPLE = [
+  "ipv4     2 tcp      6 431990 ESTABLISHED src=100.101.1.2 dst=93.184.216.34 sport=51234 dport=443 src=93.184.216.34 dst=10.64.12.34 sport=443 dport=51234 [ASSURED] mark=0 zone=0 use=2",
+  "ipv4     2 udp      17 110 src=10.100.3.4 dst=9.9.9.9 sport=40000 dport=443 src=9.9.9.9 dst=10.64.12.34 sport=443 dport=40000 [ASSURED] mark=0 zone=0 use=2",
+].join("\n");
+/** Runs `body` with conntrack reading `table`, or unreadable when null. */
+async function withConntrack(table: string | null, body: () => Promise<void>): Promise<void> {
+  const original = files[CONNTRACK_PATH];
+  if (table === null) delete files[CONNTRACK_PATH];
+  else files[CONNTRACK_PATH] = table;
+  try {
+    await body();
+  } finally {
+    files[CONNTRACK_PATH] = original;
+  }
+}
 const readFile = async (path: string) => {
   if (!(path in files)) throw new Error("ENOENT " + path);
   return files[path];
@@ -111,6 +129,19 @@ describe("GET /status", () => {
       region: { country: "Japan", city: "Tokyo" },
       tunnel: { up: true, status: "running" },
       egress: { country: "Japan", city: "Tokyo", ip: "198.51.100.7" },
+      activeClients: 0,
+    });
+  });
+
+  it("counts the people on the region exit", async () => {
+    await withConntrack(TWO_PEOPLE, async () => {
+      assert.equal((await (await picker(gluetunUp).handle(get("/status"))).json()).activeClients, 2);
+    });
+  });
+
+  it("reports activeClients null when conntrack cannot be read", async () => {
+    await withConntrack(null, async () => {
+      assert.equal((await (await picker(gluetunUp).handle(get("/status"))).json()).activeClients, null);
     });
   });
 
@@ -128,7 +159,7 @@ describe("GET /status", () => {
     const { handle } = picker({});
     const response = await handle(get("/status"));
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { name: "spitfire", region: null, tunnel: { up: false, status: null }, egress: null });
+    assert.deepEqual(await response.json(), { name: "spitfire", region: null, tunnel: { up: false, status: null }, egress: null, activeClients: 0 });
   });
 
   it("reports the tunnel down while gluetun is reconnecting, and no egress until it has a public IP", async () => {
@@ -165,6 +196,12 @@ describe("GET /spitfire", () => {
     } finally {
       files[config.serversPath] = original;
     }
+  });
+
+  it("says how many people are on it", async () => {
+    await withConntrack(TWO_PEOPLE, async () => {
+      assert.match(await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text(), /2 people are using spitfire right now/);
+    });
   });
 
   it("says the tunnel is down when gluetun does not answer", async () => {
@@ -259,6 +296,62 @@ describe("POST /spitfire/region", () => {
     const response = await handle(post({ country: "Japan" }));
     assert.equal(response.status, 502);
     assert.match((await response.json()).error, /no server found/);
+  });
+
+  describe("with people on the region exit", () => {
+    it("asks for confirmation, and moves nothing, until the switch is confirmed", async () => {
+      await withConntrack(TWO_PEOPLE, async () => {
+        const { handle, calls } = picker(switchRoutes);
+        const response = await handle(post({ country: "Japan" }));
+        assert.equal(response.status, 409);
+        const body = await response.json();
+        assert.equal(body.activeClients, 2);
+        assert.equal(body.confirm, true);
+        assert.deepEqual(calls, []);
+      });
+    });
+
+    it("moves once confirmed", async () => {
+      await withConntrack(TWO_PEOPLE, async () => {
+        const { handle, calls } = picker(switchRoutes);
+        assert.equal((await handle(post({ country: "Japan", confirm: true }))).status, 200);
+        assert.deepEqual(
+          calls.map(c => c.method + " " + c.url),
+          ["PATCH " + STATE_URL, APPLY],
+        );
+      });
+    });
+
+    it("asks too when it cannot tell who is on it", async () => {
+      await withConntrack(null, async () => {
+        const { handle, calls } = picker(switchRoutes);
+        const response = await handle(post({ country: "Japan" }));
+        assert.equal(response.status, 409);
+        assert.equal((await response.json()).activeClients, null);
+        assert.deepEqual(calls, []);
+      });
+    });
+
+    it("answers the page's form with a confirmation page that resubmits the same region", async () => {
+      await withConntrack(TWO_PEOPLE, async () => {
+        const { handle, calls } = picker(switchRoutes);
+        const form = (body: string) => new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+        const response = await handle(form("country=Japan&city=Tokyo"));
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get("content-type") ?? "", /text\/html/);
+        const html = await response.text();
+        assert.match(html, /2 people are using spitfire right now/);
+        assert.match(html, /<form method="post" action="\/spitfire\/region"/);
+        assert.match(html, /<input type="hidden" name="country" value="Japan">/);
+        assert.match(html, /<input type="hidden" name="city" value="Tokyo">/);
+        assert.match(html, /<input type="hidden" name="confirm" value="yes">/);
+        assert.equal(calls.length, 0);
+
+        const confirmed = await handle(form("country=Japan&city=Tokyo&confirm=yes"));
+        assert.equal(confirmed.status, 303);
+        assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: ["Tokyo"] } } });
+      });
+    });
   });
 });
 
