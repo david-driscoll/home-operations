@@ -54,8 +54,15 @@ Decisions marked ✅ were taken by David on 2026-11-06 in a grilling session:
   `eth0` (the home WAN). Only forwarded client traffic goes through Mullvad.
 - ✅ **Monitoring:** Prometheus metrics from the region picker, a ServiceMonitor and a
   PrometheusRule.
-- ✅ **Known v1 gaps, documented rather than fixed:** NetBird clients resolve DNS at home, and
-  NetBird clients' IPv6 bypasses the region exit (§F).
+- ✅ **DNS resolves at home, on both meshes (2026-11-07):** each pod, gluetun included,
+  resolves through the cluster Technitium, and so do Tailscale clients on a region exit
+  (tailscaled answers them from the pod's resolver). Home names resolve everywhere and the two
+  meshes agree. The trade-off, accepted: Technitium forwards upstream from the home WAN, so
+  geo-DNS answers are home's, while IP geolocation stays on Mullvad (§D2, §F). This replaces
+  the first design, in which Tailscale clients resolved through gluetun's DNS-over-TLS over the
+  tunnel.
+- ✅ **Known v1 gap, documented rather than fixed:** NetBird clients' IPv6 bypasses the region
+  exit (§F).
 - ✅ **Tailscale's Mullvad add-on:** it ends with November 2026. Once it has, remove the seven
   hand-set `mullvad` nodeAttrs (§E4).
 
@@ -81,7 +88,9 @@ Defaults proposed in the session and accepted with the design:
   `users-internet` (`stacks/netbird/index.ts` ~L515-560).
 - **Tailscale DNS:** `overrideLocalDns: true`, and the Technitium nameservers have
   `useWithExitNode: false` (`acl-manager.ts` ~L693-748). A Tailscale client on an exit node
-  therefore resolves through the exit node's own resolver.
+  therefore resolves through the exit node's own resolver: tailscaled forwards the query to the
+  first nameserver in its `/etc/resolv.conf` (`net/dns/resolver/tsdns.go`
+  `HandleExitNodeDNSQuery`, `stubResolverForOS`, v1.104.4).
 - **NetBird DNS:** both Technitium nameserver groups apply to every client, whatever route it
   uses (`stacks/netbird/dns.ts`).
 - **The precedent for two overlays in one pod** is Technitium's `tailscale` and `netbird`
@@ -173,15 +182,31 @@ steps, never create-before-delete.
 | Container | Image | Role |
 |---|---|---|
 | `routing` (init) | `tailscale/tailscale` (has `ip`, `iptables-nft`) | Sets `ip_forward=1`. Copies the `eth0` routes into table 100. Adds `fwmark 0x80000/0xff0000` (priority 90) and `fwmark 0x1bd00` (91) → table 100, and `to 100.64.0.0/10` → table 52 (95), all ahead of gluetun's 98–101 (§G2). Sets the mangle kill switch (§G7). Technitium's init is the template, but this one fails closed: any failed step keeps the pod down. |
-| `gluetun` | `qmcgaw/gluetun` (digest-pinned) | `VPN_SERVICE_PROVIDER=mullvad`, `VPN_TYPE=wireguard`, `WIREGUARD_PRIVATE_KEY` and `WIREGUARD_ADDRESSES` from an ExternalSecret. `envFrom` takes the defaults ConfigMap, then the state ConfigMap (`optional: true`), so a picked region wins. `HTTP_CONTROL_SERVER_ADDRESS` is loopback only. `FIREWALL_OUTBOUND_SUBNETS` lists Equestria's pod and service CIDRs. `FIREWALL_INPUT_PORTS` lists the picker port and the two WireGuard ports. `DOT=on`. IPv6 is off. Forwarding and the bypass go in `/iptables/post-rules.txt` (§D3). |
-| `netbird` | `netbirdio/netbird` (as the router pins) | `NB_SETUP_KEY` comes from the ExternalSecret. `NB_HOSTNAME=<name>` is the base: the command appends the pod-name suffix (`POD_NAME` from the downward API), so each pod enrols as `<name>-<suffix>` and never waits on the old peer's deletion (§F). The route and policies select the `region-exit-<name>` device group, not the peer name. `NB_DISABLE_CLIENT_ROUTES=true`, so it never uses another node's exit route. `NB_DISABLE_DNS=true` and `NB_DNS_RESOLVER_ADDRESS=127.0.0.153:5053`, so it stays off gluetun's :53. Not 127.0.0.1: off port 53 NetBird DNATs `<listen IP>:53` to its own port, which on 127.0.0.1 hijacked gluetun's resolver (SERVFAIL, then healthcheck restart loops). State is in an emptyDir: the setup key is ephemeral, so each restart enrols fresh, which is also the only time NB_* env applies. |
+| `gluetun` | `qmcgaw/gluetun` (digest-pinned) | `VPN_SERVICE_PROVIDER=mullvad`, `VPN_TYPE=wireguard`, `WIREGUARD_PRIVATE_KEY` and `WIREGUARD_ADDRESSES` from an ExternalSecret. `envFrom` takes the defaults ConfigMap, then the state ConfigMap (`optional: true`), so a picked region wins. `HTTP_CONTROL_SERVER_ADDRESS` is loopback only. `FIREWALL_OUTBOUND_SUBNETS` lists Equestria's pod and service CIDRs. `FIREWALL_INPUT_PORTS` lists the picker port and the two WireGuard ports. No resolver: `DNS_SERVER=off` with `DNS_KEEP_NAMESERVER=on`, so it leaves `resolv.conf` alone (with the server off alone it would rewrite it to Cloudflare), and `DNS_UPDATE_PERIOD=0`, so it never loads block lists. The healthcheck targets are IPs. IPv6 is off. Forwarding and the bypass go in `/iptables/post-rules.txt` (§D3). |
+| `netbird` | `netbirdio/netbird` (as the router pins) | `NB_SETUP_KEY` comes from the ExternalSecret. `NB_HOSTNAME=<name>` is the base: the command appends the pod-name suffix (`POD_NAME` from the downward API), so each pod enrols as `<name>-<suffix>` and never waits on the old peer's deletion (§F). The route and policies select the `region-exit-<name>` device group, not the peer name. `NB_DISABLE_CLIENT_ROUTES=true`, so it never uses another node's exit route. `NB_DISABLE_DNS=true` and `NB_DNS_RESOLVER_ADDRESS=127.0.0.153:5053`, where nothing uses it. Not 127.0.0.1: off port 53 NetBird DNATs `<listen IP>:53` to its own port, which on 127.0.0.1 hijacked gluetun's old resolver (SERVFAIL, then healthcheck restart loops). Nothing uses 127.0.0.1:53 now either, so the DNAT is harmless. State is in an emptyDir: the setup key is ephemeral, so each restart enrols fresh, which is also the only time NB_* env applies. |
 | `tailscale` | `tailscale/tailscale` | containerboot with `TS_USERSPACE=false`, `TS_DEBUG_FIREWALL_MODE=nftables` and `TS_ACCEPT_DNS=false`. `TS_HOSTNAME=<name>`. `TS_EXTRA_ARGS=--advertise-exit-node --accept-routes=false`. State goes in a Secret through `TS_KUBE_SECRET`, with RBAC for that Secret only. |
 | `picker` | `node:24-alpine` | The region picker (§D4). It shares a `/gluetun` emptyDir with gluetun, for `servers.json`, and the tailscaled and NetBird daemon sockets through emptyDirs. |
 
-Set the pod's `dnsPolicy: None` with nameserver `127.0.0.1`. Everything in the pod then resolves
-through gluetun's DNS-over-TLS over the tunnel. In particular, tailscaled answers Tailscale
-clients' DNS with it, which makes Tailscale's DNS match the region. A side effect is that
-NetBird cannot resolve the home relay's private name, so the region exits use the public relays.
+Set the pod's `dnsPolicy: None` with one nameserver: the cluster Technitium's pinned Service
+ClusterIP (the `TECHNITIUM_CLUSTER_IP` substitution, the address CoreDNS forwards the root domain
+to). Everything in the pod resolves through it: gluetun, NetBird, the picker, and tailscaled,
+which answers Tailscale clients' DNS from it. NetBird clients already resolve through Technitium
+(their nameserver groups), so both meshes give the same answers, and home names resolve on a
+region exit (decided 2026-11-07, ADR 0005).
+
+- **Path.** Lookups leave by `eth0`, outside the tunnel: the Service CIDR is in
+  `FIREWALL_OUTBOUND_SUBNETS`, which gives gluetun's rule 99 (table 199, via `eth0`) and its
+  OUTPUT accept (`internal/firewall/outboundsubnets.go`, v3.41.3), and in `routing.sh`'s
+  `region-exit-out` chain. The CiliumNetworkPolicy leaves egress open, and Technitium answers
+  recursion for private sources (`AllowOnlyForPrivateNetworks`), which the pod IP is.
+- **Trade-off.** Technitium forwards upstream from the home WAN, so geo-DNS answers (some CDNs
+  and streaming services) are home's. IP geolocation, which most services check, is the
+  region's. Technitium's block lists apply to region exit clients too.
+- **Resilience.** Technitium is a single replica, and a region exit has no second resolver
+  (tailscaled reads only the first anyway). While it restarts, the region exits' clients lose
+  DNS but keep their tunnel: gluetun's healthcheck dials IPs, never a name.
+- **Side effect.** NetBird in the pod can now resolve the home relay's private name, so the
+  region exits may use the home relay rather than only the public ones.
 
 ### D3. Forwarding (gluetun post-rules)
 
@@ -267,7 +292,8 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
      picker (region set by the defaults ConfigMap).
    - Resolve §G, then prove the following from a NetBird client and from a Tailscale client: the
      egress IP is in the US, P2P is direct (not relayed), killing gluetun drops traffic, and
-     Tailscale DNS resolves through the region exit.
+     Tailscale DNS resolves through the region exit. (Since 2026-11-07, through Technitium:
+     §D2.)
 3. **P2, region picker.** The overview, switching, persistence across a pod delete, the
    active-client count, metrics and alerts.
 4. **P3, all five.** Add the other four region exits. Walk the family runbook on a phone on each
@@ -296,10 +322,13 @@ old pod is gone within seconds.
 
 ## F. Known gaps (v1)
 
-- **NetBird DNS resolves at home.** Nameserver groups go to distribution groups, not to "peers
-  using route X". Services that geolocate by resolver, such as some CDNs and streaming services,
-  may see home. IP geolocation, which most services check, is correct. A later fix could be an
-  opt-in NetBird group whose nameserver is a region exit.
+- **DNS resolves at home, on both meshes. By design since 2026-11-07.** This began as a NetBird
+  gap: nameserver groups go to distribution groups, not to "peers using route X", so NetBird
+  clients on a region exit resolved through Technitium. Rather than make Tailscale differ, the
+  region exits now resolve through Technitium too (§A, §D2). Services that geolocate by
+  resolver, such as some CDNs and streaming services, may see home. IP geolocation, which most
+  services check, is the region's. Revisit only if a service that matters keys on the resolver:
+  then the fix is a per-region resolver for both meshes, not for one.
 - **NetBird IPv6 bypasses the region exit.** The routes are `0.0.0.0/0` only, and the tunnel is
   IPv4 only, so a NetBird client on a dual-stack network reaches IPv6 sites directly, from where
   it really is. Tailscale's `::/0` through a region exit fails closed instead, and the client

@@ -53,7 +53,7 @@ A site's way out to the internet that a client device may choose to send all of 
 _Avoid_: VPN server, egress
 
 **Region exit**:
-An exit node that leaves the internet through Mullvad, in a region family choose, rather than through a site. There are five, named after the Wonderbolts (spitfire, soarin, fleetfoot, misty-fly, high-winds), each offered on both NetBird and Tailscale. Family and admins may use them on both overlays, friends on NetBird only (Tailscale's grant is `group:family`); only family and admins change their region. A region exit fails closed: while its tunnel is down, nothing leaves. On NetBird, DNS still resolves at home and IPv6 bypasses it (ADR 0005).
+An exit node that leaves the internet through Mullvad, in a region family choose, rather than through a site. There are five, named after the Wonderbolts (spitfire, soarin, fleetfoot, misty-fly, high-winds), each offered on both NetBird and Tailscale. Family and admins may use them on both overlays, friends on NetBird only (Tailscale's grant is `group:family`); only family and admins change their region. A region exit fails closed: while its tunnel is down, nothing leaves. On both overlays its DNS resolves at home, through Technitium, so home names work but geo-DNS sees home; only the traffic leaves from the region. On NetBird, IPv6 bypasses it (ADR 0005).
 _Avoid_: VPN exit node, Mullvad exit (that was Tailscale's add-on), Wonderbolt (the name of one, not the kind)
 
 **Region**:
