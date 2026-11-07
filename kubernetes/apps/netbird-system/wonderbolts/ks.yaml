@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The region picker (GLOSSARY.md; docs/plans/wonderbolts-nuxt.md, ADR 0006):
+# the Nuxt app in apps/wonderbolts, which asks each region exit's agent (the
+# picker sidecar in ../region-exits) for its state and moves it. Beside the
+# region exits in netbird-system, whose CiliumNetworkPolicy lets these pods
+# (by the commonMetadata label below) reach the agents.
+#
+# No dependsOn on region-exits: the app shows a region exit that does not
+# answer as not responding, so it never needs them up first, and waiting on
+# that Kustomization would hold every update here behind theirs.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app wonderbolts
+  namespace: &namespace netbird-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/netbird-system/wonderbolts
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    # The image pull secret, from OpenBao.
+    - name: external-secrets
+      namespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: *app
+      namespace: *namespace
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

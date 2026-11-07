@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Traefik may talk to the region picker.
+#
+# The app decides who may move a region exit from the X-authentik-* headers
+# Traefik's forward auth sets (apps/wonderbolts/server/utils/viewer.ts). That
+# is only safe while nothing but Traefik can reach it: any other pod, or
+# anything the tailscale Connector routes onto the pod network, could send
+# `X-authentik-groups: family` itself. Same shape as
+# ../../coder/setup-status/ciliumnetworkpolicy.yaml.
+#
+# Allowed in: 8080/tcp from Traefik (traefik-network serves the internal
+# Gateway) and from `host`, for the kubelet's httpGet probes. Egress is
+# untouched: the app only calls the region exits' agents, whose own policy
+# (../region-exits/ciliumnetworkpolicy.yaml) lets these pods GET /status and
+# /regions and POST /region, and nothing else.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

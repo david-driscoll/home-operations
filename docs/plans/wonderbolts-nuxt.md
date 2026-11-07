@@ -108,10 +108,10 @@ through Technitium) goes once the overview leaves the agent.
       (the exit is on its Git default, its state ConfigMap was deleted, or it was moved before
       this existed) it reads "Moved by unknown". Every move is also logged with the username
       and display name (stdout, so Loki).
-11. **Display names need one shared-middleware change.** `X-authentik-name` is added to
-    `authResponseHeaders` in `kubernetes/apps/network/traefik/middleware/outpost.yaml`, as the
-    Dockge outpost already does (`docker/_common/traefik/compose.yaml`). Every forward-auth app
-    then gets one more header, which is harmless.
+11. **Display names need no middleware change.** `X-authentik-name` is already in
+    `authResponseHeaders` in `kubernetes/apps/network/traefik/middleware/outpost.yaml`, as in
+    the Dockge outpost (`docker/_common/traefik/compose.yaml`). The grilling assumed otherwise;
+    phase 3 found it was already there.
 12. **Same-day cleanup.** The old pages are deleted as soon as the cutover checks pass. Going
     back after that means reverting the cleanup and cutover commits, in that order. See phase
     6 for the friends ordering rule.
@@ -189,8 +189,11 @@ Times are shown in `America/New_York`.
 
 New app `kubernetes/apps/netbird-system/wonderbolts/`:
 
-- `ks.yaml`: `dependsOn` region-exits; same `commonMetadata` label pattern
-  (`app.kubernetes.io/name: wonderbolts`).
+- `ks.yaml`: `dependsOn` external-secrets only (the pull secret). Not region-exits: the app
+  shows a region exit that doesn't answer as not responding, and waiting on that
+  Kustomization would hold every update here behind theirs. The same `commonMetadata` label
+  pattern; app-template labels the pods `app.kubernetes.io/name: wonderbolts` from the release
+  name, which is what both CNPs select.
 - `helmrelease.yaml` (app-template 5.3.0): one controller, 2 replicas, image by tag and
   digest with the pull secret, `PORT=8080`, probes on `/healthz`, uid 1000,
   `readOnlyRootFilesystem`, drop ALL, `automountServiceAccountToken: false`. Small requests,
@@ -198,7 +201,10 @@ New app `kubernetes/apps/netbird-system/wonderbolts/`:
 - `route.wonderbolts-app`: `wonderbolts.${ROOT_DOMAIN}` on Gateway `internal` in `network`,
   `/` to the wonderbolts Service, `authenticated-user` filter. A different name from the
   region-exits route, so the two HelmReleases never fight over one object.
-- `externalsecret.yaml`: the forge pull secret.
+- `externalsecret.yaml`: the forge pull secret, reading the same OpenBao key as
+  pulumi-workspace's (`clusters/equestria/apps/pulumi/workspace-image-pull`, the
+  `estate-images` read token). That way there's no second token and no `stacks/system`
+  change.
 - `ciliumnetworkpolicy.yaml`: ingress on 8080 from Traefik (`traefik-network`) and `host`
   (probes), nothing else.
 - `definition.yaml` (from phase 7): today's, with `friends` added to `access_policy.groups`
@@ -211,8 +217,6 @@ Changes to `region-exits/`:
   and the peers' `GET /status` rule.
 - At cleanup, delete `route.wonderbolts`, `service.yaml` (`region-exits-pickers`) and
   `enableServiceLinks: true`.
-
-Shared: `X-authentik-name` in `network/traefik/middleware/outpost.yaml` (A11).
 
 ## E. Phases
 
@@ -230,10 +234,13 @@ Each phase is its own PR.
    `crane mutate --append`s `.output/` as `/app`, with the cmd, workdir, uid 1000 and env
    set on the image. Its tag is `<package version>-<12 hex of sha256(app tree hash, base
    pin)>`. Renovate wiring (A8) is a follow-up.
-3. **Deploy, unrouted.** `kubernetes/apps/netbird-system/wonderbolts/` without the route, plus
-   `X-authentik-name` on the outpost middleware. Check the app with `kubectl port-forward`
+3. **Deploy, unrouted.** `kubernetes/apps/netbird-system/wonderbolts/` without the route. It
+   needs the image's first tag and digest from phase 2's workflow run. Check the app with `kubectl port-forward`
    against the real agents, sending the `X-authentik-*` headers by hand: the overview, a page,
    a move on an exit nobody is on, a move that 409s, and a friend's move that 403s.
+   In a browser through the port-forward (a header extension, or a local proxy adding the
+   headers), check what phase 2's tests couldn't: the confirm modal, the reconnecting
+   state finishing, and the overview refreshing itself.
 4. **Cutover.** One commit: add `route.wonderbolts-app`, remove `route.wonderbolts`. While
    both exist the Gateway gives `/` to the older route, so the worst case is a few minutes of
    the old pages. Check: Gatus green (302), then the overview and one move as a family
