@@ -392,6 +392,22 @@
       allowedVersions: "!/^v?1\\./",
     },
     {
+      // prometheus-config-reloader v0.95.1's image index is amd64-only on both
+      // ghcr.io and quay.io (five linux/amd64 entries, no arm64), while
+      // v0.94.2 is multi-arch. docker/_common/prometheus runs on an arm64
+      // Dockge host, so v0.95.1 failed `docker compose pull` there and stalled
+      // the home-operations stack (2026-11-07). Skip just that release; drop
+      // this once a later one ships arm64 again.
+      description: "prometheus-config-reloader: skip the amd64-only v0.95.1",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/prometheus-operator/prometheus-config-reloader"
+      ],
+      allowedVersions: "!/^v0\\.95\\.1$/",
+    },
+    {
       // Paperless-ngx's Tika (kubernetes/apps/equestria/home/paperless) has to
       // stay on 3.x. Tika 4.0 removed the /tika/form/* endpoints Paperless's
       // bundled tika-client calls and renamed the metadata keys, so every
