@@ -25,7 +25,14 @@
  *                (management getPeerRoutesFirewallRules, v0.82.0), so this
  *                group exists to be that destination and nothing else
  *   equestria-entry  the cluster's two /32s via the in-cluster routers (#2889)
+ *   region-exit-<name>  a region exit's netbird sidecar, a peer group
+ *                (docs/plans/region-exits.md §C2)
+ *   region-exit-internet  the `region-*` routes' access-control group, as
+ *                exit-internet is for `exit-*`, but for family, friends and
+ *                admins only
  */
+
+import { REGION_EXIT_USER_GROUPS, REGION_EXITS, regionExitNetbird } from "./regionExits.ts";
 
 export type Protocol = "tcp" | "udp" | "icmp" | "all";
 
@@ -147,6 +154,26 @@ export const ACCESS_RULES: AccessRule[] = [
     destination: "k8s-routers",
     protocol: "icmp",
     mirrors: ["member-exit-node"],
+  },
+  // The region exits (docs/plans/region-exits.md §C2): the same pair as
+  // users-exit-nodes/users-internet, for family, friends and admins only.
+  ...REGION_EXITS.map(
+    (name): AccessRule => ({
+      name: `users-region-exit-${name}`,
+      description: `Connects users to region exit ${name} so its region-${name} route syncs; users-region-internet carries the traffic`,
+      sources: [...REGION_EXIT_USER_GROUPS],
+      destination: regionExitNetbird(name).deviceGroup,
+      protocol: "icmp",
+      mirrors: [],
+    }),
+  ),
+  {
+    name: "users-region-internet",
+    description: "The internet through a region exit: the region-* routes' access-control group, which is what their routing peers forward for",
+    sources: [...REGION_EXIT_USER_GROUPS],
+    destination: "region-exit-internet",
+    protocol: "all",
+    mirrors: [],
   },
   {
     name: "users-equestria",

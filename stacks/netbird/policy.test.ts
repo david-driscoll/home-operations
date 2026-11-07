@@ -78,6 +78,19 @@ describe("client access, mirroring member-home-subnet-access", () => {
     assert.ok(!can("gateways", "exit-internet", 443));
   });
 
+  it("lets family, friends and admins out through a region exit, and not media-managers or devices", () => {
+    for (const group of ["admins", "family", "friends"]) {
+      assert.ok(can(group, "region-exit-internet", 443), group);
+      assert.ok(can(group, "region-exit-internet", 53, "udp"), group);
+      assert.ok(can(group, "region-exit-spitfire", 0, "icmp"), `${group} reaches spitfire`);
+    }
+    for (const who of ["media-managers", "apple-tv", "gateways"]) {
+      assert.ok(!can(who, "region-exit-internet", 443), who);
+      assert.ok(!can(who, "region-exit-spitfire", 0, "icmp"), who);
+    }
+    assert.ok(!can("family", "region-exit-spitfire", 22), "only ICMP to the region exit itself");
+  });
+
   it("never targets a user group, which would open users' devices to each other", () => {
     for (const rule of ACCESS_RULES) assert.ok(!USER_GROUPS.includes(rule.destination), rule.name);
   });
