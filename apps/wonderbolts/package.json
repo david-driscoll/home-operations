@@ -5,7 +5,7 @@
   "description": "The region picker: every region exit's region and availability, and moving one (docs/plans/wonderbolts-nuxt.md).",
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.22.2"
   },
   "scripts": {
     "dev": "nuxt dev",
