@@ -139,9 +139,9 @@ tdarr-mcp's 105 tools, cut down by an `MCPToolConfig` allow-list in
 `agent-tools-servers/tdarr.yaml`: nothing that deletes media from disk or
 touches users or plugin code. The one raw DB tool, `tdarr_cruddb`, is allowed
 because it is the only way to manage flows, and it reaches every collection
-in every mode; see [tdarr.md](tdarr.md). `ecm`, `arr-*`, `teamarr` and
-`tdarr` all front `equestria` apps and fail 02:00-09:00, when that namespace is
-shed. `forgejo` is the in-cluster forge as the `claude-code` account (created
+in every mode; see [tdarr.md](tdarr.md). `ecm` and `arr-*` front `equestria`
+apps that are shed 01:00-07:00 and fail in that window; `teamarr` and `tdarr`
+front apps excluded from the shed and stay up. `forgejo` is the in-cluster forge as the `claude-code` account (created
 by `stacks/system`): in every organization repository it can write code,
 issues, pull requests, Actions (logs, re-run, dispatch), releases and wiki, and
 read packages; it has nothing in user-owned repositories, no repository

@@ -815,7 +815,7 @@ spec:
                           Per-endpoint maintenance windows, passed through to Gatus
                           `endpoints[].maintenance-windows`. During a window the endpoint is
                           still checked but does not alert. Used by the nightly Low Power
-                          shed (02:00-09:00 America/New_York) so a deliberately scaled-down
+                          shed (01:00-07:00 America/New_York) so a deliberately scaled-down
                           service does not page. This field MUST exist here: the CRD has no
                           x-kubernetes-preserve-unknown-fields, so an unknown key is pruned
                           by the API server before the Pulumi stack that renders the Gatus

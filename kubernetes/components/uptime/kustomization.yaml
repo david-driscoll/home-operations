@@ -45,14 +45,14 @@
 #      during working hours.
 #
 #   2. A narrower or shifted window on something with a scheduled job that
-#      would otherwise be missed. The *arr / download chain is the live example:
-#      radarr, sonarr, prowlarr, bazarr, autobrr, qbittorrent, sabnzbd and
-#      tautulli all do timed or webhook-driven background work and fail
-#      SILENTLY when they are down -- a completed download is never imported, a
-#      Sonarr webhook to Bazarr is fire-and-forget so it is lost rather than
-#      queued, and autobrr's IRC announces have no backfill at all. Today the
-#      estate default happens to be the right window for them; if it ever
-#      changes, they will need to pin this one.
+#      would otherwise be missed. The *arr / download chain was the example:
+#      it does timed or webhook-driven background work and fails SILENTLY when
+#      down -- a completed download is never imported, a Sonarr webhook to
+#      Bazarr is fire-and-forget so it is lost rather than queued, and
+#      autobrr's IRC announces have no backfill at all. Most of that chain
+#      (radarr, sonarr, prowlarr, autobrr, qbittorrent, sabnzbd, tautulli) is
+#      now excluded outright, so it never sheds; bazarr still follows the
+#      estate default.
 #
 #   3. Pinning a window in Git so a change to the estate default does not
 #      silently move an app that had a reason to be where it was.

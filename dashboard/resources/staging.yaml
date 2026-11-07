@@ -166,8 +166,8 @@
         # leave the cluster; `title-url` is what a browser follows, so it is the
         # public name.
         #
-        # Tracearr is shed nightly 02:00-09:00 with the rest of `equestria`, so
-        # these show their failure text in that window.
+        # Tracearr is excluded from the nightly 01:00-07:00 shed, so these stay
+        # live overnight; failure text here means Tracearr is actually down.
         - type: custom-api
           title: Tracearr Today
           title-url: https://tracearr.${ROOT_DOMAIN}

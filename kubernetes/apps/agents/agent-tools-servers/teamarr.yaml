@@ -35,10 +35,9 @@
 # https://teamarr.${ROOT_DOMAIN} -- that route sits behind the `local-user`
 # middleware, and this traffic never leaves the cluster network anyway.
 #
-# EXPECTED TO BE UNREACHABLE 02:00-09:00: Teamarr sheds nightly with the rest
-# of `equestria` (docs/cluster-consolidation/24-power-states.md), exactly like
-# the ECM and arr-mcp backends. This pod stays up through the
-# window; a tool call in it fails rather than answering from a cache.
+# Teamarr is excluded from the nightly 01:00-07:00 `equestria` shed (#2177),
+# so unlike the ECM and arr-mcp backends it answers overnight too. When it is
+# down, a tool call fails rather than answering from a cache.
 #
 # `latest@sha256:` because upstream publishes only `latest`/`main`; Renovate's
 # kubernetes manager keeps the digest current.
