@@ -1,17 +1,24 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The region exits (docs/plans/region-exits.md, ADR 0005): exit nodes that
+# leave through Mullvad, one privileged pod each (gluetun, tailscaled, NetBird
+# and the region picker sharing one network namespace). Part of the NetBird
+# estate, so they live in netbird-system (decided 2026-11-07) and share its
+# downscaler exclusion. Nothing here relies on a namespace label: the old
+# region-exits namespace's PodSecurity patch went with it (ADR 0005).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app region-exits
-  namespace: &namespace region-exits
+  namespace: &namespace netbird-system
 spec:
   targetNamespace: *namespace
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
-  path: ./kubernetes/apps/region-exits/app
+  path: ./kubernetes/apps/netbird-system/region-exits
   prune: true
   wait: false
   force: false

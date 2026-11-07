@@ -4,7 +4,8 @@
 # NetBird's in-cluster entry path (#2889, docs/plans/netbird-mirror.md §G):
 # the operator, and the routing peers it runs; and nbidp (#2891, §K), the
 # private reverse proxy and Dex behind "log in with NetBird"; and the failover
-# watchdog (#3001, §E) that moves the server's DNS lease to the standby. Routing peers are privileged
+# watchdog (#3001, §E) that moves the server's DNS lease to the standby; and
+# the region exits (docs/plans/region-exits.md). Routing peers and region exits are privileged
 # pods (NET_ADMIN, a WireGuard interface), hence the PodSecurity label.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -28,3 +29,7 @@ resources:
   - ./health/ks.yaml
   # Restarts the nbidp proxy when its management stream stalls (watchdog.ts).
   - ./proxy-watchdog/ks.yaml
+  # The region exits (docs/plans/region-exits.md, ADR 0005): Mullvad exit
+  # nodes on the NetBird and Tailscale overlays, privileged like the routing
+  # peers.
+  - ./region-exits/ks.yaml

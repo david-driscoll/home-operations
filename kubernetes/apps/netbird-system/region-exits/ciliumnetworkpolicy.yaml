@@ -10,6 +10,12 @@
 # switch straight to the Service. Same shape as
 # ../../coder/setup-status/ciliumnetworkpolicy.yaml.
 #
+# The endpointSelector is the Flux Kustomization's commonMetadata label
+# (ks.yaml), which only the region exits' objects carry: the other
+# netbird-system pods (operator, routing peers, nbidp, the CronJobs) are
+# labelled with their own names and are not selected. No other policy in
+# netbird-system selects these pods (nbidp's selects only its Dex).
+#
 # Selecting the pods puts them into default-deny for ingress. Allowed:
 #   - 8080/tcp from Traefik (traefik-network serves the internal Gateway the
 #     route is on), and from `host` for the kubelet's httpGet probes. The
@@ -21,14 +27,19 @@
 #     back to DERP and relays. These ports only carry WireGuard and disco/ICE,
 #     which authenticate every packet, and gluetun's FIREWALL_INPUT_PORTS opens
 #     the same two.
+#   - 8080/tcp from Prometheus (observability, the operator's `prometheus`
+#     instance), L7: `GET /metrics` only, for the ServiceMonitor (#3142).
+#     Cilium's proxy answers any other method or path with 403, so the
+#     scraper cannot reach the POST that switches region. Same L7 shape as
+#     ../nbidp/ciliumnetworkpolicy.yaml.
+#   - GET /status on 8080 from the region exits' own pods, for the overview
+#     at / (#3143, overview.ts): whichever picker serves it reads every region
+#     exit's /status, its own included. An L7 rule, never a plain port rule:
+#     the same port takes the POST that switches region, and one picker must
+#     not be able to move another. Cilium's path is a full-match regex.
 # Everything else (gluetun's 8000 and 9999 are loopback or overlay-dropped
 # anyway) is closed. Egress is untouched: the tunnel, the overlays' control
 # planes and the Kubernetes API.
-#
-# #3143 (the overview at /) will read each region exit's GET /status from
-# inside the namespace. Add that then, as an L7 rule (`rules.http` with
-# method GET, path /status) from the overview's pods, never as a plain port
-# rule: the same port takes the POST that switches region.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -47,12 +58,37 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: observability
+            app.kubernetes.io/name: prometheus
+            operator.prometheus.io/name: prometheus
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+          rules:
+            http:
+              - method: GET
+                path: /metrics
     - fromEntities:
         - host
       toPorts:
         - ports:
             - port: "8080"
               protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: netbird-system
+            app.kubernetes.io/name: region-exits
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+          rules:
+            http:
+              - method: GET
+                path: /status
     - fromEntities:
         - all
       toPorts:

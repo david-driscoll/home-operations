@@ -196,7 +196,7 @@ const setupKeys = {
   // keeps its peer, and so its overlay address, across restarts. Read by
   // docker/_common/technitium and Equestria's ExternalSecret as `#/dns`.
   dns: setupKey("dns-servers", groups.dnsServers).key,
-  // The region exits' netbird sidecars, read by kubernetes/apps/region-exits
+  // The region exits' netbird sidecars, read by kubernetes/apps/netbird-system/region-exits
   // as `region_exit_<name>`.
   ...Object.fromEntries(regionExitPeers.map(exit => [exit.names.setupKeyProperty, exit.setupKey])),
 };
@@ -594,7 +594,7 @@ for (const { name, names, deviceGroup } of regionExitPeers) {
     names.route,
     {
       networkId: names.route,
-      description: `Exit through region exit ${name}: its pod's gluetun, out of Mullvad (kubernetes/apps/region-exits)`,
+      description: `Exit through region exit ${name}: its pod's gluetun, out of Mullvad (kubernetes/apps/netbird-system/region-exits)`,
       network: "0.0.0.0/0",
       peerGroups: [deviceGroup.id],
       groups: REGION_EXIT_USER_GROUPS.map(user => userGroups[user].id),

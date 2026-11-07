@@ -3,10 +3,11 @@
  *
  * One reusable, preauthorised key tagged tag:region-exit, in the Equestria
  * Secret `tailscale-system/tailscale-region-exit-authkey`. Reflector mirrors it
- * into the region-exits namespace (kubernetes/apps/region-exits/app/
- * tailscale-authkey.yaml), as it does tailscale-dns-authkey for Technitium.
- * It goes to tailscale-system rather than straight into region-exits so this
- * stack never depends on Flux having created that namespace first.
+ * into netbird-system, where the region exits run (kubernetes/apps/netbird-system/
+ * region-exits/tailscale-authkey.yaml), as it does tailscale-dns-authkey for
+ * Technitium, and into no other namespace. It goes to tailscale-system rather
+ * than straight into netbird-system so this stack never depends on Flux having
+ * created that namespace first.
  *
  * The tag has to be in the tailnet policy before the key can be minted:
  * configureRegionExits (acl-manager.ts) adds it in the same run, so the key
@@ -20,6 +21,8 @@ import { Tailscale } from "components/constants.ts";
 import type { GlobalResources } from "components/globals.ts";
 
 export const REGION_EXIT_AUTHKEY_SECRET = "tailscale-region-exit-authkey";
+/** Where the region exits run (ADR 0005), the only namespace the key is mirrored to. */
+export const REGION_EXIT_NAMESPACE = "netbird-system";
 
 export function createRegionExitAuthKey(globals: GlobalResources, provider: kubernetes.Provider, tailnetAcl: pulumi.Input<pulumi.Resource>): void {
   const key = new TailnetKey(
@@ -41,7 +44,10 @@ export function createRegionExitAuthKey(globals: GlobalResources, provider: kube
       metadata: {
         name: REGION_EXIT_AUTHKEY_SECRET,
         namespace: "tailscale-system",
-        annotations: { "reflector.v1.k8s.emberstack.com/reflection-allowed": "true" },
+        annotations: {
+          "reflector.v1.k8s.emberstack.com/reflection-allowed": "true",
+          "reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces": REGION_EXIT_NAMESPACE,
+        },
       },
       type: "Opaque",
       stringData: { authkey: key.key },
