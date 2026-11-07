@@ -14,6 +14,7 @@
  *
  *   POST   https://api.mullvad.net/auth/v1/token          {account_number}      -> {access_token, expiry}
  *   POST   https://api.mullvad.net/accounts/v1/devices     {pubkey, hijack_dns}  -> 201 {id, name, pubkey, ipv4_address, ipv6_address, ...}
+ *   GET    https://api.mullvad.net/accounts/v1/devices/<id>                      -> 200 {id, name, pubkey, ipv4_address, ...}
  *   DELETE https://api.mullvad.net/accounts/v1/devices/<id>                      -> 204
  *
  * Device calls carry `Authorization: Bearer <access_token>`. Errors are JSON
@@ -140,7 +141,20 @@ async function revokeDevice(accountNumber: string, deviceId: string): Promise<vo
   throw error;
 }
 
-/** Exported for components/mullvad.test.ts; stacks use `MullvadDevice`. */
+/** The device as Mullvad has it now, or undefined once it is revoked. */
+async function fetchDevice(accountNumber: string, deviceId: string): Promise<DeviceResponse | undefined> {
+  const token = await accessToken(accountNumber);
+  const path = `/accounts/v1/devices/${encodeURIComponent(deviceId)}`;
+  const response = await fetch(`${MULLVAD_API}${path}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+  if (!response.ok) {
+    const error = await apiError(`GET ${path}`, response);
+    if (error.status === 404 || error.code.endsWith(DEVICE_NOT_FOUND)) return undefined;
+    throw error;
+  }
+  return (await response.json()) as DeviceResponse;
+}
+
+/** Exported for dynamic/mullvad/MullvadDevice.test.ts; stacks use `MullvadDevice`. */
 export const mullvadDeviceProvider = {
   /**
    * A new account or label is a different device. Delete first: the five
@@ -154,10 +168,15 @@ export const mullvadDeviceProvider = {
   async delete(id: string, olds: MullvadDeviceOutputs): Promise<void> {
     await revokeDevice(olds.accountNumber, id);
   },
-  async update(_id: string, olds: MullvadDeviceOutputs, news: ProviderInputs): Promise<{ outs: MullvadDeviceOutputs }> {
-    // diff replaces on every input that matters, so nothing reaches here but
-    // a no-op; keep the device as it is.
-    return { outs: { ...olds, ...news } };
+  /**
+   * Refresh: a device revoked by hand (or by the app) comes back with no id,
+   * so `pulumi refresh` drops it and the next `up` registers a fresh one. The
+   * private key is only ever in state; Mullvad never had it.
+   */
+  async read(id: string, olds: MullvadDeviceOutputs): Promise<{ id?: string; props?: MullvadDeviceOutputs }> {
+    const device = await fetchDevice(olds.accountNumber, id);
+    if (!device) return {};
+    return { id, props: { ...olds, deviceId: device.id, deviceName: device.name, ipv4Address: device.ipv4_address, publicKey: device.pubkey } };
   },
   async create(inputs: ProviderInputs): Promise<{ id: string; outs: MullvadDeviceOutputs }> {
     const keypair = await generateWireguardKeypair();
@@ -167,7 +186,7 @@ export const mullvadDeviceProvider = {
       outs: { ...inputs, deviceId: device.id, deviceName: device.name, ipv4Address: device.ipv4_address, publicKey: keypair.publicKey, privateKey: keypair.privateKey },
     };
   },
-};
+} satisfies pulumi.dynamic.ResourceProvider;
 
 export class MullvadDevice extends pulumi.dynamic.Resource {
   /** Mullvad's device id. */

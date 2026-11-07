@@ -11,7 +11,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import { GlobalResources } from "components/globals.ts";
-import { MullvadDevice } from "components/mullvad.ts";
+import { MullvadDevice } from "dynamic/mullvad/MullvadDevice.ts";
 import { REGION_EXITS, regionExitBaoData } from "./baoData.ts";
 
 const globals = new GlobalResources({}, {});
