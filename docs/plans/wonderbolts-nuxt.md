@@ -198,9 +198,10 @@ New app `kubernetes/apps/netbird-system/wonderbolts/`:
   digest with the pull secret, `PORT=8080`, probes on `/healthz`, uid 1000,
   `readOnlyRootFilesystem`, drop ALL, `automountServiceAccountToken: false`. Small requests,
   a `256Mi` memory limit to start.
-- `route.wonderbolts-app`: `wonderbolts.${ROOT_DOMAIN}` on Gateway `internal` in `network`,
-  `/` to the wonderbolts Service, `authenticated-user` filter. A different name from the
-  region-exits route, so the two HelmReleases never fight over one object.
+- `route.app`: `wonderbolts.${ROOT_DOMAIN}` on Gateway `internal` in `network`, `/` to the
+  wonderbolts Service, with the `authenticated-user` filter. app-template names a release's
+  only HTTPRoute after the release, so this is HTTPRoute `wonderbolts` and the old one is
+  `region-exits`. The two never shared a name.
 - `externalsecret.yaml`: the forge pull secret, reading the same OpenBao key as
   pulumi-workspace's (`clusters/equestria/apps/pulumi/workspace-image-pull`, the
   `estate-images` read token). That way there's no second token and no `stacks/system`
@@ -241,9 +242,11 @@ Each phase is its own PR.
    In a browser through the port-forward (a header extension, or a local proxy adding the
    headers), check what phase 2's tests couldn't: the confirm modal, the reconnecting
    state finishing, and the overview refreshing itself.
-4. **Cutover.** One commit: add `route.wonderbolts-app`, remove `route.wonderbolts`. While
-   both exist the Gateway gives `/` to the older route, so the worst case is a few minutes of
-   the old pages. Check: Gatus green (302), then the overview and one move as a family
+4. **Cutover.** One commit: add `route.app` to wonderbolts and remove region-exits'
+   `route.wonderbolts`. The two Kustomizations reconcile separately, so for a few minutes
+   either both HTTPRoutes exist or neither does. With both, the longest prefix wins across
+   routes: `/<name>` stays on the old pages and `/` goes to whichever route is older. With
+   neither, the host 404s. Either way the worst case is a few minutes. Check: Gatus green (302), then the overview and one move as a family
    account in a browser. Rollback is reverting this commit.
 5. **Cleanup, the same day.** Strip the HTML, `overview.ts`, `html.ts` and the
    `/<name>/...` paths from the agent; delete `region-exits-pickers`, Traefik's and the peers'
