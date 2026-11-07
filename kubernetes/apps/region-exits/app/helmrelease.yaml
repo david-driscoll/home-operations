@@ -10,8 +10,7 @@
 #                   127.0.0.1:53 (resources/post-rules.txt)
 #   tailscale       containerboot, advertising an exit node
 #   netbird         the routing peer for the `region-spitfire` route (#3139)
-#
-# The region picker (#3140) joins later.
+#   picker          the region picker (#3140)
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -62,6 +61,17 @@ spec:
             - apiGroups: [""]
               resources: ["events"]
               verbs: ["get", "create", "patch"]
+            # The picker (#3140) saves the picked region in its state
+            # ConfigMap. create cannot be scoped by name (the name is in the
+            # body, not the URL, when RBAC decides), so it is namespace-wide;
+            # it can make a ConfigMap but not read or change any other.
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              verbs: ["create"]
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              resourceNames: ["region-exit-spitfire-state"]
+              verbs: ["get", "patch"]
       bindings:
         spitfire:
           type: RoleBinding
@@ -121,6 +131,10 @@ spec:
               DNS_UPSTREAM_IPV6: "off"
               # Never off the pod. The picker (#3140) calls it on loopback.
               HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
+              # Every route open to loopback, with no key: v3.41.3's built-in
+              # role omits PUT /v1/vpn/settings, which the picker switches
+              # with. Loopback is the boundary (internal/server/middlewares/auth).
+              HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE: '{"auth":"none"}'
               # Equestria's pods and Services, and its control planes: the
               # kubernetes Service is socket-load-balanced to a control-plane
               # address before routing, and containerboot needs the API for
@@ -130,9 +144,9 @@ spec:
               # (TS_TAILSCALED_EXTRA_ARGS, NB_WIREGUARD_PORT below), on eth0,
               # for peers dialling in directly. Only on the default interface:
               # gluetun opens these per default route.
-              # The picker's port (8080, #3140) belongs here too; routing.sh
-              # already drops it on tailscale0 and wt0.
-              FIREWALL_INPUT_PORTS: "41641,51821"
+              # And the picker's 8080, for the Gateway and the kubelet's
+              # probes on eth0; routing.sh drops it on tailscale0 and wt0.
+              FIREWALL_INPUT_PORTS: "41641,8080,51821"
             envFrom:
               # WIREGUARD_PRIVATE_KEY, WIREGUARD_ADDRESSES (IPv4 /32 only, so
               # the tunnel is IPv4 only).
@@ -259,6 +273,48 @@ spec:
                 memory: 64Mi
               limits:
                 memory: 256Mi
+          # The region picker (#3140, ./picker.ts): /spitfire on
+          # wonderbolts.<root domain>, /status for in-cluster readers.
+          picker:
+            image:
+              # The same pin as netbird-system/proxy-watchdog.
+              repository: node
+              tag: 24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+            # Node strips the types itself.
+            command: ["node", "/app/picker.ts"]
+            env:
+              REGION_EXIT_NAME: spitfire
+              PORT: "8080"
+              POD_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+              NODE_EXTRA_CA_CERTS: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            probes:
+              liveness: &picker-probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &picker-port 8080
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness: *picker-probe
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
 
     defaultPodOptions:
       securityContext:
@@ -291,3 +347,53 @@ spec:
           spitfire:
             netbird:
               - path: /var/lib/netbird
+      picker:
+        type: configMap
+        name: region-exit-picker
+        advancedMounts:
+          spitfire:
+            picker:
+              - path: /app
+                readOnly: true
+      # gluetun writes servers.json here; the picker reads the Mullvad
+      # countries and cities from it.
+      gluetun:
+        type: emptyDir
+        advancedMounts:
+          spitfire:
+            gluetun:
+              - path: /gluetun
+            picker:
+              - path: /gluetun
+                readOnly: true
+
+    service:
+      spitfire:
+        controller: spitfire
+        ports:
+          http:
+            port: *picker-port
+
+    route:
+      # The region picker. /spitfire only for now; / is the overview (#3143).
+      wonderbolts:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "wonderbolts.${ROOT_DOMAIN}"
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /spitfire
+            backendRefs:
+              - identifier: spitfire
+                port: *picker-port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user
