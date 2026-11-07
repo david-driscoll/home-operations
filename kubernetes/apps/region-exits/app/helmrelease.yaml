@@ -9,8 +9,9 @@
 #   gluetun         Mullvad WireGuard on tun0; its firewall, its DNS-over-TLS on
 #                   127.0.0.1:53 (resources/post-rules.txt)
 #   tailscale       containerboot, advertising an exit node
+#   netbird         the routing peer for the `region-spitfire` route (#3139)
 #
-# The NetBird sidecar (#3139) and the region picker (#3140) join later.
+# The region picker (#3140) joins later.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -125,12 +126,13 @@ spec:
               # address before routing, and containerboot needs the API for
               # TS_KUBE_SECRET.
               FIREWALL_OUTBOUND_SUBNETS: "10.206.0.0/16,10.196.0.0/16,10.10.206.0/24"
-              # tailscaled's fixed WireGuard port (TS_TAILSCALED_EXTRA_ARGS
-              # below), on eth0, for peers dialling in directly. Only on the
-              # default interface: gluetun opens these per default route.
+              # tailscaled's and NetBird's fixed WireGuard ports
+              # (TS_TAILSCALED_EXTRA_ARGS, NB_WIREGUARD_PORT below), on eth0,
+              # for peers dialling in directly. Only on the default interface:
+              # gluetun opens these per default route.
               # The picker's port (8080, #3140) belongs here too; routing.sh
               # already drops it on tailscale0 and wt0.
-              FIREWALL_INPUT_PORTS: "41641"
+              FIREWALL_INPUT_PORTS: "41641,51821"
             envFrom:
               # WIREGUARD_PRIVATE_KEY, WIREGUARD_ADDRESSES (IPv4 /32 only, so
               # the tunnel is IPv4 only).
@@ -217,6 +219,46 @@ spec:
                 memory: 64Mi
               limits:
                 memory: 256Mi
+          netbird:
+            # The routing peer for `region-spitfire` (stacks/netbird, plan
+            # §C2, §D2), in kernel mode on wt0. Its own packets carry mark
+            # 0x1bd00 and leave over eth0 (routing.sh rule 91); its peers'
+            # traffic is forwarded wt0 -> tun0 (post-rules.txt), and never to
+            # eth0 (routing.sh's mangle kill switch).
+            image:
+              repository: netbirdio/netbird
+              tag: 0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
+            env:
+              NB_MANAGEMENT_URL: https://netbird.${ROOT_DOMAIN}
+              NB_SETUP_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: region-exit-spitfire-netbird
+                    key: NB_SETUP_KEY
+              NB_HOSTNAME: spitfire
+              # A routing peer, never a client: it must not pick up another
+              # peer's exit route.
+              NB_DISABLE_CLIENT_ROUTES: "true"
+              # gluetun owns :53 in this namespace. NB_DISABLE_DNS alone still
+              # binds <wt0 address>:53, so park NetBird's resolver on loopback
+              # as Technitium's sidecar does. NB_* env applies only at
+              # enrolment; the state below is an emptyDir and the key
+              # ephemeral, so every pod enrols fresh and always takes it.
+              NB_DISABLE_DNS: "true"
+              NB_DNS_RESOLVER_ADDRESS: "127.0.0.1:5053"
+              # Fixed for gluetun's FIREWALL_INPUT_PORTS, and clear of
+              # tailscale's 41641. Change both together.
+              NB_WIREGUARD_PORT: "51821"
+              NB_LOG_LEVEL: info
+              NB_LOG_FILE: console
+            securityContext:
+              privileged: true
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
 
     defaultPodOptions:
       securityContext:
@@ -240,3 +282,12 @@ spec:
               - path: /iptables/post-rules.txt
                 subPath: post-rules.txt
                 readOnly: true
+      # NetBird's peer state. An emptyDir on purpose: the setup key is
+      # ephemeral, so each pod enrols a new peer and management removes the
+      # old one, and enrolment is the only time NB_* env applies.
+      netbird-state:
+        type: emptyDir
+        advancedMounts:
+          spitfire:
+            netbird:
+              - path: /var/lib/netbird

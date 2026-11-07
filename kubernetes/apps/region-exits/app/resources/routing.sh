@@ -23,8 +23,9 @@ sysctl -w net.ipv4.conf.default.rp_filter=2
 # Priorities in this namespace (§G2, read from the pinned sources):
 #   0       local table
 #   90      ours: tailscaled's own packets (fwmark 0x80000/0xff0000) -> table 100
-#   91      reserved: NetBird's own packets (fwmark 0x1bd00) -> table 100 (#3139)
+#   91      ours: NetBird's own packets (fwmark 0x1bd00) -> table 100 (#3139)
 #   95      ours: to 100.64.0.0/10 -> table 52 (tailscaled's peer routes)
+#   96      ours: to 10.100.0.0/16 -> main, minus its default (wt0's link route)
 #   98      gluetun: to each local network -> main (routing/local.go)
 #   99      gluetun: to FIREWALL_OUTBOUND_SUBNETS -> table 199 (routing/outbound.go)
 #   100     gluetun: from the pod IP -> table 200 (routing/inbound.go)
@@ -53,12 +54,24 @@ done
 ip rule del priority 90 2>/dev/null || true
 ip rule add priority 90 fwmark 0x80000/0xff0000 lookup 100
 
+# 91: the same for NetBird (#3139). Its control, signal, relay and WireGuard
+# sockets carry 0x1bd00, so P2P to its peers starts from the home WAN.
+ip rule del priority 91 2>/dev/null || true
+ip rule add priority 91 fwmark 0x1bd00 lookup 100
+
 # 95: replies to Tailscale clients. Forwarded traffic is masqueraded out tun0;
 # the replies are de-NATed to the client's 100.x address, and without this
 # rule gluetun's 101 would route them back into the tunnel instead of
 # tailscale0. If table 52 has no route, the lookup falls through.
 ip rule del priority 95 2>/dev/null || true
 ip rule add priority 95 to 100.64.0.0/10 lookup 52
+
+# 96: replies to NetBird clients, de-NATed to their 10.100.x address, for the
+# same reason. In kernel mode wt0's /16 link route is in main; suppressing
+# main's default route makes the lookup fall through while wt0 is down,
+# rather than leave by eth0.
+ip rule del priority 96 2>/dev/null || true
+ip rule add priority 96 to 10.100.0.0/16 lookup main suppress_prefixlength 0
 
 # --- kill switch (§G7) --------------------------------------------------------
 # tailscaled's nftables mode puts its ts-forward chain in the SAME `filter`
@@ -78,6 +91,19 @@ iptables-nft -t mangle -C FORWARD -i tailscale0 ! -o tun0 -j DROP 2>/dev/null \
   || iptables-nft -t mangle -A FORWARD -i tailscale0 ! -o tun0 -j DROP
 ip6tables-nft -t mangle -C FORWARD -i tailscale0 -j DROP 2>/dev/null \
   || ip6tables-nft -t mangle -A FORWARD -i tailscale0 -j DROP
+
+# NetBird (#3139) does the same to filter FORWARD: it inserts `-i wt0 -j
+# ACCEPT` at position 1, with iptables or else nftables
+# (client/firewall/nftables/chains_linux.go acceptFilterTableRules, v0.82.0),
+# and its own `netbird` table has forward chains too. It adds accepts to
+# other tables' forward chains, but never to iptables-managed ones such as
+# mangle (isIptablesTable), so this drop is untouched and final as above.
+# IPv6 from wt0 (management routes ::/0 to an exit for peers with an overlay
+# IPv6 address) is dropped too, so those clients fall back to IPv4.
+iptables-nft -t mangle -C FORWARD -i wt0 ! -o tun0 -j DROP 2>/dev/null \
+  || iptables-nft -t mangle -A FORWARD -i wt0 ! -o tun0 -j DROP
+ip6tables-nft -t mangle -C FORWARD -i wt0 -j DROP 2>/dev/null \
+  || ip6tables-nft -t mangle -A FORWARD -i wt0 -j DROP
 
 # --- local services stay off the overlays -------------------------------------
 # tailscaled's ts-input accepts everything arriving on tailscale0 the same way,

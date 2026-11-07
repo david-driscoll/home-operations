@@ -177,6 +177,13 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
   tailscaled's `ts-forward` accepts client traffic first (§G7). The kill switch is a mangle
   FORWARD drop of anything from tailscale0 not going out tun0, set by the `routing` init
   container (`kubernetes/apps/region-exits/app/resources/routing.sh`).
+- NetBird does the same as tailscaled: it inserts `-i wt0 -j ACCEPT` at the top of filter FORWARD
+  and INPUT. It never adds rules to iptables-managed tables such as mangle
+  ([chains_linux.go](https://github.com/netbirdio/netbird/blob/v0.82.0/client/firewall/nftables/chains_linux.go),
+  `isIptablesTable`). So wt0 gets the same mangle drops: FORWARD `-i wt0 ! -o tun0`, all IPv6
+  from wt0, and the INPUT port drops. Rule 91 sends NetBird's own `0x1bd00` packets to table 100,
+  and rule 96 (`to 10.100.0.0/16`, main without its default route) returns replies to NetBird
+  clients over wt0.
 
 ### D4. Region picker
 
@@ -238,6 +245,12 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
   IPv4 only, so a NetBird client on a dual-stack network reaches IPv6 sites directly, from where
   it really is. Tailscale's `::/0` through a region exit fails closed instead, and the client
   falls back to IPv4.
+
+  **To confirm live (#3139):** the account has an overlay IPv6 range for every peer, and
+  management adds the `::/0` half of a `0.0.0.0/0` exit route for peers with an overlay IPv6
+  address (`stacks/netbird/index.ts`, section 5). If so, NetBird clients' IPv6 also reaches
+  spitfire, where the mangle drop on IPv6 from wt0 fails it closed, as on Tailscale. Record
+  which of the two a dual-stack client sees.
 - **No locking.** A family member can move a region exit someone else is using. The picker
   warns before it switches.
 

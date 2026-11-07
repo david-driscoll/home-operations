@@ -137,7 +137,7 @@ export const ACCESS_RULES: AccessRule[] = [
     sources: USER_GROUPS,
     destination: "gateways",
     protocol: "icmp",
-    mirrors: ["member-exit-node"],
+    mirrors: ["member-exit-node", "member-exit-node-devices"],
   },
   {
     name: "users-internet",
@@ -173,7 +173,7 @@ export const ACCESS_RULES: AccessRule[] = [
     sources: [...REGION_EXIT_USER_GROUPS],
     destination: "region-exit-internet",
     protocol: "all",
-    mirrors: [],
+    mirrors: ["region-exit"],
   },
   {
     name: "users-equestria",
