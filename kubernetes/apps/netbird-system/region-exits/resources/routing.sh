@@ -136,8 +136,9 @@ ip6tables-nft -t mangle -C FORWARD -i wt0 -j DROP 2>/dev/null \
 #
 # What may leave by eth0: replies; tailscaled's and NetBird's own packets;
 # gluetun's WireGuard to the Mullvad server (marked with its fwmark 51820,
-# 0xca6c); and gluetun's FIREWALL_OUTBOUND_SUBNETS (change both together).
-# Everything else - gluetun's DNS and public-IP lookups, the picker - must go
+# 0xca6c); and gluetun's FIREWALL_OUTBOUND_SUBNETS (change both together),
+# which include the Service CIDR and so the pod's resolver, Technitium.
+# Everything else - gluetun's public-IP lookups, the picker - must go
 # through tun0, and is dropped while the tunnel is down.
 iptables-nft -t mangle -N region-exit-out 2>/dev/null \
   || iptables-nft -t mangle -F region-exit-out

@@ -99,9 +99,10 @@ spec:
             severity: warning
         # One alert per overlay: tailscaled not Running with a live control
         # connection, or NetBird's wt0 gone or down (overlays.ts). Held back
-        # while the tunnel is down: the pod resolves DNS through gluetun, so a
-        # dead tunnel can take the overlays' control connections with it, and
-        # RegionExitTunnelDown already says so.
+        # while the tunnel is down, which RegionExitTunnelDown already reports:
+        # a region exit without its tunnel is no use to either overlay. (Their
+        # control connections no longer need the tunnel for DNS: the pod
+        # resolves through Technitium over eth0.)
         - alert: RegionExitOverlayOffline
           annotations:
             summary: Region exit {{ $labels.region_exit }} is offline on {{ $labels.overlay }}.

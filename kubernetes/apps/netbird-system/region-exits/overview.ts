@@ -7,7 +7,7 @@
  * itself included. One region exit that does not answer shows as not
  * responding; the page still lists the rest.
  *
- * The pod resolves names through gluetun's DNS-over-TLS (dnsPolicy None), so
+ * The pod resolves names through Technitium, not CoreDNS (dnsPolicy None), so
  * cluster names do not resolve: the peers' Services are found through the
  * `<SERVICE>_SERVICE_HOST`/`_PORT` variables Kubernetes injects
  * (enableServiceLinks), and gluetun's FIREWALL_OUTBOUND_SUBNETS lets the

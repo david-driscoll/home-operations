@@ -10,8 +10,8 @@
 #
 #   routing (init)  sysctls, the eth0 bypass for tailscaled's own packets, the
 #                   kill switch (resources/routing.sh)
-#   gluetun         Mullvad WireGuard on tun0; its firewall, its DNS-over-TLS on
-#                   127.0.0.1:53 (resources/post-rules.txt)
+#   gluetun         Mullvad WireGuard on tun0 and its firewall
+#                   (resources/post-rules.txt); no resolver of its own
 #   tailscale       containerboot, advertising an exit node
 #   netbird         the routing peer for the `region-<name>` route (#3139)
 #   picker          the region picker (#3140) and the overview (#3143)
@@ -210,16 +210,33 @@ spec:
         pod: &pod
           automountServiceAccountToken: true
           # The overview (overview.ts) finds the other region exits' Services
-          # by the variables this injects: the pod's resolver is gluetun's, which
-          # knows no cluster names.
+          # by the variables this injects: the pod's resolver is Technitium,
+          # not CoreDNS, so cluster names do not resolve.
           enableServiceLinks: true
-          # Everything in the pod resolves through gluetun's DNS-over-TLS, over
-          # the tunnel. tailscaled answers exit-node clients' DNS from this
-          # resolver, so their DNS follows the region (§D2).
+          # Everything in the pod resolves through the cluster Technitium
+          # (decided 2026-11-07, plan §D2, ADR 0005): gluetun, NetBird, the
+          # picker, and tailscaled, which answers its exit-node clients' DNS
+          # from the first nameserver here (net/dns/resolver/tsdns.go
+          # HandleExitNodeDNSQuery and stubResolverForOS, v1.104.4). Home names
+          # resolve on both meshes, and Technitium forwards everything else
+          # upstream from the home WAN, so geo-DNS answers for home while the
+          # region's IP still comes from Mullvad. Accepted trade-off.
+          #
+          # The pinned ClusterIP of Technitium's `dns` Service, the address
+          # CoreDNS forwards the root domain to (equestria/dns/technitium).
+          # Lookups leave by eth0, outside the tunnel: the Service CIDR is in
+          # FIREWALL_OUTBOUND_SUBNETS (gluetun's rule 99 and its firewall) and
+          # in routing.sh's region-exit-out chain. Technitium's recursion is
+          # AllowOnlyForPrivateNetworks, and the pod IP is private. The default
+          # after `:=` is for offline rendering only and is the same address as
+          # cluster-secrets' TECHNITIUM_CLUSTER_IP; change both together.
+          # dnsPolicy None, not ClusterFirst: CoreDNS would answer public names
+          # from the node's resolver instead of Technitium. No search domains:
+          # nothing here resolves a short name.
           dnsPolicy: None
           dnsConfig:
             nameservers:
-              - 127.0.0.1
+              - "${TECHNITIUM_CLUSTER_IP:=10.196.0.53}"
         initContainers: &init-containers
           routing:
             image:
@@ -259,24 +276,29 @@ spec:
               # The name routing.sh and post-rules.txt match on (gluetun's
               # WireGuard default is wg0).
               VPN_INTERFACE: tun0
-              # DNS-over-TLS on 127.0.0.1:53, upstream over the tunnel.
-              DNS_SERVER: "on"
-              DNS_UPSTREAM_RESOLVER_TYPE: dot
-              DNS_UPSTREAM_IPV6: "off"
-              # No block lists. gluetun downloads and holds them in memory at
-              # every start (BLOCK_MALICIOUS and BLOCK_SURVEILLANCE default on),
-              # which OOMKilled it at 256Mi; and an exit node's clients expect
-              # the region's answers, not a second filter on top of their own.
-              BLOCK_MALICIOUS: "off"
-              BLOCK_SURVEILLANCE: "off"
-              BLOCK_ADS: "off"
+              # No resolver of its own: the pod resolves through Technitium
+              # (pod dnsConfig above). DNS_SERVER off alone is not enough:
+              # gluetun would then rewrite resolv.conf to its plaintext
+              # fallback, Cloudflare's 1.1.1.1 (internal/dns/plaintext.go
+              # useUnencryptedDNS, v3.41.3). DNS_KEEP_NAMESERVER leaves
+              # resolv.conf as the kubelet wrote it, and its own Go lookups (the
+              # public-IP APIs, the Mullvad API) read it too (internal/dns/run.go).
+              DNS_SERVER: "off"
+              DNS_KEEP_NAMESERVER: "on"
+              # The DNS loop's 24h ticker would still download the block lists
+              # (BLOCK_MALICIOUS and BLOCK_SURVEILLANCE default on) into memory
+              # with no server to use them (internal/dns/ticker.go, update.go);
+              # that is what once OOMKilled gluetun at 256Mi. Never run it.
+              # The server-list updater (UPDATER_PERIOD) defaults to off, and
+              # resolves through its own DoH to Cloudflare and Google by IP.
+              DNS_UPDATE_PERIOD: "0"
               # What the healthcheck TLS-dials through the tunnel, by IP so it
               # tests the tunnel and not the resolver. The defaults
-              # (cloudflare.com:443, github.com:443) resolve through
-              # 127.0.0.1:53 first, so a resolver fault alone failed the
-              # startup and periodic checks, and HEALTH_RESTART_VPN (on) tore a
-              # working tunnel down in a loop that never ends, since a VPN
-              # restart does not restart the DNS server. Both certificates
+              # (cloudflare.com:443, github.com:443) resolve through the pod's
+              # resolver first, so a resolver fault alone (gluetun's own, then;
+              # a Technitium restart, now) failed the startup and periodic
+              # checks, and HEALTH_RESTART_VPN (on) tore a working tunnel down
+              # in a loop that a VPN restart can never clear. Both certificates
               # carry their IP as a SAN, which Go verifies when ServerName is an
               # IP (internal/healthcheck/checker.go tcpTLSCheck, v3.41.3). The
               # small check is already ICMP to 1.1.1.1 and 8.8.8.8, no DNS.
@@ -340,8 +362,8 @@ spec:
                 cpu: 20m
                 memory: 64Mi
               limits:
-                # The block lists (off above) are what filled 256Mi; this is
-                # headroom on top, not a measured need.
+                # gluetun's DNS block lists filled 256Mi; they are never loaded
+                # now (above), and this is headroom, not a measured need.
                 memory: 512Mi
           tailscale: &tailscale
             image:
@@ -357,8 +379,8 @@ spec:
               TS_AUTH_ONCE: "true"
               TS_KUBE_SECRET: region-exit-spitfire-tailscale
               # Reach the API by KUBERNETES_SERVICE_HOST, not
-              # kubernetes.default.svc: the pod resolves through gluetun's
-              # DNS-over-TLS (dnsPolicy None), which knows no cluster names.
+              # kubernetes.default.svc: the pod resolves through Technitium
+              # (dnsPolicy None), which knows no cluster names.
               # Read by containerboot and tailscaled's kube state store alike
               # (cmd/containerboot/kube.go, ipn/store/kubestore, v1.104.4).
               TS_KUBERNETES_READ_API_SERVER_ADDRESS_FROM_ENV: "true"
@@ -366,8 +388,8 @@ spec:
               # The image points `iptables` at the legacy backend, which the
               # Talos kernel lacks (as for Technitium's sidecar).
               TS_DEBUG_FIREWALL_MODE: nftables
-              # gluetun owns resolv.conf (127.0.0.1); tailscaled forwards
-              # clients' DNS to it.
+              # Never rewrite resolv.conf: tailscaled answers exit-node
+              # clients' DNS from its first nameserver, Technitium.
               TS_ACCEPT_DNS: "false"
               TS_EXTRA_ARGS: "--advertise-exit-node --accept-routes=false"
               # Fixed, for gluetun's FIREWALL_INPUT_PORTS. Change both together.
@@ -442,17 +464,17 @@ spec:
               # A routing peer, never a client: it must not pick up another
               # peer's exit route.
               NB_DISABLE_CLIENT_ROUTES: "true"
-              # gluetun owns :53 in this namespace. NB_DISABLE_DNS alone still
-              # binds <wt0 address>:53, so park NetBird's resolver elsewhere.
-              # Never on 127.0.0.1: off port 53, NetBird adds an OUTPUT DNAT
+              # NB_DISABLE_DNS alone still binds <wt0 address>:53, so park
+              # NetBird's resolver where nothing uses it. Never on 127.0.0.1:
+              # off port 53, NetBird adds an OUTPUT DNAT
               # <listen IP>:53 -> <listen IP>:<port>, UDP and TCP, in its own
               # nftables table (client/internal/dns/service_listener.go
-              # setupDNAT, v0.82.0). On 127.0.0.1 that took gluetun's resolver
-              # (the pod's resolv.conf) over as soon as NetBird enrolled, and
-              # NetBird's resolver, with no upstreams, answered SERVFAIL: the
-              # healthcheck then restart-looped the tunnel and every exit-node
-              # client lost DNS. 127.0.0.153 is loopback too, and nothing in the
-              # pod sends to 127.0.0.153:53, so the redirect matches nothing.
+              # setupDNAT, v0.82.0). On 127.0.0.1 that took gluetun's old
+              # resolver (then the pod's resolv.conf) over as soon as NetBird
+              # enrolled, and NetBird's resolver, with no upstreams, answered
+              # SERVFAIL. The pod now resolves through Technitium, so nothing
+              # sends to 127.0.0.1:53 either; 127.0.0.153 is loopback too, and
+              # nothing sends to 127.0.0.153:53, so the redirect matches nothing.
               # NB_* env applies only at enrolment; the state below is an
               # emptyDir and the key ephemeral, so every pod enrols fresh and
               # always takes it.
