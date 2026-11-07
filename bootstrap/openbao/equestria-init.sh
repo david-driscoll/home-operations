@@ -856,10 +856,10 @@ setup() {
   # OpenBao reviews the client's own token and there is no long-lived
   # credential to store or rotate.
   #
-  # equestria is the only cluster in the estate today. The retired SGC
-  # cluster's `kubernetes-sgc` mount and `eso-sgc` policy were deleted by hand
-  # (step 4 of Phase 2 in docs/cluster-consolidation/22-decommission-sgc.md),
-  # and the `pulumi` grants that managed the mount went with them.
+  # equestria is the only cluster in the estate today. This script no longer
+  # writes the retired SGC cluster's `kubernetes-sgc` grants or `eso-sgc`
+  # policy; the server-side mount and policy are deleted by hand (the closing
+  # pass in docs/cluster-consolidation/22-decommission-sgc.md).
   #
   # Applying the widened `pulumi` policy needs an admin token, so it takes one
   # root ceremony: `root-ceremony.sh run`, then re-run this script's `resume`

@@ -697,6 +697,8 @@ services are named `<app>.sgc.<root domain>` (GLOSSARY.md, **SGC**).
   grants or the `eso-sgc` policy, and `CLUSTER_KEYS` drops `sgc`.
 - **Docs (step 13).** `docs/codebase`, the `create-k8s-deployment` skill and the
   `age-recipients.txt` invariant are updated.
+- **OpenBao replica.** Dumps are no longer encrypted to SGC's age key. The recipients are now
+  exactly the `.sops.yaml` set.
 
 **Live, by hand:**
 - **UniFi DNS (rule 1).** SGC's external-dns left 33 records behind (its A and CNAME records with
