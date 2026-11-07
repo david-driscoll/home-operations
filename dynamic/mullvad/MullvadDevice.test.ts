@@ -1,5 +1,5 @@
 /**
- * node --test components/mullvad.test.ts
+ * node --test dynamic/mullvad/MullvadDevice.test.ts
  *
  * The MullvadDevice dynamic provider against a mocked HTTP layer: no Pulumi
  * engine, no network, never Mullvad's live API. The fake below answers the
@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { createPrivateKey, createPublicKey, diffieHellman } from "node:crypto";
 import { afterEach, describe, it, mock } from "node:test";
-import { generateWireguardKeypair, MULLVAD_API, mullvadDeviceProvider } from "./mullvad.ts";
+import { generateWireguardKeypair, MULLVAD_API, mullvadDeviceProvider } from "./MullvadDevice.ts";
 
 const ACCOUNT = "1234567890123456";
 const TOKEN = "mva_test_token";
@@ -166,5 +166,34 @@ describe("MullvadDevice diff", () => {
       assert.equal(diff.replaces.length, 1);
       assert.equal(diff.deleteBeforeReplace, true);
     }
+  });
+});
+
+describe("MullvadDevice read", () => {
+  it("refreshes the device from Mullvad and keeps the private key from state", async () => {
+    const calls = fakeMullvad(call =>
+      call.method === "GET" && call.url === `${MULLVAD_API}/accounts/v1/devices/dev-1`
+        ? json(200, { id: "dev-1", name: "brave otter", pubkey: "pub", ipv4_address: "10.64.9.9/32", ipv6_address: "fc00::1/128", hijack_dns: false, created: "2026-11-06T12:00:00Z" })
+        : undefined,
+    );
+
+    const result = await mullvadDeviceProvider.read("dev-1", OLDS);
+
+    const get = calls.find(c => c.method === "GET");
+    assert.ok(get, "no GET /accounts/v1/devices/dev-1");
+    assert.equal(get.authorization, `Bearer ${TOKEN}`);
+    assert.equal(result.id, "dev-1");
+    assert.deepEqual(result.props, { ...OLDS, deviceName: "brave otter", ipv4Address: "10.64.9.9/32" });
+  });
+
+  it("returns no id for a device revoked by hand, so refresh drops it", async () => {
+    fakeMullvad(call => (call.method === "GET" ? json(404, { code: "DEVICE_NOT_FOUND" }) : undefined));
+    const result = await mullvadDeviceProvider.read("dev-1", OLDS);
+    assert.equal(result.id, undefined);
+  });
+
+  it("fails on any other error, so state keeps the device", async () => {
+    fakeMullvad(call => (call.method === "GET" ? json(500, { code: "INTERNAL" }) : undefined));
+    await assert.rejects(mullvadDeviceProvider.read("dev-1", OLDS), /HTTP 500/);
   });
 });

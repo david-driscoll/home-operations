@@ -4,6 +4,7 @@
  * and tunnel address gluetun needs. The region exits' ExternalSecret reads these
  * property names by hand; rename one only with the other.
  */
+import type * as pulumi from "@pulumi/pulumi";
 
 /**
  * The region exits with a Mullvad device. spitfire alone for the P1 prototype;
@@ -12,19 +13,19 @@
  */
 export const REGION_EXITS = ["spitfire"] as const;
 
-export interface RegionExitDeviceSecret<T> {
+export interface RegionExitDeviceSecret {
   name: string;
-  privateKey: T;
-  address: T;
+  privateKey: pulumi.Input<string>;
+  address: pulumi.Input<string>;
 }
 
-export interface RegionExitBaoData<T> {
-  data: Record<string, T>;
+export interface RegionExitBaoData {
+  data: Record<string, pulumi.Input<string>>;
   concealedFields: string[];
 }
 
-export function regionExitBaoData<T>(devices: RegionExitDeviceSecret<T>[]): RegionExitBaoData<T> {
-  const data: Record<string, T> = {};
+export function regionExitBaoData(devices: RegionExitDeviceSecret[]): RegionExitBaoData {
+  const data: Record<string, pulumi.Input<string>> = {};
   const concealedFields: string[] = [];
   for (const device of devices) {
     data[`${device.name}_private_key`] = device.privateKey;

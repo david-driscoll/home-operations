@@ -93,14 +93,15 @@ Defaults proposed in the session and accepted with the design:
 
 ### C1. Mullvad devices: new stack `stacks/region-exits`
 
-- Add a `MullvadDevice` dynamic resource in `components/mullvad.ts`:
+- Add a `MullvadDevice` dynamic resource in `dynamic/mullvad/MullvadDevice.ts`:
   - **Create:** generate an X25519 keypair in-process and register the public key with
     Mullvad's device API.
   - **Delete:** revoke the device.
+  - **Read:** fetch the device, so `pulumi refresh` drops one revoked by hand.
   - **Outputs:** the device id, the device name Mullvad assigns, the tunnel IPv4 address, and
     the private key as a secret.
 - Read the Mullvad account number in `components/globals.ts` (provider centralisation) from
-  OpenBao `third-party-tokens/mullvad/account`.
+  OpenBao `third-party-tokens/mullvad/wonderbolts`, property `account`.
 - Write one `baoKvSecret` per region exit at `third-party-tokens/mullvad/region-exits`, with
   properties `<name>_private_key` and `<name>_address`.
 - Confirm the API's endpoints and auth flow (account number → access token → devices) against

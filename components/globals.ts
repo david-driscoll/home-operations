@@ -48,8 +48,8 @@ export class GlobalResources extends ComponentResource {
   private _ociCredential?: Output<OciApiKeyCredential>;
   private _ociProvider?: OciProvider;
   private _azureCredential?: Output<AzureServicePrincipalCredential>;
-  private _mullvadCredential?: Output<MullvadAccountCredential>;
   private _azureProvider?: AzureProvider;
+  private _mullvadCredential?: Output<MullvadAccountCredential>;
   private _netbirdOwner?: Output<NetbirdOwnerCredential>;
   private _netbirdApi?: NetbirdApiCredential;
   private _netbirdOwnerApi?: NetbirdApiCredential;
@@ -382,18 +382,6 @@ export class GlobalResources extends ComponentResource {
     return this._azureCredential;
   }
 
-  /**
-   * The standalone Mullvad account the region exits register their WireGuard
-   * devices on (docs/plans/region-exits.md §C1, components/mullvad.ts). Lazy
-   * like `azureCredential`: only stacks/region-exits reads it.
-   *
-   * Never log this Output: the account number is the whole credential.
-   */
-  public get mullvadCredential(): Output<MullvadAccountCredential> {
-    this._mullvadCredential ??= this.store.getSecretByPath<MullvadAccountCredential>("third-party-tokens/mullvad/wonderbolts");
-    return this._mullvadCredential;
-  }
-
   public get azureProvider(): AzureProvider {
     if (this._azureProvider) return this._azureProvider;
     const credential = this.azureCredential;
@@ -408,6 +396,18 @@ export class GlobalResources extends ComponentResource {
       { parent: this },
     );
     return this._azureProvider;
+  }
+
+  /**
+   * The standalone Mullvad account the region exits register their WireGuard
+   * devices on (docs/plans/region-exits.md §C1, dynamic/mullvad/MullvadDevice.ts).
+   * Lazy like `azureCredential`: only stacks/region-exits reads it.
+   *
+   * Never log this Output: the account number is the whole credential.
+   */
+  public get mullvadCredential(): Output<MullvadAccountCredential> {
+    this._mullvadCredential ??= this.store.getSecretByPath<MullvadAccountCredential>("third-party-tokens/mullvad/wonderbolts");
+    return this._mullvadCredential;
   }
 
   /**
@@ -510,16 +510,16 @@ export interface OciApiKeyCredential {
 }
 
 /** OpenBao `third-party-tokens/azure/netbird-edge`. */
-/** OpenBao `third-party-tokens/mullvad/wonderbolts`. */
-export interface MullvadAccountCredential {
-  account: string;
-}
-
 export interface AzureServicePrincipalCredential {
   tenant_id: string;
   subscription_id: string;
   client_id: string;
   client_secret: string;
+}
+
+/** OpenBao `third-party-tokens/mullvad/wonderbolts`. */
+export interface MullvadAccountCredential {
+  account: string;
 }
 
 export interface GithubAppCredential {
