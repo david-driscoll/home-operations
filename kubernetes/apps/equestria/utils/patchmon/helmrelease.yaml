@@ -52,7 +52,7 @@ spec:
               # separate patchmon-backend / patchmon-frontend images stop at
               # 1.4.2 and are not this app any more.
               repository: ghcr.io/patchmon/patchmon-server
-              tag: 2.1.7@sha256:ed9190d9d39790c6422d3360bb0320deaa1130db15e6e3c3dc58141d1cd54045
+              tag: 2.1.8@sha256:bee093a3ad55925aad5efa9874c5075020b65c9adb8fa412958e211aac9cd094
               pullPolicy: IfNotPresent
             envFrom:
               - secretRef:
