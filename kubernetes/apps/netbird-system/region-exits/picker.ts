@@ -125,21 +125,44 @@ export function renderConfirm(name: string, region: Region, count: number | null
   ]);
 }
 
+/** The countries the page offers as one-click moves, in servers.json's names, in this order. */
+export const QUICK_COUNTRIES: readonly string[] = ["USA", "Canada", "UK"];
+
+const option = (value: string, label: string, selected: boolean) => '<option value="' + escapeHtml(value) + '"' + (selected ? " selected" : "") + ">" + escapeHtml(label) + "</option>";
+
 /** The page at /<name>: where the region exit is, and a form to move it. */
 export function renderPage(name: string, current: Status, regions: RegionChoice[]): string {
-  const country = current.region?.country;
-  const options = regions.map(r => '<option value="' + escapeHtml(r.country) + '"' + (r.country === country ? " selected" : "") + ">" + escapeHtml(r.country) + "</option>").join("");
+  // What the country <select> shows: the current country, or the browser's
+  // default (the first) when Mullvad no longer offers it. The city list
+  // matches it, so the page is right before (or without) the script.
+  const shown = regions.find(r => r.country === current.region?.country) ?? regions[0];
+  const currentCity = shown && shown.country === current.region?.country ? current.region.city : null;
+  const options = regions.map(r => option(r.country, r.country, r === shown && shown.country === current.region?.country)).join("");
+  const cityOptions = option("", "Any city", !currentCity) + (shown?.cities ?? []).map(c => option(c, c, c === currentCity)).join("");
+  // One-click moves: a country and no city, through the same POST as the form.
+  // The buttons sit in the form beside the dropdown but submit the empty
+  // #quick form (the form attribute), so they never send the dropdowns too.
+  const quick = QUICK_COUNTRIES.filter(c => regions.some(r => r.country === c))
+    .map(c =>
+      c === current.region?.country
+        ? '<button form="quick" name="country" value="' + escapeHtml(c) + '" disabled aria-current="true">' + escapeHtml(c) + " (current)</button>"
+        : '<button form="quick" name="country" value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</button>",
+    )
+    .join("");
   const cities = Object.fromEntries(regions.map(r => [r.country, r.cities]));
   const tunnel = current.tunnel.up ? "connected" : "not connected" + (current.tunnel.status ? " (" + escapeHtml(current.tunnel.status) + ")" : "");
   const egress = current.egress ? "Traffic leaves from " + escapeHtml((current.egress.city ? current.egress.city + ", " : "") + (current.egress.country ?? "an unknown country")) + "." : "";
   const availability = describeAvailability(name, current.availability);
-  return renderDocument(name + " region", PAGE_STYLE + AVAILABILITY_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}", [
+  const quickStyle = ".quick{display:flex;gap:.5rem}.quick button{flex:1;margin:0}.quick button[aria-current]{font-weight:bold}";
+  return renderDocument(name + " region", PAGE_STYLE + AVAILABILITY_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}" + quickStyle, [
     "<h1>" + escapeHtml(name) + "</h1>",
     '<p class="availability ' + current.availability.state + '"><strong>' + escapeHtml(availability.label) + "</strong><br>" + escapeHtml(availability.detail) + "</p>",
     "<p>Region: <strong>" + escapeHtml(describeRegion(current.region)) + "</strong>. Tunnel " + tunnel + ". " + egress + "</p>",
+    '<form id="quick" method="post" action="/' + escapeHtml(name) + '/region"></form>',
     '<form method="post" action="/' + escapeHtml(name) + '/region">',
-    '<label for="country">Country</label><select id="country" name="country" required>' + options + "</select>",
-    '<label for="city">City (optional)</label><select id="city" name="city"></select>',
+    '<label for="country">Country</label><div class="quick">' + quick + "</div>",
+    '<select id="country" name="country" required>' + options + "</select>",
+    '<label for="city">City (optional)</label><select id="city" name="city">' + cityOptions + "</select>",
     "<button>Move " + escapeHtml(name) + "</button>",
     "<p>" + escapeHtml(describePeople(name, current.activeClients)) + " Everyone using it moves with it.</p>",
     "</form>",
@@ -147,11 +170,13 @@ export function renderPage(name: string, current: Status, regions: RegionChoice[
     "const cities = " + scriptJson(cities) + ";",
     "const current = " + scriptJson(current.region) + ";",
     'const country = document.getElementById("country"), city = document.getElementById("city");',
+    // The server rendered the cities of the country shown; this redoes it,
+    // the same way, when another country is picked.
     "function fill() {",
     '  city.replaceChildren(new Option("Any city", ""));',
     "  for (const c of cities[country.value] || []) city.add(new Option(c, c, false, !!current && current.country === country.value && current.city === c));",
     "}",
-    'country.addEventListener("change", fill); fill();',
+    'country.addEventListener("change", fill);',
     "</script>",
   ]);
 }
