@@ -9,6 +9,7 @@ import { createRegionExitAuthKey } from "./region-exit-authkey.ts";
 import { createTailnetEgressServices, discoverServerKinds } from "./tailnet-egress.ts";
 import { configureTailscaleApiToken } from "./tailscale-api-token.ts";
 import { createTailscaleAttDropFirewallRule } from "./tailscale-drop-firewall-rule.ts";
+import { configureTechnitiumMcpToken } from "./technitium-mcp-token.ts";
 import { configureTechnitiumServerSettings } from "./technitium-settings.ts";
 import { configureTechnitiumZones } from "./technitium-zone.ts";
 
@@ -16,7 +17,9 @@ const globals = new GlobalResources({}, {});
 createTailscaleAttDropFirewallRule(globals);
 const tailscaleAcls = assignTailscaleAcls(globals);
 configureLocalDns(globals);
-configureTechnitiumZones(globals);
+const technitiumZones = configureTechnitiumZones(globals);
+// The read-only Technitium MCP's user and token, with View on every zone above.
+configureTechnitiumMcpToken(globals, technitiumZones.zones);
 configureNetbirdHomeRelay(globals);
 configureTechnitiumServerSettings(globals);
 // Re-mints on every run of this stack (every 5 minutes,
