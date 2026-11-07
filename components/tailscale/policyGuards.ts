@@ -46,6 +46,16 @@ export function canUseExitNode(policyJson: string, principal: readonly string[],
   });
 }
 
+/**
+ * The tags an ordinary internet grant's `via` should name: `exitNodeTag`
+ * (the tag that marks an exit node by name), then every tag in `approvers`
+ * (autoApprovers.exitNode) except `excluded`. Approvers that are not tags
+ * (users, groups, autogroups) cannot appear in `via` and are dropped.
+ */
+export function ordinaryExitNodeTags(exitNodeTag: string, approvers: readonly string[], excluded: readonly string[]): string[] {
+  return [...new Set([exitNodeTag, ...approvers.filter(a => a.startsWith("tag:") && !excluded.includes(a))])];
+}
+
 /** Throws unless canUseExitNode is `expected`; `who` names the principal in the message, `why` explains what depends on it. */
 export function assertExitNodeAccess(policyJson: string, who: string, principal: readonly string[], exitNodeTags: readonly string[], expected: boolean, why: string): void {
   if (canUseExitNode(policyJson, principal, exitNodeTags) === expected) return;

@@ -14,8 +14,8 @@
  */
 import * as kubernetes from "@pulumi/kubernetes";
 import { TailnetKey } from "@pulumi/tailscale";
-import { Tailscale } from "../../components/constants.ts";
-import type { GlobalResources } from "../../components/globals.ts";
+import { Tailscale } from "components/constants.ts";
+import type { GlobalResources } from "components/globals.ts";
 
 export const REGION_EXIT_AUTHKEY_SECRET = "tailscale-region-exit-authkey";
 

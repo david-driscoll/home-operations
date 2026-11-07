@@ -86,8 +86,16 @@ spec:
         # Two pods would be two exit nodes on one tailscaled identity and one
         # Mullvad key.
         strategy: Recreate
+        # Named, not `reloader.stakater.com/auto`: auto would roll the pod
+        # whenever the picker writes region-exit-spitfire-state, i.e. on every
+        # region pick (reloadOnCreate is on, so even the first). The picker
+        # switches gluetun live; the state ConfigMap only has to be read at the
+        # next start. Without `auto`, Reloader watches exactly these lists
+        # (Reloader 2.x, chart 2.2.19). A new ConfigMap or Secret the pod
+        # reads goes here too.
         annotations:
-          reloader.stakater.com/auto: "true"
+          configmap.reloader.stakater.com/reload: "region-exit-spitfire-defaults,region-exit-routing,region-exit-picker"
+          secret.reloader.stakater.com/reload: "region-exit-spitfire-mullvad,region-exit-spitfire-netbird,tailscale-region-exit-authkey"
         serviceAccount:
           identifier: spitfire
         pod:

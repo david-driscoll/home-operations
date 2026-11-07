@@ -13,7 +13,7 @@ import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
-import { assertExitNodeAccess, assertGrantPath } from "../../components/tailscale/policyGuards.ts";
+import { assertExitNodeAccess, assertGrantPath, ordinaryExitNodeTags } from "../../components/tailscale/policyGuards.ts";
 import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../../components/tailscale.ts";
 
 /**
@@ -37,17 +37,31 @@ import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../
 const internetFacingTags: readonly string[] = [tag.funnel, tag.netbirdEdge, tag.regionExit];
 
 /**
- * The tags the estate's ordinary exit nodes carry (every live one carried
- * tag:exit-node on 2026-11-06; the others are what autoApprovers.exitNode
- * approves). member-exit-node is limited to these with `via`, which is what
- * keeps tag:region-exit to its own grant: grants are a union, and a
- * member-exit-node without `via` would open every exit node to every member.
+ * Every exit-node approver this file owns, registered before any grant is set:
+ * ordinaryExitNodes() reads the list when each grant is built.
+ */
+function registerExitNodes(manager: TailscaleAclManager) {
+  manager.setExitNode(tag.proxmox);
+  manager.setExitNode(tag.sgc);
+  manager.setExitNode(tag.equestria);
+  manager.setExitNode(tag.regionExit);
+}
+
+/**
+ * The tags the estate's ordinary exit nodes carry: tag:exit-node (every live
+ * one carried it on 2026-11-06), then whatever autoApprovers.exitNode approves,
+ * minus tag:region-exit. Every grant to autogroup:internet except `region-exit`
+ * is limited to these with `via`, which is what keeps tag:region-exit to its
+ * own grant: grants are a union, and one internet grant without `via` would
+ * open every exit node, region exits included, to its sources.
  *
  * tag:region-exit is also in internetFacingTags above, not because it parses
  * public traffic but because a region exit needs nothing on the tailnet: it
  * only forwards its clients out through Mullvad.
  */
-const ordinaryExitNodeTags = [tag.exitNode, tag.proxmox, tag.sgc, tag.equestria];
+function ordinaryExitNodes(manager: TailscaleAclManager): TailscaleTags[] {
+  return ordinaryExitNodeTags(tag.exitNode, manager.exitNodeApprovers, [tag.regionExit]) as TailscaleTags[];
+}
 const taggedExceptInternetFacing = Object.values(tag).filter(t => !internetFacingTags.includes(t));
 
 export interface AggregatedNodeExport {
@@ -162,6 +176,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     }
 
     // ── Per-role access rules ─────────────────────────────────────────────
+    registerExitNodes(manager);
     configureProxmoxAccess(manager);
     configureDockgeAccess(manager);
     configureDnsAccess(manager);
@@ -274,7 +289,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         src: [autogroups.member, ...taggedExceptInternetFacing],
         dst: [autogroups.internet],
         ip: ["*"],
-        via: ordinaryExitNodeTags,
+        via: ordinaryExitNodes(manager),
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
     );
@@ -783,7 +798,6 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
 function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
   manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.backups, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox, tag.dns, tag.idp]);
-  manager.setExitNode(tag.proxmox);
   for (const subnet of Object.values(subnets)) {
     manager.setRoute(subnet, [tag.proxmox]);
   }
@@ -821,7 +835,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
     { accept: [tag.proxmox], deny: testData.knownNormalUsers },
   );
   manager.setGrant({ src: [tag.proxmox], dst: [tag.observability], ip: ports.observability }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [tag.proxmox], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.proxmox] });
+  manager.setGrant({ src: [tag.proxmox], dst: [autogroups.internet], ip: ports.any, via: ordinaryExitNodes(manager) }, { accept: [tag.proxmox] });
 
   const rules = Object.fromEntries(testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.proxmoxDevices.map(z => [z, { accept: [`root`] }] as const)));
   manager.setSshRule(
@@ -882,7 +896,7 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
     { accept: testData.knownNormalUsers.concat(testData.knownAdminUsers) },
   );
   manager.setGrant({ src: [tag.dockge], dst: [tag.observability], ip: ports.observability }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [tag.dockge], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.dockge] });
+  manager.setGrant({ src: [tag.dockge], dst: [autogroups.internet], ip: ports.any, via: ordinaryExitNodes(manager) }, { accept: [tag.dockge] });
 
   const rules = Object.fromEntries(
     testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.dockgeDevices.map(z => [z, { accept: [`root`] } as TailscaleSshTestInputItem] as const)),
@@ -925,7 +939,6 @@ function configureDnsAccess(manager: TailscaleAclManager) {
  */
 function configureRegionExits(manager: TailscaleAclManager) {
   manager.setTagOwner(tag.proxmox, [tag.regionExit]);
-  manager.setExitNode(tag.regionExit);
   manager.setGrant(
     "region-exit",
     {
@@ -951,6 +964,15 @@ function assertRegionExitAccess(json: string) {
   assertExitNodeAccess(json, "admins", [autogroups.member, autogroups.admin], regionExit, true, why);
   assertExitNodeAccess(json, "other members", [autogroups.member], regionExit, false, why);
   assertExitNodeAccess(json, "members", [autogroups.member], [tag.exitNode], true, "Members lost the ordinary exit nodes -- restore `member-exit-node` and its `via`.");
+  // No tagged host reaches a region exit: every tag's internet grant carries
+  // the ordinary exit nodes as its `via`.
+  for (const t of Object.values(tag).filter(t => t !== tag.regionExit)) {
+    assertExitNodeAccess(json, t, [t], regionExit, false, "Only people may use a region exit -- give that tag's autogroup:internet grant `via: ordinaryExitNodes(manager)`.");
+  }
+  // ...and the hosts that use an ordinary exit node still can.
+  for (const t of [tag.proxmox, tag.dockge, tag.backups, ...kubernetesClusters.map(c => c.tag)]) {
+    assertExitNodeAccess(json, t, [t], [tag.exitNode], true, "That tag lost its internet grant -- restore it with `via: ordinaryExitNodes(manager)`.");
+  }
 }
 
 /**
@@ -1100,7 +1122,7 @@ function configurePbsAccess(manager: TailscaleAclManager) {
     { accept: [tag.backups], deny: testData.knownNormalUsers },
   );
   manager.setGrant({ src: [tag.backups], dst: [tag.observability], ip: ports.observability }, { accept: [tag.backups], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [tag.backups], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.backups] });
+  manager.setGrant({ src: [tag.backups], dst: [autogroups.internet], ip: ports.any, via: ordinaryExitNodes(manager) }, { accept: [tag.backups] });
 
   const rules = Object.fromEntries(testData.knownAdminUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const));
   manager.setSshRule(
@@ -1183,9 +1205,6 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: reado
         },
       ] as TailscaleTest[],
   );
-
-  manager.setExitNode(tag.sgc);
-  manager.setExitNode(tag.equestria);
 
   manager.setService(tag.apps, [...clusterTags, tag.operator, tag.ingress]);
   manager.setService(tag.observability, [...clusterTags, tag.operator, tag.ingress]);
@@ -1304,7 +1323,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: reado
     },
     { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers },
   );
-  manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
+  manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any, via: ordinaryExitNodes(manager) }, { accept: clusterTags });
 
   manager.setGrant(
     {

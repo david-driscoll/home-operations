@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { assertExitNodeAccess, assertGrantPath, canUseExitNode, missingGrantPorts } from "./policyGuards.ts";
+import { assertExitNodeAccess, assertGrantPath, canUseExitNode, missingGrantPorts, ordinaryExitNodeTags } from "./policyGuards.ts";
 
 const policy = (grants: object[]) => `{
   // HuJSON, as the live policy is
@@ -116,5 +116,24 @@ describe("assertExitNodeAccess", () => {
       () => assertExitNodeAccess(policy([regionExit]), "friends and family", ["group:fnf"], ["tag:region-exit"], false, "why."),
       /friends and family can use an exit node tagged tag:region-exit\. why\. Refusing/,
     );
+  });
+});
+
+// The `via` of every ordinary internet grant: the tags autoApprovers.exitNode
+// approves, minus tag:region-exit, led by tag:exit-node itself.
+describe("ordinaryExitNodeTags", () => {
+  it("keeps the approved tags, drops the excluded ones and leads with the exit-node tag", () => {
+    assert.deepEqual(ordinaryExitNodeTags("tag:exit-node", ["tag:proxmox", "tag:region-exit", "tag:sgc"], ["tag:region-exit"]), ["tag:exit-node", "tag:proxmox", "tag:sgc"]);
+  });
+
+  it("ignores approvers that are not tags, and duplicates", () => {
+    assert.deepEqual(ordinaryExitNodeTags("tag:exit-node", ["autogroup:admin", "tag:exit-node", "tag:proxmox", "tag:proxmox"], []), ["tag:exit-node", "tag:proxmox"]);
+  });
+
+  it("keeps a tagged host's internet grant off the region exits once it carries that via", () => {
+    const via = ordinaryExitNodeTags("tag:exit-node", ["tag:proxmox", "tag:region-exit"], ["tag:region-exit"]);
+    const proxmoxInternet = { src: ["tag:proxmox"], dst: ["autogroup:internet"], ip: ["*"], via };
+    assert.equal(canUseExitNode(policy([proxmoxInternet]), ["tag:proxmox"], ["tag:region-exit"]), false);
+    assert.equal(canUseExitNode(policy([proxmoxInternet]), ["tag:proxmox"], ["tag:exit-node"]), true);
   });
 });

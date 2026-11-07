@@ -17,7 +17,11 @@ patches:
   # The pods create kernel interfaces and set routing rules and sysctls, so the
   # namespace is privileged (ADR 0005). A patch, not a top-level `labels:`:
   # that would label every object, and a `metadata.labels` on this file is
-  # ignored by kustomize.
+  # ignored by kustomize (`kubectl kustomize` drops it: the peers that use it,
+  # e.g. netbird-system, render their Namespace unlabelled). Today the label
+  # changes nothing -- talos/patches/controller/cluster.yaml deletes the
+  # PodSecurity admission config, so nothing is enforced -- but it is what
+  # keeps these pods running if enforcement ever comes back.
   - target:
       kind: Namespace
     patch: |-

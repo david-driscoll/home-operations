@@ -124,10 +124,9 @@ const groups = {
   exitInternet: group("exit-internet"),
 };
 
-// The region exits (docs/plans/region-exits.md §C2): one device group per
-// region exit, which its netbird sidecar joins by setup key, and the
-// `region-*` routes' access-control group, peerless like exit-internet.
-const regionExitGroups: Record<string, netbird.Group> = Object.fromEntries(REGION_EXITS.map(name => [name, group(regionExitNetbird(name).deviceGroup)]));
+// The `region-*` routes' access-control group (docs/plans/region-exits.md
+// §C2), peerless like exit-internet. The region exits' own groups and keys
+// are built with setupKey below.
 const regionExitInternet = group("region-exit-internet");
 
 /**
@@ -143,6 +142,17 @@ if (problems.length > 0) throw new Error(`stacks/netbird/sites.ts is inconsisten
 
 const setupKey = (name: string, autoGroup: netbird.Group, extra: Partial<netbird.SetupKeyArgs> = {}) =>
   new netbird.SetupKey(name, { name, type: "reusable", autoGroups: [autoGroup.id], expirySeconds: 0, usageLimit: 0, ...extra }, { ...opts, dependsOn: [defaultPolicyRemoval] });
+
+// Each region exit's NetBird half (docs/plans/region-exits.md §C2), built once:
+// the device group its netbird sidecar joins, and the setup key that joins it.
+// Ephemeral, like the router pods: the sidecar's state is an emptyDir, so every
+// restart enrols a fresh peer and the old one is cleaned up. Its route is
+// declared in 5, its policies in 9.
+const regionExitPeers = REGION_EXITS.map(name => {
+  const names = regionExitNetbird(name);
+  const deviceGroup = group(names.deviceGroup);
+  return { name, names, deviceGroup, setupKey: setupKey(names.setupKey, deviceGroup, { ephemeral: true }).key };
+});
 
 // The live peers and groups, read on every run: a setup key's auto groups
 // apply only at enrolment, so the peers enrolled before D53 sit in the old
@@ -186,11 +196,9 @@ const setupKeys = {
   // keeps its peer, and so its overlay address, across restarts. Read by
   // docker/_common/technitium and Equestria's ExternalSecret as `#/dns`.
   dns: setupKey("dns-servers", groups.dnsServers).key,
-  // The region exits' netbird sidecars. Ephemeral, like the router pods:
-  // their state is an emptyDir, so every restart enrols a fresh peer and the
-  // old one is cleaned up. Read by kubernetes/apps/region-exits as
-  // `region_exit_<name>`.
-  ...Object.fromEntries(REGION_EXITS.map(name => [regionExitNetbird(name).setupKeyProperty, setupKey(regionExitNetbird(name).setupKey, regionExitGroups[name], { ephemeral: true }).key])),
+  // The region exits' netbird sidecars, read by kubernetes/apps/region-exits
+  // as `region_exit_<name>`.
+  ...Object.fromEntries(regionExitPeers.map(exit => [exit.names.setupKeyProperty, exit.setupKey])),
 };
 
 // ── 5. Site LANs and exit nodes (#2887) ─────────────────────────────────
@@ -581,15 +589,14 @@ for (const [stack, hosts] of Object.entries(GATEWAY_SITE_STACKS)) {
 // what lets traffic out, and media-managers cannot use it even if handed the
 // route. Never rename one in a single run: two `0.0.0.0/0` routes collide
 // on create-before-delete; remove the old one first.
-for (const name of REGION_EXITS) {
-  const names = regionExitNetbird(name);
+for (const { name, names, deviceGroup } of regionExitPeers) {
   new netbird.Route(
     names.route,
     {
       networkId: names.route,
       description: `Exit through region exit ${name}: its pod's gluetun, out of Mullvad (kubernetes/apps/region-exits)`,
       network: "0.0.0.0/0",
-      peerGroups: [regionExitGroups[name].id],
+      peerGroups: [deviceGroup.id],
       groups: REGION_EXIT_USER_GROUPS.map(user => userGroups[user].id),
       accessControlGroups: [regionExitInternet.id],
       masquerade: true,
@@ -608,7 +615,7 @@ const destinationGroups: Record<string, netbird.Group | undefined> = {
   "equestria-entry": equestriaEntry,
   "k8s-routers": groups.k8sRouters,
   "exit-internet": groups.exitInternet,
-  ...Object.fromEntries(REGION_EXITS.map(name => [regionExitNetbird(name).deviceGroup, regionExitGroups[name]])),
+  ...Object.fromEntries(regionExitPeers.map(exit => [exit.names.deviceGroup, exit.deviceGroup])),
   "region-exit-internet": regionExitInternet,
 };
 for (const rule of ACCESS_RULES) {

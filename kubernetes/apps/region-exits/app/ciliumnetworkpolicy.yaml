@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Traefik may talk to the region picker.
+#
+# The picker (picker.ts) trusts that every request on 8080 came through the
+# wonderbolts route's forward auth (family and admins, ADR 0005): it has no
+# login of its own. Without this policy any pod in the cluster, and anything
+# the tailscale Connector routes onto the pod network, could POST a region
+# switch straight to the Service. Same shape as
+# ../../coder/setup-status/ciliumnetworkpolicy.yaml.
+#
+# Selecting the pods puts them into default-deny for ingress. Allowed:
+#   - 8080/tcp from Traefik (traefik-network serves the internal Gateway the
+#     route is on), and from `host` for the kubelet's httpGet probes. The
+#     other containers' probes are exec and need nothing.
+#   - The overlays' fixed WireGuard ports, 41641/udp (tailscaled) and
+#     51821/udp (NetBird), from anywhere. Direct P2P is hole-punched: a peer's
+#     first packet can arrive from an address the pod never sent to, which
+#     conntrack would not treat as a reply, so without these the overlays fall
+#     back to DERP and relays. These ports only carry WireGuard and disco/ICE,
+#     which authenticate every packet, and gluetun's FIREWALL_INPUT_PORTS opens
+#     the same two.
+# Everything else (gluetun's 8000 and 9999 are loopback or overlay-dropped
+# anyway) is closed. Egress is untouched: the tunnel, the overlays' control
+# planes and the Kubernetes API.
+#
+# #3143 (the overview at /) will read each region exit's GET /status from
+# inside the namespace. Add that then, as an L7 rule (`rules.http` with
+# method GET, path /status) from the overview's pods, never as a plain port
+# rule: the same port takes the POST that switches region.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: region-exits
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: region-exits
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEntities:
+        - all
+      toPorts:
+        - ports:
+            - port: "41641"
+              protocol: UDP
+            - port: "51821"
+              protocol: UDP
