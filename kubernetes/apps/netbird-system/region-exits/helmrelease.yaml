@@ -270,6 +270,17 @@ spec:
               BLOCK_MALICIOUS: "off"
               BLOCK_SURVEILLANCE: "off"
               BLOCK_ADS: "off"
+              # What the healthcheck TLS-dials through the tunnel, by IP so it
+              # tests the tunnel and not the resolver. The defaults
+              # (cloudflare.com:443, github.com:443) resolve through
+              # 127.0.0.1:53 first, so a resolver fault alone failed the
+              # startup and periodic checks, and HEALTH_RESTART_VPN (on) tore a
+              # working tunnel down in a loop that never ends, since a VPN
+              # restart does not restart the DNS server. Both certificates
+              # carry their IP as a SAN, which Go verifies when ServerName is an
+              # IP (internal/healthcheck/checker.go tcpTLSCheck, v3.41.3). The
+              # small check is already ICMP to 1.1.1.1 and 8.8.8.8, no DNS.
+              HEALTH_TARGET_ADDRESSES: "1.1.1.1:443,8.8.8.8:443"
               # Never off the pod. The picker (#3140) calls it on loopback.
               HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
               # Every route open to loopback, with no key: v3.41.3's built-in
@@ -432,12 +443,21 @@ spec:
               # peer's exit route.
               NB_DISABLE_CLIENT_ROUTES: "true"
               # gluetun owns :53 in this namespace. NB_DISABLE_DNS alone still
-              # binds <wt0 address>:53, so park NetBird's resolver on loopback
-              # as Technitium's sidecar does. NB_* env applies only at
-              # enrolment; the state below is an emptyDir and the key
-              # ephemeral, so every pod enrols fresh and always takes it.
+              # binds <wt0 address>:53, so park NetBird's resolver elsewhere.
+              # Never on 127.0.0.1: off port 53, NetBird adds an OUTPUT DNAT
+              # <listen IP>:53 -> <listen IP>:<port>, UDP and TCP, in its own
+              # nftables table (client/internal/dns/service_listener.go
+              # setupDNAT, v0.82.0). On 127.0.0.1 that took gluetun's resolver
+              # (the pod's resolv.conf) over as soon as NetBird enrolled, and
+              # NetBird's resolver, with no upstreams, answered SERVFAIL: the
+              # healthcheck then restart-looped the tunnel and every exit-node
+              # client lost DNS. 127.0.0.153 is loopback too, and nothing in the
+              # pod sends to 127.0.0.153:53, so the redirect matches nothing.
+              # NB_* env applies only at enrolment; the state below is an
+              # emptyDir and the key ephemeral, so every pod enrols fresh and
+              # always takes it.
               NB_DISABLE_DNS: "true"
-              NB_DNS_RESOLVER_ADDRESS: "127.0.0.1:5053"
+              NB_DNS_RESOLVER_ADDRESS: "127.0.0.153:5053"
               # Fixed for gluetun's FIREWALL_INPUT_PORTS, and clear of
               # tailscale's 41641. Change both together.
               NB_WIREGUARD_PORT: "51821"
