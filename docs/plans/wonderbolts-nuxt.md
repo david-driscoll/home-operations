@@ -1,6 +1,8 @@
 # The region picker as a Nuxt app
 
-**Status:** designed 2026-11-07 (grilled the same day), nothing built. Owner: David. Decision
+**Status:** live 2026-11-07. Phases 1-4 are merged (#3184, #3185, #3186, #3189, plus #3187,
+the image-base fix). Phase 5 is the cleanup PR; phases 6 (friends) and 7 (moving
+`definition.yaml`) follow it. Owner: David. Decision
 record: [ADR 0006](../adr/0006-region-picker-own-app.md), amending ADR 0005. Replaces the
 pages in [region-exits.md §D4](region-exits.md#d4-region-picker). Terms: GLOSSARY.md (Region
 exit, Region, Region picker).

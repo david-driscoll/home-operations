@@ -14,7 +14,8 @@
 #                   (resources/post-rules.txt); no resolver of its own
 #   tailscale       containerboot, advertising an exit node
 #   netbird         the routing peer for the `region-<name>` route (#3139)
-#   picker          the region picker (#3140) and the overview (#3143)
+#   picker          the region exit agent (#3140): JSON for the region picker
+#                   app and Prometheus (ADR 0006)
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -182,7 +183,7 @@ spec:
         # the Mullvad key and the tailscaled state. Kept, the Deployment is
         # updated in place, and Recreate stops the old pod first. Its
         # Service, Role and RoleBinding take the -spitfire names like the
-        # others': the overview finds Services by name, and neither runs a pod.
+        # others': the region picker app finds Services by name, and neither runs a pod.
         forceRename: region-exits
         replicas: 1
         # Two pods would be two exit nodes on one tailscaled identity and one
@@ -209,10 +210,11 @@ spec:
           identifier: spitfire
         pod: &pod
           automountServiceAccountToken: true
-          # The overview (overview.ts) finds the other region exits' Services
-          # by the variables this injects: the pod's resolver is Technitium,
-          # not CoreDNS, so cluster names do not resolve.
-          enableServiceLinks: true
+          # Nothing in the pod reads other Services' variables any more (the
+          # overview that did moved to the region picker app, ADR 0006). The
+          # kubelet still sets KUBERNETES_SERVICE_HOST/PORT, which the agent
+          # reaches the API by.
+          enableServiceLinks: false
           # Everything in the pod resolves through the cluster Technitium
           # (decided 2026-11-07, plan §D2, ADR 0005): gluetun, NetBird, the
           # picker, and tailscaled, which answers its exit-node clients' DNS
@@ -487,10 +489,9 @@ spec:
               NB_LOG_FILE: console
             securityContext: *privileged
             resources: *overlay-resources
-          # The region picker (#3140, ./picker.ts): /spitfire on
-          # wonderbolts.<root domain>, /status for in-cluster readers, and the
-          # overview at / (#3143, ./overview.ts) for whichever picker the
-          # region-exits-pickers Service lands on.
+          # The region exit agent (#3140, ./picker.ts): /status, /regions and
+          # POST /region for the region picker app (../wonderbolts, ADR 0006),
+          # /metrics for Prometheus. No pages, and no route through the Gateway.
           picker: &picker
             image:
               # The same pin as netbird-system/proxy-watchdog.
@@ -500,9 +501,6 @@ spec:
             command: ["node", "/app/picker.ts"]
             env: &picker-env
               REGION_EXIT_NAME: spitfire
-              # The overview's rows, in order; each one's Service is
-              # region-exits-<name> (REGION_EXIT_SERVICE_PREFIX).
-              REGION_EXITS: "spitfire,soarin,fleetfoot,misty-fly,high-winds"
               PORT: "8080"
               # tailscale's TS_SOCKET; NetBird is read from wt0 in sysfs, not
               # its gRPC socket, which has no read-only mode (overlays.ts).
@@ -801,9 +799,8 @@ spec:
           misty-fly: *tailscale-socket-mounts
           high-winds: *tailscale-socket-mounts
 
-    # One per region exit, region-exits-<name>: the route's /<name>, and the
-    # overview's reads of each /status. The Service selecting all five pickers,
-    # for /, is ./service.yaml: the chart pins every Service to one controller.
+    # One per region exit, region-exits-<name>: how the region picker app
+    # reaches each agent (NUXT_AGENT_URL_TEMPLATE in ../wonderbolts).
     service:
       spitfire:
         controller: spitfire
@@ -863,7 +860,5 @@ spec:
         endpoints: *metrics-endpoints
 
     # No route. wonderbolts.<root domain> belongs to the region picker app
-    # (../wonderbolts/helmrelease.yaml, ADR 0006), which reaches each picker
-    # sidecar through its Service above. The sidecar's own pages, and
-    # region-exits-pickers (./service.yaml) behind them, go in the cleanup
-    # that follows (docs/plans/wonderbolts-nuxt.md, phase 5).
+    # (../wonderbolts/helmrelease.yaml, ADR 0006), which reaches each agent
+    # through its Service above.

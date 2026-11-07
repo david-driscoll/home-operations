@@ -1,32 +1,24 @@
 // biome-ignore-all lint/style/useTemplate: no template literals in this file. It ships as a ConfigMap, and Flux envsubst and the hk eso lint both read a dollar-brace as a variable.
 /**
- * The region picker (docs/plans/region-exits.md §D4, ADR 0005): a sidecar in a
- * region exit's pod that shows where the region exit leaves from and lets
- * family move it. The route publishes /<name> behind Authentik forward auth
- * (family and admins); /status is also served at the root for in-cluster
- * readers.
+ * The region exit agent (docs/plans/wonderbolts-nuxt.md, ADR 0006): a sidecar
+ * in a region exit's pod that reports where the region exit leaves from and
+ * moves it, for the region picker app (apps/wonderbolts) and Prometheus. It
+ * serves no pages and has no route through the Gateway; the app, behind
+ * Authentik forward auth, decides who may move a region exit, and the CNP
+ * lets only the app's pods ask for a move.
  *
- *   GET  /                        the overview of every region exit (overview.ts)
- *   GET  /status, /<name>/status  JSON: region, tunnel state, Mullvad egress,
- *                                 people on it (./activeClients.ts), overlays
- *                                 and the availability derived from them
- *                                 (./overlays.ts)
- *   GET  /metrics                 the same for Prometheus (./metrics.ts); root only
- *   GET  /<name>                  the page: availability, current region and a
- *                                 country/city form
- *   GET  /regions, /<name>/regions  JSON: Mullvad WireGuard countries and their cities
- *   POST /region                  move it, for the region picker app
- *                                 (docs/plans/wonderbolts-nuxt.md): JSON only,
- *                                 with who is moving it as `movedBy`
- *   POST /<name>/region           move it from this sidecar's own page (JSON or
- *                                 its form post); who is moving it is the
- *                                 X-authentik-name or -username forward auth set.
- *                                 Either way, with anyone on it, only once confirmed
- *   GET  /healthz                 liveness, touches nothing
+ *   GET  /status    JSON: region, tunnel state, Mullvad egress, people on it
+ *                   (./activeClients.ts), overlays and the availability
+ *                   derived from them (./overlays.ts), and the last move
+ *   GET  /metrics   the same for Prometheus (./metrics.ts)
+ *   GET  /regions   JSON: Mullvad WireGuard countries and their cities
+ *   POST /region    JSON { country, city?, confirm?, movedBy }: move it; with
+ *                   anyone on it, only once confirmed (409 until then)
+ *   GET  /healthz   liveness, touches nothing
  *
  * gluetun's control server (pinned v3.41.x, internal/server/vpn.go) listens on
  * 127.0.0.1:8000 only, with HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE {"auth":"none"}
- * so the picker needs no key: the pod's loopback is the boundary. A switch is
+ * so the agent needs no key: the pod's loopback is the boundary. A switch is
  * PUT /v1/vpn/settings with a partial settings.VPN; gluetun overrides only the
  * fields given (gosettings.OverrideWithSlice: a non-nil empty list clears),
  * validates against its server list, and restarts the tunnel when anything
@@ -48,10 +40,8 @@
 import { readFile } from "node:fs/promises";
 import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
 import { activeClients } from "./activeClients.ts";
-import { AVAILABILITY_STYLE, describeAvailability, describeRegion, escapeHtml, peopleCount, renderDocument } from "./html.ts";
 import { renderMetrics } from "./metrics.ts";
 import { type Availability, availabilityOf, type OverlayConfig, type OverlayDeps, type OverlayState, overlayState } from "./overlays.ts";
-import { collectOverview, peerStatusUrl, renderOverview } from "./overview.ts";
 
 export interface PickerConfig extends OverlayConfig {
   name: string;
@@ -61,10 +51,6 @@ export interface PickerConfig extends OverlayConfig {
   kubeUrl: string;
   serversPath: string;
   tokenPath: string;
-  /** Every region exit, in the order the overview lists them. */
-  regionExits: string[];
-  /** A region exit's GET /status URL through its Service, or null when there is none. */
-  statusUrl: (name: string) => string | null;
 }
 
 export interface Deps extends OverlayDeps {
@@ -161,87 +147,13 @@ export interface Status {
   lastMove: LastMove | null;
 }
 
-/** JSON safe inside a <script>: no `<`, so no `</script>`. */
-const scriptJson = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
+/** "2 people are using spitfire right now.", for the 409 a move gets with people on it. */
 const describePeople = (name: string, count: number | null) =>
-  count === null ? "The picker cannot tell how many people are using " + name + "." : peopleCount(count) + (count === 1 ? " is" : " are") + " using " + name + " right now.";
-const PAGE_STYLE = "body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}";
-
-/** The page a form post gets when people are on the region exit: the same move again, confirmed. */
-export function renderConfirm(name: string, region: Region, count: number | null): string {
-  const hidden = (field: string, value: string) => '<input type="hidden" name="' + field + '" value="' + escapeHtml(value) + '">';
-  return renderDocument("Move " + name + "?", PAGE_STYLE + "button{display:block;width:100%;margin:.5rem 0;font-size:1rem;padding:.6rem}", [
-    "<h1>Move " + escapeHtml(name) + " to " + escapeHtml(describeRegion(region)) + "?</h1>",
-    "<p>" + escapeHtml(describePeople(name, count)) + " Everyone using it moves with it.</p>",
-    '<form method="post" action="/' + escapeHtml(name) + '/region">',
-    hidden("country", region.country) + hidden("city", region.city ?? "") + hidden("confirm", "yes"),
-    "<button>Move anyway</button>",
-    "</form>",
-    '<p><a href="/' + escapeHtml(name) + '">Cancel</a></p>',
-  ]);
-}
-
-/** The countries the page offers as one-click moves, in servers.json's names, in this order. */
-export const QUICK_COUNTRIES: readonly string[] = ["USA", "Canada", "UK"];
-
-const option = (value: string, label: string, selected: boolean) => '<option value="' + escapeHtml(value) + '"' + (selected ? " selected" : "") + ">" + escapeHtml(label) + "</option>";
-
-/** The page at /<name>: where the region exit is, and a form to move it. */
-export function renderPage(name: string, current: Status, regions: RegionChoice[]): string {
-  // What the country <select> shows: the current country, or the browser's
-  // default (the first) when Mullvad no longer offers it. The city list
-  // matches it, so the page is right before (or without) the script.
-  const shown = regions.find(r => r.country === current.region?.country) ?? regions[0];
-  const currentCity = shown && shown.country === current.region?.country ? current.region.city : null;
-  const options = regions.map(r => option(r.country, r.country, r === shown && shown.country === current.region?.country)).join("");
-  const cityOptions = option("", "Any city", !currentCity) + (shown?.cities ?? []).map(c => option(c, c, c === currentCity)).join("");
-  // One-click moves: a country and no city, through the same POST as the form.
-  // The buttons sit in the form beside the dropdown but submit the empty
-  // #quick form (the form attribute), so they never send the dropdowns too.
-  const quick = QUICK_COUNTRIES.filter(c => regions.some(r => r.country === c))
-    .map(c =>
-      c === current.region?.country
-        ? '<button form="quick" name="country" value="' + escapeHtml(c) + '" disabled aria-current="true">' + escapeHtml(c) + " (current)</button>"
-        : '<button form="quick" name="country" value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</button>",
-    )
-    .join("");
-  const cities = Object.fromEntries(regions.map(r => [r.country, r.cities]));
-  const tunnel = current.tunnel.up ? "connected" : "not connected" + (current.tunnel.status ? " (" + escapeHtml(current.tunnel.status) + ")" : "");
-  const egress = current.egress ? "Traffic leaves from " + escapeHtml((current.egress.city ? current.egress.city + ", " : "") + (current.egress.country ?? "an unknown country")) + "." : "";
-  const availability = describeAvailability(name, current.availability);
-  const quickStyle = ".quick{display:flex;gap:.5rem}.quick button{flex:1;margin:0}.quick button[aria-current]{font-weight:bold}";
-  return renderDocument(name + " region", PAGE_STYLE + AVAILABILITY_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}" + quickStyle, [
-    "<h1>" + escapeHtml(name) + "</h1>",
-    '<p class="availability ' + current.availability.state + '"><strong>' + escapeHtml(availability.label) + "</strong><br>" + escapeHtml(availability.detail) + "</p>",
-    "<p>Region: <strong>" + escapeHtml(describeRegion(current.region)) + "</strong>. Tunnel " + tunnel + ". " + egress + "</p>",
-    '<form id="quick" method="post" action="/' + escapeHtml(name) + '/region"></form>',
-    '<form method="post" action="/' + escapeHtml(name) + '/region">',
-    '<label for="country">Country</label><div class="quick">' + quick + "</div>",
-    '<select id="country" name="country" required>' + options + "</select>",
-    '<label for="city">City (optional)</label><select id="city" name="city">' + cityOptions + "</select>",
-    "<button>Move " + escapeHtml(name) + "</button>",
-    "<p>" + escapeHtml(describePeople(name, current.activeClients)) + " Everyone using it moves with it.</p>",
-    "</form>",
-    "<script>",
-    "const cities = " + scriptJson(cities) + ";",
-    "const current = " + scriptJson(current.region) + ";",
-    'const country = document.getElementById("country"), city = document.getElementById("city");',
-    // The server rendered the cities of the country shown; this redoes it,
-    // the same way, when another country is picked.
-    "function fill() {",
-    '  city.replaceChildren(new Option("Any city", ""));',
-    "  for (const c of cities[country.value] || []) city.add(new Option(c, c, false, !!current && current.country === country.value && current.city === c));",
-    "}",
-    'country.addEventListener("change", fill);',
-    "</script>",
-  ]);
-}
+  count === null ? "The picker cannot tell how many people are using " + name + "." : (count === 1 ? "1 person is" : count + " people are") + " using " + name + " right now.";
 
 const asJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 export function createHandler(config: PickerConfig, deps: Deps): (request: Request) => Promise<Response> {
-  const base = "/" + config.name;
-
   /** A GET on gluetun's control API, or null when it does not answer. */
   async function gluetun<T>(path: string): Promise<T | null> {
     try {
@@ -356,28 +268,13 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     return text;
   }
 
-  /**
-   * The region asked for, if Mullvad offers it, whether the move is confirmed,
-   * and who is moving it: from the body for the app (`fromApp`), from forward
-   * auth's headers for this sidecar's own page. An error message otherwise.
-   */
-  async function requested(request: Request, fromApp: boolean): Promise<{ region: Region; confirmed: boolean; movedBy: string | null } | string> {
-    let country: string | undefined;
-    let city: string | undefined;
-    let confirmed = false;
-    let movedBy = fromApp ? null : moverName(request.headers.get("x-authentik-name") || request.headers.get("x-authentik-username"));
-    if ((request.headers.get("content-type") ?? "").includes("application/json")) {
-      const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown; confirm?: unknown; movedBy?: unknown };
-      country = typeof body.country === "string" ? body.country : undefined;
-      city = typeof body.city === "string" ? body.city : undefined;
-      confirmed = body.confirm === true;
-      if (fromApp) movedBy = moverName(body.movedBy);
-    } else {
-      const form = new URLSearchParams(await request.text());
-      country = form.get("country") ?? undefined;
-      city = form.get("city") ?? undefined;
-      confirmed = form.get("confirm") === "yes";
-    }
+  /** The region asked for, if Mullvad offers it, whether the move is confirmed, and who is moving it; an error message otherwise. */
+  async function requested(request: Request): Promise<{ region: Region; confirmed: boolean; movedBy: string | null } | string> {
+    const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown; confirm?: unknown; movedBy?: unknown };
+    const country = typeof body.country === "string" ? body.country : undefined;
+    const city = typeof body.city === "string" ? body.city : undefined;
+    const confirmed = body.confirm === true;
+    const movedBy = moverName(body.movedBy);
     if (!country) return "pick a country";
     const asked = country;
     const offered = regionsFrom(await deps.readFile(config.serversPath)).find(r => sameName(r.country, asked));
@@ -387,11 +284,10 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     return { region: { country: offered.country, city: offeredCity }, confirmed, movedBy };
   }
 
-  /** A move: `fromApp` is POST /region, the app's (JSON only); otherwise POST /<name>/region from this sidecar's page. */
-  async function switchRegion(request: Request, fromApp: boolean): Promise<Response> {
-    const fromForm = !(request.headers.get("content-type") ?? "").includes("application/json");
-    if (fromApp && fromForm) return asJson({ error: "send JSON" }, 415);
-    const asked = await requested(request, fromApp);
+  /** POST /region: the app's move, JSON only. */
+  async function switchRegion(request: Request): Promise<Response> {
+    if (!(request.headers.get("content-type") ?? "").includes("application/json")) return asJson({ error: "send JSON" }, 415);
+    const asked = await requested(request);
     if (typeof asked === "string") return asJson({ error: asked }, 400);
     const { region, movedBy } = asked;
     // Moving a region exit moves everyone on it, and nothing locks it, so
@@ -399,7 +295,6 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     if (!asked.confirmed) {
       const people = await activeClients(deps.readFile);
       if (people !== 0) {
-        if (fromForm) return new Response(renderConfirm(config.name, region, people), { headers: { "Content-Type": "text/html; charset=utf-8" } });
         return asJson({ error: describePeople(config.name, people) + " Send it again with confirm: true to move them.", activeClients: people, confirm: true }, 409);
       }
     }
@@ -413,36 +308,19 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
       return asJson({ error: String(error instanceof Error ? error.message : error) }, 502);
     }
     console.log(JSON.stringify({ msg: "region switched", region, movedBy, outcome }));
-    if (fromForm) return new Response(null, { status: 303, headers: { Location: base } });
     return asJson({ region, outcome });
-  }
-
-  async function page(): Promise<Response> {
-    const [current, regions] = await Promise.all([status(), deps.readFile(config.serversPath).then(regionsFrom)]);
-    return new Response(renderPage(config.name, current, regions), { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 
   return async request => {
     let path = new URL(request.url).pathname;
     while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
     if (request.method === "GET" && path === "/healthz") return new Response("ok");
-    if (request.method === "GET" && path === "/") {
-      const [peers, regions] = await Promise.all([collectOverview(config.regionExits, config.statusUrl, deps.fetch), offeredRegions()]);
-      // A peer's /status is already canonical; this covers one from before it was.
-      const entries = peers.map(entry => (entry.region ? { ...entry, region: canonicalRegion(entry.region, regions) } : entry));
-      return new Response(renderOverview(entries, new Date()), { headers: { "Content-Type": "text/html; charset=utf-8" } });
-    }
-    if (request.method === "GET" && path === base) return page();
-    if (request.method === "GET" && (path === "/status" || path === base + "/status")) return asJson(await status());
-    // Root only, never under /<name>: the HTTPRoute publishes /<name>, and
-    // the CNP lets Prometheus GET this path and nothing else.
+    if (request.method === "GET" && path === "/status") return asJson(await status());
+    // The CNP lets Prometheus GET this path and nothing else.
     if (request.method === "GET" && path === "/metrics") return new Response(renderMetrics(await status()), { headers: { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" } });
-    // POST /region is the app's. The CNP lets only the app's pods send it:
-    // Traefik may POST /<name>/region and nothing else, though the route's /
-    // reaches whichever sidecar region-exits-pickers lands on.
-    if (request.method === "POST" && path === "/region") return switchRegion(request, true);
-    if (request.method === "POST" && path === base + "/region") return switchRegion(request, false);
-    if (request.method === "GET" && (path === "/regions" || path === base + "/regions")) return asJson(regionsFrom(await deps.readFile(config.serversPath)));
+    if (request.method === "GET" && path === "/regions") return asJson(regionsFrom(await deps.readFile(config.serversPath)));
+    // The CNP lets only the region picker app's pods send this.
+    if (request.method === "POST" && path === "/region") return switchRegion(request);
     return new Response("not found", { status: 404 });
   };
 }
@@ -497,24 +375,19 @@ function main(): void {
     // The API server's CA comes from NODE_EXTRA_CA_CERTS, as for the proxy watchdog.
     // By address, not kubernetes.default.svc: the pod resolves through
     // Technitium (dnsPolicy None), which knows no cluster names.
-    // The kubelet always sets KUBERNETES_SERVICE_HOST/PORT, service links or not,
-    // and the API server's certificate carries the Service address.
+    // The kubelet sets KUBERNETES_SERVICE_HOST/PORT even with
+    // enableServiceLinks off, as it is here, and the API server's certificate
+    // carries the Service address.
     kubeUrl: env("KUBERNETES_URL", "https://" + process.env.KUBERNETES_SERVICE_HOST + ":" + process.env.KUBERNETES_SERVICE_PORT),
     serversPath: env("GLUETUN_SERVERS_JSON", "/gluetun/servers.json"),
     tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
-    // Every region exit, comma-separated; on its own, the overview lists this one.
-    regionExits: env("REGION_EXITS", name)
-      .split(",")
-      .map(exit => exit.trim())
-      .filter(Boolean),
-    statusUrl: peerStatusUrl(env("REGION_EXIT_SERVICE_PREFIX", "region-exits-"), process.env),
     // The tailscale container's TS_SOCKET, on the emptyDir both mount.
     tailscaleSocket: env("TAILSCALE_SOCKET", "/var/run/tailscale/tailscaled.sock"),
     netbirdFlagsPath: "/sys/class/net/" + env("NETBIRD_INTERFACE", "wt0") + "/flags",
   };
   const handle = createHandler(config, { fetch: globalThis.fetch, readFile: path => readFile(path, "utf8"), unixGet });
   const port = Number(env("PORT", "8080"));
-  createServer((req, res) => void serve(handle, req, res)).listen(port, () => console.log(JSON.stringify({ msg: "region picker listening", name, port })));
+  createServer((req, res) => void serve(handle, req, res)).listen(port, () => console.log(JSON.stringify({ msg: "region exit agent listening", name, port })));
 }
 
 if (import.meta.main) main();

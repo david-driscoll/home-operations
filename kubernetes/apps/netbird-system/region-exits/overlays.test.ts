@@ -3,8 +3,8 @@
  * node --test kubernetes/apps/netbird-system/region-exits/overlays.test.ts
  *
  * A region exit's availability (docs/plans/region-exits.md §D4): one verdict
- * from the tunnel and the two overlays, which /status, the pages and the
- * overview all share. How the overlays are read is covered through the
+ * from the tunnel and the two overlays, which /status and /metrics report and
+ * the region picker app shows. How the overlays are read is covered through the
  * handler in picker.test.ts.
  */
 import assert from "node:assert/strict";

@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useTemplate: no template literals in this file. It ships as a ConfigMap, and Flux envsubst and the hk eso lint both read a dollar-brace as a variable.
 /**
- * Whether a region exit's two overlays are connected, as the region picker
+ * Whether a region exit's two overlays are connected, as its agent (picker.ts)
  * reports them on /status and /metrics (docs/plans/region-exits.md §D4, §D5).
  * Both reads are read-only by construction:
  *
@@ -66,8 +66,8 @@ async function netbirdConnected(config: OverlayConfig, deps: OverlayDeps): Promi
 export type Overlay = keyof OverlayState;
 
 /**
- * Whether family can use a region exit, the one verdict /status, the pages
- * and the overview share (docs/plans/region-exits.md §D4):
+ * Whether family can use a region exit: the one verdict /status and /metrics
+ * report, and the region picker app shows (docs/plans/region-exits.md §D4):
  *
  *   online       the tunnel is up and both overlays are connected
  *   degraded     the tunnel is up and one overlay is not (offlineOn); people
@@ -76,9 +76,11 @@ export type Overlay = keyof OverlayState;
  *   offline      the tunnel is down, so the kill switch lets nothing out
  *                (reason "tunnel"), or neither overlay is connected
  *                (reason "overlays")
- *   unreachable  its /status did not answer; only the overview sees this
+ *
+ * The app adds `unreachable` for an agent that does not answer
+ * (apps/wonderbolts/shared/types/regionExit.ts); no agent reports it.
  */
-export type Availability = { state: "online" } | { state: "degraded"; offlineOn: Overlay } | { state: "offline"; reason: "tunnel" | "overlays" } | { state: "unreachable" };
+export type Availability = { state: "online" } | { state: "degraded"; offlineOn: Overlay } | { state: "offline"; reason: "tunnel" | "overlays" };
 
 export function availabilityOf(tunnelUp: boolean, overlays: OverlayState): Availability {
   if (!tunnelUp) return { state: "offline", reason: "tunnel" };

@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # The region picker is its own Nuxt app; each region exit keeps a JSON agent
