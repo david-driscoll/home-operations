@@ -21,15 +21,19 @@
 #     back to DERP and relays. These ports only carry WireGuard and disco/ICE,
 #     which authenticate every packet, and gluetun's FIREWALL_INPUT_PORTS opens
 #     the same two.
-# Everything else (gluetun's 8000 and 9999 are loopback or overlay-dropped
-# anyway) is closed. Egress is untouched: the tunnel, the overlays' control
-# planes and the Kubernetes API.
-#
+#   - 8080/tcp from Prometheus (observability, the operator's `prometheus`
+#     instance), L7: `GET /metrics` only, for the ServiceMonitor (#3142).
+#     Cilium's proxy answers any other method or path with 403, so the
+#     scraper cannot reach the POST that switches region. Same L7 shape as
+#     ../../netbird-system/nbidp/ciliumnetworkpolicy.yaml.
 #   - GET /status on 8080 from the region exits' own pods, for the overview
 #     at / (#3143, overview.ts): whichever picker serves it reads every region
 #     exit's /status, its own included. An L7 rule, never a plain port rule:
 #     the same port takes the POST that switches region, and one picker must
 #     not be able to move another. Cilium's path is a full-match regex.
+# Everything else (gluetun's 8000 and 9999 are loopback or overlay-dropped
+# anyway) is closed. Egress is untouched: the tunnel, the overlays' control
+# planes and the Kubernetes API.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -48,6 +52,19 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: observability
+            app.kubernetes.io/name: prometheus
+            operator.prometheus.io/name: prometheus
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+          rules:
+            http:
+              - method: GET
+                path: /metrics
     - fromEntities:
         - host
       toPorts:

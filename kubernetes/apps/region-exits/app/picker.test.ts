@@ -22,6 +22,8 @@ const config: PickerConfig = {
   tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
   regionExits: ["spitfire", "soarin"],
   statusUrl: name => "http://" + name + ".peer:8080/status",
+  tailscaleSocket: "/var/run/tailscale/tailscaled.sock",
+  netbirdFlagsPath: "/sys/class/net/wt0/flags",
 };
 
 /** A slice of gluetun's servers.json: Mullvad, plus servers the picker must skip. */
@@ -68,8 +70,16 @@ function fakeFetch(routes: Record<string, Route>) {
 }
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+/** wt0 up (IFF_UP | IFF_POINTOPOINT | IFF_NOARP), as sysfs prints it. */
+const WT0_UP = "0x91\n";
 // Nobody on the region exit, unless a test says otherwise.
-const files: Record<string, string> = { [config.serversPath]: SERVERS, [config.tokenPath]: "sa-token\n", [CONNTRACK_PATH]: "", [ESTABLISHED_TIMEOUT_PATH]: "432000\n" };
+const files: Record<string, string> = {
+  [config.serversPath]: SERVERS,
+  [config.tokenPath]: "sa-token\n",
+  [CONNTRACK_PATH]: "",
+  [ESTABLISHED_TIMEOUT_PATH]: "432000\n",
+  [config.netbirdFlagsPath]: WT0_UP,
+};
 /** One Tailscale and one NetBird client browsing through the tunnel. */
 const TWO_PEOPLE = [
   "ipv4     2 tcp      6 431990 ESTABLISHED src=100.101.1.2 dst=93.184.216.34 sport=51234 dport=443 src=93.184.216.34 dst=10.64.12.34 sport=443 dport=51234 [ASSURED] mark=0 zone=0 use=2",
@@ -91,9 +101,27 @@ const readFile = async (path: string) => {
   return files[path];
 };
 
-function picker(routes: Record<string, Route> = {}) {
+interface LocalApiCall {
+  socketPath: string;
+  path: string;
+  headers: Record<string, string>;
+}
+const TAILSCALE_RUNNING = { BackendState: "Running", Self: { HostName: "spitfire", Online: true } };
+/** tailscaled's LocalAPI on its socket, answering /localapi/v0/status with `status`; null is no socket. */
+function fakeLocalApi(status: unknown) {
+  const calls: LocalApiCall[] = [];
+  const unixGet = async (socketPath: string, path: string, headers: Record<string, string>) => {
+    calls.push({ socketPath, path, headers });
+    if (status === null) throw new Error("connect ENOENT " + socketPath);
+    return { status: 200, body: JSON.stringify(status) };
+  };
+  return { unixGet, calls };
+}
+
+function picker(routes: Record<string, Route> = {}, tailscale: unknown = TAILSCALE_RUNNING) {
   const fake = fakeFetch(routes);
-  return { handle: createHandler(config, { fetch: fake.fetch, readFile }), calls: fake.calls };
+  const localApi = fakeLocalApi(tailscale);
+  return { handle: createHandler(config, { fetch: fake.fetch, readFile, unixGet: localApi.unixGet }), calls: fake.calls, localApiCalls: localApi.calls };
 }
 
 const get = (path: string, accept = "application/json") => new Request("http://picker" + path, { headers: { Accept: accept } });
@@ -130,6 +158,7 @@ describe("GET /status", () => {
       tunnel: { up: true, status: "running" },
       egress: { country: "Japan", city: "Tokyo", ip: "198.51.100.7" },
       activeClients: 0,
+      overlays: { tailscale: true, netbird: true },
     });
   });
 
@@ -159,7 +188,7 @@ describe("GET /status", () => {
     const { handle } = picker({});
     const response = await handle(get("/status"));
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { name: "spitfire", region: null, tunnel: { up: false, status: null }, egress: null, activeClients: 0 });
+    assert.deepEqual(await response.json(), { name: "spitfire", region: null, tunnel: { up: false, status: null }, egress: null, activeClients: 0, overlays: { tailscale: true, netbird: true } });
   });
 
   it("reports the tunnel down while gluetun is reconnecting, and no egress until it has a public IP", async () => {
@@ -215,6 +244,61 @@ describe("GET /healthz", () => {
     const { handle, calls } = picker({});
     assert.equal((await handle(get("/healthz"))).status, 200);
     assert.deepEqual(calls, []);
+  });
+});
+
+describe("the overlays on /status", () => {
+  it("asks tailscaled's LocalAPI on its socket, by the host name the LocalAPI requires", async () => {
+    const { handle, localApiCalls } = picker(gluetunUp);
+    await handle(get("/status"));
+    assert.deepEqual(localApiCalls, [{ socketPath: config.tailscaleSocket, path: "/localapi/v0/status", headers: { Host: "local-tailscaled.sock" } }]);
+  });
+
+  for (const [what, status] of [
+    ["tailscaled is not running (no socket)", null],
+    ["tailscaled needs a login", { BackendState: "NeedsLogin", Self: { Online: false } }],
+    ["tailscaled has lost the control plane", { BackendState: "Running", Self: { Online: false } }],
+  ] as const) {
+    it("reports Tailscale offline when " + what + ", and NetBird still connected", async () => {
+      const { handle } = picker(gluetunUp, status);
+      assert.deepEqual((await (await handle(get("/status"))).json()).overlays, { tailscale: false, netbird: true });
+    });
+  }
+
+  for (const [what, flags] of [
+    ["wt0 is gone (NetBird stopped, or gave up on management)", undefined],
+    ["wt0 is down", "0x90\n"],
+  ] as const) {
+    it("reports NetBird offline when " + what, async () => {
+      const original = files[config.netbirdFlagsPath];
+      if (flags === undefined) delete files[config.netbirdFlagsPath];
+      else files[config.netbirdFlagsPath] = flags;
+      try {
+        const { handle } = picker(gluetunUp);
+        assert.deepEqual((await (await handle(get("/status"))).json()).overlays, { tailscale: true, netbird: false });
+      } finally {
+        files[config.netbirdFlagsPath] = original;
+      }
+    });
+  }
+});
+
+describe("GET /metrics", () => {
+  it("serves the status as Prometheus text", async () => {
+    const { handle } = picker(gluetunUp, { BackendState: "Stopped", Self: { Online: false } });
+    const response = await handle(new Request("http://picker/metrics"));
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /^text\/plain; version=0\.0\.4/);
+    const text = await response.text();
+    assert.match(text, /^region_exit_tunnel_up\{region_exit="spitfire"\} 1$/m);
+    assert.match(text, /^region_exit_egress_country_match\{region_exit="spitfire"\} 1$/m);
+    assert.match(text, /^region_exit_overlay_connected\{region_exit="spitfire",overlay="tailscale"\} 0$/m);
+    assert.match(text, /^region_exit_overlay_connected\{region_exit="spitfire",overlay="netbird"\} 1$/m);
+  });
+
+  it("is not served under the route's path, so the HTTPRoute never publishes it", async () => {
+    const { handle } = picker(gluetunUp);
+    assert.equal((await handle(new Request("http://picker/spitfire/metrics"))).status, 404);
   });
 });
 

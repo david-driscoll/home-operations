@@ -316,6 +316,11 @@ spec:
               TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
               TS_ENABLE_HEALTH_CHECK: "true"
               TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+              # On the tailscale-socket emptyDir, where the picker reads
+              # /localapi/v0/status for region_exit_overlay_connected. The
+              # socket is 0666 and tailscaled grants the picker's uid 1000
+              # read-only access (overlays.ts).
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
             probes: &tailscale-probes
               liveness: &tailscale-probe
                 enabled: true
@@ -386,6 +391,9 @@ spec:
               # region-exits-<name> (REGION_EXIT_SERVICE_PREFIX).
               REGION_EXITS: &region-exits "spitfire,soarin,fleetfoot,misty-fly,high-winds"
               PORT: "8080"
+              # tailscale's TS_SOCKET; NetBird is read from wt0 in sysfs, not
+              # its gRPC socket, which has no read-only mode (overlays.ts).
+              TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
                   fieldRef:
@@ -466,6 +474,7 @@ spec:
               TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
               TS_ENABLE_HEALTH_CHECK: "true"
               TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
             probes: *tailscale-probes
             securityContext: *privileged
             resources: *overlay-resources
@@ -494,6 +503,7 @@ spec:
               REGION_EXIT_NAME: soarin
               REGION_EXITS: *region-exits
               PORT: "8080"
+              TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
                   fieldRef:
@@ -545,6 +555,7 @@ spec:
               TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
               TS_ENABLE_HEALTH_CHECK: "true"
               TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
             probes: *tailscale-probes
             securityContext: *privileged
             resources: *overlay-resources
@@ -573,6 +584,7 @@ spec:
               REGION_EXIT_NAME: fleetfoot
               REGION_EXITS: *region-exits
               PORT: "8080"
+              TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
                   fieldRef:
@@ -624,6 +636,7 @@ spec:
               TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
               TS_ENABLE_HEALTH_CHECK: "true"
               TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
             probes: *tailscale-probes
             securityContext: *privileged
             resources: *overlay-resources
@@ -652,6 +665,7 @@ spec:
               REGION_EXIT_NAME: misty-fly
               REGION_EXITS: *region-exits
               PORT: "8080"
+              TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
                   fieldRef:
@@ -703,6 +717,7 @@ spec:
               TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
               TS_ENABLE_HEALTH_CHECK: "true"
               TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
             probes: *tailscale-probes
             securityContext: *privileged
             resources: *overlay-resources
@@ -731,6 +746,7 @@ spec:
               REGION_EXIT_NAME: high-winds
               REGION_EXITS: *region-exits
               PORT: "8080"
+              TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
                   fieldRef:
@@ -806,6 +822,22 @@ spec:
           fleetfoot: *gluetun-mounts
           misty-fly: *gluetun-mounts
           high-winds: *gluetun-mounts
+      # tailscaled's LocalAPI socket (TS_SOCKET). The picker connects as a
+      # non-root peer, which tailscaled answers read-only; a read-only mount
+      # still lets it connect.
+      tailscale-socket:
+        type: emptyDir
+        advancedMounts:
+          spitfire: &tailscale-socket-mounts
+            tailscale:
+              - path: /var/run/tailscale
+            picker:
+              - path: /var/run/tailscale
+                readOnly: true
+          soarin: *tailscale-socket-mounts
+          fleetfoot: *tailscale-socket-mounts
+          misty-fly: *tailscale-socket-mounts
+          high-winds: *tailscale-socket-mounts
 
     # One per region exit, region-exits-<name>: the route's /<name>, and the
     # overview's reads of each /status. The Service selecting all five pickers,
@@ -836,6 +868,37 @@ spec:
         ports:
           http:
             port: *picker-port
+
+    # The picker's GET /metrics (metrics.ts), which prometheusrule.yaml alerts
+    # on. The series carry region_exit=<name> themselves. The CNP lets
+    # Prometheus GET /metrics on 8080 and nothing else.
+    serviceMonitor:
+      spitfire:
+        service:
+          identifier: spitfire
+        endpoints: &metrics-endpoints
+          - port: http
+            scheme: http
+            path: /metrics
+            interval: 1m
+            # gluetun and tailscaled are each given 5s.
+            scrapeTimeout: 15s
+      soarin:
+        service:
+          identifier: soarin
+        endpoints: *metrics-endpoints
+      fleetfoot:
+        service:
+          identifier: fleetfoot
+        endpoints: *metrics-endpoints
+      misty-fly:
+        service:
+          identifier: misty-fly
+        endpoints: *metrics-endpoints
+      high-winds:
+        service:
+          identifier: high-winds
+        endpoints: *metrics-endpoints
 
     route:
       # The region picker: / is the overview, from any picker
