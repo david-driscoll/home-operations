@@ -271,3 +271,20 @@ spec:
     # The chart's own Ingress stays off; see ./httproute.yaml.
     ingress:
       enabled: false
+  # Always up: excluded from the nightly 01:00-07:00 shed. The chart exposes no
+  # Deployment-level annotations (see `web.podAnnotations` above), so this lands
+  # by patch on both Deployments, sure-web and sure-worker.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: not-used
+                annotations:
+                  downscaler/exclude: "true"

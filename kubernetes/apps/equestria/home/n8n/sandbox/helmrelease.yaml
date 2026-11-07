@@ -89,3 +89,32 @@ spec:
           memory: 256Mi
         limits:
           memory: 4Gi
+  # Always up: excluded from the nightly 01:00-07:00 shed, like n8n itself
+  # (../helmrelease.yaml), whose AI sandbox this is. The chart has no workload
+  # annotation values, so this lands by patch on the API Deployment and the
+  # runner StatefulSet.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: not-used
+                annotations:
+                  downscaler/exclude: "true"
+          - target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+            patch: |
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: not-used
+                annotations:
+                  downscaler/exclude: "true"
