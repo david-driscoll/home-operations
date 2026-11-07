@@ -1,11 +1,12 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
 #
-# Only Traefik may talk to the region picker.
+# Only Traefik and the region picker app may talk to the picker sidecar.
 #
-# The picker (picker.ts) trusts that every request on 8080 came through the
-# wonderbolts route's forward auth (family and admins, ADR 0005): it has no
-# login of its own. Without this policy any pod in the cluster, and anything
+# The sidecar (picker.ts) trusts that every request on 8080 came through the
+# wonderbolts route's forward auth (family and admins, ADR 0005) or from the
+# region picker app, which checks who may move a region exit itself (ADR
+# 0006): it has no login of its own. Without this policy any pod in the cluster, and anything
 # the tailscale Connector routes onto the pod network, could POST a region
 # switch straight to the Service. Same shape as
 # ../../coder/setup-status/ciliumnetworkpolicy.yaml.
@@ -18,8 +19,19 @@
 #
 # Selecting the pods puts them into default-deny for ingress. Allowed:
 #   - 8080/tcp from Traefik (traefik-network serves the internal Gateway the
-#     route is on), and from `host` for the kubelet's httpGet probes. The
-#     other containers' probes are exec and need nothing.
+#     route is on), L7: any GET, and POST only on /<name>/region, the sidecar
+#     page's own move. Never the root POST /region: that is the region picker
+#     app's (below), and the route's / reaches whichever sidecar
+#     region-exits-pickers lands on, so a hand-made POST there would move a
+#     region exit nobody picked and name its own mover. Cilium's path is a
+#     full-match regex. Goes when the app owns the route
+#     (docs/plans/wonderbolts-nuxt.md, phase 5).
+#   - 8080/tcp from `host` for the kubelet's httpGet probes. The other
+#     containers' probes are exec and need nothing.
+#   - From the region picker app (wonderbolts, docs/plans/wonderbolts-nuxt.md,
+#     ADR 0006), L7: GET /status, GET /regions and POST /region. The app
+#     decides who may move a region exit; this is what keeps anything else
+#     from asking the sidecar directly.
 #   - The overlays' fixed WireGuard ports, 41641/udp (tailscaled) and
 #     51821/udp (NetBird), from anywhere. Direct P2P is hole-punched: a peer's
 #     first packet can arrive from an address the pod never sent to, which
@@ -58,6 +70,27 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
+          rules:
+            http:
+              - method: GET
+              - method: POST
+                path: /[^/]+/region
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: netbird-system
+            app.kubernetes.io/name: wonderbolts
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+          rules:
+            http:
+              - method: GET
+                path: /status
+              - method: GET
+                path: /regions
+              - method: POST
+                path: /region
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: observability

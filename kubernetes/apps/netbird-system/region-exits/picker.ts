@@ -14,9 +14,14 @@
  *   GET  /metrics                 the same for Prometheus (./metrics.ts); root only
  *   GET  /<name>                  the page: availability, current region and a
  *                                 country/city form
- *   GET  /<name>/regions          JSON: Mullvad WireGuard countries and their cities
- *   POST /<name>/region           move it (JSON or the page's form post); with
- *                                 anyone on it, only once confirmed
+ *   GET  /regions, /<name>/regions  JSON: Mullvad WireGuard countries and their cities
+ *   POST /region                  move it, for the region picker app
+ *                                 (docs/plans/wonderbolts-nuxt.md): JSON only,
+ *                                 with who is moving it as `movedBy`
+ *   POST /<name>/region           move it from this sidecar's own page (JSON or
+ *                                 its form post); who is moving it is the
+ *                                 X-authentik-name or -username forward auth set.
+ *                                 Either way, with anyone on it, only once confirmed
  *   GET  /healthz                 liveness, touches nothing
  *
  * gluetun's control server (pinned v3.41.x, internal/server/vpn.go) listens on
@@ -30,6 +35,9 @@
  * The region is saved first to the region-exit-<name>-state ConfigMap, which
  * Flux does not manage and which gluetun's envFrom reads after the Git
  * defaults, so the pick survives a restart and deleting it falls back to Git.
+ * Who moved it and when go on the same ConfigMap as annotations
+ * (MOVED_BY_ANNOTATION, MOVED_AT_ANNOTATION), and /status reports them as
+ * lastMove: the same object and the same RBAC, so nothing else is granted.
  * Countries and cities come from /gluetun/servers.json, which gluetun writes
  * into the emptyDir both containers mount.
  *
@@ -61,6 +69,34 @@ export interface PickerConfig extends OverlayConfig {
 
 export interface Deps extends OverlayDeps {
   fetch: typeof globalThis.fetch;
+  /** The clock a move's time is read from; the real one when not given. */
+  now?: () => Date;
+}
+
+/** On region-exit-<name>-state: who last moved the region exit, as the picker was told. Absent when nobody is known. */
+export const MOVED_BY_ANNOTATION = "driscoll.dev/region-exit-moved-by";
+/** On region-exit-<name>-state: when it was last moved, ISO 8601. */
+export const MOVED_AT_ANNOTATION = "driscoll.dev/region-exit-moved-at";
+/** The longest `movedBy` kept; a display name is far shorter. */
+const MOVED_BY_MAX = 256;
+
+/** Who last moved a region exit (null when nobody is known) and when. */
+export interface LastMove {
+  by: string | null;
+  at: string;
+}
+
+/** A name to record as the mover: trimmed, without control characters, bounded; null when there is none. */
+export function moverName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const isControl = (c: string) => (c.codePointAt(0) ?? 0) < 0x20 || c === "\u007f";
+  const kept = [...value]
+    .filter(c => !isControl(c))
+    .join("")
+    .trim();
+  // By code point, so an emoji at the cut is never split in half.
+  const name = [...kept].slice(0, MOVED_BY_MAX).join("");
+  return name === "" ? null : name;
 }
 
 export interface RegionChoice {
@@ -121,6 +157,8 @@ export interface Status {
   overlays: OverlayState;
   /** Whether family can use it, from the tunnel and the overlays (availabilityOf). */
   availability: Availability;
+  /** Who last moved it and when, from the state ConfigMap; null when it has no record (on its Git default, or moved before this was kept). */
+  lastMove: LastMove | null;
 }
 
 /** JSON safe inside a <script>: no `<`, so no `</script>`. */
@@ -223,13 +261,14 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
       .catch(() => []);
 
   async function status(): Promise<Status> {
-    const [vpn, settings, publicIp, people, overlays, regions] = await Promise.all([
+    const [vpn, settings, publicIp, people, overlays, regions, moved] = await Promise.all([
       gluetun<{ status?: string }>("/v1/vpn/status"),
       gluetun<{ provider?: { server_selection?: { countries?: string[] | null; cities?: string[] | null } } }>("/v1/vpn/settings"),
       gluetun<{ public_ip?: string; country?: string; city?: string }>("/v1/publicip/ip"),
       activeClients(deps.readFile),
       overlayState(config, deps),
       offeredRegions(),
+      lastMove(),
     ]);
     const selection = settings?.provider?.server_selection;
     const country = selection?.countries?.[0];
@@ -242,29 +281,64 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
       activeClients: people,
       overlays,
       availability: availabilityOf(tunnelUp, overlays),
+      lastMove: moved,
     };
   }
 
   /** A call on the Kubernetes API with the pod's ServiceAccount token. */
-  async function kube(method: "PATCH" | "POST", path: string, body: unknown, contentType = "application/json"): Promise<Response> {
+  async function kube(method: "GET" | "PATCH" | "POST", path: string, body?: unknown, contentType = "application/json", timeoutMs = 10000): Promise<Response> {
     const token = (await deps.readFile(config.tokenPath)).trim();
     return deps.fetch(config.kubeUrl + path, {
       method,
-      headers: { Authorization: "Bearer " + token, "Content-Type": contentType, Accept: "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(10000),
+      headers: body === undefined ? { Authorization: "Bearer " + token, Accept: "application/json" } : { Authorization: "Bearer " + token, "Content-Type": contentType, Accept: "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   }
 
-  /** Writes the region to the state ConfigMap, creating it the first time. Throws when it cannot. */
-  async function saveRegion(region: Region): Promise<void> {
+  const stateConfigMapPath = () => "/api/v1/namespaces/" + config.namespace + "/configmaps/" + config.stateConfigMap;
+
+  /** Who last moved it and when, from the state ConfigMap's annotations; null when there is no record or it cannot be read. */
+  async function lastMove(): Promise<LastMove | null> {
+    try {
+      const response = await kube("GET", stateConfigMapPath(), undefined, undefined, 5000);
+      // 404: no state ConfigMap, so the region exit is on its Git default.
+      if (response.status === 404) return null;
+      if (!response.ok) {
+        console.log(JSON.stringify({ msg: "reading the last move failed", status: response.status }));
+        return null;
+      }
+      const annotations = ((await response.json()) as { metadata?: { annotations?: Record<string, unknown> } }).metadata?.annotations ?? {};
+      const at = annotations[MOVED_AT_ANNOTATION];
+      if (typeof at !== "string" || at === "") return null;
+      return { by: moverName(annotations[MOVED_BY_ANNOTATION]), at };
+    } catch (error) {
+      console.log(JSON.stringify({ msg: "reading the last move failed", error: String(error) }));
+      return null;
+    }
+  }
+
+  /**
+   * Writes the region, and who moved it when, to the state ConfigMap, creating
+   * it the first time. A mover nobody named removes the old one's name, so it
+   * never shows someone who did not make this move. Throws when it cannot.
+   */
+  async function saveRegion(region: Region, movedBy: string | null, at: Date): Promise<void> {
     const configmaps = "/api/v1/namespaces/" + config.namespace + "/configmaps";
-    const patched = await kube("PATCH", configmaps + "/" + config.stateConfigMap, { data: { SERVER_COUNTRIES: region.country, SERVER_CITIES: region.city } }, "application/merge-patch+json");
+    const movedAt = at.toISOString();
+    const patched = await kube(
+      "PATCH",
+      stateConfigMapPath(),
+      { metadata: { annotations: { [MOVED_BY_ANNOTATION]: movedBy, [MOVED_AT_ANNOTATION]: movedAt } }, data: { SERVER_COUNTRIES: region.country, SERVER_CITIES: region.city } },
+      "application/merge-patch+json",
+    );
     if (patched.ok) return;
     if (patched.status !== 404) throw new Error("patching ConfigMap " + config.stateConfigMap + ": HTTP " + patched.status);
     const data: Record<string, string> = { SERVER_COUNTRIES: region.country };
     if (region.city) data.SERVER_CITIES = region.city;
-    const created = await kube("POST", configmaps, { apiVersion: "v1", kind: "ConfigMap", metadata: { name: config.stateConfigMap }, data });
+    const annotations: Record<string, string> = { [MOVED_AT_ANNOTATION]: movedAt };
+    if (movedBy) annotations[MOVED_BY_ANNOTATION] = movedBy;
+    const created = await kube("POST", configmaps, { apiVersion: "v1", kind: "ConfigMap", metadata: { name: config.stateConfigMap, annotations }, data });
     if (!created.ok) throw new Error("creating ConfigMap " + config.stateConfigMap + ": HTTP " + created.status);
   }
 
@@ -282,16 +356,22 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     return text;
   }
 
-  /** The region asked for, if Mullvad offers it, and whether the move is confirmed; an error message otherwise. */
-  async function requested(request: Request): Promise<{ region: Region; confirmed: boolean } | string> {
+  /**
+   * The region asked for, if Mullvad offers it, whether the move is confirmed,
+   * and who is moving it: from the body for the app (`fromApp`), from forward
+   * auth's headers for this sidecar's own page. An error message otherwise.
+   */
+  async function requested(request: Request, fromApp: boolean): Promise<{ region: Region; confirmed: boolean; movedBy: string | null } | string> {
     let country: string | undefined;
     let city: string | undefined;
     let confirmed = false;
+    let movedBy = fromApp ? null : moverName(request.headers.get("x-authentik-name") || request.headers.get("x-authentik-username"));
     if ((request.headers.get("content-type") ?? "").includes("application/json")) {
-      const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown; confirm?: unknown };
+      const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown; confirm?: unknown; movedBy?: unknown };
       country = typeof body.country === "string" ? body.country : undefined;
       city = typeof body.city === "string" ? body.city : undefined;
       confirmed = body.confirm === true;
+      if (fromApp) movedBy = moverName(body.movedBy);
     } else {
       const form = new URLSearchParams(await request.text());
       country = form.get("country") ?? undefined;
@@ -304,14 +384,16 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     if (!offered) return "Mullvad has no WireGuard servers in " + country;
     const offeredCity = city ? offered.cities.find(c => sameName(c, city)) : null;
     if (offeredCity === undefined) return "Mullvad has no WireGuard servers in " + city + ", " + country;
-    return { region: { country: offered.country, city: offeredCity }, confirmed };
+    return { region: { country: offered.country, city: offeredCity }, confirmed, movedBy };
   }
 
-  async function switchRegion(request: Request): Promise<Response> {
+  /** A move: `fromApp` is POST /region, the app's (JSON only); otherwise POST /<name>/region from this sidecar's page. */
+  async function switchRegion(request: Request, fromApp: boolean): Promise<Response> {
     const fromForm = !(request.headers.get("content-type") ?? "").includes("application/json");
-    const asked = await requested(request);
+    if (fromApp && fromForm) return asJson({ error: "send JSON" }, 415);
+    const asked = await requested(request, fromApp);
     if (typeof asked === "string") return asJson({ error: asked }, 400);
-    const { region } = asked;
+    const { region, movedBy } = asked;
     // Moving a region exit moves everyone on it, and nothing locks it, so
     // anyone on it (or not knowing) means asking first.
     if (!asked.confirmed) {
@@ -324,13 +406,13 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     let outcome: string;
     try {
       // Saved first, so a restart never goes back on a switch gluetun already made.
-      await saveRegion(region);
+      await saveRegion(region, movedBy, (deps.now ?? (() => new Date()))());
       outcome = await applyRegion(region);
     } catch (error) {
-      console.log(JSON.stringify({ msg: "region switch failed", region, error: String(error) }));
+      console.log(JSON.stringify({ msg: "region switch failed", region, movedBy, error: String(error) }));
       return asJson({ error: String(error instanceof Error ? error.message : error) }, 502);
     }
-    console.log(JSON.stringify({ msg: "region switched", region, outcome }));
+    console.log(JSON.stringify({ msg: "region switched", region, movedBy, outcome }));
     if (fromForm) return new Response(null, { status: 303, headers: { Location: base } });
     return asJson({ region, outcome });
   }
@@ -355,8 +437,12 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     // Root only, never under /<name>: the HTTPRoute publishes /<name>, and
     // the CNP lets Prometheus GET this path and nothing else.
     if (request.method === "GET" && path === "/metrics") return new Response(renderMetrics(await status()), { headers: { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" } });
-    if (request.method === "POST" && path === base + "/region") return switchRegion(request);
-    if (request.method === "GET" && path === base + "/regions") return asJson(regionsFrom(await deps.readFile(config.serversPath)));
+    // POST /region is the app's. The CNP lets only the app's pods send it:
+    // Traefik may POST /<name>/region and nothing else, though the route's /
+    // reaches whichever sidecar region-exits-pickers lands on.
+    if (request.method === "POST" && path === "/region") return switchRegion(request, true);
+    if (request.method === "POST" && path === base + "/region") return switchRegion(request, false);
+    if (request.method === "GET" && (path === "/regions" || path === base + "/regions")) return asJson(regionsFrom(await deps.readFile(config.serversPath)));
     return new Response("not found", { status: 404 });
   };
 }

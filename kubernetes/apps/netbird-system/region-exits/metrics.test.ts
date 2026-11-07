@@ -19,6 +19,7 @@ const healthy: Status = {
   activeClients: null,
   overlays: { tailscale: true, netbird: true },
   availability: { state: "online" },
+  lastMove: null,
 };
 
 /** The sample lines only, without HELP and TYPE. */

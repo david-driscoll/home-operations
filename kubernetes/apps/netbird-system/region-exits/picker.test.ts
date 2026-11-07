@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { CONNTRACK_PATH, ESTABLISHED_TIMEOUT_PATH } from "./activeClients.ts";
-import { createHandler, type PickerConfig } from "./picker.ts";
+import { createHandler, MOVED_AT_ANNOTATION, MOVED_BY_ANNOTATION, moverName, type PickerConfig } from "./picker.ts";
 
 const config: PickerConfig = {
   name: "spitfire",
@@ -120,10 +120,16 @@ function fakeLocalApi(status: unknown) {
   return { unixGet, calls };
 }
 
+/** The clock every move is made at. */
+const NOW = new Date("2026-11-07T18:00:00.000Z");
+const STATE_URL = config.kubeUrl + "/api/v1/namespaces/netbird-system/configmaps/region-exit-spitfire-state";
+/** No state ConfigMap, so no last move, unless a test routes GET STATE_URL itself. */
+const noState: Record<string, Route> = { ["GET " + STATE_URL]: () => json({ kind: "Status", code: 404 }, 404) };
+
 function picker(routes: Record<string, Route> = {}, tailscale: unknown = TAILSCALE_RUNNING) {
-  const fake = fakeFetch(routes);
+  const fake = fakeFetch({ ...noState, ...routes });
   const localApi = fakeLocalApi(tailscale);
-  return { handle: createHandler(config, { fetch: fake.fetch, readFile, unixGet: localApi.unixGet }), calls: fake.calls, localApiCalls: localApi.calls };
+  return { handle: createHandler(config, { fetch: fake.fetch, readFile, unixGet: localApi.unixGet, now: () => NOW }), calls: fake.calls, localApiCalls: localApi.calls };
 }
 
 const get = (path: string, accept = "application/json") => new Request("http://picker" + path, { headers: { Accept: accept } });
@@ -164,8 +170,38 @@ describe("GET /status", () => {
       activeClients: 0,
       overlays: { tailscale: true, netbird: true },
       availability: { state: "online" },
+      lastMove: null,
     });
   });
+
+  it("reports who last moved it and when, from the state ConfigMap's annotations", async () => {
+    const { handle, calls } = picker({
+      ...gluetunUp,
+      ["GET " + STATE_URL]: () => json({ metadata: { name: "region-exit-spitfire-state", annotations: { [MOVED_BY_ANNOTATION]: "Jamie", [MOVED_AT_ANNOTATION]: "2026-11-07T17:00:00.000Z" } } }),
+    });
+    assert.deepEqual((await (await handle(get("/status"))).json()).lastMove, { by: "Jamie", at: "2026-11-07T17:00:00.000Z" });
+    const read = calls.find(c => c.url === STATE_URL);
+    assert.equal(read?.method, "GET");
+    assert.equal(read?.headers.authorization, "Bearer sa-token");
+  });
+
+  it("reports a move with no mover as by null", async () => {
+    const { handle } = picker({ ...gluetunUp, ["GET " + STATE_URL]: () => json({ metadata: { annotations: { [MOVED_AT_ANNOTATION]: "2026-11-07T17:00:00.000Z" } } }) });
+    assert.deepEqual((await (await handle(get("/status"))).json()).lastMove, { by: null, at: "2026-11-07T17:00:00.000Z" });
+  });
+
+  for (const [what, route] of [
+    ["the state ConfigMap has no move recorded, as one saved before moves were", () => json({ metadata: { name: "region-exit-spitfire-state" }, data: { SERVER_COUNTRIES: "Japan" } })],
+    ["the state ConfigMap cannot be read", () => json({ kind: "Status", code: 403 }, 403)],
+    ["the Kubernetes API does not answer", () => new Response("no", { status: 599 })],
+  ] as const) {
+    it("reports lastMove null when " + what + ", and the rest as usual", async () => {
+      const { handle } = picker({ ...gluetunUp, ["GET " + STATE_URL]: route });
+      const body = await (await handle(get("/status"))).json();
+      assert.equal(body.lastMove, null);
+      assert.deepEqual(body.region, { country: "Japan", city: "Tokyo" });
+    });
+  }
 
   it("counts the people on the region exit", async () => {
     await withConntrack(TWO_PEOPLE, async () => {
@@ -225,6 +261,7 @@ describe("GET /status", () => {
       activeClients: 0,
       overlays: { tailscale: true, netbird: true },
       availability: { state: "offline", reason: "tunnel" },
+      lastMove: null,
     });
   });
 
@@ -448,13 +485,15 @@ describe("GET /metrics", () => {
   });
 });
 
-const STATE_URL = config.kubeUrl + "/api/v1/namespaces/netbird-system/configmaps/region-exit-spitfire-state";
 const APPLY = "PUT " + G + "/v1/vpn/settings";
 const switchRoutes: Record<string, Route> = {
   ["PATCH " + STATE_URL]: () => json({ metadata: { name: "region-exit-spitfire-state" } }),
   [APPLY]: () => new Response("running"),
 };
-const post = (body: unknown) => new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
+const post = (body: unknown, headers: Record<string, string> = {}) =>
+  new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", ...headers }, body: JSON.stringify(body) });
+/** The state ConfigMap's merge patch for a move to `data`, made at NOW by `by`. */
+const statePatch = (data: Record<string, string | null>, by: string | null = null) => ({ metadata: { annotations: { [MOVED_BY_ANNOTATION]: by, [MOVED_AT_ANNOTATION]: NOW.toISOString() } }, data });
 
 describe("POST /spitfire/region", () => {
   it("saves the region to the state ConfigMap, then has gluetun reconnect there", async () => {
@@ -468,15 +507,30 @@ describe("POST /spitfire/region", () => {
     );
     assert.equal(calls[0].headers.authorization, "Bearer sa-token");
     assert.equal(calls[0].headers["content-type"], "application/merge-patch+json");
-    assert.deepEqual(calls[0].body, { data: { SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" } });
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" }));
     assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: ["Tokyo"] } } });
+  });
+
+  it("records who moved it from forward auth's display name, else the username", async () => {
+    const named = picker(switchRoutes);
+    await named.handle(post({ country: "Japan" }, { "X-authentik-name": "Jamie Doe", "X-authentik-username": "jamie" }));
+    assert.deepEqual(named.calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "Jamie Doe"));
+    const unnamed = picker(switchRoutes);
+    await unnamed.handle(post({ country: "Japan" }, { "X-authentik-username": "jamie" }));
+    assert.deepEqual(unnamed.calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "jamie"));
+  });
+
+  it("ignores a movedBy in the body: on this path the mover is forward auth's", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    await handle(post({ country: "Japan", movedBy: "Someone Else" }, { "X-authentik-username": "jamie" }));
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "jamie"));
   });
 
   it("clears any city when only a country is picked", async () => {
     const { handle, calls } = picker(switchRoutes);
     assert.equal((await handle(post({ country: "USA" }))).status, 200);
     // A merge-patch null removes the key, so gluetun reads no SERVER_CITIES after a restart.
-    assert.deepEqual(calls[0].body, { data: { SERVER_COUNTRIES: "USA", SERVER_CITIES: null } });
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "USA", SERVER_CITIES: null }));
     assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["USA"], cities: [] } } });
   });
 
@@ -487,7 +541,12 @@ describe("POST /spitfire/region", () => {
       ["POST " + config.kubeUrl + "/api/v1/namespaces/netbird-system/configmaps"]: () => json({}, 201),
     });
     assert.equal((await handle(post({ country: "Japan", city: "Osaka" }))).status, 200);
-    assert.deepEqual(calls[1].body, { apiVersion: "v1", kind: "ConfigMap", metadata: { name: "region-exit-spitfire-state" }, data: { SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Osaka" } });
+    assert.deepEqual(calls[1].body, {
+      apiVersion: "v1",
+      kind: "ConfigMap",
+      metadata: { name: "region-exit-spitfire-state", annotations: { [MOVED_AT_ANNOTATION]: NOW.toISOString() } },
+      data: { SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Osaka" },
+    });
     assert.equal(calls[2].method + " " + calls[2].url, APPLY);
   });
 
@@ -505,14 +564,14 @@ describe("POST /spitfire/region", () => {
     const response = await handle(new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "country=Canada" }));
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("location"), "/spitfire");
-    assert.deepEqual(calls[0].body, { data: { SERVER_COUNTRIES: "Canada", SERVER_CITIES: null } });
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Canada", SERVER_CITIES: null }));
     assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Canada"], cities: [] } } });
   });
 
   it("saves a region typed in another case in servers.json's spelling", async () => {
     const { handle, calls } = picker(switchRoutes);
     assert.equal((await handle(post({ country: "japan", city: "tokyo" }))).status, 200);
-    assert.deepEqual(calls[0].body, { data: { SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" } });
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" }));
   });
 
   for (const [what, body] of [
@@ -611,6 +670,88 @@ describe("POST /spitfire/region", () => {
         assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: ["Tokyo"] } } });
       });
     });
+  });
+});
+
+/** The region picker app's move: JSON, on the root path. */
+const appPost = (body: unknown) => new Request("http://picker/region", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
+
+describe("the region picker app's endpoints", () => {
+  it("GET /regions offers the same countries and cities as /spitfire/regions", async () => {
+    const { handle } = picker();
+    const root = await handle(get("/regions"));
+    assert.equal(root.status, 200);
+    assert.deepEqual(await root.json(), await (await handle(get("/spitfire/regions"))).json());
+  });
+
+  it("POST /region moves it, recording the mover the app names", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    const response = await handle(appPost({ country: "Japan", city: "Tokyo", movedBy: "Jamie Doe" }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { region: { country: "Japan", city: "Tokyo" }, outcome: "running" });
+    assert.deepEqual(
+      calls.map(c => c.method + " " + c.url),
+      ["PATCH " + STATE_URL, APPLY],
+    );
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" }, "Jamie Doe"));
+  });
+
+  it("POST /region takes the mover from the body only, never forward auth's headers", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    const request = new Request("http://picker/region", { method: "POST", headers: { "Content-Type": "application/json", "X-authentik-username": "jamie" }, body: JSON.stringify({ country: "Japan" }) });
+    assert.equal((await handle(request)).status, 200);
+    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }));
+  });
+
+  it("POST /region refuses a form post and changes nothing", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    const response = await handle(new Request("http://picker/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "country=Japan" }));
+    assert.equal(response.status, 415);
+    assert.deepEqual(calls, []);
+  });
+
+  it("POST /region refuses a region Mullvad does not offer", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    assert.equal((await handle(appPost({ country: "Atlantis", movedBy: "Jamie" }))).status, 400);
+    assert.deepEqual(calls, []);
+  });
+
+  it("POST /region asks for confirmation with people on it, and moves once confirmed", async () => {
+    await withConntrack(TWO_PEOPLE, async () => {
+      const { handle, calls } = picker(switchRoutes);
+      const asked = await handle(appPost({ country: "Japan", movedBy: "Jamie" }));
+      assert.equal(asked.status, 409);
+      assert.deepEqual(await asked.json(), { error: "2 people are using spitfire right now. Send it again with confirm: true to move them.", activeClients: 2, confirm: true });
+      assert.equal(calls.length, 0);
+      assert.equal((await handle(appPost({ country: "Japan", movedBy: "Jamie", confirm: true }))).status, 200);
+      assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "Jamie"));
+    });
+  });
+});
+
+describe("moverName", () => {
+  for (const [given, expected] of [
+    ["Jamie Doe", "Jamie Doe"],
+    ["  Zoë  ", "Zoë"],
+    ["Ja\nmie\u0000", "Jamie"],
+    ["", null],
+    ["   ", null],
+    [42, null],
+    [undefined, null],
+  ] as const) {
+    it("makes " + JSON.stringify(given) + " " + JSON.stringify(expected), () => {
+      assert.equal(moverName(given), expected);
+    });
+  }
+
+  it("keeps at most 256 characters", () => {
+    assert.equal(moverName("x".repeat(300))?.length, 256);
+  });
+
+  it("never cuts a character in half at the limit", () => {
+    const name = moverName("x".repeat(255) + "🦄🦄") ?? "";
+    assert.equal([...name].length, 256);
+    assert.ok(name.endsWith("🦄"));
   });
 });
 
