@@ -63,7 +63,7 @@ spec:
               # which prints this line when it is behind. Pinned by digest: a
               # tag in this registry can be overwritten by the push token.
               repository: git.${ROOT_DOMAIN}/estate-images/wonderbolts
-              tag: PENDING-FIRST-PUBLISH
+              tag: 0.1.0-1d614c6d2a5c@sha256:af580e097eb9f3f37bcd95bfcfbb2efa8f98af711e3ca481e96f9829d03ed27d
             # The image's cmd is `node /app/server/index.mjs` with PORT=8080
             # and HOST=0.0.0.0; the runtime config is the app's
             # nuxt.config.ts runtimeConfig, overridden here.
