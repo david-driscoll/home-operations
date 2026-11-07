@@ -25,6 +25,8 @@
  *      same proxy (app-services.ts, apps.ts);
  *  13. the region exits' Mullvad devices, keys written to OpenBao for their
  *      gluetun (region-exit-devices.ts, regionExits.ts).
+ *      Their NetBird half (device groups, setup keys, `region-*` routes and
+ *      policies) sits in 4, 9 and policy.ts, beside the other exits.
  *
  * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
  * the server runs on Azure and Authentik is LAN/tailnet-only, so neither the
@@ -51,6 +53,7 @@ import { type LiveCluster, type LiveDomain, type LiveService, liveCustomDomain, 
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { clusterCnames, declareCustomDomain, validationCname } from "./proxyDomains.ts";
 import { declareRegionExitDevices } from "./region-exit-devices.ts";
+import { REGION_EXIT_USER_GROUPS, REGION_EXITS, regionExitNetbird } from "./regionExits.ts";
 import { type LiveUser, selfAccessPlan } from "./selfAccess.ts";
 import { GATEWAY_SITE_STACKS, gatewayGroupName, gatewayGroupPeers, gatewayHosts, type LiveGatewayPeer, routedSites, SITES, siteProblems, siteStackOf } from "./sites.ts";
 
@@ -121,6 +124,12 @@ const groups = {
   exitInternet: group("exit-internet"),
 };
 
+// The region exits (docs/plans/region-exits.md §C2): one device group per
+// region exit, which its netbird sidecar joins by setup key, and the
+// `region-*` routes' access-control group, peerless like exit-internet.
+const regionExitGroups: Record<string, netbird.Group> = Object.fromEntries(REGION_EXITS.map(name => [name, group(regionExitNetbird(name).deviceGroup)]));
+const regionExitInternet = group("region-exit-internet");
+
 /**
  * The Dockge hosts that run a gateway container (#2887), by cluster key. Each
  * keeps its own setup key, `gateway-<host>`; the peers are grouped per Dockge
@@ -177,6 +186,11 @@ const setupKeys = {
   // keeps its peer, and so its overlay address, across restarts. Read by
   // docker/_common/technitium and Equestria's ExternalSecret as `#/dns`.
   dns: setupKey("dns-servers", groups.dnsServers).key,
+  // The region exits' netbird sidecars. Ephemeral, like the router pods:
+  // their state is an emptyDir, so every restart enrols a fresh peer and the
+  // old one is cleaned up. Read by kubernetes/apps/region-exits as
+  // `region_exit_<name>`.
+  ...Object.fromEntries(REGION_EXITS.map(name => [regionExitNetbird(name).setupKeyProperty, setupKey(regionExitNetbird(name).setupKey, regionExitGroups[name], { ephemeral: true }).key])),
 };
 
 // ── 5. Site LANs and exit nodes (#2887) ─────────────────────────────────
@@ -560,6 +574,32 @@ for (const [stack, hosts] of Object.entries(GATEWAY_SITE_STACKS)) {
   );
 }
 
+// Each region exit is an exit node too, `region-<name>`, through its pod's
+// gluetun to Mullvad (docs/plans/region-exits.md §C2, ADR 0005). Offered to
+// family, friends and admins only, never applied by default. Its own
+// access-control group, so users-region-internet, not users-internet, is
+// what lets traffic out, and media-managers cannot use it even if handed the
+// route. Never rename one in a single run: two `0.0.0.0/0` routes collide
+// on create-before-delete; remove the old one first.
+for (const name of REGION_EXITS) {
+  const names = regionExitNetbird(name);
+  new netbird.Route(
+    names.route,
+    {
+      networkId: names.route,
+      description: `Exit through region exit ${name}: its pod's gluetun, out of Mullvad (kubernetes/apps/region-exits)`,
+      network: "0.0.0.0/0",
+      peerGroups: [regionExitGroups[name].id],
+      groups: REGION_EXIT_USER_GROUPS.map(user => userGroups[user].id),
+      accessControlGroups: [regionExitInternet.id],
+      masquerade: true,
+      skipAutoApply: true,
+      enabled: true,
+    },
+    { ...opts, dependsOn: [defaultPolicyRemoval] },
+  );
+}
+
 const destinationGroups: Record<string, netbird.Group | undefined> = {
   ...endpointGroups,
   "dns-servers": groups.dnsServers,
@@ -568,6 +608,8 @@ const destinationGroups: Record<string, netbird.Group | undefined> = {
   "equestria-entry": equestriaEntry,
   "k8s-routers": groups.k8sRouters,
   "exit-internet": groups.exitInternet,
+  ...Object.fromEntries(REGION_EXITS.map(name => [regionExitNetbird(name).deviceGroup, regionExitGroups[name]])),
+  "region-exit-internet": regionExitInternet,
 };
 for (const rule of ACCESS_RULES) {
   const destination = destinationGroups[rule.destination];

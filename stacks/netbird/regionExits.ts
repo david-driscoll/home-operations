@@ -16,6 +16,34 @@ import type * as pulumi from "@pulumi/pulumi";
  */
 export const REGION_EXITS = ["spitfire"] as const;
 
+/**
+ * The user groups the region exits are offered to (§C2): the `region-*`
+ * routes' distribution groups and the region-exit policies' sources.
+ * media-managers is left out on purpose.
+ */
+export const REGION_EXIT_USER_GROUPS = ["admins", "family", "friends"] as const;
+
+export interface RegionExitNetbirdNames {
+  /** The device group the region exit's netbird sidecar joins. */
+  deviceGroup: string;
+  /** The ephemeral, reusable setup key that auto-joins it. */
+  setupKey: string;
+  /** Its property in OpenBao `third-party-tokens/netbird/setup-keys`, read by the region exit's ExternalSecret. */
+  setupKeyProperty: string;
+  /** The `0.0.0.0/0` route the region exit serves. Never rename it in one step: same-prefix routes collide on create-before-delete. */
+  route: string;
+}
+
+/** The NetBird objects stacks/netbird declares for one region exit (docs/plans/region-exits.md §C2). */
+export function regionExitNetbird(name: string): RegionExitNetbirdNames {
+  return {
+    deviceGroup: `region-exit-${name}`,
+    setupKey: `region-exit-${name}`,
+    setupKeyProperty: `region_exit_${name.replaceAll("-", "_")}`,
+    route: `region-${name}`,
+  };
+}
+
 /** Where the devices' keys and addresses go, under the `secrets` mount. */
 export const REGION_EXITS_BAO_PATH = "third-party-tokens/mullvad/region-exits";
 
