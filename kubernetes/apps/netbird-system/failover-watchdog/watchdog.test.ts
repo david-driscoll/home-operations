@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 // The hosts' side of the second view. Only the test imports it: watchdog.ts
 // ships alone in a ConfigMap, so the two agree through this test.
-import { FAILOVER_VIEW_HEALTH_PATH, FAILOVER_VIEW_PREFIX } from "../../../../components/netbird/failoverView.ts";
+import { FAILOVER_VIEW_HEALTH_PATH, FAILOVER_VIEW_PREFIX } from "components/netbird/failoverView.ts";
 import {
   alertFor,
   CONSECUTIVE_RUN_GAP_MINUTES,
