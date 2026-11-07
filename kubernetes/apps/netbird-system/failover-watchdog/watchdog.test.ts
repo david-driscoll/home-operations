@@ -11,18 +11,26 @@ import { describe, it } from "node:test";
 import { FAILOVER_VIEW_HEALTH_PATH, FAILOVER_VIEW_PREFIX } from "components/netbird/failoverView.ts";
 import {
   alertFor,
+  alertForStandbyView,
   CONSECUTIVE_RUN_GAP_MINUTES,
   type Decision,
   decide,
   FLIP_COOLDOWN_MINUTES,
   HEALTH_PATH,
+  judgeStandbyView,
+  nextViewStaleRuns,
   type Observation,
   PEER_VIEW_FRESH_MINUTES,
   PEER_VIEW_PREFIX,
   parseCandidates,
   parseState,
+  peerViewsFrom,
   run,
+  type StandbyView,
   signS3,
+  standbyOf,
+  VIEW_STALE_RUNS_TO_ALERT,
+  type ViewRead,
   WATCHDOG_FAILURES_TO_FLIP,
   type WatchdogIo,
   type WatchdogState,
@@ -304,6 +312,8 @@ describe("parseState", () => {
     assert.deepEqual(parseState({ failures: "0", everHealthy: "false" }), { failures: 0 });
     assert.deepEqual(parseState({ failures: "1", blindRuns: "3", lastRun: "2026-11-03T19:59:00.000Z" }), { failures: 1, blindRuns: 3, lastRunAt: "2026-11-03T19:59:00.000Z" });
     assert.deepEqual(parseState({ failures: "1", blindRuns: "-2", lastRun: "" }), { failures: 1 });
+    assert.deepEqual(parseState({ failures: "0", viewStaleRuns: "2" }), { failures: 0, viewStaleRuns: 2 });
+    assert.deepEqual(parseState({ failures: "0", viewStaleRuns: "junk" }), { failures: 0 });
   });
 });
 
@@ -331,6 +341,101 @@ describe("alertFor", () => {
     assert.equal(blind[0].labels.alertname, "NetbirdFailoverWatchdogBlind");
     assert.equal(blind[0].labels.severity, "warning");
     assert.ok(Date.parse(blind[0].endsAt) > now.getTime());
+  });
+});
+
+// Follow-up to #3167: is failover armed while the primary is healthy? The
+// standby's view is judged every run as a flip would weigh it.
+describe("the standby's view, between outages", () => {
+  const at = (minutesAgo: number) => new Date(now.getTime() - minutesAgo * 60000).toISOString();
+  const read = (minutesAgo: number, targets: Record<string, unknown> = { [PRIMARY]: true }): ViewRead => ({ observer: "azure-cus", status: "ok", at: at(minutesAgo), targets });
+
+  it("is fresh inside the flip rule's window, healthy or not: the view itself is what matters", () => {
+    assert.deepEqual(judgeStandbyView("azure-cus", PRIMARY, [read(0.5)], now), { standby: "azure-cus", status: "fresh", ageSeconds: 30 });
+    assert.equal(judgeStandbyView("azure-cus", PRIMARY, [read(0.5, { [PRIMARY]: false })], now).status, "fresh");
+    assert.equal(judgeStandbyView("azure-cus", PRIMARY, [read(PEER_VIEW_FRESH_MINUTES)], now).status, "fresh");
+  });
+
+  it("is stale past the window, or stamped in the future", () => {
+    assert.deepEqual(judgeStandbyView("azure-cus", PRIMARY, [read(PEER_VIEW_FRESH_MINUTES + 1)], now), { standby: "azure-cus", status: "stale", ageSeconds: (PEER_VIEW_FRESH_MINUTES + 1) * 60 });
+    assert.equal(judgeStandbyView("azure-cus", PRIMARY, [read(-2)], now).status, "stale");
+  });
+
+  it("is missing when the host never published, and unreadable when Garage or the object is broken", () => {
+    assert.deepEqual(judgeStandbyView("azure-cus", PRIMARY, [{ observer: "azure-cus", status: "missing" }], now), { standby: "azure-cus", status: "missing" });
+    assert.deepEqual(judgeStandbyView("azure-cus", PRIMARY, [], now), { standby: "azure-cus", status: "missing" });
+    assert.deepEqual(judgeStandbyView("azure-cus", PRIMARY, [{ observer: "azure-cus", status: "unreadable" }], now), { standby: "azure-cus", status: "unreadable" });
+  });
+
+  it("is silent when fresh but saying nothing about the holder's address, which could not arm a flip", () => {
+    assert.equal(judgeStandbyView("azure-cus", PRIMARY, [read(0.5, { [STANDBY]: true })], now).status, "silent");
+    assert.equal(judgeStandbyView("azure-cus", PRIMARY, [read(0.5, { [PRIMARY]: "yes" })], now).status, "silent");
+  });
+
+  it("judges only the standby's own view", () => {
+    const other: ViewRead = { observer: "azure-eus2", status: "ok", at: at(0.5), targets: { [PRIMARY]: true } };
+    assert.equal(judgeStandbyView("azure-cus", PRIMARY, [other], now).status, "missing");
+  });
+
+  it("feeds decide() the same entries it judged", () => {
+    assert.deepEqual(peerViewsFrom([read(0.5, { [PRIMARY]: false, junk: "x" }), { observer: "azure-eus2", status: "unreadable" }]), [{ observer: "azure-cus", ip: PRIMARY, healthy: false, at: at(0.5) }]);
+  });
+
+  it("the standby is the host that would be promoted", () => {
+    assert.equal(standbyOf(PRIMARY, hosts()), "azure-cus");
+    assert.equal(standbyOf(STANDBY, hosts()), "azure-eus2");
+    assert.equal(standbyOf(PRIMARY, [{ name: "azure-eus2", ip: PRIMARY, reachable: true }]), undefined);
+    const three = [...hosts(false), { name: "azure-west", ip: "192.0.2.30", reachable: true }];
+    assert.equal(standbyOf(PRIMARY, three), "azure-west");
+    assert.equal(standbyOf(PRIMARY, hosts(false)), "azure-cus");
+  });
+
+  describe("counting runs in a row, so one late publish does not page", () => {
+    const stale: StandbyView = { standby: "azure-cus", status: "stale", ageSeconds: 400 };
+    const fresh: StandbyView = { standby: "azure-cus", status: "fresh", ageSeconds: 20 };
+
+    it("alerts only on the Nth unusable run in a row", () => {
+      let state: WatchdogState = { failures: 0, lastRunAt: minuteAgo };
+      for (let i = 1; i <= VIEW_STALE_RUNS_TO_ALERT; i++) {
+        const runs = nextViewStaleRuns(state, stale, now);
+        assert.equal(runs, i);
+        assert.equal(alertForStandbyView(stale, runs, "netbird.example.test", now) === undefined, i < VIEW_STALE_RUNS_TO_ALERT);
+        state = { ...state, viewStaleRuns: runs };
+      }
+    });
+
+    it("a flapping view, fresh every other run, never alerts", () => {
+      let state: WatchdogState = { failures: 0, lastRunAt: minuteAgo };
+      for (let i = 0; i < 10; i++) {
+        const view = i % 2 === 0 ? stale : fresh;
+        const runs = nextViewStaleRuns(state, view, now);
+        assert.equal(alertForStandbyView(view, runs, "netbird.example.test", now), undefined);
+        state = { ...state, viewStaleRuns: runs };
+      }
+    });
+
+    it("a fresh view resets the count; a blind run keeps it; a gap starts it over", () => {
+      assert.equal(nextViewStaleRuns({ failures: 0, lastRunAt: minuteAgo, viewStaleRuns: 2 }, fresh, now), 0);
+      assert.equal(nextViewStaleRuns({ failures: 0, lastRunAt: minuteAgo, viewStaleRuns: 2 }, undefined, now), 2);
+      const longAgo = new Date(now.getTime() - (CONSECUTIVE_RUN_GAP_MINUTES + 1) * 60000).toISOString();
+      assert.equal(nextViewStaleRuns({ failures: 0, lastRunAt: longAgo, viewStaleRuns: 2 }, stale, now), 1);
+    });
+
+    it("warns, naming the standby, and lapses on its own", () => {
+      const alerts = alertForStandbyView({ standby: "azure-cus", status: "missing" }, VIEW_STALE_RUNS_TO_ALERT, "netbird.example.test", now) as {
+        labels: Record<string, string>;
+        annotations: Record<string, string>;
+        endsAt: string;
+      }[];
+      assert.equal(alerts.length, 1);
+      assert.equal(alerts[0].labels.alertname, "NetbirdFailoverViewStale");
+      assert.equal(alerts[0].labels.severity, "warning");
+      assert.equal(alerts[0].labels.standby, "azure-cus");
+      assert.match(alerts[0].annotations.summary, /azure-cus.*missing/);
+      assert.ok(Date.parse(alerts[0].endsAt) > now.getTime());
+      assert.equal(alertForStandbyView(fresh, 99, "netbird.example.test", now), undefined);
+      assert.equal(alertForStandbyView(undefined, 99, "netbird.example.test", now), undefined);
+    });
   });
 });
 
@@ -375,8 +480,12 @@ describe("run", () => {
      * it is. Absent: 404. Default: azure-cus saw the primary down 30 s ago.
      */
     published?: Record<string, { targets: Record<string, boolean>; minutesAgo: number }>;
-    /** false: Garage refuses connections. */
-    garage?: boolean;
+    /** false: Garage refuses connections. A number: Garage answers every view GET with that status. */
+    garage?: boolean | number;
+    /** Replace the view object's body with this raw text (broken JSON, say). */
+    rawView?: string;
+    /** Env names to leave unset. */
+    unset?: string[];
   }
   function world(opts: World = {}) {
     const calls: Call[] = [];
@@ -396,11 +505,12 @@ describe("run", () => {
       }
       if (url.startsWith(`${ENV.S3_ENDPOINT}/`)) {
         if (opts.garage === false) throw new TypeError("fetch failed");
+        if (typeof opts.garage === "number") return new Response("<Error/>", { status: opts.garage });
         const match = /^\/netbird-backups\/failover-view\/([a-z0-9-]+)\.json$/.exec(new URL(url).pathname);
         const published = opts.published ?? { "azure-cus": { targets: { [PRIMARY]: false }, minutesAgo: 0.5 } };
         const object = match ? published[match[1]] : undefined;
         if (method !== "GET" || !object) return new Response("<Error><Code>NoSuchKey</Code></Error>", { status: 404 });
-        return new Response(JSON.stringify({ observer: match?.[1], targets: object.targets }), {
+        return new Response(opts.rawView ?? JSON.stringify({ observer: match?.[1], targets: object.targets }), {
           status: 200,
           headers: { "Last-Modified": new Date(now.getTime() - object.minutesAgo * 60000).toUTCString() },
         });
@@ -412,7 +522,7 @@ describe("run", () => {
       throw new Error(`unexpected ${method} ${url}`);
     };
     const io: WatchdogIo = {
-      env: name => ENV[name],
+      env: name => (opts.unset?.includes(name) ? undefined : ENV[name]),
       now: () => now,
       fetch: fakeFetch as typeof fetch,
       serviceAccountToken: () => "sa-token",
@@ -438,7 +548,19 @@ describe("run", () => {
     assert.deepEqual(await run(w.io), { action: "healthy" });
     assert.deepEqual(w.recordWrites(), []);
     assert.deepEqual(w.alerts(), []);
-    assert.deepEqual(w.written()?.data, { failures: "0", blindRuns: "0", lastFlipAt: "", everHealthy: "true", lastRun: now.toISOString(), lastDecision: "healthy", lastLease: PRIMARY });
+    assert.deepEqual(w.written()?.data, {
+      failures: "0",
+      blindRuns: "0",
+      lastFlipAt: "",
+      everHealthy: "true",
+      lastRun: now.toISOString(),
+      lastDecision: "healthy",
+      lastLease: PRIMARY,
+      standby: "azure-cus",
+      standbyView: "fresh",
+      standbyViewAgeSeconds: "30",
+      viewStaleRuns: "0",
+    });
     assert.ok(w.probes.includes(`healthy ${PRIMARY} ${LEASE}`));
   });
 
@@ -494,13 +616,70 @@ describe("run", () => {
     assert.equal((await run(w.io)).action, "flip");
   });
 
-  it("does not ask Garage while management answers", async () => {
-    const w = world({ state: streak(0), healthy: true });
-    await run(w.io);
-    assert.deepEqual(
-      w.calls.filter(c => c.url.startsWith(ENV.S3_ENDPOINT)),
-      [],
-    );
+  describe("whether failover is armed, checked on every run", () => {
+    const healthyRun = (opts: World = {}) => world({ healthy: true, ...opts, state: { ...streak(0), ...opts.state } });
+
+    it("reads the standby's view while management answers, and records how old it is", async () => {
+      const w = healthyRun({ published: { "azure-cus": { targets: { [PRIMARY]: true }, minutesAgo: 1 } } });
+      assert.deepEqual(await run(w.io), { action: "healthy" });
+      assert.deepEqual(
+        w.calls.filter(c => c.url.startsWith(ENV.S3_ENDPOINT)).map(c => `${c.method} ${c.url}`),
+        [`GET ${ENV.S3_ENDPOINT}/netbird-backups/failover-view/azure-cus.json`],
+      );
+      assert.equal(w.written()?.data.standbyView, "fresh");
+      assert.equal(w.written()?.data.standbyViewAgeSeconds, "60");
+      assert.deepEqual(w.alerts(), []);
+    });
+
+    const unusable: [string, World, string][] = [
+      ["missing", { published: {} }, "missing"],
+      ["stale", { published: { "azure-cus": { targets: { [PRIMARY]: true }, minutesAgo: PEER_VIEW_FRESH_MINUTES + 2 } } }, "stale"],
+      ["not JSON", { rawView: "{not json" }, "unreadable"],
+      ["refused by Garage (403)", { garage: 403 }, "unreadable"],
+      ["unreachable (Garage down)", { garage: false }, "unreadable"],
+    ];
+    for (const [what, opts, status] of unusable) {
+      it(`a view that is ${what} never touches the health check or the record, and warns only after ${VIEW_STALE_RUNS_TO_ALERT} runs in a row`, async () => {
+        const first = healthyRun(opts);
+        assert.deepEqual(await run(first.io), { action: "healthy" });
+        assert.deepEqual(first.recordWrites(), []);
+        assert.deepEqual(first.alerts(), []);
+        assert.equal(first.written()?.data.standbyView, status);
+        assert.equal(first.written()?.data.viewStaleRuns, "1");
+        assert.equal(first.written()?.data.failures, "0");
+
+        const nth = healthyRun({ ...opts, state: { viewStaleRuns: String(VIEW_STALE_RUNS_TO_ALERT - 1) } });
+        assert.deepEqual(await run(nth.io), { action: "healthy" });
+        assert.deepEqual(nth.recordWrites(), []);
+        assert.deepEqual(
+          nth.alerts().map(a => [a.labels.alertname, a.labels.standby]),
+          [["NetbirdFailoverViewStale", "azure-cus"]],
+        );
+      });
+    }
+
+    it("a fresh view clears the count, so the alert lapses", async () => {
+      const w = healthyRun({ state: { viewStaleRuns: "7" } });
+      await run(w.io);
+      assert.equal(w.written()?.data.viewStaleRuns, "0");
+      assert.deepEqual(w.alerts(), []);
+    });
+
+    it("missing Garage settings do not fail the run: the view is unreadable, the health check goes on", async () => {
+      const w = healthyRun({ unset: ["S3_ENDPOINT", "AWS_SECRET_ACCESS_KEY"] });
+      assert.deepEqual(await run(w.io), { action: "healthy" });
+      assert.equal(w.written()?.data.standbyView, "unreadable");
+    });
+
+    it("an unreadable view on the Nth failure holds, never flips, and sends both alerts", async () => {
+      const w = world({ state: { ...streak(WATCHDOG_FAILURES_TO_FLIP - 1), viewStaleRuns: String(VIEW_STALE_RUNS_TO_ALERT - 1) }, garage: 500 });
+      assert.equal((await run(w.io)).action, "hold");
+      assert.deepEqual(w.recordWrites(), []);
+      assert.deepEqual(
+        w.alerts().map(a => a.labels.alertname),
+        ["NetbirdFailoverBlocked", "NetbirdFailoverViewStale"],
+      );
+    });
   });
 
   it("with no internet, probes nothing, never writes the record, and warns once blind long enough", async () => {
@@ -515,6 +694,12 @@ describe("run", () => {
     assert.equal(w.written()?.data.failures, "0");
     assert.equal(w.written()?.data.blindRuns, String(WATCHDOG_FAILURES_TO_FLIP));
     assert.equal(w.written()?.data.lastDecision, "blind");
+    // Blind: there is no holder to judge a view against, so none is read.
+    assert.deepEqual(
+      w.calls.filter(c => c.url.startsWith(ENV.S3_ENDPOINT)),
+      [],
+    );
+    assert.equal(w.written()?.data.standbyView, "");
   });
 
   it("still records the run when Alertmanager is down", async () => {
