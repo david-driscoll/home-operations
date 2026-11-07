@@ -6,7 +6,17 @@ resources:
   - ./externalsecret.yaml
   - ./tailscale-authkey.yaml
   - ./helmrelease.yaml
+  - ./definition.yaml
 configMapGenerator:
+  # The region picker (#3140), a real .ts file so tsc, biome and node --test
+  # see it (picker.test.ts beside it is not shipped). Flux envsubst must not
+  # read the code.
+  - name: region-exit-picker
+    files:
+      - ./picker.ts
+    options:
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
   # Each region exit's default region (§A), in gluetun's servers.json names
   # ("USA", not "United States"). A region picked later lives in
   # region-exit-<name>-state, which Flux does not manage and which wins (the

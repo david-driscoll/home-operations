@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# The region picker (GLOSSARY.md): family and admins only. Friends may use the
+# region exits but not move them (ADR 0005).
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: wonderbolts
+spec:
+  name: Region exits
+  category: Applications
+  description: Choose where the region exits leave the internet from
+  url: &url https://wonderbolts.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mullvad.svg
+  access_policy:
+    groups:
+      - family
+      - admins
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      # No page at / until the overview (#3143).
+      url: https://wonderbolts.${ROOT_DOMAIN}/spitfire
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

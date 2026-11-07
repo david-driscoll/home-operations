@@ -309,6 +309,22 @@ them.
 4. **gluetun's control API.** In the pinned version, confirm the endpoint for changing
    `SERVER_COUNTRIES`/`SERVER_CITIES` at runtime, its loopback binding and its auth role
    (`HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE`).
+
+   **Resolved (#3140):** `PUT /v1/vpn/settings` takes a partial `settings.VPN`,
+   `{"provider":{"server_selection":{"countries":[..],"cities":[..]}}}`. gluetun overrides only
+   the fields given (a non-nil empty `cities` clears a city), validates the result against its
+   server list (a 400 if no server matches), and stops and restarts the tunnel only if something
+   changed ([server/vpn.go](https://github.com/qdm12/gluetun/blob/v3.41.3/internal/server/vpn.go),
+   [vpn/state/vpn.go](https://github.com/qdm12/gluetun/blob/v3.41.3/internal/vpn/state/vpn.go)).
+   `HTTP_CONTROL_SERVER_ADDRESS` defaults to `:8000`, so it is set to `127.0.0.1:8000`
+   ([settings/server.go](https://github.com/qdm12/gluetun/blob/v3.41.3/internal/configuration/settings/server.go)).
+   With no auth file, the built-in `public` role leaves out `/v1/vpn/settings`.
+   `HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}` covers every route the auth file does
+   not, and the auth file is absent, so loopback is the only boundary
+   ([middlewares/auth/settings.go](https://github.com/qdm12/gluetun/blob/v3.41.3/internal/server/middlewares/auth/settings.go)).
+   The picker reads the region from `GET /v1/vpn/settings`, the tunnel from `GET /v1/vpn/status`
+   and the egress country from `GET /v1/publicip/ip`. The Mullvad server names it offers come
+   from `servers.json`, which gluetun writes (mode 0644) into the `/gluetun` emptyDir.
 5. **Mullvad's device API.** Confirm the endpoints, the token flow and the error when the device
    limit is reached.
 6. **Counting active clients.** Confirm conntrack is readable from the picker container (it needs
