@@ -17,9 +17,9 @@ const globals = new GlobalResources({}, {});
 createTailscaleAttDropFirewallRule(globals);
 const tailscaleAcls = assignTailscaleAcls(globals);
 configureLocalDns(globals);
-const technitiumZones = configureTechnitiumZones(globals);
-// The read-only Technitium MCP's user and token, with View on every zone above.
-configureTechnitiumMcpToken(globals, technitiumZones.zones);
+configureTechnitiumZones(globals);
+// The read-only Technitium MCP's user and token, with View on every zone.
+configureTechnitiumMcpToken(globals);
 configureNetbirdHomeRelay(globals);
 configureTechnitiumServerSettings(globals);
 // Re-mints on every run of this stack (every 5 minutes,

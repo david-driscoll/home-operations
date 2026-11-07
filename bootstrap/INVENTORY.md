@@ -150,7 +150,7 @@ GitHub when the repo is archived.
   reissues it, so nothing here needs keeping.
 - **The Technitium MCP's token.** `apps/technitium/mcp` (`user`, `token_name`, `token`)
   is minted by `stacks/unifi-network` (`technitium-mcp-token.ts`) for a non-admin
-  `mcp` user with View on the zones that stack manages. Pulumi-minted and never in a
+  `mcp` user with View on every zone. Pulumi-minted and never in a
   recovery path: a lost token is re-minted by replacing the stack's `ApiToken`.
 - **1Password.** It is retained for browser-fill logins, recovery codes, and
   personal-scope credentials. It is no longer infrastructure source of truth. The one

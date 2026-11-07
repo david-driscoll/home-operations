@@ -56,11 +56,7 @@ export function configureTechnitiumZones(globals: GlobalResources) {
   addForwarderRecord(cro, zone, root, "dns.quad9.net:853 (9.9.9.9)");
   addForwarderRecord(cro, zone, root, "dns.quad9.net:853 (149.112.112.112)");
 
-  // Every zone this stack manages, keyed by resource name, for the ones that
-  // act on each zone (technitium-mcp-token.ts). Add a new zone here too.
-  const zones: Record<string, technitium.Zone> = { [rootDomainSlug()]: zone };
-
-  return { zone, zones };
+  return { zone };
 }
 
 function addForwarderRecord(cro: pulumi.ComponentResourceOptions, zone: technitium.Zone, name: string, target: string) {
