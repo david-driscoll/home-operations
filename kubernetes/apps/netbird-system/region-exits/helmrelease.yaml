@@ -396,6 +396,23 @@ spec:
             image:
               repository: netbirdio/netbird
               tag: 0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
+            # Rerun in place, never crashloop. After a restart, management
+            # refuses this hostname until the old ephemeral peer is deleted
+            # (about 10 minutes offline, plan §F), and the image's entrypoint
+            # exits on that. A crashlooping container makes the whole pod
+            # NotReady, which empties the picker's Services (wonderbolts 503)
+            # for those 10 minutes. Retrying here keeps the pod Ready; the
+            # region exit rejoins NetBird when the old peer ages out. Same
+            # loop as Technitium's sidecar; no shell dollar signs (Flux
+            # post-build substitution would rewrite them).
+            command:
+              - /bin/bash
+              - -c
+              - |
+                while true; do
+                  /usr/local/bin/netbird-entrypoint.sh || echo "netbird exited; restarting in 30s"
+                  sleep 30
+                done
             env: &netbird-env
               NB_MANAGEMENT_URL: https://netbird.${ROOT_DOMAIN}
               NB_SETUP_KEY:
