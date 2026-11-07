@@ -34,7 +34,8 @@ below.** The eleven entries were the starting set. Since then:
   Jellyseerr and the SuperSync coordinator.
 - [#2194](https://github.com/david-driscoll/home-operations/pull/2194): Navidrome.
 - [#3160](https://github.com/david-driscoll/home-operations/pull/3160): Sonarr and Radarr
-  (requests had nowhere to land overnight while Seerr stayed up), Chaptarr, Listenarr,
+  (requests had nowhere to land overnight while Seerr stayed up), Lidarr, Bazarr (Sonarr's
+  import webhook to it is fire-and-forget, so it must be up whenever Sonarr is), Chaptarr, Listenarr,
   Audiobookshelf, Sure, Actual Budget, Windmill (every Deployment and its CronJob) and
   n8n-sandbox.
 - `netbird-system` joined `excludedNamespaces` (b8cb34e9).
