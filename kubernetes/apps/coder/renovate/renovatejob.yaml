@@ -275,6 +275,40 @@ spec:
                 },
               ]
             : []),
+          // The forge's own container registry, for the images this estate
+          // builds (`estate-images/*`; first the region picker app,
+          // docs/plans/wonderbolts-nuxt.md A8). It is REQUIRE_SIGNIN_VIEW, so a
+          // lookup needs the estate-images read:package token, the same one the
+          // nodes pull with (./externalsecret.yaml). The host is the public
+          // name, which Flux fills in here and nowhere in git; it resolves to
+          // Traefik on the LAN, an internal address, hence allowInternal.
+          ...(process.env.ESTATE_IMAGES_USERNAME && process.env.ESTATE_IMAGES_TOKEN
+            ? [
+                {
+                  hostType: 'docker',
+                  matchHost: 'git.${ROOT_DOMAIN}',
+                  username: process.env.ESTATE_IMAGES_USERNAME,
+                  password: process.env.ESTATE_IMAGES_TOKEN,
+                  allowInternal: true,
+                },
+              ]
+            : []),
+        ],
+        // WHERE estate-images LIVE. The repository's custom manager for them
+        // (.github/renovate.json5, "Estate images on the forge's registry")
+        // names each image WITHOUT its registry -- `estate-images/wonderbolts`,
+        // not `git.<domain>/estate-images/wonderbolts` -- so the domain never
+        // reaches a branch name, commit message or PR title, which the GitHub
+        // sync would refuse to publish. This supplies the registry, from the
+        // one place the domain may be written: Flux's substitution into this
+        // ConfigMap. GitHub's Renovate has no such rule and the repository
+        // config disables the image there.
+        packageRules: [
+          {
+            matchDatasources: ['docker'],
+            matchDepNames: ['estate-images/**'],
+            registryUrls: ['https://git.${ROOT_DOMAIN}'],
+          },
         ],
 
         // Not set here and deliberately so: `endpoint` and `token` come from

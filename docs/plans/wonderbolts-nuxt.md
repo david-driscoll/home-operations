@@ -88,15 +88,24 @@ through Technitium) goes once the overview leaves the agent.
    pinned by tag and digest. The forge is `REQUIRE_SIGNIN_VIEW`, so `netbird-system` needs a
    pull-secret ExternalSecret like `kubernetes/apps/pulumi/workspace-image/externalsecret.yaml`.
    GHCR was turned down: GitHub is the mirror.
-8. **Renovate bumps the pin.** The self-hosted Forgejo Renovate bot opens digest-bump PRs for
-   `estate-images/wonderbolts`. **Not wired yet (found in phase 2):** the reference in git is
-   `git.${ROOT_DOMAIN}/estate-images/wonderbolts`, and Renovate can't resolve a Flux
-   placeholder in a registry host. Wiring it needs a `registryAliases` entry mapping
-   `git.${ROOT_DOMAIN}` to the real host, supplied through the bot's own secret
-   (`kubernetes/apps/coder/renovate`), since the domain can't be written in the repo, plus
-   read access to the registry (a `hostRules` entry with the `estate-images` read token).
-   Until then the image workflow prints the line to paste, as pulumi-workspace's does.
-   Renovate finds `apps/wonderbolts/package.json` and its lockfile without any config.
+8. **Renovate bumps the pin.** The self-hosted Forgejo Renovate bot opens the PRs. Wired up
+   after the cutover, because a plain `registryAliases` entry didn't work:
+   - **No host in the dependency name.** A custom manager in `.github/renovate.json5`
+     ("Estate images on the forge's registry") reads `repository: git.${ROOT_DOMAIN}/estate-images/<name>`
+     plus its `tag: <version>@sha256:<digest>` as `estate-images/<name>`. A host in the
+     dependency name would reach branch names, commit messages and PR titles, and the GitHub
+     sync refuses to publish anything that names the domain.
+   - **The registry comes from the bot.** Its `config.js` (`kubernetes/apps/coder/renovate`)
+     sets `registryUrls` for `estate-images/**`, plus a docker host rule with the
+     `estate-images` read token. Flux substitution fills in the host there, so it's never
+     written in git.
+   - **GitHub's Renovate leaves it alone** (`matchRepositories: david-driscoll/home-operations`),
+     and `helm-values`' copy of the dependency, whose name has the placeholder host, is off for
+     both bots.
+   - **Tags are monotonic:** `<major>.<minor>.<commits touching the app or the image
+     workflow>`. The first tags, `0.1.0-<hash>`, gave docker versioning an incompatible
+     suffix, so nothing could ever be offered as an update. The pin moves to the new scheme by
+     hand once; after that Renovate does it.
 9. **PRs are checked on GitHub.** `.github/workflows/wonderbolts.yaml`, on `pull_request`,
    path-filtered to `apps/wonderbolts/**`: `npm ci`, `nuxi typecheck`, `vitest`,
    `nuxt build`. It never pushes. The forge workflow publishes from `main` only.

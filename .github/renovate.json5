@@ -1605,6 +1605,39 @@
       ],
       enabled: false,
     },
+    {
+      // ESTATE IMAGES, the ones this estate builds and pushes to the forge's
+      // registry (first estate-images/wonderbolts, the region picker app;
+      // docs/plans/wonderbolts-nuxt.md A8). helm-values extracts their
+      // app-template `repository: git.${ROOT_DOMAIN}/...` too, and nothing can
+      // look a Flux placeholder host up, so that copy is off for every bot.
+      // The "Estate images on the forge's registry" customManager below tracks
+      // them instead, by a name without the host.
+      description: "Estate images: not through helm-values, whose depName carries the placeholder host",
+      matchManagers: [
+        "helm-values"
+      ],
+      matchDepNames: [
+        "/^git\\.\\$\\{ROOT_DOMAIN\\}\\//"
+      ],
+      enabled: false,
+    },
+    {
+      // ...and the customManager's copy only on the forge. GitHub's Renovate
+      // works on david-driscoll/home-operations and cannot reach the forge's
+      // registry; the Forgejo bot works on github-mirror/home-operations and
+      // gets the registry URL and its read token from its own config
+      // (kubernetes/apps/coder/renovate/renovatejob.yaml), the one place the
+      // domain may be written.
+      description: "Estate images: looked up by the Forgejo bot only",
+      matchRepositories: [
+        "david-driscoll/home-operations"
+      ],
+      matchDepNames: [
+        "estate-images/**"
+      ],
+      enabled: false,
+    },
   ],
   customManagers: [
     {
@@ -1845,6 +1878,34 @@
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n[^:\\n]+:\\s[^:\\n]+:(?<currentValue>[^\\s@]+)",
       ],
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
+    },
+    {
+      // The images this estate builds, on the forge's registry, referenced as
+      // app-template does:
+      //
+      //   repository: git.${ROOT_DOMAIN}/estate-images/<name>
+      //   tag: <version>@sha256:<digest>
+      //
+      // The depName is `estate-images/<name>`, WITHOUT the host: a host in the
+      // depName would be the real domain once a registry is supplied, and it
+      // would then reach branch names, commit messages and PR titles, which the
+      // GitHub sync refuses to publish. The Forgejo bot supplies the registry
+      // URL (renovatejob.yaml packageRules); GitHub's Renovate leaves these
+      // alone (the "Estate images" packageRules above). Tag and digest are
+      // captured together, so an update rewrites both.
+      //
+      // The tags are `<major>.<minor>.<n>` (.forgejo/workflows/wonderbolts-image.yml),
+      // so docker versioning can order them.
+      description: "Estate images on the forge's registry",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)kubernetes/.+\\.ya?ml$/"
+      ],
+      matchStrings: [
+        "repository: git\\.\\$\\{ROOT_DOMAIN\\}/(?<depName>estate-images/[a-z0-9._-]+)\\n\\s+tag: \"?(?<currentValue>[^@\\s\"]+)@(?<currentDigest>sha256:[a-f0-9]{64})\"?",
+      ],
+      datasourceTemplate: "docker",
+      versioningTemplate: "docker",
     },
   ],
 }
