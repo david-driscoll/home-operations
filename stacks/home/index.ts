@@ -495,8 +495,9 @@ const _openbaoOidc = new OpenBaoOidc("openbao-oidc", { globals });
 // components/openbao/clusterAuth.ts.
 //
 // The `kubernetes-sgc` mount and the `eso-sgc` policy/role were
-// `retainOnDelete`, so Pulumi never reached them; they were deleted by hand
-// with the rest of the clusters/sgc/* paths (step 4).
+// `retainOnDelete`, so Pulumi never reached them; they are deleted by hand
+// with the rest of the clusters/sgc/* paths (the closing pass in
+// docs/cluster-consolidation/22-decommission-sgc.md).
 
 function clusterWideDns(globals: GlobalResources) {
   StandardDns.create(
