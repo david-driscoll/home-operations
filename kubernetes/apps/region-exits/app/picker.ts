@@ -282,7 +282,11 @@ function main(): void {
     stateConfigMap: env("STATE_CONFIGMAP", "region-exit-" + name + "-state"),
     gluetunUrl: env("GLUETUN_CONTROL_URL", "http://127.0.0.1:8000"),
     // The API server's CA comes from NODE_EXTRA_CA_CERTS, as for the proxy watchdog.
-    kubeUrl: env("KUBERNETES_URL", "https://kubernetes.default.svc"),
+    // By address, not kubernetes.default.svc: the pod resolves through
+    // gluetun's DNS-over-TLS (dnsPolicy None), which knows no cluster names.
+    // The kubelet always sets KUBERNETES_SERVICE_HOST/PORT, service links or not,
+    // and the API server's certificate carries the Service address.
+    kubeUrl: env("KUBERNETES_URL", "https://" + process.env.KUBERNETES_SERVICE_HOST + ":" + process.env.KUBERNETES_SERVICE_PORT),
     serversPath: env("GLUETUN_SERVERS_JSON", "/gluetun/servers.json"),
     tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
   };

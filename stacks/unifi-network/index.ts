@@ -14,7 +14,7 @@ import { configureTechnitiumZones } from "./technitium-zone.ts";
 
 const globals = new GlobalResources({}, {});
 createTailscaleAttDropFirewallRule(globals);
-assignTailscaleAcls(globals);
+const tailscaleAcls = assignTailscaleAcls(globals);
 configureLocalDns(globals);
 configureTechnitiumZones(globals);
 configureNetbirdHomeRelay(globals);
@@ -49,7 +49,12 @@ globals.store.getKubernetesClusters().apply(clusters => {
     });
     // The region exits run on Equestria only (kubernetes/apps/region-exits).
     if (cluster.key === "equestria") {
-      createRegionExitAuthKey(globals, provider);
+      // After the ACL, which adds the key's tag.
+      createRegionExitAuthKey(
+        globals,
+        provider,
+        tailscaleAcls.apply(({ acl }) => acl),
+      );
     }
   }
 });

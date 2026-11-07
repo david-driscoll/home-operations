@@ -22,15 +22,18 @@
 # Client traffic from tailscale0 out the tunnel, and the replies back.
 iptables -A FORWARD -i tailscale0 -o tun0 -j ACCEPT
 iptables -A FORWARD -i tun0 -o tailscale0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-# tailscaled's own packets (routing.sh rule 90) through gluetun's OUTPUT DROP
-# policy, out eth0 to the home WAN.
-iptables -A OUTPUT -o eth0 -m mark --mark 0x80000/0xff0000 -j ACCEPT
+# The pod's own traffic out eth0, through gluetun's OUTPUT DROP policy: for
+# tailscaled's and NetBird's own packets (routing.sh rules 90 and 91) to the
+# home WAN. All of eth0, because gluetun re-parses OUTPUT on every reconnect
+# and cannot parse a `-m mark` line (or a jump to a custom chain). The mangle
+# chain region-exit-out in routing.sh is what narrows it to their marks,
+# gluetun's own WireGuard and its outbound subnets. Nothing else may go in
+# OUTPUT here unless gluetun's parser reads it (internal/firewall/list.go).
+iptables -A OUTPUT -o eth0 -j ACCEPT
 #
 # NetBird (#3139): the same, for wt0 and its overlay. NetBird inserts its own
 # `-i wt0 -j ACCEPT` ahead of these; they keep forwarding to the tunnel
 # explicit if that changes.
 iptables -A FORWARD -i wt0 -o tun0 -j ACCEPT
 iptables -A FORWARD -i tun0 -o wt0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-# NetBird's own packets (routing.sh rule 91), out eth0 to the home WAN.
-iptables -A OUTPUT -o eth0 -m mark --mark 0x1bd00 -j ACCEPT
 # Nothing accepts forwarded traffic to eth0: the region exit fails closed.

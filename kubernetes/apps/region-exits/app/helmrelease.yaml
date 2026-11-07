@@ -127,6 +127,19 @@ spec:
             image:
               repository: qmcgaw/gluetun
               tag: v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+            # A gluetun killed without its cleanup (OOMKilled, a failed liveness
+            # probe) leaves its ip rule 101 and tun0 in the pod's namespace,
+            # which outlives the container, and the restart then fails on
+            # "adding IPv4 rule: file exists" in a loop. Clear both first; on a
+            # fresh pod there is nothing to clear. (Busybox's ip, in the image.)
+            command:
+              - /bin/sh
+              - -c
+              - >-
+                ip rule del priority 101 2>/dev/null;
+                ip -6 rule del priority 101 2>/dev/null;
+                ip link del tun0 2>/dev/null;
+                exec /gluetun-entrypoint
             env:
               VPN_SERVICE_PROVIDER: mullvad
               VPN_TYPE: wireguard
@@ -137,6 +150,13 @@ spec:
               DNS_SERVER: "on"
               DNS_UPSTREAM_RESOLVER_TYPE: dot
               DNS_UPSTREAM_IPV6: "off"
+              # No block lists. gluetun downloads and holds them in memory at
+              # every start (BLOCK_MALICIOUS and BLOCK_SURVEILLANCE default on),
+              # which OOMKilled it at 256Mi; and an exit node's clients expect
+              # the region's answers, not a second filter on top of their own.
+              BLOCK_MALICIOUS: "off"
+              BLOCK_SURVEILLANCE: "off"
+              BLOCK_ADS: "off"
               # Never off the pod. The picker (#3140) calls it on loopback.
               HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
               # Every route open to loopback, with no key: v3.41.3's built-in
@@ -146,7 +166,8 @@ spec:
               # Equestria's pods and Services, and its control planes: the
               # kubernetes Service is socket-load-balanced to a control-plane
               # address before routing, and containerboot needs the API for
-              # TS_KUBE_SECRET.
+              # TS_KUBE_SECRET. routing.sh's region-exit-out chain repeats these;
+              # change both together.
               FIREWALL_OUTBOUND_SUBNETS: "10.206.0.0/16,10.196.0.0/16,10.10.206.0/24"
               # tailscaled's and NetBird's fixed WireGuard ports
               # (TS_TAILSCALED_EXTRA_ARGS, NB_WIREGUARD_PORT below), on eth0,
@@ -195,7 +216,9 @@ spec:
                 cpu: 20m
                 memory: 64Mi
               limits:
-                memory: 256Mi
+                # The block lists (off above) are what filled 256Mi; this is
+                # headroom on top, not a measured need.
+                memory: 512Mi
           tailscale:
             image:
               repository: tailscale/tailscale
@@ -209,6 +232,12 @@ spec:
                     key: authkey
               TS_AUTH_ONCE: "true"
               TS_KUBE_SECRET: region-exit-spitfire-tailscale
+              # Reach the API by KUBERNETES_SERVICE_HOST, not
+              # kubernetes.default.svc: the pod resolves through gluetun's
+              # DNS-over-TLS (dnsPolicy None), which knows no cluster names.
+              # Read by containerboot and tailscaled's kube state store alike
+              # (cmd/containerboot/kube.go, ipn/store/kubestore, v1.104.4).
+              TS_KUBERNETES_READ_API_SERVER_ADDRESS_FROM_ENV: "true"
               TS_USERSPACE: "false"
               # The image points `iptables` at the legacy backend, which the
               # Talos kernel lacks (as for Technitium's sidecar).
