@@ -18,7 +18,7 @@ powershell-core = "7.6.9"
 # line has to move with it.
 talosctl = "1.14.4"
 talhelper = "3.1.17"
-yq = "4.54.1"
+yq = "4.54.2"
 jq = "1.8.2"
 sops = "3.13.3"
 flux2 = "2.10.0"
@@ -31,7 +31,7 @@ gh = "2.103.3"
 # itself as `hk run pre-commit --from-hook` via git config, and an unpinned mise
 # shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
 # The hook exits non-zero and git aborts the commit.
-hk = "2.11.0"
+hk = "2.11.1"
 pkl = "0.33.0"
 biome = "2.5.2"
 typos = "1.52.0"
@@ -59,7 +59,7 @@ go = "1.27.3"
 "pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
 node = "24.22.2"
-pulumi = "3.274.0"
+pulumi = "3.274.1"
 "github:microsoft/apm" = { version = "v0.35.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
 "github:home-operations/flate" = "v0.6.5"
@@ -88,7 +88,7 @@ fnox = "v1.47.0"
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
 pipx = "1.18.13"
-"pipx:graphifyy" = "0.9.102"
+"pipx:graphifyy" = "0.9.103"
 
 [tasks.codegen]
 description = 'Regenerate types/application-definition.d.ts from schemas/'
