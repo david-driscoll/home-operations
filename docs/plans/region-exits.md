@@ -305,6 +305,16 @@ old pod is gone within seconds.
   switch (§G6); sysfs has no per-peer state. The same check as an exec probe on the netbird
   container would fail the whole pod's readiness and take its picker off the route. Revisit if
   NetBird grows a read-only status endpoint.
+- **A restart costs about 10 minutes on NetBird.** Each pod enrols a fresh ephemeral peer (state
+  in an emptyDir), and management won't register a second peer with the same hostname while the
+  old ephemeral one still exists. That one is deleted only about 10 minutes after it goes
+  offline. Until then the new `netbird` container crash-loops ("hostname already registered"),
+  and that region exit is missing from NetBird; Tailscale is unaffected. Seen 2026-11-07: the
+  audit log shows each new `spitfire` peer added seconds after the old one was deleted.
+  Accepted by David on 2026-11-07. The alternatives were a unique `NB_HOSTNAME` per pod, or
+  NetBird state on a PVC with a non-ephemeral key. Expect it after every rollout that touches
+  the pods, including a `region-exit-routing` or `region-exit-picker` change, which Reloader
+  restarts.
 
 ## G. Open risks for the P1 prototype
 
