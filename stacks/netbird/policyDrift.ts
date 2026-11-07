@@ -38,6 +38,9 @@ export const TAILSCALE_ONLY: Record<string, string> = {
 
 const USER_SOURCE = /autogroups\.(member|admin)\b|\bgroups\.|group:/;
 
+/** A source that is a tag or a list of tags: a server, out of scope. */
+const TAG_SOURCE = /^(?:\.\.\.)?(?:tag\.\w+|cluster\.tag|clusterTags|tagged\w*|["`]tag:[^"`]*["`])$/;
+
 /** The text of the `{ … }` starting at `open`, braces balanced. */
 function balancedObject(text: string, open: number): string {
   let depth = 0;
@@ -48,24 +51,73 @@ function balancedObject(text: string, open: number): string {
   return text.slice(open);
 }
 
-const list = (body: string, field: "src" | "dst") =>
-  (new RegExp(`\\b${field}:\\s*\\[([^\\]]*)\\]`).exec(body)?.[1] ?? "")
+const entries = (list: string) =>
+  list
     .split(",")
     .map(part => part.trim())
     .filter(part => part !== "");
 
+/** The field as written: the entries of an array literal, or the bare expression when it is not one. */
+function field(body: string, name: "src" | "dst"): { entries: string[] } | { expression: string } {
+  const array = new RegExp(`\\b${name}:\\s*\\[([^\\]]*)\\]`).exec(body);
+  if (array) return { entries: entries(array[1]) };
+  return { expression: new RegExp(`\\b${name}:\\s*([^,}]*)`).exec(body)?.[1].trim() ?? "" };
+}
+
+const list = (body: string, name: "src" | "dst") => {
+  const value = field(body, name);
+  return "entries" in value ? value.entries : [value.expression];
+};
+
+interface GrantCall {
+  key: string;
+  src: string[];
+  /** Why the guard cannot tell whether this grant is user-facing, if it cannot. */
+  unreadable?: string;
+}
+
+const CALL = /setGrant\(\s*(?:(["`])((?:(?!\1)[\s\S])*)\1\s*,\s*)?\{/y;
+const FORMS = '`setGrant("name", { src: [...] ... })` or `setGrant({ src: [...] ... })`';
+
+/** Every `setGrant` call in `source`, read as far as the source text allows. */
+function grantCalls(source: string): (GrantCall | { unparsed: string })[] {
+  const calls: (GrantCall | { unparsed: string })[] = [];
+  for (const start of source.matchAll(/setGrant\(/g)) {
+    CALL.lastIndex = start.index;
+    const match = CALL.exec(source);
+    if (!match) {
+      calls.push({ unparsed: source.slice(start.index).split("\n")[0].trim() });
+      continue;
+    }
+    const body = balancedObject(source, match.index + match[0].length - 1);
+    const src = field(body, "src");
+    const users = list(body, "src").filter(entry => !entry.startsWith("..."));
+    const key = match[2] ?? `${users.join(", ")} -> ${list(body, "dst").join(", ")}`;
+    if (!("entries" in src)) {
+      calls.push({ key, src: [src.expression], unreadable: TAG_SOURCE.test(src.expression) ? undefined : `src \`${src.expression}\` is not an array literal` });
+      continue;
+    }
+    const unknown = src.entries.find(entry => !USER_SOURCE.test(entry) && !TAG_SOURCE.test(entry));
+    calls.push({ key, src: src.entries, unreadable: unknown === undefined ? undefined : `src entry \`${unknown}\` is neither a user source nor a tag` });
+  }
+  return calls;
+}
+
 /** Keys of every `setGrant` call in `source` whose src is a user, group or role autogroup. */
 export function userFacingGrants(source: string): string[] {
-  const keys: string[] = [];
-  const call = /setGrant\(\s*(?:(["`])((?:(?!\1)[\s\S])*)\1\s*,\s*)?\{/g;
-  for (let match = call.exec(source); match; match = call.exec(source)) {
-    const body = balancedObject(source, match.index + match[0].length - 1);
-    const src = list(body, "src");
-    if (!src.some(entry => USER_SOURCE.test(entry))) continue;
-    const users = src.filter(entry => !entry.startsWith("..."));
-    keys.push(match[2] ?? `${users.join(", ")} -> ${list(body, "dst").join(", ")}`);
-  }
-  return keys;
+  return grantCalls(source).flatMap(call => ("key" in call && call.src.some(entry => USER_SOURCE.test(entry)) ? [call.key] : []));
+}
+
+/**
+ * Every `setGrant` call the guard cannot classify, so it fails closed: a call
+ * not written in one of the two inline forms, a src that is not an array
+ * literal of tags, or a src entry that is neither a user source nor a tag.
+ */
+export function unreadableGrants(source: string): string[] {
+  return grantCalls(source).flatMap(call => {
+    if ("unparsed" in call) return [`${call.unparsed} is not ${FORMS}`];
+    return call.unreadable === undefined ? [] : [`\`${call.key}\`: ${call.unreadable}`];
+  });
 }
 
 /** Every grant with no twin or exemption, and every twin or exemption whose grant is gone. */
