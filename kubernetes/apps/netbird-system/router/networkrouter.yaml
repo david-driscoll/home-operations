@@ -45,6 +45,18 @@ spec:
     # (internal/controller/networkrouter_controller.go): containers and env
     # merge by `name`, topologySpreadConstraints by `topologyKey`.
     podTemplate:
+      # A PodTemplateSpec, so metadata merges too (workloadOverride.annotations
+      # lands on the Deployment, not the pods).
+      metadata:
+        annotations:
+          # The operator mounts four emptyDirs (netbird-run, netbird-lib,
+          # ssh-etc, resolv-conf), so the descheduler's DefaultEvictor
+          # (evictLocalStoragePods: false) counted these pods as local storage
+          # and never evicted one, leaving two peers on one node after a
+          # reschedule. Nothing in them outlives the pod: the peer re-enrols
+          # from the reusable setup key. Opt in, so
+          # RemovePodsViolatingTopologySpreadConstraint can respread them.
+          descheduler.alpha.kubernetes.io/evict: "true"
       spec:
         topologySpreadConstraints:
           # The operator ships this constraint as ScheduleAnyway; hard here, so
