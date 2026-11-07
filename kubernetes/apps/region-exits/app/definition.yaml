@@ -23,8 +23,16 @@ spec:
       externalHost: *url
   gatus:
     - group: "Applications"
-      # No page at / until the overview (#3143).
+      # No page at / until the overview (#3143). Every path here is behind
+      # forward auth, and the picker has no unauthenticated route through the
+      # Gateway (its /healthz is for the kubelet only), so this checks the
+      # door instead: the route is served and Authentik turns an anonymous
+      # request away with its sign-in redirect. Following that redirect would
+      # only test Authentik's own page. A 200 here means the picker answered
+      # without a login -- forward auth is off the route.
       url: https://wonderbolts.${ROOT_DOMAIN}/spitfire
       method: GET
+      client:
+        ignore-redirect: true
       conditions:
-        - "[STATUS] == 200"
+        - "[STATUS] == 302"

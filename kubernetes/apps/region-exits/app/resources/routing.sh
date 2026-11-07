@@ -105,6 +105,18 @@ iptables-nft -t mangle -C FORWARD -i wt0 ! -o tun0 -j DROP 2>/dev/null \
 ip6tables-nft -t mangle -C FORWARD -i wt0 -j DROP 2>/dev/null \
   || ip6tables-nft -t mangle -A FORWARD -i wt0 -j DROP
 
+# --- masquerade into the tunnel ------------------------------------------------
+# Clients leave with the tunnel's address. tailscaled masquerades its
+# forwarded traffic too (ts-postrouting), and NetBird its route's in its own
+# table; these keep it so if either changes. Here rather than in gluetun's
+# post-rules.txt because gluetun cannot guard a line with -C, and never removes
+# nat rules, so each gluetun restart in the pod would add another copy. A rule
+# naming tun0 before it exists is valid and matches once it does.
+iptables-nft -t nat -C POSTROUTING -s 100.64.0.0/10 -o tun0 -j MASQUERADE 2>/dev/null \
+  || iptables-nft -t nat -A POSTROUTING -s 100.64.0.0/10 -o tun0 -j MASQUERADE
+iptables-nft -t nat -C POSTROUTING -s 10.100.0.0/16 -o tun0 -j MASQUERADE 2>/dev/null \
+  || iptables-nft -t nat -A POSTROUTING -s 10.100.0.0/16 -o tun0 -j MASQUERADE
+
 # --- local services stay off the overlays -------------------------------------
 # tailscaled's ts-input accepts everything arriving on tailscale0 the same way,
 # so gluetun's INPUT policy cannot keep overlay clients off the pod's own
@@ -125,3 +137,4 @@ done
 echo "table 100:"; ip -4 route show table 100
 echo "rules:"; ip rule show
 echo "mangle:"; iptables-nft -t mangle -S; ip6tables-nft -t mangle -S
+echo "nat:"; iptables-nft -t nat -S POSTROUTING

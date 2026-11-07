@@ -170,7 +170,10 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
 ### D3. Forwarding (gluetun post-rules)
 
 - `FORWARD`: accept `wt0`→`tun0` and `tailscale0`→`tun0`, and established traffic coming back.
-- `POSTROUTING`: masquerade sources in `10.100.0.0/16` and `100.64.0.0/10` out of `tun0`.
+- `POSTROUTING`: masquerade sources in `10.100.0.0/16` and `100.64.0.0/10` out of `tun0`. These
+  two are set by the `routing` init container, guarded with `-C`, not by post-rules: gluetun execs
+  each post-rules line without a shell, only flips a leading `-A` to `-D` on rollback, and never
+  flushes `nat`, so a `-t nat -A` line there would pile up duplicates.
 - `OUTPUT`: accept packets marked `0x1bd00` and `0x80000/0xff0000` out of `eth0`, so gluetun's
   kill switch lets the overlay transport through.
 - Nothing accepts forwarded traffic to `eth0`. On its own this does not fail closed, because

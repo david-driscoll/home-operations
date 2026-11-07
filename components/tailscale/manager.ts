@@ -97,6 +97,7 @@ export class TailscaleAclManager {
   acls: string;
   updates: ((context: TailscaleAclContext) => pulumi.Output<string>)[] = [];
   testData: TestsDataPopulated;
+  private readonly exitNodeApproverSet: Set<string>;
   constructor(acls: string, hosts: [pulumi.Input<string>, pulumi.Input<string>][], testData: TestsData) {
     this.acls = acls;
     this.updates.push(({ acls }) => {
@@ -106,6 +107,7 @@ export class TailscaleAclManager {
     });
 
     const context = new TailscaleAclContext(acls);
+    this.exitNodeApproverSet = new Set(context.policy?.autoApprovers?.exitNode ?? []);
     const knownAdminUsers = ["david.driscoll@gmail.com"];
     const knownNormalUsers = context.policy.groups?.[groups.friendsAndFamily] ?? [];
 
@@ -238,7 +240,17 @@ export class TailscaleAclManager {
     return this;
   }
 
+  /**
+   * autoApprovers.exitNode as the written policy will have it: the live
+   * entries, then every tag passed to setExitNode so far. Known as soon as
+   * setExitNode is called, unlike the policy, which is built in getJson.
+   */
+  public get exitNodeApprovers(): readonly string[] {
+    return [...this.exitNodeApproverSet];
+  }
+
   public setExitNode(tag: TailscaleTags) {
+    this.exitNodeApproverSet.add(tag);
     this.updates.push(context => pulumi.output(setExitNode(context, tag)));
     return this;
   }
