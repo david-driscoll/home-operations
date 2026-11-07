@@ -148,6 +148,10 @@ GitHub when the repo is archived.
   NetBird app names (docs/plans/netbird-mirror.md §N), pushed there by an ESO PushSecret
   from cert-manager's Secret (D39, the one path `eso-equestria` may write); cert-manager
   reissues it, so nothing here needs keeping.
+- **The Technitium MCP's token.** `apps/technitium/mcp` (`user`, `token_name`, `token`)
+  is minted by `stacks/unifi-network` (`technitium-mcp-token.ts`) for a non-admin
+  `mcp` user with View on the zones that stack manages. Pulumi-minted and never in a
+  recovery path: a lost token is re-minted by replacing the stack's `ApiToken`.
 - **1Password.** It is retained for browser-fill logins, recovery codes, and
   personal-scope credentials. It is no longer infrastructure source of truth. The one
   remaining personal-scope reference in code is `dashboard/.mise.toml`

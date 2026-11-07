@@ -29,6 +29,13 @@ export class GlobalResources extends ComponentResource {
   public readonly unifiFirewallProvider: UnifiFirewallProvider;
   public readonly technitiumCredential;
   public readonly technitiumProvider: TechnitiumProvider;
+  /**
+   * The admin API the provider talks to, and the name its TLS certificate is
+   * validated against. Exposed for the dynamic resources that call endpoints
+   * the provider does not model (dynamic/technitium/).
+   */
+  public readonly technitiumServerUrl: Output<string>;
+  public readonly technitiumTlsServerName: Output<string>;
   public readonly proxmoxCredential;
   public readonly tailscaleCredential;
   public readonly tailscaleProvider: TailscaleProvider;
@@ -123,17 +130,20 @@ export class GlobalResources extends ComponentResource {
       cro,
     );
     // hostname is host:port (cluster primary's admin TLS endpoint); writes replicate cluster-wide
+    //
+    // The cluster primary's tailnet name resolves everywhere: MagicDNS
+    // returns the tailscale IP for local runs, and the tailscale operator's
+    // nameserver (dnsrecords ConfigMap) returns the dns-celestia egress
+    // service IP for pulumi-operator workspace pods.
+    this.technitiumServerUrl = interpolate`https://dns-celestia.${this.tailscaleDomain}:53443`;
+    // The tailnet name doesn't match the LE certificate — validate TLS
+    // against the real hostname from the credential item (sans port).
+    this.technitiumTlsServerName = this.technitiumCredential.hostname.apply(h => h.split(":")[0]);
     this.technitiumProvider = new TechnitiumProvider(
       "technitium",
       {
-        // The cluster primary's tailnet name resolves everywhere: MagicDNS
-        // returns the tailscale IP for local runs, and the tailscale operator's
-        // nameserver (dnsrecords ConfigMap) returns the dns-celestia egress
-        // service IP for pulumi-operator workspace pods.
-        serverUrl: interpolate`https://dns-celestia.${this.tailscaleDomain}:53443`,
-        // The tailnet name doesn't match the LE certificate — validate TLS
-        // against the real hostname from the credential item (sans port).
-        tlsServerName: this.technitiumCredential.hostname.apply(h => h.split(":")[0]),
+        serverUrl: this.technitiumServerUrl,
+        tlsServerName: this.technitiumTlsServerName,
         apiToken: this.technitiumCredential.credential,
       },
       cro,
