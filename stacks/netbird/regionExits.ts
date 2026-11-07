@@ -9,12 +9,33 @@
  */
 import type * as pulumi from "@pulumi/pulumi";
 
+/** The standalone Mullvad account's device limit; the region exits use every slot (§A). */
+export const MULLVAD_DEVICE_SLOTS = 5;
+
+export interface RegionExitDefault {
+  name: string;
+  /** Its default region, in gluetun's servers.json spelling ("USA", "UK"). kubernetes/apps/region-exits repeats it as SERVER_COUNTRIES. */
+  defaultCountry: string;
+}
+
 /**
- * The region exits with a Mullvad device. spitfire alone for the P1 prototype;
- * soarin, fleetfoot, misty-fly and high-winds join in P3, which uses all five
- * device slots on the account.
+ * The region exits, the one list every Mullvad device, NetBird group, setup
+ * key, route and policy is generated from (docs/plans/region-exits.md §A).
+ * spitfire stays first: it was the P1 prototype, and its resource names are
+ * already live. Append, never rename: a renamed route collides with its old
+ * self on create-before-delete.
  */
-export const REGION_EXITS = ["spitfire"] as const;
+export const REGION_EXIT_DEFAULTS: readonly RegionExitDefault[] = [
+  { name: "spitfire", defaultCountry: "USA" },
+  { name: "soarin", defaultCountry: "Canada" },
+  { name: "fleetfoot", defaultCountry: "UK" },
+  { name: "misty-fly", defaultCountry: "Germany" },
+  { name: "high-winds", defaultCountry: "Japan" },
+];
+
+/** The region exits' names, each with a Mullvad device. */
+export const REGION_EXITS: readonly string[] = REGION_EXIT_DEFAULTS.map(exit => exit.name);
+if (REGION_EXITS.length > MULLVAD_DEVICE_SLOTS) throw new Error(`${REGION_EXITS.length} region exits, but the Mullvad account has ${MULLVAD_DEVICE_SLOTS} device slots`);
 
 /**
  * The user groups the region exits are offered to (§C2): the `region-*`

@@ -6,6 +6,7 @@
  * (family and admins); /status is also served at the root for in-cluster
  * readers.
  *
+ *   GET  /                        the overview of every region exit (overview.ts)
  *   GET  /status, /<name>/status  JSON: region, tunnel state, Mullvad egress
  *   GET  /<name>                  the page: current region and a country/city form
  *   GET  /<name>/regions          JSON: Mullvad WireGuard countries and their cities
@@ -32,6 +33,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { collectOverview, peerStatusUrl, renderOverview } from "./overview.ts";
 
 export interface PickerConfig {
   name: string;
@@ -41,6 +43,10 @@ export interface PickerConfig {
   kubeUrl: string;
   serversPath: string;
   tokenPath: string;
+  /** Every region exit, in the order the overview lists them. */
+  regionExits: string[];
+  /** A region exit's GET /status URL through its Service, or null when there is none. */
+  statusUrl: (name: string) => string | null;
 }
 
 export interface Deps {
@@ -241,6 +247,10 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     let path = new URL(request.url).pathname;
     while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
     if (request.method === "GET" && path === "/healthz") return new Response("ok");
+    if (request.method === "GET" && path === "/") {
+      const entries = await collectOverview(config.regionExits, config.statusUrl, deps.fetch);
+      return new Response(renderOverview(entries), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
     if (request.method === "GET" && path === base) return page();
     if (request.method === "GET" && (path === "/status" || path === base + "/status")) return asJson(await status());
     if (request.method === "POST" && path === base + "/region") return switchRegion(request);
@@ -282,9 +292,19 @@ function main(): void {
     stateConfigMap: env("STATE_CONFIGMAP", "region-exit-" + name + "-state"),
     gluetunUrl: env("GLUETUN_CONTROL_URL", "http://127.0.0.1:8000"),
     // The API server's CA comes from NODE_EXTRA_CA_CERTS, as for the proxy watchdog.
-    kubeUrl: env("KUBERNETES_URL", "https://kubernetes.default.svc"),
+    // By address, not kubernetes.default.svc: the pod resolves through
+    // gluetun's DNS-over-TLS (dnsPolicy None), which knows no cluster names.
+    // The kubelet always sets KUBERNETES_SERVICE_HOST/PORT, service links or not,
+    // and the API server's certificate carries the Service address.
+    kubeUrl: env("KUBERNETES_URL", "https://" + process.env.KUBERNETES_SERVICE_HOST + ":" + process.env.KUBERNETES_SERVICE_PORT),
     serversPath: env("GLUETUN_SERVERS_JSON", "/gluetun/servers.json"),
     tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+    // Every region exit, comma-separated; on its own, the overview lists this one.
+    regionExits: env("REGION_EXITS", name)
+      .split(",")
+      .map(exit => exit.trim())
+      .filter(Boolean),
+    statusUrl: peerStatusUrl(env("REGION_EXIT_SERVICE_PREFIX", "region-exits-"), process.env),
   };
   const handle = createHandler(config, { fetch: globalThis.fetch, readFile: path => readFile(path, "utf8") });
   const port = Number(env("PORT", "8080"));

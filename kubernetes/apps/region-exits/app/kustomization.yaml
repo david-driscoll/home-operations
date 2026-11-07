@@ -15,16 +15,30 @@ configMapGenerator:
   - name: region-exit-picker
     files:
       - ./picker.ts
+      - ./overview.ts
     options:
       annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled
   # Each region exit's default region (§A), in gluetun's servers.json names
-  # ("USA", not "United States"). A region picked later lives in
-  # region-exit-<name>-state, which Flux does not manage and which wins (the
-  # gluetun container's envFrom order).
+  # ("USA", not "United States"; "UK", not "United Kingdom"). The same list
+  # as REGION_EXIT_DEFAULTS in stacks/netbird/regionExits.ts. A region picked
+  # later lives in region-exit-<name>-state, which Flux does not manage and
+  # which wins (the gluetun container's envFrom order).
   - name: region-exit-spitfire-defaults
     literals:
       - SERVER_COUNTRIES=USA
+  - name: region-exit-soarin-defaults
+    literals:
+      - SERVER_COUNTRIES=Canada
+  - name: region-exit-fleetfoot-defaults
+    literals:
+      - SERVER_COUNTRIES=UK
+  - name: region-exit-misty-fly-defaults
+    literals:
+      - SERVER_COUNTRIES=Germany
+  - name: region-exit-high-winds-defaults
+    literals:
+      - SERVER_COUNTRIES=Japan
   # The routing init container's script and gluetun's post-rules. Flux
   # post-build substitution is disabled on both, so they may use shell `$`.
   - name: region-exit-routing

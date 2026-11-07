@@ -19,6 +19,8 @@ const config: PickerConfig = {
   kubeUrl: "https://kubernetes.default.svc",
   serversPath: "/gluetun/servers.json",
   tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+  regionExits: ["spitfire", "soarin"],
+  statusUrl: name => "http://" + name + ".peer:8080/status",
 };
 
 /** A slice of gluetun's servers.json: Mullvad, plus servers the picker must skip. */
@@ -257,5 +259,21 @@ describe("POST /spitfire/region", () => {
     const response = await handle(post({ country: "Japan" }));
     assert.equal(response.status, 502);
     assert.match((await response.json()).error, /no server found/);
+  });
+});
+
+describe("GET /", () => {
+  it("shows the overview, built from every region exit's /status, one that is down included", async () => {
+    const { handle, calls } = picker({
+      ["GET http://spitfire.peer:8080/status"]: () => json({ name: "spitfire", region: { country: "USA", city: null }, tunnel: { up: true, status: "running" }, egress: null }),
+      ["GET http://soarin.peer:8080/status"]: () => new Response("upstream connect error", { status: 503 }),
+    });
+    const response = await handle(get("/", "text/html"));
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /text\/html/);
+    const html = await response.text();
+    assert.match(html, /href="\/spitfire"[\s\S]*USA[\s\S]*tunnel up/);
+    assert.match(html, /href="\/soarin"[\s\S]*not answering/);
+    assert.deepEqual(calls.map(c => c.url).sort(), ["http://soarin.peer:8080/status", "http://spitfire.peer:8080/status"]);
   });
 });
