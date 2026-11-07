@@ -38,6 +38,8 @@ const SERVERS = JSON.stringify({
       { vpn: "wireguard", country: "USA", city: "New York NY", hostname: "us-nyc-wg-002" },
       { vpn: "wireguard", country: "Japan", city: "Tokyo", hostname: "jp-tok-wg-001" },
       { vpn: "wireguard", country: "Japan", city: "Osaka", hostname: "jp-osa-wg-001" },
+      { vpn: "wireguard", country: "Canada", city: "Toronto ON", hostname: "ca-tor-wg-001" },
+      { vpn: "wireguard", country: "UK", city: "London", hostname: "gb-lon-wg-001" },
       { vpn: "openvpn", country: "Brazil", city: "Sao Paulo", hostname: "br-sao-ovpn-001" },
     ],
   },
@@ -132,7 +134,9 @@ describe("GET /spitfire/regions", () => {
     const response = await handle(get("/spitfire/regions"));
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), [
+      { country: "Canada", cities: ["Toronto ON"] },
       { country: "Japan", cities: ["Osaka", "Tokyo"] },
+      { country: "UK", cities: ["London"] },
       { country: "USA", cities: ["Dallas TX", "New York NY"] },
     ]);
   });
@@ -222,6 +226,51 @@ describe("GET /spitfire", () => {
     assert.match(html, /<option value="USA">USA<\/option>/);
     // The cities, for the page's script to narrow by country.
     assert.match(html, /"Dallas TX","New York NY"/);
+  });
+
+  /** The page with gluetun connected in `countries`/`cities`. */
+  const pageIn = async (countries: string[], cities: string[] | null) =>
+    (await picker({ ...gluetunUp, ["GET " + G + "/v1/vpn/settings"]: () => json({ provider: { server_selection: { countries, cities } } }) }).handle(get("/spitfire", "text/html"))).text();
+  /** The city <select>'s options, as served. */
+  const citySelect = (html: string) => html.match(/<select id="city"[^>]*>([\s\S]*?)<\/select>/)?.[1] ?? assert.fail("no city select");
+
+  it("preselects the current city, among the current country's cities only", async () => {
+    const cities = citySelect(await pageIn(["Japan"], ["Tokyo"]));
+    assert.equal(cities, '<option value="">Any city</option><option value="Osaka">Osaka</option><option value="Tokyo" selected>Tokyo</option>');
+  });
+
+  it("preselects Any city when the region exit has no city", async () => {
+    const html = await pageIn(["USA"], null);
+    assert.match(html, /<option value="USA" selected>USA<\/option>/);
+    assert.equal(citySelect(html), '<option value="" selected>Any city</option><option value="Dallas TX">Dallas TX</option><option value="New York NY">New York NY</option>');
+  });
+
+  it("offers the first country's cities when there is no current region", async () => {
+    assert.equal(citySelect(await (await picker({}).handle(get("/spitfire", "text/html"))).text()), '<option value="" selected>Any city</option><option value="Toronto ON">Toronto ON</option>');
+  });
+
+  it("offers USA, Canada and UK as one-click moves, each posting a country with no city", async () => {
+    const html = await pageIn(["Japan"], ["Tokyo"]);
+    assert.match(html, /<form id="quick" method="post" action="\/spitfire\/region"><\/form>/);
+    assert.match(html, /<button form="quick" name="country" value="USA">USA<\/button><button form="quick" name="country" value="Canada">Canada<\/button><button form="quick" name="country" value="UK">UK<\/button>/);
+  });
+
+  it("marks the current country's quick button and disables it", async () => {
+    const html = await pageIn(["Canada"], ["Toronto ON"]);
+    assert.match(html, /<button form="quick" name="country" value="Canada" disabled aria-current="true">Canada \(current\)<\/button>/);
+    assert.match(html, /<button form="quick" name="country" value="USA">USA<\/button>/);
+  });
+
+  it("leaves out a quick country Mullvad does not offer", async () => {
+    const original = files[config.serversPath];
+    files[config.serversPath] = JSON.stringify({ mullvad: { servers: [{ vpn: "wireguard", country: "USA", city: "Dallas TX" }] } });
+    try {
+      const html = await pageIn(["USA"], null);
+      assert.doesNotMatch(html, /value="Canada"/);
+      assert.match(html, /value="USA" disabled/);
+    } finally {
+      files[config.serversPath] = original;
+    }
   });
 
   it("escapes names from servers.json", async () => {
@@ -416,6 +465,16 @@ describe("POST /spitfire/region", () => {
     assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: [] } } });
   });
 
+  it("moves to a quick button's country with no city, as the form does", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    // A quick button sends its country and no city field at all.
+    const response = await handle(new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "country=Canada" }));
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "/spitfire");
+    assert.deepEqual(calls[0].body, { data: { SERVER_COUNTRIES: "Canada", SERVER_CITIES: null } });
+    assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Canada"], cities: [] } } });
+  });
+
   for (const [what, body] of [
     ["a country Mullvad does not offer", { country: "Atlantis" }],
     ["a city in another country", { country: "USA", city: "Tokyo" }],
@@ -476,6 +535,19 @@ describe("POST /spitfire/region", () => {
         assert.equal(response.status, 409);
         assert.equal((await response.json()).activeClients, null);
         assert.deepEqual(calls, []);
+      });
+    });
+
+    it("asks before a quick button moves anyone, then moves to that country with no city", async () => {
+      await withConntrack(TWO_PEOPLE, async () => {
+        const { handle, calls } = picker(switchRoutes);
+        const form = (body: string) => new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+        const html = await (await handle(form("country=UK"))).text();
+        assert.match(html, /Move spitfire to UK\?/);
+        assert.match(html, /<input type="hidden" name="country" value="UK"><input type="hidden" name="city" value="">/);
+        assert.equal(calls.length, 0);
+        assert.equal((await handle(form("country=UK&city=&confirm=yes"))).status, 303);
+        assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["UK"], cities: [] } } });
       });
     });
 

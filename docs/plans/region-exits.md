@@ -213,7 +213,11 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
   - **`GET /`** shows the overview built from every region exit's `/status`: a plain-language
     status badge per region exit from that `availability`, and when it last checked.
   - **`GET /<name>`** shows the same status at the top, with what still works when it is
-    degraded or offline, and offers country and city from gluetun's `servers.json`.
+    degraded or offline, and offers country and city from gluetun's `servers.json`. Both
+    dropdowns start on the current region (the city list is the current country's, rendered
+    server-side, with "Any city" when none is set). Quick buttons beside the country dropdown
+    (`QUICK_COUNTRIES`: USA, Canada, UK) move it to that country with no city through the same
+    POST, confirmation included; the current one is shown disabled. Neither needs JavaScript.
   - **`POST /<name>/region`** asks for confirmation when anyone is on the region exit. It then
     patches the `region-exit-<name>-state` ConfigMap (RBAC: get, create and patch on that name
     only) and calls gluetun's control API to reconnect.
