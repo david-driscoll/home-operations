@@ -39,7 +39,7 @@ spec:
               # Same pin as the garage-sync / garage-mirror loops
               # (docker/_common/garage/compose.yaml).
               # renovate: datasource=docker depName=rclone/rclone
-              image: rclone/rclone:1.76.0@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
+              image: rclone/rclone:1.76.0@sha256:7cbeec24a44f206067597c0368be4de90ae19a64d5113c7d1938bd737a81e466
               command: ["/bin/sh", "-c"]
               env:
                 # An env-defined rclone remote named `garage`, the same shape the
