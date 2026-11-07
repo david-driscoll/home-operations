@@ -33,3 +33,6 @@ resources:
   # nodes on the NetBird and Tailscale overlays, privileged like the routing
   # peers.
   - ./region-exits/ks.yaml
+  # The region picker app at wonderbolts.<root domain> (docs/plans/wonderbolts-nuxt.md,
+  # ADR 0006): unprivileged, it only calls the region exits' agents.
+  - ./wonderbolts/ks.yaml
