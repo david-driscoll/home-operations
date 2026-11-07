@@ -3,7 +3,7 @@
  * node --test kubernetes/apps/netbird-system/region-exits/overview.test.ts
  *
  * The overview at `/` (docs/plans/region-exits.md §D4): every region exit's
- * region, tunnel state and the people on it, read from each one's GET /status
+ * availability, region and the people on it, read from each one's GET /status
  * over its Service. The Services are faked at fetch.
  */
 import assert from "node:assert/strict";
@@ -18,6 +18,8 @@ const status = (name: string, country: string, extra: Record<string, unknown> = 
   region: { country, city: null },
   tunnel: { up: true, status: "running" },
   egress: { country, city: null, ip: "203.0.113.1" },
+  overlays: { tailscale: true, netbird: true },
+  availability: { state: "online" },
   ...extra,
 });
 
@@ -32,25 +34,37 @@ function fakeFetch(answers: Record<string, () => Response>) {
 const json = (body: unknown) => () => new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
 
 describe("collectOverview", () => {
-  it("lists every region exit, in order, with its region, tunnel state and the people on it", async () => {
+  it("lists every region exit, in order, with its availability, region and the people on it", async () => {
     const fetch = fakeFetch({
       [url("spitfire")]: json(status("spitfire", "USA", { activeClients: 2 })),
-      [url("soarin")]: json(status("soarin", "Canada", { activeClients: 0 })),
+      [url("soarin")]: json(status("soarin", "Canada", { activeClients: 0, overlays: { tailscale: true, netbird: false }, availability: { state: "degraded", offlineOn: "netbird" } })),
       [url("fleetfoot")]: json(status("fleetfoot", "UK", { activeClients: 1 })),
       [url("misty-fly")]: json({ ...status("misty-fly", "Germany"), region: { country: "Germany", city: "Berlin" }, activeClients: 3 }),
-      [url("high-winds")]: json(status("high-winds", "Japan", { tunnel: { up: false, status: "stopped" } })),
+      [url("high-winds")]: json(status("high-winds", "Japan", { tunnel: { up: false, status: "stopped" }, availability: { state: "offline", reason: "tunnel" } })),
     });
     const entries = await collectOverview(WONDERBOLTS, url, fetch);
     assert.deepEqual(entries, [
-      { name: "spitfire", reachable: true, region: { country: "USA", city: null }, tunnelUp: true, activeClients: 2 },
-      { name: "soarin", reachable: true, region: { country: "Canada", city: null }, tunnelUp: true, activeClients: 0 },
-      { name: "fleetfoot", reachable: true, region: { country: "UK", city: null }, tunnelUp: true, activeClients: 1 },
-      { name: "misty-fly", reachable: true, region: { country: "Germany", city: "Berlin" }, tunnelUp: true, activeClients: 3 },
-      { name: "high-winds", reachable: true, region: { country: "Japan", city: null }, tunnelUp: false, activeClients: null },
+      { name: "spitfire", availability: { state: "online" }, region: { country: "USA", city: null }, activeClients: 2 },
+      { name: "soarin", availability: { state: "degraded", offlineOn: "netbird" }, region: { country: "Canada", city: null }, activeClients: 0 },
+      { name: "fleetfoot", availability: { state: "online" }, region: { country: "UK", city: null }, activeClients: 1 },
+      { name: "misty-fly", availability: { state: "online" }, region: { country: "Germany", city: "Berlin" }, activeClients: 3 },
+      { name: "high-winds", availability: { state: "offline", reason: "tunnel" }, region: { country: "Japan", city: null }, activeClients: null },
     ]);
   });
 
-  it("shows a region exit that does not answer as down, and still lists the others", async () => {
+  it("works out the availability itself from a /status without one, as from a picker not yet rolled", async () => {
+    const { availability: _, ...old } = status("soarin", "Canada", { overlays: { tailscale: false, netbird: true } });
+    const [entry] = await collectOverview(["soarin"], url, fakeFetch({ [url("soarin")]: json(old) }));
+    assert.deepEqual(entry.availability, { state: "degraded", offlineOn: "tailscale" });
+  });
+
+  it("does not trust an availability it does not recognise, and works it out instead", async () => {
+    const odd = status("soarin", "Canada", { tunnel: { up: false, status: "stopped" }, availability: { state: "<b>fine</b>" } });
+    const [entry] = await collectOverview(["soarin"], url, fakeFetch({ [url("soarin")]: json(odd) }));
+    assert.deepEqual(entry.availability, { state: "offline", reason: "tunnel" });
+  });
+
+  it("shows a region exit that does not answer as unreachable, and still lists the others", async () => {
     const fetch = fakeFetch({
       [url("spitfire")]: json(status("spitfire", "USA")),
       [url("soarin")]: () => new Response("upstream connect error", { status: 503 }),
@@ -58,28 +72,28 @@ describe("collectOverview", () => {
     });
     const entries = await collectOverview(["spitfire", "soarin", "fleetfoot", "misty-fly"], url, fetch);
     assert.deepEqual(
-      entries.map(e => [e.name, e.reachable]),
+      entries.map(e => [e.name, e.availability.state]),
       [
-        ["spitfire", true],
-        ["soarin", false],
-        ["fleetfoot", false],
-        ["misty-fly", false],
+        ["spitfire", "online"],
+        ["soarin", "unreachable"],
+        ["fleetfoot", "unreachable"],
+        ["misty-fly", "unreachable"],
       ],
     );
-    assert.deepEqual(entries[3], { name: "misty-fly", reachable: false, region: null, tunnelUp: false, activeClients: null });
+    assert.deepEqual(entries[3], { name: "misty-fly", availability: { state: "unreachable" }, region: null, activeClients: null });
   });
 
   it("gives up on a region exit that hangs, without holding up the page", async () => {
     const hang = (_input: string | URL | Request, init?: RequestInit) => new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
     const started = Date.now();
     const [entry] = await collectOverview(["spitfire"], url, hang, 50);
-    assert.equal(entry.reachable, false);
+    assert.deepEqual(entry.availability, { state: "unreachable" });
     assert.ok(Date.now() - started < 2000);
   });
 
-  it("shows a region exit with no Service address as down", async () => {
+  it("shows a region exit with no Service address as unreachable", async () => {
     const entries = await collectOverview(["soarin"], () => null, fakeFetch({}));
-    assert.equal(entries[0].reachable, false);
+    assert.deepEqual(entries[0].availability, { state: "unreachable" });
   });
 });
 
@@ -96,25 +110,36 @@ describe("peerStatusUrl", () => {
 
 describe("renderOverview", () => {
   const entries: OverviewEntry[] = [
-    { name: "spitfire", reachable: true, region: { country: "USA", city: "Dallas TX" }, tunnelUp: true, activeClients: 2 },
-    { name: "soarin", reachable: false, region: null, tunnelUp: false, activeClients: null },
-    { name: "fleetfoot", reachable: true, region: { country: "<UK>", city: null }, tunnelUp: false, activeClients: 0 },
+    { name: "spitfire", availability: { state: "online" }, region: { country: "USA", city: "Dallas TX" }, activeClients: 2 },
+    { name: "soarin", availability: { state: "unreachable" }, region: null, activeClients: null },
+    { name: "fleetfoot", availability: { state: "offline", reason: "tunnel" }, region: { country: "<UK>", city: null }, activeClients: 0 },
+    { name: "misty-fly", availability: { state: "degraded", offlineOn: "netbird" }, region: { country: "Germany", city: null }, activeClients: 1 },
+    { name: "high-winds", availability: { state: "degraded", offlineOn: "tailscale" }, region: { country: "Japan", city: null }, activeClients: 0 },
   ];
-  const html = renderOverview(entries);
+  // 10:42:05 Eastern, after the clocks went back.
+  const html = renderOverview(entries, new Date("2026-11-07T15:42:05Z"));
+  /** The row of one region exit. */
+  const row = (name: string) => html.match(new RegExp('<tr[^>]*><th scope="row"><a href="/' + name + '">[\\s\\S]*?</tr>'))?.[0] ?? "";
 
   it("links each region exit to its picker", () => {
-    for (const name of ["spitfire", "soarin", "fleetfoot"]) assert.ok(html.includes('href="/' + name + '"'), name);
+    for (const name of ["spitfire", "soarin", "fleetfoot", "misty-fly", "high-winds"]) assert.ok(html.includes('href="/' + name + '"'), name);
   });
 
-  it("shows region, tunnel state and the people on it", () => {
-    assert.match(html, /Dallas TX, USA/);
-    assert.match(html, /2 people/);
-    assert.match(html, /spitfire[\s\S]*?tunnel up/);
+  it("keeps the region and the people on it", () => {
+    assert.match(row("spitfire"), /Dallas TX, USA/);
+    assert.match(row("spitfire"), /2 people/);
   });
 
-  it("marks a region exit that did not answer as down, and one whose tunnel is down as such", () => {
-    assert.match(html, /soarin[\s\S]*?not answering/);
-    assert.match(html, /fleetfoot[\s\S]*?tunnel down/);
+  it("gives every region exit a status badge in plain words", () => {
+    assert.match(row("spitfire"), /class="availability online">Online</);
+    assert.match(row("soarin"), /class="availability unreachable">Not responding</);
+    assert.match(row("fleetfoot"), /class="availability offline">Offline: not connected to Mullvad</);
+    assert.match(row("misty-fly"), /class="availability degraded">Offline on NetBird, Tailscale works</);
+    assert.match(row("high-winds"), /class="availability degraded">Offline on Tailscale, NetBird works</);
+  });
+
+  it("says when it last checked, in Eastern time", () => {
+    assert.match(html, /Last checked <time datetime="2026-11-07T15:42:05.000Z">10:42:05 AM EST<\/time>/);
   });
 
   it("escapes what the region exits report", () => {

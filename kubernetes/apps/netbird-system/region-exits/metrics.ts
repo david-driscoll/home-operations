@@ -9,6 +9,9 @@
  *   region_exit_egress_country_match       RegionExitWrongCountry
  *   region_exit_overlay_connected{overlay} RegionExitOverlayOffline
  *
+ * region_exit_available (online or degraded, overlays.ts availabilityOf) is
+ * for dashboards; no alert reads it.
+ *
  * The info series (region, egress) keep the country names out of the alerting
  * series, so a region switch does not start a new series under the alert.
  */
@@ -83,6 +86,9 @@ export function renderMetrics(status: Status): string {
   gauge("region_exit_overlay_connected", "Whether the overlay's daemon on the region exit is connected.", [
     [{ overlay: "tailscale" }, bit(status.overlays.tailscale)],
     [{ overlay: "netbird" }, bit(status.overlays.netbird)],
+  ]);
+  gauge("region_exit_available", "Whether family can use the region exit on at least one overlay: its /status availability is online or degraded.", [
+    [{}, bit(status.availability.state === "online" || status.availability.state === "degraded")],
   ]);
   // activeClients.ts; absent, not 0, when conntrack cannot be read.
   if (status.activeClients !== null) gauge("region_exit_active_clients", "Distinct overlay clients with traffic out of the tunnel recently (activeClients.ts).", [[{}, status.activeClients]]);

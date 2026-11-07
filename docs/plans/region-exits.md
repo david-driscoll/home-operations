@@ -204,9 +204,16 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
   their Services.
   - **`GET /status`** (JSON) reports: region, tunnel up, the Mullvad egress country (gluetun's
     public-IP endpoint), whether NetBird and Tailscale are connected, and active clients.
-  - **`GET /metrics`** serves the same values for Prometheus.
-  - **`GET /`** shows the overview built from every region exit's `/status`.
-  - **`GET /<name>`** offers country and city from gluetun's `servers.json`.
+    It also reports one derived `availability` (`overlays.ts` `availabilityOf`): `online`,
+    `degraded` with the overlay that is offline (as for ~10 minutes on NetBird after a restart,
+    §F), or `offline` (tunnel down, or both overlays down). The overview adds `unreachable` for
+    a `/status` that fails or times out.
+  - **`GET /metrics`** serves the same values for Prometheus, plus `region_exit_available`
+    (online or degraded).
+  - **`GET /`** shows the overview built from every region exit's `/status`: a plain-language
+    status badge per region exit from that `availability`, and when it last checked.
+  - **`GET /<name>`** shows the same status at the top, with what still works when it is
+    degraded or offline, and offers country and city from gluetun's `servers.json`.
   - **`POST /<name>/region`** asks for confirmation when anyone is on the region exit. It then
     patches the `region-exit-<name>-state` ConfigMap (RBAC: get, create and patch on that name
     only) and calls gluetun's control API to reconnect.

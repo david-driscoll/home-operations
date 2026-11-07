@@ -9,9 +9,11 @@
  *   GET  /                        the overview of every region exit (overview.ts)
  *   GET  /status, /<name>/status  JSON: region, tunnel state, Mullvad egress,
  *                                 people on it (./activeClients.ts), overlays
+ *                                 and the availability derived from them
  *                                 (./overlays.ts)
  *   GET  /metrics                 the same for Prometheus (./metrics.ts); root only
- *   GET  /<name>                  the page: current region and a country/city form
+ *   GET  /<name>                  the page: availability, current region and a
+ *                                 country/city form
  *   GET  /<name>/regions          JSON: Mullvad WireGuard countries and their cities
  *   POST /<name>/region           move it (JSON or the page's form post); with
  *                                 anyone on it, only once confirmed
@@ -38,9 +40,9 @@
 import { readFile } from "node:fs/promises";
 import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
 import { activeClients } from "./activeClients.ts";
-import { describeRegion, escapeHtml, peopleCount, renderDocument } from "./html.ts";
+import { AVAILABILITY_STYLE, describeAvailability, describeRegion, escapeHtml, peopleCount, renderDocument } from "./html.ts";
 import { renderMetrics } from "./metrics.ts";
-import { type OverlayConfig, type OverlayDeps, type OverlayState, overlayState } from "./overlays.ts";
+import { type Availability, availabilityOf, type OverlayConfig, type OverlayDeps, type OverlayState, overlayState } from "./overlays.ts";
 import { collectOverview, peerStatusUrl, renderOverview } from "./overview.ts";
 
 export interface PickerConfig extends OverlayConfig {
@@ -99,6 +101,8 @@ export interface Status {
   activeClients: number | null;
   /** Whether each overlay's daemon is connected (overlays.ts). */
   overlays: OverlayState;
+  /** Whether family can use it, from the tunnel and the overlays (availabilityOf). */
+  availability: Availability;
 }
 
 /** JSON safe inside a <script>: no `<`, so no `</script>`. */
@@ -128,8 +132,10 @@ export function renderPage(name: string, current: Status, regions: RegionChoice[
   const cities = Object.fromEntries(regions.map(r => [r.country, r.cities]));
   const tunnel = current.tunnel.up ? "connected" : "not connected" + (current.tunnel.status ? " (" + escapeHtml(current.tunnel.status) + ")" : "");
   const egress = current.egress ? "Traffic leaves from " + escapeHtml((current.egress.city ? current.egress.city + ", " : "") + (current.egress.country ?? "an unknown country")) + "." : "";
-  return renderDocument(name + " region", PAGE_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}", [
+  const availability = describeAvailability(name, current.availability);
+  return renderDocument(name + " region", PAGE_STYLE + AVAILABILITY_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}", [
     "<h1>" + escapeHtml(name) + "</h1>",
+    '<p class="availability ' + current.availability.state + '"><strong>' + escapeHtml(availability.label) + "</strong><br>" + escapeHtml(availability.detail) + "</p>",
     "<p>Region: <strong>" + escapeHtml(describeRegion(current.region)) + "</strong>. Tunnel " + tunnel + ". " + egress + "</p>",
     '<form method="post" action="/' + escapeHtml(name) + '/region">',
     '<label for="country">Country</label><select id="country" name="country" required>' + options + "</select>",
@@ -176,13 +182,15 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     ]);
     const selection = settings?.provider?.server_selection;
     const country = selection?.countries?.[0];
+    const tunnelUp = vpn?.status === "running";
     return {
       name: config.name,
       region: country ? { country, city: selection?.cities?.[0] ?? null } : null,
-      tunnel: { up: vpn?.status === "running", status: vpn?.status ?? null },
+      tunnel: { up: tunnelUp, status: vpn?.status ?? null },
       egress: publicIp?.public_ip ? { country: publicIp.country ?? null, city: publicIp.city ?? null, ip: publicIp.public_ip } : null,
       activeClients: people,
       overlays,
+      availability: availabilityOf(tunnelUp, overlays),
     };
   }
 
@@ -285,7 +293,7 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     if (request.method === "GET" && path === "/healthz") return new Response("ok");
     if (request.method === "GET" && path === "/") {
       const entries = await collectOverview(config.regionExits, config.statusUrl, deps.fetch);
-      return new Response(renderOverview(entries), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      return new Response(renderOverview(entries, new Date()), { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
     if (request.method === "GET" && path === base) return page();
     if (request.method === "GET" && (path === "/status" || path === base + "/status")) return asJson(await status());

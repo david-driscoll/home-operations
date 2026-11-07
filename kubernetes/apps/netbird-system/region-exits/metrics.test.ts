@@ -18,6 +18,7 @@ const healthy: Status = {
   // Unreadable conntrack, so the samples below need not repeat the gauge.
   activeClients: null,
   overlays: { tailscale: true, netbird: true },
+  availability: { state: "online" },
 };
 
 /** The sample lines only, without HELP and TYPE. */
@@ -32,6 +33,7 @@ describe("renderMetrics", () => {
       'region_exit_egress_country_match{region_exit="spitfire"} 1',
       'region_exit_overlay_connected{region_exit="spitfire",overlay="tailscale"} 1',
       'region_exit_overlay_connected{region_exit="spitfire",overlay="netbird"} 1',
+      'region_exit_available{region_exit="spitfire"} 1',
     ]);
   });
 
@@ -56,13 +58,20 @@ describe("renderMetrics", () => {
   });
 
   it("drops the egress series, and the match, while gluetun has no public IP; the tunnel says why", () => {
-    const down: Status = { ...healthy, tunnel: { up: false, status: "stopping" }, egress: null };
+    const down: Status = { ...healthy, tunnel: { up: false, status: "stopping" }, egress: null, availability: { state: "offline", reason: "tunnel" } };
     assert.deepEqual(samples(renderMetrics(down)), [
       'region_exit_tunnel_up{region_exit="spitfire"} 0',
       'region_exit_region_info{region_exit="spitfire",country="USA",city="Dallas TX"} 1',
       'region_exit_overlay_connected{region_exit="spitfire",overlay="tailscale"} 1',
       'region_exit_overlay_connected{region_exit="spitfire",overlay="netbird"} 1',
+      'region_exit_available{region_exit="spitfire"} 0',
     ]);
+  });
+
+  it("says the region exit is available while either overlay still carries traffic, and not once neither does", () => {
+    const available = (status: Status) => samples(renderMetrics(status)).find(line => line.startsWith("region_exit_available"));
+    assert.equal(available({ ...healthy, overlays: { tailscale: true, netbird: false }, availability: { state: "degraded", offlineOn: "netbird" } }), 'region_exit_available{region_exit="spitfire"} 1');
+    assert.equal(available({ ...healthy, overlays: { tailscale: false, netbird: false }, availability: { state: "offline", reason: "overlays" } }), 'region_exit_available{region_exit="spitfire"} 0');
   });
 
   it("reports each overlay on its own, so one being offline names that one", () => {
