@@ -28,6 +28,13 @@ sysctl -w net.ipv4.conf.default.rp_filter=2
 # it has no setting to force that otherwise.
 sysctl -w net.ipv6.conf.all.disable_ipv6=1
 sysctl -w net.ipv6.conf.default.disable_ipv6=1
+# ...but IPv6 *forwarding* on. An exit node advertises ::/0 as well as
+# 0.0.0.0/0, so tailscaled also checks net.ipv6.conf.all.forwarding
+# (net/netutil/ip_forward.go, v1.104.4) and, finding it 0, reports "IPv6
+# forwarding is disabled", which the admin console shows as "Unable to relay
+# traffic". Nothing is forwarded over IPv6 regardless: it is disabled above,
+# and the mangle FORWARD drops below discard IPv6 from tailscale0 and wt0.
+sysctl -w net.ipv6.conf.all.forwarding=1
 
 # --- ip rules ---------------------------------------------------------------
 # Priorities in this namespace (§G2, read from the pinned sources):
