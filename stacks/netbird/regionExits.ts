@@ -1,8 +1,11 @@
 /**
- * What stacks/region-exits writes to OpenBao `third-party-tokens/mullvad/region-exits`
+ * What stacks/netbird writes to OpenBao `third-party-tokens/mullvad/region-exits`
  * (docs/plans/region-exits.md §C1): per region exit, the WireGuard private key
  * and tunnel address gluetun needs. The region exits' ExternalSecret reads these
  * property names by hand; rename one only with the other.
+ *
+ * The pure half: region-exit-devices.ts declares the devices and the write.
+ * Type-only imports, so `node --test` covers it.
  */
 import type * as pulumi from "@pulumi/pulumi";
 
@@ -12,6 +15,9 @@ import type * as pulumi from "@pulumi/pulumi";
  * device slots on the account.
  */
 export const REGION_EXITS = ["spitfire"] as const;
+
+/** Where the devices' keys and addresses go, under the `secrets` mount. */
+export const REGION_EXITS_BAO_PATH = "third-party-tokens/mullvad/region-exits";
 
 export interface RegionExitDeviceSecret {
   name: string;

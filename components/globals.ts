@@ -401,7 +401,7 @@ export class GlobalResources extends ComponentResource {
   /**
    * The standalone Mullvad account the region exits register their WireGuard
    * devices on (docs/plans/region-exits.md §C1, dynamic/mullvad/MullvadDevice.ts).
-   * Lazy like `azureCredential`: only stacks/region-exits reads it.
+   * Lazy like `azureCredential`: only stacks/netbird reads it.
    *
    * Never log this Output: the account number is the whole credential.
    */

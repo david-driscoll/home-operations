@@ -91,7 +91,12 @@ Defaults proposed in the session and accepted with the design:
 
 ## C. Pulumi
 
-### C1. Mullvad devices: new stack `stacks/region-exits`
+### C1. Mullvad devices, in `stacks/netbird`
+
+Section 13 of `stacks/netbird` (`region-exit-devices.ts`, with the pure payload in
+`regionExits.ts`), beside the NetBird half in C2. No stack of its own: one Stack CR, one
+state file and one set of envRefs for everything a region exit needs from Pulumi.
+
 
 - Add a `MullvadDevice` dynamic resource in `dynamic/mullvad/MullvadDevice.ts`:
   - **Create:** generate an X25519 keypair in-process and register the public key with

@@ -22,7 +22,9 @@
  *  11. a `self-` group and policy per person, so their own devices reach
  *      each other (selfAccess.ts);
  *  12. every tailnet app's NetBird twin, `<host>.nb.<root domain>`, on the
- *      same proxy (app-services.ts, apps.ts).
+ *      same proxy (app-services.ts, apps.ts);
+ *  13. the region exits' Mullvad devices, keys written to OpenBao for their
+ *      gluetun (region-exit-devices.ts, regionExits.ts).
  *
  * Login is NetBird's built-in IdP (embedded Dex, local users), not Authentik:
  * the server runs on Azure and Authentik is LAN/tailnet-only, so neither the
@@ -48,6 +50,7 @@ import { DNS_SERVER_GROUP, enrolledDnsPeers, type LivePeer, selectNameservers, t
 import { type LiveCluster, type LiveDomain, type LiveService, liveCustomDomain, privateServiceAccessGroups, privateServiceRequest, serviceOnCluster } from "./nbidp.ts";
 import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolvedSources } from "./policy.ts";
 import { clusterCnames, declareCustomDomain, validationCname } from "./proxyDomains.ts";
+import { declareRegionExitDevices } from "./region-exit-devices.ts";
 import { type LiveUser, selfAccessPlan } from "./selfAccess.ts";
 import { GATEWAY_SITE_STACKS, gatewayGroupName, gatewayGroupPeers, gatewayHosts, type LiveGatewayPeer, routedSites, SITES, siteProblems, siteStackOf } from "./sites.ts";
 
@@ -711,6 +714,12 @@ declareAppServices({
   dependsOn: [defaultPolicyRemoval, nbidpProxyToken],
 });
 
+// ── 13. Region exits' Mullvad devices ───────────────────────────────────────
+// One Mullvad WireGuard device per region exit, its key and tunnel address
+// written to OpenBao for the exit's gluetun (region-exit-devices.ts,
+// regionExits.ts; docs/plans/region-exits.md §C1).
+const regionExits = declareRegionExitDevices(globals);
+
 /** GET a NetBird API path with `globals.netbirdApi`'s token. */
 async function netbirdGet<T>(url: string, token: string, path: string): Promise<T> {
   const response = await fetch(`${url.replace(/\/+$/, "")}${path}`, { headers: { Authorization: `Token ${token}`, Accept: "application/json" } });
@@ -724,3 +733,5 @@ export const deviceGroups = pulumi.output(Object.fromEntries(Object.entries(grou
 export const gatewayGroups = pulumi.output(Object.fromEntries(Object.entries(gatewayStackGroups).map(([key, value]) => [key, value.id])));
 /** The Equestria entry's destination group (#2889), which policy.ts's `equestria-entry` rules target. */
 export const equestriaEntryGroup = equestriaEntry.id;
+/** Each region exit's Mullvad device id, name and tunnel address, by region exit (§C1). */
+export const regionExitDevices = regionExits;
