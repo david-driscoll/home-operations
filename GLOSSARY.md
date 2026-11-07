@@ -61,8 +61,8 @@ The Mullvad country, optionally narrowed to a city, that a region exit currently
 _Avoid_: Location, server (a region spans many Mullvad servers)
 
 **Region picker**:
-The page at `wonderbolts.<root domain>` where family see every region exit's region and change one, at `/<name>`.
-_Avoid_: VPN UI, Mullvad UI
+The app at `wonderbolts.<root domain>` where family, admins and friends see every region exit's region and availability, and where family and admins change one. Friends only look.
+_Avoid_: VPN UI, Mullvad UI, Wonderbolts (the hostname, not a name for the app), dashboard
 
 **Relay**:
 A server that forwards encrypted traffic between two peers that cannot connect directly.
