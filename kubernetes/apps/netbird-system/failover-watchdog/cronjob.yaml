@@ -3,7 +3,7 @@
 #
 # Every minute: probe the host the NetBird lease points at, and after
 # WATCHDOG_FAILURES_TO_FLIP failures in a row repoint the lease at a reachable
-# standby, if the holder still answers TLS on 443 (watchdog.ts). Forbid: two
+# standby, if another host saw the holder down too (watchdog.ts). Forbid: two
 # runs at once would both count, and could both flip. A run that starts late
 # or not at all breaks the streak (CONSECUTIVE_RUN_GAP_MINUTES).
 apiVersion: batch/v1
@@ -57,6 +57,10 @@ spec:
               envFrom:
                 - secretRef:
                     name: netbird-failover-watchdog-cloudflare
+                # S3_ENDPOINT, S3_BUCKET and the key: where the other hosts'
+                # views of the lease holder are (the second view a flip needs).
+                - secretRef:
+                    name: netbird-failover-watchdog-garage
               resources:
                 requests:
                   cpu: 10m

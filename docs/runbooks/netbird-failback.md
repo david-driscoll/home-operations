@@ -24,14 +24,22 @@ design is in [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md) §E an
   never starts on an unknown lease.
 - **The watchdog** (`kubernetes/apps/netbird-system/failover-watchdog`, a CronJob every minute in Equestria)
   probes management where the lease points. After 5 failed runs in a row it repoints the lease at the first
-  standby that answers TLS on 443, but only if Cloudflare answered too and the old holder still answers TLS on
-  443. That last check proves Equestria's route to the holder works, so only management failed; a holder that
-  answers nothing could equally be Equestria's route to it gone, and the watchdog holds (ADR 0002, #3161). Only
-  failures in a row count: a healthy run, a run that couldn't read Cloudflare, or a gap of more than 3 minutes
-  since the last recorded run starts the count over. It never flips twice within 60 minutes, and never from a
-  management it has not once seen answer (its state ConfigMap's `everHealthy`).
+  standby that answers TLS on 443, but only if Cloudflare answered too **and another host saw the holder down
+  too**. Equestria alone can't tell a dead holder from its own route to it being gone, so it needs that second
+  view from outside home (ADR 0002, #3161). Only failures in a row count: a healthy run, a run that couldn't read
+  Cloudflare, or a gap of more than 3 minutes since the last recorded run starts the count over. It never flips
+  twice within 60 minutes, and never from a management it has not once seen answer (its state ConfigMap's `everHealthy`).
   Every flip pages as `NetbirdFailover`; a flip it would make but may not pages as `NetbirdFailoverBlocked`;
   5 runs in a row without Cloudflare page as `NetbirdFailoverWatchdogBlind`.
+- **The failover views** (`components/netbird/failoverView.ts`, the `netbird-failover-view.timer` unit on every
+  host, every 30 s). Each host probes management at the others, the same check the watchdog makes, and PUTs the
+  result to the NetBird backup bucket as `failover-view/<host>.json`. The watchdog counts a view only if Garage's
+  `Last-Modified` is under 3 minutes old. To check one host is publishing:
+
+  ```bash
+  ssh root@netbird-azure-cus.<tailnet> 'systemctl status netbird-failover-view.timer; journalctl -u netbird-failover-view -n 4'
+  ```
+
 - **Pulumi and the lease.** `netbird-edge:primary` says which host config assigns the lease to.
   `DnsLeaseAssignment` writes the record only when that value (or that host's address) changes, so a run after a
   watchdog flip leaves the flip alone. It logs a warning until someone acknowledges it.
@@ -120,11 +128,11 @@ resolver) and never leaves its host.
 - **`NetbirdFailoverBlocked`.** Management has been down for 5 checks and the watchdog won't flip. The alert's
   reason says why:
   - "no standby answers on 443": the standby is down too, or Equestria's internet is.
-  - "does not answer on 443 from Equestria": the holder's VM (or region) is down, **or** only Equestria's route
-    to it is. The watchdog can't tell which, so it won't flip. Check from somewhere that isn't the home network:
-    a phone on cellular opening `https://netbird.<root domain>`, or the Azure portal for the VM. If the holder
-    is really down, promote the standby by hand. If it's up for everyone but Equestria, leave the lease alone
-    and fix the route.
+  - "no fresh view from another host ... confirms <ip> is down": the standby hasn't published a view of the holder
+    in the last 3 minutes. Its `netbird-failover-view` timer is stopped or failing, it can't reach Garage, or Garage
+    is down. Check its journal (above). If the holder really is down, promote by hand.
+  - "<host> still sees management at <ip> answer": the standby can reach management, Equestria can't. The fault is
+    on Equestria's path. Leave the lease alone and fix the route.
   - "cooldown": it flipped less than an hour ago.
   - "never answered": the server hasn't come up once since the watchdog's state began (a first deploy, or
     someone deleted `netbird-failover-watchdog-state`).
