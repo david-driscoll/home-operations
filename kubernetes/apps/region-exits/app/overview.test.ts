@@ -3,7 +3,7 @@
  * node --test kubernetes/apps/region-exits/app/overview.test.ts
  *
  * The overview at `/` (docs/plans/region-exits.md §D4): every region exit's
- * region, tunnel state and active users, read from each one's GET /status
+ * region, tunnel state and the people on it, read from each one's GET /status
  * over its Service. The Services are faked at fetch.
  */
 import assert from "node:assert/strict";
@@ -32,7 +32,7 @@ function fakeFetch(answers: Record<string, () => Response>) {
 const json = (body: unknown) => () => new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
 
 describe("collectOverview", () => {
-  it("lists every region exit, in order, with its region, tunnel state and active users", async () => {
+  it("lists every region exit, in order, with its region, tunnel state and the people on it", async () => {
     const fetch = fakeFetch({
       [url("spitfire")]: json(status("spitfire", "USA", { activeClients: 2 })),
       [url("soarin")]: json(status("soarin", "Canada", { activeClients: 0 })),
@@ -42,11 +42,11 @@ describe("collectOverview", () => {
     });
     const entries = await collectOverview(WONDERBOLTS, url, fetch);
     assert.deepEqual(entries, [
-      { name: "spitfire", reachable: true, region: { country: "USA", city: null }, tunnelUp: true, activeUsers: 2 },
-      { name: "soarin", reachable: true, region: { country: "Canada", city: null }, tunnelUp: true, activeUsers: 0 },
-      { name: "fleetfoot", reachable: true, region: { country: "UK", city: null }, tunnelUp: true, activeUsers: 1 },
-      { name: "misty-fly", reachable: true, region: { country: "Germany", city: "Berlin" }, tunnelUp: true, activeUsers: 3 },
-      { name: "high-winds", reachable: true, region: { country: "Japan", city: null }, tunnelUp: false, activeUsers: null },
+      { name: "spitfire", reachable: true, region: { country: "USA", city: null }, tunnelUp: true, activeClients: 2 },
+      { name: "soarin", reachable: true, region: { country: "Canada", city: null }, tunnelUp: true, activeClients: 0 },
+      { name: "fleetfoot", reachable: true, region: { country: "UK", city: null }, tunnelUp: true, activeClients: 1 },
+      { name: "misty-fly", reachable: true, region: { country: "Germany", city: "Berlin" }, tunnelUp: true, activeClients: 3 },
+      { name: "high-winds", reachable: true, region: { country: "Japan", city: null }, tunnelUp: false, activeClients: null },
     ]);
   });
 
@@ -66,7 +66,7 @@ describe("collectOverview", () => {
         ["misty-fly", false],
       ],
     );
-    assert.deepEqual(entries[3], { name: "misty-fly", reachable: false, region: null, tunnelUp: false, activeUsers: null });
+    assert.deepEqual(entries[3], { name: "misty-fly", reachable: false, region: null, tunnelUp: false, activeClients: null });
   });
 
   it("gives up on a region exit that hangs, without holding up the page", async () => {
@@ -96,9 +96,9 @@ describe("peerStatusUrl", () => {
 
 describe("renderOverview", () => {
   const entries: OverviewEntry[] = [
-    { name: "spitfire", reachable: true, region: { country: "USA", city: "Dallas TX" }, tunnelUp: true, activeUsers: 2 },
-    { name: "soarin", reachable: false, region: null, tunnelUp: false, activeUsers: null },
-    { name: "fleetfoot", reachable: true, region: { country: "<UK>", city: null }, tunnelUp: false, activeUsers: 0 },
+    { name: "spitfire", reachable: true, region: { country: "USA", city: "Dallas TX" }, tunnelUp: true, activeClients: 2 },
+    { name: "soarin", reachable: false, region: null, tunnelUp: false, activeClients: null },
+    { name: "fleetfoot", reachable: true, region: { country: "<UK>", city: null }, tunnelUp: false, activeClients: 0 },
   ];
   const html = renderOverview(entries);
 
@@ -106,7 +106,7 @@ describe("renderOverview", () => {
     for (const name of ["spitfire", "soarin", "fleetfoot"]) assert.ok(html.includes('href="/' + name + '"'), name);
   });
 
-  it("shows region, tunnel state and active users", () => {
+  it("shows region, tunnel state and the people on it", () => {
     assert.match(html, /Dallas TX, USA/);
     assert.match(html, /2 people/);
     assert.match(html, /spitfire[\s\S]*?tunnel up/);

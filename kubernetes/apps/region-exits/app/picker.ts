@@ -38,6 +38,7 @@
 import { readFile } from "node:fs/promises";
 import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
 import { activeClients } from "./activeClients.ts";
+import { describeRegion, escapeHtml, peopleCount, renderDocument } from "./html.ts";
 import { renderMetrics } from "./metrics.ts";
 import { type OverlayConfig, type OverlayDeps, type OverlayState, overlayState } from "./overlays.ts";
 import { collectOverview, peerStatusUrl, renderOverview } from "./overview.ts";
@@ -100,23 +101,16 @@ export interface Status {
   overlays: OverlayState;
 }
 
-const HTML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => HTML_ESCAPES[c]);
 /** JSON safe inside a <script>: no `<`, so no `</script>`. */
 const scriptJson = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
-const describeRegion = (region: Region | null) => (region ? (region.city ? region.city + ", " : "") + region.country : "unknown");
 const describePeople = (name: string, count: number | null) =>
-  count === null ? "The picker cannot tell how many people are using " + name + "." : (count === 1 ? "1 person is" : count + " people are") + " using " + name + " right now.";
+  count === null ? "The picker cannot tell how many people are using " + name + "." : peopleCount(count) + (count === 1 ? " is" : " are") + " using " + name + " right now.";
+const PAGE_STYLE = "body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}";
 
 /** The page a form post gets when people are on the region exit: the same move again, confirmed. */
 export function renderConfirm(name: string, region: Region, count: number | null): string {
   const hidden = (field: string, value: string) => '<input type="hidden" name="' + field + '" value="' + escapeHtml(value) + '">';
-  return [
-    "<!doctype html>",
-    '<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-    "<title>Move " + escapeHtml(name) + "?</title>",
-    "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}button{display:block;width:100%;margin:.5rem 0;font-size:1rem;padding:.6rem}</style>",
-    "</head><body>",
+  return renderDocument("Move " + name + "?", PAGE_STYLE + "button{display:block;width:100%;margin:.5rem 0;font-size:1rem;padding:.6rem}", [
     "<h1>Move " + escapeHtml(name) + " to " + escapeHtml(describeRegion(region)) + "?</h1>",
     "<p>" + escapeHtml(describePeople(name, count)) + " Everyone using it moves with it.</p>",
     '<form method="post" action="/' + escapeHtml(name) + '/region">',
@@ -124,8 +118,7 @@ export function renderConfirm(name: string, region: Region, count: number | null
     "<button>Move anyway</button>",
     "</form>",
     '<p><a href="/' + escapeHtml(name) + '">Cancel</a></p>',
-    "</body></html>",
-  ].join("\n");
+  ]);
 }
 
 /** The page at /<name>: where the region exit is, and a form to move it. */
@@ -135,12 +128,7 @@ export function renderPage(name: string, current: Status, regions: RegionChoice[
   const cities = Object.fromEntries(regions.map(r => [r.country, r.cities]));
   const tunnel = current.tunnel.up ? "connected" : "not connected" + (current.tunnel.status ? " (" + escapeHtml(current.tunnel.status) + ")" : "");
   const egress = current.egress ? "Traffic leaves from " + escapeHtml((current.egress.city ? current.egress.city + ", " : "") + (current.egress.country ?? "an unknown country")) + "." : "";
-  return [
-    "<!doctype html>",
-    '<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-    "<title>" + escapeHtml(name) + " region</title>",
-    "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}</style>",
-    "</head><body>",
+  return renderDocument(name + " region", PAGE_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}", [
     "<h1>" + escapeHtml(name) + "</h1>",
     "<p>Region: <strong>" + escapeHtml(describeRegion(current.region)) + "</strong>. Tunnel " + tunnel + ". " + egress + "</p>",
     '<form method="post" action="/' + escapeHtml(name) + '/region">',
@@ -159,8 +147,7 @@ export function renderPage(name: string, current: Status, regions: RegionChoice[
     "}",
     'country.addEventListener("change", fill); fill();',
     "</script>",
-    "</body></html>",
-  ].join("\n");
+  ]);
 }
 
 const asJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });

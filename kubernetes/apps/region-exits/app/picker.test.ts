@@ -442,8 +442,8 @@ describe("POST /spitfire/region", () => {
 describe("GET /", () => {
   it("shows the overview, built from every region exit's /status, one that is down included", async () => {
     const { handle, calls } = picker({
-      ["GET http://spitfire.peer:8080/status"]: () => json({ name: "spitfire", region: { country: "USA", city: null }, tunnel: { up: true, status: "running" }, egress: null }),
-      ["GET http://soarin.peer:8080/status"]: () => new Response("upstream connect error", { status: 503 }),
+      "GET http://spitfire.peer:8080/status": () => json({ name: "spitfire", region: { country: "USA", city: null }, tunnel: { up: true, status: "running" }, egress: null }),
+      "GET http://soarin.peer:8080/status": () => new Response("upstream connect error", { status: 503 }),
     });
     const response = await handle(get("/", "text/html"));
     assert.equal(response.status, 200);

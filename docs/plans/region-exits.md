@@ -216,7 +216,19 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
 - A PrometheusRule with these alerts:
   - `RegionExitTunnelDown` (5m);
   - `RegionExitWrongCountry` (15m), when the egress country differs from the stored region;
-  - `RegionExitOverlayOffline` (10m), per overlay.
+  - `RegionExitOverlayOffline` (10m), per overlay;
+  - `RegionExitDown` (15m), one rule per region exit, when no picker answers its scrape
+    (`absent(up{service="region-exits-<name>"} == 1)`): the pod is gone, Pending or
+    crash-looping, or the picker is dead, which would otherwise silence the alerts above.
+- The egress match compares countries, not strings: Mullvad's `servers.json` says "USA", "UK",
+  "Czech Republic", "Turkey", "Netherlands", and gluetun's public-IP vote may report MaxMind's
+  or ip2location's spelling ("Czechia", "Türkiye", "The Netherlands"). `metrics.test.ts` holds
+  every Mullvad country.
+- Going from one controller to five keeps spitfire's Deployment and ServiceAccount named
+  `region-exits` (`forceRename`). Renamed, Helm would create `region-exits-spitfire` before
+  deleting `region-exits`, and two spitfire pods would share the Mullvad key and tailscaled
+  state for a while. Kept, the Deployment updates in place and `Recreate` stops the old pod
+  first. Its Service, Role and RoleBinding do take the `-spitfire` names; none of them runs a pod.
 
 ## E. Phases
 
@@ -256,6 +268,16 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
   which of the two a dual-stack client sees.
 - **No locking.** A family member can move a region exit someone else is using. The picker
   warns before it switches.
+- **NetBird "connected" is only wt0 up.** The picker reports NetBird connected while `wt0`
+  exists and is `IFF_UP` (`overlays.ts`), which the engine tears down when management is lost
+  for good. It misses a stalled signal or relay connection. The stronger reads all need more
+  than the picker should have: `netbird status --check startup` (v0.82.0: management, signal
+  and a relay connected) goes through the daemon's gRPC socket, which has no read-only mode and
+  would let the picker run `down` or rewrite the config. WireGuard handshake times come only from
+  generic netlink, which needs `NET_ADMIN` in the pod's namespace and so would also reach the kill
+  switch (§G6); sysfs has no per-peer state. The same check as an exec probe on the netbird
+  container would fail the whole pod's readiness and take its picker off the route. Revisit if
+  NetBird grows a read-only status endpoint.
 
 ## G. Open risks for the P1 prototype
 

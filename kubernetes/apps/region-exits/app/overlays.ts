@@ -20,6 +20,7 @@
  * the client to give up and restart (client/internal/engine.go, v0.82.0).
  * Connected means wt0 exists and is IFF_UP. It does not see a stalled signal
  * connection; the management outage it does see is what takes peers away.
+ * Why nothing stronger is read: docs/plans/region-exits.md §F.
  */
 
 export interface OverlayState {

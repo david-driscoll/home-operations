@@ -15,16 +15,38 @@
 import type { Status } from "./picker.ts";
 
 /**
- * Mullvad's names in gluetun's servers.json that differ from the names
- * gluetun's public-IP lookup reports (internal/constants/countries.go,
- * v3.41.3). Every other Mullvad WireGuard country is spelt the same in both.
+ * One spelling per country, for names that are spelt more than one way. The
+ * region is a Mullvad name from gluetun's servers.json ("USA", "UK"). The
+ * egress is whichever name won gluetun's public-IP vote (v3.41.3,
+ * internal/publicip/api/resilient.go): ipinfo's and Cloudflare's codes named
+ * by constants.CountryCodes() ("United States", "Czech Republic", "Turkey"),
+ * ifconfig.co's MaxMind names ("Czechia", "Türkiye", "The Netherlands"), or
+ * ip2location's with any " (...)" cut off. Keys are lower case, without
+ * diacritics or a leading "the". metrics.test.ts holds every Mullvad country.
  */
-const EGRESS_NAMES: Record<string, string> = { USA: "United States", UK: "United Kingdom" };
+const SAME_COUNTRY: Record<string, string> = {
+  usa: "united states",
+  "united states of america": "united states",
+  uk: "united kingdom",
+  "united kingdom of great britain and northern ireland": "united kingdom",
+  czechia: "czech republic",
+  turkiye: "turkey",
+};
+
+function countryKey(name: string): string {
+  const key = name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/ \(.*\)$/, "")
+    .replace(/^the /i, "")
+    .trim()
+    .toLowerCase();
+  return SAME_COUNTRY[key] ?? key;
+}
 
 /** Whether traffic leaves from the country the region exit is set to. */
 export function egressMatchesRegion(regionCountry: string, egressCountry: string): boolean {
-  const expected = EGRESS_NAMES[regionCountry] ?? regionCountry;
-  return expected.toLowerCase() === egressCountry.toLowerCase();
+  return countryKey(regionCountry) === countryKey(egressCountry);
 }
 
 const escapeLabel = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");

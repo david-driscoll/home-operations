@@ -15,6 +15,52 @@ spec:
   groups:
     - name: region-exits
       rules:
+        # No picker answering /metrics for a region exit: its pod is gone,
+        # Pending or crash-looping, or the picker in it is dead, so every
+        # alert below is silent for it. One rule per region exit, as absent()
+        # cannot group: the ServiceMonitor's job label is the app's name for
+        # all five, and each target's `service` label is region-exits-<name>.
+        # Like the peers' (coder, forgejo), `== 1` makes a failing scrape
+        # count as absent, and 15m rides out a Recreate rollout. absent() of
+        # a comparison has no labels, and annotations only see the result's,
+        # so label_replace puts region_exit on it.
+        - alert: RegionExitDown
+          annotations: &down-annotations
+            summary: Region exit {{ $labels.region_exit }} is down.
+            description: >-
+              Prometheus has not scraped region exit {{ $labels.region_exit }}'s picker for 15
+              minutes: its pod is missing, Pending or crash-looping, or its picker is dead. Its
+              clients may have no exit, and its other alerts cannot fire. Check
+              `kubectl -n region-exits get pods -l app.kubernetes.io/controller={{ $labels.region_exit }}`.
+          expr: |
+            label_replace(absent(up{namespace="region-exits", service="region-exits-spitfire"} == 1), "region_exit", "spitfire", "", "")
+          for: &down-for 15m
+          labels: &down-labels
+            severity: critical
+        - alert: RegionExitDown
+          annotations: *down-annotations
+          expr: |
+            label_replace(absent(up{namespace="region-exits", service="region-exits-soarin"} == 1), "region_exit", "soarin", "", "")
+          for: *down-for
+          labels: *down-labels
+        - alert: RegionExitDown
+          annotations: *down-annotations
+          expr: |
+            label_replace(absent(up{namespace="region-exits", service="region-exits-fleetfoot"} == 1), "region_exit", "fleetfoot", "", "")
+          for: *down-for
+          labels: *down-labels
+        - alert: RegionExitDown
+          annotations: *down-annotations
+          expr: |
+            label_replace(absent(up{namespace="region-exits", service="region-exits-misty-fly"} == 1), "region_exit", "misty-fly", "", "")
+          for: *down-for
+          labels: *down-labels
+        - alert: RegionExitDown
+          annotations: *down-annotations
+          expr: |
+            label_replace(absent(up{namespace="region-exits", service="region-exits-high-winds"} == 1), "region_exit", "high-winds", "", "")
+          for: *down-for
+          labels: *down-labels
         # gluetun's /v1/vpn/status is not "running", or gluetun does not
         # answer. Every client of this region exit is cut off meanwhile (the
         # kill switch fails closed), hence critical. 5m rides out a region
@@ -25,7 +71,7 @@ spec:
             description: >-
               gluetun on region exit {{ $labels.region_exit }} has not reported its WireGuard tunnel
               running for 5 minutes, so its clients' traffic is being dropped. Check the gluetun
-              container's log (`kubectl -n region-exits logs deploy/region-exits-{{ $labels.region_exit }} -c gluetun`).
+              container's log (`kubectl -n region-exits logs -l app.kubernetes.io/controller={{ $labels.region_exit }} -c gluetun`).
           expr: |
             max by (namespace, region_exit) (region_exit_tunnel_up) == 0
           for: 5m

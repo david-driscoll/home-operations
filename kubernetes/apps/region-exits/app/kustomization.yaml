@@ -18,6 +18,7 @@ configMapGenerator:
     files:
       - ./picker.ts
       - ./overview.ts
+      - ./html.ts
       - ./activeClients.ts
       - ./metrics.ts
       - ./overlays.ts

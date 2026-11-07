@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderMetrics } from "./metrics.ts";
+import { egressMatchesRegion, renderMetrics } from "./metrics.ts";
 import type { Status } from "./picker.ts";
 
 const healthy: Status = {
@@ -82,5 +82,88 @@ describe("renderMetrics", () => {
     assert.ok(samples(renderMetrics({ ...healthy, activeClients: 3 })).includes('region_exit_active_clients{region_exit="spitfire"} 3'));
     assert.ok(samples(renderMetrics({ ...healthy, activeClients: 0 })).includes('region_exit_active_clients{region_exit="spitfire"} 0'));
     assert.ok(!samples(renderMetrics(healthy)).some(line => line.startsWith("region_exit_active_clients")));
+  });
+});
+
+/**
+ * Every Mullvad country in gluetun v3.41.3's servers.json (its spelling), then
+ * the spellings gluetun's public-IP lookup can report for it. gluetun asks
+ * ipinfo, Cloudflare, ifconfig.co and ip2location at once and keeps the most
+ * popular country (internal/publicip/api/resilient.go), so any of them can
+ * win. ipinfo and Cloudflare report a code that gluetun names from
+ * constants.CountryCodes(); ifconfig.co reports MaxMind's English name;
+ * ip2location's own name loses any " (...)" and a few are renamed
+ * (ip2location.go).
+ */
+const MULLVAD_EGRESS_NAMES: [string, ...string[]][] = [
+  ["Albania", "Albania"],
+  ["Australia", "Australia"],
+  ["Austria", "Austria"],
+  ["Belgium", "Belgium"],
+  ["Brazil", "Brazil"],
+  ["Bulgaria", "Bulgaria"],
+  ["Canada", "Canada"],
+  ["Chile", "Chile"],
+  ["Colombia", "Colombia"],
+  ["Croatia", "Croatia"],
+  ["Cyprus", "Cyprus"],
+  ["Czech Republic", "Czech Republic", "Czechia"],
+  ["Denmark", "Denmark"],
+  ["Estonia", "Estonia"],
+  ["Finland", "Finland"],
+  ["France", "France"],
+  ["Germany", "Germany"],
+  ["Greece", "Greece"],
+  ["Hong Kong", "Hong Kong"],
+  ["Hungary", "Hungary"],
+  ["Indonesia", "Indonesia"],
+  ["Ireland", "Ireland"],
+  ["Israel", "Israel"],
+  ["Italy", "Italy"],
+  ["Japan", "Japan"],
+  ["Malaysia", "Malaysia"],
+  ["Mexico", "Mexico"],
+  ["Netherlands", "Netherlands", "The Netherlands"],
+  ["New Zealand", "New Zealand"],
+  ["Nigeria", "Nigeria"],
+  ["Norway", "Norway"],
+  ["Peru", "Peru"],
+  ["Philippines", "Philippines"],
+  ["Poland", "Poland"],
+  ["Portugal", "Portugal"],
+  ["Romania", "Romania"],
+  ["Serbia", "Serbia"],
+  ["Singapore", "Singapore"],
+  ["Slovakia", "Slovakia"],
+  ["Slovenia", "Slovenia"],
+  ["South Africa", "South Africa"],
+  ["Spain", "Spain"],
+  ["Sweden", "Sweden"],
+  ["Switzerland", "Switzerland"],
+  ["Thailand", "Thailand"],
+  ["Turkey", "Turkey", "Türkiye"],
+  ["UK", "United Kingdom"],
+  ["USA", "United States", "United States of America"],
+  ["Ukraine", "Ukraine"],
+];
+
+describe("egressMatchesRegion", () => {
+  for (const [region, ...egressNames] of MULLVAD_EGRESS_NAMES) {
+    it(region + " matches every spelling the public-IP lookup reports for it", () => {
+      for (const egress of egressNames) assert.equal(egressMatchesRegion(region, egress), true, egress);
+    });
+  }
+
+  it("matches no Mullvad country to another's egress", () => {
+    for (const [region] of MULLVAD_EGRESS_NAMES) {
+      for (const [other, ...egressNames] of MULLVAD_EGRESS_NAMES) {
+        if (other === region) continue;
+        for (const egress of egressNames) assert.equal(egressMatchesRegion(region, egress), false, region + " vs " + egress);
+      }
+    }
+  });
+
+  it("ignores case", () => {
+    assert.equal(egressMatchesRegion("usa", "UNITED STATES"), true);
   });
 });
