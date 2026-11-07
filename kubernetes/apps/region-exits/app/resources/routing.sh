@@ -19,6 +19,16 @@ sysctl -w net.ipv4.conf.all.src_valid_mark=1
 sysctl -w net.ipv4.conf.all.rp_filter=2
 sysctl -w net.ipv4.conf.default.rp_filter=2
 
+# No IPv6 in this namespace (§G). The tunnel is IPv4 only (WIREGUARD_ADDRESSES
+# is a /32), but gluetun decides IPv6 support from whether ANY non-loopback
+# IPv6 route exists (internal/netlink/ipv6.go, v3.41.3), and eth0's fe80::/64
+# is one. It then picked IPv6 Mullvad endpoints and added an IPv6 rule 101
+# that a restart trips over ("file exists"). With IPv6 off on every interface,
+# present and future, there are no such routes and gluetun stays IPv4 only;
+# it has no setting to force that otherwise.
+sysctl -w net.ipv6.conf.all.disable_ipv6=1
+sysctl -w net.ipv6.conf.default.disable_ipv6=1
+
 # --- ip rules ---------------------------------------------------------------
 # Priorities in this namespace (§G2, read from the pinned sources):
 #   0       local table
@@ -104,6 +114,36 @@ iptables-nft -t mangle -C FORWARD -i wt0 ! -o tun0 -j DROP 2>/dev/null \
   || iptables-nft -t mangle -A FORWARD -i wt0 ! -o tun0 -j DROP
 ip6tables-nft -t mangle -C FORWARD -i wt0 -j DROP 2>/dev/null \
   || ip6tables-nft -t mangle -A FORWARD -i wt0 -j DROP
+
+# --- the pod's own traffic out eth0 ---------------------------------------------
+# gluetun's OUTPUT policy is DROP, so tailscaled's and NetBird's own packets
+# (rules 90 and 91) need an accept out eth0. It cannot match their marks in
+# filter OUTPUT: whenever gluetun removes one of its own OUTPUT rules (every
+# reconnect and region switch) it lists the whole chain and parses each line,
+# and its parser knows only tcp/udp dpt, ctstate and redir ports, and only
+# ACCEPT/DROP/REJECT/REDIRECT targets (internal/firewall/list.go, v3.41.3). A
+# `mark match` line, or a jump to a chain of ours, fails the parse, the
+# removal is skipped, and its rules pile up. So post-rules.txt accepts all of
+# eth0 in filter, which parses, and this mangle chain is the real filter: a
+# DROP here is final whatever filter accepts, and gluetun never touches mangle.
+#
+# What may leave by eth0: replies; tailscaled's and NetBird's own packets;
+# gluetun's WireGuard to the Mullvad server (marked with its fwmark 51820,
+# 0xca6c); and gluetun's FIREWALL_OUTBOUND_SUBNETS (change both together).
+# Everything else - gluetun's DNS and public-IP lookups, the picker - must go
+# through tun0, and is dropped while the tunnel is down.
+iptables-nft -t mangle -N region-exit-out 2>/dev/null \
+  || iptables-nft -t mangle -F region-exit-out
+iptables-nft -t mangle -A region-exit-out -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+iptables-nft -t mangle -A region-exit-out -m mark --mark 0x80000/0xff0000 -j RETURN
+iptables-nft -t mangle -A region-exit-out -m mark --mark 0x1bd00 -j RETURN
+iptables-nft -t mangle -A region-exit-out -m mark --mark 0xca6c -j RETURN
+for subnet in 10.206.0.0/16 10.196.0.0/16 10.10.206.0/24; do
+  iptables-nft -t mangle -A region-exit-out -d "$subnet" -j RETURN
+done
+iptables-nft -t mangle -A region-exit-out -j DROP
+iptables-nft -t mangle -C OUTPUT -o eth0 -j region-exit-out 2>/dev/null \
+  || iptables-nft -t mangle -A OUTPUT -o eth0 -j region-exit-out
 
 # --- masquerade into the tunnel ------------------------------------------------
 # Clients leave with the tunnel's address. tailscaled masquerades its

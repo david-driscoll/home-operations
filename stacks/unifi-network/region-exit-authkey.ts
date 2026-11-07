@@ -8,18 +8,20 @@
  * It goes to tailscale-system rather than straight into region-exits so this
  * stack never depends on Flux having created that namespace first.
  *
- * The tag has to be in the tailnet policy before the key can be minted.
- * configureRegionExits (acl-manager.ts) adds it in the same run; if the key
- * is created first, the run fails on it and the next resync mints it.
+ * The tag has to be in the tailnet policy before the key can be minted:
+ * configureRegionExits (acl-manager.ts) adds it in the same run, so the key
+ * dependsOn the ACL resource. Without that the two raced and the first run
+ * failed with "requested tags [tag:region-exit] are invalid".
  */
 import * as kubernetes from "@pulumi/kubernetes";
+import type * as pulumi from "@pulumi/pulumi";
 import { TailnetKey } from "@pulumi/tailscale";
 import { Tailscale } from "components/constants.ts";
 import type { GlobalResources } from "components/globals.ts";
 
 export const REGION_EXIT_AUTHKEY_SECRET = "tailscale-region-exit-authkey";
 
-export function createRegionExitAuthKey(globals: GlobalResources, provider: kubernetes.Provider): void {
+export function createRegionExitAuthKey(globals: GlobalResources, provider: kubernetes.Provider, tailnetAcl: pulumi.Input<pulumi.Resource>): void {
   const key = new TailnetKey(
     "region-exit-authkey",
     {
@@ -30,7 +32,7 @@ export function createRegionExitAuthKey(globals: GlobalResources, provider: kube
       tags: [Tailscale.tag.regionExit],
       description: "Equestria region exits",
     },
-    { provider: globals.tailscaleProvider },
+    { provider: globals.tailscaleProvider, dependsOn: tailnetAcl },
   );
 
   new kubernetes.core.v1.Secret(
