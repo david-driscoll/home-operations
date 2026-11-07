@@ -189,6 +189,30 @@ describe("GET /status", () => {
     assert.deepEqual((await (await handle(get("/status"))).json()).region, { country: "USA", city: null });
   });
 
+  /** /status's region with gluetun's server_selection set to `countries`/`cities`. */
+  const statusRegion = async (countries: string[], cities: string[] | null) =>
+    (await (await picker({ ...gluetunUp, ["GET " + G + "/v1/vpn/settings"]: () => json({ provider: { server_selection: { countries, cities } } }) }).handle(get("/status"))).json()).region;
+
+  it("reports the region in servers.json's spelling when gluetun lowercases it", async () => {
+    assert.deepEqual(await statusRegion(["japan"], ["tokyo"]), { country: "Japan", city: "Tokyo" });
+    assert.deepEqual(await statusRegion(["uk"], null), { country: "UK", city: null });
+    assert.deepEqual(await statusRegion(["usa"], ["new york ny"]), { country: "USA", city: "New York NY" });
+  });
+
+  it("title-cases a lowercase region servers.json does not list", async () => {
+    assert.deepEqual(await statusRegion(["atlantis"], ["lost city"]), { country: "Atlantis", city: "Lost City" });
+  });
+
+  it("title-cases a lowercase region when servers.json cannot be read", async () => {
+    const original = files[config.serversPath];
+    delete files[config.serversPath];
+    try {
+      assert.deepEqual(await statusRegion(["canada"], null), { country: "Canada", city: null });
+    } finally {
+      files[config.serversPath] = original;
+    }
+  });
+
   it("reports the tunnel down, and no region or egress, when gluetun does not answer", async () => {
     const { handle } = picker({});
     const response = await handle(get("/status"));
@@ -259,6 +283,16 @@ describe("GET /spitfire", () => {
     const html = await pageIn(["Canada"], ["Toronto ON"]);
     assert.match(html, /<button form="quick" name="country" value="Canada" disabled aria-current="true">Canada \(current\)<\/button>/);
     assert.match(html, /<button form="quick" name="country" value="USA">USA<\/button>/);
+  });
+
+  it("preselects and marks the current region when gluetun reports it lowercased", async () => {
+    const html = await pageIn(["canada"], ["toronto on"]);
+    assert.match(html, /Region: <strong>Toronto ON, Canada<\/strong>/);
+    assert.match(html, /<option value="Canada" selected>Canada<\/option>/);
+    assert.match(html, /<option value="Toronto ON" selected>Toronto ON<\/option>/);
+    assert.match(html, /<button form="quick" name="country" value="Canada" disabled aria-current="true">Canada \(current\)<\/button>/);
+    // The page's script compares against the same spelling as the options.
+    assert.match(html, /const current = \{"country":"Canada","city":"Toronto ON"\};/);
   });
 
   it("leaves out a quick country Mullvad does not offer", async () => {
@@ -475,6 +509,12 @@ describe("POST /spitfire/region", () => {
     assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Canada"], cities: [] } } });
   });
 
+  it("saves a region typed in another case in servers.json's spelling", async () => {
+    const { handle, calls } = picker(switchRoutes);
+    assert.equal((await handle(post({ country: "japan", city: "tokyo" }))).status, 200);
+    assert.deepEqual(calls[0].body, { data: { SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" } });
+  });
+
   for (const [what, body] of [
     ["a country Mullvad does not offer", { country: "Atlantis" }],
     ["a city in another country", { country: "USA", city: "Tokyo" }],
@@ -596,5 +636,15 @@ describe("GET /", () => {
     assert.match(html, /href="\/soarin"[\s\S]*Not responding/);
     assert.match(html, /Last checked <time/);
     assert.deepEqual(calls.map(c => c.url).sort(), ["http://soarin.peer:8080/status", "http://spitfire.peer:8080/status"]);
+  });
+
+  it("shows a region a peer reports lowercased in servers.json's spelling", async () => {
+    const peer = (country: string, city: string | null) => () =>
+      json({ region: { country, city }, tunnel: { up: true, status: "running" }, overlays: { tailscale: true, netbird: true }, availability: { state: "online" } });
+    const { handle } = picker({ "GET http://spitfire.peer:8080/status": peer("uk", null), "GET http://soarin.peer:8080/status": peer("usa", "dallas tx") });
+    const html = await (await handle(get("/", "text/html"))).text();
+    assert.match(html, /<td>UK<\/td>/);
+    assert.match(html, /<td>Dallas TX, USA<\/td>/);
+    assert.doesNotMatch(html, />uk</);
   });
 });

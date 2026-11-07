@@ -92,6 +92,24 @@ export interface Region {
   city: string | null;
 }
 
+const sameName = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+/** "lost city" -> "Lost City": the best guess at a name servers.json does not list. */
+const titleCase = (name: string) => name.replace(/(^|[\s-])(\S)/g, (_, gap: string, first: string) => gap + first.toUpperCase());
+
+/**
+ * `region` in servers.json's spelling. gluetun's control API reports
+ * server_selection lowercased ("uk", "new york ny"), so the name is looked up
+ * in `regions` ignoring case, and title-cased when it is not there.
+ */
+export function canonicalRegion(region: Region, regions: readonly RegionChoice[]): Region {
+  const choice = regions.find(r => sameName(r.country, region.country));
+  const city = region.city;
+  return {
+    country: choice?.country ?? titleCase(region.country),
+    city: city === null ? null : (choice?.cities.find(c => sameName(c, city)) ?? titleCase(city)),
+  };
+}
+
 export interface Status {
   name: string;
   region: Region | null;
@@ -197,20 +215,28 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     }
   }
 
+  /** Mullvad's countries and cities from servers.json, or none when it cannot be read. */
+  const offeredRegions = (): Promise<RegionChoice[]> =>
+    deps
+      .readFile(config.serversPath)
+      .then(regionsFrom)
+      .catch(() => []);
+
   async function status(): Promise<Status> {
-    const [vpn, settings, publicIp, people, overlays] = await Promise.all([
+    const [vpn, settings, publicIp, people, overlays, regions] = await Promise.all([
       gluetun<{ status?: string }>("/v1/vpn/status"),
       gluetun<{ provider?: { server_selection?: { countries?: string[] | null; cities?: string[] | null } } }>("/v1/vpn/settings"),
       gluetun<{ public_ip?: string; country?: string; city?: string }>("/v1/publicip/ip"),
       activeClients(deps.readFile),
       overlayState(config, deps),
+      offeredRegions(),
     ]);
     const selection = settings?.provider?.server_selection;
     const country = selection?.countries?.[0];
     const tunnelUp = vpn?.status === "running";
     return {
       name: config.name,
-      region: country ? { country, city: selection?.cities?.[0] ?? null } : null,
+      region: country ? canonicalRegion({ country, city: selection?.cities?.[0] ?? null }, regions) : null,
       tunnel: { up: tunnelUp, status: vpn?.status ?? null },
       egress: publicIp?.public_ip ? { country: publicIp.country ?? null, city: publicIp.city ?? null, ip: publicIp.public_ip } : null,
       activeClients: people,
@@ -273,10 +299,12 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
       confirmed = form.get("confirm") === "yes";
     }
     if (!country) return "pick a country";
-    const offered = regionsFrom(await deps.readFile(config.serversPath)).find(r => r.country === country);
+    const asked = country;
+    const offered = regionsFrom(await deps.readFile(config.serversPath)).find(r => sameName(r.country, asked));
     if (!offered) return "Mullvad has no WireGuard servers in " + country;
-    if (city && !offered.cities.includes(city)) return "Mullvad has no WireGuard servers in " + city + ", " + country;
-    return { region: { country, city: city || null }, confirmed };
+    const offeredCity = city ? offered.cities.find(c => sameName(c, city)) : null;
+    if (offeredCity === undefined) return "Mullvad has no WireGuard servers in " + city + ", " + country;
+    return { region: { country: offered.country, city: offeredCity }, confirmed };
   }
 
   async function switchRegion(request: Request): Promise<Response> {
@@ -317,7 +345,9 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
     if (request.method === "GET" && path === "/healthz") return new Response("ok");
     if (request.method === "GET" && path === "/") {
-      const entries = await collectOverview(config.regionExits, config.statusUrl, deps.fetch);
+      const [peers, regions] = await Promise.all([collectOverview(config.regionExits, config.statusUrl, deps.fetch), offeredRegions()]);
+      // A peer's /status is already canonical; this covers one from before it was.
+      const entries = peers.map(entry => (entry.region ? { ...entry, region: canonicalRegion(entry.region, regions) } : entry));
       return new Response(renderOverview(entries, new Date()), { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
     if (request.method === "GET" && path === base) return page();

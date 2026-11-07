@@ -332,6 +332,13 @@ old pod is gone within seconds.
   PVC with a non-ephemeral key. The peer is now `<name>-<pod name suffix>` (`spitfire-jjvlx`),
   so a restarted pod rejoins within about a minute and the old peer is deleted on schedule.
   Routes and policies use the device group, never the peer name (§D2).
+- **A rollout takes the picker off for about a minute.** The region-exits Deployments use
+  `strategy: Recreate`, so a rollout (any change to the pod template, such as a picker change
+  in the ConfigMap) stops the old pod before starting the new one, and the picker on
+  wonderbolts answers 503 until the new pod is Ready, about a minute. A plain pod restart no
+  longer does: #3171 keeps the pod Ready while the `netbird` container retries in place.
+  Recreate stays on purpose: a rolling update would briefly run two pods on one Mullvad key and
+  one Tailscale state. Accepted by David 2026-11-07.
 
 ## G. Open risks for the P1 prototype
 
