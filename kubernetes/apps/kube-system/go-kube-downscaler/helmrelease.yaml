@@ -209,6 +209,11 @@ spec:
       - ^network$
       - ^stargate-command$
       - ^tailscale-system$
+      # NetBird is how family reach the estate (gateways, in-cluster routers,
+      # nbidp) and its watchdog/health CronJobs guard the failover; suspending
+      # them nightly fired NetbirdProxyWatchdog/NetbirdHealth/NetbirdFailover-
+      # Watchdog NotRunning every night.
+      - ^netbird-system$
       - ^garage-system$
       - ^observability$
       - ^pulumi$
