@@ -7,8 +7,8 @@
 #
 # The age layer is ON TOP of OpenBao's own encryption, deliberately:
 # alpha-site also hosts the transit key, so possession of that one host must
-# never be enough to read the estate's secrets. Recipients are the three
-# estate age keys plus the dedicated restore-test key — see
+# never be enough to read the estate's secrets. Recipients are the
+# estate age keys (this repo's .sops.yaml set) plus the dedicated restore-test key — see
 # age-recipients.txt, which is the authoritative list.
 #
 # Environment (set in helmrelease.yaml):
