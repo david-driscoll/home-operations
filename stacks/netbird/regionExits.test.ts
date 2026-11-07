@@ -1,5 +1,5 @@
 /**
- * node --test stacks/region-exits/baoData.test.ts
+ * node --test stacks/netbird/regionExits.test.ts
  *
  * The OpenBao payload at `third-party-tokens/mullvad/region-exits`. Its
  * property names are read by the region exits' ExternalSecret
@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { REGION_EXITS, regionExitBaoData } from "./baoData.ts";
+import { REGION_EXITS, regionExitBaoData } from "./regionExits.ts";
 
 describe("regionExitBaoData", () => {
   it("writes <name>_private_key and <name>_address per region exit, and conceals only the keys", () => {

@@ -29,4 +29,3 @@ resources:
   # the owner PAT it authenticates with.
   - ./netbird/ks.yaml
   # Mullvad devices for the region exits (#3137); keys go to OpenBao.
-  - ./region-exits/ks.yaml
