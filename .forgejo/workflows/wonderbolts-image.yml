@@ -34,13 +34,14 @@ jobs:
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # The base the image is appended to, and the container it is built in:
-    # the same pin, so the build runs on exactly the filesystem it ships on.
-    # BASE_IMAGE below MUST match; Renovate bumps both in one branch.
+    # The container it is built in, AND the base the image is appended to:
+    # "Work out the tag" reads this very line back as the base, so the build
+    # runs on exactly the filesystem it ships on. One pin, the one Renovate's
+    # github-actions manager bumps; a second copy in env drifted the first
+    # time it did (f09d6851 bumped this line only).
     container:
       image: node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8
     env:
-      BASE_IMAGE: docker.io/library/node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
       # The account that owns the image (stacks/system/forgejo-github-mirror.ts).
       IMAGE_OWNER: estate-images
       IMAGE_NAME: wonderbolts
@@ -67,6 +68,13 @@ jobs:
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$PWD"
+          # The job container's pin, above: the one image reference in this file.
+          pinned="$(sed -nE 's#^      image: (node:[^[:space:]]+@sha256:[0-9a-f]{64})$#\1#p' .forgejo/workflows/wonderbolts-image.yml)"
+          if [ "$(printf '%s\n' "$pinned" | grep -c .)" -ne 1 ]; then
+            echo "::error::expected exactly one pinned 'image: node:<tag>@sha256:<digest>' line in this workflow"
+            exit 1
+          fi
+          BASE_IMAGE="docker.io/library/${pinned}"
           version="$(node -p "require('./${APP_DIR}/package.json').version")"
           # The app's git tree and the base: the tag changes when either does
           # and for nothing else, so a re-run on an unchanged tree is a no-op.
@@ -80,6 +88,7 @@ jobs:
           {
             echo "tag=${tag}"
             echo "path=${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
+            echo "base=${BASE_IMAGE}"
           } >> "$GITHUB_OUTPUT"
           echo "Image: git.${ROOT_DOMAIN}/${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
 
@@ -144,6 +153,7 @@ jobs:
         shell: bash
         env:
           IMAGE_PATH: ${{ steps.tag.outputs.path }}
+          BASE_IMAGE: ${{ steps.tag.outputs.base }}
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
           REVISION: ${{ github.sha }}
         run: |
