@@ -9,14 +9,6 @@ apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
   name: wonderbolts
-  annotations:
-    # Step one of moving this file to ../wonderbolts (docs/plans/wonderbolts-nuxt.md,
-    # phase 7). stacks/system reads ApplicationDefinitions live from the cluster
-    # on every run, and every merge runs it: if this Kustomization pruned the
-    # object before the wonderbolts one re-applied it, a run in between would
-    # delete the Authentik application and lock the site. With this on the live
-    # object first, the move's prune skips it.
-    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   name: Region exits
   category: Applications

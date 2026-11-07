@@ -260,7 +260,9 @@ each pod is the agent, the `picker` container (`picker.ts`), which serves JSON o
   conntrack entry out of `tun0` in the last few minutes.
 - `HTTPRoute` `wonderbolts` (`wonderbolts.${ROOT_DOMAIN}`) on Gateway `internal` in
   `network`, with middleware `authenticated-user`, routes everything to the app.
-- `definition.yaml`: `authentik.proxy.mode: forward_single`, `groups: [family, admins]`. The
+- `definition.yaml`, now in `kubernetes/apps/netbird-system/wonderbolts`:
+  `authentik.proxy.mode: forward_single`, `groups: [family, admins, friends]` (friends look but
+  can't move, which the app enforces). The
   pattern is `kubernetes/apps/equestria/downloads/qbittorrent`.
 - No `$` in inline scripts: Flux post-build substitution rewrites it (see Technitium's init).
 
