@@ -192,6 +192,49 @@ WantedBy=timers.target
   };
 }
 
+export const RELAY_PROBE_UNIT_DIR = "/etc/systemd/system";
+const HEREDOC_END = "NETBIRD_RELAY_PROBE_EOF";
+
+/**
+ * The install and teardown commands for one host, as one unit of work.
+ *
+ * They were separate Commands once: one per file, then an `-enable` Command
+ * whose delete disabled the timer and removed the files. Pulumi replaces
+ * create-before-delete, so any change to the script enabled the new timer and
+ * then ran the old Command's delete on the same host. The 2026-11-06 deploy
+ * took the probe off both Azure hosts that way, and the heartbeats went
+ * stale. Now the install writes every file itself, and NetbirdRelayProbe runs
+ * it deleteBeforeReplace: the teardown always runs before the install.
+ */
+export function renderRelayProbeInstall(args: { script: string; dir?: string; unitDir?: string }): { install: string; teardown: string } {
+  const dir = shellWord(args.dir ?? RELAY_PROBE_DIR, "probe dir");
+  const unitDir = shellWord(args.unitDir ?? RELAY_PROBE_UNIT_DIR, "unit dir");
+  const paths = relayProbePaths(dir);
+  const units = renderRelayProbeUnits(dir);
+  const files: [string, string, string][] = [
+    [paths.script, args.script, "700"],
+    [`${unitDir}/netbird-relay-probe.service`, units.service, "644"],
+    [`${unitDir}/netbird-relay-probe.timer`, units.timer, "644"],
+  ];
+  const write = files.map(([path, content, mode]) => {
+    const body = content.endsWith("\n") ? content : `${content}\n`;
+    if (body.split("\n").includes(HEREDOC_END)) throw new Error(`relay probe: ${path} contains the heredoc delimiter ${HEREDOC_END}`);
+    return `write ${path} ${mode} <<'${HEREDOC_END}'\n${body}${HEREDOC_END}\n`;
+  });
+  return {
+    // stdin to `bash -s`: the script carries the heartbeat token, so it never goes on a command line.
+    install: `set -euo pipefail
+umask 077
+install -d -m 700 ${dir}
+write() { cat > "$1.tmp" && chmod "$2" "$1.tmp" && mv "$1.tmp" "$1"; }
+${write.join("")}systemctl daemon-reload
+systemctl enable --now netbird-relay-probe.timer
+systemctl start --no-block netbird-relay-probe.service
+`,
+    teardown: `systemctl disable --now netbird-relay-probe.timer 2>/dev/null || true; rm -rf ${dir} ${unitDir}/netbird-relay-probe.service ${unitDir}/netbird-relay-probe.timer && systemctl daemon-reload`,
+  };
+}
+
 /** A value baked into the script. Only these characters, so no quoting can go wrong. */
 function shellWord(value: string, what: string): string {
   if (!/^[A-Za-z0-9_./:@-]+$/.test(value)) throw new Error(`${what} '${value}' has characters the rendered script does not quote`);

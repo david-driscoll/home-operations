@@ -10,7 +10,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -23,6 +23,7 @@ import {
   RELAY_PROBE_STALE_AFTER_MINUTES,
   relayProbeHeartbeat,
   relayTlsEndpoint,
+  renderRelayProbeInstall,
   renderRelayProbeScript,
   renderRelayProbeUnits,
 } from "./relayProbe.ts";
@@ -186,5 +187,57 @@ describe("the Gatus side", () => {
 
   it("runs the probe every RELAY_PROBE_INTERVAL_MINUTES", () => {
     assert.match(renderRelayProbeUnits().timer, new RegExp(`OnCalendar=\\*:0/${RELAY_PROBE_INTERVAL_MINUTES}\n`));
+  });
+});
+
+describe("renderRelayProbeInstall", () => {
+  function host() {
+    const b = box();
+    writeFileSync(join(b.bin, "systemctl"), '#!/usr/bin/env bash\necho "systemctl $*" >> "$FAKE_LOG"\n');
+    chmodSync(join(b.bin, "systemctl"), 0o755);
+    const dir = join(b.dir, "opt", "relay-probe");
+    const unitDir = join(b.dir, "units");
+    spawnSync("mkdir", ["-p", unitDir]);
+    const commands = renderRelayProbeInstall({ script: script(), dir, unitDir });
+    const sh = (input: string) => {
+      const result = spawnSync("bash", ["-s"], { input, encoding: "utf8", env: { PATH: `${b.bin}:/usr/bin:/bin`, FAKE_LOG: b.log } });
+      const calls = existsSync(b.log) ? readFileSync(b.log, "utf8").trim().split("\n") : [];
+      return { status: result.status, stderr: result.stderr, calls };
+    };
+    return { dir, unitDir, commands, sh };
+  }
+
+  it("writes the script and both units byte for byte, then enables the timer", () => {
+    const { dir, unitDir, commands, sh } = host();
+    const { status, stderr, calls } = sh(commands.install);
+    assert.equal(status, 0, stderr);
+    assert.equal(readFileSync(join(dir, "netbird-relay-probe.sh"), "utf8"), script());
+    const units = renderRelayProbeUnits(dir);
+    assert.equal(readFileSync(join(unitDir, "netbird-relay-probe.service"), "utf8"), units.service);
+    assert.equal(readFileSync(join(unitDir, "netbird-relay-probe.timer"), "utf8"), units.timer);
+    assert.equal(statSync(join(dir, "netbird-relay-probe.sh")).mode & 0o777, 0o700);
+    assert.equal(statSync(join(unitDir, "netbird-relay-probe.timer")).mode & 0o777, 0o644);
+    assert.deepEqual(calls, ["systemctl daemon-reload", "systemctl enable --now netbird-relay-probe.timer", "systemctl start --no-block netbird-relay-probe.service"]);
+  });
+
+  it("keeps the heartbeat token off the command line: it is in the install, which goes on stdin", () => {
+    const { commands } = host();
+    assert.ok(commands.install.includes(TOKEN));
+    assert.ok(!commands.teardown.includes(TOKEN));
+  });
+
+  it("tears down what it installed, and a replace (teardown, then install) leaves the probe running", () => {
+    const { dir, unitDir, commands, sh } = host();
+    sh(commands.install);
+    assert.equal(sh(commands.teardown).status, 0);
+    assert.ok(!existsSync(dir));
+    assert.ok(!existsSync(join(unitDir, "netbird-relay-probe.timer")));
+    assert.equal(sh(commands.install).status, 0);
+    assert.ok(existsSync(join(dir, "netbird-relay-probe.sh")));
+    assert.ok(existsSync(join(unitDir, "netbird-relay-probe.timer")));
+  });
+
+  it("refuses a file that contains its heredoc delimiter", () => {
+    assert.throws(() => renderRelayProbeInstall({ script: "echo\nNETBIRD_RELAY_PROBE_EOF\n" }), /heredoc delimiter/);
   });
 });
