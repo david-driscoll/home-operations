@@ -89,8 +89,7 @@ All providers are constructed once in `components/globals.ts` (`GlobalResources`
 ## Cluster Definitions
 
 ### Kubernetes Clusters
-- **Equestria** — Primary Kubernetes cluster (hosts `observability` namespace, Alertmanager, etc.)
-- **Stargate Command** — Secondary Kubernetes cluster
+- **Equestria** — The only Kubernetes cluster (hosts `observability` namespace, Alertmanager, etc.). The Stargate Command cluster is retired; `stargate-command` is now a namespace in Equestria.
 
 ### Dockge Clusters (Docker/LXC)
 - **Celestia** — Production Dockge cluster (LXC on Proxmox)

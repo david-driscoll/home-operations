@@ -19,6 +19,7 @@ import { getAclOutput } from "@pulumi/tailscale";
 import { awaitOutput } from "components/helpers.ts";
 import * as parser from "jsonc-parser";
 import { Tailscale } from "../constants.ts";
+import { pruneUndefinedTags } from "./policyGuards.ts";
 
 export const { groups, autogroups, tag, subnets, ports } = Tailscale;
 
@@ -275,7 +276,9 @@ export class TailscaleAclManager {
         throw e;
       }
     }
-    return acls;
+    // Last: drop tags that tagOwners no longer defines from the approvers and
+    // `via` lists carried over from the live policy (see pruneUndefinedTags).
+    return pruneUndefinedTags(acls);
   }
 
   public getJsonParsed() {

@@ -43,7 +43,6 @@ const internetFacingTags: readonly string[] = [tag.funnel, tag.netbirdEdge, tag.
  */
 function registerExitNodes(manager: TailscaleAclManager) {
   manager.setExitNode(tag.proxmox);
-  manager.setExitNode(tag.sgc);
   manager.setExitNode(tag.equestria);
   manager.setExitNode(tag.regionExit);
 }
@@ -119,7 +118,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       proxmoxDevices,
       dockgeDevices,
       pbsDevices,
-      kubernetesDevices: ["sgc", "equestria"],
+      kubernetesDevices: ["equestria"],
       taggedDevices: [...proxmoxDevices, ...dockgeDevices, ...pbsDevices],
     };
 

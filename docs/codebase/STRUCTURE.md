@@ -125,7 +125,7 @@ TruenasVm.ts
 |-------|---------|---------------|
 | `home/` | Core infrastructure | ProxmoxHost (twilight-sparkle, celestia, alpha-site), TruenasVm (spike), DockgeLxc (celestia-dockge, alpha-site-dockge), Minio buckets |
 | `authentik/` | IdP management | Authentik groups/roles/flows; outputs written to 1Password "Authentik Outputs" |
-| `applications/` | Kubernetes app deployment | Helm releases, Authentik app registration, Volsync secrets on Equestria + Stargate Command |
+| `applications/` | Kubernetes app deployment | Helm releases, Authentik app registration, Volsync secrets on Equestria |
 | `backups/` | Backup automation | Backrest (restic) plans, Garage-backed repos, the TrueNAS copy of Garage, Gatus heartbeats |
 | `unifi-network/` | Network management | Unifi firewall rules, Tailscale drop rules (ACL manager) |
 | `ocracoke/` | Ocracoke cluster | Cluster node and network management |

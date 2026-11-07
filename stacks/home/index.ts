@@ -117,6 +117,11 @@ const _cnpgEquestriaBackups = new minio.S3Bucket(
   },
 );
 
+// The retired SGC cluster's CNPG backups, on its way out of this stack: the
+// bucket stays in Minio, but Pulumi stops managing it. A protected resource
+// cannot be removed from code, so this step only drops `protect`; the next
+// change deletes the block, and `retainOnDelete` turns that into a state-only
+// removal. Delete the bucket by hand in Minio once nothing old needs restoring.
 const _cnpgSgcBackups = new minio.S3Bucket(
   `cnpg-sgc-backups`,
   {
@@ -125,7 +130,7 @@ const _cnpgSgcBackups = new minio.S3Bucket(
   },
   {
     provider: globals.truenasMinioProvider,
-    protect: true,
+    protect: false,
     retainOnDelete: true,
   },
 );
@@ -489,9 +494,9 @@ const _openbaoOidc = new OpenBaoOidc("openbao-oidc", { globals });
 // bootstrap script and would need `pulumi import` to adopt. See
 // components/openbao/clusterAuth.ts.
 //
-// Still outstanding from Phase 2: the `kubernetes-sgc` mount and the `eso-sgc`
-// policy/role are `retainOnDelete`, so Pulumi never reaches them — they need
-// hand-deletion (step 4).
+// The `kubernetes-sgc` mount and the `eso-sgc` policy/role were
+// `retainOnDelete`, so Pulumi never reached them; they were deleted by hand
+// with the rest of the clusters/sgc/* paths (step 4).
 
 function clusterWideDns(globals: GlobalResources) {
   StandardDns.create(

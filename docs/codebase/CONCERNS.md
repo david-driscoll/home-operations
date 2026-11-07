@@ -60,11 +60,11 @@
 ### 6) `[ASK USER]` Questions
 
 1. [ASK USER] What does `// TODO: make work at somepoint` in `components/ProxmoxHost.ts:137` refer to?
-2. [ASK USER] Is kubeconfig rotation for the Kubernetes clusters (Equestria, Stargate Command) automated, and how is the 1Password item updated when it rotates?
+2. [ASK USER] Is kubeconfig rotation for the Kubernetes cluster (Equestria) automated, and how is the 1Password item updated when it rotates?
 3. [ASK USER] Are SSH keys (the `sftpKey`) rotated, and is there a process for key rotation across all Dockge hosts?
 4. [ASK USER] Is the Backblaze B2 integration (currently commented out) planned for removal, or will it be re-enabled?
 5. [ASK USER] Is there a plan to adopt Pulumi Testing SDK or any other approach to automated testing for this infrastructure repo?
-6. [ASK USER] What is the `ocracoke` and `gulf-of-mexico` stack managing? These stack names don't match the documented cluster names (Equestria, Stargate Command, Celestia, Luna, Skystar, Alpha Site).
+6. [ASK USER] What is the `ocracoke` and `gulf-of-mexico` stack managing? These stack names don't match the documented cluster names (Equestria, Celestia, Luna, Skystar, Alpha Site).
 
 ### 7) Evidence
 

@@ -320,7 +320,7 @@ export class BaoStore extends VaultStore {
 }
 
 /** Cluster keys that prefix a generated per-app credential title. */
-const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-site", "twilight-sparkle"];
+const CLUSTER_KEYS = ["equestria", "celestia", "luna", "skystar", "alpha-site", "twilight-sparkle"];
 
 /**
  * Titles whose 1Password item is deliberately NOT in OpenBao.

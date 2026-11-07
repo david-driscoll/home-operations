@@ -61,7 +61,7 @@ All SSH management connections use `${name}.<tailnet>` — no direct IPs are use
 **Home subnet routed via Tailscale:** `10.10.0.0/16`
 
 **ACL tags** (from `components/constants.ts`):
-`dockge`, `proxmox`, `k8s`, `observability`, `backups`, `egress`, `ingress`, `management`, `operator`, `sgc`, `equestria`, `exit-node`, `peer-relay`, `recorder`, `shared-drive`, `apps`, `media-device`
+`dockge`, `proxmox`, `k8s`, `observability`, `backups`, `egress`, `ingress`, `management`, `operator`, `equestria`, `exit-node`, `peer-relay`, `recorder`, `shared-drive`, `apps`, `media-device`
 
 **Named port groups** (from `components/constants.ts`):
 

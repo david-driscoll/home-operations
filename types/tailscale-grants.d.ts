@@ -18,7 +18,6 @@ export type TailscaleTags =
   | "tag:proxmox"
   | "tag:ci-server"
   | "tag:operator"
-  | "tag:sgc"
   | "tag:equestria"
   | "tag:ingress"
   | "tag:egress"

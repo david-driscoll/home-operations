@@ -667,6 +667,46 @@ each other but all sit behind them.
 14. **Remove `Update.cs`'s `decommissionedServers` entry — last, and only once SGC's machines have
     left the tailnet** (rule 5). Doing it earlier regenerates the probes that #874 retired.
 
+## Closing pass, 2026-11-07
+
+A fresh read-only audit (repo and live) found what was still left, and one change closes it.
+`sgc` is also a live name again, so a reference is a leftover only when it means the retired
+cluster: `stargate-command` is a namespace in equestria, and its apps that are not primary
+services are named `<app>.sgc.<root domain>` (GLOSSARY.md, **SGC**).
+
+**In git, one change:**
+- **Tailnet policy (step 5).** No tailnet device belonged to SGC any more (52 checked, offline
+  ones included), so rule 5 was met. `tag:sgc`, SGC's `kubernetesClusters` entry, its exit-node
+  approver, its `kubernetesDevices` test entry and `decommissionedServers` all go.
+  `TailscaleAclManager.getJson` now ends with `pruneUndefinedTags`
+  (`components/tailscale/policyGuards.ts`). It is needed because the manager only ever adds to
+  the `autoApprovers` it carries over from the live policy, so without it the `tag:sgc`
+  approvers (and the `10.199/16` and `10.209/16` route keys) would have outlived `tagOwners`,
+  and Tailscale would have rejected the whole policy.
+- **NetBird.** The `lan-home` resources for SGC's addresses go with the `kubernetesClusters` entry.
+- **Step 6.** The `"Stargate Command"` DNS server entry is deleted.
+- **Step 7.** The `pulumi/sgc-kubeproxy` ExternalName is deleted. Flux prunes it, and the
+  operator removes its `tailscale-system` child.
+- **Step 9.** `cnpg-sgc-backups` is no longer `protect`ed. A follow-up change deletes the block,
+  which `retainOnDelete` turns into a state-only removal. The bucket stays in Minio until it is
+  deleted by hand.
+- **SGC naming.** Authentik's cluster-scoped name moves from `authentik.${CLUSTER_DOMAIN}` to
+  `authentik.sgc.${ROOT_DOMAIN}`. The certificates gain `*.sgc.${ROOT_DOMAIN}`, which
+  `matter.sgc` had been missing.
+- **Bootstrap.** `bootstrap/openbao/equestria-init.sh` no longer writes the `kubernetes-sgc`
+  grants or the `eso-sgc` policy, and `CLUSTER_KEYS` drops `sgc`.
+- **Docs (step 13).** `docs/codebase`, the `create-k8s-deployment` skill and the
+  `age-recipients.txt` invariant are updated.
+
+**Live, by hand:**
+- **UniFi DNS (rule 1).** SGC's external-dns left 33 records behind (its A and CNAME records with
+  their owner TXT records), plus the untracked `flux-sgc-webhook` CNAME. They are deleted before
+  this change merges, so that equestria's external-dns can claim `authentik.sgc`.
+- **OpenBao (steps 9 and 10).** Delete every path under `clusters/sgc/`, then
+  `retired/sgc-age-key` (public half only). Disable the `kubernetes-sgc` auth mount and delete the
+  `eso-sgc` policy. Then re-run `write_policies` to narrow the `pulumi` policy. The PR that made
+  this change lists the exact commands.
+
 ## Exit gate
 
 The old gate was a single repo-wide grep returning "zero live-configuration hits." That is
