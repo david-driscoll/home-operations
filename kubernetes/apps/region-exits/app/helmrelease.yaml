@@ -198,6 +198,10 @@ spec:
         annotations:
           configmap.reloader.stakater.com/reload: "region-exit-spitfire-defaults,region-exit-routing,region-exit-picker"
           secret.reloader.stakater.com/reload: "region-exit-spitfire-mullvad,region-exit-spitfire-netbird,tailscale-region-exit-authkey"
+          # Region exits are always on: the nightly go-kube-downscaler window
+          # (01:00-07:00) would otherwise scale every one to 0, as it did spitfire
+          # after #3153. Technitium carries the same exclusion.
+          downscaler/exclude: "true"
         serviceAccount:
           identifier: spitfire
         pod: &pod
@@ -478,6 +482,7 @@ spec:
         annotations:
           configmap.reloader.stakater.com/reload: "region-exit-soarin-defaults,region-exit-routing,region-exit-picker"
           secret.reloader.stakater.com/reload: "region-exit-soarin-mullvad,region-exit-soarin-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
         serviceAccount:
           identifier: soarin
         pod: *pod
@@ -520,6 +525,7 @@ spec:
         annotations:
           configmap.reloader.stakater.com/reload: "region-exit-fleetfoot-defaults,region-exit-routing,region-exit-picker"
           secret.reloader.stakater.com/reload: "region-exit-fleetfoot-mullvad,region-exit-fleetfoot-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
         serviceAccount:
           identifier: fleetfoot
         pod: *pod
@@ -562,6 +568,7 @@ spec:
         annotations:
           configmap.reloader.stakater.com/reload: "region-exit-misty-fly-defaults,region-exit-routing,region-exit-picker"
           secret.reloader.stakater.com/reload: "region-exit-misty-fly-mullvad,region-exit-misty-fly-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
         serviceAccount:
           identifier: misty-fly
         pod: *pod
@@ -604,6 +611,7 @@ spec:
         annotations:
           configmap.reloader.stakater.com/reload: "region-exit-high-winds-defaults,region-exit-routing,region-exit-picker"
           secret.reloader.stakater.com/reload: "region-exit-high-winds-mullvad,region-exit-high-winds-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
         serviceAccount:
           identifier: high-winds
         pod: *pod
