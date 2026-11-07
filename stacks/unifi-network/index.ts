@@ -47,7 +47,7 @@ globals.store.getKubernetesClusters().apply(clusters => {
       globals,
       credentials: globals.tailscaleCredential,
     });
-    // The region exits run on Equestria only (kubernetes/apps/region-exits).
+    // The region exits run on Equestria only (kubernetes/apps/netbird-system/region-exits).
     if (cluster.key === "equestria") {
       // After the ACL, which adds the key's tag.
       createRegionExitAuthKey(

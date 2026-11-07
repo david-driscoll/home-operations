@@ -10,6 +10,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ACCESS_RULES, allows, USER_GROUPS as CREATED_USER_GROUPS, DEVICE_GROUPS, homeResourceGroups, unresolvedSources } from "./policy.ts";
 
+const WONDERBOLTS = ["spitfire", "soarin", "fleetfoot", "misty-fly", "high-winds"];
+
 const can = (who: string, destination: string, port: number, protocol: "tcp" | "udp" | "icmp" = "tcp") => allows(ACCESS_RULES, who, destination, protocol, port);
 const USER_GROUPS = ["admins", "family", "friends", "media-managers"];
 
@@ -82,13 +84,13 @@ describe("client access, mirroring member-home-subnet-access", () => {
     for (const group of ["admins", "family", "friends"]) {
       assert.ok(can(group, "region-exit-internet", 443), group);
       assert.ok(can(group, "region-exit-internet", 53, "udp"), group);
-      assert.ok(can(group, "region-exit-spitfire", 0, "icmp"), `${group} reaches spitfire`);
+      for (const exit of WONDERBOLTS) assert.ok(can(group, `region-exit-${exit}`, 0, "icmp"), `${group} reaches ${exit}`);
     }
     for (const who of ["media-managers", "apple-tv", "gateways"]) {
       assert.ok(!can(who, "region-exit-internet", 443), who);
-      assert.ok(!can(who, "region-exit-spitfire", 0, "icmp"), who);
+      for (const exit of WONDERBOLTS) assert.ok(!can(who, `region-exit-${exit}`, 0, "icmp"), `${who} ${exit}`);
     }
-    assert.ok(!can("family", "region-exit-spitfire", 22), "only ICMP to the region exit itself");
+    for (const exit of WONDERBOLTS) assert.ok(!can("family", `region-exit-${exit}`, 22), `only ICMP to ${exit} itself`);
   });
 
   it("never targets a user group, which would open users' devices to each other", () => {

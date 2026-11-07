@@ -58,7 +58,8 @@ Decisions marked ✅ were taken by David on 2026-11-06 in a grilling session:
 
 Defaults proposed in the session and accepted with the design:
 
-- Namespace `region-exits`.
+- Namespace `region-exits`. Superseded 2026-11-07: the region exits live in `netbird-system`
+  (§D1, ADR 0005).
 - One ephemeral, reusable NetBird setup key per region exit.
 - NetBird routes named `region-<name>`.
 - The picked region kept in a ConfigMap that Flux does not manage.
@@ -140,14 +141,23 @@ steps, never create-before-delete.
 - Update the policy tests in `acl-manager.ts` so that friends and family can reach the internet
   via `tag:region-exit`, and others cannot.
 - Mint a `TailnetKey` (reusable, preauthorised, tagged `tag:region-exit`) into the
-  `region-exits/tailscale-authkey` Secret, following `KubernetesTailscaleAuthKey.ts`.
+  `tailscale-system/tailscale-region-exit-authkey` Secret, which Reflector mirrors into
+  `netbird-system` and no other namespace (`region-exit-authkey.ts`).
 
-## D. Kubernetes: `kubernetes/apps/region-exits/`
+## D. Kubernetes: `kubernetes/apps/netbird-system/region-exits/`
 
 ### D1. Namespace and app
 
-- The namespace kustomization sets `pod-security.kubernetes.io/enforce: privileged`.
-- The `app/` directory has one app-template HelmRelease with five controllers (one per region
+- Namespace `netbird-system` (decided 2026-11-07, replacing a namespace of their own,
+  `region-exits`): the region exits are part of the NetBird estate, and share its downscaler
+  exclusion (#3158). The directory is one more per-app Kustomization beside `router/`,
+  `nbidp/` and the watchdogs, listed in `netbird-system/kustomization.yaml`. Nothing in it relies
+  on a namespace label; the old namespace's PodSecurity patch was deleted with it (Talos removes
+  PodSecurity admission anyway).
+- The app keeps the name `region-exits` (Flux Kustomization, HelmRelease, the
+  `app.kubernetes.io/name` label the CiliumNetworkPolicy selects, and the `region-exits-<name>`
+  Services), so none of its objects collides with the rest of `netbird-system`.
+- The directory has one app-template HelmRelease with five controllers (one per region
   exit, one replica each) and a `configMapGenerator` for:
   - the picker script;
   - `region-exit-defaults`: `SERVER_COUNTRIES` per region exit.
@@ -179,7 +189,7 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
 - Nothing accepts forwarded traffic to `eth0`. On its own this does not fail closed, because
   tailscaled's `ts-forward` accepts client traffic first (§G7). The kill switch is a mangle
   FORWARD drop of anything from tailscale0 not going out tun0, set by the `routing` init
-  container (`kubernetes/apps/region-exits/app/resources/routing.sh`).
+  container (`kubernetes/apps/netbird-system/region-exits/resources/routing.sh`).
 - NetBird does the same as tailscaled: it inserts `-i wt0 -j ACCEPT` at the top of filter FORWARD
   and INPUT. It never adds rules to iptables-managed tables such as mangle
   ([chains_linux.go](https://github.com/netbirdio/netbird/blob/v0.82.0/client/firewall/nftables/chains_linux.go),
@@ -216,7 +226,19 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
 - A PrometheusRule with these alerts:
   - `RegionExitTunnelDown` (5m);
   - `RegionExitWrongCountry` (15m), when the egress country differs from the stored region;
-  - `RegionExitOverlayOffline` (10m), per overlay.
+  - `RegionExitOverlayOffline` (10m), per overlay;
+  - `RegionExitDown` (15m), one rule per region exit, when no picker answers its scrape
+    (`absent(up{namespace="netbird-system", service="region-exits-<name>"} == 1)`): the pod is gone, Pending or
+    crash-looping, or the picker is dead, which would otherwise silence the alerts above.
+- The egress match compares countries, not strings: Mullvad's `servers.json` says "USA", "UK",
+  "Czech Republic", "Turkey", "Netherlands", and gluetun's public-IP vote may report MaxMind's
+  or ip2location's spelling ("Czechia", "Türkiye", "The Netherlands"). `metrics.test.ts` holds
+  every Mullvad country.
+- Going from one controller to five keeps spitfire's Deployment and ServiceAccount named
+  `region-exits` (`forceRename`). Renamed, Helm would create `region-exits-spitfire` before
+  deleting `region-exits`, and two spitfire pods would share the Mullvad key and tailscaled
+  state for a while. Kept, the Deployment updates in place and `Recreate` stops the old pod
+  first. Its Service, Role and RoleBinding do take the `-spitfire` names; none of them runs a pod.
 
 ## E. Phases
 
@@ -238,6 +260,23 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
    - After the add-on ends, remove the seven `mullvad` nodeAttrs and the code comments that
      protect them, and close §J1 in `cloudflare-tunnel-to-funnel.md`.
 
+### E1. Live migration to `netbird-system` (2026-11-07)
+
+Moving the namespace is not an in-place update: Flux creates the app in `netbird-system` and
+prunes the `region-exits` namespace, and everything in it, in the same reconcile. For a moment
+the old and new pods can overlap and share a Mullvad key; whichever handshakes last wins, and the
+old pod is gone within seconds.
+
+- **Tailscale:** each region exit's tailscaled state Secret (`region-exit-<name>-tailscale`) is
+  pruned with the old namespace, so the new pod logs in fresh with the auth key and the
+  tailnet sees a new device. After rollout, delete the old offline `spitfire` device (and any
+  other region exit's offline twin) in the Tailscale admin, then rename the new `spitfire-1`
+  back to `spitfire`.
+- **NetBird:** the peer is ephemeral; it re-enrols with its setup key and the stale one expires.
+- **Mullvad:** unaffected. The keys live in OpenBao and the ExternalSecrets read the same path.
+- **Picked regions:** the `region-exit-<name>-state` ConfigMaps go with the old namespace, so
+  each region exit restarts on its default region until someone picks again.
+
 ## F. Known gaps (v1)
 
 - **NetBird DNS resolves at home.** Nameserver groups go to distribution groups, not to "peers
@@ -256,6 +295,16 @@ NetBird cannot resolve the home relay's private name, so the region exits use th
   which of the two a dual-stack client sees.
 - **No locking.** A family member can move a region exit someone else is using. The picker
   warns before it switches.
+- **NetBird "connected" is only wt0 up.** The picker reports NetBird connected while `wt0`
+  exists and is `IFF_UP` (`overlays.ts`), which the engine tears down when management is lost
+  for good. It misses a stalled signal or relay connection. The stronger reads all need more
+  than the picker should have: `netbird status --check startup` (v0.82.0: management, signal
+  and a relay connected) goes through the daemon's gRPC socket, which has no read-only mode and
+  would let the picker run `down` or rewrite the config. WireGuard handshake times come only from
+  generic netlink, which needs `NET_ADMIN` in the pod's namespace and so would also reach the kill
+  switch (§G6); sysfs has no per-peer state. The same check as an exec probe on the netbird
+  container would fail the whole pod's readiness and take its picker off the route. Revisit if
+  NetBird grows a read-only status endpoint.
 
 ## G. Open risks for the P1 prototype
 
@@ -295,7 +344,7 @@ them.
    reserves **91** for NetBird's `0x1bd00` (#3139), and adds **95** (to `100.64.0.0/10` →
    table 52). Without 95, the replies to Tailscale clients, de-NATed to their 100.x address,
    would match gluetun's 101 and go back into the tunnel. The rules are in
-   `kubernetes/apps/region-exits/app/resources/routing.sh`.
+   `kubernetes/apps/netbird-system/region-exits/resources/routing.sh`.
 3. **Ordering and re-application.** gluetun rewrites its rules on every reconnect, including
    each region switch. The bypass and post-rules must survive that without the reference repo's
    30-second loop.
@@ -332,6 +381,34 @@ them.
    limit is reached.
 6. **Counting active clients.** Confirm conntrack is readable from the picker container (it needs
    `NET_ADMIN`, or a shared reader).
+
+   **Resolved (#3141):** neither. The picker reads `/proc/net/nf_conntrack` as **group 0**, with
+   no capability. The Talos kernel has `CONFIG_NF_CONNTRACK_PROCFS=y` (read from a 6.18 Talos
+   node's `/proc/config.gz`), and the picker shares the pod's network namespace, so the file is
+   that namespace's table: the clients' forwarded flows and nothing from the node. The kernel
+   creates it `0440` owned by the namespace's root uid and gid and makes no capability check on
+   read ([nf_conntrack_standalone.c](https://github.com/torvalds/linux/blob/v6.18/net/netfilter/nf_conntrack_standalone.c)),
+   so the picker keeps `runAsUser: 1000`, `runAsNonRoot`, all capabilities dropped and a
+   read-only root, and changes only `runAsGroup` to 0. Netlink (`conntrack -L`) would need
+   `NET_ADMIN` in this namespace, which also lets a process rewrite the mangle kill switch and
+   gluetun's firewall. A privileged sidecar writing a count file would put another privileged
+   container in the pod. Both cost more than a group.
+
+   The count (`kubernetes/apps/netbird-system/region-exits/activeClients.ts`) is the number of distinct IPv4
+   sources in `10.100.0.0/16` or `100.64.0.0/10` with an entry that is masqueraded, i.e. whose
+   reply goes to an address other than the client's. routing.sh masquerades overlay sources only
+   out `tun0`, and the mangle FORWARD drop discards everything else before conntrack confirms it,
+   so a masqueraded entry is a flow through the tunnel. Overlay connections to the pod itself are
+   not masqueraded and do not count. Conntrack keeps no last-seen time, but each packet resets an
+   entry's timeout to its state's full value, so an `ESTABLISHED` TCP entry counts only while
+   `nf_conntrack_tcp_timeout_established` minus its remaining timeout is under 180 seconds.
+   Every other state and protocol times out within a few minutes and counts while it exists.
+   When conntrack cannot be read, `/status` reports `activeClients: null` and a switch asks for
+   confirmation as if someone were on the region exit.
+
+   **To confirm live:** in the pod, `/proc/net/nf_conntrack` is readable by the picker, it is not
+   masked by the runtime, and the count follows one Tailscale and one NetBird client to 2 and
+   then back to 0.
 7. **tailscaled forwarding.** Check tailscaled's nftables `ts-forward` chain against gluetun's
    FORWARD policy.
 

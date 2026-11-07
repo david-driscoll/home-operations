@@ -18,7 +18,7 @@ The design follows [manfredbjorlin/netbird_gluetun_mullvad](https://codeberg.org
 
 ## Consequences
 
-- The pod is privileged (gluetun, NetBird and tailscaled each create a kernel interface and set routing rules), so it lives in its own namespace, `region-exits`, labelled `pod-security.kubernetes.io/enforce: privileged`, like `netbird-system`.
+- The pod is privileged (gluetun, NetBird and tailscaled each create a kernel interface and set routing rules). It first lived in its own namespace, `region-exits`, labelled `pod-security.kubernetes.io/enforce: privileged`. Amended 2026-11-07: the namespace is now `netbird-system`, because the region exits are part of the NetBird estate and share its downscaler exclusion (`docs/plans/region-exits.md` §D1, §E1).
 - Only forwarded client traffic goes through Mullvad. NetBird's and tailscaled's own sockets (marks `0x1bd00` and `0x80000/0xff0000`) are policy-routed out `eth0` to the home WAN, the same technique Technitium's sidecars use. Peers then connect directly instead of through relays, since Mullvad has no inbound ports.
 - Mullvad WireGuard keys are Pulumi resources: generated, registered with Mullvad's device API and written to OpenBao. Replacing or destroying one frees its device slot. All five slots on the account are in use.
 - The region a family member picks is stored outside Git, in a ConfigMap Flux does not manage, so it survives a restart. Git holds each region exit's default region (US, Canada, UK, Germany, Japan).

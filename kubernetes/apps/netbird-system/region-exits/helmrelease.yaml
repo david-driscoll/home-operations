@@ -1,0 +1,864 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# The region exits (docs/plans/region-exits.md §D, ADR 0005). One controller
+# per region exit, one replica each: spitfire, soarin, fleetfoot, misty-fly and
+# high-winds. spitfire's controller spells everything out and anchors what the
+# five share; the others alias those anchors and name only their own Secrets,
+# ConfigMaps and hostnames. Their default regions are in kustomization.yaml.
+# In each pod:
+#
+#   routing (init)  sysctls, the eth0 bypass for tailscaled's own packets, the
+#                   kill switch (resources/routing.sh)
+#   gluetun         Mullvad WireGuard on tun0; its firewall, its DNS-over-TLS on
+#                   127.0.0.1:53 (resources/post-rules.txt)
+#   tailscale       containerboot, advertising an exit node
+#   netbird         the routing peer for the `region-<name>` route (#3139)
+#   picker          the region picker (#3140) and the overview (#3143)
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app region-exits
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    serviceAccount:
+      # spitfire's ServiceAccount and Deployment keep the names they had as
+      # the only controller (see the controller).
+      spitfire:
+        forceRename: region-exits
+      soarin: {}
+      fleetfoot: {}
+      misty-fly: {}
+      high-winds: {}
+
+    # containerboot keeps tailscaled's state in a Secret (TS_KUBE_SECRET), so a
+    # restart keeps the node's identity. It needs create (which cannot be
+    # scoped by name) and get/update/patch on its own Secret, and posts events.
+    rbac:
+      roles:
+        spitfire:
+          type: Role
+          rules:
+            - &create-secrets
+              apiGroups: [""]
+              resources: ["secrets"]
+              verbs: ["create"]
+            - apiGroups: [""]
+              resources: ["secrets"]
+              resourceNames: ["region-exit-spitfire-tailscale"]
+              verbs: ["get", "update", "patch"]
+            - &events
+              apiGroups: [""]
+              resources: ["events"]
+              verbs: ["get", "create", "patch"]
+            # The picker (#3140) saves the picked region in its state
+            # ConfigMap. create cannot be scoped by name (the name is in the
+            # body, not the URL, when RBAC decides), so it is namespace-wide;
+            # it can make a ConfigMap but not read or change any other.
+            - &create-configmaps
+              apiGroups: [""]
+              resources: ["configmaps"]
+              verbs: ["create"]
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              resourceNames: ["region-exit-spitfire-state"]
+              verbs: ["get", "patch"]
+        soarin:
+          type: Role
+          rules:
+            - *create-secrets
+            - apiGroups: [""]
+              resources: ["secrets"]
+              resourceNames: ["region-exit-soarin-tailscale"]
+              verbs: ["get", "update", "patch"]
+            - *events
+            - *create-configmaps
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              resourceNames: ["region-exit-soarin-state"]
+              verbs: ["get", "patch"]
+        fleetfoot:
+          type: Role
+          rules:
+            - *create-secrets
+            - apiGroups: [""]
+              resources: ["secrets"]
+              resourceNames: ["region-exit-fleetfoot-tailscale"]
+              verbs: ["get", "update", "patch"]
+            - *events
+            - *create-configmaps
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              resourceNames: ["region-exit-fleetfoot-state"]
+              verbs: ["get", "patch"]
+        misty-fly:
+          type: Role
+          rules:
+            - *create-secrets
+            - apiGroups: [""]
+              resources: ["secrets"]
+              resourceNames: ["region-exit-misty-fly-tailscale"]
+              verbs: ["get", "update", "patch"]
+            - *events
+            - *create-configmaps
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              resourceNames: ["region-exit-misty-fly-state"]
+              verbs: ["get", "patch"]
+        high-winds:
+          type: Role
+          rules:
+            - *create-secrets
+            - apiGroups: [""]
+              resources: ["secrets"]
+              resourceNames: ["region-exit-high-winds-tailscale"]
+              verbs: ["get", "update", "patch"]
+            - *events
+            - *create-configmaps
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              resourceNames: ["region-exit-high-winds-state"]
+              verbs: ["get", "patch"]
+      bindings:
+        spitfire:
+          type: RoleBinding
+          roleRef:
+            identifier: spitfire
+          subjects:
+            - identifier: spitfire
+        soarin:
+          type: RoleBinding
+          roleRef:
+            identifier: soarin
+          subjects:
+            - identifier: soarin
+        fleetfoot:
+          type: RoleBinding
+          roleRef:
+            identifier: fleetfoot
+          subjects:
+            - identifier: fleetfoot
+        misty-fly:
+          type: RoleBinding
+          roleRef:
+            identifier: misty-fly
+          subjects:
+            - identifier: misty-fly
+        high-winds:
+          type: RoleBinding
+          roleRef:
+            identifier: high-winds
+          subjects:
+            - identifier: high-winds
+
+    controllers:
+      spitfire:
+        # `region-exits`, its name when it was the only controller, not
+        # region-exits-spitfire: Helm creates a renamed Deployment before it
+        # deletes the old one, so for a while two spitfire pods would share
+        # the Mullvad key and the tailscaled state. Kept, the Deployment is
+        # updated in place, and Recreate stops the old pod first. Its
+        # Service, Role and RoleBinding take the -spitfire names like the
+        # others': the overview finds Services by name, and neither runs a pod.
+        forceRename: region-exits
+        replicas: 1
+        # Two pods would be two exit nodes on one tailscaled identity and one
+        # Mullvad key.
+        strategy: &strategy Recreate
+        # Named, not `reloader.stakater.com/auto`: auto would roll the pod
+        # whenever the picker writes region-exit-spitfire-state, i.e. on every
+        # region pick (reloadOnCreate is on, so even the first). The picker
+        # switches gluetun live; the state ConfigMap only has to be read at the
+        # next start. Without `auto`, Reloader watches exactly these lists
+        # (Reloader 2.x, chart 2.2.19). A new ConfigMap or Secret the pod
+        # reads goes here too.
+        annotations:
+          configmap.reloader.stakater.com/reload: "region-exit-spitfire-defaults,region-exit-routing,region-exit-picker"
+          secret.reloader.stakater.com/reload: "region-exit-spitfire-mullvad,region-exit-spitfire-netbird,tailscale-region-exit-authkey"
+          # Region exits are always on: the nightly go-kube-downscaler window
+          # (01:00-07:00) would otherwise scale every one to 0, as it did spitfire
+          # after #3153. Technitium carries the same exclusion. Redundant
+          # since #3158 excludes all of netbird-system, the region exits'
+          # namespace, but harmless, and kept so the exclusion survives a
+          # namespace move; the other four carry it for the same reason.
+          downscaler/exclude: "true"
+        serviceAccount:
+          identifier: spitfire
+        pod: &pod
+          automountServiceAccountToken: true
+          # The overview (overview.ts) finds the other region exits' Services
+          # by the variables this injects: the pod's resolver is gluetun's, which
+          # knows no cluster names.
+          enableServiceLinks: true
+          # Everything in the pod resolves through gluetun's DNS-over-TLS, over
+          # the tunnel. tailscaled answers exit-node clients' DNS from this
+          # resolver, so their DNS follows the region (§D2).
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 127.0.0.1
+        initContainers: &init-containers
+          routing:
+            image:
+              repository: tailscale/tailscale
+              tag: v1.104.4@sha256:ed6480b33c6eb67c9cbd203ed42b9fb57e361986725b6856def71b7a3d9e276c
+            command: ["/bin/sh", "/scripts/routing.sh"]
+            securityContext:
+              # sysctls under /proc/sys/net need a privileged container on Talos.
+              privileged: true
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+        containers:
+          gluetun: &gluetun
+            image:
+              repository: qmcgaw/gluetun
+              tag: v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+            # A gluetun killed without its cleanup (OOMKilled, a failed liveness
+            # probe) leaves its ip rule 101 and tun0 in the pod's namespace,
+            # which outlives the container, and the restart then fails on
+            # "adding IPv4 rule: file exists" in a loop. Clear both first; on a
+            # fresh pod there is nothing to clear. (Busybox's ip, in the image.)
+            command:
+              - /bin/sh
+              - -c
+              - >-
+                ip rule del priority 101 2>/dev/null;
+                ip -6 rule del priority 101 2>/dev/null;
+                ip link del tun0 2>/dev/null;
+                exec /gluetun-entrypoint
+            env:
+              VPN_SERVICE_PROVIDER: mullvad
+              VPN_TYPE: wireguard
+              # The name routing.sh and post-rules.txt match on (gluetun's
+              # WireGuard default is wg0).
+              VPN_INTERFACE: tun0
+              # DNS-over-TLS on 127.0.0.1:53, upstream over the tunnel.
+              DNS_SERVER: "on"
+              DNS_UPSTREAM_RESOLVER_TYPE: dot
+              DNS_UPSTREAM_IPV6: "off"
+              # No block lists. gluetun downloads and holds them in memory at
+              # every start (BLOCK_MALICIOUS and BLOCK_SURVEILLANCE default on),
+              # which OOMKilled it at 256Mi; and an exit node's clients expect
+              # the region's answers, not a second filter on top of their own.
+              BLOCK_MALICIOUS: "off"
+              BLOCK_SURVEILLANCE: "off"
+              BLOCK_ADS: "off"
+              # Never off the pod. The picker (#3140) calls it on loopback.
+              HTTP_CONTROL_SERVER_ADDRESS: "127.0.0.1:8000"
+              # Every route open to loopback, with no key: v3.41.3's built-in
+              # role omits PUT /v1/vpn/settings, which the picker switches
+              # with. Loopback is the boundary (internal/server/middlewares/auth).
+              HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE: '{"auth":"none"}'
+              # Equestria's pods and Services, and its control planes: the
+              # kubernetes Service is socket-load-balanced to a control-plane
+              # address before routing, and containerboot needs the API for
+              # TS_KUBE_SECRET. routing.sh's region-exit-out chain repeats these;
+              # change both together.
+              FIREWALL_OUTBOUND_SUBNETS: "10.206.0.0/16,10.196.0.0/16,10.10.206.0/24"
+              # tailscaled's and NetBird's fixed WireGuard ports
+              # (TS_TAILSCALED_EXTRA_ARGS, NB_WIREGUARD_PORT below), on eth0,
+              # for peers dialling in directly. Only on the default interface:
+              # gluetun opens these per default route.
+              # And the picker's 8080, for the Gateway and the kubelet's
+              # probes on eth0; routing.sh drops it on tailscale0 and wt0.
+              FIREWALL_INPUT_PORTS: "41641,8080,51821"
+            envFrom:
+              # WIREGUARD_PRIVATE_KEY, WIREGUARD_ADDRESSES (IPv4 /32 only, so
+              # the tunnel is IPv4 only).
+              - secretRef:
+                  name: region-exit-spitfire-mullvad
+              # SERVER_COUNTRIES: the default region, then the picked one,
+              # which wins because it comes later.
+              - configMapRef:
+                  name: region-exit-spitfire-defaults
+              - configMapRef:
+                  name: region-exit-spitfire-state
+                  optional: true
+            probes:
+              # exec, not httpGet: gluetun's INPUT policy drops the kubelet.
+              liveness: &gluetun-probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["/gluetun-entrypoint", "healthcheck"]
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *gluetun-probe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["/gluetun-entrypoint", "healthcheck"]
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 30
+            securityContext: &privileged
+              privileged: true
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                # The block lists (off above) are what filled 256Mi; this is
+                # headroom on top, not a measured need.
+                memory: 512Mi
+          tailscale: &tailscale
+            image:
+              repository: tailscale/tailscale
+              tag: v1.104.4@sha256:ed6480b33c6eb67c9cbd203ed42b9fb57e361986725b6856def71b7a3d9e276c
+            env: &tailscale-env
+              TS_HOSTNAME: spitfire
+              TS_AUTHKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: tailscale-region-exit-authkey
+                    key: authkey
+              TS_AUTH_ONCE: "true"
+              TS_KUBE_SECRET: region-exit-spitfire-tailscale
+              # Reach the API by KUBERNETES_SERVICE_HOST, not
+              # kubernetes.default.svc: the pod resolves through gluetun's
+              # DNS-over-TLS (dnsPolicy None), which knows no cluster names.
+              # Read by containerboot and tailscaled's kube state store alike
+              # (cmd/containerboot/kube.go, ipn/store/kubestore, v1.104.4).
+              TS_KUBERNETES_READ_API_SERVER_ADDRESS_FROM_ENV: "true"
+              TS_USERSPACE: "false"
+              # The image points `iptables` at the legacy backend, which the
+              # Talos kernel lacks (as for Technitium's sidecar).
+              TS_DEBUG_FIREWALL_MODE: nftables
+              # gluetun owns resolv.conf (127.0.0.1); tailscaled forwards
+              # clients' DNS to it.
+              TS_ACCEPT_DNS: "false"
+              TS_EXTRA_ARGS: "--advertise-exit-node --accept-routes=false"
+              # Fixed, for gluetun's FIREWALL_INPUT_PORTS. Change both together.
+              TS_TAILSCALED_EXTRA_ARGS: "--port=41641"
+              TS_ENABLE_HEALTH_CHECK: "true"
+              TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+              # On the tailscale-socket emptyDir, where the picker reads
+              # /localapi/v0/status for region_exit_overlay_connected. The
+              # socket is 0666 and tailscaled grants the picker's uid 1000
+              # read-only access (overlays.ts).
+              TS_SOCKET: /var/run/tailscale/tailscaled.sock
+            probes:
+              liveness: &tailscale-probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9002/healthz"]
+                  initialDelaySeconds: 15
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *tailscale-probe
+            securityContext: *privileged
+            resources: &overlay-resources
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+          netbird: &netbird
+            # The routing peer for `region-spitfire` (stacks/netbird, plan
+            # §C2, §D2), in kernel mode on wt0. Its own packets carry mark
+            # 0x1bd00 and leave over eth0 (routing.sh rule 91); its peers'
+            # traffic is forwarded wt0 -> tun0 (post-rules.txt), and never to
+            # eth0 (routing.sh's mangle kill switch).
+            image:
+              repository: netbirdio/netbird
+              tag: 0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
+            env: &netbird-env
+              NB_MANAGEMENT_URL: https://netbird.${ROOT_DOMAIN}
+              NB_SETUP_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: region-exit-spitfire-netbird
+                    key: NB_SETUP_KEY
+              NB_HOSTNAME: spitfire
+              # A routing peer, never a client: it must not pick up another
+              # peer's exit route.
+              NB_DISABLE_CLIENT_ROUTES: "true"
+              # gluetun owns :53 in this namespace. NB_DISABLE_DNS alone still
+              # binds <wt0 address>:53, so park NetBird's resolver on loopback
+              # as Technitium's sidecar does. NB_* env applies only at
+              # enrolment; the state below is an emptyDir and the key
+              # ephemeral, so every pod enrols fresh and always takes it.
+              NB_DISABLE_DNS: "true"
+              NB_DNS_RESOLVER_ADDRESS: "127.0.0.1:5053"
+              # Fixed for gluetun's FIREWALL_INPUT_PORTS, and clear of
+              # tailscale's 41641. Change both together.
+              NB_WIREGUARD_PORT: "51821"
+              NB_LOG_LEVEL: info
+              NB_LOG_FILE: console
+            securityContext: *privileged
+            resources: *overlay-resources
+          # The region picker (#3140, ./picker.ts): /spitfire on
+          # wonderbolts.<root domain>, /status for in-cluster readers, and the
+          # overview at / (#3143, ./overview.ts) for whichever picker the
+          # region-exits-pickers Service lands on.
+          picker: &picker
+            image:
+              # The same pin as netbird-system/proxy-watchdog.
+              repository: node
+              tag: 24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+            # Node strips the types itself.
+            command: ["node", "/app/picker.ts"]
+            env: &picker-env
+              REGION_EXIT_NAME: spitfire
+              # The overview's rows, in order; each one's Service is
+              # region-exits-<name> (REGION_EXIT_SERVICE_PREFIX).
+              REGION_EXITS: "spitfire,soarin,fleetfoot,misty-fly,high-winds"
+              PORT: "8080"
+              # tailscale's TS_SOCKET; NetBird is read from wt0 in sysfs, not
+              # its gRPC socket, which has no read-only mode (overlays.ts).
+              TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
+              POD_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+              NODE_EXTRA_CA_CERTS: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            probes:
+              liveness: &picker-probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &picker-port 8080
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness: *picker-probe
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              # Group 0, for /proc/net/nf_conntrack (0440 root:root), which
+              # activeClients.ts counts people from. No capability: NET_ADMIN
+              # for netlink would also reach the kill switch (plan §G6).
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+
+      # The other four: spitfire's shape, their own names. Each container is
+      # spitfire's, merged (`<<:`) with what differs: gluetun's Secret and
+      # ConfigMaps, and the name in tailscale's, netbird's and the picker's
+      # env. Merge keys are shallow, so a changed env map repeats its anchor.
+      soarin:
+        replicas: 1
+        strategy: *strategy
+        annotations:
+          configmap.reloader.stakater.com/reload: "region-exit-soarin-defaults,region-exit-routing,region-exit-picker"
+          secret.reloader.stakater.com/reload: "region-exit-soarin-mullvad,region-exit-soarin-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
+        serviceAccount:
+          identifier: soarin
+        pod: *pod
+        initContainers: *init-containers
+        containers:
+          gluetun:
+            <<: *gluetun
+            envFrom:
+              - secretRef:
+                  name: region-exit-soarin-mullvad
+              - configMapRef:
+                  name: region-exit-soarin-defaults
+              - configMapRef:
+                  name: region-exit-soarin-state
+                  optional: true
+          tailscale:
+            <<: *tailscale
+            env:
+              <<: *tailscale-env
+              TS_HOSTNAME: soarin
+              TS_KUBE_SECRET: region-exit-soarin-tailscale
+          netbird:
+            <<: *netbird
+            env:
+              <<: *netbird-env
+              NB_SETUP_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: region-exit-soarin-netbird
+                    key: NB_SETUP_KEY
+              NB_HOSTNAME: soarin
+          picker:
+            <<: *picker
+            env:
+              <<: *picker-env
+              REGION_EXIT_NAME: soarin
+      fleetfoot:
+        replicas: 1
+        strategy: *strategy
+        annotations:
+          configmap.reloader.stakater.com/reload: "region-exit-fleetfoot-defaults,region-exit-routing,region-exit-picker"
+          secret.reloader.stakater.com/reload: "region-exit-fleetfoot-mullvad,region-exit-fleetfoot-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
+        serviceAccount:
+          identifier: fleetfoot
+        pod: *pod
+        initContainers: *init-containers
+        containers:
+          gluetun:
+            <<: *gluetun
+            envFrom:
+              - secretRef:
+                  name: region-exit-fleetfoot-mullvad
+              - configMapRef:
+                  name: region-exit-fleetfoot-defaults
+              - configMapRef:
+                  name: region-exit-fleetfoot-state
+                  optional: true
+          tailscale:
+            <<: *tailscale
+            env:
+              <<: *tailscale-env
+              TS_HOSTNAME: fleetfoot
+              TS_KUBE_SECRET: region-exit-fleetfoot-tailscale
+          netbird:
+            <<: *netbird
+            env:
+              <<: *netbird-env
+              NB_SETUP_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: region-exit-fleetfoot-netbird
+                    key: NB_SETUP_KEY
+              NB_HOSTNAME: fleetfoot
+          picker:
+            <<: *picker
+            env:
+              <<: *picker-env
+              REGION_EXIT_NAME: fleetfoot
+      misty-fly:
+        replicas: 1
+        strategy: *strategy
+        annotations:
+          configmap.reloader.stakater.com/reload: "region-exit-misty-fly-defaults,region-exit-routing,region-exit-picker"
+          secret.reloader.stakater.com/reload: "region-exit-misty-fly-mullvad,region-exit-misty-fly-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
+        serviceAccount:
+          identifier: misty-fly
+        pod: *pod
+        initContainers: *init-containers
+        containers:
+          gluetun:
+            <<: *gluetun
+            envFrom:
+              - secretRef:
+                  name: region-exit-misty-fly-mullvad
+              - configMapRef:
+                  name: region-exit-misty-fly-defaults
+              - configMapRef:
+                  name: region-exit-misty-fly-state
+                  optional: true
+          tailscale:
+            <<: *tailscale
+            env:
+              <<: *tailscale-env
+              TS_HOSTNAME: misty-fly
+              TS_KUBE_SECRET: region-exit-misty-fly-tailscale
+          netbird:
+            <<: *netbird
+            env:
+              <<: *netbird-env
+              NB_SETUP_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: region-exit-misty-fly-netbird
+                    key: NB_SETUP_KEY
+              NB_HOSTNAME: misty-fly
+          picker:
+            <<: *picker
+            env:
+              <<: *picker-env
+              REGION_EXIT_NAME: misty-fly
+      high-winds:
+        replicas: 1
+        strategy: *strategy
+        annotations:
+          configmap.reloader.stakater.com/reload: "region-exit-high-winds-defaults,region-exit-routing,region-exit-picker"
+          secret.reloader.stakater.com/reload: "region-exit-high-winds-mullvad,region-exit-high-winds-netbird,tailscale-region-exit-authkey"
+          downscaler/exclude: "true"
+        serviceAccount:
+          identifier: high-winds
+        pod: *pod
+        initContainers: *init-containers
+        containers:
+          gluetun:
+            <<: *gluetun
+            envFrom:
+              - secretRef:
+                  name: region-exit-high-winds-mullvad
+              - configMapRef:
+                  name: region-exit-high-winds-defaults
+              - configMapRef:
+                  name: region-exit-high-winds-state
+                  optional: true
+          tailscale:
+            <<: *tailscale
+            env:
+              <<: *tailscale-env
+              TS_HOSTNAME: high-winds
+              TS_KUBE_SECRET: region-exit-high-winds-tailscale
+          netbird:
+            <<: *netbird
+            env:
+              <<: *netbird-env
+              NB_SETUP_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: region-exit-high-winds-netbird
+                    key: NB_SETUP_KEY
+              NB_HOSTNAME: high-winds
+          picker:
+            <<: *picker
+            env:
+              <<: *picker-env
+              REGION_EXIT_NAME: high-winds
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      routing:
+        type: configMap
+        name: region-exit-routing
+        advancedMounts:
+          spitfire: &routing-mounts
+            routing:
+              - path: /scripts/routing.sh
+                subPath: routing.sh
+                readOnly: true
+            gluetun:
+              - path: /iptables/post-rules.txt
+                subPath: post-rules.txt
+                readOnly: true
+          soarin: *routing-mounts
+          fleetfoot: *routing-mounts
+          misty-fly: *routing-mounts
+          high-winds: *routing-mounts
+      # NetBird's peer state. An emptyDir on purpose: the setup key is
+      # ephemeral, so each pod enrols a new peer and management removes the
+      # old one, and enrolment is the only time NB_* env applies.
+      netbird-state:
+        type: emptyDir
+        advancedMounts:
+          spitfire: &netbird-state-mounts
+            netbird:
+              - path: /var/lib/netbird
+          soarin: *netbird-state-mounts
+          fleetfoot: *netbird-state-mounts
+          misty-fly: *netbird-state-mounts
+          high-winds: *netbird-state-mounts
+      picker:
+        type: configMap
+        name: region-exit-picker
+        advancedMounts:
+          spitfire: &picker-mounts
+            picker:
+              - path: /app
+                readOnly: true
+          soarin: *picker-mounts
+          fleetfoot: *picker-mounts
+          misty-fly: *picker-mounts
+          high-winds: *picker-mounts
+      # gluetun writes servers.json here; the picker reads the Mullvad
+      # countries and cities from it.
+      gluetun:
+        type: emptyDir
+        advancedMounts:
+          spitfire: &gluetun-mounts
+            gluetun:
+              - path: /gluetun
+            picker:
+              - path: /gluetun
+                readOnly: true
+          soarin: *gluetun-mounts
+          fleetfoot: *gluetun-mounts
+          misty-fly: *gluetun-mounts
+          high-winds: *gluetun-mounts
+      # tailscaled's LocalAPI socket (TS_SOCKET). The picker connects as a
+      # non-root peer, which tailscaled answers read-only; a read-only mount
+      # still lets it connect.
+      tailscale-socket:
+        type: emptyDir
+        advancedMounts:
+          spitfire: &tailscale-socket-mounts
+            tailscale:
+              - path: /var/run/tailscale
+            picker:
+              - path: /var/run/tailscale
+                readOnly: true
+          soarin: *tailscale-socket-mounts
+          fleetfoot: *tailscale-socket-mounts
+          misty-fly: *tailscale-socket-mounts
+          high-winds: *tailscale-socket-mounts
+
+    # One per region exit, region-exits-<name>: the route's /<name>, and the
+    # overview's reads of each /status. The Service selecting all five pickers,
+    # for /, is ./service.yaml: the chart pins every Service to one controller.
+    service:
+      spitfire:
+        controller: spitfire
+        ports:
+          http:
+            port: *picker-port
+      soarin:
+        controller: soarin
+        ports:
+          http:
+            port: *picker-port
+      fleetfoot:
+        controller: fleetfoot
+        ports:
+          http:
+            port: *picker-port
+      misty-fly:
+        controller: misty-fly
+        ports:
+          http:
+            port: *picker-port
+      high-winds:
+        controller: high-winds
+        ports:
+          http:
+            port: *picker-port
+
+    # The picker's GET /metrics (metrics.ts), which prometheusrule.yaml alerts
+    # on. The series carry region_exit=<name> themselves. The CNP lets
+    # Prometheus GET /metrics on 8080 and nothing else.
+    serviceMonitor:
+      spitfire:
+        service:
+          identifier: spitfire
+        endpoints: &metrics-endpoints
+          - port: http
+            scheme: http
+            path: /metrics
+            interval: 1m
+            # gluetun and tailscaled are each given 5s.
+            scrapeTimeout: 15s
+      soarin:
+        service:
+          identifier: soarin
+        endpoints: *metrics-endpoints
+      fleetfoot:
+        service:
+          identifier: fleetfoot
+        endpoints: *metrics-endpoints
+      misty-fly:
+        service:
+          identifier: misty-fly
+        endpoints: *metrics-endpoints
+      high-winds:
+        service:
+          identifier: high-winds
+        endpoints: *metrics-endpoints
+
+    route:
+      # The region picker: / is the overview, from any picker
+      # (region-exits-pickers, ./service.yaml); /<name> goes to that region
+      # exit's own picker. The longest matching prefix wins, and a PathPrefix
+      # matches whole path segments, so /soarin never takes /soarin-x.
+      wonderbolts:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "wonderbolts.${ROOT_DOMAIN}"
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: region-exits-pickers
+                port: *picker-port
+            filters: &forward-auth
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /spitfire
+            backendRefs:
+              - identifier: spitfire
+                port: *picker-port
+            filters: *forward-auth
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /soarin
+            backendRefs:
+              - identifier: soarin
+                port: *picker-port
+            filters: *forward-auth
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /fleetfoot
+            backendRefs:
+              - identifier: fleetfoot
+                port: *picker-port
+            filters: *forward-auth
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /misty-fly
+            backendRefs:
+              - identifier: misty-fly
+                port: *picker-port
+            filters: *forward-auth
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /high-winds
+            backendRefs:
+              - identifier: high-winds
+                port: *picker-port
+            filters: *forward-auth
