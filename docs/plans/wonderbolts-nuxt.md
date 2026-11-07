@@ -120,7 +120,7 @@ Root paths, since nothing routes `/<name>` to it any more. JSON only.
 
 | Method | Path | From | Notes |
 | --- | --- | --- | --- |
-| GET | `/status` | wonderbolts | today's `Status`, plus `lastMove: { by: string, at: string } \| null` |
+| GET | `/status` | wonderbolts | today's `Status`, plus `lastMove: { by: string \| null, at: string } \| null` |
 | GET | `/regions` | wonderbolts | was `/<name>/regions` |
 | POST | `/region` | wonderbolts | `{country, city?, confirm?, movedBy}`; 400 bad region, 409 needs confirm, 502 save/apply failed |
 | GET | `/metrics` | Prometheus | unchanged |
@@ -130,8 +130,15 @@ Root paths, since nothing routes `/<name>` to it any more. JSON only.
 `region-exit-<name>-state`: `driscoll.dev/region-exit-moved-by` (the display name the app sent)
 and `driscoll.dev/region-exit-moved-at` (ISO-8601). Use the same merge patch and the same RBAC
 (get, create, patch on that one name), so nothing widens. `/status` reads them back with a GET
-on that ConfigMap; if the ConfigMap or the annotations are missing, `lastMove` is `null`. The
-agent takes `movedBy` from the app on trust: only the app can POST to it.
+on that ConfigMap; if the ConfigMap or `moved-at` is missing, or it can't be read, `lastMove`
+is `null`. A move whose mover is unknown removes `moved-by` and still sets `moved-at`, so
+`by` is `null` and nobody else's name is left on it. The app shows "Moved by unknown" for
+both. The agent takes `movedBy` from the app's body on trust: only the app can POST
+`/region` (the CNP). Until cleanup, the sidecar's own page still moves through
+`/<name>/region`, and those moves record forward auth's `X-authentik-name`, or else
+`X-authentik-username`, so a move made on the old page never leaves an earlier mover's name
+in place. Traefik may only POST `/<name>/region`, never the root `/region`, because the
+route's `/` reaches whichever sidecar `region-exits-pickers` lands on.
 
 ## C. The Nuxt app
 
@@ -209,8 +216,8 @@ Each phase is its own PR.
 
 1. **Agent API.** Root `GET /regions` and JSON `POST /region` (with `movedBy`), the
    last-move annotations and `lastMove` on `/status`, beside the old paths. Tests in
-   `picker.test.ts`. Add the CNP rule for wonderbolts pods (it selects nothing yet). Nothing
-   visible changes.
+   `picker.test.ts`. CNP: a rule for the wonderbolts pods (it selects nothing yet), and
+   Traefik's rule narrowed to any GET plus `POST /<name>/region`. Nothing visible changes.
 2. **The app and its pipeline.** `apps/wonderbolts/` with the ported logic, tests and mock
    agent; `.github/workflows/wonderbolts.yaml` (PR check);
    `.forgejo/workflows/wonderbolts-image.yml` (push to `main` on `apps/wonderbolts/**`, plus
@@ -260,6 +267,11 @@ Each phase is its own PR.
 - **Traefik's header handling**: in phase 3, confirm with a hand-sent `X-authentik-groups:
   admins` through the route as a friend that the app sees the outpost's value, not the
   client's.
+- **Non-ASCII display names**: Node (and so h3) reads header values as latin1, so a UTF-8
+  `X-authentik-name` such as "Zoë" arrives garbled. `utils/viewer.ts` re-decodes it
+  (`Buffer.from(value, "latin1").toString("utf8")`, kept only if that round-trips), and a
+  test covers it. The sidecar's old `/<name>/region` path does not, which is accepted
+  because it goes at cleanup.
 - **`crane append` on `.output/`**: the output needs no `node_modules` install at run time,
   so one layer is enough. Verify there are no native addons built against a different libc.
 - **Polling load**: 2 replicas, a 30 s overview refresh and post-move polling all hit the
