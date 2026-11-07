@@ -48,7 +48,7 @@ spec:
     api:
       image:
         repository: ghcr.io/n8n-io/n8n-sandbox-service-api
-        tag: 1.13.0@sha256:fc4912f9023ac46ec58fd6cc30d5dae8bddd3b4589cf8d5d6d58db7417a12385
+        tag: 1.14.0@sha256:bca5e76d828306c0e319e946cfd0f4ff22941ce9e61bb5fcc118a1cce59c180d
       # SQLite in an emptyDir. It only tracks live sandboxes, which are
       # throwaway: losing it on a restart costs the in-flight ones, not data.
       persistence:
