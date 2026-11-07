@@ -13,8 +13,9 @@ import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
-import { assertExitNodeAccess, assertGrantPath, ordinaryExitNodeTags } from "../../components/tailscale/policyGuards.ts";
+import { assertGrantPath, ordinaryExitNodeTags } from "../../components/tailscale/policyGuards.ts";
 import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../../components/tailscale.ts";
+import { assertRegionExitAccess } from "./region-exit-access.ts";
 
 /**
  * `autogroup:tagged` minus tag:funnel, spelled out -- use it wherever a grant's
@@ -934,45 +935,27 @@ function configureDnsAccess(manager: TailscaleAclManager) {
  * region-exit-authkey.ts. tag:proxmox owns the tag because that is the tag the
  * Pulumi OAuth client mints keys under (see configureNetbirdEdgeAccess).
  *
+ * On Tailscale only group:family and admins may use them (decided 2026-11-07);
+ * friends in group:fnf may not, though NetBird's twin `users-region-internet`
+ * still lets friends in. group:family's members are hand-managed in the admin
+ * console.
+ *
  * The grant carries no Tailscale `tests`: they cannot spell autogroup:internet
- * or `via`. assertRegionExitAccess checks the rendered policy instead.
+ * or `via`. assertRegionExitAccess (region-exit-access.ts) checks the rendered
+ * policy instead.
  */
 function configureRegionExits(manager: TailscaleAclManager) {
   manager.setTagOwner(tag.proxmox, [tag.regionExit]);
   manager.setGrant(
     "region-exit",
     {
-      src: [groups.friendsAndFamily, autogroups.admin],
+      src: [groups.family, autogroups.admin],
       dst: [autogroups.internet],
       ip: ["*"],
       via: [tag.regionExit],
     },
     () => [],
   );
-}
-
-/**
- * Who may use a region exit, checked on the policy about to be written, as
- * assertGrantPath checks the paths Pulumi itself depends on. Principals are
- * the selectors a device matches: a friends-and-family user is a member in
- * group:fnf, any other user only a member.
- */
-function assertRegionExitAccess(json: string) {
-  const regionExit = [tag.regionExit];
-  const why = "Region exits are for friends and family and admins only (docs/plans/region-exits.md §A) -- check the `region-exit` and `member-exit-node` grants.";
-  assertExitNodeAccess(json, "friends and family", [autogroups.member, groups.friendsAndFamily], regionExit, true, why);
-  assertExitNodeAccess(json, "admins", [autogroups.member, autogroups.admin], regionExit, true, why);
-  assertExitNodeAccess(json, "other members", [autogroups.member], regionExit, false, why);
-  assertExitNodeAccess(json, "members", [autogroups.member], [tag.exitNode], true, "Members lost the ordinary exit nodes -- restore `member-exit-node` and its `via`.");
-  // No tagged host reaches a region exit: every tag's internet grant carries
-  // the ordinary exit nodes as its `via`.
-  for (const t of Object.values(tag).filter(t => t !== tag.regionExit)) {
-    assertExitNodeAccess(json, t, [t], regionExit, false, "Only people may use a region exit -- give that tag's autogroup:internet grant `via: ordinaryExitNodes(manager)`.");
-  }
-  // ...and the hosts that use an ordinary exit node still can.
-  for (const t of [tag.proxmox, tag.dockge, tag.backups, ...kubernetesClusters.map(c => c.tag)]) {
-    assertExitNodeAccess(json, t, [t], [tag.exitNode], true, "That tag lost its internet grant -- restore it with `via: ordinaryExitNodes(manager)`.");
-  }
 }
 
 /**

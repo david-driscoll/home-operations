@@ -67,10 +67,11 @@ describe("assertGrantPath", () => {
 // carrying one of the listed tags; with no `via` any exit node will do. Grants
 // are a union, so one grant without `via` reopens every exit node.
 describe("canUseExitNode", () => {
-  const fnfUser = ["autogroup:member", "group:fnf"];
+  const familyUser = ["autogroup:member", "group:family"];
+  const friendUser = ["autogroup:member", "group:fnf"];
   const otherMember = ["autogroup:member"];
   const memberExit = { src: ["autogroup:member"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:exit-node"] };
-  const regionExit = { src: ["group:fnf", "autogroup:admin"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:region-exit"] };
+  const regionExit = { src: ["group:family", "autogroup:admin"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:region-exit"] };
 
   it("lets a grant without via use any exit node", () => {
     const open = { src: ["autogroup:member"], dst: ["autogroup:internet"], ip: ["*"] };
@@ -82,10 +83,12 @@ describe("canUseExitNode", () => {
     assert.equal(canUseExitNode(policy([memberExit]), otherMember, ["tag:region-exit"]), false);
   });
 
-  it("unions grants, so friends and family reach both kinds and other members only one", () => {
+  it("unions grants, so family reach both kinds and friends and other members only one", () => {
     const both = policy([memberExit, regionExit]);
-    assert.equal(canUseExitNode(both, fnfUser, ["tag:region-exit"]), true);
-    assert.equal(canUseExitNode(both, fnfUser, ["tag:exit-node"]), true);
+    assert.equal(canUseExitNode(both, familyUser, ["tag:region-exit"]), true);
+    assert.equal(canUseExitNode(both, familyUser, ["tag:exit-node"]), true);
+    assert.equal(canUseExitNode(both, friendUser, ["tag:region-exit"]), false);
+    assert.equal(canUseExitNode(both, friendUser, ["tag:exit-node"]), true);
     assert.equal(canUseExitNode(both, otherMember, ["tag:region-exit"]), false);
   });
 
@@ -100,22 +103,16 @@ describe("canUseExitNode", () => {
 });
 
 describe("assertExitNodeAccess", () => {
-  const regionExit = { src: ["group:fnf"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:region-exit"] };
+  const regionExit = { src: ["group:family"], dst: ["autogroup:internet"], ip: ["*"], via: ["tag:region-exit"] };
 
   it("returns quietly when access matches what is expected", () => {
-    assertExitNodeAccess(policy([regionExit]), "friends and family", ["group:fnf"], ["tag:region-exit"], true, "why.");
+    assertExitNodeAccess(policy([regionExit]), "family", ["group:family"], ["tag:region-exit"], true, "why.");
     assertExitNodeAccess(policy([regionExit]), "other members", ["autogroup:member"], ["tag:region-exit"], false, "why.");
   });
 
   it("throws, naming who and which exit node, when access is missing or leaks", () => {
-    assert.throws(
-      () => assertExitNodeAccess(policy([]), "friends and family", ["group:fnf"], ["tag:region-exit"], true, "why."),
-      /friends and family can no longer use an exit node tagged tag:region-exit\. why\. Refusing/,
-    );
-    assert.throws(
-      () => assertExitNodeAccess(policy([regionExit]), "friends and family", ["group:fnf"], ["tag:region-exit"], false, "why."),
-      /friends and family can use an exit node tagged tag:region-exit\. why\. Refusing/,
-    );
+    assert.throws(() => assertExitNodeAccess(policy([]), "family", ["group:family"], ["tag:region-exit"], true, "why."), /family can no longer use an exit node tagged tag:region-exit\. why\. Refusing/);
+    assert.throws(() => assertExitNodeAccess(policy([regionExit]), "family", ["group:family"], ["tag:region-exit"], false, "why."), /family can use an exit node tagged tag:region-exit\. why\. Refusing/);
   });
 });
 
