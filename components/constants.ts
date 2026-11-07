@@ -204,6 +204,9 @@ export const Tailscale = {
   groups: {
     mediaManagers: "group:media-managers" as TailscaleGroups,
     friendsAndFamily: "group:fnf" as TailscaleGroups,
+    // Family only: who may use a region exit on Tailscale (docs/plans/region-exits.md §A).
+    // Members are hand-managed in the admin console; setGroup keeps them.
+    family: "group:family" as TailscaleGroups,
   } as const,
   tag: {
     idp: "tag:idp" as TailscaleTags,

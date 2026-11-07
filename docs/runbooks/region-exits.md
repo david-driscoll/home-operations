@@ -29,8 +29,9 @@ You need NetBird or Tailscale already set up on your device
 
 - **NetBird:** open the NetBird app, open **Exit node** (on phones, under **Networks**) and pick
   `region-spitfire` (or another). Pick **None** to stop.
-- **Tailscale:** open the Tailscale app, open **Exit node** and pick `spitfire` (or another).
-  Pick **None** to stop.
+- **Tailscale (family only):** open the Tailscale app, open **Exit node** and pick `spitfire`
+  (or another). Pick **None** to stop. Friends don't see the region exits on Tailscale: use
+  NetBird instead.
 
 To check it worked, open a "what is my IP" site. It should show the region exit's country and
 Mullvad as the provider.
@@ -59,5 +60,8 @@ put it until someone moves it again.
     calling on that network.
   - **On Tailscale,** clear the site's cookies or use a private window. Many sites remember
     where you were last time.
+- **A region exit is missing from Tailscale's exit node list:** on Tailscale they are for family
+  only. Friends can use them over NetBird. If you are family, ask David to add you to the
+  Tailscale family group.
 - **The region picker says "not allowed":** only family can move region exits. Friends can use
   them as they are.

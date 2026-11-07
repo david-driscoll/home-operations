@@ -30,8 +30,9 @@ Decisions marked ✅ were taken by David on 2026-11-06 in a grilling session:
   The five region exits use all five device slots on the Mullvad account.
 - ✅ **Platform:** Equestria. One pod per region exit, in which gluetun, `netbird`, `tailscaled`
   and the region picker share the pod network namespace.
-- ✅ **Who:** friends and family may use the region exits; only family and admins change their
-  region.
+- ✅ **Who:** on NetBird, friends, family and admins may use the region exits; on Tailscale,
+  family and admins only (`group:family`, decided 2026-11-07). Only family and admins change
+  their region.
 - ✅ **Fail closed:** while the tunnel is down or reconnecting, forwarded traffic is dropped.
   Traffic never falls back to the home WAN.
 - ✅ **Region picker:** one host, `wonderbolts.<root domain>`, on the internal Gateway behind
@@ -46,7 +47,9 @@ Decisions marked ✅ were taken by David on 2026-11-06 in a grilling session:
 - ✅ **Mullvad keys:** Pulumi-managed. Pulumi generates each keypair, registers the public key with
   Mullvad's device API and writes the private key to OpenBao.
 - ✅ **Tailscale access:** `member-exit-node` gains a `via` on the existing exit-node tags, and a
-  new grant gives `group:fnf` and admins `autogroup:internet` via `tag:region-exit`.
+  new grant gives `group:family` and admins `autogroup:internet` via `tag:region-exit`.
+  (Originally `group:fnf`; narrowed to `group:family` on 2026-11-07. Its members are
+  hand-managed in the admin console.)
 - ✅ **Mesh transport bypasses the tunnel:** NetBird's and tailscaled's own packets leave over
   `eth0` (the home WAN). Only forwarded client traffic goes through Mullvad.
 - ✅ **Monitoring:** Prometheus metrics from the region picker, a ServiceMonitor and a
@@ -136,10 +139,13 @@ steps, never create-before-delete.
 - Add `tag:region-exit` to `components/constants.ts`, give it a tag owner, and add it to
   `autoApprovers.exitNode`.
 - Add `via` to the `member-exit-node` grant, listing the existing exit-node tags.
-- Add a new grant `region-exit`: `src: [group:fnf, admins]`, `dst: [autogroup:internet]`,
-  `via: [tag:region-exit]`.
-- Update the policy tests in `acl-manager.ts` so that friends and family can reach the internet
-  via `tag:region-exit`, and others cannot.
+- Add a new grant `region-exit`: `src: [group:family, admins]`, `dst: [autogroup:internet]`,
+  `via: [tag:region-exit]`. (First `group:fnf`; family only since 2026-11-07, so friends use
+  region exits over NetBird.) `group:family` is in the `groups` map of `components/constants.ts`
+  so the policy declares it; `setGroup` keeps its hand-managed members.
+- Guard the rendered policy (`stacks/unifi-network/region-exit-access.ts`, tested in
+  `region-exit-access.test.ts`) so that family and admins can reach the internet via
+  `tag:region-exit`, and friends in `group:fnf` only, other members and every tag cannot.
 - Mint a `TailnetKey` (reusable, preauthorised, tagged `tag:region-exit`) into the
   `tailscale-system/tailscale-region-exit-authkey` Secret, which Reflector mirrors into
   `netbird-system` and no other namespace (`region-exit-authkey.ts`).

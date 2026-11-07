@@ -40,7 +40,9 @@ if (REGION_EXITS.length > MULLVAD_DEVICE_SLOTS) throw new Error(`${REGION_EXITS.
 /**
  * The user groups the region exits are offered to (§C2): the `region-*`
  * routes' distribution groups and the region-exit policies' sources.
- * media-managers is left out on purpose.
+ * media-managers is left out on purpose. Wider than Tailscale's `region-exit`
+ * grant (group:family and admins, decided 2026-11-07): friends reach a region
+ * exit only over NetBird.
  */
 export const REGION_EXIT_USER_GROUPS = ["admins", "family", "friends"] as const;
 

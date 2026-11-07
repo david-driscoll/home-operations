@@ -29,8 +29,8 @@ export function assertGrantPath(policyJson: string, src: string, dst: string, po
 }
 
 /**
- * Whether `principal` -- every selector it matches, e.g. a friends-and-family
- * user is `["autogroup:member", "group:fnf"]` -- may send internet traffic
+ * Whether `principal` -- every selector it matches, e.g. a family
+ * user is `["autogroup:member", "group:family"]` -- may send internet traffic
  * through an exit node carrying `exitNodeTags`. Using an exit node is a grant
  * to autogroup:internet; `via` narrows it to exit nodes with one of its tags,
  * and an absent or empty `via` allows any. Grants are a union, so a single

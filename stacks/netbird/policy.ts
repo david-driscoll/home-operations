@@ -167,6 +167,10 @@ export const ACCESS_RULES: AccessRule[] = [
       mirrors: [],
     }),
   ),
+  // Mirrors `region-exit` by path, not by audience: Tailscale's grant is
+  // group:family and admins only (decided 2026-11-07), while NetBird keeps
+  // friends too. policyDrift.ts matches grants by name, so the wider audience
+  // here is deliberate, not drift.
   {
     name: "users-region-internet",
     description: "The internet through a region exit: the region-* routes' access-control group, which is what their routing peers forward for",
