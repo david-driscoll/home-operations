@@ -1,0 +1,294 @@
+// biome-ignore-all lint/style/useTemplate: no template literals in this file. It ships as a ConfigMap, and Flux envsubst and the hk eso lint both read a dollar-brace as a variable.
+/**
+ * The region picker (docs/plans/region-exits.md §D4, ADR 0005): a sidecar in a
+ * region exit's pod that shows where the region exit leaves from and lets
+ * family move it. The route publishes /<name> behind Authentik forward auth
+ * (family and admins); /status is also served at the root for in-cluster
+ * readers.
+ *
+ *   GET  /status, /<name>/status  JSON: region, tunnel state, Mullvad egress
+ *   GET  /<name>                  the page: current region and a country/city form
+ *   GET  /<name>/regions          JSON: Mullvad WireGuard countries and their cities
+ *   POST /<name>/region           move it (JSON or the page's form post)
+ *   GET  /healthz                 liveness, touches nothing
+ *
+ * gluetun's control server (pinned v3.41.x, internal/server/vpn.go) listens on
+ * 127.0.0.1:8000 only, with HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE {"auth":"none"}
+ * so the picker needs no key: the pod's loopback is the boundary. A switch is
+ * PUT /v1/vpn/settings with a partial settings.VPN; gluetun overrides only the
+ * fields given (gosettings.OverrideWithSlice: a non-nil empty list clears),
+ * validates against its server list, and restarts the tunnel when anything
+ * changed (internal/vpn/state/vpn.go SetSettings).
+ *
+ * The region is saved first to the region-exit-<name>-state ConfigMap, which
+ * Flux does not manage and which gluetun's envFrom reads after the Git
+ * defaults, so the pick survives a restart and deleting it falls back to Git.
+ * Countries and cities come from /gluetun/servers.json, which gluetun writes
+ * into the emptyDir both containers mount.
+ *
+ * Node runs this file by stripping types. createHandler is what
+ * picker.test.ts covers, with fetch and readFile faked; main() is the socket
+ * around it.
+ */
+import { readFile } from "node:fs/promises";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+
+export interface PickerConfig {
+  name: string;
+  namespace: string;
+  stateConfigMap: string;
+  gluetunUrl: string;
+  kubeUrl: string;
+  serversPath: string;
+  tokenPath: string;
+}
+
+export interface Deps {
+  fetch: typeof globalThis.fetch;
+  readFile: (path: string) => Promise<string>;
+}
+
+export interface RegionChoice {
+  country: string;
+  cities: string[];
+}
+
+interface ServerEntry {
+  vpn?: string;
+  country?: string;
+  city?: string;
+}
+
+/** Mullvad's WireGuard countries in servers.json, each with its cities. */
+export function regionsFrom(serversJson: string): RegionChoice[] {
+  const servers: ServerEntry[] = JSON.parse(serversJson)?.mullvad?.servers ?? [];
+  const byCountry = new Map<string, Set<string>>();
+  for (const server of servers) {
+    if (server.vpn !== "wireguard" || !server.country) continue;
+    const cities = byCountry.get(server.country) ?? new Set<string>();
+    if (server.city) cities.add(server.city);
+    byCountry.set(server.country, cities);
+  }
+  return [...byCountry.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([country, cities]) => ({ country, cities: [...cities].sort((a, b) => a.localeCompare(b)) }));
+}
+
+export interface Region {
+  country: string;
+  city: string | null;
+}
+
+export interface Status {
+  name: string;
+  region: Region | null;
+  tunnel: { up: boolean; status: string | null };
+  egress: { country: string | null; city: string | null; ip: string } | null;
+}
+
+const HTML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => HTML_ESCAPES[c]);
+/** JSON safe inside a <script>: no `<`, so no `</script>`. */
+const scriptJson = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
+const describeRegion = (region: Region | null) => (region ? (region.city ? region.city + ", " : "") + region.country : "unknown");
+
+/** The page at /<name>: where the region exit is, and a form to move it. */
+export function renderPage(name: string, current: Status, regions: RegionChoice[]): string {
+  const country = current.region?.country;
+  const options = regions.map(r => '<option value="' + escapeHtml(r.country) + '"' + (r.country === country ? " selected" : "") + ">" + escapeHtml(r.country) + "</option>").join("");
+  const cities = Object.fromEntries(regions.map(r => [r.country, r.cities]));
+  const tunnel = current.tunnel.up ? "connected" : "not connected" + (current.tunnel.status ? " (" + escapeHtml(current.tunnel.status) + ")" : "");
+  const egress = current.egress ? "Traffic leaves from " + escapeHtml((current.egress.city ? current.egress.city + ", " : "") + (current.egress.country ?? "an unknown country")) + "." : "";
+  return [
+    "<!doctype html>",
+    '<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    "<title>" + escapeHtml(name) + " region</title>",
+    "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}</style>",
+    "</head><body>",
+    "<h1>" + escapeHtml(name) + "</h1>",
+    "<p>Region: <strong>" + escapeHtml(describeRegion(current.region)) + "</strong>. Tunnel " + tunnel + ". " + egress + "</p>",
+    '<form method="post" action="/' + escapeHtml(name) + '/region">',
+    '<label for="country">Country</label><select id="country" name="country" required>' + options + "</select>",
+    '<label for="city">City (optional)</label><select id="city" name="city"></select>',
+    "<button>Move " + escapeHtml(name) + "</button>",
+    "<p>Everyone using " + escapeHtml(name) + " moves with it.</p>",
+    "</form>",
+    "<script>",
+    "const cities = " + scriptJson(cities) + ";",
+    "const current = " + scriptJson(current.region) + ";",
+    'const country = document.getElementById("country"), city = document.getElementById("city");',
+    "function fill() {",
+    '  city.replaceChildren(new Option("Any city", ""));',
+    "  for (const c of cities[country.value] || []) city.add(new Option(c, c, false, !!current && current.country === country.value && current.city === c));",
+    "}",
+    'country.addEventListener("change", fill); fill();',
+    "</script>",
+    "</body></html>",
+  ].join("\n");
+}
+
+const asJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
+export function createHandler(config: PickerConfig, deps: Deps): (request: Request) => Promise<Response> {
+  const base = "/" + config.name;
+
+  /** A GET on gluetun's control API, or null when it does not answer. */
+  async function gluetun<T>(path: string): Promise<T | null> {
+    try {
+      const response = await deps.fetch(config.gluetunUrl + path, { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return null;
+      return (await response.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async function status(): Promise<Status> {
+    const [vpn, settings, publicIp] = await Promise.all([
+      gluetun<{ status?: string }>("/v1/vpn/status"),
+      gluetun<{ provider?: { server_selection?: { countries?: string[] | null; cities?: string[] | null } } }>("/v1/vpn/settings"),
+      gluetun<{ public_ip?: string; country?: string; city?: string }>("/v1/publicip/ip"),
+    ]);
+    const selection = settings?.provider?.server_selection;
+    const country = selection?.countries?.[0];
+    return {
+      name: config.name,
+      region: country ? { country, city: selection?.cities?.[0] ?? null } : null,
+      tunnel: { up: vpn?.status === "running", status: vpn?.status ?? null },
+      egress: publicIp?.public_ip ? { country: publicIp.country ?? null, city: publicIp.city ?? null, ip: publicIp.public_ip } : null,
+    };
+  }
+
+  /** A call on the Kubernetes API with the pod's ServiceAccount token. */
+  async function kube(method: "PATCH" | "POST", path: string, body: unknown, contentType = "application/json"): Promise<Response> {
+    const token = (await deps.readFile(config.tokenPath)).trim();
+    return deps.fetch(config.kubeUrl + path, {
+      method,
+      headers: { Authorization: "Bearer " + token, "Content-Type": contentType, Accept: "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000),
+    });
+  }
+
+  /** Writes the region to the state ConfigMap, creating it the first time. Throws when it cannot. */
+  async function saveRegion(region: Region): Promise<void> {
+    const configmaps = "/api/v1/namespaces/" + config.namespace + "/configmaps";
+    const patched = await kube("PATCH", configmaps + "/" + config.stateConfigMap, { data: { SERVER_COUNTRIES: region.country, SERVER_CITIES: region.city } }, "application/merge-patch+json");
+    if (patched.ok) return;
+    if (patched.status !== 404) throw new Error("patching ConfigMap " + config.stateConfigMap + ": HTTP " + patched.status);
+    const data: Record<string, string> = { SERVER_COUNTRIES: region.country };
+    if (region.city) data.SERVER_CITIES = region.city;
+    const created = await kube("POST", configmaps, { apiVersion: "v1", kind: "ConfigMap", metadata: { name: config.stateConfigMap }, data });
+    if (!created.ok) throw new Error("creating ConfigMap " + config.stateConfigMap + ": HTTP " + created.status);
+  }
+
+  /** PUT /v1/vpn/settings: gluetun merges the selection in, validates it, and reconnects. Returns its outcome text. */
+  async function applyRegion(region: Region): Promise<string> {
+    const response = await deps.fetch(config.gluetunUrl + "/v1/vpn/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      // An empty `cities` clears a city picked before; a missing one would keep it.
+      body: JSON.stringify({ provider: { server_selection: { countries: [region.country], cities: region.city ? [region.city] : [] } } }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const text = (await response.text()).trim();
+    if (!response.ok) throw new Error("gluetun refused the region: " + text);
+    return text;
+  }
+
+  /** The region asked for, if Mullvad offers it; an error message otherwise. */
+  async function requested(request: Request): Promise<Region | string> {
+    let country: string | undefined;
+    let city: string | undefined;
+    if ((request.headers.get("content-type") ?? "").includes("application/json")) {
+      const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown };
+      country = typeof body.country === "string" ? body.country : undefined;
+      city = typeof body.city === "string" ? body.city : undefined;
+    } else {
+      const form = new URLSearchParams(await request.text());
+      country = form.get("country") ?? undefined;
+      city = form.get("city") ?? undefined;
+    }
+    if (!country) return "pick a country";
+    const offered = regionsFrom(await deps.readFile(config.serversPath)).find(r => r.country === country);
+    if (!offered) return "Mullvad has no WireGuard servers in " + country;
+    if (city && !offered.cities.includes(city)) return "Mullvad has no WireGuard servers in " + city + ", " + country;
+    return { country, city: city || null };
+  }
+
+  async function switchRegion(request: Request): Promise<Response> {
+    const fromForm = !(request.headers.get("content-type") ?? "").includes("application/json");
+    const region = await requested(request);
+    if (typeof region === "string") return asJson({ error: region }, 400);
+    let outcome: string;
+    try {
+      // Saved first, so a restart never goes back on a switch gluetun already made.
+      await saveRegion(region);
+      outcome = await applyRegion(region);
+    } catch (error) {
+      console.log(JSON.stringify({ msg: "region switch failed", region, error: String(error) }));
+      return asJson({ error: String(error instanceof Error ? error.message : error) }, 502);
+    }
+    console.log(JSON.stringify({ msg: "region switched", region, outcome }));
+    if (fromForm) return new Response(null, { status: 303, headers: { Location: base } });
+    return asJson({ region, outcome });
+  }
+
+  async function page(): Promise<Response> {
+    const [current, regions] = await Promise.all([status(), deps.readFile(config.serversPath).then(regionsFrom)]);
+    return new Response(renderPage(config.name, current, regions), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  }
+
+  return async request => {
+    let path = new URL(request.url).pathname;
+    while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+    if (request.method === "GET" && path === "/healthz") return new Response("ok");
+    if (request.method === "GET" && path === base) return page();
+    if (request.method === "GET" && (path === "/status" || path === base + "/status")) return asJson(await status());
+    if (request.method === "POST" && path === base + "/region") return switchRegion(request);
+    if (request.method === "GET" && path === base + "/regions") return asJson(regionsFrom(await deps.readFile(config.serversPath)));
+    return new Response("not found", { status: 404 });
+  };
+}
+
+function env(name: string, fallback?: string): string {
+  const value = process.env[name] || fallback;
+  if (!value) throw new Error(name + " is not set");
+  return value;
+}
+
+/** Hands a node:http request to the fetch-style handler and writes back its answer. */
+async function serve(handle: (request: Request) => Promise<Response>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  try {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) if (typeof value === "string") headers.set(key, value);
+    const method = req.method ?? "GET";
+    const body = method === "GET" || method === "HEAD" ? undefined : Buffer.concat(chunks);
+    const response = await handle(new Request("http://picker" + (req.url ?? "/"), { method, headers, body }));
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+    res.end(Buffer.from(await response.arrayBuffer()));
+  } catch (error) {
+    console.log(JSON.stringify({ msg: "request failed", url: req.url, error: String(error) }));
+    if (!res.headersSent) res.writeHead(500);
+    res.end();
+  }
+}
+
+function main(): void {
+  const name = env("REGION_EXIT_NAME");
+  const config: PickerConfig = {
+    name,
+    namespace: env("POD_NAMESPACE"),
+    stateConfigMap: env("STATE_CONFIGMAP", "region-exit-" + name + "-state"),
+    gluetunUrl: env("GLUETUN_CONTROL_URL", "http://127.0.0.1:8000"),
+    // The API server's CA comes from NODE_EXTRA_CA_CERTS, as for the proxy watchdog.
+    kubeUrl: env("KUBERNETES_URL", "https://kubernetes.default.svc"),
+    serversPath: env("GLUETUN_SERVERS_JSON", "/gluetun/servers.json"),
+    tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+  };
+  const handle = createHandler(config, { fetch: globalThis.fetch, readFile: path => readFile(path, "utf8") });
+  const port = Number(env("PORT", "8080"));
+  createServer((req, res) => void serve(handle, req, res)).listen(port, () => console.log(JSON.stringify({ msg: "region picker listening", name, port })));
+}
+
+if (import.meta.main) main();
