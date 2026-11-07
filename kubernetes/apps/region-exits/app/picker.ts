@@ -6,10 +6,15 @@
  * (family and admins); /status is also served at the root for in-cluster
  * readers.
  *
- *   GET  /status, /<name>/status  JSON: region, tunnel state, Mullvad egress
+ *   GET  /                        the overview of every region exit (overview.ts)
+ *   GET  /status, /<name>/status  JSON: region, tunnel state, Mullvad egress,
+ *                                 people on it (./activeClients.ts), overlays
+ *                                 (./overlays.ts)
+ *   GET  /metrics                 the same for Prometheus (./metrics.ts); root only
  *   GET  /<name>                  the page: current region and a country/city form
  *   GET  /<name>/regions          JSON: Mullvad WireGuard countries and their cities
- *   POST /<name>/region           move it (JSON or the page's form post)
+ *   POST /<name>/region           move it (JSON or the page's form post); with
+ *                                 anyone on it, only once confirmed
  *   GET  /healthz                 liveness, touches nothing
  *
  * gluetun's control server (pinned v3.41.x, internal/server/vpn.go) listens on
@@ -31,9 +36,14 @@
  * around it.
  */
 import { readFile } from "node:fs/promises";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
+import { activeClients } from "./activeClients.ts";
+import { describeRegion, escapeHtml, peopleCount, renderDocument } from "./html.ts";
+import { renderMetrics } from "./metrics.ts";
+import { type OverlayConfig, type OverlayDeps, type OverlayState, overlayState } from "./overlays.ts";
+import { collectOverview, peerStatusUrl, renderOverview } from "./overview.ts";
 
-export interface PickerConfig {
+export interface PickerConfig extends OverlayConfig {
   name: string;
   namespace: string;
   stateConfigMap: string;
@@ -41,11 +51,14 @@ export interface PickerConfig {
   kubeUrl: string;
   serversPath: string;
   tokenPath: string;
+  /** Every region exit, in the order the overview lists them. */
+  regionExits: string[];
+  /** A region exit's GET /status URL through its Service, or null when there is none. */
+  statusUrl: (name: string) => string | null;
 }
 
-export interface Deps {
+export interface Deps extends OverlayDeps {
   fetch: typeof globalThis.fetch;
-  readFile: (path: string) => Promise<string>;
 }
 
 export interface RegionChoice {
@@ -82,13 +95,31 @@ export interface Status {
   region: Region | null;
   tunnel: { up: boolean; status: string | null };
   egress: { country: string | null; city: string | null; ip: string } | null;
+  /** People on the region exit now; null when conntrack cannot be read. */
+  activeClients: number | null;
+  /** Whether each overlay's daemon is connected (overlays.ts). */
+  overlays: OverlayState;
 }
 
-const HTML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => HTML_ESCAPES[c]);
 /** JSON safe inside a <script>: no `<`, so no `</script>`. */
 const scriptJson = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
-const describeRegion = (region: Region | null) => (region ? (region.city ? region.city + ", " : "") + region.country : "unknown");
+const describePeople = (name: string, count: number | null) =>
+  count === null ? "The picker cannot tell how many people are using " + name + "." : peopleCount(count) + (count === 1 ? " is" : " are") + " using " + name + " right now.";
+const PAGE_STYLE = "body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}";
+
+/** The page a form post gets when people are on the region exit: the same move again, confirmed. */
+export function renderConfirm(name: string, region: Region, count: number | null): string {
+  const hidden = (field: string, value: string) => '<input type="hidden" name="' + field + '" value="' + escapeHtml(value) + '">';
+  return renderDocument("Move " + name + "?", PAGE_STYLE + "button{display:block;width:100%;margin:.5rem 0;font-size:1rem;padding:.6rem}", [
+    "<h1>Move " + escapeHtml(name) + " to " + escapeHtml(describeRegion(region)) + "?</h1>",
+    "<p>" + escapeHtml(describePeople(name, count)) + " Everyone using it moves with it.</p>",
+    '<form method="post" action="/' + escapeHtml(name) + '/region">',
+    hidden("country", region.country) + hidden("city", region.city ?? "") + hidden("confirm", "yes"),
+    "<button>Move anyway</button>",
+    "</form>",
+    '<p><a href="/' + escapeHtml(name) + '">Cancel</a></p>',
+  ]);
+}
 
 /** The page at /<name>: where the region exit is, and a form to move it. */
 export function renderPage(name: string, current: Status, regions: RegionChoice[]): string {
@@ -97,19 +128,14 @@ export function renderPage(name: string, current: Status, regions: RegionChoice[
   const cities = Object.fromEntries(regions.map(r => [r.country, r.cities]));
   const tunnel = current.tunnel.up ? "connected" : "not connected" + (current.tunnel.status ? " (" + escapeHtml(current.tunnel.status) + ")" : "");
   const egress = current.egress ? "Traffic leaves from " + escapeHtml((current.egress.city ? current.egress.city + ", " : "") + (current.egress.country ?? "an unknown country")) + "." : "";
-  return [
-    "<!doctype html>",
-    '<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-    "<title>" + escapeHtml(name) + " region</title>",
-    "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem}label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}</style>",
-    "</head><body>",
+  return renderDocument(name + " region", PAGE_STYLE + "label,select,button{display:block;width:100%;margin:.5rem 0;font-size:1rem}button{padding:.6rem}", [
     "<h1>" + escapeHtml(name) + "</h1>",
     "<p>Region: <strong>" + escapeHtml(describeRegion(current.region)) + "</strong>. Tunnel " + tunnel + ". " + egress + "</p>",
     '<form method="post" action="/' + escapeHtml(name) + '/region">',
     '<label for="country">Country</label><select id="country" name="country" required>' + options + "</select>",
     '<label for="city">City (optional)</label><select id="city" name="city"></select>',
     "<button>Move " + escapeHtml(name) + "</button>",
-    "<p>Everyone using " + escapeHtml(name) + " moves with it.</p>",
+    "<p>" + escapeHtml(describePeople(name, current.activeClients)) + " Everyone using it moves with it.</p>",
     "</form>",
     "<script>",
     "const cities = " + scriptJson(cities) + ";",
@@ -121,8 +147,7 @@ export function renderPage(name: string, current: Status, regions: RegionChoice[
     "}",
     'country.addEventListener("change", fill); fill();',
     "</script>",
-    "</body></html>",
-  ].join("\n");
+  ]);
 }
 
 const asJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -142,10 +167,12 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
   }
 
   async function status(): Promise<Status> {
-    const [vpn, settings, publicIp] = await Promise.all([
+    const [vpn, settings, publicIp, people, overlays] = await Promise.all([
       gluetun<{ status?: string }>("/v1/vpn/status"),
       gluetun<{ provider?: { server_selection?: { countries?: string[] | null; cities?: string[] | null } } }>("/v1/vpn/settings"),
       gluetun<{ public_ip?: string; country?: string; city?: string }>("/v1/publicip/ip"),
+      activeClients(deps.readFile),
+      overlayState(config, deps),
     ]);
     const selection = settings?.provider?.server_selection;
     const country = selection?.countries?.[0];
@@ -154,6 +181,8 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
       region: country ? { country, city: selection?.cities?.[0] ?? null } : null,
       tunnel: { up: vpn?.status === "running", status: vpn?.status ?? null },
       egress: publicIp?.public_ip ? { country: publicIp.country ?? null, city: publicIp.city ?? null, ip: publicIp.public_ip } : null,
+      activeClients: people,
+      overlays,
     };
   }
 
@@ -194,30 +223,43 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     return text;
   }
 
-  /** The region asked for, if Mullvad offers it; an error message otherwise. */
-  async function requested(request: Request): Promise<Region | string> {
+  /** The region asked for, if Mullvad offers it, and whether the move is confirmed; an error message otherwise. */
+  async function requested(request: Request): Promise<{ region: Region; confirmed: boolean } | string> {
     let country: string | undefined;
     let city: string | undefined;
+    let confirmed = false;
     if ((request.headers.get("content-type") ?? "").includes("application/json")) {
-      const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown };
+      const body = (await request.json().catch(() => ({}))) as { country?: unknown; city?: unknown; confirm?: unknown };
       country = typeof body.country === "string" ? body.country : undefined;
       city = typeof body.city === "string" ? body.city : undefined;
+      confirmed = body.confirm === true;
     } else {
       const form = new URLSearchParams(await request.text());
       country = form.get("country") ?? undefined;
       city = form.get("city") ?? undefined;
+      confirmed = form.get("confirm") === "yes";
     }
     if (!country) return "pick a country";
     const offered = regionsFrom(await deps.readFile(config.serversPath)).find(r => r.country === country);
     if (!offered) return "Mullvad has no WireGuard servers in " + country;
     if (city && !offered.cities.includes(city)) return "Mullvad has no WireGuard servers in " + city + ", " + country;
-    return { country, city: city || null };
+    return { region: { country, city: city || null }, confirmed };
   }
 
   async function switchRegion(request: Request): Promise<Response> {
     const fromForm = !(request.headers.get("content-type") ?? "").includes("application/json");
-    const region = await requested(request);
-    if (typeof region === "string") return asJson({ error: region }, 400);
+    const asked = await requested(request);
+    if (typeof asked === "string") return asJson({ error: asked }, 400);
+    const { region } = asked;
+    // Moving a region exit moves everyone on it, and nothing locks it, so
+    // anyone on it (or not knowing) means asking first.
+    if (!asked.confirmed) {
+      const people = await activeClients(deps.readFile);
+      if (people !== 0) {
+        if (fromForm) return new Response(renderConfirm(config.name, region, people), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+        return asJson({ error: describePeople(config.name, people) + " Send it again with confirm: true to move them.", activeClients: people, confirm: true }, 409);
+      }
+    }
     let outcome: string;
     try {
       // Saved first, so a restart never goes back on a switch gluetun already made.
@@ -241,8 +283,15 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     let path = new URL(request.url).pathname;
     while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
     if (request.method === "GET" && path === "/healthz") return new Response("ok");
+    if (request.method === "GET" && path === "/") {
+      const entries = await collectOverview(config.regionExits, config.statusUrl, deps.fetch);
+      return new Response(renderOverview(entries), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
     if (request.method === "GET" && path === base) return page();
     if (request.method === "GET" && (path === "/status" || path === base + "/status")) return asJson(await status());
+    // Root only, never under /<name>: the HTTPRoute publishes /<name>, and
+    // the CNP lets Prometheus GET this path and nothing else.
+    if (request.method === "GET" && path === "/metrics") return new Response(renderMetrics(await status()), { headers: { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" } });
     if (request.method === "POST" && path === base + "/region") return switchRegion(request);
     if (request.method === "GET" && path === base + "/regions") return asJson(regionsFrom(await deps.readFile(config.serversPath)));
     return new Response("not found", { status: 404 });
@@ -274,6 +323,21 @@ async function serve(handle: (request: Request) => Promise<Response>, req: Incom
   }
 }
 
+/** A GET over a unix socket (fetch cannot dial one), for tailscaled's LocalAPI. */
+function unixGet(socketPath: string, path: string, headers: Record<string, string>): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest({ socketPath, path, headers, timeout: 5000 }, res => {
+      const chunks: Buffer[] = [];
+      res.on("data", chunk => chunks.push(chunk as Buffer));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8") }));
+      res.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(new Error("timed out")));
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 function main(): void {
   const name = env("REGION_EXIT_NAME");
   const config: PickerConfig = {
@@ -289,8 +353,17 @@ function main(): void {
     kubeUrl: env("KUBERNETES_URL", "https://" + process.env.KUBERNETES_SERVICE_HOST + ":" + process.env.KUBERNETES_SERVICE_PORT),
     serversPath: env("GLUETUN_SERVERS_JSON", "/gluetun/servers.json"),
     tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+    // Every region exit, comma-separated; on its own, the overview lists this one.
+    regionExits: env("REGION_EXITS", name)
+      .split(",")
+      .map(exit => exit.trim())
+      .filter(Boolean),
+    statusUrl: peerStatusUrl(env("REGION_EXIT_SERVICE_PREFIX", "region-exits-"), process.env),
+    // The tailscale container's TS_SOCKET, on the emptyDir both mount.
+    tailscaleSocket: env("TAILSCALE_SOCKET", "/var/run/tailscale/tailscaled.sock"),
+    netbirdFlagsPath: "/sys/class/net/" + env("NETBIRD_INTERFACE", "wt0") + "/flags",
   };
-  const handle = createHandler(config, { fetch: globalThis.fetch, readFile: path => readFile(path, "utf8") });
+  const handle = createHandler(config, { fetch: globalThis.fetch, readFile: path => readFile(path, "utf8"), unixGet });
   const port = Number(env("PORT", "8080"));
   createServer((req, res) => void serve(handle, req, res)).listen(port, () => console.log(JSON.stringify({ msg: "region picker listening", name, port })));
 }
