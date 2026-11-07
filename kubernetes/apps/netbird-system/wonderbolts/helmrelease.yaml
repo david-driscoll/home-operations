@@ -6,7 +6,7 @@
 # agent for its state on every request and keeps nothing.
 #
 # Served at wonderbolts.<root domain> behind Authentik forward auth (the route
-# below; ../region-exits/definition.yaml is its Authentik application). To
+# below; ./definition.yaml is its Authentik application). To
 # reach it without the Gateway, `kubectl port-forward` and send the
 # X-authentik-* headers by hand.
 apiVersion: helm.toolkit.fluxcd.io/v2

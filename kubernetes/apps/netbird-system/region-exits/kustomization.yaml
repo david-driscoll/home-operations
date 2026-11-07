@@ -7,7 +7,6 @@ resources:
   - ./externalsecret.yaml
   - ./tailscale-authkey.yaml
   - ./helmrelease.yaml
-  - ./definition.yaml
   - ./prometheusrule.yaml
 configMapGenerator:
   # The region exit agent (#3140, ADR 0006), a real .ts file so tsc, biome

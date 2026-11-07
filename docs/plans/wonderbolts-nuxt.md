@@ -1,8 +1,9 @@
 # The region picker as a Nuxt app
 
-**Status:** live 2026-11-07. Phases 1-4 are merged (#3184, #3185, #3186, #3189, plus #3187,
-the image-base fix). Phase 5 is the cleanup PR; phases 6 (friends) and 7 (moving
-`definition.yaml`) follow it. Owner: David. Decision
+**Status:** live 2026-11-07. Phases 1-5 are merged (#3184, #3185, #3186, #3189, #3190, plus
+#3187, the image-base fix). Phase 6 (friends, with the prune guard) and phase 7 (moving
+`definition.yaml`) are two PRs, prepared together and merged in that order. Follow-up:
+Renovate for the image pin (A8). Owner: David. Decision
 record: [ADR 0006](../adr/0006-region-picker-own-app.md), amending ADR 0005. Replaces the
 pages in [region-exits.md §D4](region-exits.md#d4-region-picker). Terms: GLOSSARY.md (Region
 exit, Region, Region picker).
