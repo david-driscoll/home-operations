@@ -13,7 +13,7 @@ import { rootDomain } from "../../components/domains.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { nodeAttrHolders, withoutNodeAttr } from "../../components/tailscale/nodeAttrs.ts";
-import { assertGrantPath } from "../../components/tailscale/policyGuards.ts";
+import { assertExitNodeAccess, assertGrantPath } from "../../components/tailscale/policyGuards.ts";
 import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../../components/tailscale.ts";
 
 /**
@@ -34,7 +34,20 @@ import { getDnsMachines, getTailscaleIp, reconcileTailnetNameservers } from "../
  * tagOwners is rebuilt from this same constant, so no tag outside it can be
  * applied. On 2026-09-27 all 16 tags on the 37 tagged devices were in it.
  */
-const internetFacingTags: readonly string[] = [tag.funnel, tag.netbirdEdge];
+const internetFacingTags: readonly string[] = [tag.funnel, tag.netbirdEdge, tag.regionExit];
+
+/**
+ * The tags the estate's ordinary exit nodes carry (every live one carried
+ * tag:exit-node on 2026-11-06; the others are what autoApprovers.exitNode
+ * approves). member-exit-node is limited to these with `via`, which is what
+ * keeps tag:region-exit to its own grant: grants are a union, and a
+ * member-exit-node without `via` would open every exit node to every member.
+ *
+ * tag:region-exit is also in internetFacingTags above, not because it parses
+ * public traffic but because a region exit needs nothing on the tailnet: it
+ * only forwards its clients out through Mullvad.
+ */
+const ordinaryExitNodeTags = [tag.exitNode, tag.proxmox, tag.sgc, tag.equestria];
 const taggedExceptInternetFacing = Object.values(tag).filter(t => !internetFacingTags.includes(t));
 
 export interface AggregatedNodeExport {
@@ -156,6 +169,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     configureKubernetesAccess(manager, clusters);
     configureBorder0Pam(manager);
     configureNetbirdEdgeAccess(manager);
+    configureRegionExits(manager);
     createGroupGrants(manager);
 
     // ── General member/admin grants ───────────────────────────────────────
@@ -251,11 +265,24 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [], deny: testData.knownNormalUsers },
     );
 
+    // Two grants where there was one: `via` is a routing constraint on
+    // autogroup:internet, so the device access (tag:exit-node on any port)
+    // stays in its own grant, unchanged.
     manager.setGrant(
       "member-exit-node",
       {
         src: [autogroups.member, ...taggedExceptInternetFacing],
-        dst: [tag.exitNode, autogroups.internet],
+        dst: [autogroups.internet],
+        ip: ["*"],
+        via: ordinaryExitNodeTags,
+      },
+      { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
+    );
+    manager.setGrant(
+      "member-exit-node-devices",
+      {
+        src: [autogroups.member, ...taggedExceptInternetFacing],
+        dst: [tag.exitNode],
         ip: ["*"],
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
@@ -642,6 +669,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     );
 
     const policyJson = pulumi.output(manager.getJson()).apply(json => {
+      assertRegionExitAccess(json);
       assertGrantPath(json, tag.egress, tag.dockge, ports.garageS3Vip.map(String), "That is the cluster's path to the garage-s3 VIP, and Pulumi state lives behind it -- restore the `garage-s3-vip-egress` grant.");
       assertGrantPath(
         json,
@@ -887,6 +915,45 @@ function configureDnsAccess(manager: TailscaleAclManager) {
 }
 
 /**
+ * The region exits (docs/plans/region-exits.md §C3, ADR 0005): exit nodes that
+ * leave through Mullvad, minted with a tag:region-exit auth key by
+ * region-exit-authkey.ts. tag:proxmox owns the tag because that is the tag the
+ * Pulumi OAuth client mints keys under (see configureNetbirdEdgeAccess).
+ *
+ * The grant carries no Tailscale `tests`: they cannot spell autogroup:internet
+ * or `via`. assertRegionExitAccess checks the rendered policy instead.
+ */
+function configureRegionExits(manager: TailscaleAclManager) {
+  manager.setTagOwner(tag.proxmox, [tag.regionExit]);
+  manager.setExitNode(tag.regionExit);
+  manager.setGrant(
+    "region-exit",
+    {
+      src: [groups.friendsAndFamily, autogroups.admin],
+      dst: [autogroups.internet],
+      ip: ["*"],
+      via: [tag.regionExit],
+    },
+    () => [],
+  );
+}
+
+/**
+ * Who may use a region exit, checked on the policy about to be written, as
+ * assertGrantPath checks the paths Pulumi itself depends on. Principals are
+ * the selectors a device matches: a friends-and-family user is a member in
+ * group:fnf, any other user only a member.
+ */
+function assertRegionExitAccess(json: string) {
+  const regionExit = [tag.regionExit];
+  const why = "Region exits are for friends and family and admins only (docs/plans/region-exits.md §A) -- check the `region-exit` and `member-exit-node` grants.";
+  assertExitNodeAccess(json, "friends and family", [autogroups.member, groups.friendsAndFamily], regionExit, true, why);
+  assertExitNodeAccess(json, "admins", [autogroups.member, autogroups.admin], regionExit, true, why);
+  assertExitNodeAccess(json, "other members", [autogroups.member], regionExit, false, why);
+  assertExitNodeAccess(json, "members", [autogroups.member], [tag.exitNode], true, "Members lost the ordinary exit nodes -- restore `member-exit-node` and its `via`.");
+}
+
+/**
  * The OCI and Azure VMs that host the NetBird control plane (stacks/netbird-edge). Their
  * public NSG has no port 22: this grant is the admin path in. tag:proxmox owns
  * the tag because that is the tag the Pulumi OAuth client mints keys under, as
@@ -1111,7 +1178,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: reado
             "10.10.206.101:443", // member-home-subnet-access (equestria gateway)
             `${tag.equestria}:443`, // member-cluster-web
             `${tag.ingress}:443`, // member-cluster-web
-            `${tag.exitNode}:443`, // member-exit-node (ip "*", so any port)
+            `${tag.exitNode}:443`, // member-exit-node-devices (ip "*", so any port)
           ],
         },
       ] as TailscaleTest[],

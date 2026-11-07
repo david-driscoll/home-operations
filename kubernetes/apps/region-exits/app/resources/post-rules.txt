@@ -1,0 +1,24 @@
+# gluetun's /iptables/post-rules.txt (docs/plans/region-exits.md §D3).
+#
+# gluetun runs each line starting `iptables `, `iptables-nft ` or
+# `iptables-legacy ` with the backend it detected, and skips every other line
+# (internal/firewall/iptables.go runUserPostRules). On Talos that backend is
+# nft. It applies them once, when its firewall is enabled at startup;
+# reconnects and region switches only swap the VPN-server rules
+# (internal/firewall/vpn.go), so these stay.
+#
+# The kill switch itself is NOT here: it is the mangle FORWARD drop in
+# routing.sh. tailscaled's ts-forward accepts client traffic before
+# gluetun's FORWARD policy is reached, so filter-table rules cannot fail
+# closed on their own.
+#
+# Client traffic from tailscale0 out the tunnel, and the replies back.
+iptables -A FORWARD -i tailscale0 -o tun0 -j ACCEPT
+iptables -A FORWARD -i tun0 -o tailscale0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# Clients leave with the tunnel's address. tailscaled masquerades its
+# forwarded traffic too (ts-postrouting); this keeps it so if that changes.
+iptables -t nat -A POSTROUTING -s 100.64.0.0/10 -o tun0 -j MASQUERADE
+# tailscaled's own packets (routing.sh rule 90) through gluetun's OUTPUT DROP
+# policy, out eth0 to the home WAN.
+iptables -A OUTPUT -o eth0 -m mark --mark 0x80000/0xff0000 -j ACCEPT
+# Nothing accepts forwarded traffic to eth0: the region exit fails closed.

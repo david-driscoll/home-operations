@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./tailscale-authkey.yaml
+  - ./helmrelease.yaml
+configMapGenerator:
+  # Each region exit's default region (§A), in gluetun's servers.json names
+  # ("USA", not "United States"). A region picked later lives in
+  # region-exit-<name>-state, which Flux does not manage and which wins (the
+  # gluetun container's envFrom order).
+  - name: region-exit-spitfire-defaults
+    literals:
+      - SERVER_COUNTRIES=USA
+  # The routing init container's script and gluetun's post-rules. Flux
+  # post-build substitution is disabled on both, so they may use shell `$`.
+  - name: region-exit-routing
+    files:
+      - ./resources/routing.sh
+      - ./resources/post-rules.txt
+    options:
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+generatorOptions:
+  # Referenced by name from HelmRelease values, which kustomize cannot rewrite.
+  # Reloader rolls the pod when they change.
+  disableNameSuffixHash: true

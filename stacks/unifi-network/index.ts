@@ -5,6 +5,7 @@ import { assignTailscaleAcls } from "./acl-manager.ts";
 import { KubernetesTailscaleAuthKeyComponent } from "./KubernetesTailscaleAuthKey.ts";
 import { configureLocalDns } from "./local-dns.ts";
 import { configureNetbirdHomeRelay } from "./netbird-relay.ts";
+import { createRegionExitAuthKey } from "./region-exit-authkey.ts";
 import { createTailnetEgressServices, discoverServerKinds } from "./tailnet-egress.ts";
 import { configureTailscaleApiToken } from "./tailscale-api-token.ts";
 import { createTailscaleAttDropFirewallRule } from "./tailscale-drop-firewall-rule.ts";
@@ -46,6 +47,10 @@ globals.store.getKubernetesClusters().apply(clusters => {
       globals,
       credentials: globals.tailscaleCredential,
     });
+    // The region exits run on Equestria only (kubernetes/apps/region-exits).
+    if (cluster.key === "equestria") {
+      createRegionExitAuthKey(globals, provider);
+    }
   }
 });
 
