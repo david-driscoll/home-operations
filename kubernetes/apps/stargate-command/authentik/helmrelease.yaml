@@ -198,7 +198,7 @@ spec:
           # incident docs/cluster-consolidation/07-authentik-to-alpha-site.md
           # was written around.
           hostnames:
-            - authentik.${CLUSTER_DOMAIN}
+            - authentik.sgc.${ROOT_DOMAIN}
           annotations:
             external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
           parentRefs:

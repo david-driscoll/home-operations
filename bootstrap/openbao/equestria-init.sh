@@ -198,7 +198,7 @@ path "auth/oidc/role/*" {
 # docs/postgres-credentials/PLAN.md), managed by stacks/system.
 #
 # Named paths, never `database/*` wholesale and never `sys/mounts/*`, for the
-# same reason as the oidc and kubernetes-sgc grants above: Pulumi may manage
+# same reason as the oidc grants above: Pulumi may manage
 # THIS engine and may not mount arbitrary others.
 #
 # `sudo` on sys/mounts/database is unavoidable — enabling and tuning a secrets
@@ -228,39 +228,6 @@ path "database/static-roles/*" {
 # (see the split-brain note in the plan).
 path "database/rotate-role/*" {
   capabilities = ["create", "update"]
-}
-
-# SGC's kubernetes auth mount (Phase 7), managed by
-# components/openbao/clusterAuth.ts. Same shape and same reasoning as the oidc
-# grants above: named paths, never sys/auth/* or sys/mounts/auth/*, so Pulumi
-# can manage THIS mount and cannot enable arbitrary others.
-#
-# It needed a mount of its own because `auth/kubernetes` is configured with
-# kubernetes_host="https://kubernetes.default.svc:443" — equestria's own API
-# server — so it can only validate equestria ServiceAccount tokens. See the
-# warning in configure_kubernetes_auth() below.
-#
-# ⚠️ VESTIGIAL. SGC was decommissioned 2026-08-17 and equestria is the only
-# cluster left, so nothing logs in through `kubernetes-sgc` any more. These
-# grants and the `eso-sgc` policy written below are deliberately left in place:
-# retiring them is step 4 of Phase 2 in
-# docs/cluster-consolidation/22-decommission-sgc.md, which also hand-deletes
-# the server-side mount. Do not drop them here in isolation — the mount would
-# outlive the grant that lets Pulumi clean it up.
-path "sys/auth/kubernetes-sgc" {
-  capabilities = ["create", "read", "update", "delete", "sudo"]
-}
-path "sys/mounts/auth/kubernetes-sgc" {
-  capabilities = ["read", "update", "sudo"]
-}
-path "sys/mounts/auth/kubernetes-sgc/tune" {
-  capabilities = ["read", "update", "sudo"]
-}
-path "auth/kubernetes-sgc/config" {
-  capabilities = ["create", "read", "update"]
-}
-path "auth/kubernetes-sgc/role/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
 }
 
 # Coder workspaces: a `jwt` auth mount that trusts the OIDC access tokens
@@ -316,7 +283,9 @@ EOF
   ok "wrote policy eso-postgres-rotation"
 
   local cluster push_grants
-  for cluster in equestria sgc; do
+  # One cluster today; kept a loop so the next one is a one-word change.
+  # shellcheck disable=SC2043
+  for cluster in equestria; do
     # THE ONE WRITE. equestria's ESO pushes the NetBird `*.nb` certificate
     # (kubernetes/apps/netbird-system/nbidp/app-wildcard-pushsecret.yaml,
     # docs/plans/netbird-mirror.md D39) to this single path, and may write
@@ -511,7 +480,7 @@ status() {
   done
 
   local p
-  for p in admin pulumi eso-equestria eso-sgc viewer; do
+  for p in admin pulumi eso-equestria viewer; do
     if bao policy read "${p}" >/dev/null 2>&1
     then ok "policy ${p} exists"; else warn "policy ${p} MISSING"; ready=1; fi
   done
@@ -887,11 +856,10 @@ setup() {
   # OpenBao reviews the client's own token and there is no long-lived
   # credential to store or rotate.
   #
-  # equestria is the only cluster in the estate today. SGC's `kubernetes-sgc`
-  # mount and `eso-sgc` policy/role still exist server-side — they are
-  # `retainOnDelete`, so removing the Pulumi resource never reached them. They
-  # need hand-deletion: step 4 of Phase 2 in
-  # docs/cluster-consolidation/22-decommission-sgc.md.
+  # equestria is the only cluster in the estate today. The retired SGC
+  # cluster's `kubernetes-sgc` mount and `eso-sgc` policy were deleted by hand
+  # (step 4 of Phase 2 in docs/cluster-consolidation/22-decommission-sgc.md),
+  # and the `pulumi` grants that managed the mount went with them.
   #
   # Applying the widened `pulumi` policy needs an admin token, so it takes one
   # root ceremony: `root-ceremony.sh run`, then re-run this script's `resume`

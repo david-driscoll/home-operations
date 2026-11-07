@@ -12,7 +12,7 @@ spec:
   name: Authentik (Equestria)
   category: ${CLUSTER_TITLE}
   description: The equestria half of active-active authentik, and its database.
-  url: https://authentik.${CLUSTER_DOMAIN}
+  url: https://authentik.sgc.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
   # NO `authentik:` block: authentik cannot be an OAuth client of itself (the
   # same reason docker/alpha-site/authentik/definition.yaml gives).
@@ -27,7 +27,7 @@ spec:
     # /ready/, not /live/: ready includes the database, and "this site cannot
     # reach authentik-pg" is the failure this site exists to be independent of.
     # It is also exactly what keepalived's health check keys on in phase 6.
-    - url: https://authentik.${CLUSTER_DOMAIN}/-/health/ready/
+    - url: https://authentik.sgc.${ROOT_DOMAIN}/-/health/ready/
       method: GET
       interval: 1m
       conditions:

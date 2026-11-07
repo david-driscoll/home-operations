@@ -56,6 +56,57 @@ export function ordinaryExitNodeTags(exitNodeTag: string, approvers: readonly st
   return [...new Set([exitNodeTag, ...approvers.filter(a => a.startsWith("tag:") && !excluded.includes(a))])];
 }
 
+type ApproverPolicy = {
+  tagOwners?: Record<string, string[]>;
+  autoApprovers?: { exitNode?: string[]; routes?: Record<string, string[]>; services?: Record<string, string[]> };
+  grants?: Grant[];
+};
+
+/**
+ * `policyJson` without any tag that tagOwners no longer defines, in the places
+ * a retired tag outlives its owner: autoApprovers (exitNode, and each route and
+ * service, whose key goes too once nothing approves it) and grants' `via`.
+ *
+ * The ACL code rebuilds tagOwners, grants, tests and ssh from scratch, but it
+ * only ever ADDS approvers to autoApprovers, which it carries over from the live
+ * policy, so a retired tag (tag:sgc) stays there after its tagOwners entry is
+ * gone. Tailscale rejects a policy that names an undefined tag, so this is the
+ * last edit before writing it. A policy with no tagOwners at all is returned
+ * unchanged rather than stripped of every tag.
+ *
+ * Throws if pruning would empty a grant's `via`: an empty `via` means any exit
+ * node, so silently pruning it would widen the grant.
+ */
+export function pruneUndefinedTags(policyJson: string): string {
+  const policy = parser.parse(policyJson, [], { allowTrailingComma: true }) as ApproverPolicy;
+  if (!policy?.tagOwners) return policyJson;
+  const defined = new Set(Object.keys(policy.tagOwners));
+  const keep = (selector: string) => !selector.startsWith("tag:") || defined.has(selector);
+
+  const edits: { path: (string | number)[]; value: unknown }[] = [];
+  const exitNode = policy.autoApprovers?.exitNode;
+  if (exitNode && !exitNode.every(keep)) {
+    edits.push({ path: ["autoApprovers", "exitNode"], value: exitNode.filter(keep) });
+  }
+  for (const kind of ["routes", "services"] as const) {
+    for (const [key, approvers] of Object.entries(policy.autoApprovers?.[kind] ?? {})) {
+      if (approvers.every(keep)) continue;
+      const kept = approvers.filter(keep);
+      edits.push({ path: ["autoApprovers", kind, key], value: kept.length > 0 ? kept : undefined });
+    }
+  }
+  (policy.grants ?? []).forEach((grant, index) => {
+    if (!grant.via || grant.via.every(keep)) return;
+    const kept = grant.via.filter(keep);
+    if (kept.length === 0) {
+      throw new Error(`Tailnet policy: grant ${index} routes only via undefined tags (${grant.via.join(", ")}); dropping them would open every exit node. Refusing to write the policy.`);
+    }
+    edits.push({ path: ["grants", index, "via"], value: kept });
+  });
+
+  return edits.reduce((json, { path, value }) => parser.applyEdits(json, parser.modify(json, path, value, { formattingOptions: { insertSpaces: true } })), policyJson);
+}
+
 /** Throws unless canUseExitNode is `expected`; `who` names the principal in the message, `why` explains what depends on it. */
 export function assertExitNodeAccess(policyJson: string, who: string, principal: readonly string[], exitNodeTags: readonly string[], expected: boolean, why: string): void {
   if (canUseExitNode(policyJson, principal, exitNodeTags) === expected) return;

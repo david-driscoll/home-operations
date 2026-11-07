@@ -61,3 +61,7 @@ spec:
     # apps/coder/git-pages). A wildcard so a new Forgejo org publishing pages is
     # not a certificate change.
     - "*.pages.${ROOT_DOMAIN}"
+    # SGC, the stargate-command namespace: its apps that are not primary
+    # services are named <app>.sgc.${ROOT_DOMAIN} (matter, authentik's
+    # cluster-scoped name). One label deeper than *.${ROOT_DOMAIN} reaches.
+    - "*.sgc.${ROOT_DOMAIN}"

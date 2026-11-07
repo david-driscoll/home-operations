@@ -210,7 +210,7 @@ const extraPorts: Record<string, Partial<Record<ServiceKind, PortDef[]>>> = {
  * `clusters/skystar.yaml` was `.disabled`. Parking it is what stopped its eight
  * probes paging; Gatus drops a disabled cluster's endpoints on its own.
  */
-const decommissionedServers = new Set(["sgc"]);
+const decommissionedServers = new Set<string>();
 
 /**
  * Off-site. Their probes get `remote: "true"`, which the generic

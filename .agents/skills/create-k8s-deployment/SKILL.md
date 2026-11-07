@@ -812,21 +812,18 @@ Before creating a new deployment, **always find a similar existing app** to use 
 
 **Web Apps with Postgres + OIDC**:
 - Equestria: `immich`, `vikunja`, `tandoor`
-- Stargate: `oxycloud`
 
 **Dashboards / Simple Apps**:
 - Equestria: `glance`
-- Stargate: none yet
 
 **PVR / Media Management**:
 - Equestria: `radarr`, `sonarr`, `prowlarr`, `lidarr`
 
 **Home Automation**:
-- Stargate: `home-assistant`
+- Equestria, `stargate-command` namespace: `home-assistant`
 
 **Downloads / Cache Apps**:
-- Equestria: `sabnzbd`, `qbittorrent`, `autobrr`
-- Stargate: `tdarr-node`
+- Equestria: `sabnzbd`, `qbittorrent`, `autobrr`, `tdarr`
 
 ### Reference Checklist
 

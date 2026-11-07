@@ -9,7 +9,8 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { assertExitNodeAccess, assertGrantPath, canUseExitNode, missingGrantPorts, ordinaryExitNodeTags } from "./policyGuards.ts";
+import * as parser from "jsonc-parser";
+import { assertExitNodeAccess, assertGrantPath, canUseExitNode, missingGrantPorts, ordinaryExitNodeTags, pruneUndefinedTags } from "./policyGuards.ts";
 
 const policy = (grants: object[]) => `{
   // HuJSON, as the live policy is
@@ -120,7 +121,7 @@ describe("assertExitNodeAccess", () => {
 // approves, minus tag:region-exit, led by tag:exit-node itself.
 describe("ordinaryExitNodeTags", () => {
   it("keeps the approved tags, drops the excluded ones and leads with the exit-node tag", () => {
-    assert.deepEqual(ordinaryExitNodeTags("tag:exit-node", ["tag:proxmox", "tag:region-exit", "tag:sgc"], ["tag:region-exit"]), ["tag:exit-node", "tag:proxmox", "tag:sgc"]);
+    assert.deepEqual(ordinaryExitNodeTags("tag:exit-node", ["tag:proxmox", "tag:region-exit", "tag:equestria"], ["tag:region-exit"]), ["tag:exit-node", "tag:proxmox", "tag:equestria"]);
   });
 
   it("ignores approvers that are not tags, and duplicates", () => {
@@ -132,5 +133,68 @@ describe("ordinaryExitNodeTags", () => {
     const proxmoxInternet = { src: ["tag:proxmox"], dst: ["autogroup:internet"], ip: ["*"], via };
     assert.equal(canUseExitNode(policy([proxmoxInternet]), ["tag:proxmox"], ["tag:region-exit"]), false);
     assert.equal(canUseExitNode(policy([proxmoxInternet]), ["tag:proxmox"], ["tag:exit-node"]), true);
+  });
+});
+
+describe("pruneUndefinedTags", () => {
+  // The shape tag:sgc left behind: tagOwners rebuilt without it, every
+  // approver list and `via` still carried over from the live policy.
+  const retired = (extra: object = {}) =>
+    `{
+  // HuJSON, as the live policy is
+  "tagOwners": { "tag:equestria": [], "tag:proxmox": [], "tag:exit-node": [] },
+  "autoApprovers": {
+    "exitNode": ["tag:proxmox", "tag:sgc", "tag:equestria"],
+    "routes": {
+      "10.10.0.0/16": ["tag:equestria", "tag:sgc", "group:admins"],
+      "10.209.0.0/16": ["tag:sgc"],
+    },
+    "services": { "svc:loki": ["tag:sgc", "tag:equestria"], "svc:gone": ["tag:sgc"] },
+  },
+  "grants": [{ "src": ["autogroup:member"], "dst": ["autogroup:internet"], "ip": ["*"], "via": ["tag:exit-node", "tag:sgc"] }],
+  ${Object.entries(extra)
+    .map(([k, v]) => `"${k}": ${JSON.stringify(v)},`)
+    .join("\n")}
+}`;
+  const parse = (json: string) => parser.parse(json, [], { allowTrailingComma: true });
+
+  it("drops a retired tag from every approver list and via", () => {
+    const pruned = parse(pruneUndefinedTags(retired()));
+    assert.deepEqual(pruned.autoApprovers.exitNode, ["tag:proxmox", "tag:equestria"]);
+    assert.deepEqual(pruned.autoApprovers.routes["10.10.0.0/16"], ["tag:equestria", "group:admins"]);
+    assert.deepEqual(pruned.autoApprovers.services["svc:loki"], ["tag:equestria"]);
+    assert.deepEqual(pruned.grants[0].via, ["tag:exit-node"]);
+  });
+
+  it("removes a route or service that nothing approves any more", () => {
+    const pruned = parse(pruneUndefinedTags(retired()));
+    assert.equal("10.209.0.0/16" in pruned.autoApprovers.routes, false);
+    assert.equal("svc:gone" in pruned.autoApprovers.services, false);
+  });
+
+  it("keeps groups, users and autogroups, which are not tags", () => {
+    const pruned = parse(pruneUndefinedTags(retired()));
+    assert.ok(pruned.autoApprovers.routes["10.10.0.0/16"].includes("group:admins"));
+  });
+
+  it("leaves a policy whose tags are all defined byte-for-byte unchanged", () => {
+    const clean = `{
+  "tagOwners": { "tag:equestria": [] },
+  "autoApprovers": { "exitNode": ["tag:equestria"], "routes": { "10.10.0.0/16": ["tag:equestria"] } },
+}`;
+    assert.equal(pruneUndefinedTags(clean), clean);
+  });
+
+  it("leaves a policy with no tagOwners alone instead of pruning every tag", () => {
+    const noOwners = `{ "autoApprovers": { "exitNode": ["tag:equestria"] } }`;
+    assert.equal(pruneUndefinedTags(noOwners), noOwners);
+  });
+
+  it("refuses to empty a via, which would open every exit node", () => {
+    const onlyRetired = `{
+  "tagOwners": { "tag:equestria": [] },
+  "grants": [{ "src": ["autogroup:member"], "dst": ["autogroup:internet"], "ip": ["*"], "via": ["tag:sgc"] }],
+}`;
+    assert.throws(() => pruneUndefinedTags(onlyRetired), /open every exit node/);
   });
 });

@@ -118,6 +118,10 @@ _Avoid_: DNS gateway, resolver peer
 An app's name under the root domain (`<app>.<root domain>`), reached on the LAN or through a gateway.
 _Avoid_: Internal URL, LAN URL
 
+**SGC**:
+Stargate Command, the namespace in Equestria that holds identity and home automation (Authentik, Home Assistant, Matter, Mosquitto, chrony). Its apps that are not primary services are named under `sgc.<root domain>`. It was once a cluster of its own; that cluster is retired, and nothing else is called SGC.
+_Avoid_: SGC cluster (retired), Stargate Command cluster
+
 **Short name**:
 An app's name on its own (`jellyfin`), which a client device completes to the app's app route on every network.
 _Avoid_: Hostname, single-label name, alias
@@ -141,3 +145,45 @@ _Avoid_: nbidp (that is one service it serves), ingress
 **nbidp**:
 The passwordless "log in with NetBird" path on Authentik, which recognises a person by the NetBird device they are using.
 _Avoid_: NetBird SSO, NetBird login (that is NetBird's own login)
+
+## Network map
+
+**Network map**:
+The single picture of the estate's networks (the UniFi site LANs, the tailnet, NetBird) and the machines and apps on them, refreshed hourly to show the estate as it is now.
+_Avoid_: Topology, inventory, CMDB
+
+**Machine**:
+One physical or virtual computer, appearing once in the network map however many networks it is on. A container or VM with its own network presence (a NetBird gateway container, an LXC) is its own machine, hosted on another.
+_Avoid_: Device, host, node (when you mean the computer itself)
+
+**Interface**:
+A machine's presence on one network, with its address there: a UniFi client on one VLAN, a Tailscale device, a NetBird peer. A machine has one interface per network it is on.
+_Avoid_: Membership, NIC, peer (when you mean the presence rather than the machine)
+
+**App**:
+One thing people use (Jellyfin, Authentik), shown once in the network map with its app route, tailnet route and app service, and linked to the machine that runs it.
+_Avoid_: Service, endpoint, workload (when you mean the app as people know it)
+
+**Entry point**:
+The thing listening where one of an app's names leads: the Traefik in front of Equestria or a Dockge host for an app route, a Tailscale Service for a tailnet route, the proxy cluster for an app service.
+_Avoid_: Ingress, frontend, load balancer (when you mean the role rather than the box)
+
+**Declared**:
+What the repo on main says the estate should have: the machines, apps, policies and routes written down in code and manifests.
+_Avoid_: Desired, intended, config (the control planes' live settings are observed, not declared)
+
+**Observed**:
+What the control planes and hosts report right now, as of the network map's last refresh.
+_Avoid_: Actual, live, discovered
+
+**Drift**:
+A difference between declared and observed: something declared but not observed, observed but not declared, or both with different details.
+_Avoid_: Mismatch, discrepancy, out of sync
+
+**Reach**:
+Permission for one thing (a user group, a machine) to connect to another (a machine, an app, a network), granted by a Tailscale grant, a NetBird policy, a UniFi firewall zone policy or an app's access policy. Reach says what is allowed, not what is routable.
+_Avoid_: Access (ambiguous with access policy), connectivity, permission
+
+**Path**:
+The chain of interfaces, gateways, routers and entry points that traffic from one thing to another crosses, where every hop is both routed and permitted by reach. A route without reach, or reach without a route, is drift, not a path.
+_Avoid_: Route (one hop of a path), flow, connection

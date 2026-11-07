@@ -44,13 +44,6 @@ export interface KubernetesCluster {
  */
 export const kubernetesClusters: readonly KubernetesCluster[] = [
   {
-    tag: "tag:sgc" as TailscaleTags,
-    clusterNetwork: "10.209.0.0/16" as TailscaleCidr,
-    serviceNetwork: "10.199.0.0/16" as TailscaleCidr,
-    kubeApiIp: "10.10.209.201" as TailscaleIp,
-    publicIps: ["10.199.0.10", "10.10.209.100", "10.10.209.101", "10.10.209.202"] as TailscaleIp[],
-  },
-  {
     tag: "tag:equestria" as TailscaleTags,
     clusterNetwork: "10.206.0.0/16" as TailscaleCidr,
     serviceNetwork: "10.196.0.0/16" as TailscaleCidr,
@@ -69,19 +62,6 @@ const dnsServers = {
   Discord: {
     ips: ["10.10.0.1"],
     uptime: true,
-    use: false,
-    internal: true,
-  },
-  // SGC was decommissioned and its three nodes wiped on 2026-08-17 (see
-  // docs/cluster-consolidation/22-decommission-sgc.md); this resolver no longer
-  // answers. `use` feeds dns.internalIps in stacks/unifi-network/local-dns.ts,
-  // so while it was true every IoT and Home DHCP lease still handed clients a
-  // dead nameserver in slot 4. Commit 2244059a dropped it from the Talos global
-  // nameservers but not from this path. Kept rather than deleted so the address
-  // stays on record if the entry is ever revived.
-  "Stargate Command": {
-    ips: ["10.10.209.202"],
-    uptime: false,
     use: false,
     internal: true,
   },
@@ -214,7 +194,6 @@ export const Tailscale = {
     exitNode: "tag:exit-node" as TailscaleTags,
     mediaDevice: "tag:media-device" as TailscaleTags,
     peerRelay: "tag:peer-relay" as TailscaleTags,
-    sgc: "tag:sgc" as TailscaleTags,
     k8s: "tag:k8s" as TailscaleTags,
     equestria: "tag:equestria" as TailscaleTags,
     operator: "tag:operator" as TailscaleTags,
