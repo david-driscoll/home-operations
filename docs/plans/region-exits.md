@@ -168,7 +168,7 @@ steps, never create-before-delete.
 |---|---|---|
 | `routing` (init) | `tailscale/tailscale` (has `ip`, `iptables-nft`) | Sets `ip_forward=1`. Copies the `eth0` routes into table 100. Adds `fwmark 0x80000/0xff0000` (priority 90) and `fwmark 0x1bd00` (91) → table 100, and `to 100.64.0.0/10` → table 52 (95), all ahead of gluetun's 98–101 (§G2). Sets the mangle kill switch (§G7). Technitium's init is the template, but this one fails closed: any failed step keeps the pod down. |
 | `gluetun` | `qmcgaw/gluetun` (digest-pinned) | `VPN_SERVICE_PROVIDER=mullvad`, `VPN_TYPE=wireguard`, `WIREGUARD_PRIVATE_KEY` and `WIREGUARD_ADDRESSES` from an ExternalSecret. `envFrom` takes the defaults ConfigMap, then the state ConfigMap (`optional: true`), so a picked region wins. `HTTP_CONTROL_SERVER_ADDRESS` is loopback only. `FIREWALL_OUTBOUND_SUBNETS` lists Equestria's pod and service CIDRs. `FIREWALL_INPUT_PORTS` lists the picker port and the two WireGuard ports. `DOT=on`. IPv6 is off. Forwarding and the bypass go in `/iptables/post-rules.txt` (§D3). |
-| `netbird` | `netbirdio/netbird` (as the router pins) | `NB_SETUP_KEY` comes from the ExternalSecret. `NB_HOSTNAME=<name>`. `NB_DISABLE_CLIENT_ROUTES=true`, so it never uses another node's exit route. `NB_DISABLE_DNS=true` and `NB_DNS_RESOLVER_ADDRESS=127.0.0.1:5053`, so it stays off gluetun's :53, as Technitium does. State is in an emptyDir: the setup key is ephemeral, so each restart enrols fresh, which is also the only time NB_* env applies. |
+| `netbird` | `netbirdio/netbird` (as the router pins) | `NB_SETUP_KEY` comes from the ExternalSecret. `NB_HOSTNAME=<name>` is the base: the command appends the pod-name suffix (`POD_NAME` from the downward API), so each pod enrols as `<name>-<suffix>` and never waits on the old peer's deletion (§F). The route and policies select the `region-exit-<name>` device group, not the peer name. `NB_DISABLE_CLIENT_ROUTES=true`, so it never uses another node's exit route. `NB_DISABLE_DNS=true` and `NB_DNS_RESOLVER_ADDRESS=127.0.0.1:5053`, so it stays off gluetun's :53, as Technitium does. State is in an emptyDir: the setup key is ephemeral, so each restart enrols fresh, which is also the only time NB_* env applies. |
 | `tailscale` | `tailscale/tailscale` | containerboot with `TS_USERSPACE=false`, `TS_DEBUG_FIREWALL_MODE=nftables` and `TS_ACCEPT_DNS=false`. `TS_HOSTNAME=<name>`. `TS_EXTRA_ARGS=--advertise-exit-node --accept-routes=false`. State goes in a Secret through `TS_KUBE_SECRET`, with RBAC for that Secret only. |
 | `picker` | `node:24-alpine` | The region picker (§D4). It shares a `/gluetun` emptyDir with gluetun, for `servers.json`, and the tailscaled and NetBird daemon sockets through emptyDirs. |
 
@@ -316,16 +316,16 @@ old pod is gone within seconds.
   switch (§G6); sysfs has no per-peer state. The same check as an exec probe on the netbird
   container would fail the whole pod's readiness and take its picker off the route. Revisit if
   NetBird grows a read-only status endpoint.
-- **A restart costs about 10 minutes on NetBird.** Each pod enrols a fresh ephemeral peer (state
-  in an emptyDir), and management won't register a second peer with the same hostname while the
-  old ephemeral one still exists. That one is deleted only about 10 minutes after it goes
-  offline. Until then the new `netbird` container crash-loops ("hostname already registered"),
-  and that region exit is missing from NetBird; Tailscale is unaffected. Seen 2026-11-07: the
-  audit log shows each new `spitfire` peer added seconds after the old one was deleted.
-  Accepted by David on 2026-11-07. The alternatives were a unique `NB_HOSTNAME` per pod, or
-  NetBird state on a PVC with a non-ephemeral key. Expect it after every rollout that touches
-  the pods, including a `region-exit-routing` or `region-exit-picker` change, which Reloader
-  restarts.
+- ~~**A restart costs about 10 minutes on NetBird.**~~ **Resolved 2026-11-07 by per-pod
+  hostnames; old peers age out on their own.** Each pod enrols a fresh ephemeral peer (state in
+  an emptyDir), and management won't register a second peer with the same hostname while the old
+  ephemeral one still exists, which it deletes only about 10 minutes after it goes offline. Seen
+  2026-11-07: the audit log showed each new `spitfire` peer added seconds after the old one was
+  deleted. #3171 kept the pod Ready through that gap (the `netbird` container retries in place
+  rather than crash-looping); David then chose a unique hostname per pod over NetBird state on a
+  PVC with a non-ephemeral key. The peer is now `<name>-<pod name suffix>` (`spitfire-jjvlx`),
+  so a restarted pod rejoins within about a minute and the old peer is deleted on schedule.
+  Routes and policies use the device group, never the peer name (§D2).
 
 ## G. Open risks for the P1 prototype
 

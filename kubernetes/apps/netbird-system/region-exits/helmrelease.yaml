@@ -396,21 +396,23 @@ spec:
             image:
               repository: netbirdio/netbird
               tag: 0.82.0@sha256:eca5b274c635bfbb04ec6724a0712d1146190dd450eea199eeb83916fdd94965
-            # Rerun in place, never crashloop. After a restart, management
-            # refuses this hostname until the old ephemeral peer is deleted
-            # (about 10 minutes offline, plan §F), and the image's entrypoint
-            # exits on that. A crashlooping container makes the whole pod
-            # NotReady, which empties the picker's Services (wonderbolts 503)
-            # for those 10 minutes. Retrying here keeps the pod Ready; the
-            # region exit rejoins NetBird when the old peer ages out. Same
-            # loop as Technitium's sidecar; no shell dollar signs (Flux
-            # post-build substitution would rewrite them).
+            # Each pod enrols as its own peer, `<NB_HOSTNAME>-<pod suffix>`
+            # (spitfire-jjvlx): management refuses a hostname until its old
+            # ephemeral peer is deleted (about 10 minutes offline, plan §F),
+            # so a shared name kept a restarted region exit off NetBird that
+            # long. Now the old peer just ages out. The base is NB_HOSTNAME,
+            # never the pod name (spitfire's pods are
+            # region-exits-<hash>-<suffix>). Still rerun in place, never
+            # crashloop: a crashlooping container makes the pod NotReady and
+            # empties the picker's Services (wonderbolts 503). Same loop as
+            # Technitium's sidecar; no shell dollar signs (Flux post-build
+            # substitution would rewrite them), hence the pipe into xargs.
             command:
               - /bin/bash
               - -c
               - |
                 while true; do
-                  /usr/local/bin/netbird-entrypoint.sh || echo "netbird exited; restarting in 30s"
+                  { printenv NB_HOSTNAME; printenv POD_NAME | sed 's/.*-//'; } | paste -sd- | xargs -I{} env NB_HOSTNAME={} /usr/local/bin/netbird-entrypoint.sh || echo "netbird exited; restarting in 30s"
                   sleep 30
                 done
             env: &netbird-env
@@ -420,7 +422,12 @@ spec:
                   secretKeyRef:
                     name: region-exit-spitfire-netbird
                     key: NB_SETUP_KEY
+              # The base name; the command appends the pod-name suffix.
               NB_HOSTNAME: spitfire
+              POD_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
               # A routing peer, never a client: it must not pick up another
               # peer's exit route.
               NB_DISABLE_CLIENT_ROUTES: "true"
