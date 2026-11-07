@@ -44,15 +44,16 @@ Apps that ship always-up from day one (Tracearr, AIOStreams, Postiz, …) are no
 anywhere else. To see what actually sheds, read the cluster rather than this file:
 
 ```bash
-for ns in equestria github-actions region-exits; do
+for ns in equestria github-actions; do
   kubectl get deploy,sts,cronjob -n "$ns" -o json | jq -r '.items[]
     | select(.metadata.annotations["downscaler/exclude"] != "true")
     | "\(.kind)/\(.metadata.namespace)/\(.metadata.name)"'
 done
 ```
 
-Those three are the only non-excluded namespaces with workloads today. A new namespace
-sheds by default unless it is added to `excludedNamespaces`.
+Those two are the only non-excluded namespaces with workloads today (the region exits
+moved into the excluded `netbird-system` on 2026-11-07, 79e0d892). A new namespace sheds by
+default unless it is added to `excludedNamespaces`.
 
 ## Revision, 2026-09-05 — two controllers now: a clock and a request
 
