@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useTemplate: no template literals in this file. It ships as a ConfigMap, and Flux envsubst and the hk eso lint both read a dollar-brace as a variable.
 /**
- * The region picker's GET /metrics (docs/plans/region-exits.md §D5): the
+ * The region exit agent's GET /metrics (docs/plans/region-exits.md §D5): the
  * Prometheus text for one region exit's status. Every series carries
  * `region_exit="<name>"`, so the five region exits share one PrometheusRule
  * (prometheusrule.yaml), which alerts on:

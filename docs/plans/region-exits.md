@@ -231,33 +231,35 @@ region exit (decided 2026-11-07, ADR 0005).
 
 ### D4. Region picker
 
-- One script, run in every pod. It knows its own name from env and reaches the others through
-  their Services.
+Amended 2026-11-07 by [ADR 0006](../adr/0006-region-picker-own-app.md) and
+[wonderbolts-nuxt.md](wonderbolts-nuxt.md). The pages are now their own Nuxt app,
+`apps/wonderbolts`, deployed as `kubernetes/apps/netbird-system/wonderbolts`. What stays in
+each pod is the agent, the `picker` container (`picker.ts`), which serves JSON only.
+
+- **The agent**, one script run in every pod, knows its own name from env:
   - **`GET /status`** (JSON) reports: region, tunnel up, the Mullvad egress country (gluetun's
-    public-IP endpoint), whether NetBird and Tailscale are connected, and active clients.
-    It also reports one derived `availability` (`overlays.ts` `availabilityOf`): `online`,
-    `degraded` with the overlay that is offline (as for ~10 minutes on NetBird after a restart,
-    §F), or `offline` (tunnel down, or both overlays down). The overview adds `unreachable` for
-    a `/status` that fails or times out.
+    public-IP endpoint), whether NetBird and Tailscale are connected, active clients, and the
+    last move (who and when, from the state ConfigMap's annotations). It also reports one
+    derived `availability` (`overlays.ts` `availabilityOf`): `online`, `degraded` with the
+    overlay that is offline (as for ~10 minutes on NetBird after a restart, §F), or `offline`
+    (tunnel down, or both overlays down).
   - **`GET /metrics`** serves the same values for Prometheus, plus `region_exit_available`
     (online or degraded).
-  - **`GET /`** shows the overview built from every region exit's `/status`: a plain-language
-    status badge per region exit from that `availability`, and when it last checked.
-  - **`GET /<name>`** shows the same status at the top, with what still works when it is
-    degraded or offline, and offers country and city from gluetun's `servers.json`. Both
-    dropdowns start on the current region (the city list is the current country's, rendered
-    server-side, with "Any city" when none is set). Quick buttons beside the country dropdown
-    (`QUICK_COUNTRIES`: USA, Canada, UK) move it to that country with no city through the same
-    POST, confirmation included; the current one is shown disabled. Neither needs JavaScript.
-  - **`POST /<name>/region`** asks for confirmation when anyone is on the region exit. It then
-    patches the `region-exit-<name>-state` ConfigMap (RBAC: get, create and patch on that name
-    only) and calls gluetun's control API to reconnect.
+  - **`GET /regions`** lists the countries and cities in gluetun's `servers.json`.
+  - **`POST /region`** (JSON, with `movedBy`) answers 409 while anyone is on the region exit,
+    until the move is confirmed. It then patches the `region-exit-<name>-state` ConfigMap
+    (RBAC: get, create and patch on that name only) and calls gluetun's control API to
+    reconnect.
+  - Its CNP admits only the app's pods (and Prometheus for `/metrics`, the kubelet for
+    `/healthz`).
+- **The app** shows the overview at `/` (refreshed every 30 s) and each region exit at
+  `/<name>`. It adds `unreachable` for an agent that doesn't answer. Family and admins move
+  region exits: quick countries (USA, Canada, UK), or a country and an optional city, with a
+  confirm step when the agent asks for one. The app refuses everyone else.
 - Active clients are distinct overlay sources (`10.100.0.0/16` or `100.64.0.0/10`) with a
   conntrack entry out of `tun0` in the last few minutes.
-- `HTTPRoute` `wonderbolts.${ROOT_DOMAIN}` on Gateway `internal` in `network`, with middleware
-  `authenticated-user`:
-  - `/<name>` routes to that region exit's Service;
-  - `/` routes to a Service selecting all five.
+- `HTTPRoute` `wonderbolts` (`wonderbolts.${ROOT_DOMAIN}`) on Gateway `internal` in
+  `network`, with middleware `authenticated-user`, routes everything to the app.
 - `definition.yaml`: `authentik.proxy.mode: forward_single`, `groups: [family, admins]`. The
   pattern is `kubernetes/apps/equestria/downloads/qbittorrent`.
 - No `$` in inline scripts: Flux post-build substitution rewrites it (see Technitium's init).

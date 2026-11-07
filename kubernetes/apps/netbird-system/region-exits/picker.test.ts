@@ -2,7 +2,7 @@
 /**
  * node --test kubernetes/apps/netbird-system/region-exits/picker.test.ts
  *
- * The region picker, through its HTTP handler: what /status reports, what the
+ * The region exit agent, through its HTTP handler: what /status reports, what the
  * page offers from gluetun's servers.json, and what a switch writes to the
  * state ConfigMap and asks of gluetun's control API. gluetun and the
  * Kubernetes API are faked at fetch; servers.json at readFile.
@@ -20,8 +20,6 @@ const config: PickerConfig = {
   kubeUrl: "https://kubernetes.default.svc",
   serversPath: "/gluetun/servers.json",
   tokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
-  regionExits: ["spitfire", "soarin"],
-  statusUrl: name => "http://" + name + ".peer:8080/status",
   tailscaleSocket: "/var/run/tailscale/tailscaled.sock",
   netbirdFlagsPath: "/sys/class/net/wt0/flags",
 };
@@ -134,10 +132,10 @@ function picker(routes: Record<string, Route> = {}, tailscale: unknown = TAILSCA
 
 const get = (path: string, accept = "application/json") => new Request("http://picker" + path, { headers: { Accept: accept } });
 
-describe("GET /spitfire/regions", () => {
+describe("GET /regions", () => {
   it("offers Mullvad WireGuard countries, each with its cities, sorted and without repeats", async () => {
     const { handle } = picker();
-    const response = await handle(get("/spitfire/regions"));
+    const response = await handle(get("/regions"));
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), [
       { country: "Canada", cities: ["Toronto ON"] },
@@ -215,11 +213,6 @@ describe("GET /status", () => {
     });
   });
 
-  it("is also served under the region exit's own path, where the route sends it", async () => {
-    const { handle } = picker(gluetunUp);
-    assert.equal((await (await handle(get("/spitfire/status"))).json()).name, "spitfire");
-  });
-
   it("reports a region with no city as city null", async () => {
     const { handle } = picker({ ...gluetunUp, ["GET " + G + "/v1/vpn/settings"]: () => json({ provider: { server_selection: { countries: ["USA"], cities: null } } }) });
     assert.deepEqual((await (await handle(get("/status"))).json()).region, { country: "USA", city: null });
@@ -270,151 +263,6 @@ describe("GET /status", () => {
     const body = await (await handle(get("/status"))).json();
     assert.deepEqual(body.tunnel, { up: false, status: "stopping" });
     assert.equal(body.egress, null);
-  });
-});
-
-describe("GET /spitfire", () => {
-  it("shows the current region and tunnel, and a form offering every country", async () => {
-    const { handle } = picker(gluetunUp);
-    const response = await handle(get("/spitfire", "text/html"));
-    assert.equal(response.status, 200);
-    assert.match(response.headers.get("content-type") ?? "", /text\/html/);
-    const html = await response.text();
-    assert.match(html, /Tokyo, Japan/);
-    assert.match(html, /connected/);
-    assert.match(html, /<form method="post" action="\/spitfire\/region"/);
-    assert.match(html, /<option value="Japan" selected>Japan<\/option>/);
-    assert.match(html, /<option value="USA">USA<\/option>/);
-    // The cities, for the page's script to narrow by country.
-    assert.match(html, /"Dallas TX","New York NY"/);
-  });
-
-  /** The page with gluetun connected in `countries`/`cities`. */
-  const pageIn = async (countries: string[], cities: string[] | null) =>
-    (await picker({ ...gluetunUp, ["GET " + G + "/v1/vpn/settings"]: () => json({ provider: { server_selection: { countries, cities } } }) }).handle(get("/spitfire", "text/html"))).text();
-  /** The city <select>'s options, as served. */
-  const citySelect = (html: string) => html.match(/<select id="city"[^>]*>([\s\S]*?)<\/select>/)?.[1] ?? assert.fail("no city select");
-
-  it("preselects the current city, among the current country's cities only", async () => {
-    const cities = citySelect(await pageIn(["Japan"], ["Tokyo"]));
-    assert.equal(cities, '<option value="">Any city</option><option value="Osaka">Osaka</option><option value="Tokyo" selected>Tokyo</option>');
-  });
-
-  it("preselects Any city when the region exit has no city", async () => {
-    const html = await pageIn(["USA"], null);
-    assert.match(html, /<option value="USA" selected>USA<\/option>/);
-    assert.equal(citySelect(html), '<option value="" selected>Any city</option><option value="Dallas TX">Dallas TX</option><option value="New York NY">New York NY</option>');
-  });
-
-  it("offers the first country's cities when there is no current region", async () => {
-    assert.equal(citySelect(await (await picker({}).handle(get("/spitfire", "text/html"))).text()), '<option value="" selected>Any city</option><option value="Toronto ON">Toronto ON</option>');
-  });
-
-  it("offers USA, Canada and UK as one-click moves, each posting a country with no city", async () => {
-    const html = await pageIn(["Japan"], ["Tokyo"]);
-    assert.match(html, /<form id="quick" method="post" action="\/spitfire\/region"><\/form>/);
-    assert.match(html, /<button form="quick" name="country" value="USA">USA<\/button><button form="quick" name="country" value="Canada">Canada<\/button><button form="quick" name="country" value="UK">UK<\/button>/);
-  });
-
-  it("marks the current country's quick button and disables it", async () => {
-    const html = await pageIn(["Canada"], ["Toronto ON"]);
-    assert.match(html, /<button form="quick" name="country" value="Canada" disabled aria-current="true">Canada \(current\)<\/button>/);
-    assert.match(html, /<button form="quick" name="country" value="USA">USA<\/button>/);
-  });
-
-  it("preselects and marks the current region when gluetun reports it lowercased", async () => {
-    const html = await pageIn(["canada"], ["toronto on"]);
-    assert.match(html, /Region: <strong>Toronto ON, Canada<\/strong>/);
-    assert.match(html, /<option value="Canada" selected>Canada<\/option>/);
-    assert.match(html, /<option value="Toronto ON" selected>Toronto ON<\/option>/);
-    assert.match(html, /<button form="quick" name="country" value="Canada" disabled aria-current="true">Canada \(current\)<\/button>/);
-    // The page's script compares against the same spelling as the options.
-    assert.match(html, /const current = \{"country":"Canada","city":"Toronto ON"\};/);
-  });
-
-  it("leaves out a quick country Mullvad does not offer", async () => {
-    const original = files[config.serversPath];
-    files[config.serversPath] = JSON.stringify({ mullvad: { servers: [{ vpn: "wireguard", country: "USA", city: "Dallas TX" }] } });
-    try {
-      const html = await pageIn(["USA"], null);
-      assert.doesNotMatch(html, /value="Canada"/);
-      assert.match(html, /value="USA" disabled/);
-    } finally {
-      files[config.serversPath] = original;
-    }
-  });
-
-  it("escapes names from servers.json", async () => {
-    const original = files[config.serversPath];
-    files[config.serversPath] = JSON.stringify({ mullvad: { servers: [{ vpn: "wireguard", country: "<b>X</b>", city: "</script><script>alert(1)" }] } });
-    try {
-      const html = await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text();
-      assert.doesNotMatch(html, /<b>X<\/b>/);
-      assert.doesNotMatch(html, /<\/script><script>alert/);
-    } finally {
-      files[config.serversPath] = original;
-    }
-  });
-
-  it("says how many people are on it", async () => {
-    await withConntrack(TWO_PEOPLE, async () => {
-      assert.match(await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text(), /2 people are using spitfire right now/);
-    });
-  });
-
-  it("says the tunnel is down when gluetun does not answer", async () => {
-    const html = await (await picker({}).handle(get("/spitfire", "text/html"))).text();
-    assert.match(html, /not connected/);
-  });
-
-  /** Where `text` sits on the page, which must be before the form. */
-  const beforeForm = (html: string, text: RegExp) => {
-    const at = html.search(text);
-    assert.ok(at >= 0, "missing " + text);
-    assert.ok(at < html.indexOf("<form"), text + " should come before the form");
-  };
-
-  it("says it is online, above the form, when the tunnel and both overlays are up", async () => {
-    const html = await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text();
-    beforeForm(html, />Online</);
-  });
-
-  it("says it is offline on NetBird, what still works, and still offers the form", async () => {
-    const original = files[config.netbirdFlagsPath];
-    delete files[config.netbirdFlagsPath];
-    try {
-      const html = await (await picker(gluetunUp).handle(get("/spitfire", "text/html"))).text();
-      beforeForm(html, /Offline on NetBird, Tailscale works/);
-      assert.match(html, /People on Tailscale can still use spitfire/);
-      assert.match(html, /<form method="post" action="\/spitfire\/region"/);
-    } finally {
-      files[config.netbirdFlagsPath] = original;
-    }
-  });
-
-  it("says it is offline on Tailscale, and that NetBird still works", async () => {
-    const html = await (await picker(gluetunUp, { BackendState: "NeedsLogin", Self: { Online: false } }).handle(get("/spitfire", "text/html"))).text();
-    beforeForm(html, /Offline on Tailscale, NetBird works/);
-    assert.match(html, /People on NetBird can still use spitfire/);
-  });
-
-  it("says it is offline when the tunnel is down, that nothing gets out, and suggests moving it", async () => {
-    const html = await (await picker({ ...gluetunUp, ["GET " + G + "/v1/vpn/status"]: () => json({ status: "stopped" }) }).handle(get("/spitfire", "text/html"))).text();
-    beforeForm(html, /Offline: not connected to Mullvad/);
-    assert.match(html, /Nothing gets out through spitfire/);
-    assert.match(html, /Picking a region below reconnects/);
-    assert.match(html, /<form method="post" action="\/spitfire\/region"/);
-  });
-
-  it("says it is offline when neither overlay is connected", async () => {
-    const original = files[config.netbirdFlagsPath];
-    delete files[config.netbirdFlagsPath];
-    try {
-      const html = await (await picker(gluetunUp, null).handle(get("/spitfire", "text/html"))).text();
-      beforeForm(html, /Offline: not connected to NetBird or Tailscale/);
-    } finally {
-      files[config.netbirdFlagsPath] = original;
-    }
   });
 });
 
@@ -479,7 +327,7 @@ describe("GET /metrics", () => {
     assert.match(text, /^region_exit_overlay_connected\{region_exit="spitfire",overlay="netbird"\} 1$/m);
   });
 
-  it("is not served under the route's path, so the HTTPRoute never publishes it", async () => {
+  it("is served at the root only", async () => {
     const { handle } = picker(gluetunUp);
     assert.equal((await handle(new Request("http://picker/spitfire/metrics"))).status, 404);
   });
@@ -491,11 +339,11 @@ const switchRoutes: Record<string, Route> = {
   [APPLY]: () => new Response("running"),
 };
 const post = (body: unknown, headers: Record<string, string> = {}) =>
-  new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", ...headers }, body: JSON.stringify(body) });
+  new Request("http://picker/region", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", ...headers }, body: JSON.stringify(body) });
 /** The state ConfigMap's merge patch for a move to `data`, made at NOW by `by`. */
 const statePatch = (data: Record<string, string | null>, by: string | null = null) => ({ metadata: { annotations: { [MOVED_BY_ANNOTATION]: by, [MOVED_AT_ANNOTATION]: NOW.toISOString() } }, data });
 
-describe("POST /spitfire/region", () => {
+describe("POST /region", () => {
   it("saves the region to the state ConfigMap, then has gluetun reconnect there", async () => {
     const { handle, calls } = picker(switchRoutes);
     const response = await handle(post({ country: "Japan", city: "Tokyo" }));
@@ -509,21 +357,6 @@ describe("POST /spitfire/region", () => {
     assert.equal(calls[0].headers["content-type"], "application/merge-patch+json");
     assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Tokyo" }));
     assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: ["Tokyo"] } } });
-  });
-
-  it("records who moved it from forward auth's display name, else the username", async () => {
-    const named = picker(switchRoutes);
-    await named.handle(post({ country: "Japan" }, { "X-authentik-name": "Jamie Doe", "X-authentik-username": "jamie" }));
-    assert.deepEqual(named.calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "Jamie Doe"));
-    const unnamed = picker(switchRoutes);
-    await unnamed.handle(post({ country: "Japan" }, { "X-authentik-username": "jamie" }));
-    assert.deepEqual(unnamed.calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "jamie"));
-  });
-
-  it("ignores a movedBy in the body: on this path the mover is forward auth's", async () => {
-    const { handle, calls } = picker(switchRoutes);
-    await handle(post({ country: "Japan", movedBy: "Someone Else" }, { "X-authentik-username": "jamie" }));
-    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "jamie"));
   });
 
   it("clears any city when only a country is picked", async () => {
@@ -548,24 +381,6 @@ describe("POST /spitfire/region", () => {
       data: { SERVER_COUNTRIES: "Japan", SERVER_CITIES: "Osaka" },
     });
     assert.equal(calls[2].method + " " + calls[2].url, APPLY);
-  });
-
-  it("accepts the page's form post and sends the browser back to the page", async () => {
-    const { handle, calls } = picker(switchRoutes);
-    const response = await handle(new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "country=Japan&city=" }));
-    assert.equal(response.status, 303);
-    assert.equal(response.headers.get("location"), "/spitfire");
-    assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: [] } } });
-  });
-
-  it("moves to a quick button's country with no city, as the form does", async () => {
-    const { handle, calls } = picker(switchRoutes);
-    // A quick button sends its country and no city field at all.
-    const response = await handle(new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "country=Canada" }));
-    assert.equal(response.status, 303);
-    assert.equal(response.headers.get("location"), "/spitfire");
-    assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Canada", SERVER_CITIES: null }));
-    assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Canada"], cities: [] } } });
   });
 
   it("saves a region typed in another case in servers.json's spelling", async () => {
@@ -636,54 +451,13 @@ describe("POST /spitfire/region", () => {
         assert.deepEqual(calls, []);
       });
     });
-
-    it("asks before a quick button moves anyone, then moves to that country with no city", async () => {
-      await withConntrack(TWO_PEOPLE, async () => {
-        const { handle, calls } = picker(switchRoutes);
-        const form = (body: string) => new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
-        const html = await (await handle(form("country=UK"))).text();
-        assert.match(html, /Move spitfire to UK\?/);
-        assert.match(html, /<input type="hidden" name="country" value="UK"><input type="hidden" name="city" value="">/);
-        assert.equal(calls.length, 0);
-        assert.equal((await handle(form("country=UK&city=&confirm=yes"))).status, 303);
-        assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["UK"], cities: [] } } });
-      });
-    });
-
-    it("answers the page's form with a confirmation page that resubmits the same region", async () => {
-      await withConntrack(TWO_PEOPLE, async () => {
-        const { handle, calls } = picker(switchRoutes);
-        const form = (body: string) => new Request("http://picker/spitfire/region", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
-        const response = await handle(form("country=Japan&city=Tokyo"));
-        assert.equal(response.status, 200);
-        assert.match(response.headers.get("content-type") ?? "", /text\/html/);
-        const html = await response.text();
-        assert.match(html, /2 people are using spitfire right now/);
-        assert.match(html, /<form method="post" action="\/spitfire\/region"/);
-        assert.match(html, /<input type="hidden" name="country" value="Japan">/);
-        assert.match(html, /<input type="hidden" name="city" value="Tokyo">/);
-        assert.match(html, /<input type="hidden" name="confirm" value="yes">/);
-        assert.equal(calls.length, 0);
-
-        const confirmed = await handle(form("country=Japan&city=Tokyo&confirm=yes"));
-        assert.equal(confirmed.status, 303);
-        assert.deepEqual(calls[1].body, { provider: { server_selection: { countries: ["Japan"], cities: ["Tokyo"] } } });
-      });
-    });
   });
 });
 
 /** The region picker app's move: JSON, on the root path. */
 const appPost = (body: unknown) => new Request("http://picker/region", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
 
-describe("the region picker app's endpoints", () => {
-  it("GET /regions offers the same countries and cities as /spitfire/regions", async () => {
-    const { handle } = picker();
-    const root = await handle(get("/regions"));
-    assert.equal(root.status, 200);
-    assert.deepEqual(await root.json(), await (await handle(get("/spitfire/regions"))).json());
-  });
-
+describe("POST /region, as the region picker app sends it", () => {
   it("POST /region moves it, recording the mover the app names", async () => {
     const { handle, calls } = picker(switchRoutes);
     const response = await handle(appPost({ country: "Japan", city: "Tokyo", movedBy: "Jamie Doe" }));
@@ -755,37 +529,19 @@ describe("moverName", () => {
   });
 });
 
-describe("GET /", () => {
-  it("shows the overview, built from every region exit's /status, one that is down included", async () => {
-    const { handle, calls } = picker({
-      "GET http://spitfire.peer:8080/status": () =>
-        json({
-          name: "spitfire",
-          region: { country: "USA", city: null },
-          tunnel: { up: true, status: "running" },
-          egress: null,
-          overlays: { tailscale: true, netbird: false },
-          availability: { state: "degraded", offlineOn: "netbird" },
-        }),
-      "GET http://soarin.peer:8080/status": () => new Response("upstream connect error", { status: 503 }),
+describe("the old pages", () => {
+  for (const [method, path] of [
+    ["GET", "/"],
+    ["GET", "/spitfire"],
+    ["GET", "/spitfire/status"],
+    ["GET", "/spitfire/regions"],
+    ["POST", "/spitfire/region"],
+  ] as const) {
+    it("are gone: " + method + " " + path + " is 404 and touches nothing", async () => {
+      const { handle, calls } = picker(switchRoutes);
+      const response = await handle(new Request("http://picker" + path, { method, headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: method === "POST" ? "country=Japan" : undefined }));
+      assert.equal(response.status, 404);
+      assert.deepEqual(calls, []);
     });
-    const response = await handle(get("/", "text/html"));
-    assert.equal(response.status, 200);
-    assert.match(response.headers.get("content-type") ?? "", /text\/html/);
-    const html = await response.text();
-    assert.match(html, /href="\/spitfire"[\s\S]*Offline on NetBird, Tailscale works[\s\S]*USA/);
-    assert.match(html, /href="\/soarin"[\s\S]*Not responding/);
-    assert.match(html, /Last checked <time/);
-    assert.deepEqual(calls.map(c => c.url).sort(), ["http://soarin.peer:8080/status", "http://spitfire.peer:8080/status"]);
-  });
-
-  it("shows a region a peer reports lowercased in servers.json's spelling", async () => {
-    const peer = (country: string, city: string | null) => () =>
-      json({ region: { country, city }, tunnel: { up: true, status: "running" }, overlays: { tailscale: true, netbird: true }, availability: { state: "online" } });
-    const { handle } = picker({ "GET http://spitfire.peer:8080/status": peer("uk", null), "GET http://soarin.peer:8080/status": peer("usa", "dallas tx") });
-    const html = await (await handle(get("/", "text/html"))).text();
-    assert.match(html, /<td>UK<\/td>/);
-    assert.match(html, /<td>Dallas TX, USA<\/td>/);
-    assert.doesNotMatch(html, />uk</);
-  });
+  }
 });

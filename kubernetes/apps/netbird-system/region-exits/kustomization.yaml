@@ -7,18 +7,15 @@ resources:
   - ./externalsecret.yaml
   - ./tailscale-authkey.yaml
   - ./helmrelease.yaml
-  - ./service.yaml
   - ./definition.yaml
   - ./prometheusrule.yaml
 configMapGenerator:
-  # The region picker (#3140), a real .ts file so tsc, biome and node --test
-  # see it (picker.test.ts beside it is not shipped). Flux envsubst must not
-  # read the code. Its modules sit beside it in /app.
+  # The region exit agent (#3140, ADR 0006), a real .ts file so tsc, biome
+  # and node --test see it (picker.test.ts beside it is not shipped). Flux
+  # envsubst must not read the code. Its modules sit beside it in /app.
   - name: region-exit-picker
     files:
       - ./picker.ts
-      - ./overview.ts
-      - ./html.ts
       - ./activeClients.ts
       - ./metrics.ts
       - ./overlays.ts

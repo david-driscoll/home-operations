@@ -2,6 +2,9 @@
 status: accepted
 ---
 
+> Amended by [ADR 0006](0006-region-picker-own-app.md): the region picker's pages left the pods for
+> their own app; each pod keeps only a JSON agent.
+
 # Region exits are gluetun pods on Equestria shared by NetBird and Tailscale
 
 Family want to appear to be somewhere else (another country's streaming catalogue, travel, privacy), on whichever overlay their device uses. Tailscale's Mullvad add-on did this for Tailscale only, set by hand per device, and it ends at the end of November 2026. NetBird has no equivalent. We decided to run five region exits (GLOSSARY.md), named spitfire, soarin, fleetfoot, misty-fly and high-winds, as one pod each on Equestria. In each pod gluetun (Mullvad WireGuard), a NetBird client, tailscaled and a small region picker share the pod's network namespace. One Mullvad tunnel therefore serves both overlays, and the region is one setting that both of them follow. Family change a region exit's region at `wonderbolts.<root domain>/<name>`; friends may use the region exits (over NetBird; on Tailscale they are family and admins only, amended 2026-11-07) but not change them.

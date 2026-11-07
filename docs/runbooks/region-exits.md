@@ -42,7 +42,8 @@ than your normal connection.
 ## Move one to another country (family only)
 
 1. Open **`wonderbolts.<root domain>`** and sign in with your usual account.
-2. The front page shows every region exit, where it is, and how many people are using it.
+2. The front page shows every region exit, where it is, how many people are using it, and who
+   moved it last. It updates by itself every 30 seconds.
 3. Click the one to move, choose a country (and a city, if you care), and confirm.
 
 **Moving a region exit moves everyone on it.** If the page says someone is using it, pick
