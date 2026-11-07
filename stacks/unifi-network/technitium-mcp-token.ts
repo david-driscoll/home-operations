@@ -18,9 +18,12 @@
  *
  * Section-level View on Zones is not enough to read a zone: each zone carries
  * its own permission list, and a new zone gets only its creator and the admin
- * groups. technitium-zone.ts's zones get the user added View-only by
- * dynamic/technitium/TechnitiumZoneViewPermission.ts, one per zone, so a zone
- * added there is covered without touching this file.
+ * groups. dynamic/technitium/TechnitiumUserZoneView.ts adds the user View-only
+ * to EVERY zone on the primary -- this stack's, hand-made ones, the cluster
+ * catalog -- not just those declared in code. Its diff walks the live zone
+ * list, so a zone created anywhere is picked up by the next run (every 5
+ * minutes, the stack's resync). It skips only the root zone and the built-in
+ * `internal` zones; see its header.
  *
  * Everything is written to the cluster primary (globals.technitiumProvider);
  * the secondaries take the account, its token and the zone permissions from
@@ -38,14 +41,13 @@ import * as random from "@pulumi/random";
 import * as technitium from "@pulumi/technitium";
 import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import type { GlobalResources } from "components/globals.ts";
-import { TechnitiumZoneViewPermission } from "dynamic/technitium/TechnitiumZoneViewPermission.ts";
+import { TechnitiumUserZoneView } from "dynamic/technitium/TechnitiumUserZoneView.ts";
 
 export const TECHNITIUM_MCP_BAO_PATH = "apps/technitium/mcp";
 const MCP_USERNAME = "mcp";
 const MCP_TOKEN_NAME = "toolport";
 
-/** `zones` is technitium-zone.ts's, keyed by each zone's resource name. */
-export function configureTechnitiumMcpToken(globals: GlobalResources, zones: Record<string, technitium.Zone>) {
+export function configureTechnitiumMcpToken(globals: GlobalResources) {
   const parent = new pulumi.ComponentResource("custom:technitium:McpToken", "technitium-mcp", {});
   const cro = { parent, provider: globals.technitiumProvider };
 
@@ -66,23 +68,20 @@ export function configureTechnitiumMcpToken(globals: GlobalResources, zones: Rec
 
   const token = new technitium.ApiToken("mcp-toolport", { user: user.username, tokenName: MCP_TOKEN_NAME }, { ...cro, additionalSecretOutputs: ["token"], deleteBeforeReplace: true });
 
-  // Dynamic resources take no provider; they call the admin API directly with
-  // the provider's own URL, TLS name and key.
-  for (const [key, zone] of Object.entries(zones)) {
-    new TechnitiumZoneViewPermission(
-      `mcp-view-${key}`,
-      {
-        serverUrl: globals.technitiumServerUrl,
-        tlsServerName: globals.technitiumTlsServerName,
-        apiToken: globals.technitiumCredential.credential,
-        zone: zone.name.apply(z => z!),
-        // The constant, not `user.username`: a known value keeps the diff's
-        // live read usable in preview; dependsOn orders it after the user.
-        username: MCP_USERNAME,
-      },
-      { parent, dependsOn: [user, zone] },
-    );
-  }
+  // A dynamic resource takes no provider; it calls the admin API directly
+  // with the provider's own URL, TLS name and key.
+  const zoneView = new TechnitiumUserZoneView(
+    "mcp-zone-view",
+    {
+      serverUrl: globals.technitiumServerUrl,
+      tlsServerName: globals.technitiumTlsServerName,
+      apiToken: globals.technitiumCredential.credential,
+      // The constant, not `user.username`: a known value keeps the diff's
+      // live read usable in preview; dependsOn orders it after the user.
+      username: MCP_USERNAME,
+    },
+    { parent, dependsOn: [user] },
+  );
 
   const secret = baoKvSecret(
     "technitium-mcp",
@@ -96,5 +95,5 @@ export function configureTechnitiumMcpToken(globals: GlobalResources, zones: Rec
     { provider: globals.baoProvider },
   );
 
-  return { user, token, secret };
+  return { user, token, zoneView, secret };
 }
