@@ -1,0 +1,113 @@
+---
+# Stale-standby watchdog. ./resources/watchdog.sh has the full story: on
+# 2026-11-07 a standby lost track of the leader and kept failing a third of
+# requests with "local node not active but active cluster node not found".
+# The chart's readiness probe could not see that, and a pod restart was the
+# only fix. This job finds that state and evicts the pod.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openbao-watchdog
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openbao-watchdog
+rules:
+  # Find the server pods and their container start times.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+  # GET sys/seal-status and sys/leader through the apiserver pod proxy. These
+  # endpoints are unauthenticated and already reachable from every pod in the
+  # cluster. `get` allows only GET requests through the proxy, so this cannot
+  # write to OpenBao.
+  #
+  # The resourceNames pin these rules to the three replicas in helmrelease.yaml
+  # (server.ha.replicas). Add a name here if replicas grow, or the new pod's
+  # probe comes back `unreachable` and the job never acts on it.
+  - apiGroups: [""]
+    resources: ["pods/proxy"]
+    resourceNames: ["openbao-0", "openbao-1", "openbao-2"]
+    verbs: ["get"]
+  # Eviction, never delete: eviction honours the PodDisruptionBudget, so the
+  # job cannot take down a second pod while one is already gone.
+  - apiGroups: [""]
+    resources: ["pods/eviction"]
+    resourceNames: ["openbao-0", "openbao-1", "openbao-2"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openbao-watchdog
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: openbao-watchdog
+subjects:
+  - kind: ServiceAccount
+    name: openbao-watchdog
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: openbao-watchdog
+  annotations:
+    # The script is bash: `${VAR}` there must reach the shell, not Flux.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  # Every 5 minutes. Worst case, a stale standby keeps failing about a third of
+  # requests for MIN_AGE_SECONDS plus one interval before it is evicted.
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # A failed run means "no active node" or "eviction refused". Both need a
+      # human or the next run, not an immediate retry of the same check.
+      backoffLimit: 0
+      activeDeadlineSeconds: 240
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: openbao-watchdog
+          restartPolicy: Never
+          containers:
+            - name: watchdog
+              # Same pinned image as pulumi/lock-canceller. It ships kubectl,
+              # bash, jq and curl, so nothing is installed at runtime.
+              image: bitnami/kubectl@sha256:8f59408f9e896fc8992a0660a56687545bd06751f26531b4a26fca6d5dc7562d
+              command: ["/bin/bash", "/scripts/watchdog.sh"]
+              env:
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                # 10 minutes. A fresh transit unseal needs about 30s to discover
+                # the leader, so this leaves plenty of margin before a new pod
+                # counts as stale.
+                - name: MIN_AGE_SECONDS
+                  value: "600"
+                # Three rounds 30s apart. A normal failover leaves standbys
+                # without a leader for seconds, not a minute.
+                - name: PROBES
+                  value: "3"
+                - name: PROBE_INTERVAL
+                  value: "30"
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi
+          volumes:
+            - name: scripts
+              configMap:
+                name: openbao-watchdog

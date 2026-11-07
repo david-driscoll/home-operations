@@ -9,6 +9,7 @@ resources:
   - ./definition.yaml
   - ./externalsecret.yaml
   - ./secret.sops.yaml
+  - ./watchdog.yaml
   #
   # The two secret-bearing values arrive by different routes, and the split is
   # deliberate:
@@ -28,3 +29,11 @@ resources:
   #                        bootstrap/INVENTORY.md.
   #
   # Everything else about the server config is plaintext in helmrelease.yaml.
+configMapGenerator:
+  - name: openbao-watchdog
+    files:
+      - watchdog.sh=./resources/watchdog.sh
+    options:
+      annotations:
+        # Bash `${VAR}` in the script must reach the shell, not Flux.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
