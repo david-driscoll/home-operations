@@ -687,9 +687,9 @@ services are named `<app>.sgc.<root domain>` (GLOSSARY.md, **SGC**).
 - **Step 6.** The `"Stargate Command"` DNS server entry is deleted.
 - **Step 7.** The `pulumi/sgc-kubeproxy` ExternalName is deleted. Flux prunes it, and the
   operator removes its `tailscale-system` child.
-- **Step 9.** `cnpg-sgc-backups` is no longer `protect`ed. A follow-up change deletes the block,
-  which `retainOnDelete` turns into a state-only removal. The bucket stays in Minio until it is
-  deleted by hand.
+- **Step 9.** `cnpg-sgc-backups` is no longer `protect`ed, and a follow-up change deleted the
+  block, which `retainOnDelete` turned into a state-only removal. The `cnpg-sgc` bucket stays in
+  Minio until it is deleted by hand.
 - **SGC naming.** Authentik's cluster-scoped name moves from `authentik.${CLUSTER_DOMAIN}` to
   `authentik.sgc.${ROOT_DOMAIN}`. The certificates gain `*.sgc.${ROOT_DOMAIN}`, which
   `matter.sgc` had been missing.
@@ -699,6 +699,10 @@ services are named `<app>.sgc.<root domain>` (GLOSSARY.md, **SGC**).
   `age-recipients.txt` invariant are updated.
 - **OpenBao replica.** Dumps are no longer encrypted to SGC's age key. The recipients are now
   exactly the `.sops.yaml` set.
+
+**Already gone:** the empty `sgc` Pulumi stack that the 2026-08-17 destroy left in Minio
+(`applications/sgc`). On 2026-11-07 no `sgc` stack existed under any prefix of either the Garage
+backend or the Minio `stack export` archive, so there was no `pulumi stack rm sgc` left to run.
 
 **Live, by hand:**
 - **UniFi DNS (rule 1).** SGC's external-dns left 33 records behind (its A and CNAME records with

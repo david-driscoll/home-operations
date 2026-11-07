@@ -116,24 +116,10 @@ const _cnpgEquestriaBackups = new minio.S3Bucket(
     retainOnDelete: true,
   },
 );
-
-// The retired SGC cluster's CNPG backups, on its way out of this stack: the
-// bucket stays in Minio, but Pulumi stops managing it. A protected resource
-// cannot be removed from code, so this step only drops `protect`; the next
-// change deletes the block, and `retainOnDelete` turns that into a state-only
-// removal. Delete the bucket by hand in Minio once nothing old needs restoring.
-const _cnpgSgcBackups = new minio.S3Bucket(
-  `cnpg-sgc-backups`,
-  {
-    acl: "private",
-    bucket: pulumi.interpolate`cnpg-sgc`,
-  },
-  {
-    provider: globals.truenasMinioProvider,
-    protect: false,
-    retainOnDelete: true,
-  },
-);
+// The retired SGC cluster's `cnpg-sgc` bucket left this stack on 2026-11-07:
+// unprotected first, then removed from code, so `retainOnDelete` made it a
+// state-only removal. The bucket and its old CNPG backups are still in Minio
+// until someone deletes them by hand.
 
 const thanosStorage = new minio.S3Bucket(
   `thanos-storage`,
