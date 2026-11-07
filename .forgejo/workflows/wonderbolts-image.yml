@@ -38,7 +38,7 @@ jobs:
     # the same pin, so the build runs on exactly the filesystem it ships on.
     # BASE_IMAGE below MUST match; Renovate bumps both in one branch.
     container:
-      image: node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+      image: node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8
     env:
       BASE_IMAGE: docker.io/library/node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
       # The account that owns the image (stacks/system/forgejo-github-mirror.ts).
