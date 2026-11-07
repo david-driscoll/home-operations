@@ -59,6 +59,7 @@ spec:
                     name: netbird-failover-watchdog-cloudflare
                 # S3_ENDPOINT, S3_BUCKET and the key: where the other hosts'
                 # views of the lease holder are (the second view a flip needs).
+                # Read every run, so the state shows whether failover is armed.
                 - secretRef:
                     name: netbird-failover-watchdog-garage
               resources:

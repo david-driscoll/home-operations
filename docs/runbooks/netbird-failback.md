@@ -30,7 +30,8 @@ design is in [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md) §E an
   Cloudflare, or a gap of more than 3 minutes since the last recorded run starts the count over. It never flips
   twice within 60 minutes, and never from a management it has not once seen answer (its state ConfigMap's `everHealthy`).
   Every flip pages as `NetbirdFailover`; a flip it would make but may not pages as `NetbirdFailoverBlocked`;
-  5 runs in a row without Cloudflare page as `NetbirdFailoverWatchdogBlind`.
+  5 runs in a row without Cloudflare page as `NetbirdFailoverWatchdogBlind`; 3 runs in a row without a fresh view
+  from the standby warn as `NetbirdFailoverViewStale` (see "How to tell failover is armed").
 - **The failover views** (`components/netbird/failoverView.ts`, the `netbird-failover-view.timer` unit on every
   host, every 30 s). Each host probes management at the others, the same check the watchdog makes, and PUTs the
   result to the NetBird backup bucket as `failover-view/<host>.json`. The watchdog counts a view only if Garage's
@@ -39,6 +40,31 @@ design is in [`docs/plans/netbird-mirror.md`](../plans/netbird-mirror.md) §E an
   ```bash
   ssh root@netbird-azure-cus.<tailnet> 'systemctl status netbird-failover-view.timer; journalctl -u netbird-failover-view -n 4'
   ```
+
+### How to tell failover is armed
+
+The watchdog reads the standby's view on every run, not only during an outage, and records it in its state
+ConfigMap:
+
+```bash
+kubectl -n netbird-system get configmap netbird-failover-watchdog-state \
+  -o jsonpath='{.data.standby} {.data.standbyView} {.data.standbyViewAgeSeconds}s {.data.viewStaleRuns}{"\n"}'
+```
+
+Armed looks like `azure-cus fresh 25s 0`: the host that would be promoted published a view of the current holder
+under 3 minutes ago, so a flip could go ahead. Any other `standbyView` means a flip right now would hold and page
+instead:
+
+- `missing`: Garage has no `failover-view/<standby>.json`. The standby has never published.
+- `stale`: the object is over 3 minutes old. The standby's timer stopped, or its PUTs fail.
+- `silent`: the object is fresh but has no entry for the holder's address. Its target list is out of date; rerun
+  `stacks/netbird-edge`.
+- `unreadable`: the watchdog couldn't read or parse it. Garage is down, the key is wrong, or the JSON is broken.
+
+After 3 runs in a row like that, the watchdog posts **`NetbirdFailoverViewStale`** (warning, labelled with the
+standby). It never flips on its own account. Check the standby's timer and journal (above), and its route to
+Garage. The alert lapses about 5 minutes after the view is fresh again. Right after a real failover it fires for
+the old holder until that host is repaired: failover isn't armed again until then.
 
 - **Pulumi and the lease.** `netbird-edge:primary` says which host config assigns the lease to.
   `DnsLeaseAssignment` writes the record only when that value (or that host's address) changes, so a run after a
@@ -142,6 +168,8 @@ resolver) and never leaves its host.
   Equestria's internet is down, or Cloudflare's API is. It hasn't checked management and won't flip while it's
   blind. Nothing to do for NetBird; it clears by itself about 5 minutes after Cloudflare answers again. The state
   ConfigMap's `blindRuns` and `lastDecision: blind` show it too.
+- **`NetbirdFailoverViewStale`** (warning). Failover isn't armed: the standby's view has been missing, stale,
+  silent or unreadable for 3 runs in a row. See "How to tell failover is armed".
 - **Both fences stopped (`stop (unknown)`).** Neither host can reach DNS. Management comes back by itself once
   one of them can.
 - **`restore failed; management stays stopped`.** The new holder can't read Garage over the tailnet. Check its

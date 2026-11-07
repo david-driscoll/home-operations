@@ -23,9 +23,18 @@
  * Each host's fence (components/netbird/fence.ts) then does the rest: the old
  * primary stops management, the standby restores and starts.
  *
+ * Whether failover is armed is checked every run, not only during an outage
+ * (follow-up to #3167): the watchdog reads every other host's view whatever
+ * the holder's health, and records how old the standby's is. A standby whose
+ * view is missing, unreadable, stale or silent about the holder for
+ * VIEW_STALE_RUNS_TO_ALERT runs in a row raises NetbirdFailoverViewStale, so
+ * a host that stopped publishing shows up now instead of as a hold during the
+ * next outage. Reading the views only ever informs: it never flips, and a
+ * Garage that cannot be read never fails the run.
+ *
  * The counts live in a ConfigMap, because each run is a new pod. Every flip,
- * every run that would flip but may not, and a watchdog blind for too long
- * post an alert to Alertmanager.
+ * every run that would flip but may not, a watchdog blind for too long and a
+ * standby whose view has gone stale post an alert to Alertmanager.
  *
  * Node runs this file by stripping types. watchdog.test.ts covers the pure
  * part (decide, alertFor, the parsers) and run(), the I/O around it, with the
@@ -52,6 +61,12 @@ export const CONSECUTIVE_RUN_GAP_MINUTES = 3;
  * Equestria's failures overlap in time.
  */
 export const PEER_VIEW_FRESH_MINUTES = 3;
+/**
+ * Runs in a row the standby's view must be unusable before
+ * NetbirdFailoverViewStale fires: one late publish, or one Garage hiccup,
+ * does not page.
+ */
+export const VIEW_STALE_RUNS_TO_ALERT = 3;
 /** Where each host's view lives in the backup bucket: failover-view/<host>.json (components/netbird/failoverView.ts). */
 export const PEER_VIEW_PREFIX = "failover-view/";
 /** Garage signs as its own region (components/netbird/backup.ts). */
@@ -75,6 +90,8 @@ export interface WatchdogState {
   blindRuns?: number;
   /** When the last run finished and wrote this state (the ConfigMap's lastRun). */
   lastRunAt?: string;
+  /** Runs in a row the standby's view could not have armed a flip (standbyView not fresh). */
+  viewStaleRuns?: number;
 }
 
 export interface Candidate {
@@ -109,6 +126,34 @@ export interface PeerView {
   at: string;
 }
 
+/** One host's view object as read from Garage, before any judgement of it. */
+export interface ViewRead {
+  observer: string;
+  /** ok: a parsed object; missing: Garage answered 404; unreadable: anything else (Garage down, bad JSON, no Last-Modified). */
+  status: "ok" | "missing" | "unreadable";
+  /** Garage's Last-Modified, when status is ok. */
+  at?: string;
+  /** Management's health at each address it probed, when status is ok. */
+  targets?: Record<string, unknown>;
+}
+
+/**
+ * Whether the standby's view could confirm the holder down right now:
+ *   fresh: it would count toward a flip (within PEER_VIEW_FRESH_MINUTES);
+ *   stale: too old, or stamped in the future;
+ *   silent: fresh, but it says nothing about the holder's address;
+ *   missing / unreadable: as read (ViewRead).
+ */
+export type ViewStatus = "fresh" | "stale" | "silent" | "missing" | "unreadable";
+
+export interface StandbyView {
+  /** The host that would be promoted. */
+  standby: string;
+  status: ViewStatus;
+  /** Seconds since Garage's Last-Modified, when there is an object. */
+  ageSeconds?: number;
+}
+
 export type Decision =
   | { action: "healthy" }
   | { action: "count"; failures: number }
@@ -126,8 +171,7 @@ export function decide(state: WatchdogState, obs: Observation, failuresToFlip: n
   };
   // Only runs in a row count. With no recorded run, or one too long ago, the
   // streak starts over: a crashed or skipped run is not a failure.
-  const sinceLastRun = state.lastRunAt ? (obs.now.getTime() - Date.parse(state.lastRunAt)) / 60000 : Number.POSITIVE_INFINITY;
-  const inARow = sinceLastRun <= CONSECUTIVE_RUN_GAP_MINUTES;
+  const inARow = continuesStreak(state, obs.now);
   if (obs.leaseIp === null) {
     // Cannot even read the record: the watchdog's own internet, or Cloudflare.
     // Nothing is learned about the primary, and the failure streak is broken.
@@ -173,6 +217,86 @@ export function decide(state: WatchdogState, obs: Observation, failuresToFlip: n
   };
 }
 
+/** Whether the last recorded run is recent enough that this one continues its streaks. */
+export function continuesStreak(state: WatchdogState, now: Date): boolean {
+  return state.lastRunAt !== undefined && (now.getTime() - Date.parse(state.lastRunAt)) / 60000 <= CONSECUTIVE_RUN_GAP_MINUTES;
+}
+
+/** The views decide() weighs: every readable object's entries, stamped with Garage's Last-Modified. */
+export function peerViewsFrom(reads: ViewRead[]): PeerView[] {
+  return reads.flatMap(r => {
+    const at = r.at;
+    if (r.status !== "ok" || !at) return [];
+    return Object.entries(r.targets ?? {})
+      .filter(([, healthy]) => typeof healthy === "boolean")
+      .map(([ip, healthy]) => ({ observer: r.observer, ip, healthy: healthy as boolean, at }));
+  });
+}
+
+/**
+ * The host that would be promoted, as decide() picks it: the first candidate
+ * other than the holder that answers on 443, or else the first other one.
+ * Undefined when there is no other host.
+ */
+export function standbyOf(leaseIp: string, candidates: { name: string; ip: string; reachable: boolean }[]): string | undefined {
+  const others = candidates.filter(c => c.ip !== leaseIp);
+  return (others.find(c => c.reachable) ?? others[0])?.name;
+}
+
+/** Judge the standby's view the way decide() would weigh it in a flip, whatever the holder's health. */
+export function judgeStandbyView(standby: string, leaseIp: string, reads: ViewRead[], now: Date): StandbyView {
+  const read = reads.find(r => r.observer === standby);
+  if (!read || read.status === "missing") return { standby, status: "missing" };
+  if (read.status === "unreadable" || !read.at) return { standby, status: "unreadable" };
+  const ageSeconds = Math.round((now.getTime() - Date.parse(read.at)) / 1000);
+  if (ageSeconds < -60 || ageSeconds > PEER_VIEW_FRESH_MINUTES * 60) return { standby, status: "stale", ageSeconds };
+  if (typeof read.targets?.[leaseIp] !== "boolean") return { standby, status: "silent", ageSeconds };
+  return { standby, status: "fresh", ageSeconds };
+}
+
+/**
+ * Runs in a row the standby's view has been unusable. A fresh view resets it;
+ * a run with nothing to judge (blind, or no standby) leaves it as it was; a
+ * gap since the last run starts it over, as for the failure streak.
+ */
+export function nextViewStaleRuns(state: WatchdogState, view: StandbyView | undefined, now: Date): number {
+  const before = continuesStreak(state, now) ? (state.viewStaleRuns ?? 0) : 0;
+  if (!view) return before;
+  return view.status === "fresh" ? 0 : before + 1;
+}
+
+/** NetbirdFailoverViewStale once the standby's view has been unusable for VIEW_STALE_RUNS_TO_ALERT runs, or undefined. */
+export function alertForStandbyView(view: StandbyView | undefined, runs: number, lease: string, now: Date): object[] | undefined {
+  if (!view || view.status === "fresh" || runs < VIEW_STALE_RUNS_TO_ALERT) return undefined;
+  const age = view.ageSeconds === undefined ? "" : " (last written " + view.ageSeconds + " s ago)";
+  return [
+    {
+      labels: { namespace: "netbird-system", job: "netbird-failover-watchdog", lease, alertname: "NetbirdFailoverViewStale", severity: "warning", standby: view.standby },
+      annotations: {
+        summary: "NetBird failover is not armed: " + view.standby + "'s view of the primary is " + view.status,
+        description:
+          view.standby +
+          "'s view of management (" +
+          PEER_VIEW_PREFIX +
+          view.standby +
+          ".json in the NetBird backup bucket) has been " +
+          view.status +
+          age +
+          " for " +
+          runs +
+          " runs in a row. A flip needs it fresh (within " +
+          PEER_VIEW_FRESH_MINUTES +
+          " min), so if the primary died now the watchdog would hold and page instead of failing over. Check the failover-view timer on " +
+          view.standby +
+          ": docs/runbooks/netbird-failback.md.",
+      },
+      startsAt: now.toISOString(),
+      // Re-sent every run while stale; lapses on its own once the view is fresh.
+      endsAt: new Date(now.getTime() + 5 * 60000).toISOString(),
+    },
+  ];
+}
+
 /** `azure-eus2=relay-eus2.example.com,azure-cus=relay-cus.example.com`, in preference order. */
 export function parseCandidates(value: string): Candidate[] {
   const candidates = value
@@ -194,12 +318,14 @@ export function parseState(data: Record<string, string> | undefined): WatchdogSt
     return Number.isFinite(n) && n >= 0 ? n : 0;
   };
   const blindRuns = count(data?.blindRuns);
+  const viewStaleRuns = count(data?.viewStaleRuns);
   return {
     failures: count(data?.failures),
     ...(data?.lastFlipAt ? { lastFlipAt: data.lastFlipAt } : {}),
     ...(data?.everHealthy === "true" ? { everHealthy: true } : {}),
     ...(blindRuns > 0 ? { blindRuns } : {}),
     ...(data?.lastRun ? { lastRunAt: data.lastRun } : {}),
+    ...(viewStaleRuns > 0 ? { viewStaleRuns } : {}),
   };
 }
 
@@ -349,35 +475,34 @@ async function kube(io: WatchdogIo, method: "GET" | "PATCH", path: string, body?
 }
 
 /**
- * Every other host's published view, from Garage. A missing object, an
- * unreadable one or Garage being down all read as no view, which holds.
+ * Every other host's published view, from Garage: read-only GETs, on every
+ * run. Never throws: a 404 is "missing", and Garage down, a bad key, bad JSON
+ * or no Last-Modified are "unreadable". Either way decide() sees no view from
+ * that host and holds.
  */
-async function peerViews(io: WatchdogIo, observers: string[], now: Date): Promise<PeerView[]> {
-  const endpoint = required(io, "S3_ENDPOINT").replace(/\/+$/, "");
-  const bucket = required(io, "S3_BUCKET");
-  const views = await Promise.all(
-    observers.map(async (observer): Promise<PeerView[]> => {
-      const url = endpoint + "/" + bucket + "/" + PEER_VIEW_PREFIX + observer + ".json";
+async function readViews(io: WatchdogIo, observers: string[], now: Date): Promise<ViewRead[]> {
+  return Promise.all(
+    observers.map(async (observer): Promise<ViewRead> => {
       try {
+        const url = required(io, "S3_ENDPOINT").replace(/\/+$/, "") + "/" + required(io, "S3_BUCKET") + "/" + PEER_VIEW_PREFIX + observer + ".json";
         const headers = signS3({ method: "GET", url, region: GARAGE_REGION, accessKeyId: required(io, "AWS_ACCESS_KEY_ID"), secretAccessKey: required(io, "AWS_SECRET_ACCESS_KEY"), now });
         const response = await io.fetch(url, { headers, signal: AbortSignal.timeout(10000) });
         if (!response.ok) {
           io.log({ msg: "no view from " + observer, status: response.status });
-          return [];
+          return { observer, status: response.status === 404 ? "missing" : "unreadable" };
         }
         // Garage's clock, not the host's: the host cannot make a view look fresh.
         const at = new Date(response.headers.get("Last-Modified") ?? "").toISOString();
-        const body = (await response.json()) as { targets?: Record<string, unknown> };
-        return Object.entries(body.targets ?? {})
-          .filter(([, healthy]) => typeof healthy === "boolean")
-          .map(([ip, healthy]) => ({ observer, ip, healthy: healthy as boolean, at }));
+        const body = (await response.json()) as { targets?: unknown } | null;
+        const targets = body?.targets;
+        if (typeof targets !== "object" || targets === null || Array.isArray(targets)) throw new Error("the view has no targets");
+        return { observer, status: "ok", at, targets: targets as Record<string, unknown> };
       } catch (error) {
         io.log({ msg: "no view from " + observer, error: String(error) });
-        return [];
+        return { observer, status: "unreadable" };
       }
     }),
   );
-  return views.flat();
 }
 
 /** One watchdog run: read state and Cloudflare, probe, decide, act, record. Returns the decision. */
@@ -398,25 +523,33 @@ export async function run(io: WatchdogIo): Promise<Decision> {
     io.log({ msg: "Cloudflare unreadable", error: String(error) });
     record = null;
   }
-  const activeHealthy = record ? await io.healthy(record.content, lease) : false;
-  // Only asked when management failed: what the other hosts saw at the holder.
-  const views =
-    record && !activeHealthy
-      ? await peerViews(
+  // What the other hosts saw at the holder, read on every run and beside the
+  // health check rather than after it, so a slow Garage cannot hold it up. A
+  // flip needs these views; between outages they show whether one could happen.
+  const [activeHealthy, reads] = await Promise.all([
+    record ? io.healthy(record.content, lease) : Promise.resolve(false),
+    record
+      ? readViews(
           io,
           hosts.filter(h => h.ip !== record?.content).map(h => h.name),
           now,
-        )
-      : [];
+        ).catch((): ViewRead[] => [])
+      : Promise.resolve([] as ViewRead[]),
+  ]);
+  const views = peerViewsFrom(reads);
   const probed = record ? await Promise.all(hosts.map(async h => ({ name: h.name, ip: h.ip, reachable: h.ip === record.content ? false : await io.reachable(h.ip, h.record) }))) : [];
   const { decision, next } = decide(state, { leaseIp: record?.content ?? null, activeHealthy, views, candidates: probed, now });
+  // Is failover armed? The standby's view, judged as a flip would weigh it.
+  const standby = record ? standbyOf(record.content, probed) : undefined;
+  const standbyView = record && standby ? judgeStandbyView(standby, record.content, reads, now) : undefined;
+  const viewStaleRuns = nextViewStaleRuns(state, standbyView, now);
 
   if (decision.action === "flip" && record) {
     const written = (await cloudflare(io, "/zones/" + zoneId + "/dns_records/" + record.id, { method: "PATCH", body: JSON.stringify({ content: decision.to.ip }) })) as { content: string };
     if (written.content !== decision.to.ip) throw new Error("Cloudflare kept " + written.content + " instead of " + decision.to.ip);
   }
-  const alerts = alertFor(decision, lease, now);
-  if (alerts) {
+  const alerts = [...(alertFor(decision, lease, now) ?? []), ...(alertForStandbyView(standbyView, viewStaleRuns, lease, now) ?? [])];
+  if (alerts.length > 0) {
     // A failed alert must not undo the flip, or block the state write below.
     try {
       const response = await io.fetch(required(io, "ALERTMANAGER_URL") + "/api/v2/alerts", {
@@ -439,9 +572,15 @@ export async function run(io: WatchdogIo): Promise<Decision> {
       lastRun: next.lastRunAt ?? now.toISOString(),
       lastDecision: decision.action,
       lastLease: record?.content ?? "",
+      // Whether failover is armed: the standby's view as a flip would weigh it.
+      // Empty while blind, or with no standby.
+      standby: standbyView?.standby ?? "",
+      standbyView: standbyView?.status ?? "",
+      standbyViewAgeSeconds: standbyView?.ageSeconds === undefined ? "" : String(standbyView.ageSeconds),
+      viewStaleRuns: String(viewStaleRuns),
     },
   });
-  io.log({ msg: "netbird-failover-watchdog", lease: record?.content ?? null, activeHealthy, views, candidates: probed, decision });
+  io.log({ msg: "netbird-failover-watchdog", lease: record?.content ?? null, activeHealthy, views, standbyView, viewStaleRuns, candidates: probed, decision });
   return decision;
 }
 
