@@ -147,10 +147,6 @@ export interface Status {
   lastMove: LastMove | null;
 }
 
-/** "2 people are using spitfire right now.", for the 409 a move gets with people on it. */
-const describePeople = (name: string, count: number | null) =>
-  count === null ? "The picker cannot tell how many people are using " + name + "." : (count === 1 ? "1 person is" : count + " people are") + " using " + name + " right now.";
-
 const asJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 export function createHandler(config: PickerConfig, deps: Deps): (request: Request) => Promise<Response> {
@@ -290,14 +286,6 @@ export function createHandler(config: PickerConfig, deps: Deps): (request: Reque
     const asked = await requested(request);
     if (typeof asked === "string") return asJson({ error: asked }, 400);
     const { region, movedBy } = asked;
-    // Moving a region exit moves everyone on it, and nothing locks it, so
-    // anyone on it (or not knowing) means asking first.
-    if (!asked.confirmed) {
-      const people = await activeClients(deps.readFile);
-      if (people !== 0) {
-        return asJson({ error: describePeople(config.name, people) + " Send it again with confirm: true to move them.", activeClients: people, confirm: true }, 409);
-      }
-    }
     let outcome: string;
     try {
       // Saved first, so a restart never goes back on a switch gluetun already made.
