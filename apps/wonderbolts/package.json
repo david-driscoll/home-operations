@@ -1,0 +1,36 @@
+{
+  "name": "wonderbolts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The region picker: every region exit's region and availability, and moving one (docs/plans/wonderbolts-nuxt.md).",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "nuxt dev",
+    "dev:agent": "node dev/mock-agent.ts",
+    "build": "nuxt build",
+    "preview": "node .output/server/index.mjs",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "1.2.152",
+    "@nuxt/ui": "4.12.0",
+    "nuxt": "4.6.4",
+    "tailwindcss": "4.3.5",
+    "vue": "3.5.45",
+    "vue-router": "5.4.0"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "4.3.4",
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0",
+    "vue-tsc": "3.3.14"
+  }
+}

@@ -86,10 +86,14 @@ through Technitium) goes once the overview leaves the agent.
    pull-secret ExternalSecret like `kubernetes/apps/pulumi/workspace-image/externalsecret.yaml`.
    GHCR was turned down: GitHub is the mirror.
 8. **Renovate bumps the pin.** The self-hosted Forgejo Renovate bot opens digest-bump PRs for
-   `estate-images/wonderbolts`. It needs read access to the forge registry (a `hostRules`
-   entry and the `estate-images` read token); check that while building phase 2. Until it
-   works, the image workflow prints the line to paste, as pulumi-workspace's does. Renovate
-   also has to see `apps/wonderbolts/package.json` and its lockfile.
+   `estate-images/wonderbolts`. **Not wired yet (found in phase 2):** the reference in git is
+   `git.${ROOT_DOMAIN}/estate-images/wonderbolts`, and Renovate can't resolve a Flux
+   placeholder in a registry host. Wiring it needs a `registryAliases` entry mapping
+   `git.${ROOT_DOMAIN}` to the real host, supplied through the bot's own secret
+   (`kubernetes/apps/coder/renovate`), since the domain can't be written in the repo, plus
+   read access to the registry (a `hostRules` entry with the `estate-images` read token).
+   Until then the image workflow prints the line to paste, as pulumi-workspace's does.
+   Renovate finds `apps/wonderbolts/package.json` and its lockfile without any config.
 9. **PRs are checked on GitHub.** `.github/workflows/wonderbolts.yaml`, on `pull_request`,
    path-filtered to `apps/wonderbolts/**`: `npm ci`, `nuxi typecheck`, `vitest`,
    `nuxt build`. It never pushes. The forge workflow publishes from `main` only.
@@ -221,8 +225,11 @@ Each phase is its own PR.
 2. **The app and its pipeline.** `apps/wonderbolts/` with the ported logic, tests and mock
    agent; `.github/workflows/wonderbolts.yaml` (PR check);
    `.forgejo/workflows/wonderbolts-image.yml` (push to `main` on `apps/wonderbolts/**`, plus
-   `workflow_dispatch`, never `pull_request`, for the same reason as pulumi-workspace's);
-   Renovate's `hostRules` and lockfile coverage. Merge, let it publish.
+   `workflow_dispatch`, never `pull_request`, for the same reason as pulumi-workspace's).
+   Merge, let it publish. The image is built inside `node:24-alpine` (its own base) and
+   `crane mutate --append`s `.output/` as `/app`, with the cmd, workdir, uid 1000 and env
+   set on the image. Its tag is `<package version>-<12 hex of sha256(app tree hash, base
+   pin)>`. Renovate wiring (A8) is a follow-up.
 3. **Deploy, unrouted.** `kubernetes/apps/netbird-system/wonderbolts/` without the route, plus
    `X-authentik-name` on the outpost middleware. Check the app with `kubectl port-forward`
    against the real agents, sending the `X-authentik-*` headers by hand: the overview, a page,
@@ -257,8 +264,12 @@ Each phase is its own PR.
   characters.
 - `picker.test.ts`: keeps `status` (now with `lastMove`), the switch and `regionsFrom`; loses
   the HTML cases in phase 5.
-- Vitest with `@nuxt/test-utils` for the server routes; one Playwright pass of the move flow
-  (family) and the friend view against the mock agent.
+- Vitest: `unit` (server/utils and shared/, fetch faked) and `e2e` (`@nuxt/test-utils`
+  builds the app and runs it against `dev/mock-agent.ts`: every server route, the
+  friend/family split, and the server-rendered pages for both).
+- **Not covered yet:** the browser half, meaning the confirm modal, the reconnecting poll and
+  auto-refresh. A Playwright pass needs a browser in CI; until then, check it by hand in
+  phase 3 against the real agents.
 
 ## G. Risks and things to check while building
 
@@ -272,8 +283,9 @@ Each phase is its own PR.
   (`Buffer.from(value, "latin1").toString("utf8")`, kept only if that round-trips), and a
   test covers it. The sidecar's old `/<name>/region` path does not, which is accepted
   because it goes at cleanup.
-- **`crane append` on `.output/`**: the output needs no `node_modules` install at run time,
-  so one layer is enough. Verify there are no native addons built against a different libc.
+- **`crane mutate --append` on `.output/`**: checked in phase 2. The output is 7 MB, needs
+  no install at run time, and has no native addons (`find .output -name '*.node'` is
+  empty). It's built in the base it ships on regardless.
 - **Polling load**: 2 replicas, a 30 s overview refresh and post-move polling all hit the
   agents, which give gluetun 5 s per call. Keep the post-move poll at 3-5 s and stop it after
   the 60 s warning.

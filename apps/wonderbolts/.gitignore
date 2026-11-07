@@ -1,0 +1,9 @@
+# Nuxt's generated and built trees, and the local dependencies.
+.nuxt
+.output
+.data
+.nitro
+.cache
+dist
+node_modules
+*.tsbuildinfo
