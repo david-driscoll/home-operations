@@ -2,8 +2,8 @@
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 #
 # Region exits (docs/plans/region-exits.md, ADR 0005): exit nodes that leave
-# through Mullvad, one privileged pod each (gluetun, tailscaled and, later,
-# NetBird and the region picker sharing one network namespace).
+# through Mullvad, one privileged pod each (gluetun, tailscaled, NetBird and,
+# later, the region picker sharing one network namespace).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: region-exits
