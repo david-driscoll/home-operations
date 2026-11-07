@@ -862,69 +862,8 @@ spec:
           identifier: high-winds
         endpoints: *metrics-endpoints
 
-    route:
-      # The region picker: / is the overview, from any picker
-      # (region-exits-pickers, ./service.yaml); /<name> goes to that region
-      # exit's own picker. The longest matching prefix wins, and a PathPrefix
-      # matches whole path segments, so /soarin never takes /soarin-x.
-      wonderbolts:
-        parentRefs:
-          - name: internal
-            namespace: network
-            kind: Gateway
-        hostnames:
-          - "wonderbolts.${ROOT_DOMAIN}"
-        rules:
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /
-            backendRefs:
-              - name: region-exits-pickers
-                port: *picker-port
-            filters: &forward-auth
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: authenticated-user
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /spitfire
-            backendRefs:
-              - identifier: spitfire
-                port: *picker-port
-            filters: *forward-auth
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /soarin
-            backendRefs:
-              - identifier: soarin
-                port: *picker-port
-            filters: *forward-auth
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /fleetfoot
-            backendRefs:
-              - identifier: fleetfoot
-                port: *picker-port
-            filters: *forward-auth
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /misty-fly
-            backendRefs:
-              - identifier: misty-fly
-                port: *picker-port
-            filters: *forward-auth
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /high-winds
-            backendRefs:
-              - identifier: high-winds
-                port: *picker-port
-            filters: *forward-auth
+    # No route. wonderbolts.<root domain> belongs to the region picker app
+    # (../wonderbolts/helmrelease.yaml, ADR 0006), which reaches each picker
+    # sidecar through its Service above. The sidecar's own pages, and
+    # region-exits-pickers (./service.yaml) behind them, go in the cleanup
+    # that follows (docs/plans/wonderbolts-nuxt.md, phase 5).

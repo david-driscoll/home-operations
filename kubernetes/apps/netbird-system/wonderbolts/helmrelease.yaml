@@ -5,10 +5,10 @@
 # apps/wonderbolts. Stateless, so two replicas; it asks each region exit's
 # agent for its state on every request and keeps nothing.
 #
-# Not routed yet (phase 3). wonderbolts.<root domain> still goes to the region
-# exits' own pages until phase 4 adds the route here and removes theirs; until
-# then, reach it with `kubectl port-forward` and send the X-authentik-* headers
-# by hand.
+# Served at wonderbolts.<root domain> behind Authentik forward auth (the route
+# below; ../region-exits/definition.yaml is its Authentik application). To
+# reach it without the Gateway, `kubectl port-forward` and send the
+# X-authentik-* headers by hand.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -117,3 +117,32 @@ spec:
         type: emptyDir
         globalMounts:
           - path: /tmp
+    route:
+      # The whole host: / is the overview, /<name> a region exit, /api the
+      # server, /_nuxt the assets. Forward auth (family, admins; friends once
+      # the plan's phase 6 adds them) on every path: the app decides who may
+      # move a region exit from the X-authentik-* headers it sets.
+      #
+      # The HTTPRoute is named after the release (wonderbolts), as the region
+      # exits' was (region-exits), so the two never shared a name.
+      app:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "wonderbolts.${ROOT_DOMAIN}"
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user
