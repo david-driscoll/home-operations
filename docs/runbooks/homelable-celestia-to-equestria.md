@@ -98,7 +98,7 @@ with the merge:
 ## Things that genuinely change
 
 - **Nightly Low Power shed.** `equestria` is the shed-list namespace, so the app
-  is scaled to 0 between 02:00 and 09:00 and the scanner does not run in that
+  is scaled to 0 between 01:00 and 07:00 and the scanner does not run in that
   window. That was not true on the Dockge host. The Gatus checks carry a
   matching maintenance window; the disagreement-rate comparison against Gatus
   that `STATUS_CHECKER_INTERVAL` exists to support now has a seven-hour hole in

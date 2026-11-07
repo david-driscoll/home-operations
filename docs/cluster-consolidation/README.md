@@ -132,7 +132,7 @@ completed and eleven days have passed:
 Current cluster: 7 nodes, **3 etcd members** (`milky-way`, `othalla`, `pegasus`), all Ready.
 
 **Low Power and Battery are different states — do not merge them when reading.** Low Power is
-[24](24-power-states.md)'s nightly 02:00–09:00 window: Tier 2 scaled to zero, keep-list up, and
+[24](24-power-states.md)'s nightly 01:00–07:00 window: Tier 2 scaled to zero, keep-list up, and
 **every node still powered.** Battery is [20](20-low-power-tier.md)'s S′: the three
 **bare-metal** workers off, Tier 0/1 only, on the Pecron. Correction recorded 2026-08-22 —
 Battery is *not* "all four workers off": David confirmed `shining-armor` stays online, being a VM

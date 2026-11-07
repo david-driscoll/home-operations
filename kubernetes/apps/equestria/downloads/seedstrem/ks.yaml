@@ -6,8 +6,8 @@
 # (../../media/aiostreams), which Gelato in Jellyfin reads. The whole chain is
 # in docs/runbooks/seedstrem-gelato.md.
 #
-# Not on the Low Power keep-list, same as qbittorrent and prowlarr: it is shed
-# 02:00-09:00 with them, which is also when it would have nothing to talk to.
+# Not on the Low Power keep-list: it is shed 01:00-07:00. qbittorrent and
+# prowlarr are excluded from the shed (#2177) and stay up without it.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

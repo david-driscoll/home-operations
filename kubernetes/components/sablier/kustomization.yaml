@@ -6,7 +6,7 @@
 #
 # Every workload in this estate belongs to exactly one of three sets:
 #
-#   scheduled   (default, no marker)  go-kube-downscaler sheds it 02:00-09:00
+#   scheduled   (default, no marker)  go-kube-downscaler sheds it 01:00-07:00
 #   on-demand   (this component)      Sablier sleeps it after 30m idle,
 #                                     wakes it on an HTTP request, any hour
 #   always up   (downscaler/exclude)  neither controller touches it

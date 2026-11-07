@@ -4,7 +4,7 @@
 # ============================================================================
 # These alerts exist because py-kube-downscaler had NO metrics at all
 # (caas-team/py-kube-downscaler#164, open since 2025-07) and so its failure mode
-# was silent by construction: a missed 09:00 upscale looks exactly like an
+# was silent by construction: a missed 07:00 upscale looks exactly like an
 # ordinary night until someone tries to use an app and finds it at zero.
 #
 # The Go rewrite exposes the metrics below. This file is the reason to migrate.
@@ -93,14 +93,14 @@ spec:
         # quietly wrong for the other half. This one needs no timezone at all.
         #
         # This is the concrete symptom of upstream #520 (controller crashed
-        # before the 09:00 upscale) and of a 409 storm that exhausted retries.
+        # before the 07:00 upscale) and of a 409 storm that exhausted retries.
         - alert: DownscalerWorkloadsStuckDown
           annotations:
             summary: workloads in {{ $labels.namespace }} have been downscaled for 9h
             description: >-
               {{ $value }} workload(s) in {{ $labels.namespace }} have been
               scaled to zero continuously for nine hours -- longer than the
-              seven-hour 02:00-09:00 window. They did not come back up.
+              six-hour 01:00-07:00 window. They did not come back up.
               Check DownscalerNotCycling first, then look for workloads left
               carrying the restore annotation:
               kubectl get deploy,sts -A -o json | jq -r '.items[] |
