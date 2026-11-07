@@ -68,6 +68,16 @@ spec:
                 - RemoveDuplicates
                 - RemovePodsViolatingTopologySpreadConstraint
                 - LowNodeUtilization
+            # Workers first, control plane as fallback (2026-11-07). Apps that
+            # tolerate the control-plane taint for the low-power tier (forgejo,
+            # authentik server/worker) carry a PREFERRED anti-control-plane node
+            # affinity; this moves them back to a worker once one has room, e.g.
+            # after an outage parked them on a control plane. `deschedule`, not
+            # `balance`: the plugin implements DeschedulePlugin only, and listing
+            # it under `balance` is a hard startup error (#1051's notes).
+            deschedule:
+              enabled:
+                - RemovePodsViolatingNodeAffinity
           pluginConfig:
             - name: DefaultEvictor
               args:
@@ -99,6 +109,21 @@ spec:
                 # reverted; the churn it prevents is real today and would be real
                 # if the media apps had never been touched. Doc 29 is the record.
                 nodeFit: true
+            - name: RemovePodsViolatingNodeAffinity
+              args:
+                # A LIST ([]string; a scalar fails to decode, an empty list fails
+                # validation). Preferred only: the required form would start
+                # evicting unrelated pods estate-wide.
+                #
+                # Scope stays narrow without touching evictLocalStoragePods
+                # (#1051 had to flip it to true for a whole profile): the target
+                # pods mount emptyDirs, so they opt in individually with
+                # `descheduler.alpha.kubernetes.io/evict: "true"`, which
+                # DefaultEvictor honours ahead of the local-storage check.
+                # nodeFit above still refuses any eviction no worker can absorb,
+                # so with the workers down nothing moves.
+                nodeAffinityType:
+                  - preferredDuringSchedulingIgnoredDuringExecution
             - name: RemoveDuplicates
             - name: RemovePodsViolatingTopologySpreadConstraint
             - name: LowNodeUtilization

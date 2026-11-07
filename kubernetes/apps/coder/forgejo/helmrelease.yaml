@@ -120,6 +120,21 @@ spec:
         operator: Exists
         effect: NoExecute
         tolerationSeconds: 60
+    # Workers first. The toleration above only ALLOWS a control plane; the
+    # scheduler scores a tolerated NoSchedule node like any other, and the
+    # control planes look idle, so the forge kept landing on one (2026-11-06:
+    # ~1.2 cores of a 4-core control plane under CI load). A soft preference
+    # keeps the low-power fallback (no worker fits -> control plane) and the
+    # descheduler's RemovePodsViolatingNodeAffinity moves it back once a
+    # worker has room (gitea.podAnnotations opts it in past the emptyDir).
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: DoesNotExist
 
     deployment:
       annotations:
@@ -254,6 +269,12 @@ spec:
       enabled: false
 
     gitea:
+      # The `temp` emptyDir makes it local-storage, which the descheduler's
+      # evictor skips (evictLocalStoragePods: false). Opt in, so it can be moved
+      # off a control plane (see `affinity` above). nodeFit still refuses the
+      # eviction when no worker can take it.
+      podAnnotations:
+        descheduler.alpha.kubernetes.io/evict: "true"
       admin:
         # Break-glass local admin, the same account docker/celestia/forgejo's
         # provision.sh reconciled. The email is deliberately not a real person's:
