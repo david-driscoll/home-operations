@@ -190,13 +190,18 @@ What to watch, in order:
    The spegel pod on the node is Ready.
 7. **talos-logs.** The node's kubelet/containerd lines and kernel lines keep reaching Loki with
    `node="shining-armor"`.
-8. **Workload isolation still off.** No `sandboxd` service:
+8. **Workload isolation still off.** The applied config says so:
 
    ```sh
-   talosctl -n 10.10.206.10 services | grep -i sandbox
+   talosctl -n 10.10.206.10 get machineconfig v1alpha1 -o yaml \
+     | yq '.spec' | yq 'select(.kind == "SecurityProfileConfig") | .workloadIsolation'   # false
    ```
 
-   This must print nothing.
+   Do not judge this by the `sandboxd` service. Talos 1.14 runs it on every node whether or not
+   isolation is on: on 2026-11-08 it had been up for about 22 days on all seven, the
+   never-isolated nodes included. Its uptime should not reset at the apply. `cri` and `kubelet`
+   do restart, because the containerd config file moves into `CRICustomizationConfig`. Running
+   containers survive that restart; spegel's `registry` container restarting once is expected.
 
 Leave it at least an hour, ideally overnight, before continuing.
 
