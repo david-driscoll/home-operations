@@ -13,3 +13,5 @@ resources:
   - ./temporal/ks.yaml
   # The network map's graph (docs/adr/0006-network-map-neo4j-homelable-projection.md).
   - ./neo4j/ks.yaml
+  # Its observed-layer collector (images/network-map), hourly; dependsOn neo4j.
+  - ./network-map/ks.yaml

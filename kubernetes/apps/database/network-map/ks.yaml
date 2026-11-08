@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The network map's observed-layer collector (docs/network-map/schema.md,
+# docs/adr/0006-network-map-neo4j-homelable-projection.md): an hourly CronJob
+# that reads UniFi, Tailscale, NetBird, Kubernetes, Proxmox and the Docker
+# hosts and writes what they report into Neo4j beside it. The image and its
+# source are images/network-map.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app network-map
+  namespace: &namespace database
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The graph it writes to.
+    - name: neo4j
+      namespace: database
+    # Its credentials.
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/database/network-map
+  prune: true
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
