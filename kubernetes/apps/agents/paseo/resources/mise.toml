@@ -6,7 +6,7 @@
 # the daemon and its native modules were built against -- still runs Paseo;
 # `node` below is for the `npm:` tools.
 [tools]
-node = "24.22.2"
+node = "26.13.0"
 python = "3.15.2"
 gh = "2.103.3"
 kubectl = "1.37.2"
