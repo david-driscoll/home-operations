@@ -38,12 +38,10 @@ spec:
 # collector; and this job needs no source credentials and never writes.
 # Same image, other entrypoint (src/drift-main.ts).
 #
-# SUSPENDED UNTIL ITS IMAGE EXISTS. The image pinned below is the collector's
-# current one, which predates src/drift-main.ts. Once
-# .forgejo/workflows/network-map-image.yml has built the image with it, set
-# that image (tag@digest from the workflow's Report step) here AND in
-# ./cronjob.yaml, and delete `suspend: true`. NetworkMapDriftNotRunning
-# (./prometheusrule.yaml) ignores a suspended CronJob.
+# Same image as ./cronjob.yaml (it holds src/drift-main.ts): when
+# .forgejo/workflows/network-map-image.yml reports a new tag@digest, set it in
+# both files. NetworkMapDriftNotRunning (./prometheusrule.yaml) ignores the
+# CronJob while it is suspended.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -52,7 +50,6 @@ metadata:
     # The map stays current around the clock (./cronjob.yaml), so do its alerts.
     downscaler/exclude: "true"
 spec:
-  suspend: true
   schedule: "*/15 * * * *"
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 300
@@ -78,7 +75,7 @@ spec:
           containers:
             - name: drift
               # Keep in step with ./cronjob.yaml (see the header).
-              image: git.${ROOT_DOMAIN}/estate-images/network-map:07b25791e663@sha256:ccaca1e574496eec229a94408c16665eaf52bbe5ba740336c21d4c7f92647bff
+              image: git.${ROOT_DOMAIN}/estate-images/network-map:52bbce092580@sha256:23ed36c06c664c1f6d1862cbe34c79d99911b70a102f30b009271f0c2da0972d
               command: ["node", "/app/src/drift-main.ts"]
               env:
                 - name: NEO4J_URI
