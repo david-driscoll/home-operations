@@ -660,9 +660,15 @@
       // talosctl went v1.14.0 -> v1.14.1 in #1711 while the OS version stayed
       // pinned at v1.13.10, which is exactly the divergence the group exists to
       // prevent.
+      //
+      // And `talosctl` -- the .config/mise.toml pin, which Renovate names by
+      // its mise tool name. Without it the CLI went v1.14.4 -> v1.14.5 on its
+      // own while #2907 held the OS back, and talos:validate-config refuses
+      // a talosctl that does not match topf.yaml's talosVersion.
       matchDepNames: [
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
+        "talosctl",
       ],
       group: {
         commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
