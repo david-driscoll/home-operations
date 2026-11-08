@@ -68,6 +68,7 @@ export function projectApps(g: MapGraph): Canvas {
       "app route": str(app.props.appRoute),
       "tailnet route": str(app.props.tailnetRoute),
       "app service": str(app.props.appService),
+      "declared by": g.declaredBy(app.id),
     },
   });
   const appZones: ZoneSpec[] = [...zones.entries()]

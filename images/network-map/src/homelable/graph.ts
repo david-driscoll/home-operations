@@ -5,20 +5,32 @@
  * elements, so the sync reads it in two queries (./reader.ts) instead of
  * asking Neo4j one question per design.
  *
- * Drift (GLOSSARY.md) is computed here, once, from the DECLARES edges:
+ * Drift (GLOSSARY.md) is computed here, once, the way ../drift.ts and
+ * ../declares.ts see the two layers:
  *
- *   - an observed node nothing DECLARES is `undeclared`;
- *   - a declared node that DECLARES nothing is `unobserved`.
+ *   - an observed node is `undeclared` when no declared node DECLARES it and,
+ *     for the labels both layers key alike (App, Group, Route, Network:
+ *     ../declares.ts SAME_KEY_LABELS), no declared node has its key. The key
+ *     match covers a node the collector re-created since the link last ran,
+ *     as ../drift.ts's `counterparts` does;
+ *   - a declared node is `unobserved` when it DECLARES nothing and no observed
+ *     node shares its key in the same way.
  *
- * Only for labels the declared layer has at least one node of. The declared
- * loader is built separately and may not have run yet, or may not cover every
- * label: without that rule every observed node would show as drift the moment
- * the first declared Machine landed, App or not.
+ * A node is judged by its own label, and only when the declared layer has at
+ * least one node of that label: the loader may not have run yet, and covers
+ * Machine, Network, Group, Route, App, Policy and Zone, never Interface,
+ * EntryPoint or Port. A UniFi Device (labelled Machine and Device) is judged
+ * as a Device, so the gateway, switches and APs, which the repo never
+ * declares, are not drawn as drift.
+ *
+ * Each DECLARES edge records `by` (key, name, mac, ip, hostname); `declaredBy`
+ * returns those of a node's edges, which the projections show as a property.
  *
  * Pure: no I/O. Node ids are whatever the reader used (Neo4j element ids);
  * they never leave the process. Homelable ids come from the schema keys.
  */
 import { KEY_PROPERTY } from "../cypher.ts";
+import { SAME_KEY_LABELS } from "../declares.ts";
 import type { NodeLabel } from "../model.ts";
 
 export type Layer = "observed" | "declared";
@@ -57,6 +69,8 @@ export interface MapGraph {
   /** Incoming hops of `type`, sorted by the near node's key. */
   in(id: string, type: string): Hop[];
   drift(id: string): Drift | undefined;
+  /** The `by` of each DECLARES edge into (observed) or out of (declared) the node, sorted. */
+  declaredBy(id: string): string[];
   /** Labels the declared layer has nodes of: drift is only judged for these. */
   readonly declaredLabels: ReadonlySet<string>;
 }
@@ -91,12 +105,31 @@ export function buildMapGraph(nodes: MapNode[], rels: MapRel[]): MapGraph {
   const sortedNodes = [...nodes].sort((a, b) => byString(keyOf(a.id), keyOf(b.id)) || byString(a.layer, b.layer) || byString(a.id, b.id));
 
   const declaredLabels = new Set(nodes.filter(n => n.layer === "declared").flatMap(n => n.labels));
+  const sameKey = new Set<string>();
+  const keyId = (label: string, layer: Layer, key: string) => `${label}|${layer}|${key}`;
+  for (const n of nodes) {
+    for (const { label, key } of SAME_KEY_LABELS) {
+      const value = n.props[key];
+      if (n.labels.includes(label) && value !== undefined && value !== null) sameKey.add(keyId(label, n.layer, String(value)));
+    }
+  }
+  const counterpartByKey = (n: MapNode) => {
+    const other: Layer = n.layer === "observed" ? "declared" : "observed";
+    return SAME_KEY_LABELS.some(({ label, key }) => n.labels.includes(label) && n.props[key] !== undefined && n.props[key] !== null && sameKey.has(keyId(label, other, String(n.props[key]))));
+  };
+  /** The label a node is judged as: Device over Machine, else its labels. */
+  const judgedLabels = (n: MapNode) => (n.labels.includes("Device") ? ["Device"] : n.labels);
   const drift = new Map<string, Drift>();
   for (const n of nodes) {
-    if (!n.labels.some(l => declaredLabels.has(l))) continue;
-    if (n.layer === "observed" && !(incoming.get(`${n.id}|DECLARES`) ?? []).length) drift.set(n.id, "undeclared");
-    if (n.layer === "declared" && !(outgoing.get(`${n.id}|DECLARES`) ?? []).length) drift.set(n.id, "unobserved");
+    if (!judgedLabels(n).some(l => declaredLabels.has(l))) continue;
+    if (n.layer === "observed" && !(incoming.get(`${n.id}|DECLARES`) ?? []).length && !counterpartByKey(n)) drift.set(n.id, "undeclared");
+    if (n.layer === "declared" && !(outgoing.get(`${n.id}|DECLARES`) ?? []).length && !counterpartByKey(n)) drift.set(n.id, "unobserved");
   }
+  const declaredBy = (id: string) => {
+    const n = byId.get(id);
+    const rels = n?.layer === "declared" ? outgoing.get(`${id}|DECLARES`) : incoming.get(`${id}|DECLARES`);
+    return [...new Set((rels ?? []).map(r => (r.props.by === undefined || r.props.by === null ? "" : String(r.props.by))).filter(Boolean))].sort();
+  };
 
   const hops = (rels: MapRel[] | undefined, end: "from" | "to"): Hop[] =>
     (rels ?? []).map(rel => ({ rel, node: byId.get(rel[end]) as MapNode })).sort((a, b) => byString(keyOf(a.node.id), keyOf(b.node.id)) || byString(JSON.stringify(a.rel.props), JSON.stringify(b.rel.props)));
@@ -109,6 +142,7 @@ export function buildMapGraph(nodes: MapNode[], rels: MapRel[]): MapGraph {
     out: (id, type) => hops(outgoing.get(`${id}|${type}`), "to"),
     in: (id, type) => hops(incoming.get(`${id}|${type}`), "from"),
     drift: id => drift.get(id),
+    declaredBy,
     declaredLabels,
   };
 }

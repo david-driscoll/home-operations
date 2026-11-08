@@ -180,9 +180,24 @@ describe("drift", () => {
     assert.equal(ghost.parentKey, zone(apps, "Declared, not observed").key);
     assert.equal(byLabel(apps, "traefik-luna").drift, undefined, "no EntryPoint is declared, so none is judged");
 
+    assert.deepEqual(byLabel(apps, "jellyfin").properties?.["declared by"], [], "paired by key, with no edge to report");
+
     const unifi = projectUnifi(g);
-    assert.equal(byLabel(unifi, "luna-dockge").drift, undefined);
+    const dockge = byLabel(unifi, "luna-dockge");
+    assert.equal(dockge.drift, undefined);
+    assert.deepEqual(dockge.properties?.["declared by"], ["mac"]);
     assert.equal(byLabel(unifi, "apple-tv").drift, "undeclared");
+    assert.equal(byLabel(unifi, "ucg-max").drift, undefined, "UniFi gear is judged as a Device, which the repo never declares");
+    assert.deepEqual(membersOf(unifi, zone(unifi, "Declared, not observed")), ["old-lxc"], "placed by its declared LAN address");
+
+    const ts = projectTailscale(g);
+    assert.deepEqual(membersOf(ts, zone(ts, "Declared, not observed")), ["skystar"], "placed by its declared 100.x address");
+    assert.equal(zone(ts, "tag:media").drift, "unobserved");
+    assert.ok(!ts.nodes.some(n => n.label === "group:family"), "a user group places no device");
+
+    const nb = projectNetbird(g);
+    assert.deepEqual(membersOf(nb, zone(nb, "Declared, not observed")), ["gateway-skystar"]);
+    assert.ok(!nb.nodes.some(n => n.key === "zone:declared:netbird:gateways"), "the declared gateways group pairs with the observed one by key");
 
     const body = savePayload(apps, "d1");
     const auth = body.nodes.find(n => n.label === "authentik");

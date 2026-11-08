@@ -11,7 +11,7 @@
 import { type Canvas, canvasBuilder, type NodeSpec, type ZoneSpec } from "./canvas.ts";
 import { type MapGraph, type MapNode, num, preferredIp, str, strs } from "./graph.ts";
 import { NODE_HEIGHT, treeLayout, ZONE_GAP } from "./layout.ts";
-import { declaredMachineSpec, declaredMachinesOn, interfaceSpec, interfacesOf, isDevice, machineLabel, machineOf, machineType, statusOf } from "./machines.ts";
+import { declaredIpsIn, declaredMachineSpec, declaredMachinesWhere, interfaceSpec, interfacesOf, isDevice, machineLabel, machineOf, machineType, statusOf } from "./machines.ts";
 
 const DEVICE_RANK: Record<string, number> = { gateway: 0, switch: 1, ap: 2 };
 const isUnifiNetwork = (g: MapGraph, n: MapNode) => g.key(n).startsWith("unifi:");
@@ -97,11 +97,14 @@ export function projectUnifi(g: MapGraph): Canvas {
     });
   }
 
-  // Declared, not observed: machines meant to be on a VLAN, and VLANs nobody reported.
-  for (const net of g.find("Network", "declared").filter(n => g.drift(n.id) === "unobserved" && str(n.props.kind) === "vlan")) {
+  // Declared, not observed: UniFi networks the zone map names that UniFi does
+  // not report (declared/zones.ts, `system: unifi`, joined by name), and
+  // machines whose declared address is on one of UniFi's networks.
+  for (const net of g.find("Network", "declared").filter(n => g.drift(n.id) === "unobserved" && (str(n.props.system) === "unifi" || str(n.props.kind) === "vlan"))) {
     zones.push({ key: `zone:declared:${g.key(net)}`, label: networkLabel(net), description: "Declared UniFi network", drift: "unobserved", members: [] });
   }
-  const ghosts = declaredMachinesOn(g, net => str(net.props.kind) === "vlan" || g.key(net).startsWith("unifi:"));
+  const unifiCidrs = networks.map(n => str(n.props.cidr)).filter((c): c is string => !!c);
+  const ghosts = declaredMachinesWhere(g, m => declaredIpsIn(m, unifiCidrs));
   if (ghosts.length > 0) {
     zones.push({
       key: "zone:declared-machines",

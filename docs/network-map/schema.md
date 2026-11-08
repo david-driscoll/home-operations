@@ -151,9 +151,12 @@ The sync (`images/network-map/src/homelable/`) runs in the collector's CronJob, 
 write. Some rules it follows:
 
 - **Drift** is marked with a border colour and a `drift` property: amber for an observed node that
-  nothing `DECLARES`, red for a declared node that `DECLARES` nothing. Declared-only nodes are drawn
-  in a "Declared, not observed" zone. Drift is only judged for labels the declared layer has at
-  least one node of, so a declared layer that covers only Apps does not flag every Machine.
+  nothing `DECLARES`, red for a declared node that `DECLARES` nothing. For App, Group, Route and
+  Network a shared key also counts as a match, as the drift alerts treat it. Declared-only
+  machines are drawn in a "Declared, not observed" zone, placed by their declared addresses and
+  groups (they have no Interfaces). Drift is only judged for labels the declared layer has at
+  least one node of, and UniFi gear is judged as a `Device`, which the repo never declares. A
+  matched node lists its DECLARES `by` as a "declared by" property.
 - **One parent per node.** Homelable nests a node in one zone only, so a device in several groups
   or tags sits in the first one and lists the rest as a property.
 - **Inventory rows.** Homelable keeps device facts (label, type, ip, status, properties) on an
