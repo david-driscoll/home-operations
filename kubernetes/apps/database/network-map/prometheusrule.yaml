@@ -1,12 +1,14 @@
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
 #
-# The collector runs hourly and exits non-zero only when the Neo4j write failed
-# or every source failed (images/network-map/src/exit.ts): one source being down
-# is normal, keeps its last-good nodes and is recorded on its CollectorSource
-# node. So this fires when the map as a whole has stopped updating. A single
-# stale source is the drift alerts' job (NetworkMapCollectorSourceStale, from
-# ./drift.yaml). The second branch covers a CronJob that has never succeeded.
+# The collector runs hourly and exits non-zero only when the Neo4j write failed,
+# every source failed, or the Homelable sync after it failed for every design
+# (images/network-map/src/exit.ts): one source or one design being down is
+# normal, and the source keeps its last-good nodes and is recorded on its
+# CollectorSource node. So this fires when the map as a whole has stopped
+# updating, in Neo4j or in Homelable. A single stale source is the drift
+# alerts' job (NetworkMapCollectorSourceStale, from ./drift.yaml). The second
+# branch covers a CronJob that has never succeeded.
 #
 # The drift alerts post straight to Alertmanager (images/network-map/src/drift.ts);
 # NetworkMapDriftNotRunning covers the case where that job has stopped and so
@@ -24,8 +26,9 @@ spec:
             summary: The network map collector has not succeeded in 3 hours.
             description: >-
               network-map-collector last succeeded {{ $value | humanizeDuration }} ago, so the
-              network map in Neo4j has stopped updating (the write failed, or every source did). Read the failed Job's
-              log (`kubectl -n database logs job/<job>`): each source logs one line with its status.
+              network map has stopped updating in Neo4j (the write failed, or every source did) or in Homelable
+              (every design's sync failed). Read the failed Job's log (`kubectl -n database logs job/<job>`): each
+              source logs one line with its status, and each Homelable design one with `step: homelable-sync`.
           expr: |
             (
               time() - max by (namespace, cronjob) (

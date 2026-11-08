@@ -8,6 +8,17 @@
 # every source failed, and NetworkMapCollectorNotRunning
 # (./prometheusrule.yaml) pages when no run has succeeded for 3 hours.
 #
+# Then, in the same container, the Homelable sync (HOMELABLE_SYNC,
+# images/network-map/src/homelable-sync.ts) projects the graph into
+# Homelable's four network-map designs. Chained in one process rather than a
+# second container or Job: a pod's containers run side by side, so only a
+# sequential step sees the graph this run just committed; an initContainer
+# would skip the sync whenever the collector exits 1, and a separate CronJob
+# would race the write. Neither step can undo the other (the sync only reads
+# Neo4j), and the sync still runs after a failed write, on last run's graph.
+# It fails the Job only when every design failed, the same policy as the
+# sources.
+#
 # Every target is reached the way an existing in-cluster reader reaches it
 # (pods have no route to 100.64.0.0/10):
 #   UniFi       https://<the DISCORD_DOMAIN substitution>, the gateway's own name, as
@@ -23,6 +34,9 @@
 #               egress Service's docker-proxy port, as
 #               ../../agents/agent-tools-servers/docker/* does
 #   Neo4j       the neo4j Service beside it
+#   Homelable   the backend's own Service, homelable-backend.equestria:8000,
+#               which ../../equestria/home/homelable/ciliumnetworkpolicy.yaml
+#               opens to this ServiceAccount only
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -100,9 +114,19 @@ spec:
                   value: "30"
                 - name: SOURCE_TIMEOUT_SECONDS
                   value: "240"
+                - name: HOMELABLE_SYNC
+                  value: "true"
+                - name: HOMELABLE_URL
+                  value: http://homelable-backend.equestria.svc.cluster.local:8000
               envFrom:
                 - secretRef:
                     name: network-map-collector
+                # HOMELABLE_SERVICE_KEY. Optional, so the pod still starts and
+                # the collector still writes without it; the sync then reports
+                # every design failed, which fails the Job and says why.
+                - secretRef:
+                    name: network-map-homelable
+                    optional: true
               resources:
                 requests:
                   cpu: 50m
