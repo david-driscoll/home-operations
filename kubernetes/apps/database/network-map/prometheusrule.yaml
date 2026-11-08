@@ -5,8 +5,12 @@
 # or every source failed (images/network-map/src/exit.ts): one source being down
 # is normal, keeps its last-good nodes and is recorded on its CollectorSource
 # node. So this fires when the map as a whole has stopped updating. A single
-# stale source is the drift alerts' job (follow-up). The second branch covers a
-# CronJob that has never succeeded.
+# stale source is the drift alerts' job (NetworkMapCollectorSourceStale, from
+# ./drift.yaml). The second branch covers a CronJob that has never succeeded.
+#
+# The drift alerts post straight to Alertmanager (images/network-map/src/drift.ts);
+# NetworkMapDriftNotRunning covers the case where that job has stopped and so
+# reports nothing.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -36,6 +40,38 @@ spec:
               unless on (namespace, cronjob)
               kube_cronjob_status_last_successful_time{namespace="database", cronjob="network-map-collector"}
             ) > 10800
+          for: 5m
+          labels:
+            severity: warning
+        # Four runs an hour, so an hour without a success means it is broken.
+        # drift-main.ts exits non-zero when Neo4j, a query or Alertmanager
+        # failed. A suspended CronJob (./drift.yaml, until its image exists)
+        # is left out. The second branch covers one that has never succeeded.
+        - alert: NetworkMapDriftNotRunning
+          annotations:
+            summary: The network map drift checks have not succeeded in an hour.
+            description: >-
+              network-map-drift last succeeded {{ $value | humanizeDuration }} ago, so a route with no live
+              router, a declared machine gone missing, an unknown client, reach drift or a stale collector source
+              would not alert. Read the failed Job's log (`kubectl -n database logs job/<job>`).
+          expr: |
+            (
+              (
+                time() - max by (namespace, cronjob) (
+                  kube_cronjob_status_last_successful_time{namespace="database", cronjob="network-map-drift"}
+                )
+                or
+                (
+                  time() - max by (namespace, cronjob) (
+                    kube_cronjob_created{namespace="database", cronjob="network-map-drift"}
+                  )
+                )
+                unless on (namespace, cronjob)
+                kube_cronjob_status_last_successful_time{namespace="database", cronjob="network-map-drift"}
+              ) > 3600
+            )
+            unless on (namespace, cronjob)
+            (kube_cronjob_spec_suspend{namespace="database", cronjob="network-map-drift"} == 1)
           for: 5m
           labels:
             severity: warning

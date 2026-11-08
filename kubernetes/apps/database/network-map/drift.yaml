@@ -1,0 +1,104 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The drift job's one credential: the Neo4j login. Its own Secret, not the
+# collector's, which also holds every source's API key and is not needed here.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: network-map-drift
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: network-map-drift
+    creationPolicy: Owner
+    template:
+      data:
+        NEO4J_USERNAME: "{{ .username }}"
+        NEO4J_PASSWORD: "{{ .password }}"
+  dataFrom:
+    - extract:
+        key: clusters/equestria/apps/neo4j/auth
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Every 15 minutes: read the network map in READ transactions and post
+# Alertmanager alerts for drift (images/network-map/src/drift.ts has the five
+# alerts and their rules; docs/network-map/queries.md "Drift" the queries).
+# Each alert lapses 45 minutes after the last run that posted it, and a run
+# that no longer finds one resolves it straight away.
+#
+# ITS OWN CRONJOB, NOT A STEP OF THE COLLECTOR. A bug or a slow query here
+# must never stop the map being written; the declared layer changes on push,
+# not on the collector's clock, so the checks run more often than the
+# collector; and this job needs no source credentials and never writes.
+# Same image, other entrypoint (src/drift-main.ts).
+#
+# SUSPENDED UNTIL ITS IMAGE EXISTS. The image pinned below is the collector's
+# current one, which predates src/drift-main.ts. Once
+# .forgejo/workflows/network-map-image.yml has built the image with it, set
+# that image (tag@digest from the workflow's Report step) here AND in
+# ./cronjob.yaml, and delete `suspend: true`. NetworkMapDriftNotRunning
+# (./prometheusrule.yaml) ignores a suspended CronJob.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: network-map-drift
+  annotations:
+    # The map stays current around the clock (./cronjob.yaml), so do its alerts.
+    downscaler/exclude: "true"
+spec:
+  suspend: true
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: network-map-image-pull
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: drift
+              # Keep in step with ./cronjob.yaml (see the header).
+              image: git.${ROOT_DOMAIN}/estate-images/network-map:07b25791e663@sha256:ccaca1e574496eec229a94408c16665eaf52bbe5ba740336c21d4c7f92647bff
+              command: ["node", "/app/src/drift-main.ts"]
+              env:
+                - name: NEO4J_URI
+                  value: bolt://neo4j.database.svc.cluster.local:7687
+                - name: ALERTMANAGER_URL
+                  value: http://alertmanager-operated.observability.svc.cluster.local:9093
+                # The UniFi networks whose undeclared clients alert, by name. Guest is left out.
+                - name: UNKNOWN_CLIENT_NETWORKS
+                  value: Home,IoT
+              envFrom:
+                - secretRef:
+                    name: network-map-drift
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
