@@ -1,6 +1,6 @@
 ---
 name: toolport
-description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, NetBird, homelable, GitHub, Forgejo, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, Teamarr, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
+description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, NetBird, homelable, Technitium, GitHub, Forgejo, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, Teamarr, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
 ---
 
 <!--
@@ -93,7 +93,8 @@ the only MCP front door: the old `agent-tools` aggregated server is retired. So:
   - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`,
     `netbird` (read-only: an `auditor` PAT, so NetBird refuses writes; change
     NetBird in stacks/netbird), `homelable` (network map, inventory, racks and
-    documentation)
+    documentation), `technitium` (read-only: zones, records, cache, logs and
+    audits across all five DNS nodes)
   - `toolport-home`: `home-assistant` (Assist: control the exposed entities)
     and `ha-mcp` (admin: integrations, registries, automations, history, logs)
   - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr`

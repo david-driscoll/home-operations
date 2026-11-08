@@ -1,0 +1,153 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The Technitium MCP's credential: an API token for the non-admin `mcp` user,
+# which stacks/unifi-network creates (technitium-mcp-token.ts) on the primary,
+# dns-celestia, and writes to apps/technitium/mcp. The secondaries join the
+# primary's cluster and take its accounts, tokens and zone permissions, so the
+# one token works against every node below. The user has View on each zone and
+# no Settings section (settings/get carries the TSIG keys), so it reads records,
+# not secrets, and writes nothing.
+#
+# Before that stack's first run with the `mcp` user, this path does not exist,
+# the ExternalSecret errors and the pod waits on its Secret, and ./ks.yaml is
+# `wait: true`: land the stacks/unifi-network change first.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-technitium
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: toolhive-technitium
+    creationPolicy: Owner
+    template:
+      data:
+        TECHNITIUM_TOKEN: "{{ .token }}"
+  dataFrom:
+    - extract:
+        key: apps/technitium/mcp
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# technitium-mcp (github.com/katbyte/technitium-mcp, Go, GPL-3.0): zones and
+# records, cache, logs, cluster state and 17 audits, against every Technitium
+# node at once, so one call can compare the primary with its secondaries.
+# Toolport serves it in the networking profile (../toolport/resources/registry.json).
+#
+# STREAMABLE HTTP, NOT STDIO. Its go-sdk (v1.8.0) rejects every call that
+# arrives before `initialize`, the trap docs/kubernetes/agentboard-mcp.md
+# describes for Python servers over stdio. Its HTTP mode keeps sessions (30m,
+# no stateless switch), so a restart of this pod leaves toolport holding a dead
+# session until the watchdog restarts toolport.
+#
+# READ-ONLY TWICE. The server registers write and delete tools only with
+# TECHNITIUM_ENABLE_WRITE / TECHNITIUM_ENABLE_DELETE, both unset, and
+# TECHNITIUM_READ_ONLY pins it. The token's user could not write anyway.
+# settings_backup is denied: it writes a full backup zip into the pod.
+# server_settings is denied too: the token cannot read settings, so it would
+# only ever fail.
+#
+# NO AUTH ON ITS PORT (TECHNITIUM_ALLOW_NO_AUTH): the NetworkPolicy at the end
+# of this file admits only toolport and this server's own proxy, as for
+# ./homelable.yaml and ./ha-mcp.
+#
+# SERVERS. The four Dockge nodes through their Traefik (`<key>.dns.<root
+# domain>`, 443, a public certificate): the tailnet egress names would fail TLS,
+# because that is the certificate's only name and this server has no
+# server-name override. Equestria's node is reached in-cluster over plain HTTP.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-technitium
+spec:
+  image: ghcr.io/katbyte/technitium-mcp:v0.2.1@sha256:cf69c2f7f28b22f9710fb80914d412f835e42d65438d1f2f13861e1126340819
+  transport: streamable-http
+  proxyPort: 8080
+  # Must match TECHNITIUM_LISTEN, which the image sets to :8080.
+  mcpPort: 8080
+  groupRef:
+    name: agent-tools
+  args: ["serve"]
+  env:
+    - name: HOME
+      value: /tmp
+    - name: TECHNITIUM_SERVER
+      value: "celestia=https://celestia.dns.${ROOT_DOMAIN},luna=https://luna.dns.${ROOT_DOMAIN},skystar=https://skystar.dns.${ROOT_DOMAIN},alpha-site=https://alpha-site.dns.${ROOT_DOMAIN},equestria=http://technitium-admin.network.svc.cluster.local:5380"
+    - name: TECHNITIUM_READ_ONLY
+      value: "true"
+    - name: TECHNITIUM_TOOLSETS
+      value: all
+    - name: TECHNITIUM_DENY_TOOLS
+      value: settings_backup,server_settings
+    - name: TECHNITIUM_ALLOW_NO_AUTH
+      value: "true"
+  podTemplateSpec:
+    # Reloader on the pod template, not the Secret: see ./openbao.yaml.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: toolhive-technitium
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/networkpolicy-networking-k8s-io-v1.json
+#
+# Who may reach technitium-mcp: toolport, and its own proxy. Its port has no
+# auth (TECHNITIUM_ALLOW_NO_AUTH above), so this policy is the whole of it --
+# the same pair as ./ha-mcp/networkpolicy.yaml, whose header explains the two
+# `from` entries. Both pods listen on 8080.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: toolhive-technitium-allow-toolport
+spec:
+  podSelector:
+    matchLabels:
+      toolhive-name: toolhive-technitium
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: toolport
+              app.kubernetes.io/controller: toolport
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              toolhive-name: toolhive-technitium
+      ports:
+        - protocol: TCP
+          port: 8080
