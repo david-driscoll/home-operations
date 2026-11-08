@@ -1,0 +1,19 @@
+# Image Factory schematic for milky-way, a control plane rebuilt as a VM on the
+# celestia Proxmox host (2026-11-02): the control-plane.yaml kernel arguments
+# minus the Intel-only ones (i915.enable_guc, intel_iommu, iommu=pt), and
+# qemu-guest-agent in place of i915/intel-ucode -- there is no Intel GPU.
+# Hashed locally by TOPF into 847c39de...; see control-plane.yaml for how.
+customization:
+  extraKernelArgs:
+    - sysctl.kernel.kexec_load_disabled=1
+    - apparmor=0                          # Less security, faster puter
+    - init_on_alloc=0                     # Less security, faster puter
+    - init_on_free=0                      # Less security, faster puter
+    - mitigations=off                     # Less security, faster puter
+    - security=none                       # Less security, faster puter
+    - talos.auditd.disabled=1             # Less security, faster puter
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/qemu-guest-agent
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools

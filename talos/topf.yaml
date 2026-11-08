@@ -37,7 +37,7 @@ talosVersion: v1.14.4
 # upgraded Kubernetes as a side effect of `talos:apply`. Realigned 2026-09-21 --
 # if you change one, change the others in the same PR.
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
-kubernetesVersion: v1.37.1
+kubernetesVersion: v1.37.2
 
 # The talhelper-era filename, kept on purpose: bootstrap/INVENTORY.md and
 # docs/runbooks/talos-ca-rotation.md name it, and `.sops.yaml` says what it is.
@@ -200,22 +200,37 @@ nodes:
       <<: *intel_un1290_data
       mac: "58:47:ca:7a:07:b4" # No VIP on purpose -- see the note on hard-hat.
 
+  # A VM on the celestia Proxmox host since 2026-11-02. The original milky-way
+  # (an Intel N-series mini PC like othalla/pegasus) lost its board on
+  # 2026-11-01; the name and IP were kept so talosconfig endpoints and the
+  # authentik-vip address list did not have to change.
+  #
+  # What differs from the bare-metal control planes, all of it deliberate:
+  # - Boot/EPHEMERAL (and so etcd) is a virtio-scsi disk on celestia's
+  #   local-lvm, `/dev/sda`.
+  # - Longhorn gets celestia's spare Samsung 990 EVO Plus, passed through as a
+  #   PCIe device (IOMMU group 16 on the host, alone in it), so the guest sees
+  #   a real NVMe and the model selector below matches -- same as hard-hat's.
+  # - No `technitium-dns` label: Technitium's NAD hardcodes `master: enp3s0`,
+  #   and this node's NIC is virtio (`ens18`). Plex/Jellyfin omit `master`
+  #   and need an Intel GPU, so they simply never land here.
+  # - No Intel GPU, so its own schematic: qemu-guest-agent instead of
+  #   i915/intel-ucode (schematics/milky-way.yaml).
+  # - 4 vCPU / 7 GiB is all celestia (15 GiB total) can spare. The old board
+  #   had 16 GiB and used ~9.5, with kube-apiserver alone at ~3.8 -- watch
+  #   memory on this node.
   - host: milky-way
     ip: 10.10.209.10
     role: control-plane
-    schematicId: &cp_schematic "@schematics/control-plane.yaml"
-    data: &cp_data
-      mac: "e0:51:d8:19:93:18"
-      installDisk: disk.dev_path == "/dev/nvme0n1"
-      longhornDisk: disk.dev_path == "/dev/sda"
-      labels:
-        <<: *nodeLabels
-        # Technitium DNS runs on the control planes (they carry enp3s0, which the
-        # ipvlan L2 NAD now binds). Moved here from hard-hat 2026-08-19 so the LAN
-        # resolver survives a low-power window with every worker powered off —
-        # docs/cluster-consolidation/20-low-power-tier.md §0.3.
-        technitium-dns: "true"
-      annotations:
+    schematicId: "@schematics/milky-way.yaml"
+    data:
+      # Set explicitly on the VM's net0 (`qm set 210 --net0
+      # virtio=bc:24:11:20:91:10,bridge=vmbr0`) so this never drifts.
+      mac: "bc:24:11:20:91:10"
+      installDisk: disk.dev_path == "/dev/sda"
+      longhornDisk: *samsung990
+      labels: *nodeLabels
+      annotations: &criticalAnnotations
         # `critical` = D6's low-power survivors: Tier-1 data must live on the
         # control planes. See docs/cluster-consolidation/12-longhorn-critical-tier.md.
         node.longhorn.io/default-node-tags: '["critical"]'
@@ -232,10 +247,20 @@ nodes:
   - host: othalla
     ip: 10.10.209.11
     role: control-plane
-    schematicId: *cp_schematic
-    data:
-      <<: *cp_data
+    schematicId: &cp_schematic "@schematics/control-plane.yaml"
+    data: &cp_data
       mac: "e0:51:d8:19:d4:98"
+      installDisk: disk.dev_path == "/dev/nvme0n1"
+      longhornDisk: disk.dev_path == "/dev/sda"
+      labels:
+        <<: *nodeLabels
+        # Technitium DNS runs on the bare-metal control planes (they carry
+        # enp3s0, which the ipvlan L2 NAD binds). Moved here from hard-hat
+        # 2026-08-19 so the LAN resolver survives a low-power window with every
+        # worker powered off — docs/cluster-consolidation/20-low-power-tier.md
+        # §0.3. Not on milky-way: see the note there.
+        technitium-dns: "true"
+      annotations: *criticalAnnotations
   - host: pegasus
     ip: 10.10.209.12
     role: control-plane
