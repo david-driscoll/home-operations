@@ -181,10 +181,10 @@ export function parseNetbird(snapshot: NetbirdSnapshot): SourceResult & { unreso
   for (const route of snapshot.routes) advertise(route.network, route.peer, route.peer_groups, route.enabled !== false, { name: route.network_id, description: route.description });
   const resources = new Map<string, NetbirdNetworkResource>();
   for (const net of snapshot.networks) {
-    for (const res of net.resources) {
+    for (const res of asArray(net.resources)) {
       resources.set(res.id, res);
       if (res.type === "domain") continue;
-      for (const router of net.routers) advertise(res.address, router.peer, router.peer_groups, router.enabled !== false && res.enabled !== false, { name: res.name, network: net.name });
+      for (const router of asArray(net.routers)) advertise(res.address, router.peer, router.peer_groups, router.enabled !== false && res.enabled !== false, { name: res.name, network: net.name });
     }
   }
   result.routes = [...routes.values()];
@@ -240,9 +240,19 @@ export async function collectNetbird(client: ApiClient): Promise<SourceResult & 
   const withChildren = await Promise.all(
     networks.map(async net => ({
       ...net,
-      resources: await client.getJson<NetbirdNetworkResource[]>(`/api/networks/${encodeURIComponent(net.id)}/resources`),
-      routers: await client.getJson<NetbirdNetworkRouter[]>(`/api/networks/${encodeURIComponent(net.id)}/routers`),
+      resources: asArray(await client.getJson<NetbirdNetworkResource[] | null>(`/api/networks/${encodeURIComponent(net.id)}/resources`)),
+      routers: asArray(await client.getJson<NetbirdNetworkRouter[] | null>(`/api/networks/${encodeURIComponent(net.id)}/routers`)),
     })),
   );
   return parseNetbird({ peers, groups, policies, routes, networks: withChildren });
+}
+
+/**
+ * A list the NetBird API may hand back as something else: a network with no
+ * resources or routers (`equestria-routers` has none) answered with a
+ * non-array, and iterating it failed the whole source (2026-11-08,
+ * "net.resources is not iterable"). Anything that is not an array is empty.
+ */
+export function asArray<T>(value: T[] | null | undefined | unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
 }
