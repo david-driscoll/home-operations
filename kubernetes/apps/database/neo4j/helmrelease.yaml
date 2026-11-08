@@ -64,8 +64,11 @@ spec:
               pullPolicy: IfNotPresent
             env:
               TZ: "${TIMEZONE}"
-              NEO4J_PLUGINS: '["apoc", "apoc-extended", "genai"]'
-              NEO4J_server__http__x_forward__private_ips_enabled: "true"
+              # Core APOC only, the copy bundled in the image (labs/), so it always
+              # matches the server. apoc-extended is fetched from GitHub by
+              # version and lagged the server (a 2026.04 jar on 2026.10.1);
+              # genai is unused. The network map needs neither.
+              NEO4J_PLUGINS: '["apoc"]'
               NEO4J_AUTH:
                 secretKeyRef:
                   name: "${APP}-config"
