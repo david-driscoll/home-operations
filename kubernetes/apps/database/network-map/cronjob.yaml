@@ -4,8 +4,9 @@
 # Hourly: read the six sources and rewrite the network map's observed layer in
 # Neo4j (images/network-map/src/main.ts). Forbid: two runs at once would race
 # each other's stale replacement. A run that fails a source keeps that
-# source's previous nodes and exits 1; NetworkMapCollectorNotRunning
-# (./prometheusrule.yaml) pages when none has fully succeeded for 3 hours.
+# source's previous nodes and still exits 0; it exits 1 only when the write or
+# every source failed, and NetworkMapCollectorNotRunning
+# (./prometheusrule.yaml) pages when no run has succeeded for 3 hours.
 #
 # Every target is reached the way an existing in-cluster reader reaches it
 # (pods have no route to 100.64.0.0/10):

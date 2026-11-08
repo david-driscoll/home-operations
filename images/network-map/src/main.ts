@@ -11,15 +11,19 @@
  *   4. write it in one transaction (./cypher.ts has the strategy);
  *   5. log one JSON line per source, and a summary.
  *
- * Exits 1 when any source failed or was partial, or the write failed, so the
- * Job's status says so; the NetworkMapCollectorNotRunning rule pages when no
- * run has fully succeeded for a while.
+ * Exits 1 only when the Neo4j write failed or EVERY source failed (see
+ * exitCode). One host or API being down is normal -- that source keeps its
+ * last-good nodes and its CollectorSource node records the failure -- so it
+ * must not fail the Job: a Dockge host offline for days would otherwise fire
+ * KubeJobFailed hourly and NetworkMapCollectorNotRunning after 3h. Stale
+ * sources are surfaced by the drift alerts, from CollectorSource.lastSuccess.
  */
 import { readFile } from "node:fs/promises";
 import neo4j, { type Driver, type ManagedTransaction } from "neo4j-driver";
 import { buildGraph } from "./build.ts";
 import { type Config, loadConfig } from "./config.ts";
 import { fallbackNetworksQuery, nodeStatements, relStatements, retentionStatement, runRecordStatement, type SourceOutcome, type Statement, schemaStatements, staleStatements } from "./cypher.ts";
+import { exitCode } from "./exit.ts";
 import { httpClient } from "./http.ts";
 import type { SourceName, SourceResult } from "./model.ts";
 import { collectDocker } from "./sources/docker.ts";
@@ -176,7 +180,7 @@ async function main(): Promise<number> {
       retentionRemoved: removed,
       failed: outcomes.filter(o => o.status !== "ok").map(o => o.source),
     });
-    return outcomes.every(o => o.status === "ok") ? 0 : 1;
+    return exitCode(outcomes);
   } finally {
     await driver.close();
   }
