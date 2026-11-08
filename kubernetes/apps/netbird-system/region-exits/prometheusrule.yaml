@@ -3,7 +3,7 @@
 #
 # A broken region exit alerts before family notice (docs/plans/region-exits.md
 # §D5, #3142). The series come from each region picker's GET /metrics
-# (metrics.ts, scraped by the HelmRelease's ServiceMonitor) and carry
+# (wonderbolts agent/metrics.ts, scraped by the HelmRelease's ServiceMonitor) and carry
 # region_exit=<name>, so these rules cover all five region exits. Routing is
 # Alertmanager's default (observability/alertmanager/config.yaml): critical
 # and warning both go to Pushover.
@@ -98,7 +98,7 @@ spec:
           labels:
             severity: warning
         # One alert per overlay: tailscaled not Running with a live control
-        # connection, or NetBird's wt0 gone or down (overlays.ts). Held back
+        # connection, or NetBird's wt0 gone or down (wonderbolts agent/overlays.ts). Held back
         # while the tunnel is down, which RegionExitTunnelDown already reports:
         # a region exit without its tunnel is no use to either overlay. (Their
         # control connections no longer need the tunnel for DNS: the pod

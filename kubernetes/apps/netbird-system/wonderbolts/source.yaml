@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# Basic auth for the GitRepository below: the forge's `flux` account, which
+# can read the repositories stacks/system grants it and nothing else
+# (restricted, read collaborator grants, a `read:repository` token;
+# stacks/system/forgejo-renovate.ts and forgejo-app-repos.ts). The same
+# credential as ../../equestria/home/holm-config/source.yaml.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: wonderbolts-forgejo
+  namespace: netbird-system
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: wonderbolts-forgejo
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        username: "{{ .username }}"
+        password: "{{ .token }}"
+  data:
+    - secretKey: username
+      remoteRef:
+        key: clusters/equestria/apps/forgejo/flux
+        property: username
+    - secretKey: token
+      remoteRef:
+        key: clusters/equestria/apps/forgejo/flux
+        property: token
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
+#
+# home-operations/wonderbolts on the forge (stacks/system/forgejo-app-repos.ts):
+# the region picker app, the region exits' agent, and the deploy/ that
+# ./ks.yaml applies.
+#
+# The in-cluster Service, not git.<root domain>: no hairpin through the
+# gateway, and no TLS to trust. Forgejo has REQUIRE_SIGNIN_VIEW, hence the
+# credential above.
+#
+# A push reaches this at once: the repository's webhook calls the
+# forgejo-webhook Receiver (kubernetes/apps/flux-system/flux-instance/receiver.yaml),
+# which asks for a reconcile. The interval is only the fallback.
+#
+# HERE, applied straight from ../kustomization.yaml and not through ./ks.yaml:
+# flate (the `flate` hk step) resolves only sources it finds before rendering.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: wonderbolts
+  namespace: netbird-system
+spec:
+  interval: 30m
+  timeout: 1m
+  url: http://forgejo-http.coder.svc.cluster.local:3000/home-operations/wonderbolts.git
+  ref:
+    branch: main
+  secretRef:
+    name: wonderbolts-forgejo

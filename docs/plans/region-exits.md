@@ -233,7 +233,8 @@ region exit (decided 2026-11-07, ADR 0005).
 
 Amended 2026-11-07 by [ADR 0006](../adr/0006-region-picker-own-app.md) and
 [wonderbolts-nuxt.md](wonderbolts-nuxt.md). The pages are now their own Nuxt app,
-`apps/wonderbolts`, deployed as `kubernetes/apps/netbird-system/wonderbolts`. What stays in
+`app/` in the forge's `home-operations/wonderbolts`, deployed by the Kustomization
+`kubernetes/apps/netbird-system/wonderbolts` from that repository's `deploy/`. What stays in
 each pod is the agent, the `picker` container (`picker.ts`), which serves JSON only.
 
 - **The agent**, one script run in every pod, knows its own name from env:
