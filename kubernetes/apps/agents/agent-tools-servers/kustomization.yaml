@@ -58,6 +58,10 @@ resources:
   # NetBird's own MCP, read-only (an `auditor` PAT stacks/netbird mints). Run
   # from a pinned commit, as tdarr is: upstream publishes no package or image.
   - ./netbird.yaml
+  # Technitium DNS, read-only, against all five nodes (a non-admin `mcp` user
+  # stacks/unifi-network mints). Its port has no auth, so the file carries the
+  # NetworkPolicy that admits only toolport.
+  - ./technitium.yaml
   # No ToolHive proxy for Microsoft Learn, Home Assistant, ECM or arr-mcp
   # (Plex/Jellyfin): toolport calls those backends directly, with its own copy
   # of each bearer -- ../toolport/externalsecret.yaml. homelable keeps its

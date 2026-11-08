@@ -118,7 +118,7 @@ profile lists its servers and their tool counts.
 | Profile | Servers |
 |---|---|
 | `infrastructure` | `kubernetes`, `proxmox-{twilight-sparkle,celestia,luna,skystar,alpha-site}`, `docker-{celestia,luna,skystar,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao` |
-| `networking` | `unifi-{network,protect,access}`, `tailscale`, `netbird` (read-only), `homelable` |
+| `networking` | `unifi-{network,protect,access}`, `tailscale`, `netbird` (read-only), `homelable`, `technitium` (read-only) |
 | `home` | `home-assistant`, `ha-mcp` |
 | `media` | `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr` |
 | `postgres` | `postgres` — every database, tools per database |
@@ -352,10 +352,14 @@ Three things combine to cause it:
    `mcp/server/session.py` (`_received_request`) and logs `Received request
    before initialization was complete`. mcp 2.x moved it to
    `mcp/server/runner.py` (`ServerRunner._on_request`) and **logs nothing**, so
-   the only trace in the backend log is the error response itself. The Go and
-   TypeScript SDKs do not check, which is why github, pulumi and tailscale
-   survive the same restarts under stdio. context7 and tdarr are TypeScript
-   too. nuget (.NET) has not been restart-tested.
+   the only trace in the backend log is the error response itself. The
+   TypeScript SDK and the Go SDKs github and pulumi are built on do not check,
+   which is why github, pulumi and tailscale survive the same restarts under
+   stdio. context7 and tdarr are TypeScript too. nuget (.NET) has not been
+   restart-tested. The official Go SDK (modelcontextprotocol/go-sdk) DOES check,
+   at least from v1.8.0 (`mcp/server.go`, `handle()`: "method is invalid during
+   session initialization"), so technitium, which is built on it, runs
+   Streamable HTTP too.
 3. **Anything that restarts only the backend pod triggers it**: a node drain,
    an OOM kill, a Reloader roll. Restarting the proxy Deployment clears the
    cache. So the failure comes and goes, and a server works exactly as long as

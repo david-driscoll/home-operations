@@ -22,6 +22,8 @@
   "unifi-access": { "tool": "unifi_access__access_tool_index", "args": {} },
   "tailscale": { "tool": "tailscale__get_tailnet_info", "args": {} },
   "homelable": { "tool": "homelable__list_zones", "args": {} },
+  "netbird": { "tool": "netbird__list_groups", "args": {} },
+  "technitium": { "tool": "technitium__server_info", "args": {} },
   "home-assistant": { "tool": "home_assistant__llm__GetDateTime", "args": {} },
   "ha-mcp": { "tool": "ha_mcp__ha_get_zone", "args": {} },
   "arr-plex": { "tool": "arr_plex__get_indexers", "args": {} },
