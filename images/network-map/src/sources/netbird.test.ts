@@ -121,6 +121,23 @@ describe("collectNetbird", () => {
     assert.equal(result.reaches.length, 4);
   });
 
+  it("treats a network's non-array resources or routers as empty", async () => {
+    // equestria-routers has neither; the live API answered with a non-array,
+    // which used to fail the whole source ("net.resources is not iterable").
+    const empty = {
+      ...fixtures,
+      "/api/networks": [
+        { id: "n1", name: "home" },
+        { id: "n2", name: "equestria-routers" },
+      ],
+      "/api/networks/n2/resources": null,
+      "/api/networks/n2/routers": null,
+    };
+    const result = await collectNetbird(fixtureClient(empty));
+    assert.equal(result.machines.length, 1);
+    assert.deepEqual(result.machines[0].interfaces[0].advertises?.map(a => a.routeId).sort(), ["netbird:10.10.10.0/24", "netbird:10.10.20.0/24"]);
+  });
+
   it("fails the source when an endpoint fails", async () => {
     const { "/api/policies": _, ...missing } = fixtures;
     await assert.rejects(collectNetbird(fixtureClient(missing)), /HTTP 404/);
