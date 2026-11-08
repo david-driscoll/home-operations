@@ -118,7 +118,7 @@ profile lists its servers and their tool counts.
 | Profile | Servers |
 |---|---|
 | `infrastructure` | `kubernetes`, `proxmox-{twilight-sparkle,celestia,luna,skystar,alpha-site}`, `docker-{celestia,luna,skystar,alpha-site}`, `github`, `forgejo`, `pulumi`, `openbao` |
-| `networking` | `unifi-{network,protect,access}`, `tailscale`, `netbird` (read-only), `homelable`, `technitium` (read-only), `cloudflare` (read-only token, hosted) |
+| `networking` | `unifi-{network,protect,access}`, `tailscale`, `netbird` (read-only), `homelable`, `technitium` (read-only), `neo4j` (read-only: the network map), `cloudflare` (read-only token, hosted) |
 | `home` | `home-assistant`, `ha-mcp` |
 | `media` | `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`, `tdarr` |
 | `postgres` | `postgres` — every database, tools per database |
@@ -334,7 +334,7 @@ workloads need `reloader.stakater.com/ignore: "true"` first.
 ### No Python server runs over stdio
 
 Every Python MCP server here serves Streamable HTTP from its own process:
-`openbao`, the three `docker-*` and the three `unifi-*`. Adding one as
+`openbao`, `neo4j`, the three `docker-*` and the three `unifi-*`. Adding one as
 `transport: stdio` brings back a failure that looks like a healthy server: the
 MCPServer is Ready, and every call returns -32602 `Invalid request parameters`
 (toolport: `'<name>' failed`; vMCP: `Backend unavailable`).
@@ -382,6 +382,7 @@ one has no session to lose. How each server gets there:
 | Server | How it runs stateless |
 |---|---|
 | `openbao` | `FASTMCP_STATELESS_HTTP=true`, read by the image's FastMCP 3 |
+| `neo4j` | The server builds its FastMCP 2 app with `stateless_http=True`; `NEO4J_TRANSPORT=http` serves it |
 | `docker-*` | The package's CLI is stdio-only, so `python -c` calls its exported `app.run("streamable-http", stateless_http=True)` |
 | `unifi-*` | Upstream's image with `UNIFI_MCP_HTTP_ENABLED`. The package has no stateless switch, so a `python -c` wrapper sets the SDK's `stateless_http` default before calling its `main()` |
 
