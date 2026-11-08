@@ -62,6 +62,11 @@ resources:
   # stacks/unifi-network mints). Its port has no auth, so the file carries the
   # NetworkPolicy that admits only toolport.
   - ./technitium.yaml
+  # The network map's Neo4j (database/neo4j), read-only: only the schema and
+  # read tools, in READ transactions (Community has no read-only users). Its
+  # port has no auth, so the file carries the NetworkPolicy that admits only
+  # toolport.
+  - ./neo4j.yaml
   # No ToolHive proxy for Microsoft Learn, Home Assistant, ECM or arr-mcp
   # (Plex/Jellyfin): toolport calls those backends directly, with its own copy
   # of each bearer -- ../toolport/externalsecret.yaml. homelable keeps its

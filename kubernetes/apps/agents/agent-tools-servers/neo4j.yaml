@@ -1,0 +1,193 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The Neo4j MCP's credential: the network map database's own login
+# (stacks/system neo4j-auth.ts), the same path the collector and
+# database/neo4j read. Neo4j Community has no read-only users, so this is the
+# admin login; read-only is enforced by the server below, not by the account.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-neo4j
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: toolhive-neo4j
+    creationPolicy: Owner
+    template:
+      data:
+        NEO4J_USERNAME: "{{ .username }}"
+        NEO4J_PASSWORD: "{{ .password }}"
+  dataFrom:
+    - extract:
+        key: clusters/equestria/apps/neo4j/auth
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# mcp-neo4j-cypher (github.com/neo4j-contrib/mcp-neo4j, servers/mcp-neo4j-cypher,
+# Python, FastMCP 2.x): Cypher reads and the schema against the network map's
+# Neo4j (docs/network-map/schema.md, queries.md; ADR 0006). Toolport serves it
+# in the networking profile (../toolport/resources/registry.json).
+#
+# IMAGE. docker.io/mcp/neo4j-cypher, Docker's MCP-catalog build of upstream's
+# Dockerfile: version 0.6.0, the upstream commit its labels name, the only
+# tag upstream publishes there. Upstream itself ships only to PyPI. The
+# official Go server (github.com/neo4j/mcp) was the other candidate; since
+# v2.0 its HTTP mode takes the Neo4j URI and credentials from every request's
+# headers (X-Neo4j-MCP-URI, Basic auth), which toolport cannot send.
+#
+# STREAMABLE HTTP, NOT STDIO, per docs/kubernetes/agentboard-mcp.md "No Python
+# server runs over stdio". NEO4J_TRANSPORT=http is FastMCP's streamable HTTP,
+# and the server builds FastMCP with stateless_http=True, so a restart of this
+# pod strands no session. The path is /mcp, not the image's /mcp/, so the
+# proxy's /mcp is not answered with a redirect.
+#
+# READ-ONLY, THREE WAYS, NONE OF THEM THE ACCOUNT (see the ExternalSecret):
+#   1. NEO4J_READ_ONLY=true: write_neo4j_cypher is registered disabled, so it
+#      is not listed and cannot be called.
+#   2. read_neo4j_cypher runs EXPLAIN first and refuses any query whose plan
+#      writes, then runs it with routing_control=READ. The driver sends that
+#      as the transaction's access mode even on a direct bolt:// connection,
+#      and Neo4j rejects a write in a READ transaction (AccessMode error) --
+#      schema changes too, which the EXPLAIN check alone would let through.
+#   3. The MCPToolConfig below lists only the two read tools, so an image
+#      bump that renamed NEO4J_READ_ONLY would still not expose a write tool.
+# LIMITS. A READ transaction can still read everything, run read-mode
+# procedures, and make Neo4j fetch URLs (LOAD CSV, apoc.load.*) from inside
+# the database namespace; a slow query is cut off after NEO4J_READ_TIMEOUT.
+# Everything in the graph is rebuilt by the next collector run and declared
+# load, so a write that slipped past all three would last at most an hour.
+#
+# NO AUTH ON ITS PORT: the NetworkPolicy at the end of this file admits only
+# toolport and this server's own proxy, as for ./technitium.yaml.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-neo4j
+spec:
+  image: docker.io/mcp/neo4j-cypher:latest@sha256:b252997d16d37633a5a1b30e21ac0bf368b1c64e5895e4005313c84d77a05310
+  transport: streamable-http
+  proxyPort: 8080
+  # Must match NEO4J_MCP_SERVER_PORT.
+  mcpPort: 8000
+  groupRef:
+    name: agent-tools
+  toolConfigRef:
+    name: toolhive-neo4j
+  # No `args`: the image starts with CMD `sh -c mcp-neo4j-cypher`, which args
+  # would replace. Everything is set through the environment.
+  env:
+    - name: NEO4J_URI
+      value: bolt://neo4j.database.svc.cluster.local:7687
+    - name: NEO4J_DATABASE
+      value: neo4j
+    - name: NEO4J_TRANSPORT
+      value: http
+    - name: NEO4J_MCP_SERVER_HOST
+      value: 0.0.0.0
+    - name: NEO4J_MCP_SERVER_PORT
+      value: "8000"
+    - name: NEO4J_MCP_SERVER_PATH
+      value: /mcp
+    # Starlette's TrustedHostMiddleware: the Host names the proxy reaches this
+    # pod by, as ./postgres.yaml lists its own. The image's default allows
+    # only localhost, which would refuse every proxied call.
+    - name: NEO4J_MCP_SERVER_ALLOWED_HOSTS
+      value: mcp-toolhive-neo4j,mcp-toolhive-neo4j.agents.svc.cluster.local,mcp-toolhive-neo4j-headless,mcp-toolhive-neo4j-headless.agents.svc.cluster.local
+    - name: NEO4J_READ_ONLY
+      value: "true"
+    - name: NEO4J_READ_TIMEOUT
+      value: "30"
+    # get_neo4j_schema samples this many nodes per label (apoc.meta.schema).
+    # The map is small; 1000 covers it whole.
+    - name: NEO4J_SCHEMA_SAMPLE_SIZE
+      value: "1000"
+    - name: HOME
+      value: /tmp
+    - name: PYTHONDONTWRITEBYTECODE
+      value: "1"
+  podTemplateSpec:
+    # Reloader on the pod template, not the Secret: see ./openbao.yaml.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: toolhive-neo4j
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+  resources:
+    requests:
+      cpu: 10m
+      memory: 96Mi
+    limits:
+      memory: 384Mi
+
+---
+# The second guard on read-only (see the MCPServer's header): only the two
+# read tools reach toolport, whatever the server registers. `metadata.name`
+# is the MCPServer's, as for ./tdarr.yaml.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPToolConfig
+metadata:
+  name: toolhive-neo4j
+spec:
+  toolsFilter:
+    - get_neo4j_schema
+    - read_neo4j_cypher
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/networkpolicy-networking-k8s-io-v1.json
+#
+# Who may reach the Neo4j MCP: toolport, and its own proxy. Its port has no
+# auth and the server holds the database's admin login, so this policy is the
+# whole of it -- the same pair as ./ha-mcp/networkpolicy.yaml, whose header
+# explains the two `from` entries. The proxy listens on 8080, the server on
+# 8000.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: toolhive-neo4j-allow-toolport
+spec:
+  podSelector:
+    matchLabels:
+      toolhive-name: toolhive-neo4j
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: toolport
+              app.kubernetes.io/controller: toolport
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              toolhive-name: toolhive-neo4j
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8000

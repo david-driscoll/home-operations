@@ -24,6 +24,7 @@
   "homelable": { "tool": "homelable__list_zones", "args": {} },
   "netbird": { "tool": "netbird__list_groups", "args": {} },
   "technitium": { "tool": "technitium__server_info", "args": {} },
+  "neo4j": { "tool": "neo4j__read_neo4j_cypher", "args": { "query": "RETURN 1 AS ok" } },
   "cloudflare": { "tool": "cloudflare__whoami", "args": {} },
   "home-assistant": { "tool": "home_assistant__llm__GetDateTime", "args": {} },
   "ha-mcp": { "tool": "ha_mcp__ha_get_zone", "args": {} },
