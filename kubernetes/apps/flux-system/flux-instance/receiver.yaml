@@ -33,3 +33,31 @@ spec:
       kind: GitRepository
       name: forgejo-github-sync
       namespace: coder
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/receiver-notification-v1.json
+#
+# Pushes to the forge-hosted app repositories (stacks/system/forgejo-app-repos.ts),
+# delivered by Forgejo straight to webhook-receiver in-cluster: no Funnel, and
+# Forgejo's webhook ALLOWED_HOST_LIST names that one Service
+# (../../coder/forgejo/helmrelease.yaml).
+#
+# `github`, though the sender is Forgejo: Flux has no gitea/forgejo type, and
+# Forgejo's deliveries carry X-GitHub-Event and X-Hub-Signature-256 (HMAC-SHA256
+# of the body with the hook's secret), which is all this type checks. The same
+# token as github-webhook; stacks/system reads this Receiver's path and that
+# token to configure each repository's hook.
+apiVersion: notification.toolkit.fluxcd.io/v1
+kind: Receiver
+metadata:
+  name: forgejo-webhook
+spec:
+  type: github
+  events: ["ping", "push"]
+  secretRef:
+    name: github-webhook-token-secret
+  resources:
+    # home-operations/wonderbolts, the region picker (docs/plans/wonderbolts-nuxt.md).
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      name: wonderbolts
+      namespace: netbird-system

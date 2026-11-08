@@ -90,6 +90,7 @@ import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
 import { CoderTemplatesComponent } from "./coder-templates.ts";
 import { configureFluxWebhooks } from "./flux-webhooks.ts";
+import { configureForgejoAppRepositories } from "./forgejo-app-repos.ts";
 import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureForgejoSigning } from "./forgejo-signing.ts";
@@ -193,7 +194,13 @@ const forgejoConfiguration = new ForgejoConfigurationComponent({ globals, target
 // is a deploy key registered on GitHub. That makes GitHub, through the App
 // provider in components/globals.ts, a third thing this stack talks to. See
 // forgejo-github-mirror.ts and docs/runbooks/forgejo-github-mirror.md.
-new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration });
+const forgejoGithubMirror = new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration });
+
+// Forge-hosted app repositories under home-operations (the region picker
+// first): the repository, Flux's read grant, the image workflow's secrets, and
+// a push webhook to equestria's forgejo-webhook Receiver, read through the
+// tailnet kubeproxy like flux-webhooks.ts below. See forgejo-app-repos.ts.
+await configureForgejoAppRepositories({ globals, forgejo: forgejoConfiguration, imagesPushToken: forgejoGithubMirror.imagesPushToken });
 
 // The GitHub push webhooks that wake equestria's Flux. This was the whole of
 // `stacks/vault`, folded in with its state moved rather than recreated. It
