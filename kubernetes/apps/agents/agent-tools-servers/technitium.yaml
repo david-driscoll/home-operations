@@ -57,9 +57,11 @@ spec:
 # of this file admits only toolport and this server's own proxy, as for
 # ./homelable.yaml and ./ha-mcp.
 #
-# SERVERS. The four Dockge nodes through their Traefik (`<key>.dns.<root
-# domain>`, 443, a public certificate): the tailnet egress names would fail TLS,
-# because that is the certificate's only name and this server has no
+# SERVERS. The four Dockge nodes at their web console, `<key>.dns.<root
+# domain>:53443` (a public certificate for that name). NOT 443: Traefik's
+# route there serves DNS-over-HTTPS and the dashboard, and /api/* answers 404
+# (verified 2026-11-07). The tailnet egress names would fail TLS, because the
+# certificate's only name is the root-domain one and this server has no
 # server-name override. Equestria's node is reached in-cluster over plain HTTP.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
@@ -78,7 +80,7 @@ spec:
     - name: HOME
       value: /tmp
     - name: TECHNITIUM_SERVER
-      value: "celestia=https://celestia.dns.${ROOT_DOMAIN},luna=https://luna.dns.${ROOT_DOMAIN},skystar=https://skystar.dns.${ROOT_DOMAIN},alpha-site=https://alpha-site.dns.${ROOT_DOMAIN},equestria=http://technitium-admin.network.svc.cluster.local:5380"
+      value: "celestia=https://celestia.dns.${ROOT_DOMAIN}:53443,luna=https://luna.dns.${ROOT_DOMAIN}:53443,skystar=https://skystar.dns.${ROOT_DOMAIN}:53443,alpha-site=https://alpha-site.dns.${ROOT_DOMAIN}:53443,equestria=http://technitium-admin.network.svc.cluster.local:5380"
     - name: TECHNITIUM_READ_ONLY
       value: "true"
     - name: TECHNITIUM_TOOLSETS
