@@ -12,3 +12,4 @@
 !sdks/*/package.json
 !images/network-map/
 images/network-map/**/*.test.ts
+images/network-map/declared/

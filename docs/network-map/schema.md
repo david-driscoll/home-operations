@@ -88,6 +88,35 @@ at the first match:
 Anything left unmatched stays a separate `Machine` with `joined: false`, which drift queries
 flag.
 
+## The declared layer
+
+The loader (`images/network-map/declared`, run by `.forgejo/workflows/network-map-declared.yml`)
+reads these, and writes everything with `layer: declared`, `source: repo`:
+
+| Source | Becomes |
+|---|---|
+| `definition.yaml` under `kubernetes/apps`, with its `ks.yaml` | `App` (`appId` = the ks's `APP`), `appRoute`/`tailnetRoute`/`appService`; `Group authentik:<g>` `REACHES` it via `Policy authentik:access-policy:<app>` |
+| `docker/<host>` plus `docker/_common`, less `*.ignore` | `App` per stack (`appId` = stack name), names from Traefik `Host()` rules; the host's LXC `RUNS` it |
+| `new ProxmoxHost/DockgeLxc/TalosVm/TruenasVm` in `stacks/{home,gulf-of-mexico,ocracoke}` (literal args only), `talos/talconfig.yaml`, `clusters/*.yaml` | `Machine repo:<hostname>` with `ips[]`, `macs[]`, `cluster`; `HOSTED_ON`; the Tailscale `Route`s a host advertises |
+| `stacks/netbird` `policy.ts`, `sites.ts` | NetBird `Group`s, `Policy netbird:client-<rule>`, `REACHES`, `Route`s to `Network site-lan:<site>`, gateway `Machine`s |
+| `components/constants.ts` | Tailscale tag and group `Group`s, subnet and cluster `Route`s |
+| `images/network-map/declared/unifi-zones.yaml` | `Zone unifi-fw:<zone>`, `Network unifi:name:<name>`, `IN_ZONE` |
+
+Each load replaces the whole declared layer in one transaction and never touches `observed`.
+
+`DECLARES` (`src/declares.ts`) is re-derived from scratch by BOTH writers, the loader on each
+push and the collector every hour, so something first observed after a push is linked within the
+hour. The edge carries `by`, the rule that made it:
+
+| Declared | Observed | `by` |
+|---|---|---|
+| `App`, `Group`, `Route`, `Network` | same label, same key | `key` |
+| `Network {system: unifi}` | `Network {source: unifi}` with the same `name` | `name` |
+| `Policy {system: netbird}` | `Policy {system: netbird}` named `policyName` or `policyName/<rule>` | `name` |
+| `Machine` | a `Machine` with one of `macs` on an interface or as its device MAC | `mac` |
+| `Machine` with no edge yet | a `Machine` with one of `ips` on an interface | `ip` |
+| `Machine` with no edge yet | a `Machine` whose `hostnames` hold `hostname` | `hostname` |
+
 ## What the observed layer can't see (yet)
 
 - **UniFi** reports no firewall zone membership, so `IN_ZONE` is declared only. A client's
