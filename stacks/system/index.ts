@@ -95,6 +95,7 @@ import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureForgejoSigning } from "./forgejo-signing.ts";
 import { configureGarage } from "./garage.ts";
+import { configureNeo4jAuth } from "./neo4j-auth.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
 
@@ -148,6 +149,10 @@ export const garage = configureGarage(globals);
 // Credentials for stargate-command/authentik-pg, shared by authentik on equestria and
 // alpha-site and by the Pi's streaming standby. See authentik-pg.ts's header.
 configureAuthentikPg(globals);
+
+// The network map's Neo4j credential, read by Neo4j, its collector, the
+// declared-layer loader and the Neo4j MCP. See neo4j-auth.ts's header.
+configureNeo4jAuth(globals);
 
 // The VRRP password for authentik's keepalived VIP, both sites. See authentik-vip.ts.
 configureAuthentikVip(globals);
