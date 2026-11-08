@@ -1,0 +1,97 @@
+# Upstream homelable v3.6.0 docker/nginx.conf, verbatim except for one line
+# added to every location that proxies to the backend:
+#
+#     proxy_set_header X-MCP-Service-Key "";
+#
+# and one upstream comment below reworded to name the placeholder instead of
+# spelling it (the repo's envsubst lint rejects a placeholder in a comment).
+#
+# An empty value makes nginx drop the header instead of passing it on. The
+# backend takes `X-MCP-Service-Key` on every endpoint as a login that bypasses
+# OIDC (backend/app/api/deps.py), and upstream's config passes every request
+# header through, so without this the key would work from the public route.
+# The callers that need it never come this way: the MCP sidecar calls the
+# backend over loopback, and the network-map sync calls its own Service
+# (../helmrelease.yaml, ../ciliumnetworkpolicy.yaml).
+#
+# Mounted over the image's /etc/nginx/templates/homelable.conf.template, so the
+# image's entrypoint still renders the BACKEND_UPSTREAM placeholder into
+# conf.d/homelable.conf, as it does upstream. Flux substitution is disabled for
+# this ConfigMap (../kustomization.yaml), so that placeholder and nginx's own
+# $variables reach the pod untouched.
+#
+# WHEN RENOVATE BUMPS homelable-frontend: diff upstream's docker/nginx.conf at
+# the new tag against this file, carry over any change, and keep the strip line
+# in every proxying location. A location upstream adds and this file lacks
+# falls through to the SPA fallback instead of reaching the backend.
+
+# Full-mode nginx config, served at the root. Installed as an nginx template:
+# the image renders the BACKEND_UPSTREAM placeholder at container start (default backend:8000,
+# see Dockerfile.frontend), so the API can live somewhere other than the compose
+# `backend` service — e.g. host.docker.internal:8000 when the backend runs with
+# network_mode: host.
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Proxy WebSocket (must be before /api/ to take priority)
+    location /api/v1/status/ws/ {
+        proxy_pass http://${BACKEND_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-MCP-Service-Key "";
+    }
+
+    # Proxy API to backend
+    location /api/ {
+        proxy_pass http://${BACKEND_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-MCP-Service-Key "";
+    }
+
+    # Interactive API docs — Swagger UI, ReDoc and the OpenAPI schema FastAPI
+    # generates. Outside /api/, so they need their own blocks or the SPA
+    # fallback below swallows them. See docs/api.md.
+    location /docs {
+        proxy_pass http://${BACKEND_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-MCP-Service-Key "";
+    }
+
+    location /redoc {
+        proxy_pass http://${BACKEND_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-MCP-Service-Key "";
+    }
+
+    location = /openapi.json {
+        proxy_pass http://${BACKEND_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-MCP-Service-Key "";
+    }
+
+    # Proxy legacy /ws/ path
+    location /ws/ {
+        proxy_pass http://${BACKEND_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-MCP-Service-Key "";
+    }
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

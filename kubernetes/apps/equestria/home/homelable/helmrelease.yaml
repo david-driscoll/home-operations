@@ -43,7 +43,9 @@ spec:
         strategy: Recreate
         containers:
           # nginx. The public face; the only container with an ingress route on
-          # the LAN hostname.
+          # the LAN hostname. Runs our copy of upstream's nginx config (the
+          # `nginx` persistence below), which strips `X-MCP-Service-Key` from
+          # every request it proxies to the backend.
           frontend:
             image:
               repository: ghcr.io/pouzor/homelable-frontend
@@ -81,8 +83,9 @@ spec:
                 drop: ["ALL"]
                 add: ["NET_BIND_SERVICE", "CHOWN", "SETUID", "SETGID"]
 
-          # uvicorn. No Service of its own -- see the hostAliases note below for
-          # why it is reachable only from inside this pod.
+          # uvicorn. Its siblings reach it over loopback (the hostAliases note
+          # below). Its own Service, `homelable-backend`, is for the network-map
+          # sync alone: ./ciliumnetworkpolicy.yaml admits only that job to :8000.
           backend:
             image:
               repository: ghcr.io/pouzor/homelable-backend
@@ -137,6 +140,12 @@ spec:
               # Upstream default, on purpose. This runs *alongside* Gatus, not
               # instead of it -- comparable resolution is the whole point, since
               # the question worth measuring is the disagreement rate.
+              #
+              # It checks only nodes with a check method. On the network map's
+              # four designs that is the infrastructure alone (the UniFi gear,
+              # the Proxmox and Dockge hosts, the NetBird gateways, pinged at
+              # their LAN address); every other node's status is written by the
+              # hourly sync from the source APIs (docs/network-map/schema.md).
               STATUS_CHECKER_INTERVAL: "60"
             resources:
               requests:
@@ -186,11 +195,17 @@ spec:
           # `agents` namespace
           # (kubernetes/apps/agents/agent-tools-servers/homelable.yaml). It
           # reaches the backend with an `X-MCP-Service-Key` header that bypasses
-          # OIDC by design, and that hop is a loopback one only while the two are
-          # siblings -- running the image over in `agents` instead would mean
-          # giving the backend a ClusterIP and turning a pod-private,
-          # OIDC-bypassing API into a cluster-wide one. Only the client-facing
-          # surface moved; the privileged hop did not.
+          # OIDC by design, and as a sibling it does so over loopback. The
+          # backend does have a Service now, but ./ciliumnetworkpolicy.yaml
+          # opens it to the network-map sync only; running this image in
+          # `agents` would mean opening that OIDC-bypassing port to a second
+          # namespace. Only the client-facing surface moved; the privileged hop
+          # did not.
+          #
+          # The same key is the network-map sync's credential (its own copy,
+          # kubernetes/apps/database/network-map/externalsecret.yaml), and
+          # nginx strips the header from everything it proxies, so neither the
+          # public route nor the tailnet one can present it.
           #
           # Its own `X-API-Key` gate is unconditional and cannot be turned off,
           # so `MCP_API_KEY` must stay set here. The ToolHive side injects the
@@ -252,24 +267,26 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       # WHY ONE POD AND NOT THREE CONTROLLERS.
-      # The frontend image bakes `proxy_pass http://backend:8000` into
-      # /etc/nginx/conf.d/default.conf, in three location blocks (/api/,
-      # /api/v1/status/ws/, /ws/), with no `resolver` directive -- so nginx
-      # resolves the name once at startup and holds it. Two ways to satisfy
-      # that in Kubernetes:
+      # Both the frontend and the MCP server reach the backend as
+      # `backend:8000`: the MCP server by its BACKEND_URL, nginx by its
+      # config, which the image renders at start from a template
+      # (`proxy_pass` to BACKEND_UPSTREAM, default `backend:8000`) into
+      # conf.d/homelable.conf, in six location blocks, with no `resolver`
+      # directive -- so nginx resolves the name once at startup and holds it.
       #
-      #   a) a Service literally named `backend` in `equestria`. That is the
-      #      name collision the Dockge compose scoped to a stack-private network
-      #      precisely to avoid, and a namespace shared with ~18 other apps is a
-      #      worse place to claim it than `dockge_default` was.
-      #   b) mount our own default.conf from a ConfigMap. That forks upstream's
-      #      nginx config, and Renovate bumps this image -- a new location block
-      #      upstream would go missing silently.
+      # Co-locating the three containers keeps the pod netns shared, so this
+      # hostAliases entry makes `backend:8000` a loopback hop for both, and
+      # both of the hops that carry privilege (nginx's session-authenticated
+      # proxying, the MCP server's X-MCP-Service-Key) stay inside the pod. The
+      # cost is the three restarting together, which is the coupling
+      # `depends_on` gave them on celestia anyway. Splitting them would also
+      # need a Service literally named `backend` in a namespace shared with
+      # ~18 other apps, or BACKEND_UPSTREAM/BACKEND_URL pointed at a Service
+      # that would then have to admit both siblings.
       #
-      # Neither is good. Co-locating the three containers keeps the pod netns
-      # shared (so `backend:8000` is a loopback hop) and lets upstream's config
-      # stay authoritative, at the cost of the three restarting together --
-      # which is the coupling `depends_on` gave them on celestia anyway.
+      # The nginx config is no longer upstream's own: the `nginx` persistence
+      # below mounts a copy over the image's template, to strip the service key
+      # header. Its header says what to diff when Renovate bumps the image.
       hostAliases:
         - ip: "127.0.0.1"
           hostnames:
@@ -286,6 +303,21 @@ spec:
           *app :
             backend:
               - path: /app/data
+      # Upstream's nginx template plus the X-MCP-Service-Key strip
+      # (./resources/homelable.conf.template, rendered into this ConfigMap by
+      # ./kustomization.yaml). Mounted over the image's own template, so its
+      # entrypoint still renders BACKEND_UPSTREAM into it as upstream does.
+      # subPath mounts never update in place; Reloader restarts the pod when
+      # the ConfigMap changes.
+      nginx:
+        type: configMap
+        name: homelable-nginx
+        advancedMounts:
+          *app :
+            frontend:
+              - path: /etc/nginx/templates/homelable.conf.template
+                subPath: homelable.conf.template
+                readOnly: true
 
     service:
       *app :
@@ -298,17 +330,26 @@ spec:
       # dial: http://homelable-mcp.equestria.svc.cluster.local:8001/mcp. It
       # selects the same pod as `homelable` above -- the port is what separates
       # them.
-      #
-      # Note what is NOT here: a Service for the backend. It has none, so port
-      # 8000 is reachable only from inside this pod, which is what keeps the
-      # `X-MCP-Service-Key` OIDC bypass a loopback-only privilege. Adding one
-      # would undo that; see the mcp container's comment above.
       mcp:
         controller: *app
         type: ClusterIP
         ports:
           http:
             port: *mcpPort
+      # The backend itself, for the network-map sync
+      # (docs/adr/0006-network-map-neo4j-homelable-projection.md), which
+      # rewrites the four network-map designs hourly with X-MCP-Service-Key:
+      # http://homelable-backend.equestria.svc.cluster.local:8000. That header
+      # bypasses OIDC on every endpoint, so ./ciliumnetworkpolicy.yaml admits
+      # only the sync's ServiceAccount (database/network-map-collector) to
+      # :8000; any other pod is dropped. Nothing else needs it: the frontend
+      # and the MCP server stay on loopback.
+      backend:
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *backendPort
 
     route:
       internal:
