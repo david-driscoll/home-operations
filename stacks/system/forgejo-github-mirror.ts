@@ -157,6 +157,13 @@ export interface ForgejoGithubMirrorArgs {
 }
 
 export class ForgejoGithubMirrorComponent extends ComponentResource {
+  /**
+   * The estate-images account's write:package token, for every workflow that
+   * pushes an estate image: this repository's, and the forge-hosted app
+   * repositories' (./forgejo-app-repos.ts).
+   */
+  public readonly imagesPushToken: pulumi.Output<string>;
+
   constructor(args: ForgejoGithubMirrorArgs, opts?: ComponentResourceOptions) {
     super("custom:forgejo:github-mirror", "forgejo-github-mirror", args, opts);
 
@@ -562,6 +569,7 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // workspace image with (write:package, estate-images' own packages).
       ESTATE_IMAGES_TOKEN: imagesBot.token.token,
     };
+    this.imagesPushToken = imagesBot.token.token;
     for (const [name, data] of Object.entries(secrets)) {
       new forgejo.RepositoryActionSecret(`forgejo-github-mirror-secret-${name.toLowerCase().replaceAll("_", "-")}`, { repositoryId: repository.repositoryId, name, data }, { provider, parent: repository });
     }

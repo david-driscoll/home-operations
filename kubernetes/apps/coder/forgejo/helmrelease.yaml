@@ -552,7 +552,13 @@ spec:
           #
           # Change this and the operator's `webhook.baseUrl` together: they are
           # two spellings of the same destination.
-          ALLOWED_HOST_LIST: renovate-operator.${NAMESPACE}.svc.cluster.local
+          #
+          # And Flux's notification-controller, for the forge-hosted app
+          # repositories' push hooks to the `forgejo-webhook` Receiver
+          # (kubernetes/apps/flux-system/flux-instance/receiver.yaml,
+          # stacks/system/forgejo-app-repos.ts). Comma-separated, each name
+          # exact for the same reason as above.
+          ALLOWED_HOST_LIST: renovate-operator.${NAMESPACE}.svc.cluster.local,webhook-receiver.flux-system.svc.cluster.local
 
         service:
           # This exact pair is the documented combination for "accounts come only

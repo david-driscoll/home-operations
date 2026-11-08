@@ -273,6 +273,39 @@ Each phase is its own PR.
 7. **Move `definition.yaml`** to `wonderbolts/` once phase 6 has reconciled, so its Flux
    Kustomization changes without the old one pruning it first.
 
+### Phase 8: its own repository (decided 2026-11-07)
+
+The app, the agent and the app's manifests move to `home-operations/wonderbolts` on the forge.
+The region exits stay here.
+
+- **Layout:** `app/` is the Nuxt project (was `apps/wonderbolts`). `agent/` is the sidecar
+  (was `picker.ts`, `activeClients.ts`, `overlays.ts`, `metrics.ts`, shipped as the
+  `region-exit-picker` ConfigMap). `deploy/` holds the HelmRelease, CNP, pull-secret
+  ExternalSecret and ApplicationDefinition. CI and both image builds go in
+  `.forgejo/workflows/`, and `renovate.json` at the root.
+- **Two images:** `estate-images/wonderbolts` (the app) and `estate-images/wonderbolts-agent`
+  (the sidecar), bumped separately. The app's pin lives in the repo's `deploy/`. The agent's
+  stays in `region-exits/helmrelease.yaml`, where this repo's "Estate images" custom manager
+  already tracks it. The app's version moves to 0.2.x, because its tag counts commits and a
+  fresh repository starts below the deployed 0.1.4.
+- **Fresh history:** one import commit that points back at this repository. Pushed by hand
+  once: the session that prepared it has no forge credential.
+- **`stacks/system` makes the repository** (`forgejo-app-repos.ts`): the repo, a read grant
+  for the forge's `flux` account, the `ESTATE_IMAGES_TOKEN` and `PRIVATE_DOMAIN_ROOT` Actions
+  secrets, and a push webhook. Renovate's org team already covers it.
+- **Flux:** a GitRepository `wonderbolts` in `netbird-system`, cloned with the `flux`
+  account. Pushes reach it through the `forgejo-webhook` Receiver (type `github`; Forgejo
+  sends X-GitHub-Event and X-Hub-Signature-256), and Forgejo's `ALLOWED_HOST_LIST` names
+  `webhook-receiver.flux-system.svc.cluster.local`.
+- **The Kustomization doesn't move:** `wonderbolts` stays in `kubernetes/apps/netbird-system`
+  and only its `sourceRef` and `path` change. The objects keep their owner, so nothing is
+  pruned or re-created.
+- **No confirmation step anywhere** (fe2306ac removed the agent's 409): the app's confirm
+  modal and its 409 handling go with the move.
+- **Order:** this repository creates the repo and the Receiver, then the first commit is
+  pushed and builds both images, then one PR here switches the source, moves the sidecar to
+  the agent image, and deletes `apps/wonderbolts`, the agent files and their workflows.
+
 ## F. Tests
 
 - Port, not rewrite: `overview.test.ts` becomes tests of `api/region-exits/index.get.ts` and

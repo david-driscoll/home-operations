@@ -418,40 +418,23 @@ describe("POST /region", () => {
     assert.match((await response.json()).error, /no server found/);
   });
 
-  describe("with people on the region exit", () => {
-    it("asks for confirmation, and moves nothing, until the switch is confirmed", async () => {
-      await withConntrack(TWO_PEOPLE, async () => {
+  // No confirmation step (fe2306ac): a move goes through whoever is on it.
+  // The app shows how many people are on a region exit before anyone moves it.
+  for (const [what, table] of [
+    ["with people on it", TWO_PEOPLE],
+    ["when it cannot tell who is on it", null],
+  ] as const) {
+    it("moves it at once " + what, async () => {
+      await withConntrack(table, async () => {
         const { handle, calls } = picker(switchRoutes);
-        const response = await handle(post({ country: "Japan" }));
-        assert.equal(response.status, 409);
-        const body = await response.json();
-        assert.equal(body.activeClients, 2);
-        assert.equal(body.confirm, true);
-        assert.deepEqual(calls, []);
-      });
-    });
-
-    it("moves once confirmed", async () => {
-      await withConntrack(TWO_PEOPLE, async () => {
-        const { handle, calls } = picker(switchRoutes);
-        assert.equal((await handle(post({ country: "Japan", confirm: true }))).status, 200);
+        assert.equal((await handle(post({ country: "Japan" }))).status, 200);
         assert.deepEqual(
           calls.map(c => c.method + " " + c.url),
           ["PATCH " + STATE_URL, APPLY],
         );
       });
     });
-
-    it("asks too when it cannot tell who is on it", async () => {
-      await withConntrack(null, async () => {
-        const { handle, calls } = picker(switchRoutes);
-        const response = await handle(post({ country: "Japan" }));
-        assert.equal(response.status, 409);
-        assert.equal((await response.json()).activeClients, null);
-        assert.deepEqual(calls, []);
-      });
-    });
-  });
+  }
 });
 
 /** The region picker app's move: JSON, on the root path. */
@@ -488,18 +471,6 @@ describe("POST /region, as the region picker app sends it", () => {
     const { handle, calls } = picker(switchRoutes);
     assert.equal((await handle(appPost({ country: "Atlantis", movedBy: "Jamie" }))).status, 400);
     assert.deepEqual(calls, []);
-  });
-
-  it("POST /region asks for confirmation with people on it, and moves once confirmed", async () => {
-    await withConntrack(TWO_PEOPLE, async () => {
-      const { handle, calls } = picker(switchRoutes);
-      const asked = await handle(appPost({ country: "Japan", movedBy: "Jamie" }));
-      assert.equal(asked.status, 409);
-      assert.deepEqual(await asked.json(), { error: "2 people are using spitfire right now. Send it again with confirm: true to move them.", activeClients: 2, confirm: true });
-      assert.equal(calls.length, 0);
-      assert.equal((await handle(appPost({ country: "Japan", movedBy: "Jamie", confirm: true }))).status, 200);
-      assert.deepEqual(calls[0].body, statePatch({ SERVER_COUNTRIES: "Japan", SERVER_CITIES: null }, "Jamie"));
-    });
   });
 });
 
