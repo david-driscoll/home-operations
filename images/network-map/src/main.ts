@@ -8,7 +8,9 @@
  *   2. read all six sources at once, each on its own: one failing never
  *      stops another, and a failed source keeps its previous nodes;
  *   3. join their machines and build the graph plan (./build.ts);
- *   4. write it in one transaction (./cypher.ts has the strategy);
+ *   4. write it in one transaction (./cypher.ts has the strategy), and in
+ *      the same transaction re-derive the DECLARES edges from the declared
+ *      layer to it (./declares.ts);
  *   5. log one JSON line per source, and a summary.
  *
  * Exits 1 only when the Neo4j write failed or EVERY source failed (see
@@ -23,6 +25,7 @@ import neo4j, { type Driver, type ManagedTransaction } from "neo4j-driver";
 import { buildGraph } from "./build.ts";
 import { type Config, loadConfig } from "./config.ts";
 import { fallbackNetworksQuery, nodeStatements, relStatements, retentionStatement, runRecordStatement, type SourceOutcome, type Statement, schemaStatements, staleStatements } from "./cypher.ts";
+import { linkStatements } from "./declares.ts";
 import { exitCode } from "./exit.ts";
 import { httpClient } from "./http.ts";
 import type { SourceName, SourceResult } from "./model.ts";
@@ -139,6 +142,8 @@ async function main(): Promise<number> {
         for (const s of nodeStatements(plan, ctx)) await run(tx, s);
         for (const s of relStatements(plan, ctx)) await run(tx, s);
         for (const source of replaced) for (const s of staleStatements(source, ctx)) await run(tx, s);
+        // Join the declared layer to what this run wrote (./declares.ts), before retention reads the joins.
+        for (const s of linkStatements()) await run(tx, s);
         const retention = await run(tx, retentionStatement(ctx, config.retentionDays));
         await run(tx, runRecordStatement(ctx, outcomes));
         return Number(retention.records[0]?.get("removed") ?? 0);
