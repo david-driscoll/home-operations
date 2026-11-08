@@ -16,7 +16,6 @@
  *
  * Plus the overlay itself, Network `tailscale:tailnet`.
  */
-import { kubernetesClusters, Tailscale } from "../../../components/constants.ts";
 import { TAILNET_NETWORK_ID } from "../src/model.ts";
 import { CGNAT_CIDR } from "../src/normalize.ts";
 import { tailscaleGroupKey, tailscaleRouteKey } from "../src/sources/tailscale.ts";
@@ -29,7 +28,15 @@ export interface TailscaleDeclarations {
   clusters: readonly { tag: string; clusterNetwork: string; serviceNetwork: string }[];
 }
 
-export const TAILSCALE: TailscaleDeclarations = { tags: Tailscale.tag, groups: Tailscale.groups, subnets: Tailscale.subnets, clusters: kubernetesClusters };
+/**
+ * components/constants.ts as it is in the checkout, imported when called (see
+ * ./netbird.ts readNetbird), plus the `Tailscale` scope ./machines.ts reads the
+ * site stacks with.
+ */
+export async function readTailscale(): Promise<{ decl: TailscaleDeclarations; scope: { Tailscale: unknown } }> {
+  const { kubernetesClusters, Tailscale } = await import("../../../components/constants.ts");
+  return { decl: { tags: Tailscale.tag, groups: Tailscale.groups, subnets: Tailscale.subnets, clusters: kubernetesClusters }, scope: { Tailscale } };
+}
 
 export function addTailscale(plan: DeclaredPlan, decl: TailscaleDeclarations): void {
   plan.node("Network", TAILNET_NETWORK_ID, { name: "tailnet", kind: "tailnet", cidr: CGNAT_CIDR });

@@ -10,11 +10,12 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { addDockerStack, addKubernetesApp, composeRouters, kustomizationFor, parseDefinitions, readDockerStacks, traefikHosts, urlHost } from "./apps.ts";
+import { addDockerStack, addKubernetesApp, composeRouters, kustomizationFor, parseDefinitions, readAppServiceRule, readDockerStacks, readKubernetesApps, traefikHosts, urlHost } from "./apps.ts";
 import type { ClusterFile, DockgeHost } from "./machines.ts";
 import { DeclaredPlan } from "./plan.ts";
 
 const domains = { root: "example.test", tailnet: "tail0.ts.net" };
+const services = await readAppServiceRule();
 const equestria: ClusterFile = { key: "equestria", title: "Equestria", type: "kubernetes", location: "home", domainPrefix: "equestria" };
 const celestia: ClusterFile = { key: "celestia", title: "Celestia", type: "dockge", location: "home", domainPrefix: "celestia" };
 const celestiaHost: DockgeHost = { name: "celestia-dockge", hostName: "celestia", shortName: "celestia" };
@@ -71,7 +72,7 @@ describe("kustomizationFor", () => {
 describe("addKubernetesApp", () => {
   it("resolves the ks's substitutions and the cluster's, and derives all three names", () => {
     const plan = new DeclaredPlan();
-    addKubernetesApp(plan, { dir: "kubernetes/apps/equestria/home/immich", definitionText: definition, ksText: ks }, equestria, domains);
+    addKubernetesApp(plan, { dir: "kubernetes/apps/equestria/home/immich", definitionText: definition, ksText: ks }, equestria, domains, services);
     const { nodes, rels, problems } = plan.finish();
     assert.deepEqual(problems, []);
     const app = nodes.find(n => n.label === "App");
@@ -96,7 +97,7 @@ describe("addKubernetesApp", () => {
   it("gives an app without the tailscale component no tailnet route and no app service", () => {
     const plain = ks.replace("    - ../../../../components/tailscale\n", "    - ../../../../components/volsync\n");
     const plan = new DeclaredPlan();
-    addKubernetesApp(plan, { dir: "kubernetes/apps/equestria/home/immich", definitionText: definition, ksText: plain }, equestria, domains);
+    addKubernetesApp(plan, { dir: "kubernetes/apps/equestria/home/immich", definitionText: definition, ksText: plain }, equestria, domains, services);
     const app = plan.finish().nodes.find(n => n.label === "App");
     assert.equal(app?.props.tailnetRoute, undefined);
     assert.equal(app?.props.appService, undefined);
@@ -192,6 +193,19 @@ describe("addDockerStack", () => {
     plan.node("Machine", "repo:alpha-site-dockge", {});
     addDockerStack(plan, { stack: "zot", host: { name: "alpha-site-dockge", hostName: "alpha-site", shortName: "as" }, cluster: { ...celestia, key: "alpha-site", domainPrefix: "as" }, composeText: compose }, domains);
     assert.deepEqual(plan.finish().nodes.find(n => n.label === "App")?.props.tailnetRoutes, ["zot-as.tail0.ts.net"]);
+  });
+});
+
+describe("readKubernetesApps", () => {
+  it("reports a checkout with no kubernetes/apps instead of throwing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "nm-declared-"));
+    try {
+      const problems: string[] = [];
+      assert.deepEqual(await readKubernetesApps(root, problems), []);
+      assert.deepEqual(problems, ["kubernetes/apps: no definition.yaml found; no Kubernetes apps declared"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -37,9 +37,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { parseAllDocuments } from "yaml";
-import { appAccessGroups, appHost } from "../../../stacks/netbird/apps.ts";
+import type { appAccessGroups, appHost } from "../../../stacks/netbird/apps.ts";
 import type { ClusterFile, DockgeHost } from "./machines.ts";
-import { type DeclaredPlan, machineKey } from "./plan.ts";
+import { attempt, type DeclaredPlan, machineKey } from "./plan.ts";
 import { substitute } from "./substitute.ts";
 
 export interface Domains {
@@ -130,6 +130,18 @@ function addAccess(plan: DeclaredPlan, appId: string, groups: readonly string[] 
   }
 }
 
+/** stacks/netbird/apps.ts's rule for which app gets an app service, and its name. Without it, no app gets one. */
+export interface AppServiceRule {
+  appAccessGroups: typeof appAccessGroups;
+  appHost: typeof appHost;
+}
+
+/** stacks/netbird/apps.ts as it is in the checkout, imported when called (see ./netbird.ts readNetbird). */
+export async function readAppServiceRule(): Promise<AppServiceRule> {
+  const { appAccessGroups, appHost } = await import("../../../stacks/netbird/apps.ts");
+  return { appAccessGroups, appHost };
+}
+
 export interface KubernetesAppInput {
   /** Repo-relative directory of the definition.yaml. */
   dir: string;
@@ -138,7 +150,7 @@ export interface KubernetesAppInput {
 }
 
 /** One definition.yaml beside its ks.yaml -> App nodes and their reach. */
-export function addKubernetesApp(plan: DeclaredPlan, input: KubernetesAppInput, cluster: ClusterFile, domains: Domains): void {
+export function addKubernetesApp(plan: DeclaredPlan, input: KubernetesAppInput, cluster: ClusterFile, domains: Domains, services?: AppServiceRule): void {
   const ks = input.ksText ? kustomizationFor(input.ksText, input.dir) : undefined;
   if (!ks) plan.problems.push(`${input.dir}/definition.yaml: no ks.yaml beside it; only cluster variables substituted`);
   const local = substitutions(ks);
@@ -154,8 +166,8 @@ export function addKubernetesApp(plan: DeclaredPlan, input: KubernetesAppInput, 
     const tailnetHost = (local.TAILSCALE_HOST || local.APP || appId).toLowerCase();
     const namespace = def.metadata.namespace ?? (vars.NAMESPACE as string | undefined);
     const tailnetRoute = urlHost(def.spec.tailnetUrl) ?? (tailnetApp && domains.tailnet ? `${tailnetHost}.${domains.tailnet}` : undefined);
-    const access = tailnetApp ? appAccessGroups({ metadata: { name: appId, namespace }, spec: def.spec }, { app: appId, namespace: namespace ?? "", host: tailnetHost }) : undefined;
-    const appService = access && access.groups.length > 0 && domains.root ? appHost(tailnetHost, domains.root) : undefined;
+    const access = tailnetApp && services ? services.appAccessGroups({ metadata: { name: appId, namespace }, spec: def.spec }, { app: appId, namespace: namespace ?? "", host: tailnetHost }) : undefined;
+    const appService = access && access.groups.length > 0 && domains.root && services ? services.appHost(tailnetHost, domains.root) : undefined;
     const appRoute = urlHost(def.spec.url);
     plan.node("App", appId, {
       name: def.spec.name ?? appId,
@@ -297,30 +309,39 @@ async function subdirs(dir: string): Promise<string[]> {
   }
 }
 
-/** Every definition.yaml under kubernetes/apps, with its ks.yaml. */
-export async function readKubernetesApps(root: string): Promise<KubernetesAppInput[]> {
-  const files = (await filesUnder(join(root, "kubernetes", "apps"))).filter(f => f.endsWith("/definition.yaml")).sort();
-  return Promise.all(
-    files.map(async file => ({
-      dir: relative(root, dirname(file)),
-      definitionText: await readFile(file, "utf8"),
-      ksText: await readOptional(join(dirname(file), "ks.yaml")),
-    })),
+/**
+ * Every definition.yaml under kubernetes/apps, with its ks.yaml. An unreadable
+ * file, or no definition at all, is a problem; the rest still load.
+ */
+export async function readKubernetesApps(root: string, problems: string[]): Promise<KubernetesAppInput[]> {
+  const files = (await attempt(problems, "kubernetes/apps", [], () => filesUnder(join(root, "kubernetes", "apps")))).filter(f => f.endsWith("/definition.yaml")).sort();
+  if (files.length === 0) problems.push("kubernetes/apps: no definition.yaml found; no Kubernetes apps declared");
+  const read = await Promise.all(
+    files.map(file =>
+      attempt(problems, relative(root, file), [] as KubernetesAppInput[], async () => [
+        { dir: relative(root, dirname(file)), definitionText: await readFile(file, "utf8"), ksText: await readOptional(join(dirname(file), "ks.yaml")) },
+      ]),
+    ),
   );
+  return read.flat();
 }
 
-/** The stacks DockgeLxc deploys to `host`: its directory and _common, less the ignored ones. */
-export async function readDockerStacks(root: string, host: DockgeHost, cluster: ClusterFile): Promise<DockerStackInput[]> {
+/** The stacks DockgeLxc deploys to `host`: its directory and _common, less the ignored ones. An unreadable stack is a problem. */
+export async function readDockerStacks(root: string, host: DockgeHost, cluster: ClusterFile, problems: string[] = []): Promise<DockerStackInput[]> {
   const docker = join(root, "docker");
   const names = [...new Set([...(await subdirs(join(docker, host.hostName))), ...(await subdirs(join(docker, "_common")))])].sort();
+  if (names.length === 0) problems.push(`docker/${host.hostName}: no stacks for ${host.name} (nor in docker/_common)`);
   const out: DockerStackInput[] = [];
   for (const stack of names) {
     const own = join(docker, host.hostName, stack);
     const common = join(docker, "_common", stack);
-    const files = [...(await filesUnder(own)), ...(await filesUnder(common))];
-    if (files.some(f => f.endsWith(".ignore"))) continue;
-    const pick = async (name: string) => ((await exists(join(own, name))) ? readOptional(join(own, name)) : readOptional(join(common, name)));
-    out.push({ stack, host, cluster, composeText: await pick("compose.yaml"), definitionText: await pick("definition.yaml") });
+    const input = await attempt(problems, `docker/${host.hostName}/${stack}`, undefined as DockerStackInput | undefined, async () => {
+      const files = [...(await filesUnder(own)), ...(await filesUnder(common))];
+      if (files.some(f => f.endsWith(".ignore"))) return undefined;
+      const pick = async (name: string) => ((await exists(join(own, name))) ? readOptional(join(own, name)) : readOptional(join(common, name)));
+      return { stack, host, cluster, composeText: await pick("compose.yaml"), definitionText: await pick("definition.yaml") };
+    });
+    if (input) out.push(input);
   }
   return out;
 }

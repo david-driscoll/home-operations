@@ -18,8 +18,8 @@
  *
  * Plus the overlay itself, Network `netbird:netbird`.
  */
-import { ACCESS_RULES, type AccessRule, DEVICE_GROUPS, USER_GROUPS } from "../../../stacks/netbird/policy.ts";
-import { GATEWAY_SITE_STACKS, gatewayGroupName, gatewayPeerName, routedSites, SITES, type Site } from "../../../stacks/netbird/sites.ts";
+import type { AccessRule } from "../../../stacks/netbird/policy.ts";
+import type { Site } from "../../../stacks/netbird/sites.ts";
 import { NETBIRD_NETWORK_ID } from "../src/model.ts";
 import { netbirdGroupKey, netbirdRouteKey, rulePorts } from "../src/sources/netbird.ts";
 import type { DockgeHost } from "./machines.ts";
@@ -31,10 +31,28 @@ export interface NetbirdDeclarations {
   rules: readonly AccessRule[];
   sites: Record<string, Site>;
   siteStacks: Record<string, string[]>;
+  /** sites.ts's naming: `gateway-<site stack>` for a group, `gateway-<host>` for a peer. */
+  gatewayGroupName: (siteStack: string) => string;
+  gatewayPeerName: (host: string) => string;
 }
 
-/** The modules as they are on main. */
-export const NETBIRD: NetbirdDeclarations = { userGroups: USER_GROUPS, deviceGroups: DEVICE_GROUPS, rules: ACCESS_RULES, sites: SITES, siteStacks: GATEWAY_SITE_STACKS };
+/**
+ * The modules as they are in the checkout. Imported when called, not at load,
+ * so a renamed or broken module is a problem ./load.ts reports, not a crash.
+ */
+export async function readNetbird(): Promise<NetbirdDeclarations> {
+  const policy = await import("../../../stacks/netbird/policy.ts");
+  const sites = await import("../../../stacks/netbird/sites.ts");
+  return {
+    userGroups: policy.USER_GROUPS,
+    deviceGroups: policy.DEVICE_GROUPS,
+    rules: policy.ACCESS_RULES,
+    sites: sites.SITES,
+    siteStacks: sites.GATEWAY_SITE_STACKS,
+    gatewayGroupName: sites.gatewayGroupName,
+    gatewayPeerName: sites.gatewayPeerName,
+  };
+}
 
 /** The policy name stacks/netbird gives a rule (`client-<rule>`, stacks/netbird/index.ts section 9). */
 export const clientPolicyName = (rule: string) => `client-${rule}`;
@@ -60,12 +78,13 @@ export function addNetbird(plan: DeclaredPlan, decl: NetbirdDeclarations, dockge
     }
   }
 
-  for (const [site, config] of routedSites(decl.sites)) {
+  // Only sites with a gateway stack get a network (sites.ts routedSites).
+  for (const [site, config] of Object.entries(decl.sites).filter(([, s]) => s.gatewayStacks.length > 0)) {
     const networkId = `site-lan:${site}`;
     plan.node("Network", networkId, { name: site, kind: "site-lan", cidr: config.cidrs.length === 1 ? config.cidrs[0] : undefined, cidrs: config.cidrs });
     group(plan, `lan-${site}`, "device");
     for (const cidr of config.cidrs) {
-      plan.node("Route", netbirdRouteKey(cidr), { system: "netbird", cidr, exit: false, site, routedBy: config.gatewayStacks.map(gatewayGroupName) });
+      plan.node("Route", netbirdRouteKey(cidr), { system: "netbird", cidr, exit: false, site, routedBy: config.gatewayStacks.map(decl.gatewayGroupName) });
       plan.rel("ROUTES_TO", { label: "Route", key: netbirdRouteKey(cidr) }, { label: "Network", key: networkId });
     }
   }
@@ -73,12 +92,12 @@ export function addNetbird(plan: DeclaredPlan, decl: NetbirdDeclarations, dockge
   const lxcOf = new Map(dockgeHosts.map(h => [h.hostName, h.name]));
   group(plan, "gateways", "device");
   for (const [stack, hosts] of Object.entries(decl.siteStacks)) {
-    group(plan, gatewayGroupName(stack), "device");
+    group(plan, decl.gatewayGroupName(stack), "device");
     for (const host of hosts) {
-      const name = gatewayPeerName(host);
+      const name = decl.gatewayPeerName(host);
       const key = machineKey(name);
       plan.node("Machine", key, { name, hostname: name, kind: "container", declaredAs: "netbird-gateway", cluster: host, siteStack: stack });
-      for (const g of ["gateways", gatewayGroupName(stack)]) plan.rel("MEMBER_OF", { label: "Machine", key }, { label: "Group", key: netbirdGroupKey(g) });
+      for (const g of ["gateways", decl.gatewayGroupName(stack)]) plan.rel("MEMBER_OF", { label: "Machine", key }, { label: "Group", key: netbirdGroupKey(g) });
       const lxc = lxcOf.get(host);
       if (lxc) plan.rel("HOSTED_ON", { label: "Machine", key }, { label: "Machine", key: machineKey(lxc) });
       else plan.problems.push(`netbird gateway ${name}: no Dockge LXC for ${host} in the site stacks`);

@@ -8,7 +8,7 @@
  *     TypeScript compiler and only the literal arguments are read: names,
  *     addresses, VM ids, MACs, `host:` references and Tailscale route args.
  *     Anything computed (a random VM id, a `cluster` object) is skipped;
- *   - talos/talconfig.yaml: Equestria's nodes, with their LAN address and MAC;
+ *   - talos/topf.yaml: Equestria's nodes (TOPF), with their LAN address, role and MAC;
  *   - clusters/*.yaml: which cluster each Dockge host serves, and where it is.
  *
  * One declared Machine per hostname (`repo:<hostname>`, ./plan.ts), however
@@ -19,7 +19,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import { parse as parseYaml } from "yaml";
 import type { Prop } from "../src/model.ts";
-import { type DeclaredPlan, machineKey } from "./plan.ts";
+import { attempt, type DeclaredPlan, machineKey } from "./plan.ts";
 
 /** The constructors read, and the Machine kind each declares. */
 export const MACHINE_CLASSES = { ProxmoxHost: "physical", DockgeLxc: "lxc", TalosVm: "vm", TruenasVm: "vm" } as const;
@@ -120,22 +120,27 @@ export interface TalosNode {
   macs: string[];
 }
 
-/** talconfig.yaml's `nodes`: hostname, address, role and every `hardwareAddr` under it. */
-export function parseTalconfig(text: string): TalosNode[] {
-  const doc = parseYaml(text) as { nodes?: Record<string, unknown>[] } | null;
-  const macsIn = (value: unknown): string[] => {
-    if (Array.isArray(value)) return value.flatMap(macsIn);
-    if (value && typeof value === "object") return Object.entries(value).flatMap(([k, v]) => (k === "hardwareAddr" && typeof v === "string" ? [v.toLowerCase()] : macsIn(v)));
-    return [];
-  };
-  return (doc?.nodes ?? [])
-    .filter(n => typeof n.hostname === "string")
-    .map(n => ({
-      hostname: n.hostname as string,
-      ipAddress: typeof n.ipAddress === "string" ? n.ipAddress : undefined,
-      controlPlane: typeof n.controlPlane === "boolean" ? n.controlPlane : undefined,
-      macs: [...new Set(macsIn(n.networkInterfaces))],
-    }));
+/**
+ * talos/topf.yaml's `nodes` (TOPF, which replaced talhelper's talconfig.yaml):
+ * `host` is the hostname (all/05-hostname.yaml.tpl), `ip` the LAN address,
+ * `role` worker or control-plane, and `data.mac` the NIC all/30-network.yaml.tpl
+ * selects. `data` is often a YAML merge (`<<: *cp_data`), so merges are resolved.
+ */
+export function parseTopf(text: string): TalosNode[] {
+  const doc = parseYaml(text, { merge: true }) as { nodes?: unknown } | null;
+  if (doc?.nodes !== undefined && !Array.isArray(doc.nodes)) throw new Error("`nodes` is not a list");
+  return ((doc?.nodes ?? []) as Record<string, unknown>[])
+    .filter(n => n && typeof n.host === "string")
+    .map(n => {
+      const data = n.data && typeof n.data === "object" ? (n.data as Record<string, unknown>) : {};
+      const role = typeof n.role === "string" ? n.role : undefined;
+      return {
+        hostname: n.host as string,
+        ipAddress: typeof n.ip === "string" ? n.ip : undefined,
+        controlPlane: role === undefined ? undefined : role === "control-plane",
+        macs: typeof data.mac === "string" ? [data.mac.toLowerCase()] : [],
+      };
+    });
 }
 
 export interface ClusterFile {
@@ -228,11 +233,23 @@ export function addMachines(plan: DeclaredPlan, input: { resources: ConstructedR
   }
 }
 
-/** Reads the three places from a checkout. `scope` holds the constants the stacks reference (`Tailscale`). */
-export async function readMachineSources(root: string, scope: Scope): Promise<{ resources: ConstructedResource[]; talos: TalosNode[]; clusters: ClusterFile[] }> {
-  const resources = (await Promise.all(SITE_STACKS.map(async stack => parseStackSource(await readFile(join(root, "stacks", stack, "index.ts"), "utf8"), scope, `stacks/${stack}/index.ts`)))).flat();
-  const talos = parseTalconfig(await readFile(join(root, "talos", "talconfig.yaml"), "utf8"));
-  const files = (await readdir(join(root, "clusters"))).filter(f => f.endsWith(".yaml")).sort();
-  const clusters = await Promise.all(files.map(async f => parseClusterFile(await readFile(join(root, "clusters", f), "utf8"))));
-  return { resources, talos, clusters };
+/** Where the Talos nodes are declared, relative to the repo root. */
+export const TOPF_FILE = "talos/topf.yaml";
+
+/**
+ * Reads the three places from a checkout. `scope` holds the constants the
+ * stacks reference (`Tailscale`). A file that is missing or does not parse
+ * becomes a problem and its machines are skipped; the rest still load.
+ */
+export async function readMachineSources(root: string, scope: Scope, problems: string[]): Promise<{ resources: ConstructedResource[]; talos: TalosNode[]; clusters: ClusterFile[] }> {
+  const stacks = await Promise.all(
+    SITE_STACKS.map(stack => {
+      const file = `stacks/${stack}/index.ts`;
+      return attempt(problems, file, [], async () => parseStackSource(await readFile(join(root, file), "utf8"), scope, file));
+    }),
+  );
+  const talos = await attempt(problems, TOPF_FILE, [], async () => parseTopf(await readFile(join(root, TOPF_FILE), "utf8")));
+  const files = await attempt(problems, "clusters/", [], async () => (await readdir(join(root, "clusters"))).filter(f => f.endsWith(".yaml")).sort());
+  const clusters = await Promise.all(files.map(f => attempt(problems, `clusters/${f}`, [], async () => [parseClusterFile(await readFile(join(root, "clusters", f), "utf8"))])));
+  return { resources: stacks.flat(), talos, clusters: clusters.flat() };
 }
