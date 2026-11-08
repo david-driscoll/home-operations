@@ -144,4 +144,21 @@ design. All four are read-only in the UI, and hand edits are discarded.
 | Apps | Apps grouped by the machine that runs them, entry points, and user groups with reach edges |
 
 Homelable pings infrastructure only (gateway, switches, APs, Proxmox and Dockge hosts, NetBird
-gateways). Clients and peers take their status from the source APIs.
+gateways), at its home LAN address, because a pod has no route into either overlay. Clients and
+peers take their status from the source APIs.
+
+The sync (`images/network-map/src/homelable/`) runs in the collector's CronJob, right after the
+write. Some rules it follows:
+
+- **Drift** is marked with a border colour and a `drift` property: amber for an observed node that
+  nothing `DECLARES`, red for a declared node that `DECLARES` nothing. Declared-only nodes are drawn
+  in a "Declared, not observed" zone. Drift is only judged for labels the declared layer has at
+  least one node of, so a declared layer that covers only Apps does not flag every Machine.
+- **One parent per node.** Homelable nests a node in one zone only, so a device in several groups
+  or tags sits in the first one and lists the rest as a property.
+- **Inventory rows.** Homelable keeps device facts (label, type, ip, status, properties) on an
+  inventory row shared across designs by IP, then MAC. So a Machine's label and node type depend
+  on the Machine alone, never on the design, and each save sends back the `device_id` each node
+  already has.
+- **Designs** are found by name. The UniFi design takes over Homelable's starting design,
+  "Network Topology", by renaming it, but only while that design is empty.

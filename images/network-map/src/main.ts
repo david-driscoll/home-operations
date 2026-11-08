@@ -11,14 +11,21 @@
  *   4. write it in one transaction (./cypher.ts has the strategy), and in
  *      the same transaction re-derive the DECLARES edges from the declared
  *      layer to it (./declares.ts);
- *   5. log one JSON line per source, and a summary.
+ *   5. log one JSON line per source, and a summary;
+ *   6. with HOMELABLE_SYNC=true, project the graph into Homelable
+ *      (./homelable-sync.ts), after the write has committed (DECLARES
+ *      included, so the sync's drift marking sees this run's links) and
+ *      whether or not it succeeded: a failed write leaves last run's graph,
+ *      which is still worth showing. The sync only reads Neo4j, so it cannot
+ *      undo the write either.
  *
- * Exits 1 only when the Neo4j write failed or EVERY source failed (see
- * exitCode). One host or API being down is normal -- that source keeps its
- * last-good nodes and its CollectorSource node records the failure -- so it
- * must not fail the Job: a Dockge host offline for days would otherwise fire
- * KubeJobFailed hourly and NetworkMapCollectorNotRunning after 3h. Stale
- * sources are surfaced by the drift alerts, from CollectorSource.lastSuccess.
+ * Exits 1 only when the Neo4j write failed, EVERY source failed, or the sync
+ * ran and EVERY design failed (see exitCode). One host or API being down is
+ * normal -- that source keeps its last-good nodes and its CollectorSource
+ * node records the failure -- so it must not fail the Job: a Dockge host
+ * offline for days would otherwise fire KubeJobFailed hourly and
+ * NetworkMapCollectorNotRunning after 3h. Stale sources are surfaced by the
+ * drift alerts, from CollectorSource.lastSuccess.
  */
 import { readFile } from "node:fs/promises";
 import neo4j, { type Driver, type ManagedTransaction } from "neo4j-driver";
@@ -27,6 +34,7 @@ import { type Config, loadConfig } from "./config.ts";
 import { fallbackNetworksQuery, nodeStatements, relStatements, retentionStatement, runRecordStatement, type SourceOutcome, type Statement, schemaStatements, staleStatements } from "./cypher.ts";
 import { linkStatements } from "./declares.ts";
 import { exitCode } from "./exit.ts";
+import { runHomelableSync } from "./homelable-sync.ts";
 import { httpClient } from "./http.ts";
 import type { SourceName, SourceResult } from "./model.ts";
 import { collectDocker } from "./sources/docker.ts";
@@ -95,97 +103,111 @@ const run = (tx: ManagedTransaction, s: Statement) => tx.run(s.text, toBolt(s.pa
 
 const log = (fields: Record<string, unknown>) => console.log(JSON.stringify({ msg: "network-map", ...fields }));
 
-async function main(): Promise<number> {
-  const config = loadConfig(process.env);
+/** One collector run against an open driver: steps 1-5 above. Throws when the Neo4j write fails. */
+async function collect(driver: Driver, config: Config): Promise<0 | 1> {
   const now = new Date().toISOString();
   const ctx = { run: now, now };
+  await driver.verifyConnectivity();
+  for (const text of schemaStatements()) await driver.executeQuery(text);
+
+  const all = collectors(config);
+  const settled = await Promise.allSettled(config.sources.map(source => withTimeout(all[source](), config.sourceTimeoutMs, source)));
+  const outcomes: SourceOutcome[] = [];
+  const results: Collected[] = [];
+  settled.forEach((s, i) => {
+    const source = config.sources[i];
+    if (s.status === "rejected") {
+      outcomes.push({ source, status: "failed", error: s.reason instanceof Error ? s.reason.message : String(s.reason) });
+      return;
+    }
+    results.push(s.value);
+    outcomes.push({ source, status: s.value.errors.length > 0 ? "partial" : "ok", error: s.value.errors.join("; ") || undefined });
+  });
+  if (results.length === 0) {
+    for (const o of outcomes) log({ source: o.source, status: o.status, error: o.error });
+    log({ result: "no source answered; the graph is left as it was" });
+    const record = runRecordStatement(ctx, outcomes);
+    await driver.executeQuery(record.text, toBolt(record.params) as Record<string, unknown>);
+    return 1;
+  }
+
+  // Without UniFi's networks every LAN interface would move to a fallback network; use last run's.
+  let fallbackHomeNetworks: { networkId: string; cidr: string }[] | undefined;
+  if (!results.some(r => r.source === "unifi")) {
+    const { records } = await driver.executeQuery(fallbackNetworksQuery.text, fallbackNetworksQuery.params);
+    fallbackHomeNetworks = records.map(r => ({ networkId: r.get("networkId") as string, cidr: r.get("cidr") as string }));
+  }
+
+  const { plan, machines } = buildGraph(results, { homeSite: config.homeSite, fallbackHomeNetworks });
+  const replaced = outcomes.filter(o => o.status === "ok").map(o => o.source);
+  const session = driver.session({ defaultAccessMode: neo4j.session.WRITE });
+  let removed: number;
+  try {
+    // One transaction: the graph moves from last run's to this run's in one step, or not at all.
+    removed = await session.executeWrite(async tx => {
+      for (const s of nodeStatements(plan, ctx)) await run(tx, s);
+      for (const s of relStatements(plan, ctx)) await run(tx, s);
+      for (const source of replaced) for (const s of staleStatements(source, ctx)) await run(tx, s);
+      // Join the declared layer to what this run wrote (./declares.ts), before retention reads the joins.
+      for (const s of linkStatements()) await run(tx, s);
+      const retention = await run(tx, retentionStatement(ctx, config.retentionDays));
+      await run(tx, runRecordStatement(ctx, outcomes));
+      return Number(retention.records[0]?.get("removed") ?? 0);
+    });
+  } finally {
+    await session.close();
+  }
+
+  for (const o of outcomes) {
+    const r = results.find(x => x.source === o.source);
+    log({
+      source: o.source,
+      status: o.status,
+      error: o.error,
+      replaced: o.status === "ok",
+      ...(r && {
+        machines: r.machines.length,
+        interfaces: r.machines.reduce((n, m) => n + m.interfaces.length, 0),
+        networks: r.networks.length,
+        groups: r.groups.length,
+        routes: r.routes.length,
+        policies: r.policies.length,
+        reaches: r.reaches.length,
+        apps: r.apps.length,
+        entryPoints: r.entryPoints.length,
+        unresolved: r.unresolved?.length ? r.unresolved : undefined,
+      }),
+    });
+  }
+  const count = (label: string) => plan.nodes.filter(n => n.label === label).length;
+  log({
+    run: ctx.run,
+    machines: machines.length,
+    joined: machines.filter(m => m.joined).length,
+    unjoined: machines.filter(m => !m.joined).length,
+    interfaces: count("Interface"),
+    nodes: plan.nodes.length,
+    relationships: plan.rels.length,
+    retentionRemoved: removed,
+    failed: outcomes.filter(o => o.status !== "ok").map(o => o.source),
+  });
+  return exitCode(outcomes);
+}
+
+async function main(): Promise<number> {
+  const config = loadConfig(process.env);
   const driver: Driver = neo4j.driver(config.neo4j.uri, neo4j.auth.basic(config.neo4j.username, config.neo4j.password), { disableLosslessIntegers: true });
   try {
-    await driver.verifyConnectivity();
-    for (const text of schemaStatements()) await driver.executeQuery(text);
-
-    const all = collectors(config);
-    const settled = await Promise.allSettled(config.sources.map(source => withTimeout(all[source](), config.sourceTimeoutMs, source)));
-    const outcomes: SourceOutcome[] = [];
-    const results: Collected[] = [];
-    settled.forEach((s, i) => {
-      const source = config.sources[i];
-      if (s.status === "rejected") {
-        outcomes.push({ source, status: "failed", error: s.reason instanceof Error ? s.reason.message : String(s.reason) });
-        return;
-      }
-      results.push(s.value);
-      outcomes.push({ source, status: s.value.errors.length > 0 ? "partial" : "ok", error: s.value.errors.join("; ") || undefined });
-    });
-    if (results.length === 0) {
-      for (const o of outcomes) log({ source: o.source, status: o.status, error: o.error });
-      log({ result: "no source answered; the graph is left as it was" });
-      const record = runRecordStatement(ctx, outcomes);
-      await driver.executeQuery(record.text, toBolt(record.params) as Record<string, unknown>);
-      return 1;
-    }
-
-    // Without UniFi's networks every LAN interface would move to a fallback network; use last run's.
-    let fallbackHomeNetworks: { networkId: string; cidr: string }[] | undefined;
-    if (!results.some(r => r.source === "unifi")) {
-      const { records } = await driver.executeQuery(fallbackNetworksQuery.text, fallbackNetworksQuery.params);
-      fallbackHomeNetworks = records.map(r => ({ networkId: r.get("networkId") as string, cidr: r.get("cidr") as string }));
-    }
-
-    const { plan, machines } = buildGraph(results, { homeSite: config.homeSite, fallbackHomeNetworks });
-    const replaced = outcomes.filter(o => o.status === "ok").map(o => o.source);
-    const session = driver.session({ defaultAccessMode: neo4j.session.WRITE });
-    let removed: number;
+    let collected: 0 | 1;
     try {
-      // One transaction: the graph moves from last run's to this run's in one step, or not at all.
-      removed = await session.executeWrite(async tx => {
-        for (const s of nodeStatements(plan, ctx)) await run(tx, s);
-        for (const s of relStatements(plan, ctx)) await run(tx, s);
-        for (const source of replaced) for (const s of staleStatements(source, ctx)) await run(tx, s);
-        // Join the declared layer to what this run wrote (./declares.ts), before retention reads the joins.
-        for (const s of linkStatements()) await run(tx, s);
-        const retention = await run(tx, retentionStatement(ctx, config.retentionDays));
-        await run(tx, runRecordStatement(ctx, outcomes));
-        return Number(retention.records[0]?.get("removed") ?? 0);
-      });
-    } finally {
-      await session.close();
+      collected = await collect(driver, config);
+    } catch (error) {
+      // The write is one transaction: a failed one left last run's graph, which the sync still shows.
+      log({ error: error instanceof Error ? error.message : String(error), result: "the collector failed" });
+      collected = 1;
     }
-
-    for (const o of outcomes) {
-      const r = results.find(x => x.source === o.source);
-      log({
-        source: o.source,
-        status: o.status,
-        error: o.error,
-        replaced: o.status === "ok",
-        ...(r && {
-          machines: r.machines.length,
-          interfaces: r.machines.reduce((n, m) => n + m.interfaces.length, 0),
-          networks: r.networks.length,
-          groups: r.groups.length,
-          routes: r.routes.length,
-          policies: r.policies.length,
-          reaches: r.reaches.length,
-          apps: r.apps.length,
-          entryPoints: r.entryPoints.length,
-          unresolved: r.unresolved?.length ? r.unresolved : undefined,
-        }),
-      });
-    }
-    const count = (label: string) => plan.nodes.filter(n => n.label === label).length;
-    log({
-      run: ctx.run,
-      machines: machines.length,
-      joined: machines.filter(m => m.joined).length,
-      unjoined: machines.filter(m => !m.joined).length,
-      interfaces: count("Interface"),
-      nodes: plan.nodes.length,
-      relationships: plan.rels.length,
-      retentionRemoved: removed,
-      failed: outcomes.filter(o => o.status !== "ok").map(o => o.source),
-    });
-    return exitCode(outcomes);
+    const synced = await runHomelableSync(driver, process.env);
+    return Math.max(collected, synced ?? 0);
   } finally {
     await driver.close();
   }

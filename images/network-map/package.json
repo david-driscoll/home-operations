@@ -2,12 +2,12 @@
   "name": "network-map",
   "version": "1.0.0",
   "private": true,
-  "description": "The network map's observed-layer collector and declared-layer loader (docs/network-map/schema.md)",
+  "description": "The network map's observed-layer collector, declared-layer loader and Homelable sync (docs/network-map/schema.md)",
   "license": "ISC",
   "type": "module",
   "main": "src/main.ts",
   "scripts": {
-    "test": "node --test src/*.test.ts src/sources/*.test.ts declared/*.test.ts"
+    "test": "node --test src/*.test.ts src/sources/*.test.ts declared/*.test.ts src/homelable/*.test.ts"
   },
   "dependencies": {
     "neo4j-driver": "^6.3.0"
