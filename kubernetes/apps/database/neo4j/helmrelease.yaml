@@ -32,6 +32,17 @@ spec:
     keepHistory: false
   dependsOn: []
   values:
+    defaultPodOptions:
+      # The PVC is a plain Longhorn volume (no volsync restore to set it up),
+      # so it and the subPath directories kubelet creates in it are root-owned,
+      # and Neo4j (568) failed to start: "Folder /plugins is not accessible".
+      # fsGroup hands the volume to group 568. `Always`, not OnRootMismatch: on
+      # a wiped volume kubelet re-creates the subPath dirs as root AFTER the
+      # root already matches, which OnRootMismatch would never fix. 10Gi, so a
+      # recursive pass per mount is cheap.
+      securityContext:
+        fsGroup: 568
+        fsGroupChangePolicy: Always
     controllers:
       *app :
         enabled: true
