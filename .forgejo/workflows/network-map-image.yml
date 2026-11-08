@@ -133,7 +133,7 @@ jobs:
         if: ${{ steps.exists.outputs.built != 'true' }}
         working-directory: images/network-map
         # The pure parts need no dependencies, so this runs before any install.
-        run: node --test src/*.test.ts src/sources/*.test.ts
+        run: node --test src/*.test.ts src/sources/*.test.ts src/homelable/*.test.ts
 
       - name: Bake
         if: ${{ steps.exists.outputs.built != 'true' }}
