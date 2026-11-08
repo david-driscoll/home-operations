@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/persistentvolumeclaim-v1.json
+#
+# Neo4j's data. Deliberately NOT backed up (no volsync component in ./ks.yaml):
+# the network map in it is rebuilt from the source APIs every hour and from
+# git on every merge (docs/adr/0006-network-map-neo4j-homelable-projection.md).
+# A lost volume is recovered by re-running the declared load and waiting one
+# collector cycle.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: longhorn

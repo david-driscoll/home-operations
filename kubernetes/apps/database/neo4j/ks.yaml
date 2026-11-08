@@ -34,10 +34,9 @@ spec:
   components:
     - ../../../components/failover/fast-node-eviction
     - ../../../components/tailscale
-    - ../../../components/volsync
+    # No volsync: the network map is rebuilt from the APIs and from git (ADR
+    # 0006), so the volume is ./pvc.yaml, a plain Longhorn claim with no backup.
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      VOLSYNC_CAPACITY: 10Gi
-      VOLSYNC_ACCESSMODES: ReadWriteOnce
