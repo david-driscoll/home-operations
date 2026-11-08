@@ -54,9 +54,9 @@ if [[ "${talosctl_version}" != "${expected_talos_version}" ]]; then
     'Bump `talosctl` in .config/mise.toml [tools] to match, then `mise install`.'
 fi
 
-# 2. TOPF's vendored machinery, e.g. "topf version 0.6.1 (Talos v1.14.1)".
-# Compared by minor only: a patch behind (1.14.1 machinery, 1.14.4 nodes) is
-# the normal state of affairs.
+# 2. TOPF's vendored machinery, e.g. "topf version 0.6.2 (Talos v1.14.4)".
+# Compared by minor only: a patch behind (e.g. 1.14.4 machinery, 1.14.5
+# nodes) is the normal state of affairs.
 minor() { cut -d. -f1,2 <<<"${1#v}"; }
 topf_machinery="$(topf --version 2>/dev/null | sed -n 's/.*(Talos v\([0-9.]*\)).*/\1/p')" || true
 if [[ -z "${topf_machinery}" ]]; then
