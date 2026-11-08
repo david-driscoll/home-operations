@@ -48,10 +48,13 @@ spec:
 #     header that BYPASSES OIDC by design (`app/backend_client.py`). On celestia
 #     that hop lived on a stack-private Docker network; in Kubernetes it is a
 #     loopback hop inside homelable's pod, because the mcp container is a
-#     sibling of the backend there and the backend has NO Service at all.
-#   - Running the image in `agents` instead would mean giving that backend a
-#     ClusterIP so this namespace could reach it -- turning a pod-private,
-#     OIDC-bypassing API into a cluster-wide one. degoog has no such hop to
+#     sibling of the backend there.
+#   - Running the image in `agents` instead would mean opening the backend to
+#     this namespace. It has a Service now, but only for the network-map sync:
+#     homelable's CiliumNetworkPolicy
+#     (kubernetes/apps/equestria/home/homelable/ciliumnetworkpolicy.yaml)
+#     admits that one job to it, and widening that to `agents` would spread an
+#     OIDC-bypassing API to a second namespace. degoog has no such hop to
 #     protect: its search surface carries no key, so exposing it costs nothing.
 #
 # So the container stays next to the backend it privileges, and only the MCP

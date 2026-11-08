@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Who may reach homelable's backend port: the network-map sync, and nothing
+# else from outside the pod.
+#
+# The backend takes `X-MCP-Service-Key` as a login that bypasses OIDC on every
+# endpoint. Its Service (`homelable-backend`, ./helmrelease.yaml) exists for
+# one caller, the Homelable sync in database/network-map-collector
+# (docs/adr/0006-network-map-neo4j-homelable-projection.md), so :8000 admits
+# that job's ServiceAccount and the kubelet's probes. The frontend strips the
+# header (./resources/homelable.conf.template), so the public route cannot
+# carry it either.
+#
+# Selecting the pod puts ALL of its ports into default-deny for ingress, not
+# just :8000, so the first rule keeps the other two as open as they were
+# before this policy: nginx on :80 (Traefik, the tailscale proxy, Gatus,
+# dynacat) and the MCP server on :8001 (agents/toolhive-homelable). The MCP
+# server's own X-API-Key gate and the NetworkPolicy in front of that proxy
+# (kubernetes/apps/agents/agent-tools-servers/homelable.yaml) are unchanged.
+#
+# Not covered, because policy never sees it: traffic inside the pod. nginx and
+# the MCP sidecar reach the backend as `backend:8000`, which the pod's
+# hostAliases point at 127.0.0.1, so those hops stay on loopback.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}-backend
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      app.kubernetes.io/controller: ${APP}
+  ingress:
+    - fromEntities:
+        - all
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "8001"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: database
+            io.cilium.k8s.policy.serviceaccount: network-map-collector
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    # Kubelet probes on /api/v1/health.
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
