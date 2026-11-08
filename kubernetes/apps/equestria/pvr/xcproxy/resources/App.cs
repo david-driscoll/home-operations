@@ -3,7 +3,7 @@
 #:sdk Microsoft.NET.Sdk.Web
 #:package Dumpify@0.8.0
 #:package Lunet.Extensions.Logging.SpectreConsole@1.2.0
-#:package System.Text.Json@10.0.13
+#:package System.Text.Json@10.0.14
 #:package System.Text.RegularExpressions@4.3.1
 #:package Xtream.Client@1.0.7
 #:package ZiggyCreatures.FusionCache@2.9.0
