@@ -1,12 +1,15 @@
 /**
  * node --test images/network-map/declared/machines.test.ts
  *
- * Reading the site stacks' constructor literals, talconfig nodes, and the
+ * Reading the site stacks' constructor literals, TOPF's nodes, and the
  * Machines, HOSTED_ON and advertised routes they become.
  */
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
-import { addMachines, dockgeHosts, parseStackSource, parseTalconfig } from "./machines.ts";
+import { addMachines, dockgeHosts, parseStackSource, parseTopf, readMachineSources } from "./machines.ts";
 import { DeclaredPlan } from "./plan.ts";
 
 const source = `
@@ -63,21 +66,58 @@ describe("parseStackSource", () => {
   });
 });
 
-describe("parseTalconfig", () => {
-  it("reads hostname, address, role and every hardwareAddr, lowercased", () => {
-    const nodes = parseTalconfig(`nodes:
-  - hostname: "milky-way"
-    ipAddress: "10.10.209.10"
-    controlPlane: true
-    networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "BC:24:11:20:91:10"
-  - hostname: worker
+describe("parseTopf", () => {
+  it("reads host, ip, role and data.mac, lowercased, through YAML merges", () => {
+    const nodes = parseTopf(`clusterName: equestria
+nodes:
+  - host: milky-way
+    ip: 10.10.209.10
+    role: control-plane
+    data: &cp_data
+      mac: "BC:24:11:20:91:10"
+      labels: {a: b}
+  - host: pegasus
+    ip: 10.10.209.12
+    role: control-plane
+    data:
+      <<: *cp_data
+      mac: "e0:51:d8:19:d2:b2"
+  - host: othalla
+    role: control-plane
+    data: *cp_data
+  - host: worker
+    role: worker
 `);
     assert.deepEqual(nodes, [
       { hostname: "milky-way", ipAddress: "10.10.209.10", controlPlane: true, macs: ["bc:24:11:20:91:10"] },
-      { hostname: "worker", ipAddress: undefined, controlPlane: undefined, macs: [] },
+      { hostname: "pegasus", ipAddress: "10.10.209.12", controlPlane: true, macs: ["e0:51:d8:19:d2:b2"] },
+      { hostname: "othalla", ipAddress: undefined, controlPlane: true, macs: ["bc:24:11:20:91:10"] },
+      { hostname: "worker", ipAddress: undefined, controlPlane: false, macs: [] },
     ]);
+  });
+
+  it("refuses a `nodes` that is not a list", () => {
+    assert.throws(() => parseTopf("nodes: {a: 1}\n"), /not a list/);
+  });
+});
+
+describe("readMachineSources", () => {
+  it("turns every missing source into a problem instead of throwing", async () => {
+    const problems: string[] = [];
+    const empty = await mkdtemp(join(tmpdir(), "nm-machines-"));
+    try {
+      const read = await readMachineSources(empty, {}, problems);
+      assert.deepEqual(read, { resources: [], talos: [], clusters: [] });
+      assert.deepEqual(problems, [
+        "stacks/home/index.ts: not found; skipped",
+        "stacks/gulf-of-mexico/index.ts: not found; skipped",
+        "stacks/ocracoke/index.ts: not found; skipped",
+        "talos/topf.yaml: not found; skipped",
+        "clusters/: not found; skipped",
+      ]);
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
   });
 });
 

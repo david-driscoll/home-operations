@@ -84,5 +84,20 @@ export class DeclaredPlan {
   }
 }
 
+/**
+ * Runs one source's read. A missing, renamed or unparsable source file is a
+ * problem (`<what>: <why>; skipped`) and yields `fallback`, so one source
+ * going away never stops the rest of the declared layer from loading.
+ */
+export async function attempt<T>(problems: string[], what: string, fallback: T, read: () => Promise<T> | T): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    const reason = (error as NodeJS.ErrnoException).code === "ENOENT" ? "not found" : error instanceof Error ? error.message : String(error);
+    problems.push(`${what}: ${reason}; skipped`);
+    return fallback;
+  }
+}
+
 /** A declared Machine's key: one per hostname, whichever file declares it. */
 export const machineKey = (hostname: string) => `repo:${hostname.toLowerCase()}`;

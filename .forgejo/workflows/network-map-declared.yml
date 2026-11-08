@@ -28,7 +28,7 @@ on:
       - kubernetes/apps/**/ks.yaml
       - docker/**
       - clusters/*.yaml
-      - talos/talconfig.yaml
+      - talos/topf.yaml
       - stacks/home/index.ts
       - stacks/gulf-of-mexico/index.ts
       - stacks/ocracoke/index.ts

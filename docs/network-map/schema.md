@@ -97,12 +97,14 @@ reads these, and writes everything with `layer: declared`, `source: repo`:
 |---|---|
 | `definition.yaml` under `kubernetes/apps`, with its `ks.yaml` | `App` (`appId` = the ks's `APP`), `appRoute`/`tailnetRoute`/`appService`; `Group authentik:<g>` `REACHES` it via `Policy authentik:access-policy:<app>` |
 | `docker/<host>` plus `docker/_common`, less `*.ignore` | `App` per stack (`appId` = stack name), names from Traefik `Host()` rules; the host's LXC `RUNS` it |
-| `new ProxmoxHost/DockgeLxc/TalosVm/TruenasVm` in `stacks/{home,gulf-of-mexico,ocracoke}` (literal args only), `talos/talconfig.yaml`, `clusters/*.yaml` | `Machine repo:<hostname>` with `ips[]`, `macs[]`, `cluster`; `HOSTED_ON`; the Tailscale `Route`s a host advertises |
+| `new ProxmoxHost/DockgeLxc/TalosVm/TruenasVm` in `stacks/{home,gulf-of-mexico,ocracoke}` (literal args only), `talos/topf.yaml` `nodes` (`host`, `ip`, `role`, `data.mac`), `clusters/*.yaml` | `Machine repo:<hostname>` with `ips[]`, `macs[]`, `cluster`; `HOSTED_ON`; the Tailscale `Route`s a host advertises |
 | `stacks/netbird` `policy.ts`, `sites.ts` | NetBird `Group`s, `Policy netbird:client-<rule>`, `REACHES`, `Route`s to `Network site-lan:<site>`, gateway `Machine`s |
 | `components/constants.ts` | Tailscale tag and group `Group`s, subnet and cluster `Route`s |
 | `images/network-map/declared/unifi-zones.yaml` | `Zone unifi-fw:<zone>`, `Network unifi:name:<name>`, `IN_ZONE` |
 
 Each load replaces the whole declared layer in one transaction and never touches `observed`.
+A source that is missing or does not parse is logged as a problem and only its nodes are left
+out; the rest still load.
 
 `DECLARES` (`src/declares.ts`) is re-derived from scratch by BOTH writers, the loader on each
 push and the collector every hour, so something first observed after a push is linked within the

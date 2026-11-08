@@ -7,9 +7,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ACCESS_RULES } from "../../../stacks/netbird/policy.ts";
-import { addNetbird, clientPolicyName, NETBIRD, type NetbirdDeclarations } from "./netbird.ts";
+import { addNetbird, clientPolicyName, type NetbirdDeclarations, readNetbird } from "./netbird.ts";
 import { DeclaredPlan } from "./plan.ts";
-import { addTailscale, TAILSCALE } from "./tailscale.ts";
+import { addTailscale, readTailscale } from "./tailscale.ts";
 
 const decl: NetbirdDeclarations = {
   userGroups: ["admins", "family"],
@@ -21,6 +21,8 @@ const decl: NetbirdDeclarations = {
   ],
   sites: { home: { cidrs: ["10.10.0.0/16"], gatewayStacks: ["home"] }, away: { cidrs: ["192.168.1.0/24"], gatewayStacks: [] } },
   siteStacks: { home: ["celestia", "nowhere"] },
+  gatewayGroupName: stack => `gateway-${stack}`,
+  gatewayPeerName: host => `gateway-${host}`,
 };
 
 describe("addNetbird", () => {
@@ -66,9 +68,9 @@ describe("addNetbird", () => {
     assert.deepEqual(problems, ["netbird gateway gateway-nowhere: no Dockge LXC for nowhere in the site stacks"]);
   });
 
-  it("covers every rule on main", () => {
+  it("covers every rule on main", async () => {
     const real = new DeclaredPlan();
-    addNetbird(real, NETBIRD, []);
+    addNetbird(real, await readNetbird(), []);
     for (const rule of ACCESS_RULES) assert.ok(real.has("Policy", `netbird:${clientPolicyName(rule.name)}`), rule.name);
   });
 });
@@ -94,9 +96,9 @@ describe("addTailscale", () => {
     assert.ok(nodes.some(n => n.label === "Network" && n.key === "tailscale:tailnet"));
   });
 
-  it("reads the real constants", () => {
+  it("reads the real constants", async () => {
     const plan = new DeclaredPlan();
-    addTailscale(plan, TAILSCALE);
+    addTailscale(plan, (await readTailscale()).decl);
     assert.ok(plan.has("Group", "tailscale:tag:dockge"));
     assert.ok(plan.has("Route", "tailscale:10.10.0.0/16"));
   });

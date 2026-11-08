@@ -5,6 +5,9 @@
  * source without a problem, and every edge it plans has both ends.
  */
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import { loadDeclared } from "./load.ts";
 
@@ -33,10 +36,36 @@ describe("loadDeclared on this checkout", async () => {
     }
   });
 
+  it("sources Equestria's nodes from talos/topf.yaml, milky-way's TalosVm and node as one machine", () => {
+    const nodes = of("Machine").filter(m => m.props.cluster === "equestria");
+    assert.deepEqual(nodes.map(m => m.key).sort(), ["repo:fluttershy", "repo:hard-hat", "repo:kerfuffle", "repo:milky-way", "repo:othalla", "repo:pegasus", "repo:shining-armor"]);
+    const milkyWay = nodes.find(m => m.key === "repo:milky-way");
+    assert.equal(milkyWay?.props.declaredAs, "TalosVm");
+    assert.equal(milkyWay?.props.role, "control-plane");
+    assert.ok(plan.rels.some(r => r.type === "HOSTED_ON" && r.from.key === "repo:milky-way" && r.to.key === "repo:celestia"));
+    for (const m of nodes) assert.equal((m.props.macs as string[] | undefined)?.length, 1, m.key);
+  });
+
   it("declares the six UniFi zones, the overlays, and the Equestria nodes", () => {
     assert.equal(of("Zone").length, 6);
     assert.ok(plan.nodes.some(n => n.key === "tailscale:tailnet"));
     assert.ok(plan.nodes.some(n => n.key === "netbird:netbird"));
     assert.ok(of("Machine").some(m => m.props.cluster === "equestria" && m.props.role === "control-plane"));
+  });
+});
+
+describe("loadDeclared on a checkout with nothing in it", () => {
+  it("completes, every source a problem, rather than throwing", async () => {
+    const empty = await mkdtemp(join(tmpdir(), "nm-load-"));
+    try {
+      const plan = await loadDeclared(empty, { root: "example.test", tailnet: "tail0.ts.net" });
+      assert.ok(plan.problems.some(p => p.startsWith("talos/topf.yaml: not found")));
+      assert.ok(plan.problems.some(p => p.startsWith("images/network-map/declared/unifi-zones.yaml: not found")));
+      assert.ok(plan.problems.some(p => p.startsWith("kubernetes/apps: no definition.yaml")));
+      // The module-backed sources still load: they come from this checkout's code, not the empty root.
+      assert.ok(plan.nodes.some(n => n.key === "netbird:admins"));
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
   });
 });
