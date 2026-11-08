@@ -1,0 +1,122 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Hourly: read the six sources and rewrite the network map's observed layer in
+# Neo4j (images/network-map/src/main.ts). Forbid: two runs at once would race
+# each other's stale replacement. A run that fails a source keeps that
+# source's previous nodes and exits 1; NetworkMapCollectorNotRunning
+# (./prometheusrule.yaml) pages when none has fully succeeded for 3 hours.
+#
+# Every target is reached the way an existing in-cluster reader reaches it
+# (pods have no route to 100.64.0.0/10):
+#   UniFi       https://<the DISCORD_DOMAIN substitution>, the gateway's own name, as
+#               ../../network/external-dns/unifi/static-dns-check.yaml does
+#   Tailscale   api.tailscale.com, over the internet
+#   NetBird     the management URL stored beside the PAT (netbird.<root domain>,
+#               which ../../netbird-system/health also calls from a pod)
+#   Kubernetes  the in-cluster API, with this ServiceAccount
+#   Proxmox     <host>.<tailnet>:8006, resolved in-cluster to the tailnet
+#               egress Service proxmox-<host> (stacks/unifi-network/tailnet-egress.ts),
+#               as ../../agents/agent-tools-servers/proxmox/* does
+#   Docker      dockge-<host>.<root domain>:2375, which CoreDNS rewrites to the
+#               egress Service's docker-proxy port, as
+#               ../../agents/agent-tools-servers/docker/* does
+#   Neo4j       the neo4j Service beside it
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: network-map-collector
+  annotations:
+    # The nightly 01:00-07:00 shed suspends CronJobs too; the map is meant to
+    # stay current around the clock, and Neo4j is excluded for the same reason.
+    downscaler/exclude: "true"
+spec:
+  schedule: "7 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      # Each source has SOURCE_TIMEOUT_SECONDS; this bounds the write as well.
+      activeDeadlineSeconds: 900
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: network-map-collector
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: network-map-image-pull
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: collector
+              # Built by .forgejo/workflows/network-map-image.yml, whose Report
+              # step prints the line to put here (tag AND digest) after a build.
+              # The tag is images/network-map/tag.sh's hash of the inputs. Until
+              # the first build lands this pins the tag alone; replace it with
+              # tag@digest from that run.
+              image: git.${ROOT_DOMAIN}/estate-images/network-map:535d79c8eb29
+              command: ["node", "/app/src/main.ts"]
+              env:
+                - name: NEO4J_URI
+                  value: bolt://neo4j.database.svc.cluster.local:7687
+                - name: HOME_SITE
+                  value: home
+                - name: UNIFI_URL
+                  value: https://${DISCORD_DOMAIN}
+                - name: KUBERNETES_CLUSTER
+                  value: equestria
+                # The API server's CA, for the Kubernetes reads.
+                - name: NODE_EXTRA_CA_CERTS
+                  value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                # One entry per hypervisor, as agent-tools-servers/proxmox has
+                # them. `token` picks PROXMOX_TOKEN_<TOKEN> from the Secret.
+                # `site`: the LAN the host is on (clusters/<key>.yaml
+                # `location`), so a LAN IP only joins machines on the same one.
+                - name: PROXMOX_TARGETS
+                  value: >-
+                    [{"name":"twilight-sparkle","url":"https://twilight-sparkle.${TAILSCALE_DOMAIN}:8006","site":"home","token":"main"},
+                    {"name":"celestia","url":"https://celestia.${TAILSCALE_DOMAIN}:8006","site":"home","token":"main"},
+                    {"name":"luna","url":"https://luna.${TAILSCALE_DOMAIN}:8006","site":"home","token":"main"},
+                    {"name":"skystar","url":"https://skystar.${TAILSCALE_DOMAIN}:8006","site":"skystar","token":"main"},
+                    {"name":"alpha-site","url":"https://alpha-site.${TAILSCALE_DOMAIN}:8006","site":"home","token":"alpha-site"}]
+                # One entry per Dockge host. `as` is alpha-site's short name
+                # (its ProxmoxHost shortName).
+                - name: DOCKER_TARGETS
+                  value: >-
+                    [{"name":"celestia","host":"dockge-celestia.${ROOT_DOMAIN}","site":"home"},
+                    {"name":"luna","host":"dockge-luna.${ROOT_DOMAIN}","site":"home"},
+                    {"name":"skystar","host":"dockge-skystar.${ROOT_DOMAIN}","site":"skystar"},
+                    {"name":"as","host":"dockge-as.${ROOT_DOMAIN}","site":"home"}]
+                - name: RETENTION_DAYS
+                  value: "30"
+                - name: SOURCE_TIMEOUT_SECONDS
+                  value: "240"
+              envFrom:
+                - secretRef:
+                    name: network-map-collector
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                # Nothing writes here today; a read-only root leaves Node no scratch otherwise.
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir:
+                sizeLimit: 16Mi

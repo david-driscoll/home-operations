@@ -10,4 +10,5 @@
 !dynamic/package.json
 !stacks/*/package.json
 !sdks/*/package.json
+!images/network-map/package.json
 !images/pulumi-workspace/

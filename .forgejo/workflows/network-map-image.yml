@@ -1,0 +1,218 @@
+---
+# Builds the network map collector's image (images/network-map) and pushes it
+# to this forge's container registry, the same way ./pulumi-workspace-image.yml
+# builds the Pulumi workspace image: no Docker daemon, the base plus one layer
+# appended with crane. Forge-only, like that one.
+#
+# TRUSTED TRIGGERS ONLY. Never `pull_request`: the push token can overwrite any
+# tag of the image. A tag overwrite alone gets nowhere once the CronJob pins a
+# digest (kubernetes/apps/database/network-map/cronjob.yaml), but there is no
+# reason to hand the token to a branch's workflow.
+#
+# Unlike the workspace image, the job does not run inside the base: the layer
+# is plain JavaScript (the collector's .ts files and neo4j-driver), so it is
+# baked on the runner with the Node .config/mise.toml pins and appended to
+# node:24-alpine as it is.
+name: network-map-image
+
+on:
+  push:
+    branches: [main]
+    # What images/network-map/inputs.sh lists, plus this file.
+    paths:
+      - package.json
+      - package-lock.json
+      - components/package.json
+      - dynamic/package.json
+      - stacks/*/package.json
+      - policies/*/package.json
+      - sdks/*/package.json
+      - images/network-map/**
+      - .forgejo/workflows/network-map-image.yml
+  # The backstop for a run that lost to a rate limit or an unset token.
+  schedule:
+    - cron: "53 4 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: network-map-image
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # The account that owns the image (stacks/system/forgejo-github-mirror.ts).
+      IMAGE_OWNER: estate-images
+      IMAGE_NAME: network-map
+      # The forge's PUBLIC host, git.<root domain>, from the secret stacks/system
+      # sets for scripts/private-domain-guard (masked in the log). See
+      # ./pulumi-workspace-image.yml for why not `github.server_url`.
+      ROOT_DOMAIN: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The Node everyone else uses, so its npm is the one that wrote package-lock.json.
+      - name: Read pinned versions
+        id: pins
+        run: echo "node=$(yq -p toml -oy '.tools.node' .config/mise.toml)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.pins.outputs.node }}
+
+      - name: Work out the tag
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="$(images/network-map/tag.sh "$PWD")"
+          # The LAST FROM line of the Dockerfile is the base, digest-pinned.
+          base="$(sed -nE 's#^FROM (node:[^[:space:]]+@sha256:[0-9a-f]{64}).*#\1#p' images/network-map/Dockerfile | tail -n1)"
+          if [ -z "$base" ]; then
+            echo "::error::no digest-pinned 'FROM node:...@sha256:...' in images/network-map/Dockerfile"
+            exit 1
+          fi
+          if [ -z "$ROOT_DOMAIN" ]; then
+            echo "::error::PRIVATE_DOMAIN_ROOT is not set on this repository (stacks/system sets it)"
+            exit 1
+          fi
+          {
+            echo "tag=${tag}"
+            echo "base=docker.io/library/${base}"
+            echo "path=${IMAGE_OWNER}/${IMAGE_NAME}:${tag}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Image: git.${ROOT_DOMAIN}/${IMAGE_OWNER}/${IMAGE_NAME}:${tag} on ${base}"
+
+      - name: Setup crane
+        env:
+          # The same pin as ./pulumi-workspace-image.yml and ./image-check.yml; bump all together.
+          CRANE_VERSION: "0.22.1"
+          CRANE_SHA256: "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0"
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/crane.tgz" "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+          echo "${CRANE_SHA256}  $RUNNER_TEMP/crane.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/crane.tgz" -C "$RUNNER_TEMP/bin" crane
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Log in and check for the tag
+        id: exists
+        env:
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
+          TOKEN: ${{ secrets.ESTATE_IMAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            echo "::error::ESTATE_IMAGES_TOKEN is not set on this repository yet (stacks/system creates it)"
+            exit 1
+          fi
+          REGISTRY="git.${ROOT_DOMAIN}"
+          REF="${REGISTRY}/${IMAGE_PATH}"
+          printf '%s' "$TOKEN" | crane auth login "$REGISTRY" --username "$IMAGE_OWNER" --password-stdin
+          # Only "no such tag" means build; anything else fails here.
+          if digest="$(crane digest "$REF" 2>"$RUNNER_TEMP/digest.err")"; then
+            echo "Already built: ${REF}@${digest}"
+            echo "built=true" >> "$GITHUB_OUTPUT"
+            echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          elif grep -qE 'MANIFEST_UNKNOWN|NAME_UNKNOWN|404 Not Found' "$RUNNER_TEMP/digest.err"; then
+            echo "Not built yet: ${REF}"
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::could not check ${REF} in the registry"
+            cat "$RUNNER_TEMP/digest.err"
+            exit 1
+          fi
+
+      - name: Test
+        if: ${{ steps.exists.outputs.built != 'true' }}
+        working-directory: images/network-map
+        # The pure parts need no dependencies, so this runs before any install.
+        run: node --test src/*.test.ts src/sources/*.test.ts
+
+      - name: Bake
+        if: ${{ steps.exists.outputs.built != 'true' }}
+        run: images/network-map/bake.sh "$PWD" "$RUNNER_TEMP/rootfs"
+
+      - name: Push
+        id: push
+        if: ${{ steps.exists.outputs.built != 'true' }}
+        env:
+          BASE: ${{ steps.tag.outputs.base }}
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
+        run: |
+          set -euo pipefail
+          REF="git.${ROOT_DOMAIN}/${IMAGE_PATH}"
+          # The amd64 image under the pinned index, so the layer lands on one platform's filesystem.
+          base="docker.io/library/node@$(crane digest --platform linux/amd64 "$BASE")"
+          images/network-map/append-layer.sh "$RUNNER_TEMP/rootfs" "$base" "$REF"
+          echo "digest=$(crane digest "$REF")" >> "$GITHUB_OUTPUT"
+
+      # The CronJob pins tag AND digest, so a new image goes live only when
+      # someone bumps cronjob.yaml -- the line this prints.
+      - name: Report
+        if: ${{ always() && steps.tag.outputs.path != '' }}
+        env:
+          IMAGE_PATH: ${{ steps.tag.outputs.path }}
+          DIGEST: ${{ steps.push.outputs.digest || steps.exists.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [ -n "$DIGEST" ] || exit 0
+          wanted="${IMAGE_PATH}@${DIGEST}"
+          pinned="$(sed -nE 's#.*image: git\.\$\{ROOT_DOMAIN\}/(estate-images/network-map:[^[:space:]]+).*#\1#p' kubernetes/apps/database/network-map/cronjob.yaml | head -n1)"
+          echo "built:  ${wanted}"
+          echo "pinned: ${pinned:-<none>}"
+          if [ "$pinned" != "$wanted" ]; then
+            echo "::notice::kubernetes/apps/database/network-map/cronjob.yaml pins ${pinned:-nothing}; to roll this image out set image: git.\${ROOT_DOMAIN}/${wanted}"
+          fi
+
+      # RETENTION, as in ./pulumi-workspace-image.yml: keep the tag the CronJob
+      # pins, this run's, and the newest KEEP_NEWEST; delete the rest. A tag is
+      # a hash of its inputs, so a deleted one is rebuilt by re-running this
+      # workflow at its commit.
+      - name: Prune old versions
+        if: ${{ !cancelled() && steps.exists.outcome == 'success' }}
+        env:
+          KEEP_NEWEST: "3"
+          CURRENT_TAG: ${{ steps.tag.outputs.tag }}
+          API: ${{ github.server_url }}/api/v1
+          TOKEN: ${{ secrets.ESTATE_IMAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          pinned="$(sed -nE 's#.*image: git\.\$\{ROOT_DOMAIN\}/estate-images/network-map:([^@[:space:]]+).*#\1#p' kubernetes/apps/database/network-map/cronjob.yaml | head -n1)"
+          if [ -z "$pinned" ]; then
+            echo "::error::could not read the pinned tag from kubernetes/apps/database/network-map/cronjob.yaml; not pruning"
+            exit 1
+          fi
+          echo "pinned: ${pinned}"
+          echo "current: ${CURRENT_TAG}"
+          page=1
+          : > "$RUNNER_TEMP/versions.jsonl"
+          while :; do
+            body="$(curl -fsS -H "Authorization: token ${TOKEN}" \
+              "${API}/packages/${IMAGE_OWNER}?type=container&q=${IMAGE_NAME}&limit=50&page=${page}")"
+            count="$(printf '%s' "$body" | node -e '
+              const all = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+              for (const p of all) if (p.name === process.argv[1]) console.log(JSON.stringify({v: p.version, at: p.created_at}));
+              console.error(all.length);
+            ' "$IMAGE_NAME" 2>&1 >>"$RUNNER_TEMP/versions.jsonl")"
+            [ "$count" -lt 50 ] && break
+            page=$((page + 1))
+          done
+          mapfile -t doomed < <(node -e '
+            const fs = require("node:fs");
+            const [file, keepNewest, ...keep] = process.argv.slice(1);
+            const versions = fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map(JSON.parse)
+              .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+            const kept = new Set([...keep, ...versions.slice(0, Number(keepNewest)).map(x => x.v)]);
+            for (const { v } of versions) if (!kept.has(v)) console.log(v);
+          ' "$RUNNER_TEMP/versions.jsonl" "$KEEP_NEWEST" "$pinned" "$CURRENT_TAG")
+          echo "$(wc -l < "$RUNNER_TEMP/versions.jsonl") versions, deleting ${#doomed[@]}"
+          for v in "${doomed[@]}"; do
+            echo "delete ${IMAGE_NAME}:${v}"
+            curl -fsS -X DELETE -H "Authorization: token ${TOKEN}" \
+              "${API}/packages/${IMAGE_OWNER}/container/${IMAGE_NAME}/${v}"
+          done

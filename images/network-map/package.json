@@ -1,0 +1,15 @@
+{
+  "name": "network-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The network map's observed-layer collector (docs/network-map/schema.md)",
+  "license": "ISC",
+  "type": "module",
+  "main": "src/main.ts",
+  "scripts": {
+    "test": "node --test src/*.test.ts src/sources/*.test.ts"
+  },
+  "dependencies": {
+    "neo4j-driver": "^6.3.0"
+  }
+}

@@ -22,7 +22,8 @@
     "dynamic/",
     "stacks/*",
     "policies/*",
-    "sdks/*"
+    "sdks/*",
+    "images/network-map/"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.6.5",
