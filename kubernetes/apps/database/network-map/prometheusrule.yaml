@@ -1,11 +1,12 @@
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
 #
-# The collector runs hourly and exits non-zero when any source failed or only
-# partly answered (images/network-map/src/main.ts), so this also fires when one
-# source has been down for three runs: its nodes in the map are that stale.
-# The failed Job's log names the source. The second branch covers a CronJob
-# that has never succeeded. Drift alerts are a follow-up.
+# The collector runs hourly and exits non-zero only when the Neo4j write failed
+# or every source failed (images/network-map/src/exit.ts): one source being down
+# is normal, keeps its last-good nodes and is recorded on its CollectorSource
+# node. So this fires when the map as a whole has stopped updating. A single
+# stale source is the drift alerts' job (follow-up). The second branch covers a
+# CronJob that has never succeeded.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -16,10 +17,10 @@ spec:
       rules:
         - alert: NetworkMapCollectorNotRunning
           annotations:
-            summary: The network map collector has not fully succeeded in 3 hours.
+            summary: The network map collector has not succeeded in 3 hours.
             description: >-
               network-map-collector last succeeded {{ $value | humanizeDuration }} ago, so the
-              network map in Neo4j is out of date for at least one source. Read the failed Job's
+              network map in Neo4j has stopped updating (the write failed, or every source did). Read the failed Job's
               log (`kubectl -n database logs job/<job>`): each source logs one line with its status.
           expr: |
             (
