@@ -35,4 +35,7 @@ resources:
   - ./region-exits/ks.yaml
   # The region picker app at wonderbolts.<root domain> (docs/plans/wonderbolts-nuxt.md,
   # ADR 0006): unprivileged, it only calls the region exits' agents.
+  # Its source is the forge's home-operations/wonderbolts (./wonderbolts/source.yaml,
+  # applied here so flate sees the GitRepository before rendering).
+  - ./wonderbolts/source.yaml
   - ./wonderbolts/ks.yaml

@@ -1910,7 +1910,7 @@
       // alone (the "Estate images" packageRules above). Tag and digest are
       // captured together, so an update rewrites both.
       //
-      // The tags are `<major>.<minor>.<n>` (.forgejo/workflows/wonderbolts-image.yml),
+      // The tags are `<major>.<minor>.<n>` (home-operations/wonderbolts on the forge, .forgejo/workflows/images.yml),
       // so docker versioning can order them.
       description: "Estate images on the forge's registry",
       customType: "regex",

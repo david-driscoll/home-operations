@@ -197,7 +197,7 @@ spec:
         # (Reloader 2.x, chart 2.2.19). A new ConfigMap or Secret the pod
         # reads goes here too.
         annotations:
-          configmap.reloader.stakater.com/reload: "region-exit-spitfire-defaults,region-exit-routing,region-exit-picker"
+          configmap.reloader.stakater.com/reload: "region-exit-spitfire-defaults,region-exit-routing"
           secret.reloader.stakater.com/reload: "region-exit-spitfire-mullvad,region-exit-spitfire-netbird,tailscale-region-exit-authkey"
           # Region exits are always on: the nightly go-kube-downscaler window
           # (01:00-07:00) would otherwise scale every one to 0, as it did spitfire
@@ -210,6 +210,10 @@ spec:
           identifier: spitfire
         pod: &pod
           automountServiceAccountToken: true
+          # The agent image (the picker container) is on the forge's registry,
+          # which refuses anonymous pulls (./externalsecret.yaml).
+          imagePullSecrets:
+            - name: region-exits-image-pull
           # Nothing in the pod reads other Services' variables any more (the
           # overview that did moved to the region picker app, ADR 0006). The
           # kubelet still sets KUBERNETES_SERVICE_HOST/PORT, which the agent
@@ -401,7 +405,7 @@ spec:
               # On the tailscale-socket emptyDir, where the picker reads
               # /localapi/v0/status for region_exit_overlay_connected. The
               # socket is 0666 and tailscaled grants the picker's uid 1000
-              # read-only access (overlays.ts).
+              # read-only access (wonderbolts agent/overlays.ts).
               TS_SOCKET: /var/run/tailscale/tailscaled.sock
             probes:
               liveness: &tailscale-probe
@@ -489,21 +493,23 @@ spec:
               NB_LOG_FILE: console
             securityContext: *privileged
             resources: *overlay-resources
-          # The region exit agent (#3140, ./picker.ts): /status, /regions and
-          # POST /region for the region picker app (../wonderbolts, ADR 0006),
-          # /metrics for Prometheus. No pages, and no route through the Gateway.
+          # The region exit agent (#3140): /status, /regions and POST /region
+          # for the region picker app (../wonderbolts, ADR 0006), /metrics for
+          # Prometheus. No pages, and no route through the Gateway. Its source
+          # and image are the forge's home-operations/wonderbolts (agent/,
+          # images.yml); Renovate bumps this pin (.github/renovate.json5,
+          # "Estate images on the forge's registry").
           picker: &picker
             image:
-              # The same pin as netbird-system/proxy-watchdog.
-              repository: node
-              tag: 24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
-            # Node strips the types itself.
+              repository: git.${ROOT_DOMAIN}/estate-images/wonderbolts-agent
+              tag: 0.1.1@sha256:31343780485623fe46cc916cfa54d497410db57b5b049da75c4b09dec888fd53
+            # The image's own cmd, spelled out: Node strips the types itself.
             command: ["node", "/app/picker.ts"]
             env: &picker-env
               REGION_EXIT_NAME: spitfire
               PORT: "8080"
               # tailscale's TS_SOCKET; NetBird is read from wt0 in sysfs, not
-              # its gRPC socket, which has no read-only mode (overlays.ts).
+              # its gRPC socket, which has no read-only mode (wonderbolts agent/overlays.ts).
               TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
@@ -525,7 +531,7 @@ spec:
               runAsNonRoot: true
               runAsUser: 1000
               # Group 0, for /proc/net/nf_conntrack (0440 root:root), which
-              # activeClients.ts counts people from. No capability: NET_ADMIN
+              # wonderbolts agent/activeClients.ts counts people from. No capability: NET_ADMIN
               # for netlink would also reach the kill switch (plan §G6).
               runAsGroup: 0
               allowPrivilegeEscalation: false
@@ -547,7 +553,7 @@ spec:
         replicas: 1
         strategy: *strategy
         annotations:
-          configmap.reloader.stakater.com/reload: "region-exit-soarin-defaults,region-exit-routing,region-exit-picker"
+          configmap.reloader.stakater.com/reload: "region-exit-soarin-defaults,region-exit-routing"
           secret.reloader.stakater.com/reload: "region-exit-soarin-mullvad,region-exit-soarin-netbird,tailscale-region-exit-authkey"
           downscaler/exclude: "true"
         serviceAccount:
@@ -590,7 +596,7 @@ spec:
         replicas: 1
         strategy: *strategy
         annotations:
-          configmap.reloader.stakater.com/reload: "region-exit-fleetfoot-defaults,region-exit-routing,region-exit-picker"
+          configmap.reloader.stakater.com/reload: "region-exit-fleetfoot-defaults,region-exit-routing"
           secret.reloader.stakater.com/reload: "region-exit-fleetfoot-mullvad,region-exit-fleetfoot-netbird,tailscale-region-exit-authkey"
           downscaler/exclude: "true"
         serviceAccount:
@@ -633,7 +639,7 @@ spec:
         replicas: 1
         strategy: *strategy
         annotations:
-          configmap.reloader.stakater.com/reload: "region-exit-misty-fly-defaults,region-exit-routing,region-exit-picker"
+          configmap.reloader.stakater.com/reload: "region-exit-misty-fly-defaults,region-exit-routing"
           secret.reloader.stakater.com/reload: "region-exit-misty-fly-mullvad,region-exit-misty-fly-netbird,tailscale-region-exit-authkey"
           downscaler/exclude: "true"
         serviceAccount:
@@ -676,7 +682,7 @@ spec:
         replicas: 1
         strategy: *strategy
         annotations:
-          configmap.reloader.stakater.com/reload: "region-exit-high-winds-defaults,region-exit-routing,region-exit-picker"
+          configmap.reloader.stakater.com/reload: "region-exit-high-winds-defaults,region-exit-routing"
           secret.reloader.stakater.com/reload: "region-exit-high-winds-mullvad,region-exit-high-winds-netbird,tailscale-region-exit-authkey"
           downscaler/exclude: "true"
         serviceAccount:
@@ -755,18 +761,6 @@ spec:
           fleetfoot: *netbird-state-mounts
           misty-fly: *netbird-state-mounts
           high-winds: *netbird-state-mounts
-      picker:
-        type: configMap
-        name: region-exit-picker
-        advancedMounts:
-          spitfire: &picker-mounts
-            picker:
-              - path: /app
-                readOnly: true
-          soarin: *picker-mounts
-          fleetfoot: *picker-mounts
-          misty-fly: *picker-mounts
-          high-winds: *picker-mounts
       # gluetun writes servers.json here; the picker reads the Mullvad
       # countries and cities from it.
       gluetun:
@@ -828,7 +822,7 @@ spec:
           http:
             port: *picker-port
 
-    # The picker's GET /metrics (metrics.ts), which prometheusrule.yaml alerts
+    # The picker's GET /metrics (wonderbolts agent/metrics.ts), which prometheusrule.yaml alerts
     # on. The series carry region_exit=<name> themselves. The CNP lets
     # Prometheus GET /metrics on 8080 and nothing else.
     serviceMonitor:

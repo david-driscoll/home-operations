@@ -3,7 +3,7 @@
 #
 # Only the region picker app may ask the agent for anything but metrics.
 #
-# The agent (picker.ts) has no login of its own: it moves a region exit for
+# The agent (wonderbolts agent/picker.ts) has no login of its own: it moves a region exit for
 # whoever POSTs /region, and records the `movedBy` it is sent. The region
 # picker app (../wonderbolts, ADR 0006) is what decides who may, from
 # Authentik's forward auth. Without this policy any pod in the cluster, and

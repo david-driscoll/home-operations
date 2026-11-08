@@ -1,4 +1,0 @@
-{
-  "extends": "./.nuxt/tsconfig.node.json",
-  "include": ["test/**/*", "dev/**/*", "vitest.config.ts", "server/utils/agent.ts", "server/utils/viewer.ts", "shared/**/*"]
-}
