@@ -253,6 +253,6 @@ export async function collectNetbird(client: ApiClient): Promise<SourceResult & 
  * non-array, and iterating it failed the whole source (2026-11-08,
  * "net.resources is not iterable"). Anything that is not an array is empty.
  */
-export function asArray<T>(value: T[] | null | undefined | unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
+export function asArray<T>(value: readonly T[] | T[] | null | undefined): T[] {
+  return Array.isArray(value) ? [...value] : [];
 }
