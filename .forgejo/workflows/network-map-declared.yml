@@ -1,0 +1,103 @@
+---
+# Loads the network map's DECLARED layer -- what the repo on main says -- into
+# Neo4j (docs/network-map/schema.md, docs/adr/0006-network-map-neo4j-homelable-projection.md).
+# The observed layer is the hourly CronJob's (kubernetes/apps/database/network-map);
+# this replaces only `layer: 'declared'` and re-derives the DECLARES join.
+#
+# It runs from the checkout, not from the collector image: the loader imports
+# the repo's own TypeScript (stacks/netbird's policy and sites,
+# components/constants.ts) and reads its YAML (images/network-map/declared/load.ts
+# calls every reader; each one's header names its files). Forge-only, like ./network-map-image.yml.
+#
+# TRUSTED TRIGGERS ONLY. Never `pull_request`: the Neo4j credential below is
+# the one user Neo4j Community has, the collector's too, and a branch's
+# workflow could write anything with it.
+#
+# Neo4j is reached in-cluster over Bolt: the forge's runners are pods in
+# `coder` (kubernetes/apps/coder/forgejo-runner), and neo4j.database has no
+# NetworkPolicy in front of it.
+name: network-map-declared
+
+on:
+  push:
+    branches: [main]
+    # The loader's sources (the readers images/network-map/declared/load.ts
+    # calls), plus the loader itself and this file.
+    paths:
+      - kubernetes/apps/**/definition.yaml
+      - kubernetes/apps/**/ks.yaml
+      - docker/**
+      - clusters/*.yaml
+      - talos/talconfig.yaml
+      - stacks/home/index.ts
+      - stacks/gulf-of-mexico/index.ts
+      - stacks/ocracoke/index.ts
+      - stacks/netbird/policy.ts
+      - stacks/netbird/sites.ts
+      - stacks/netbird/regionExits.ts
+      - stacks/netbird/apps.ts
+      - components/constants.ts
+      - images/network-map/declared/**
+      - images/network-map/src/**
+      - images/network-map/package.json
+      - package-lock.json
+      - .forgejo/workflows/network-map-declared.yml
+  workflow_dispatch: {}
+
+# The newest main wins: each run replaces the whole declared layer.
+concurrency:
+  group: network-map-declared
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEO4J_URI: bolt://neo4j.database.svc.cluster.local:7687
+      # Both from stacks/system (neo4j-auth.ts mints it, forgejo-github-mirror.ts
+      # sets the secrets). Masked in the log.
+      NEO4J_USERNAME: ${{ secrets.NETWORK_MAP_NEO4J_USERNAME }}
+      NEO4J_PASSWORD: ${{ secrets.NETWORK_MAP_NEO4J_PASSWORD }}
+      # The names apps are reached by, never written in the repo: the secrets
+      # stacks/system already sets for scripts/private-domain-guard.
+      ROOT_DOMAIN: ${{ secrets.PRIVATE_DOMAIN_ROOT }}
+      TAILSCALE_DOMAIN: ${{ secrets.PRIVATE_DOMAIN_TAILNET }}
+      COMMIT: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the secrets
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in NEO4J_USERNAME NEO4J_PASSWORD ROOT_DOMAIN TAILSCALE_DOMAIN; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::not set on this repository: ${missing[*]} (stacks/system sets them: NETWORK_MAP_NEO4J_*, PRIVATE_DOMAIN_*)"
+            exit 1
+          fi
+
+      # The Node everyone else uses, so its npm is the one that wrote package-lock.json.
+      - name: Read pinned versions
+        id: pins
+        run: echo "node=$(yq -p toml -oy '.tools.node' .config/mise.toml)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.pins.outputs.node }}
+
+      # neo4j-driver, and the loader's yaml and typescript (devDependencies, so
+      # the collector image does not carry them).
+      - name: Install
+        run: npm ci --workspace images/network-map --include-workspace-root=false --ignore-scripts --no-audit --no-fund
+
+      - name: Test
+        working-directory: images/network-map
+        run: node --test declared/*.test.ts src/declares.test.ts
+
+      - name: Load
+        run: node images/network-map/declared/main.ts "$PWD"

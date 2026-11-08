@@ -1,0 +1,35 @@
+---
+# The UniFi zone-based firewall's zone map: which network sits in which zone.
+# Hand-maintained, because the UniFi API does not report zone membership
+# (docs/network-map/schema.md, "What the observed layer can't see"). The
+# declared loader (images/network-map/declared/zones.ts) turns it into Zone
+# nodes `unifi-fw:<zone>` and IN_ZONE edges from Network nodes matched to the
+# observed UniFi networks by name.
+#
+# Keys are the six built-in zones, all of which must be listed (an empty list
+# is fine). Values are network names exactly as the UniFi controller shows
+# them. A network may be in one zone only.
+#
+# UNCONFIRMED: written 2026-11-08 from UniFi's defaults, not read off the
+# controller. Check each line against Settings > Security > Zones and fix it
+# here:
+#   - Home: Internal (the default for a corporate network). Likely right.
+#   - IoT: Internal, the default for a new network. It may have been moved to
+#     a custom zone, which this file cannot express yet.
+#   - Guest: Hotspot, where UniFi puts a guest network. It is Internal if the
+#     network was created as an ordinary one rather than with the guest flag.
+#   - Internet 1, Internet 2: External, which is where WANs always are.
+#   - Gateway, Vpn, Dmz: no networks. Gateway holds the gateway itself;
+#     Vpn would hold a VPN server's network, and none is declared here.
+zones:
+  Internal:
+    - Home
+    - IoT
+  External:
+    - Internet 1
+    - Internet 2
+  Gateway: []
+  Vpn: []
+  Hotspot:
+    - Guest
+  Dmz: []
