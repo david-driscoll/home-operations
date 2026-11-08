@@ -19,11 +19,11 @@ powershell-core = "7.6.9"
 talosctl = "1.14.4"
 # TOPF renders and applies talos/'s machine config (talos/topf.yaml + patch
 # tree). It vendors its own Talos machinery -- `topf --version` prints it, e.g.
-# "0.6.1 (Talos v1.14.1)" -- and generates configs against THAT, so a TOPF
+# "0.6.2 (Talos v1.14.4)" -- and generates configs against THAT, so a TOPF
 # bump can change rendered defaults even when nothing in talos/ moved.
 # `mise run talos:validate-config` refuses to run when the vendored minor is
 # older than topf.yaml's talosVersion. Review `talos:diff` on every bump.
-"aqua:postfinance/topf" = "0.6.1"
+"aqua:postfinance/topf" = "0.6.2"
 yq = "4.54.2"
 jq = "1.8.2"
 sops = "3.13.3"

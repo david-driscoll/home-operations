@@ -19,9 +19,10 @@
 #
 # Under TOPF it is still needed, but for half the reason. Upstream fixed the key
 # name ("fix: generate backwards compatible etcd encryption config", 1.14.0),
-# and TOPF 0.6.1's machinery (v1.14.1) does generate `key2` -- but still WITHOUT
-# `identity: {}`. Tested 2026-10-19 by rendering with this file and the delete
-# removed and comparing against the live config. If a later TOPF generates
+# and TOPF's machinery does generate `key2` -- but still WITHOUT `identity: {}`.
+# Tested by rendering with this file and the delete removed: TOPF 0.6.1
+# (machinery v1.14.1) on 2026-10-19, compared against the live config, and
+# TOPF 0.6.2 (machinery v1.14.4) again on 2026-11-08. If a later TOPF generates
 # key2 + identity itself, this file and the delete can both go -- check the
 # rendered KubeEtcdEncryptionConfig against
 # /system/secrets/kubernetes/kube-apiserver/encryptionconfig.yaml on a control
