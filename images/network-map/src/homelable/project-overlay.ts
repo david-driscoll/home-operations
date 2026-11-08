@@ -18,10 +18,11 @@
  * theirs (a pod has no route into either overlay). The rest takes its status
  * from the control plane.
  */
+import { CGNAT_CIDR } from "../normalize.ts";
 import { type Canvas, canvasBuilder, type DesignName, MUTED_COLOR, type NodeSpec, type ZoneSpec } from "./canvas.ts";
 import { type MapGraph, type MapNode, str } from "./graph.ts";
 import { ZONE_GAP } from "./layout.ts";
-import { declaredMachineSpec, declaredMachinesOn, homeLanIp, interfaceSpec, machineOf } from "./machines.ts";
+import { declaredIpsIn, declaredMachineSpec, declaredMachinesWhere, homeLanIp, interfaceSpec, machineOf } from "./machines.ts";
 import { networkLabel } from "./project-unifi.ts";
 
 interface OverlayOptions {
@@ -41,7 +42,11 @@ interface OverlayOptions {
   groupZoneLabel: (name: string) => string;
   /** How routes are drawn. */
   routes: "edges" | "zones";
+  /** Whether a declared, unobserved Machine belongs on this design (it has no Interfaces to say so). */
+  declaredMachine: (m: MapNode, groups: MapNode[]) => boolean;
 }
+
+const inSystem = (groups: MapNode[], system: string) => groups.some(gr => str(gr.props.system) === system);
 
 interface Peer {
   iface: MapNode;
@@ -162,13 +167,14 @@ function projectOverlay(g: MapGraph, o: OverlayOptions): Canvas {
   const ungrouped = zoneFor("ungrouped", o.ungroupedLabel);
   if (ungrouped) groupZones.push(ungrouped);
 
-  // Declared, not observed: groups as empty zones, machines in one zone.
-  for (const grp of g.find("Group", "declared").filter(n => str(n.props.system) === o.system && g.drift(n.id) === "unobserved")) {
+  // Declared, not observed: device groups and tags as empty zones (user groups
+  // place no device here), machines in one zone.
+  for (const grp of g.find("Group", "declared").filter(n => str(n.props.system) === o.system && str(n.props.kind) !== "user" && g.drift(n.id) === "unobserved")) {
     const name = groupName(grp);
     if (o.ignoreGroups.has(name)) continue;
     groupZones.push({ key: `zone:declared:${g.key(grp)}`, label: o.groupZoneLabel(name), description: `${o.system} group ${name}`, drift: "unobserved", members: [] });
   }
-  const ghosts = declaredMachinesOn(g, net => str(net.props.kind) === o.networkKind);
+  const ghosts = declaredMachinesWhere(g, o.declaredMachine);
   if (ghosts.length > 0) {
     groupZones.push({
       key: "zone:declared-machines",
@@ -206,6 +212,9 @@ export function projectTailscale(g: MapGraph): Canvas {
     ungroupedLabel: "Untagged (user devices)",
     groupZoneLabel: name => name,
     routes: "edges",
+    // declared/machines.ts gives a Proxmox host its `tailscaleIpAddress`; the
+    // declared NetBird gateways carry no address, so a 100.x one is Tailscale's.
+    declaredMachine: (m, groups) => declaredIpsIn(m, [CGNAT_CIDR]) || inSystem(groups, "tailscale"),
   });
 }
 
@@ -225,5 +234,7 @@ export function projectNetbird(g: MapGraph): Canvas {
     ungroupedLabel: "In no group",
     groupZoneLabel: name => `group ${name}`,
     routes: "zones",
+    // declared/netbird.ts: each gateway container, MEMBER_OF `gateways` and its site's group.
+    declaredMachine: (m, groups) => str(m.props.declaredAs) === "netbird-gateway" || inSystem(groups, "netbird"),
   });
 }

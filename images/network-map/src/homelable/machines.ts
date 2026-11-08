@@ -7,6 +7,7 @@
  * with the same ip or mac (./canvas.ts), so a design-specific label would
  * flip that row every hour.
  */
+import { ipInCidr } from "../normalize.ts";
 import type { NodeSpec, NodeStatus, NodeType } from "./canvas.ts";
 import { type MapGraph, type MapNode, preferredIp, str, strs } from "./graph.ts";
 
@@ -101,6 +102,7 @@ export function interfaceSpec(g: MapGraph, iface: MapNode, extra: Partial<NodeSp
       sources: m ? strs(m.props.sources) : strs(iface.props.sources),
       kind: m ? str(m.props.kind) : undefined,
       joined: m?.props.joined === false ? "no (seen by one source only)" : undefined,
+      "declared by": m ? g.declaredBy(m.id) : undefined,
       model: m ? str(m.props.model) : undefined,
       "last seen": str(iface.props.lastSeen),
     },
@@ -110,17 +112,32 @@ export function interfaceSpec(g: MapGraph, iface: MapNode, extra: Partial<NodeSp
 
 /** A declared Machine with nothing observed behind it, for a design's drift zone. */
 export function declaredMachineSpec(g: MapGraph, m: MapNode): NodeSpec {
-  return { type: machineType(m), label: machineLabel(m, g), status: "unknown", drift: "unobserved", properties: { kind: str(m.props.kind) } };
+  return {
+    type: machineType(m),
+    label: machineLabel(m, g),
+    hostname: str(m.props.hostname),
+    status: "unknown",
+    drift: "unobserved",
+    properties: { kind: str(m.props.kind), "declared addresses": strs(m.props.ips), "declared MACs": strs(m.props.macs), "declared as": str(m.props.declaredAs) },
+  };
 }
 
-/** Declared Machines with an Interface on a network matching `onNetwork`. */
-export function declaredMachinesOn(g: MapGraph, onNetwork: (net: MapNode) => boolean): MapNode[] {
+/**
+ * Declared Machines nothing observed stands for, that `belongs` places on a
+ * design. The declared layer gives a Machine no Interfaces
+ * (declared/machines.ts): what places it is its declared `ips` and the
+ * groups it is MEMBER_OF.
+ */
+export function declaredMachinesWhere(g: MapGraph, belongs: (m: MapNode, groups: MapNode[]) => boolean): MapNode[] {
   return g.find("Machine", "declared").filter(
     m =>
       g.drift(m.id) === "unobserved" &&
-      interfacesOf(g, m).some(i => {
-        const net = networkOf(g, i);
-        return net ? onNetwork(net) : false;
-      }),
+      belongs(
+        m,
+        g.out(m.id, "MEMBER_OF").map(h => h.node),
+      ),
   );
 }
+
+/** Whether any of a declared Machine's addresses is inside one of `cidrs`. */
+export const declaredIpsIn = (m: MapNode, cidrs: string[]) => strs(m.props.ips).some(ip => cidrs.some(c => ipInCidr(ip, c)));

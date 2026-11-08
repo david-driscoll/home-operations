@@ -198,10 +198,20 @@ export function fixtureGraph(): MapGraph {
 export function fixtureGraphWithDeclared(): MapGraph {
   const b = graphBuilder();
   base(b);
-  b.node("d:luna-dockge", ["Machine"], { machineId: "luna-dockge", name: "luna-dockge", kind: "lxc" }, "declared");
-  b.rel("DECLARES", "d:luna-dockge", "luna-dockge");
+  // As declared/machines.ts and declared/netbird.ts write them: `repo:<hostname>` keys,
+  // addresses as props (no Interfaces), DECLARES from src/declares.ts with its `by`.
+  const declared = (id: string, props: Record<string, Value>) => b.node(id, ["Machine"], props, "declared");
+  declared("d:luna-dockge", { machineId: "repo:luna-dockge", name: "luna-dockge", hostname: "luna-dockge", kind: "lxc", ips: ["10.10.10.20"], macs: ["bc:24:11:00:00:20"] });
+  b.rel("DECLARES", "d:luna-dockge", "luna-dockge", { by: "mac" });
+  declared("d:old-lxc", { machineId: "repo:old-lxc", name: "old-lxc", hostname: "old-lxc", kind: "lxc", ips: ["10.10.10.99"] });
+  declared("d:skystar", { machineId: "repo:skystar", name: "skystar", hostname: "skystar", kind: "physical", ips: ["192.168.50.2", "100.100.0.99"] });
+  declared("d:gw-skystar", { machineId: "repo:gateway-skystar", name: "gateway-skystar", hostname: "gateway-skystar", kind: "container", declaredAs: "netbird-gateway" });
+  b.node("d:nb:gateways", ["Group"], { groupId: "netbird:gateways", system: "netbird", name: "gateways", kind: "device" }, "declared");
+  b.rel("MEMBER_OF", "d:gw-skystar", "d:nb:gateways");
+  b.node("d:tag:media", ["Group"], { groupId: "tailscale:tag:media", system: "tailscale", name: "tag:media", kind: "tag" }, "declared");
+  b.node("d:group:family", ["Group"], { groupId: "tailscale:group:family", system: "tailscale", name: "group:family", kind: "user" }, "declared");
+  // jellyfin has no DECLARES edge (the collector re-created it since the link ran): the shared appId still pairs them.
   b.node("d:app:jellyfin", ["App"], { appId: "jellyfin", name: "jellyfin" }, "declared");
-  b.rel("DECLARES", "d:app:jellyfin", "app:jellyfin");
   b.node("d:app:ghost", ["App"], { appId: "ghost", name: "ghost" }, "declared");
   return b.graph();
 }
