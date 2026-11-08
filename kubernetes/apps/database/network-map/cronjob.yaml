@@ -62,7 +62,7 @@ spec:
               # The tag is images/network-map/tag.sh's hash of the inputs. Until
               # the first build lands this pins the tag alone; replace it with
               # tag@digest from that run.
-              image: git.${ROOT_DOMAIN}/estate-images/network-map:aa6ac98d2fa4@sha256:a9cee5733ca7123041024ca7b36687d10d2934c6e052fd5fe8b0fb17f9c293e1
+              image: git.${ROOT_DOMAIN}/estate-images/network-map:07b25791e663@sha256:ccaca1e574496eec229a94408c16665eaf52bbe5ba740336c21d4c7f92647bff
               command: ["node", "/app/src/main.ts"]
               env:
                 - name: NEO4J_URI
