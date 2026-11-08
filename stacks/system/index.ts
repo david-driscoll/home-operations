@@ -152,7 +152,7 @@ configureAuthentikPg(globals);
 
 // The network map's Neo4j credential, read by Neo4j, its collector, the
 // declared-layer loader and the Neo4j MCP. See neo4j-auth.ts's header.
-configureNeo4jAuth(globals);
+const neo4jAuth = configureNeo4jAuth(globals);
 
 // The VRRP password for authentik's keepalived VIP, both sites. See authentik-vip.ts.
 configureAuthentikVip(globals);
@@ -199,7 +199,7 @@ const forgejoConfiguration = new ForgejoConfigurationComponent({ globals, target
 // is a deploy key registered on GitHub. That makes GitHub, through the App
 // provider in components/globals.ts, a third thing this stack talks to. See
 // forgejo-github-mirror.ts and docs/runbooks/forgejo-github-mirror.md.
-const forgejoGithubMirror = new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration });
+const forgejoGithubMirror = new ForgejoGithubMirrorComponent({ globals, forgejo: forgejoConfiguration, neo4jAuth });
 
 // Forge-hosted app repositories under home-operations (the region picker
 // first): the repository, Flux's read grant, the image workflow's secrets, and

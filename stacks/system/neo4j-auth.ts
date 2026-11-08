@@ -6,8 +6,10 @@
  *   - `database/neo4j` itself: its ExternalSecret renders NEO4J_AUTH, which
  *     Neo4j reads only on first start, to set the initial password.
  *   - the hourly collector (observed layer), in `database`.
- *   - the declared-layer loader, a Forgejo workflow on push to main, and the
- *     read-only Neo4j MCP in `agents`.
+ *   - the declared-layer loader, a Forgejo workflow on push to main
+ *     (.forgejo/workflows/network-map-declared.yml), which reads it as the
+ *     NETWORK_MAP_NEO4J_* Actions secrets ./forgejo-github-mirror.ts sets from
+ *     the value returned here, and the read-only Neo4j MCP in `agents`.
  *
  * An in-cluster generated Secret would exist in one namespace only, and ESO
  * cannot write it back to OpenBao (`eso-equestria` may write one certificate
@@ -34,7 +36,13 @@ const NEO4J_PASSWORD_VERSION = "1";
 export const NEO4J_USER = "neo4j";
 export const NEO4J_BAO_PATH = "clusters/equestria/apps/neo4j/auth";
 
-export function configureNeo4jAuth(globals: GlobalResources): void {
+/** The credential, for the readers this stack hands it to directly (the declared loader's Actions secrets). */
+export interface Neo4jAuth {
+  username: string;
+  password: pulumi.Output<string>;
+}
+
+export function configureNeo4jAuth(globals: GlobalResources): Neo4jAuth {
   // Alphanumeric only: it is spliced into NEO4J_AUTH (`neo4j/<password>`) and
   // into Bolt/HTTP basic auth, and none of them want quoting.
   const password = new RandomPassword("neo4j-password", {
@@ -45,7 +53,7 @@ export function configureNeo4jAuth(globals: GlobalResources): void {
 
   if (!globals.baoDualWriteEnabled) {
     pulumi.log.warn(`No OpenBao credentials — skipping ${NEO4J_BAO_PATH}. database/neo4j's ExternalSecret stays SecretSyncedError until a credentialed run.`);
-    return;
+    return { username: NEO4J_USER, password: password.result };
   }
 
   baoKvSecret(
@@ -59,4 +67,5 @@ export function configureNeo4jAuth(globals: GlobalResources): void {
     },
     { provider: globals.baoProvider },
   );
+  return { username: NEO4J_USER, password: password.result };
 }

@@ -84,6 +84,7 @@ import * as tls from "@pulumi/tls";
 import { baoKvSecret, baoProvenance } from "components/bao.ts";
 import type { GlobalResources } from "components/globals.ts";
 import { type ForgejoConfigurationComponent, GITHUB_MIRROR_ORG, type TOKEN_SCOPES } from "./forgejo-renovate.ts";
+import type { Neo4jAuth } from "./neo4j-auth.ts";
 
 /**
  * The organization that owns the mirror. The repository's path,
@@ -154,6 +155,8 @@ export interface ForgejoGithubMirrorArgs {
   globals: GlobalResources;
   /** For its provider and its `createUser`; nothing here authenticates on its own. */
   forgejo: ForgejoConfigurationComponent;
+  /** The network map's Neo4j credential (./neo4j-auth.ts), for the declared-layer loader's workflow. */
+  neo4jAuth: Neo4jAuth;
 }
 
 export class ForgejoGithubMirrorComponent extends ComponentResource {
@@ -568,6 +571,12 @@ export class ForgejoGithubMirrorComponent extends ComponentResource {
       // What .forgejo/workflows/pulumi-workspace-image.yml pushes the
       // workspace image with (write:package, estate-images' own packages).
       ESTATE_IMAGES_TOKEN: imagesBot.token.token,
+      // What .forgejo/workflows/network-map-declared.yml writes the network
+      // map's declared layer with, over Bolt to neo4j.database in-cluster.
+      // Neo4j Community has one user, so this is the collector's credential
+      // too; the workflow runs on push to main only, never pull_request.
+      NETWORK_MAP_NEO4J_USERNAME: args.neo4jAuth.username,
+      NETWORK_MAP_NEO4J_PASSWORD: args.neo4jAuth.password,
     };
     this.imagesPushToken = imagesBot.token.token;
     for (const [name, data] of Object.entries(secrets)) {
