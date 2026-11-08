@@ -35,6 +35,13 @@ spec:
     controllers:
       *app :
         enabled: true
+        annotations:
+          # The network map's database (ADR 0006): the hourly collector writes
+          # here around the clock, so it stays up through the nightly window.
+          downscaler/exclude: "true"
+          # NEO4J_AUTH comes from neo4j-config; it only applies to an empty
+          # data directory, but a rendered change should still roll the pod.
+          reloader.stakater.com/auto: "true"
         pod:
           restartPolicy: Always
           terminationGracePeriodSeconds: 30

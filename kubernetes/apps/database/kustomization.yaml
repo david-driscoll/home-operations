@@ -11,4 +11,5 @@ resources:
   - ./postgres
   - ./valkey/ks.yaml
   - ./temporal/ks.yaml
-  # - ./neo4j/ks.yaml
+  # The network map's graph (docs/adr/0006-network-map-neo4j-homelable-projection.md).
+  - ./neo4j/ks.yaml

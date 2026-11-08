@@ -35,6 +35,9 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+          # Shows the network map (ADR 0006), which its sync rewrites hourly
+          # around the clock; scaled to zero overnight it would go stale.
+          downscaler/exclude: "true"
         replicas: 1
         # Single writer to one RWO Longhorn PVC holding a SQLite file.
         strategy: Recreate
