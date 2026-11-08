@@ -1,7 +1,22 @@
 # Cutover: equestria's Talos config from talhelper to TOPF
 
-Done by hand, one node at a time. Written 2026-10-20 against Talos **v1.14.4** on every node and
-TOPF **0.6.1** (Talos v1.14.1 machinery). Read `talos/README.md` first.
+Done by hand, one node at a time. Written 2026-10-20 and re-verified 2026-11-08 against Talos
+**v1.14.4** on every node, Kubernetes **v1.37.2** and TOPF **0.6.2** (Talos v1.14.4 machinery).
+Read `talos/README.md` first.
+
+## The sequence
+
+| Phase | Where | What | Touches nodes |
+|---|---|---|---|
+| A | `main`, talhelper | Step 0: apply the known drift with the old tooling | yes, six of seven |
+| B | GitHub | Merge the TOPF PR (#2811). Hold the Talos v1.14.5 PR (#2907) | no |
+| C | `main`, TOPF | Steps 1-4: preview, then apply node by node | yes, all seven |
+| D | GitHub, then tuppr | Merge Talos v1.14.5 once Renovate regenerates it against `topf.yaml`: the first tuppr rollout on the new config (see "After") | yes, via tuppr |
+| E | GitHub | Follow-ups: remove openebs-system (its hostpath mount is gone); the next kubelet bump is the first `KubernetesUpgrade` on `KubeletConfig` | via tuppr |
+
+Phase A has to finish before phase B: the merge deletes talhelper. Phase C must not overlap a
+tuppr rollout, and the apply tasks refuse to run during one. That is why #2907 waits for phase D.
+It also means the cutover runs on the version every node already has.
 
 ## What the first apply changes
 
@@ -15,6 +30,8 @@ What the node *does* stays the same, except for the items below. This was checke
 cutover in two ways. First, both configs were loaded with Talos machinery v1.14.4 and every
 effective setting was compared, on all seven nodes. Second, Talos itself reports
 **"Applied configuration without a reboot"** on all seven (`topf apply --dry-run`, 2026-10-20).
+That dry-run was repeated on 2026-11-08 with TOPF 0.6.2 after milky-way's rebuild, with the same
+result. Its hunks were exactly the reshaping plus the drift below.
 
 Deliberate changes, approved:
 
@@ -31,14 +48,14 @@ before the merge, so they do not ride along in the first TOPF diff:
 
 | Drift | Nodes |
 |---|---|
-| registry mirrors `data.forgejo.org` and `mcr.microsoft.com` | all seven |
+| registry mirrors `data.forgejo.org` and `mcr.microsoft.com` | all but milky-way |
 | label `driscoll.dev/ephemeral-disk: sata` (keeps Pulumi workspaces off them) | fluttershy, kerfuffle |
 | install image schematic `82664fb…` → `b2443f…` (the one it already runs) | shining-armor |
 
-The shining-armor row may already be gone. tuppr's v1.14.4 rollout finished on all seven nodes on
-2026-10-17, and tuppr writes each node's install image back into its config after upgrading it.
-It also refuses a node whose configured image does not embed the schematic the node runs. If step
-0's diff for shining-armor shows no install image change, that is why; it is not a problem.
+milky-way has none of it: it was reinstalled from `main`'s talconfig on 2026-11-02 (the VM
+rebuild). The shining-armor row was checked on 2026-11-08: the node *runs* `b2443f…`
+(`talosctl get extensions` shows util-linux-tools), and its config still names `82664fb…`
+(iscsi-tools, qemu-guest-agent, amdgpu, without util-linux-tools).
 
 ## Prerequisites
 
@@ -76,13 +93,13 @@ procedure under Rollback, and seven real changes would be mixed into a seven-nod
 
 ```sh
 mise run talos:apply-node 10.10.206.10   # shining-armor
-# … then 10.10.206.14, 10.10.206.16, 10.10.206.17, 10.10.209.10, 10.10.209.12, 10.10.209.11
+# … then 10.10.206.14, 10.10.206.16, 10.10.206.17, 10.10.209.11, 10.10.209.12
 git checkout -- talos/clusterconfig/.gitignore   # talhelper rewrites it on every genconfig
 ```
 
-Each apply should show only the two mirrors, plus the label (fluttershy, kerfuffle) or the install
-image (shining-armor, if still pending; see above). talhelper's `talos:apply-node` defaults to
-`--mode auto`; none of these changes needs a reboot.
+milky-way (10.10.209.10) is already current, so skip it. Each apply should show only the two
+mirrors, plus the label (fluttershy, kerfuffle) or the install image (shining-armor).
+talhelper's `talos:apply-node` defaults to `--mode auto`; none of these changes needs a reboot.
 
 ## Step 1 — preview every node
 
@@ -116,9 +133,9 @@ Anything else unexpected: stop.
 ## Step 2 — first real apply: shining-armor
 
 Why shining-armor:
-- It's the one node certain to be a VM (its schematic carries `qemu-guest-agent`). If the network
-  documents were wrong, it would be recoverable from the Proxmox console rather than by walking to
-  the machine.
+- It's a VM (its schematic carries `qemu-guest-agent`). If the network documents were wrong, it
+  would be recoverable from the Proxmox console rather than by walking to the machine. milky-way
+  is a VM too, but it is a control plane.
 - It's a worker, and holds `bulk`-tier Longhorn replicas only.
 - It has its own schematic, so its install image is the most distinctive one to check.
 
@@ -202,19 +219,26 @@ kubectl get nodes -l driscoll.dev/ephemeral-disk=sata   # fluttershy and kerfuff
 
 ## Step 4 — the control planes, one at a time, VIP holder last
 
-At writing, othalla held the API VIP 10.10.206.201:
+Find which control plane holds the API VIP 10.10.206.201 right now. It moves: othalla held it on
+2026-10-20, pegasus on 2026-11-08.
 
 ```sh
-talosctl -n 10.10.209.11 get addresses | grep 10.10.206.201
+for ip in 10.10.209.10 10.10.209.11 10.10.209.12; do
+  printf '%s ' "$ip"; talosctl -n "$ip" -e "$ip" get addresses | grep -c 10.10.206.201
+done
 ```
 
-Do the other two first:
+Do the other two first, milky-way among them, and the holder last:
 
 ```sh
-mise run talos:apply-node 10.10.209.10                    # milky-way
-mise run talos:apply-node 10.10.209.12                    # pegasus
+mise run talos:apply-node 10.10.209.10                    # milky-way (VM on celestia)
 mise run talos:apply-node 10.10.209.11                    # othalla
+mise run talos:apply-node 10.10.209.12                    # pegasus -- if it still holds the VIP
 ```
+
+milky-way has 4 vCPU / 7 GiB and its kube-apiserver alone runs near 3.8 GiB. Watch its memory
+while the static pods restart (`kubectl top node milky-way`). If it is OOM-killing, stop there:
+the other two keep quorum.
 
 After each, in addition to step 2's checks:
 
@@ -237,7 +261,7 @@ After each, in addition to step 2's checks:
 
    The second command shows provider names only, never the key.
 3. **The static pods run the expected version.** `kube-apiserver`, `kube-controller-manager` and
-   `kube-scheduler` are Running on the node at topf.yaml's `kubernetesVersion` (v1.37.1 at
+   `kube-scheduler` are Running on the node at topf.yaml's `kubernetesVersion` (v1.37.2 at
    writing), and Prometheus still scrapes controller-manager and scheduler (`bind-address 0.0.0.0`)
    and etcd on 2381.
 4. **No CoreDNS or kube-proxy appeared.**
@@ -249,7 +273,8 @@ After each, in addition to step 2's checks:
    Only the cluster's own CoreDNS may show.
 5. **The VIP is still answered,** and a kubeconfig that uses the `apiserver.equestria.<root
    domain>` name still passes TLS (the certSAN).
-6. **Technitium** (on the control planes) still resolves internal names.
+6. **Technitium** (othalla and pegasus; not milky-way, whose NIC is virtio) still resolves
+   internal names.
 
 ## Done
 
@@ -322,8 +347,7 @@ the document layout and the approved changes differ.
 To put one node back on the talhelper config:
 
 ```sh
-git switch --detach "$(git merge-base origin/main talos/topf-migration)"   # the commit before this migration
-# or, once merged: the merge commit's first parent
+git switch --detach <merge-commit>^1   # main just before the TOPF PR merged
 mise install                                   # talhelper is pinned there; restore sdks/ afterwards
 mise run talos:genconfig
 mise run talos:apply-node <ip> --mode no-reboot
