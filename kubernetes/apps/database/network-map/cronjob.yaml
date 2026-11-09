@@ -77,7 +77,7 @@ spec:
               # the first build lands this pins the tag alone; replace it with
               # tag@digest from that run. ./drift.yaml runs the same image:
               # change both together.
-              image: git.${ROOT_DOMAIN}/estate-images/network-map:0e586202c094@sha256:24a5c4e8e26da61ec6deed2e24d6ac8c736efec1601b486814bbcb9f8d1b29dd
+              image: git.${ROOT_DOMAIN}/estate-images/network-map:e725ec841360@sha256:4c0d8ce55d9c2ceec2ea3872e940f2a4983146aad056dc553d32994662b0126d
               command: ["node", "/app/src/main.ts"]
               env:
                 - name: NEO4J_URI
