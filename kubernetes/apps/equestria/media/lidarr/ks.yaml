@@ -72,3 +72,7 @@ spec:
       # leave a stale path behind.
       POSTGRES_APP_PATH: *path
       NAMESPACE: *namespace
+      # Was the component's implicit 5Gi until MediaCover (~3.3G) and the
+      # image cache (~1G) pushed it past 85%. Only ever raise this: see
+      # components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 10Gi
