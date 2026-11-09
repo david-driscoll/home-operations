@@ -316,13 +316,17 @@ async function subdirs(dir: string): Promise<string[]> {
 export async function readKubernetesApps(root: string, problems: string[]): Promise<KubernetesAppInput[]> {
   const files = (await attempt(problems, "kubernetes/apps", [], () => filesUnder(join(root, "kubernetes", "apps")))).filter(f => f.endsWith("/definition.yaml")).sort();
   if (files.length === 0) problems.push("kubernetes/apps: no definition.yaml found; no Kubernetes apps declared");
+  // Read in parallel, but report problems in file order (each read gets its
+  // own list), so the load's log does not depend on timing.
+  const lists = files.map((): string[] => []);
   const read = await Promise.all(
-    files.map(file =>
-      attempt(problems, relative(root, file), [] as KubernetesAppInput[], async () => [
+    files.map((file, i) =>
+      attempt(lists[i], relative(root, file), [] as KubernetesAppInput[], async () => [
         { dir: relative(root, dirname(file)), definitionText: await readFile(file, "utf8"), ksText: await readOptional(join(dirname(file), "ks.yaml")) },
       ]),
     ),
   );
+  for (const list of lists) problems.push(...list);
   return read.flat();
 }
 

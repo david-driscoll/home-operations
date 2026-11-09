@@ -242,14 +242,23 @@ export const TOPF_FILE = "talos/topf.yaml";
  * becomes a problem and its machines are skipped; the rest still load.
  */
 export async function readMachineSources(root: string, scope: Scope, problems: string[]): Promise<{ resources: ConstructedResource[]; talos: TalosNode[]; clusters: ClusterFile[] }> {
-  const stacks = await Promise.all(
-    SITE_STACKS.map(stack => {
+  // The reads run in parallel, but each gets its own problem list, appended
+  // in source order: pushing to `problems` as each read finished made the
+  // order (and so the load's log and its tests) depend on timing.
+  const inOrder = async <T>(reads: ((p: string[]) => Promise<T>)[]): Promise<T[]> => {
+    const lists = reads.map((): string[] => []);
+    const results = await Promise.all(reads.map((read, i) => read(lists[i])));
+    for (const list of lists) problems.push(...list);
+    return results;
+  };
+  const stacks = await inOrder(
+    SITE_STACKS.map(stack => (p: string[]) => {
       const file = `stacks/${stack}/index.ts`;
-      return attempt(problems, file, [], async () => parseStackSource(await readFile(join(root, file), "utf8"), scope, file));
+      return attempt(p, file, [], async () => parseStackSource(await readFile(join(root, file), "utf8"), scope, file));
     }),
   );
   const talos = await attempt(problems, TOPF_FILE, [], async () => parseTopf(await readFile(join(root, TOPF_FILE), "utf8")));
   const files = await attempt(problems, "clusters/", [], async () => (await readdir(join(root, "clusters"))).filter(f => f.endsWith(".yaml")).sort());
-  const clusters = await Promise.all(files.map(f => attempt(problems, `clusters/${f}`, [], async () => [parseClusterFile(await readFile(join(root, "clusters", f), "utf8"))])));
+  const clusters = await inOrder(files.map(f => (p: string[]) => attempt(p, `clusters/${f}`, [], async () => [parseClusterFile(await readFile(join(root, "clusters", f), "utf8"))])));
   return { resources: stacks.flat(), talos, clusters: clusters.flat() };
 }
