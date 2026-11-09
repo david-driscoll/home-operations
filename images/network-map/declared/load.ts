@@ -28,6 +28,8 @@ export interface LoadedPlan {
   nodes: DeclaredNode[];
   rels: DeclaredRel[];
   problems: string[];
+  /** Kubernetes apps with a definition that Flux does not deploy (`<dir>: <why>`), in file order. */
+  disabled: string[];
 }
 
 export async function loadDeclared(root: string, domains: Domains): Promise<LoadedPlan> {
@@ -52,7 +54,13 @@ export async function loadDeclared(root: string, domains: Domains): Promise<Load
   }
   // Without the rule no app gets an app service; the apps themselves still load.
   const services = await attempt(problems, "stacks/netbird/apps.ts", undefined, readAppServiceRule);
+  // A disabled app is not a problem: it is meant to be off, so it is counted, not declared.
+  const disabled: string[] = [];
   for (const app of await readKubernetesApps(root, problems)) {
+    if (app.disabled) {
+      disabled.push(`${app.dir}: ${app.disabled}`);
+      continue;
+    }
     const cluster = equestria;
     await attempt(problems, `${app.dir}/definition.yaml`, undefined, () => addKubernetesApp(plan, app, cluster, domains, services));
   }
@@ -70,5 +78,5 @@ export async function loadDeclared(root: string, domains: Domains): Promise<Load
   // A dockge cluster file that no site stack builds a host for.
   for (const c of sources.clusters) if (c.type === "dockge" && !hosts.some(h => h.hostName === c.key)) problems.push(`clusters/${c.key}.yaml: no DockgeLxc on a ProxmoxHost named ${c.key} in the site stacks`);
 
-  return plan.finish();
+  return { ...plan.finish(), disabled };
 }

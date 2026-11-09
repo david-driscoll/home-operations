@@ -51,7 +51,8 @@ async function main(): Promise<number> {
   const counts = { ...countBy(plan.nodes, n => n.label), ...countBy(plan.rels, r => r.type) };
   // Problems name repo paths and variable names, never values.
   for (const problem of plan.problems) log({ problem });
-  log({ nodes: plan.nodes.length, relationships: plan.rels.length, problems: plan.problems.length, counts, dryRun });
+  for (const app of plan.disabled) log({ disabled: app });
+  log({ nodes: plan.nodes.length, relationships: plan.rels.length, problems: plan.problems.length, disabled: plan.disabled.length, counts, dryRun });
   if (dryRun) return 0;
 
   const now = new Date().toISOString();

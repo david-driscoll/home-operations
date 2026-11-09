@@ -26,6 +26,8 @@ on:
     paths:
       - kubernetes/apps/**/definition.yaml
       - kubernetes/apps/**/ks.yaml
+      # Commenting an app's ks.yaml out of one of these disables it (declared/flux.ts).
+      - kubernetes/apps/**/kustomization.yaml
       - docker/**
       - clusters/*.yaml
       - talos/topf.yaml

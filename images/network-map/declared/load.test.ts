@@ -27,6 +27,19 @@ describe("loadDeclared on this checkout", async () => {
     for (const lxc of ["repo:celestia-dockge", "repo:alpha-site-dockge", "repo:luna-dockge", "repo:skystar-dockge"]) assert.ok(runsFrom.has(lxc), lxc);
   });
 
+  it("counts the apps Flux does not deploy instead of declaring them", () => {
+    const disabled = plan.disabled.map(d => d.split(":")[0].split("/").at(-1));
+    for (const app of ["karakeep", "openbooks", "readarr-audio", "readarr-ebook", "retrom", "super-productivity", "supersync", "tandoor", "stremio"]) {
+      assert.ok(disabled.includes(app), `${app} is disabled`);
+      assert.ok(!of("App").some(a => a.key === app), `${app} is not declared`);
+    }
+    for (const app of ["temporal", "valkey", "toolport", "setup-guide"])
+      assert.ok(
+        of("App").some(a => a.key === app),
+        `${app} is declared`,
+      );
+  });
+
   it("names apps under the given domains only, with no variable left in a name", () => {
     for (const app of of("App")) {
       for (const host of (app.props.hostnames as string[] | undefined) ?? []) {
