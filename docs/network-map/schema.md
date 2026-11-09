@@ -144,7 +144,7 @@ design. All four are read-only in the UI, and hand edits are discarded.
 | Apps | Apps grouped by the machine that runs them, entry points, and user groups with reach edges |
 
 Homelable pings infrastructure only (gateway, switches, APs, Proxmox and Dockge hosts, NetBird
-gateways), at its home LAN address, because a pod has no route into either overlay. Clients and
+gateways), at its LAN address, at home or at a remote site (Equestria reaches every site LAN; a pod has no route into either overlay). Clients and
 peers take their status from the source APIs.
 
 The sync (`images/network-map/src/homelable/`) runs in the collector's CronJob, right after the
@@ -156,12 +156,18 @@ write. Some rules it follows:
   machines are drawn in a "Declared, not observed" zone, placed by their declared addresses and
   groups (they have no Interfaces). Drift is only judged for labels the declared layer has at
   least one node of, and UniFi gear is judged as a `Device`, which the repo never declares. A
-  matched node lists its DECLARES `by` as a "declared by" property.
+  client Machine (`kind: client`: phones, laptops, IoT) is never amber; a new unknown client is
+  the `NetworkMapUnknownClient` alert's to report. A matched node lists its DECLARES `by` as a
+  "declared by" property.
 - **One parent per node.** Homelable nests a node in one zone only, so a device in several groups
   or tags sits in the first one and lists the rest as a property.
 - **Inventory rows.** Homelable keeps device facts (label, type, ip, status, properties) on an
   inventory row shared across designs by IP, then MAC. So a Machine's label and node type depend
   on the Machine alone, never on the design, and each save sends back the `device_id` each node
-  already has.
+  already has. Every node the sync draws carries a hidden `managed-by: network-map` property, and
+  so does its row. After a run in which every design saved, the sync deletes the rows with that
+  exact property that no design draws any more (`canvas_count` 0). It deletes none in a run that
+  would remove more than a quarter of its own rows (at least 3 may always go), and never touches
+  a row without the property.
 - **Designs** are found by name. The UniFi design takes over Homelable's starting design,
   "Network Topology", by renaming it, but only while that design is empty.

@@ -64,20 +64,29 @@ export const interfacesOf = (g: MapGraph, m: MapNode) => g.out(m.id, "HAS_INTERF
 export const machineOf = (g: MapGraph, iface: MapNode) => g.in(iface.id, "HAS_INTERFACE")[0]?.node;
 export const networkOf = (g: MapGraph, iface: MapNode) => g.out(iface.id, "ON")[0]?.node;
 
-/** The machine's address on the home LAN (a UniFi network), which a pod can reach to ping. */
-export function homeLanIp(g: MapGraph, m: MapNode): string | undefined {
-  for (const iface of interfacesOf(g, m)) {
-    const net = networkOf(g, iface);
-    if (net && g.key(net).startsWith("unifi:")) {
-      const ip = preferredIp(strs(iface.props.ips));
-      if (ip) return ip;
-    }
+/** LAN network kinds: a UniFi VLAN at home, or another site's LAN (`site-lan:<site>`). Not the overlays, not a bare CIDR. */
+const LAN_KINDS = new Set(["vlan", "site-lan"]);
+
+/**
+ * The machine's LAN address, which Homelable pings: a pod has no route into
+ * either overlay, but Equestria reaches every site's LAN (home directly, the
+ * remote sites through their gateways). A UniFi network first, then any
+ * site LAN.
+ */
+export function lanIp(g: MapGraph, m: MapNode): string | undefined {
+  const lan = interfacesOf(g, m)
+    .map(iface => ({ iface, net: networkOf(g, iface) }))
+    .filter(({ net }) => net && LAN_KINDS.has(str(net.props.kind) ?? ""))
+    .sort((a, b) => Number(!g.key(a.net as MapNode).startsWith("unifi:")) - Number(!g.key(b.net as MapNode).startsWith("unifi:")));
+  for (const { iface } of lan) {
+    const ip = preferredIp(strs(iface.props.ips));
+    if (ip) return ip;
   }
   return undefined;
 }
 
-/** The ping target for infrastructure on the home LAN; undefined for everything else. */
-export const pingTarget = (g: MapGraph, m: MapNode) => (isInfrastructure(m) ? homeLanIp(g, m) : undefined);
+/** The ping target for infrastructure, at home or at a remote site; undefined for everything else. */
+export const pingTarget = (g: MapGraph, m: MapNode) => (isInfrastructure(m) ? lanIp(g, m) : undefined);
 
 /**
  * One Interface as a node: the machine's label and type, this interface's

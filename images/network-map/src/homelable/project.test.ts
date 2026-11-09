@@ -108,13 +108,18 @@ describe("Tailscale design", () => {
     assert.equal(byLabel(c, "luna-dockge").ping, "10.10.10.20");
     assert.equal(byLabel(c, "ts-router").ping, undefined);
   });
+
+  it("pings remote-site infrastructure too, at its site LAN address", () => {
+    const sky = byLabel(c, "skystar");
+    assert.deepEqual({ type: sky.type, ip: sky.ip, ping: sky.ping }, { type: "proxmox", ip: "100.100.0.50", ping: "192.168.50.2" });
+  });
 });
 
 describe("NetBird design", () => {
   const c = projectNetbird(fixtureGraph());
 
   it("groups peers by group, gateways and in-cluster routers first, ignoring All", () => {
-    assert.deepEqual(membersOf(c, zone(c, "Gateways")), ["gateway-luna"]);
+    assert.deepEqual(membersOf(c, zone(c, "Gateways")), ["gateway-luna", "gateway-skystar"]);
     assert.deepEqual(membersOf(c, zone(c, "In-cluster routers")), ["netbird-router-0"]);
     assert.deepEqual(membersOf(c, zone(c, "group family-devices")), ["alice-laptop"]);
     assert.ok(!c.nodes.some(n => n.label === "group All"));
@@ -133,6 +138,11 @@ describe("NetBird design", () => {
     assert.equal(gw.ping, "10.10.10.21");
     assert.equal(byLabel(c, "alice-laptop").ping, undefined);
     assert.equal(byLabel(c, "alice-laptop").status, "offline");
+  });
+
+  it("pings a remote site's gateway at that site's LAN address", () => {
+    const gw = byLabel(c, "gateway-skystar");
+    assert.deepEqual({ ip: gw.ip, ping: gw.ping }, { ip: "100.90.0.22", ping: "192.168.50.21" });
   });
 });
 
@@ -186,17 +196,20 @@ describe("drift", () => {
     const dockge = byLabel(unifi, "luna-dockge");
     assert.equal(dockge.drift, undefined);
     assert.deepEqual(dockge.properties?.["declared by"], ["mac"]);
-    assert.equal(byLabel(unifi, "apple-tv").drift, "undeclared");
+    assert.equal(byLabel(unifi, "apple-tv").drift, undefined, "a client is never amber: NetworkMapUnknownClient reports those");
+    assert.equal(byLabel(unifi, "luna").drift, "undeclared", "an undeclared Proxmox host is");
+    assert.equal(byLabel(unifi, "gateway-luna").drift, "undeclared", "so is an undeclared gateway container");
+    assert.equal(byLabel(projectTailscale(g), "alice-phone").drift, undefined);
     assert.equal(byLabel(unifi, "ucg-max").drift, undefined, "UniFi gear is judged as a Device, which the repo never declares");
     assert.deepEqual(membersOf(unifi, zone(unifi, "Declared, not observed")), ["old-lxc"], "placed by its declared LAN address");
 
     const ts = projectTailscale(g);
-    assert.deepEqual(membersOf(ts, zone(ts, "Declared, not observed")), ["skystar"], "placed by its declared 100.x address");
+    assert.deepEqual(membersOf(ts, zone(ts, "Declared, not observed")), ["manehattan"], "placed by its declared 100.x address");
     assert.equal(zone(ts, "tag:media").drift, "unobserved");
     assert.ok(!ts.nodes.some(n => n.label === "group:family"), "a user group places no device");
 
     const nb = projectNetbird(g);
-    assert.deepEqual(membersOf(nb, zone(nb, "Declared, not observed")), ["gateway-skystar"]);
+    assert.deepEqual(membersOf(nb, zone(nb, "Declared, not observed")), ["gateway-ponyville"]);
     assert.ok(!nb.nodes.some(n => n.key === "zone:declared:netbird:gateways"), "the declared gateways group pairs with the observed one by key");
 
     const body = savePayload(apps, "d1");

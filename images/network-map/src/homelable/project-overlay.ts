@@ -14,7 +14,7 @@
  *     peers that route it. Either way a route not approved/enabled is greyed.
  *
  * Overlay links are `virtual` edges, dashed (Homelable has no VPN type).
- * Pinged: infrastructure with a home LAN address, plus NetBird's gateways at
+ * Pinged: infrastructure at its LAN address (any site), plus NetBird's gateways at
  * theirs (a pod has no route into either overlay). The rest takes its status
  * from the control plane.
  */
@@ -22,7 +22,7 @@ import { CGNAT_CIDR } from "../normalize.ts";
 import { type Canvas, canvasBuilder, type DesignName, MUTED_COLOR, type NodeSpec, type ZoneSpec } from "./canvas.ts";
 import { type MapGraph, type MapNode, str } from "./graph.ts";
 import { ZONE_GAP } from "./layout.ts";
-import { declaredIpsIn, declaredMachineSpec, declaredMachinesWhere, homeLanIp, interfaceSpec, machineOf } from "./machines.ts";
+import { declaredIpsIn, declaredMachineSpec, declaredMachinesWhere, interfaceSpec, lanIp, machineOf } from "./machines.ts";
 import { networkLabel } from "./project-unifi.ts";
 
 interface OverlayOptions {
@@ -80,7 +80,7 @@ function projectOverlay(g: MapGraph, o: OverlayOptions): Canvas {
   const zoneOf = (p: Peer): string => routerGroupNames.find(n => p.groups.includes(n)) ?? (p.advertises.length > 0 ? "routers" : (p.groups[0] ?? "ungrouped"));
   const pingOf = (p: Peer): string | undefined => {
     const byRole = o.routerGroups.find(r => r.ping && p.groups.includes(r.name));
-    if (byRole && p.machine) return homeLanIp(g, p.machine);
+    if (byRole && p.machine) return lanIp(g, p.machine);
     return undefined;
   };
   const peerKey = (p: Peer) => `iface:${g.key(p.iface)}`;
@@ -93,7 +93,7 @@ function projectOverlay(g: MapGraph, o: OverlayOptions): Canvas {
         ...base.properties,
         groups: p.groups,
         routes: p.advertises.map(a => `${str(a.route.props.cidr)}${a.approved ? "" : " (not approved)"}`).sort(),
-        "LAN address": p.machine ? homeLanIp(g, p.machine) : undefined,
+        "LAN address": p.machine ? lanIp(g, p.machine) : undefined,
       },
     };
   };

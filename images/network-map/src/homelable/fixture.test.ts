@@ -177,6 +177,35 @@ function base(b: Builder): void {
   b.rel("MEMBER_OF", "laptop:nb", "nb:family");
   b.rel("MEMBER_OF", "laptop:nb", "nb:all");
 
+  // A remote site: its Proxmox host and its NetBird gateway, on `site-lan:skystar`
+  // (the collector's network for a LAN that is not UniFi's), the host also on the tailnet.
+  b.node("net:skystar", ["Network"], { networkId: "site-lan:skystar", name: "skystar", kind: "site-lan" });
+  b.node("tag:proxmox", ["Group"], { groupId: "tailscale:tag:proxmox", system: "tailscale", name: "tag:proxmox", kind: "tag" });
+  b.node("skystar", ["Machine"], { machineId: "m-skystar", name: "skystar", kind: "physical", status: "online", joined: true, sources: ["proxmox", "tailscale"], observations: ["proxmox:node:skystar", "tailscale:n9"] });
+  b.node("skystar:lan", ["Interface"], { ifaceId: "site-lan:skystar:192.168.50.2", ips: ["192.168.50.2"], hostname: "skystar", online: true });
+  b.rel("HAS_INTERFACE", "skystar", "skystar:lan");
+  b.rel("ON", "skystar:lan", "net:skystar");
+  b.node("skystar:ts", ["Interface"], { ifaceId: "tailscale:tailnet:100.100.0.50", ips: ["100.100.0.50"], hostname: "skystar", online: true });
+  b.rel("HAS_INTERFACE", "skystar", "skystar:ts");
+  b.rel("ON", "skystar:ts", "net:tailnet");
+  b.rel("MEMBER_OF", "skystar:ts", "tag:proxmox");
+  b.node("nbgw2", ["Machine"], {
+    machineId: "m-nbgw2",
+    name: "gateway-skystar",
+    kind: "container",
+    status: "running",
+    joined: true,
+    sources: ["docker", "netbird"],
+    observations: ["docker:skystar/gateway-skystar", "netbird:p9"],
+  });
+  b.node("nbgw2:lan", ["Interface"], { ifaceId: "site-lan:skystar:02:42:0a:32:00:15", mac: "02:42:0a:32:00:15", ips: ["192.168.50.21"], hostname: "gateway-skystar", online: true });
+  b.rel("HAS_INTERFACE", "nbgw2", "nbgw2:lan");
+  b.rel("ON", "nbgw2:lan", "net:skystar");
+  b.node("nbgw2:nb", ["Interface"], { ifaceId: "netbird:netbird:100.90.0.22", ips: ["100.90.0.22"], hostname: "gateway-skystar", online: true });
+  b.rel("HAS_INTERFACE", "nbgw2", "nbgw2:nb");
+  b.rel("ON", "nbgw2:nb", "net:netbird");
+  b.rel("MEMBER_OF", "nbgw2:nb", "nb:gateways");
+
   // Apps and entry points.
   b.node("app:jellyfin", ["App"], { appId: "jellyfin", name: "jellyfin", cluster: "luna" });
   b.node("app:authentik", ["App"], { appId: "authentik", name: "authentik", cluster: "equestria", hostnames: ["auth.example.test"], routes: ["security/authentik"] });
@@ -204,10 +233,10 @@ export function fixtureGraphWithDeclared(): MapGraph {
   declared("d:luna-dockge", { machineId: "repo:luna-dockge", name: "luna-dockge", hostname: "luna-dockge", kind: "lxc", ips: ["10.10.10.20"], macs: ["bc:24:11:00:00:20"] });
   b.rel("DECLARES", "d:luna-dockge", "luna-dockge", { by: "mac" });
   declared("d:old-lxc", { machineId: "repo:old-lxc", name: "old-lxc", hostname: "old-lxc", kind: "lxc", ips: ["10.10.10.99"] });
-  declared("d:skystar", { machineId: "repo:skystar", name: "skystar", hostname: "skystar", kind: "physical", ips: ["192.168.50.2", "100.100.0.99"] });
-  declared("d:gw-skystar", { machineId: "repo:gateway-skystar", name: "gateway-skystar", hostname: "gateway-skystar", kind: "container", declaredAs: "netbird-gateway" });
+  declared("d:manehattan", { machineId: "repo:manehattan", name: "manehattan", hostname: "manehattan", kind: "physical", ips: ["192.168.60.2", "100.100.0.99"] });
+  declared("d:gw-ponyville", { machineId: "repo:gateway-ponyville", name: "gateway-ponyville", hostname: "gateway-ponyville", kind: "container", declaredAs: "netbird-gateway" });
   b.node("d:nb:gateways", ["Group"], { groupId: "netbird:gateways", system: "netbird", name: "gateways", kind: "device" }, "declared");
-  b.rel("MEMBER_OF", "d:gw-skystar", "d:nb:gateways");
+  b.rel("MEMBER_OF", "d:gw-ponyville", "d:nb:gateways");
   b.node("d:tag:media", ["Group"], { groupId: "tailscale:tag:media", system: "tailscale", name: "tag:media", kind: "tag" }, "declared");
   b.node("d:group:family", ["Group"], { groupId: "tailscale:group:family", system: "tailscale", name: "group:family", kind: "user" }, "declared");
   // jellyfin has no DECLARES edge (the collector re-created it since the link ran): the shared appId still pairs them.

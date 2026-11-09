@@ -8,14 +8,15 @@
  *
  * Exit policy, as ./exit.ts: 1 only when EVERY design failed (Homelable or
  * Neo4j unreachable, the key refused). One design failing is logged and
- * recorded, and the others still save.
+ * recorded, and the others still save. The inventory clean-up after the
+ * saves (./homelable/sync.ts cleanInventory) is logged and never changes it.
  */
 import neo4j, { type Driver } from "neo4j-driver";
 import { exitCode } from "./exit.ts";
 import { httpHomelableClient } from "./homelable/client.ts";
 import { loadHomelableConfig } from "./homelable/config.ts";
 import { readMapGraph } from "./homelable/reader.ts";
-import { DESIGNS, type DesignOutcome, syncHomelable } from "./homelable/sync.ts";
+import { cleanInventory, DESIGNS, type DesignOutcome, syncHomelable } from "./homelable/sync.ts";
 
 type Env = Record<string, string | undefined>;
 
@@ -32,7 +33,10 @@ export async function runHomelableSync(driver: Driver, env: Env): Promise<0 | 1 
     try {
       const graph = await readMapGraph(driver);
       log({ graph: { nodes: graph.nodes.length, declared: graph.nodes.filter(n => n.layer === "declared").length, declaredLabels: [...graph.declaredLabels].sort() } });
-      outcomes = await syncHomelable(graph, httpHomelableClient({ baseUrl: config.url, serviceKey: config.serviceKey }));
+      const client = httpHomelableClient({ baseUrl: config.url, serviceKey: config.serviceKey });
+      outcomes = await syncHomelable(graph, client);
+      // After every save, so canvas_count reflects this run; skipped unless every design saved.
+      log({ cleanup: await cleanInventory(client, outcomes) });
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       outcomes = DESIGNS.map(d => ({ design: d.name, status: "failed", error: `reading the graph: ${text}` }));
