@@ -12,7 +12,8 @@
  *     it, it is not a client Machine (`kind: client`: phones, laptops, IoT,
  *     which NetworkMapUnknownClient covers instead), and,
  *     for the labels both layers key alike (App, Group, Route, Network:
- *     ../declares.ts SAME_KEY_LABELS), no declared node has its key. The key
+ *     ../declares.ts SAME_KEY_LABELS), no declared node has its key (a
+ *     declared App's `deployedAs` counts as its key too). The key
  *     match covers a node the collector re-created since the link last ran,
  *     as ../drift.ts's `counterparts` does;
  *   - a declared node is `unobserved` when it DECLARES nothing and no observed
@@ -32,7 +33,7 @@
  * they never leave the process. Homelable ids come from the schema keys.
  */
 import { KEY_PROPERTY } from "../cypher.ts";
-import { SAME_KEY_LABELS } from "../declares.ts";
+import { SAME_KEY_LABELS, sameKeyValues } from "../declares.ts";
 import type { NodeLabel } from "../model.ts";
 
 export type Layer = "observed" | "declared";
@@ -109,15 +110,15 @@ export function buildMapGraph(nodes: MapNode[], rels: MapRel[]): MapGraph {
   const declaredLabels = new Set(nodes.filter(n => n.layer === "declared").flatMap(n => n.labels));
   const sameKey = new Set<string>();
   const keyId = (label: string, layer: Layer, key: string) => `${label}|${layer}|${key}`;
+  // A declared App is also known by its `deployedAs` (../declares.ts sameKeyValues).
   for (const n of nodes) {
     for (const { label, key } of SAME_KEY_LABELS) {
-      const value = n.props[key];
-      if (n.labels.includes(label) && value !== undefined && value !== null) sameKey.add(keyId(label, n.layer, String(value)));
+      if (n.labels.includes(label)) for (const value of sameKeyValues(label, n.layer, n.props, key)) sameKey.add(keyId(label, n.layer, value));
     }
   }
   const counterpartByKey = (n: MapNode) => {
     const other: Layer = n.layer === "observed" ? "declared" : "observed";
-    return SAME_KEY_LABELS.some(({ label, key }) => n.labels.includes(label) && n.props[key] !== undefined && n.props[key] !== null && sameKey.has(keyId(label, other, String(n.props[key]))));
+    return SAME_KEY_LABELS.some(({ label, key }) => n.labels.includes(label) && sameKeyValues(label, n.layer, n.props, key).some(value => sameKey.has(keyId(label, other, value))));
   };
   /** A client Machine (a phone, a laptop, an IoT device) is never amber: an unknown client is NetworkMapUnknownClient's to report (../drift.ts). */
   const isClient = (n: MapNode) => n.labels.includes("Machine") && n.props.kind === "client";

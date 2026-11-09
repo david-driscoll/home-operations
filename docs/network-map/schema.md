@@ -95,7 +95,7 @@ reads these, and writes everything with `layer: declared`, `source: repo`:
 
 | Source | Becomes |
 |---|---|
-| `definition.yaml` under `kubernetes/apps`, with its `ks.yaml` | `App` (`appId` = the ks's `APP`), `appRoute`/`tailnetRoute`/`appService`; `Group authentik:<g>` `REACHES` it via `Policy authentik:access-policy:<app>` |
+| `definition.yaml` under `kubernetes/apps`, with its `ks.yaml` | `App` (`appId` = the definition's name, normally the ks's `APP`; `deployedAs` = the `APP` when it differs), `appRoute`/`tailnetRoute`/`appService`; `Group authentik:<g>` `REACHES` it via `Policy authentik:access-policy:<app>` |
 | `docker/<host>` plus `docker/_common`, less `*.ignore` | `App` per stack (`appId` = stack name), names from Traefik `Host()` rules; the host's LXC `RUNS` it |
 | `new ProxmoxHost/DockgeLxc/TalosVm/TruenasVm` in `stacks/{home,gulf-of-mexico,ocracoke}` (literal args only), `talos/topf.yaml` `nodes` (`host`, `ip`, `role`, `data.mac`), `clusters/*.yaml` | `Machine repo:<hostname>` with `ips[]`, `macs[]`, `cluster`; `HOSTED_ON`; the Tailscale `Route`s a host advertises |
 | `stacks/netbird` `policy.ts`, `sites.ts` | NetBird `Group`s, `Policy netbird:client-<rule>`, `REACHES`, `Route`s to `Network site-lan:<site>`, gateway `Machine`s |
@@ -113,6 +113,7 @@ hour. The edge carries `by`, the rule that made it:
 | Declared | Observed | `by` |
 |---|---|---|
 | `App`, `Group`, `Route`, `Network` | same label, same key | `key` |
+| `App` with `deployedAs` (a definition named otherwise than its ks's `APP`, e.g. `thanos-query-observability` in the `thanos` ks) | the `App` keyed `deployedAs` | `deployedAs` |
 | `Network {system: unifi}` | `Network {source: unifi}` with the same `name` | `name` |
 | `Policy {system: netbird}` | `Policy {system: netbird}` named `policyName` or `policyName/<rule>` | `name` |
 | `Machine` | a `Machine` with one of `macs` on an interface or as its device MAC | `mac` |
@@ -150,11 +151,9 @@ containers is, so a stopped stack is still observed.
   collector calls the management API directly, which has them.
 - **Proxmox** reports no node IPs, and VM IPs only through the guest agent. The collector joins
   VMs by MAC instead.
-- **Kubernetes** apps are missed when nothing observed carries their key. Two cases remain.
-  Workloads that an operator creates (ToolHive MCP servers, garage-operator clusters) carry
-  neither the app's name label nor a Flux owner label. Definitions with a fixed name instead of
-  `${APP}` (`thanos-query-observability` in the `thanos` ks, `setup-guide` in `git-pages`) are
-  served by workloads named after the ks.
+- **Kubernetes** apps are missed when nothing observed carries their key. That happens when an
+  operator creates the workloads (ToolHive MCP servers, garage-operator clusters) and gives them
+  neither the app's name label nor a Flux owner label.
 
 ## Homelable projection
 

@@ -40,6 +40,15 @@ describe("loadDeclared on this checkout", async () => {
       );
   });
 
+  it("records deployedAs on the definitions named otherwise than their ks's APP", () => {
+    const deployedAs = Object.fromEntries(
+      of("App")
+        .filter(a => a.props.deployedAs !== undefined)
+        .map(a => [a.key, a.props.deployedAs]),
+    );
+    assert.deepEqual(deployedAs, { "setup-guide": "git-pages", "thanos-query-observability": "thanos" });
+  });
+
   it("names apps under the given domains only, with no variable left in a name", () => {
     for (const app of of("App")) {
       for (const host of (app.props.hostnames as string[] | undefined) ?? []) {

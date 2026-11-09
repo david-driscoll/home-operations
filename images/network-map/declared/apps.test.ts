@@ -94,6 +94,15 @@ describe("addKubernetesApp", () => {
     assert.ok(nodes.some(n => n.label === "Policy" && n.key === "authentik:access-policy:immich"));
   });
 
+  it("records deployedAs only when the definition is named otherwise than the ks's APP", () => {
+    const plan = new DeclaredPlan();
+    addKubernetesApp(plan, { dir: "kubernetes/apps/equestria/home/immich", definitionText: definition.replace("name: ${APP}", "name: photo-library"), ksText: ks }, equestria, domains, services);
+    addKubernetesApp(plan, { dir: "kubernetes/apps/equestria/home/immich", definitionText: definition, ksText: ks }, equestria, domains, services);
+    const apps = plan.finish().nodes.filter(n => n.label === "App");
+    assert.equal(apps.find(a => a.key === "photo-library")?.props.deployedAs, "immich");
+    assert.equal(apps.find(a => a.key === "immich")?.props.deployedAs, undefined);
+  });
+
   it("gives an app without the tailscale component no tailnet route and no app service", () => {
     const plain = ks.replace("    - ../../../../components/tailscale\n", "    - ../../../../components/volsync\n");
     const plan = new DeclaredPlan();
