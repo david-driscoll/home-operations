@@ -136,6 +136,7 @@ const kubernetes = fixtureClient({
   "/apis/apps/v1/statefulsets?limit=500": { items: [{ metadata: { name: "neo4j", namespace: "database", labels: { "app.kubernetes.io/name": "neo4j" } }, spec: { replicas: 1 } }] },
   "/apis/apps/v1/daemonsets?limit=500": { items: [] },
   "/apis/batch/v1/cronjobs?limit=500": { items: [] },
+  "/apis/postgresql.cnpg.io/v1/clusters?limit=500": { items: [] },
   "/apis/gateway.networking.k8s.io/v1/httproutes?limit=500": {
     items: [
       {

@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { type ApiClient, fixtureClient, HttpError } from "../http.ts";
 import type { PlainNode } from "../model.ts";
-import { collectKubernetes, type K8sHttpRoute, type K8sWorkload, listAll, parseKubernetes, WORKLOAD_LISTS, workloadAppId, workloadRunning } from "./kubernetes.ts";
+import { collectKubernetes, type K8sHttpRoute, type K8sWorkload, listAll, parseKubernetes, WORKLOAD_LISTS, workloadAppId, workloadAppIds, workloadRunning } from "./kubernetes.ts";
 
 const OPTIONS = { cluster: "equestria", site: "home" };
 const NAME = "app.kubernetes.io/name";
@@ -83,6 +83,46 @@ describe("workload -> App", () => {
   });
 });
 
+describe("Flux owner aliases", () => {
+  const HELM = "helm.toolkit.fluxcd.io/name";
+  const KS = "kustomize.toolkit.fluxcd.io/name";
+
+  it("also observes a workload under its HelmRelease's name when that differs from its name label", () => {
+    const { apps } = parse([
+      deployment("crowdsec-lapi", "network", { [NAME]: "crowdsec-lapi", [HELM]: "crowdsec" }),
+      { kind: "DaemonSet", metadata: { name: "crowdsec-agent", namespace: "network", labels: { [NAME]: "crowdsec-agent", [HELM]: "crowdsec" } } },
+    ]);
+    assert.deepEqual(apps.map(a => a.key).sort(), ["crowdsec", "crowdsec-agent", "crowdsec-lapi"]);
+    assert.deepEqual(app(apps, "crowdsec")?.props.workloads, ["network/DaemonSet/crowdsec-agent", "network/Deployment/crowdsec-lapi"]);
+    assert.deepEqual(app(apps, "crowdsec")?.props.workloadKinds, ["DaemonSet", "Deployment"]);
+  });
+
+  it("makes no second App when the helm name equals the name label (app-template)", () => {
+    assert.deepEqual(workloadAppIds(deployment("temporal", "database", { [NAME]: "temporal", [HELM]: "temporal" })), ["temporal"]);
+  });
+
+  it("observes a workload with only the helm label under it", () => {
+    assert.deepEqual(workloadAppIds(deployment("x", "ns", { [HELM]: "release" })), ["release"]);
+  });
+
+  it("keys a CNPG Cluster by its HelmRelease, else its Kustomization, else its name", () => {
+    const cluster = (labels: Record<string, string>): K8sWorkload => ({ kind: "CnpgCluster", metadata: { name: "pg-cluster", namespace: "database", labels: { [NAME]: "ignored", ...labels } }, spec: { instances: 3 } });
+    assert.deepEqual(workloadAppIds(cluster({ [HELM]: "postgres", [KS]: "postgres-ks" })), ["postgres"]);
+    assert.deepEqual(workloadAppIds(cluster({ [KS]: "immich" })), ["immich"]);
+    assert.deepEqual(workloadAppIds(cluster({})), ["pg-cluster"]);
+    const { apps } = parse([cluster({ [HELM]: "postgres" })]);
+    assert.deepEqual(app(apps, "postgres")?.props.workloadKinds, ["CnpgCluster"]);
+    assert.equal(app(apps, "postgres")?.props.running, true);
+  });
+
+  it("reads a hibernated or zero-instance CNPG cluster as not running", () => {
+    const meta = { name: "pg", namespace: "database" };
+    assert.equal(workloadRunning({ kind: "CnpgCluster", metadata: { ...meta, annotations: { "cnpg.io/hibernation": "on" } }, spec: { instances: 3 } }), false);
+    assert.equal(workloadRunning({ kind: "CnpgCluster", metadata: meta, spec: { instances: 0 } }), false);
+    assert.equal(workloadRunning({ kind: "CnpgCluster", metadata: meta, spec: {} }), true);
+  });
+});
+
 describe("scaled to zero and suspended", () => {
   it("still observes a Deployment at replicas 0 (the nightly downscaler), as running: false", () => {
     const { apps } = parse([deployment("readarr-audio", "books", { [NAME]: "readarr-audio" }, { replicas: 0 })]);
@@ -124,7 +164,7 @@ describe("collectKubernetes", () => {
     const result = await collectKubernetes(client, OPTIONS);
     assert.deepEqual(app(result.apps, "agent")?.props.workloadKinds, ["DaemonSet"]);
     assert.deepEqual(app(result.apps, "network-map")?.props.workloadKinds, ["CronJob"]);
-    assert.equal(client.calls.length, 8);
+    assert.equal(client.calls.length, 4 + WORKLOAD_LISTS.length);
     assert.deepEqual(result.errors, []);
   });
 
@@ -134,7 +174,7 @@ describe("collectKubernetes", () => {
     for (const { path } of WORKLOAD_LISTS) fixtures[`${path}?limit=500`] = new HttpError(`GET ${path}: HTTP 403`, 403);
     const result = await collectKubernetes(fixtureClient(fixtures), OPTIONS);
     assert.ok(app(result.apps, "neo4j"));
-    assert.equal(result.errors.length, 4);
+    assert.equal(result.errors.length, WORKLOAD_LISTS.length);
     assert.match(result.errors[0], /^Deployment list: .*HTTP 403/);
   });
 
