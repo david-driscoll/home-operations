@@ -75,7 +75,7 @@ spec:
           containers:
             - name: drift
               # Keep in step with ./cronjob.yaml (see the header).
-              image: git.${ROOT_DOMAIN}/estate-images/network-map:e725ec841360@sha256:4c0d8ce55d9c2ceec2ea3872e940f2a4983146aad056dc553d32994662b0126d
+              image: git.${ROOT_DOMAIN}/estate-images/network-map:d17c1d8d6ff8@sha256:bc61f23f4a4eb1339364feaba2873cb6dfb10fe539c10f3a0c234f9daa829c94
               command: ["node", "/app/src/drift-main.ts"]
               env:
                 - name: NEO4J_URI
