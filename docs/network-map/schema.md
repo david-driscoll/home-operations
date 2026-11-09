@@ -37,7 +37,7 @@ are never removed: if one stops being observed, it simply shows as drift.
 | Label | Key (unique per layer) | Main properties | Notes |
 |---|---|---|---|
 | `Machine` | `machineId` | `name`, `kind` (`physical`/`vm`/`lxc`/`container`/`client`), `os`, `status` | One per computer, however many networks it is on. |
-| `Interface` | `ifaceId` = `<network>:<address>` | `network`, `mac`, `ips[]`, `hostname`, `online`, `lastSeen` | One per machine per network. |
+| `Interface` | `ifaceId` = `<network>:<address>` | `network`, `mac`, `ips[]`, `hostname`, `online`, `lastSeen`, `unifiFirstSeen` | One per machine per network. `unifiFirstSeen` is UniFi's own `first_seen` for the client (ISO 8601), only on interfaces UniFi reports. |
 | `Network` | `networkId` | `kind` (`vlan`/`tailnet`/`netbird`/`site-lan`/`k8s-pod`/`k8s-svc`), `cidr`, `vlan` | UniFi networks, the tailnet, NetBird, each site LAN. |
 | `Device` | `mac` | `model`, `type` (`gateway`/`switch`/`ap`) | UniFi infrastructure; also a `Machine`. |
 | `Port` | `<deviceMac>:<idx>` | `idx`, `speed`, `poe` | Switch ports, for uplinks and wired clients. |
