@@ -15,9 +15,14 @@
  *
  * Containers on a bridge network share the host's presence, so they are not
  * Machines; their apps RUN on the host.
+ *
+ * APPS: one per compose project (the Dockge stack, the declared App's key)
+ * with any container, running or not (`running` when one is), whether or not
+ * Traefik routes it; plus a loose container that Traefik routes, by its
+ * name. Routed ones are SERVED_BY the host's Traefik.
  */
 import type { ApiClient } from "../http.ts";
-import { emptyResult, type SourceResult } from "../model.ts";
+import { emptyResult, type PlainNode, type SourceResult } from "../model.ts";
 import { normalizeHostname, normalizeIp, normalizeMac, uniq } from "../normalize.ts";
 
 export interface DockerInfo {
@@ -60,8 +65,10 @@ export function traefikHosts(rule: string): string[] {
   return uniq(out);
 }
 
+export const COMPOSE_PROJECT = "com.docker.compose.project";
+
 /** The observed App id for a container: its compose project (the Dockge stack), else its name. */
-export const containerAppId = (c: DockerContainer) => c.Labels?.["com.docker.compose.project"] ?? containerName(c);
+export const containerAppId = (c: DockerContainer) => c.Labels?.[COMPOSE_PROJECT] ?? containerName(c);
 const containerName = (c: DockerContainer) => (c.Names?.[0] ?? c.Id.slice(0, 12)).replace(/^\//, "");
 
 export function parseDocker(target: DockerTarget, info: DockerInfo, networks: DockerNetwork[], containers: DockerContainer[]): SourceResult {
@@ -78,6 +85,8 @@ export function parseDocker(target: DockerTarget, info: DockerInfo, networks: Do
   });
   const entryId = `traefik:${target.name}`;
   const driver = new Map(networks.map(n => [n.Name, n.Driver]));
+  const apps = new Map<string, { containers: Set<string>; running: boolean }>();
+  let routed = false;
 
   for (const c of containers) {
     const name = containerName(c);
@@ -101,12 +110,17 @@ export function parseDocker(target: DockerTarget, info: DockerInfo, networks: Do
     }
 
     const labels = c.Labels ?? {};
-    if (labels["traefik.enable"] === "false") continue;
-    const rules = Object.entries(labels).filter(([k]) => /^traefik\.http\.routers\.[^.]+\.rule$/.test(k));
-    if (rules.length === 0) continue;
+    const project = labels[COMPOSE_PROJECT];
+    const rules = labels["traefik.enable"] === "false" ? [] : Object.entries(labels).filter(([k]) => /^traefik\.http\.routers\.[^.]+\.rule$/.test(k));
+    // An App per compose project, routed or not; a loose container only when Traefik routes it.
+    if (!project && rules.length === 0) continue;
     const appId = containerAppId(c);
-    if (!result.apps.some(a => a.key === appId)) result.apps.push({ key: appId, props: { name: appId, cluster: target.name, observedVia: ["docker"] } });
+    const app = apps.get(appId) ?? { containers: new Set<string>(), running: false };
+    apps.set(appId, app);
+    app.containers.add(`${target.name}/${name}`);
+    app.running ||= running;
     result.runs.push({ machine: runsOn, app: appId });
+    if (rules.length > 0) routed = true;
     for (const [key, rule] of rules) {
       const router = key.split(".")[3];
       for (const host of traefikHosts(rule)) {
@@ -116,8 +130,28 @@ export function parseDocker(target: DockerTarget, info: DockerInfo, networks: Do
       }
     }
   }
-  if (result.apps.length > 0) result.entryPoints.push({ key: entryId, props: { kind: "traefik", name: `traefik-${target.name}`, address: target.host } });
+  for (const [appId, app] of apps) {
+    result.apps.push({ key: appId, props: { name: appId, cluster: target.name, clusters: [target.name], observedVia: ["docker"], containers: [...app.containers].sort(), running: app.running } });
+  }
+  if (routed) result.entryPoints.push({ key: entryId, props: { kind: "traefik", name: `traefik-${target.name}`, address: target.host } });
   return result;
+}
+
+/**
+ * A stack on several hosts (a docker/_common one) is one App: its first
+ * host's `cluster`, every host in `clusters`, every container, and running
+ * when it runs anywhere.
+ */
+function mergeApp(apps: PlainNode[], app: PlainNode): void {
+  const existing = apps.find(a => a.key === app.key);
+  if (!existing) {
+    apps.push(app);
+    return;
+  }
+  const list = (n: PlainNode, k: string) => (n.props[k] as string[] | undefined) ?? [];
+  existing.props.clusters = uniq([...list(existing, "clusters"), ...list(app, "clusters")]).sort();
+  existing.props.containers = uniq([...list(existing, "containers"), ...list(app, "containers")]).sort();
+  existing.props.running = existing.props.running === true || app.props.running === true;
 }
 
 export async function collectDocker(targets: { target: DockerTarget; client: ApiClient }[]): Promise<SourceResult> {
@@ -126,7 +160,8 @@ export async function collectDocker(targets: { target: DockerTarget; client: Api
     try {
       const [info, networks, containers] = await Promise.all([client.getJson<DockerInfo>("/info"), client.getJson<DockerNetwork[]>("/networks"), client.getJson<DockerContainer[]>("/containers/json?all=true")]);
       const one = parseDocker(target, info, networks, containers);
-      for (const k of ["machines", "apps", "entryPoints", "servedBy", "runs", "aliases"] as const) (merged[k] as unknown[]).push(...one[k]);
+      for (const k of ["machines", "entryPoints", "servedBy", "runs", "aliases"] as const) (merged[k] as unknown[]).push(...one[k]);
+      for (const app of one.apps) mergeApp(merged.apps, app);
     } catch (error) {
       merged.errors.push(`docker ${target.name}: ${error instanceof Error ? error.message : String(error)}`);
     }

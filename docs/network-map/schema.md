@@ -129,14 +129,15 @@ seen:
 |---|---|---|
 | `route` | a Kubernetes `HTTPRoute` (`hostnames`, `routes`, `SERVED_BY` its Gateway) | `app.kubernetes.io/name`, else the route's name |
 | `workload` | a Deployment, StatefulSet, DaemonSet or CronJob, in any namespace (`workloads`, `workloadKinds`) | `app.kubernetes.io/name` on the workload, else on its pod template; skipped with neither |
-| `docker` | a container with Traefik router labels (`SERVED_BY` the host's Traefik, `RUNS` on the host) | the compose project |
+| `docker` | every compose project with a container, running or not (`containers`, `clusters`, `RUNS` on the host). A Traefik-routed one is also `SERVED_BY` the host's Traefik. | the compose project (a routed container with none: its name) |
 
 app-template sets `app.kubernetes.io/name` to the release name on every controller, which is
 the ks's `APP`, so a multi-controller release is one App. Raw manifests get it from the ks's
 `commonMetadata`. Kubernetes apps also carry `namespaces`. A workload scaled to zero (the
 nightly downscaler) or a suspended CronJob still counts as observed, because the app is
 deployed. The App then has `running: false`: true means a workload is asked to run, not that it
-is healthy. A route-only App has no `running`.
+is healthy. A route-only App has no `running`. A Docker App is `running` when any of its
+containers is, so a stopped stack is still observed.
 
 ## What the observed layer can't see (yet)
 
