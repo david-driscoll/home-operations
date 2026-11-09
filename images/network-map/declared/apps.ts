@@ -9,6 +9,9 @@
  * clusters/equestria.yaml (CLUSTER_KEY, CLUSTER_TITLE, CLUSTER_DOMAIN =
  * `<domainPrefix>.<root domain>`), and the root domain and tailnet from the
  * environment (ROOT_DOMAIN, TAILSCALE_DOMAIN). The rest stay unresolved.
+ * Only apps Flux deploys are declared: a ks.yaml commented out of its
+ * parent kustomization.yaml, or suspended, makes the app `disabled`
+ * (./flux.ts), which the load counts and leaves out.
  *
  *   appId         metadata.name, i.e. the ks's APP: the observed layer's
  *                 `app.kubernetes.io/name` (../src/sources/kubernetes.ts)
@@ -38,6 +41,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { parseAllDocuments } from "yaml";
 import type { appAccessGroups, appHost } from "../../../stacks/netbird/apps.ts";
+import { fluxApplies, indexKustomizations, type KustomizationIndex } from "./flux.ts";
 import type { ClusterFile, DockgeHost } from "./machines.ts";
 import { attempt, type DeclaredPlan, machineKey } from "./plan.ts";
 import { substitute } from "./substitute.ts";
@@ -147,6 +151,23 @@ export interface KubernetesAppInput {
   dir: string;
   definitionText: string;
   ksText?: string;
+  /** Why Flux does not deploy it (./flux.ts), when it does not: such an app is counted, not declared. */
+  disabled?: string;
+}
+
+/**
+ * Why the app in `dir` is not deployed, or undefined when it is: its ks.yaml
+ * is not applied by Flux (commented out of the parent kustomization.yaml, or
+ * a parent of that one is), or its Kustomization is suspended. A definition
+ * with no ks.yaml beside it is left to addKubernetesApp's problem.
+ */
+export function disabledReason(input: Pick<KubernetesAppInput, "dir" | "ksText">, index: KustomizationIndex): string | undefined {
+  if (input.ksText === undefined) return undefined;
+  const ksFile = `${input.dir}/ks.yaml`;
+  if (!fluxApplies(ksFile, index)) return `${ksFile} is not applied by Flux (missing from, or commented out of, the kustomization.yaml above it)`;
+  const ks = kustomizationFor(input.ksText, input.dir) as (Kustomization & { spec?: { suspend?: boolean } }) | undefined;
+  if (ks?.spec?.suspend === true) return `${ksFile} is suspended`;
+  return undefined;
 }
 
 /** One definition.yaml beside its ks.yaml -> App nodes and their reach. */
@@ -310,12 +331,16 @@ async function subdirs(dir: string): Promise<string[]> {
 }
 
 /**
- * Every definition.yaml under kubernetes/apps, with its ks.yaml. An unreadable
- * file, or no definition at all, is a problem; the rest still load.
+ * Every definition.yaml under kubernetes/apps, with its ks.yaml, and whether
+ * Flux deploys it (`disabled`, from every kustomization.yaml there). An
+ * unreadable file, or no definition at all, is a problem; the rest still load.
  */
 export async function readKubernetesApps(root: string, problems: string[]): Promise<KubernetesAppInput[]> {
-  const files = (await attempt(problems, "kubernetes/apps", [], () => filesUnder(join(root, "kubernetes", "apps")))).filter(f => f.endsWith("/definition.yaml")).sort();
+  const all = await attempt(problems, "kubernetes/apps", [], () => filesUnder(join(root, "kubernetes", "apps")));
+  const files = all.filter(f => f.endsWith("/definition.yaml")).sort();
   if (files.length === 0) problems.push("kubernetes/apps: no definition.yaml found; no Kubernetes apps declared");
+  const kustomizations = all.filter(f => f.endsWith("/kustomization.yaml")).sort();
+  const index = indexKustomizations(await Promise.all(kustomizations.map(async f => ({ dir: relative(root, dirname(f)), text: await attempt(problems, relative(root, f), "", () => readFile(f, "utf8")) }))));
   // Read in parallel, but report problems in file order (each read gets its
   // own list), so the load's log does not depend on timing.
   const lists = files.map((): string[] => []);
@@ -327,7 +352,7 @@ export async function readKubernetesApps(root: string, problems: string[]): Prom
     ),
   );
   for (const list of lists) problems.push(...list);
-  return read.flat();
+  return read.flat().map(input => ({ ...input, disabled: disabledReason(input, index) }));
 }
 
 /** The stacks DockgeLxc deploys to `host`: its directory and _common, less the ignored ones. An unreadable stack is a problem. */
