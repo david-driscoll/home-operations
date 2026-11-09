@@ -31,6 +31,20 @@ export const SAME_KEY_LABELS = [
   { label: "Network", key: "networkId" },
 ] as const;
 
+/**
+ * A declared App's other key: the ks's APP, set when the definition is named
+ * something else (`thanos-query-observability` in the `thanos` ks), because
+ * the observed App is keyed by what the workloads carry, which is the APP.
+ */
+export const DEPLOYED_AS = "deployedAs";
+
+/** The keys a node of `label` on `layer` is known by: its own, plus a declared App's `deployedAs`. */
+export function sameKeyValues(label: string, layer: string, props: Record<string, unknown>, key: string): string[] {
+  const values = [props[key]];
+  if (label === "App" && layer === DECLARED_LAYER) values.push(props[DEPLOYED_AS]);
+  return values.filter(v => v !== undefined && v !== null).map(String);
+}
+
 export interface LinkRule {
   /** What the edge records as `by`. */
   by: string;
@@ -60,6 +74,11 @@ export function linkRules(): LinkRule[] {
   }));
   return [
     ...sameKey,
+    {
+      // A definition named otherwise than its ks's APP: the observed App is keyed by the APP.
+      by: "deployedAs",
+      text: [`MATCH (d:App {layer: $declared}) WHERE d.${DEPLOYED_AS} IS NOT NULL`, `MATCH (o:App {layer: $observed, appId: d.${DEPLOYED_AS}})`, ...MERGE("deployedAs")].join("\n"),
+    },
     {
       // UniFi networks are keyed by their controller id, which the repo never
       // sees; the zone map names them instead.

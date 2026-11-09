@@ -293,6 +293,14 @@ describe("queries", () => {
     for (const [name, s] of Object.entries(statements)) assert.ok(doc.includes(s.text), `${name} is not in queries.md as drift.ts has it:\n${s.text}`);
   });
 
+  it("count the observed App of a declared App's deployedAs as its counterpart", () => {
+    assert.match(declaredPresenceQuery.text, /UNION MATCH \(o:App \{layer: 'observed'\}\) WHERE o\.appId = d\.deployedAs RETURN o\.lastSeen\.epochMillis AS seen/);
+    for (const end of ["f", "t"]) {
+      assert.ok(declaredReachQuery.text.includes(`UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = ${end}.deployedAs RETURN o.appId AS k`), `declared ${end}`);
+      assert.ok(observedReachQuery(["netbird"]).text.includes(`UNION MATCH (o:App {layer: 'declared'}) WHERE o.deployedAs = ${end}.appId RETURN o.appId AS k`), `observed ${end}`);
+    }
+  });
+
   it("only read", () => {
     for (const s of [declaredCountsQuery, routesQuery, declaredPresenceQuery, unknownClientsQuery(["Home"], 0), declaredReachQuery, observedReachQuery(["netbird"]), sourcesQuery]) {
       assert.doesNotMatch(s.text, /\b(CREATE|MERGE|SET|DELETE|REMOVE|DETACH|LOAD CSV|CALL\s+apoc)\b/i);

@@ -250,13 +250,15 @@ RETURN CASE WHEN d:App THEN 'app' ELSE 'machine' END AS kind,
        COLLECT {
          MATCH (d)-[:DECLARES]->(o {layer: 'observed'}) RETURN o.lastSeen.epochMillis AS seen
          UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = d.appId RETURN o.lastSeen.epochMillis AS seen
+         UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = d.deployedAs RETURN o.lastSeen.epochMillis AS seen
        } AS observedLastSeenMs
 ORDER BY kind, nodeKey
 ```
 
 `observedLastSeenMs` holds when each observed counterpart was last seen: those
 a `DECLARES` edge joins, plus (for an app) the observed app with the same
-`appId`. The alert fires when the newest is over 6 hours old. With no
+`appId`, or with the declared app's `deployedAs` (the ks's `APP`, when the
+definition is named otherwise). The alert fires when the newest is over 6 hours old. With no
 counterpart at all, it fires once the declaration itself is 6 hours old, so a
 new declaration gets the same grace to be observed.
 
@@ -270,7 +272,7 @@ everything).
 MATCH (o {layer: 'observed'})
 WHERE (o:Machine OR o:App)
   AND NOT EXISTS { MATCH ({layer: 'declared'})-[:DECLARES]->(o) }
-  AND NOT (o:App AND EXISTS { MATCH (d:App {layer: 'declared'}) WHERE d.appId = o.appId })
+  AND NOT (o:App AND EXISTS { MATCH (d:App {layer: 'declared'}) WHERE d.appId = o.appId OR d.deployedAs = o.appId })
 RETURN CASE WHEN o:App THEN 'app' ELSE 'machine' END AS kind,
        coalesce(o.machineId, o.appId) AS nodeKey, o.name AS name, o.kind AS machineKind,
        o.sources AS sources, coalesce(o.joined, true) AS joined, o.lastSeen AS lastSeen
@@ -331,12 +333,14 @@ RETURN coalesce(f.system, split(f.groupId, ':')[0]) AS system,
          UNION MATCH (o:Group {layer: 'observed'}) WHERE o.groupId = f.groupId RETURN o.groupId AS k
          UNION MATCH (o:Network {layer: 'observed'}) WHERE o.networkId = f.networkId RETURN o.networkId AS k
          UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = f.appId RETURN o.appId AS k
+         UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = f.deployedAs RETURN o.appId AS k
        } AS fromObserved,
        COLLECT {
          MATCH (t)-[:DECLARES]->(o {layer: 'observed'}) RETURN coalesce(o.groupId, o.networkId, o.appId, o.machineId) AS k
          UNION MATCH (o:Group {layer: 'observed'}) WHERE o.groupId = t.groupId RETURN o.groupId AS k
          UNION MATCH (o:Network {layer: 'observed'}) WHERE o.networkId = t.networkId RETURN o.networkId AS k
          UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = t.appId RETURN o.appId AS k
+         UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = t.deployedAs RETURN o.appId AS k
        } AS toObserved
 ```
 
@@ -350,17 +354,20 @@ RETURN r.source AS system, f.groupId AS fromKey, coalesce(t.groupId, t.networkId
          UNION MATCH (o:Group {layer: 'declared'}) WHERE o.groupId = f.groupId RETURN o.groupId AS k
          UNION MATCH (o:Network {layer: 'declared'}) WHERE o.networkId = f.networkId RETURN o.networkId AS k
          UNION MATCH (o:App {layer: 'declared'}) WHERE o.appId = f.appId RETURN o.appId AS k
+         UNION MATCH (o:App {layer: 'declared'}) WHERE o.deployedAs = f.appId RETURN o.appId AS k
        } AS fromDeclared,
        COLLECT {
          MATCH (o {layer: 'declared'})-[:DECLARES]->(t) RETURN coalesce(o.groupId, o.networkId, o.appId, o.machineId) AS k
          UNION MATCH (o:Group {layer: 'declared'}) WHERE o.groupId = t.groupId RETURN o.groupId AS k
          UNION MATCH (o:Network {layer: 'declared'}) WHERE o.networkId = t.networkId RETURN o.networkId AS k
          UNION MATCH (o:App {layer: 'declared'}) WHERE o.appId = t.appId RETURN o.appId AS k
+         UNION MATCH (o:App {layer: 'declared'}) WHERE o.deployedAs = t.appId RETURN o.appId AS k
        } AS toDeclared
 ```
 
 An end's counterpart in the other layer is what a `DECLARES` edge joins it to,
-or a node of the same label with the same key. `drift.ts` (`classifyReach`)
+or a node of the same label with the same key (an observed App also matches
+a declared one's `deployedAs`). `drift.ts` (`classifyReach`)
 compares the two per (group, target) pair, with all of a pair's policies
 taken together:
 

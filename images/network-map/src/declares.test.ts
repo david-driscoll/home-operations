@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { KEY_PROPERTY } from "./cypher.ts";
-import { DECLARED_LAYER, DECLARED_SOURCE, linkRules, linkStatements, OBSERVED_LAYER, SAME_KEY_LABELS } from "./declares.ts";
+import { DECLARED_LAYER, DECLARED_SOURCE, linkRules, linkStatements, OBSERVED_LAYER, SAME_KEY_LABELS, sameKeyValues } from "./declares.ts";
 
 describe("linkStatements", () => {
   const statements = linkStatements();
@@ -40,6 +40,20 @@ describe("linkRules", () => {
         label,
       );
     }
+  });
+
+  it("joins a declared App's deployedAs to the observed App of that key, right after the key rules", () => {
+    const at = rules.findIndex(r => r.by === "deployedAs");
+    assert.equal(at, SAME_KEY_LABELS.length, "after every key rule");
+    assert.match(rules[at].text, /MATCH \(d:App \{layer: \$declared\}\) WHERE d\.deployedAs IS NOT NULL/);
+    assert.match(rules[at].text, /MATCH \(o:App \{layer: \$observed, appId: d\.deployedAs\}\)/);
+  });
+
+  it("knows a declared App by its key and deployedAs, any other node by its key alone", () => {
+    assert.deepEqual(sameKeyValues("App", "declared", { appId: "thanos-query-observability", deployedAs: "thanos" }, "appId"), ["thanos-query-observability", "thanos"]);
+    assert.deepEqual(sameKeyValues("App", "observed", { appId: "thanos", deployedAs: "x" }, "appId"), ["thanos"]);
+    assert.deepEqual(sameKeyValues("Group", "declared", { groupId: "g", deployedAs: "x" }, "groupId"), ["g"]);
+    assert.deepEqual(sameKeyValues("App", "declared", { appId: "a" }, "appId"), ["a"]);
   });
 
   it("joins UniFi networks by name and NetBird policies by the stack's policy name", () => {

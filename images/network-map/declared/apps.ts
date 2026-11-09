@@ -15,6 +15,8 @@
  *
  *   appId         metadata.name, i.e. the ks's APP: the observed layer's
  *                 `app.kubernetes.io/name` (../src/sources/kubernetes.ts)
+ *   deployedAs    the ks's APP when metadata.name is something else (a fixed
+ *                 name): the key the observed App has (../src/declares.ts)
  *   appRoute      the host of spec.url
  *   tailnetRoute  spec.tailnetUrl's host, else `<TAILSCALE_HOST or APP>.<tailnet>`
  *                 when the ks renders kubernetes/components/tailscale
@@ -202,6 +204,8 @@ export function addKubernetesApp(plan: DeclaredPlan, input: KubernetesAppInput, 
       hostnames: [appRoute, tailnetRoute, appService].filter((h): h is string => !!h),
       accessGroups: def.spec.access_policy?.groups,
       definition: `${input.dir}/definition.yaml`,
+      // The observed App is keyed by the APP its workloads and routes carry.
+      deployedAs: local.APP && local.APP !== appId ? local.APP : undefined,
       unresolved: unresolved.length > 0 ? unresolved : undefined,
     });
     addAccess(plan, appId, def.spec.access_policy?.groups);

@@ -75,19 +75,23 @@ const endKey = (v: string) => `coalesce(${v}.groupId, ${v}.networkId, ${v}.appId
 /**
  * The keys of the other layer's nodes that are the same thing as REACHES end
  * `v`: those a DECLARES edge joins it to, and those with the same label and
- * key. The key match is a fallback for a node the collector re-created after
- * the loader last ran (a DETACH DELETE takes the DECLARES edge with it).
+ * key (for an App, also a declared one's `deployedAs`). The key match is a
+ * fallback for a node the collector re-created after the loader last ran (a
+ * DETACH DELETE takes the DECLARES edge with it).
  * Machine keys come from the collector's join, so a Machine relies on
  * DECLARES alone.
  */
 function counterparts(v: string, other: "declared" | "observed", indent: string): string {
   const edge = other === "observed" ? `(${v})-[:DECLARES]->(o {layer: '${other}'})` : `(o {layer: '${other}'})-[:DECLARES]->(${v})`;
+  // A declared App's `deployedAs` (the ks's APP, when the definition is named otherwise) is the observed App's key too.
+  const deployedAs = other === "observed" ? `o.appId = ${v}.deployedAs` : `o.deployedAs = ${v}.appId`;
   return [
     "COLLECT {",
     `${indent}  MATCH ${edge} RETURN ${endKey("o")} AS k`,
     `${indent}  UNION MATCH (o:Group {layer: '${other}'}) WHERE o.groupId = ${v}.groupId RETURN o.groupId AS k`,
     `${indent}  UNION MATCH (o:Network {layer: '${other}'}) WHERE o.networkId = ${v}.networkId RETURN o.networkId AS k`,
     `${indent}  UNION MATCH (o:App {layer: '${other}'}) WHERE o.appId = ${v}.appId RETURN o.appId AS k`,
+    `${indent}  UNION MATCH (o:App {layer: '${other}'}) WHERE ${deployedAs} RETURN o.appId AS k`,
     `${indent}}`,
   ].join("\n");
 }
@@ -131,6 +135,7 @@ export const declaredPresenceQuery: Statement = {
     "       COLLECT {",
     "         MATCH (d)-[:DECLARES]->(o {layer: 'observed'}) RETURN o.lastSeen.epochMillis AS seen",
     "         UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = d.appId RETURN o.lastSeen.epochMillis AS seen",
+    "         UNION MATCH (o:App {layer: 'observed'}) WHERE o.appId = d.deployedAs RETURN o.lastSeen.epochMillis AS seen",
     "       } AS observedLastSeenMs",
     "ORDER BY kind, nodeKey",
   ].join("\n"),
