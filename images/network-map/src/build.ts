@@ -56,8 +56,12 @@ export function buildGraph(results: SourceResult[], ctx: BuildContext): BuildOut
       nodes.set(id, node);
       return;
     }
-    // First writer (by JOIN_ORDER) owns it; later ones only fill gaps.
+    // First writer (by JOIN_ORDER) owns it; later ones only fill gaps,
+    // except an App's `observedVia`, which is every way any source saw it.
     for (const [k, v] of Object.entries(node.props)) if (existing.props[k] === undefined || existing.props[k] === null) existing.props[k] = v;
+    if (node.label === "App" && Array.isArray(node.props.observedVia) && Array.isArray(existing.props.observedVia)) {
+      existing.props.observedVia = uniq([...(existing.props.observedVia as string[]), ...(node.props.observedVia as string[])]).sort();
+    }
     existing.firstSeen = minIso([existing.firstSeen, node.firstSeen]);
     existing.lastSeen = maxIso([existing.lastSeen, node.lastSeen]);
   };

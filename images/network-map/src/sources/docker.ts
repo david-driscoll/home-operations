@@ -105,7 +105,7 @@ export function parseDocker(target: DockerTarget, info: DockerInfo, networks: Do
     const rules = Object.entries(labels).filter(([k]) => /^traefik\.http\.routers\.[^.]+\.rule$/.test(k));
     if (rules.length === 0) continue;
     const appId = containerAppId(c);
-    if (!result.apps.some(a => a.key === appId)) result.apps.push({ key: appId, props: { name: appId, cluster: target.name } });
+    if (!result.apps.some(a => a.key === appId)) result.apps.push({ key: appId, props: { name: appId, cluster: target.name, observedVia: ["docker"] } });
     result.runs.push({ machine: runsOn, app: appId });
     for (const [key, rule] of rules) {
       const router = key.split(".")[3];

@@ -1,7 +1,8 @@
 ---
 # The collector's Kubernetes reads (images/network-map/src/sources/kubernetes.ts):
-# nodes, the tailnet egress Services' annotations, and the Gateway API routes.
-# Read-only, cluster-wide, nothing else.
+# nodes, the tailnet egress Services' annotations, the Gateway API routes, and
+# the workloads (Deployments, StatefulSets, DaemonSets, CronJobs) it observes
+# Apps from. Read-only, cluster-wide, nothing else.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -17,6 +18,12 @@ rules:
     verbs: [get, list]
   - apiGroups: [gateway.networking.k8s.io]
     resources: [httproutes, gateways]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [cronjobs]
     verbs: [get, list]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
