@@ -195,4 +195,8 @@ write. Some rules it follows:
   would remove more than a quarter of its own rows (at least 3 may always go), and never touches
   a row without the property.
 - **Designs** are found by name. The UniFi design takes over Homelable's starting design,
-  "Network Topology", by renaming it, but only while that design is empty.
+  "Network Topology", by renaming it, but only while that design is empty. A design is created
+  only after a fresh list, read just before, shows it still missing, and the list is read again
+  after creating. When several designs share a name (two syncs at once), the sync uses the one
+  with the most on it, then the oldest, and deletes the others only if they are empty on a fresh
+  read of their canvas. A duplicate with anything on it is never deleted, only logged.

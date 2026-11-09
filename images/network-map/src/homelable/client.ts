@@ -5,6 +5,8 @@
  *   GET    /api/v1/designs                  every design (id, name, node counts)
  *   POST   /api/v1/designs                  create one        {name, design_type}
  *   PUT    /api/v1/designs/<id>             rename one        {name}
+ *   DELETE /api/v1/designs/<id>             delete one, nodes and all (400 for the last design).
+ *                                           ./sync.ts calls it only for an EMPTY duplicate.
  *   GET    /api/v1/canvas?design_id=<id>    one design's canvas (for the device_ids and viewport)
  *   POST   /api/v1/canvas/save              replace one design's canvas in full
  *   GET    /api/v1/scan/pending             the inventory: every row not hidden, with its
@@ -30,6 +32,8 @@ export interface Design {
   node_count?: number | null;
   group_count?: number | null;
   text_count?: number | null;
+  /** ISO 8601; the API lists designs oldest first by it. */
+  created_at?: string | null;
 }
 
 export interface CanvasState {
@@ -53,6 +57,7 @@ export interface HomelableClient {
   listDesigns(): Promise<Design[]>;
   createDesign(name: string): Promise<Design>;
   renameDesign(id: string, name: string): Promise<Design>;
+  deleteDesign(id: string): Promise<void>;
   loadCanvas(designId: string): Promise<CanvasState>;
   saveCanvas(body: CanvasSaveRequest): Promise<void>;
   listInventory(): Promise<InventoryRow[]>;
@@ -84,6 +89,9 @@ export function httpHomelableClient(options: HomelableClientOptions): HomelableC
     listDesigns: () => call<Design[]>("GET", "/api/v1/designs"),
     createDesign: name => call<Design>("POST", "/api/v1/designs", { name, design_type: "network" }),
     renameDesign: (id, name) => call<Design>("PUT", `/api/v1/designs/${encodeURIComponent(id)}`, { name }),
+    deleteDesign: async id => {
+      await call<unknown>("DELETE", `/api/v1/designs/${encodeURIComponent(id)}`);
+    },
     loadCanvas: designId => call<CanvasState>("GET", `/api/v1/canvas?design_id=${encodeURIComponent(designId)}`),
     saveCanvas: async body => {
       await call<unknown>("POST", "/api/v1/canvas/save", body);
@@ -117,16 +125,28 @@ export function memoryHomelable(seed: { designs?: Design[]; canvases?: Record<st
     if (fail.get(method)?.(arg)) throw new HttpError(`${method}: HTTP 500 injected`, 500);
   };
   const canvasCount = (id: string) => [...canvases.values()].filter(c => c.nodes.some(n => n.device_id === id)).length;
+  // Created one second apart from 2026-01-01, after any seeded design.
+  const createdAt = () => new Date(Date.UTC(2026, 0, 1, 0, 0, 0) + 1000 * (100 + nextId)).toISOString();
+  const deletedDesigns: string[] = [];
   const client: HomelableClient = {
     listDesigns: async () => {
       check("listDesigns");
-      return designs.map(d => ({ ...d, node_count: canvases.get(d.id)?.nodes.length ?? d.node_count ?? 0 }));
+      return [...designs].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? "")).map(d => ({ ...d, node_count: canvases.get(d.id)?.nodes.length ?? d.node_count ?? 0 }));
     },
     createDesign: async name => {
       check("createDesign", name);
-      const d = { id: `design-${nextId++}`, name, design_type: "network", node_count: 0, group_count: 0, text_count: 0 };
+      const d = { id: `design-${nextId}`, name, design_type: "network", node_count: 0, group_count: 0, text_count: 0, created_at: createdAt() };
+      nextId++;
       designs.push(d);
       return d;
+    },
+    deleteDesign: async id => {
+      check("deleteDesign", id);
+      const at = designs.findIndex(d => d.id === id);
+      if (at < 0) throw new HttpError("Design not found", 404);
+      designs.splice(at, 1);
+      canvases.delete(id);
+      deletedDesigns.push(id);
     },
     renameDesign: async (id, name) => {
       check("renameDesign", id);
@@ -164,5 +184,5 @@ export function memoryHomelable(seed: { designs?: Design[]; canvases?: Record<st
       deleted.push(id);
     },
   };
-  return { client, designs, canvases, inventory, saves, calls, deleted, fail };
+  return { client, designs, canvases, inventory, saves, calls, deleted, deletedDesigns, fail };
 }
