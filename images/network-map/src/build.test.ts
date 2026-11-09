@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildGraph } from "./build.ts";
 import { fixtureClient } from "./http.ts";
-import type { GraphPlan, SourceResult } from "./model.ts";
+import { emptyResult, type GraphPlan, type SourceResult } from "./model.ts";
 import { collectDocker, traefikHosts } from "./sources/docker.ts";
 import { collectKubernetes } from "./sources/kubernetes.ts";
 import { collectNetbird } from "./sources/netbird.ts";
@@ -130,9 +130,13 @@ const tailscale = fixtureClient({
 });
 
 const kubernetes = fixtureClient({
-  "/api/v1/nodes": { items: [{ metadata: { name: "eq-1" }, status: { addresses: [{ type: "InternalIP", address: "10.10.10.31" }], conditions: [{ type: "Ready", status: "True" }] } }] },
-  "/api/v1/services": { items: [{ metadata: { name: "proxmox-luna", namespace: "tailscale-system", annotations: { "tailscale.com/tailnet-fqdn": "luna.tailnet.example" } } }] },
-  "/apis/gateway.networking.k8s.io/v1/httproutes": {
+  "/api/v1/nodes?limit=500": { items: [{ metadata: { name: "eq-1" }, status: { addresses: [{ type: "InternalIP", address: "10.10.10.31" }], conditions: [{ type: "Ready", status: "True" }] } }] },
+  "/api/v1/services?limit=500": { items: [{ metadata: { name: "proxmox-luna", namespace: "tailscale-system", annotations: { "tailscale.com/tailnet-fqdn": "luna.tailnet.example" } } }] },
+  "/apis/apps/v1/deployments?limit=500": { items: [] },
+  "/apis/apps/v1/statefulsets?limit=500": { items: [{ metadata: { name: "neo4j", namespace: "database", labels: { "app.kubernetes.io/name": "neo4j" } }, spec: { replicas: 1 } }] },
+  "/apis/apps/v1/daemonsets?limit=500": { items: [] },
+  "/apis/batch/v1/cronjobs?limit=500": { items: [] },
+  "/apis/gateway.networking.k8s.io/v1/httproutes?limit=500": {
     items: [
       {
         metadata: { name: "neo4j-internal", namespace: "database", labels: { "app.kubernetes.io/name": "neo4j" } },
@@ -140,7 +144,7 @@ const kubernetes = fixtureClient({
       },
     ],
   },
-  "/apis/gateway.networking.k8s.io/v1/gateways": { items: [{ metadata: { name: "internal", namespace: "network" }, status: { addresses: [{ value: "10.10.10.250" }] } }] },
+  "/apis/gateway.networking.k8s.io/v1/gateways?limit=500": { items: [{ metadata: { name: "internal", namespace: "network" }, status: { addresses: [{ value: "10.10.10.250" }] } }] },
 });
 
 async function collectAll(options: { proxmoxPartial?: boolean } = {}): Promise<SourceResult[]> {
@@ -224,6 +228,23 @@ describe("buildGraph: the schema's example, all six sources", async () => {
     assert.equal(node(plan, "EntryPoint", "gateway:network/internal")?.props.address, "10.10.10.250");
     assert.ok(rel(plan, "SERVED_BY", "backrest", "traefik:luna"));
     assert.ok(rel(plan, "RUNS", lxcId, "backrest"), "a bridge-network app runs on the Docker host, which is the LXC");
+  });
+
+  it("makes one neo4j App from its route and its StatefulSet, and tags Docker apps", () => {
+    assert.equal(plan.nodes.filter(n => n.label === "App" && n.key === "neo4j").length, 1);
+    const neo4j = node(plan, "App", "neo4j");
+    assert.deepEqual(neo4j?.props.observedVia, ["route", "workload"]);
+    assert.deepEqual(neo4j?.props.workloadKinds, ["StatefulSet"]);
+    assert.equal(neo4j?.props.running, true);
+    assert.deepEqual(node(plan, "App", "backrest")?.props.observedVia, ["docker"]);
+  });
+
+  it("unions observedVia when Kubernetes and Docker report the same app", () => {
+    const k8s = { ...emptyResult("kubernetes"), apps: [{ key: "shared", props: { name: "shared", observedVia: ["workload"], running: false } }] };
+    const docker = { ...emptyResult("docker"), apps: [{ key: "shared", props: { name: "shared", observedVia: ["docker"] } }] };
+    const app = buildGraph([docker, k8s], { homeSite: "home" }).plan.nodes.find(n => n.label === "App" && n.key === "shared");
+    assert.deepEqual(app?.props.observedVia, ["docker", "workload"]);
+    assert.equal(app?.props.running, false);
   });
 
   it("leaves a Kubernetes node that no UniFi client has the IP of as joined: false", () => {

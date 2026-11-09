@@ -119,6 +119,25 @@ hour. The edge carries `by`, the rule that made it:
 | `Machine` with no edge yet | a `Machine` with one of `ips` on an interface | `ip` |
 | `Machine` with no edge yet | a `Machine` whose `hostnames` hold `hostname` | `hostname` |
 
+## Observed apps
+
+An observed `App` is keyed the way the declared one is, so the two join by `key`. There is one
+per key, however many sources and objects report it, and `observedVia` lists every way it was
+seen:
+
+| `observedVia` | From | Key |
+|---|---|---|
+| `route` | a Kubernetes `HTTPRoute` (`hostnames`, `routes`, `SERVED_BY` its Gateway) | `app.kubernetes.io/name`, else the route's name |
+| `workload` | a Deployment, StatefulSet, DaemonSet or CronJob, in any namespace (`workloads`, `workloadKinds`) | `app.kubernetes.io/name` on the workload, else on its pod template; skipped with neither |
+| `docker` | a container with Traefik router labels (`SERVED_BY` the host's Traefik, `RUNS` on the host) | the compose project |
+
+app-template sets `app.kubernetes.io/name` to the release name on every controller, which is
+the ks's `APP`, so a multi-controller release is one App. Raw manifests get it from the ks's
+`commonMetadata`. Kubernetes apps also carry `namespaces`. A workload scaled to zero (the
+nightly downscaler) or a suspended CronJob still counts as observed, because the app is
+deployed. The App then has `running: false`: true means a workload is asked to run, not that it
+is healthy. A route-only App has no `running`.
+
 ## What the observed layer can't see (yet)
 
 - **UniFi** reports no firewall zone membership, so `IN_ZONE` is declared only. A client's
@@ -129,6 +148,10 @@ hour. The edge carries `by`, the rule that made it:
   collector calls the management API directly, which has them.
 - **Proxmox** reports no node IPs, and VM IPs only through the guest agent. The collector joins
   VMs by MAC instead.
+- **Kubernetes** apps whose workloads are not labelled with their `APP` are missed or observed
+  under another key. These are CloudNativePG clusters (bare Pods, no workload object), workloads
+  that operators create (ToolHive MCP servers, garage-operator clusters), and third-party charts
+  that name the component (cilium's `cilium-agent`).
 
 ## Homelable projection
 
