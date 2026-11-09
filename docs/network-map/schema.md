@@ -128,13 +128,14 @@ seen:
 | `observedVia` | From | Key |
 |---|---|---|
 | `route` | a Kubernetes `HTTPRoute` (`hostnames`, `routes`, `SERVED_BY` its Gateway) | `app.kubernetes.io/name`, else the route's name |
-| `workload` | a Deployment, StatefulSet, DaemonSet or CronJob, in any namespace (`workloads`, `workloadKinds`) | `app.kubernetes.io/name` on the workload, else on its pod template; skipped with neither |
+| `workload` | a Deployment, StatefulSet, DaemonSet or CronJob, in any namespace (`workloads`, `workloadKinds`) | `app.kubernetes.io/name` on the workload, else on its pod template. Also its `helm.toolkit.fluxcd.io/name` (the HelmRelease, named `${APP}`) when that differs. Skipped with none of them. |
+| `workload` | a CloudNativePG `Cluster` (`workloadKinds: [CnpgCluster]`); its instances are bare Pods | `helm.toolkit.fluxcd.io/name`, else `kustomize.toolkit.fluxcd.io/name`, else its name |
 | `docker` | every compose project with a container, running or not (`containers`, `clusters`, `RUNS` on the host). A Traefik-routed one is also `SERVED_BY` the host's Traefik. | the compose project (a routed container with none: its name) |
 
 app-template sets `app.kubernetes.io/name` to the release name on every controller, which is
 the ks's `APP`, so a multi-controller release is one App. Raw manifests get it from the ks's
 `commonMetadata`. Kubernetes apps also carry `namespaces`. A workload scaled to zero (the
-nightly downscaler) or a suspended CronJob still counts as observed, because the app is
+nightly downscaler), a suspended CronJob or a hibernated CNPG cluster still counts as observed, because the app is
 deployed. The App then has `running: false`: true means a workload is asked to run, not that it
 is healthy. A route-only App has no `running`. A Docker App is `running` when any of its
 containers is, so a stopped stack is still observed.
@@ -149,10 +150,11 @@ containers is, so a stopped stack is still observed.
   collector calls the management API directly, which has them.
 - **Proxmox** reports no node IPs, and VM IPs only through the guest agent. The collector joins
   VMs by MAC instead.
-- **Kubernetes** apps whose workloads are not labelled with their `APP` are missed or observed
-  under another key. These are CloudNativePG clusters (bare Pods, no workload object), workloads
-  that operators create (ToolHive MCP servers, garage-operator clusters), and third-party charts
-  that name the component (cilium's `cilium-agent`).
+- **Kubernetes** apps are missed when nothing observed carries their key. Two cases remain.
+  Workloads that an operator creates (ToolHive MCP servers, garage-operator clusters) carry
+  neither the app's name label nor a Flux owner label. Definitions with a fixed name instead of
+  `${APP}` (`thanos-query-observability` in the `thanos` ks, `setup-guide` in `git-pages`) are
+  served by workloads named after the ks.
 
 ## Homelable projection
 

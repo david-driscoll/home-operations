@@ -10,6 +10,7 @@
  *   GET /apis/gateway.networking.k8s.io/v1/gateways
  *   GET /apis/apps/v1/{deployments,statefulsets,daemonsets}
  *   GET /apis/batch/v1/cronjobs
+ *   GET /apis/postgresql.cnpg.io/v1/clusters
  *
  * Read-only, by ./rbac.yaml's ClusterRole (get/list on exactly these). The
  * lists run one at a time, paged with `limit`/`continue`, and a 429 or 503
@@ -22,14 +23,17 @@
  * workload with neither is skipped. app-template sets the label to the
  * release name (its `global.nameOverride`), on every controller of a
  * release, so a multi-controller release is one App; raw manifests get it
- * from the ks's commonMetadata. `observedVia` says which (`route`,
- * `workload`). A workload scaled to zero or a suspended CronJob still counts:
- * the app is deployed, so it is observed, with `running: false`.
+ * from the ks's commonMetadata. A workload Flux's helm-controller rendered is
+ * also observed under its HelmRelease's name when that differs, and a
+ * CloudNativePG Cluster under its Flux owner (workloadAppIds). `observedVia`
+ * says which (`route`, `workload`). A workload scaled to zero, a suspended
+ * CronJob or a hibernated CNPG cluster still counts: the app is deployed, so
+ * it is observed, with `running: false`.
  *
  * Not modelled yet: pods and Services as k8s-pod / k8s-svc networks, and
  * RUNS for Kubernetes apps (a Deployment's pods move between nodes; the app
- * is the cluster's, which the declared layer will say). Operator-made pods
- * with no workload object (CloudNativePG instances) are not seen.
+ * is the cluster's, which the declared layer will say). Other operator-made
+ * workloads are seen under whatever labels the operator gives them.
  */
 import { type ApiClient, type RetryOptions, withRetry } from "../http.ts";
 import { emptyResult, type SourceResult } from "../model.ts";
@@ -67,18 +71,21 @@ export interface K8sGateway {
   status?: { addresses?: { type?: string; value: string }[] };
 }
 
-export type WorkloadKind = "Deployment" | "StatefulSet" | "DaemonSet" | "CronJob";
+/** `CnpgCluster` is a postgresql.cnpg.io/v1 Cluster. */
+export type WorkloadKind = "Deployment" | "StatefulSet" | "DaemonSet" | "CronJob" | "CnpgCluster";
 
 interface PodTemplate {
   metadata?: { labels?: Record<string, string> };
 }
 
-/** A Deployment, StatefulSet, DaemonSet or CronJob: only the fields the App needs. A list's items carry no `kind`, so the collector sets it. */
+/** A Deployment, StatefulSet, DaemonSet, CronJob or CNPG Cluster: only the fields the App needs. A list's items carry no `kind`, so the collector sets it. */
 export interface K8sWorkload {
   kind: WorkloadKind;
   metadata: Meta;
   spec?: {
     replicas?: number;
+    /** A CNPG Cluster's. */
+    instances?: number;
     suspend?: boolean;
     template?: PodTemplate;
     jobTemplate?: { spec?: { template?: PodTemplate } };
@@ -101,6 +108,11 @@ export interface KubernetesOptions {
 }
 
 export const APP_NAME_LABEL = "app.kubernetes.io/name";
+/** What helm-controller and kustomize-controller stamp on every object they apply: the owning HelmRelease / Kustomization. */
+export const HELM_NAME_LABEL = "helm.toolkit.fluxcd.io/name";
+export const KUSTOMIZE_NAME_LABEL = "kustomize.toolkit.fluxcd.io/name";
+/** CNPG's declarative hibernation: `on` shuts every instance down. */
+export const CNPG_HIBERNATION = "cnpg.io/hibernation";
 /** Items per list page. */
 export const LIST_PAGE_SIZE = 500;
 /** A `continue` chain longer than this is a server bug, not a big cluster. */
@@ -111,6 +123,8 @@ export const WORKLOAD_LISTS: { kind: WorkloadKind; path: string }[] = [
   { kind: "StatefulSet", path: "/apis/apps/v1/statefulsets" },
   { kind: "DaemonSet", path: "/apis/apps/v1/daemonsets" },
   { kind: "CronJob", path: "/apis/batch/v1/cronjobs" },
+  // CNPG runs its instances as bare Pods: the Cluster is the only workload object.
+  { kind: "CnpgCluster", path: "/apis/postgresql.cnpg.io/v1/clusters" },
 ];
 
 /** How an App was observed. Docker's own is `docker` (./docker.ts). */
@@ -122,16 +136,37 @@ export const gatewayEntryId = (namespace: string, name: string) => `gateway:${na
 
 const podTemplate = (w: K8sWorkload) => (w.kind === "CronJob" ? w.spec?.jobTemplate?.spec?.template : w.spec?.template);
 
-/** The observed App id for a workload: its name label, else its pod template's; undefined (skip it) when neither has one. */
+/** The observed App id for a workload: its name label, else its pod template's; undefined when neither has one. */
 export const workloadAppId = (w: K8sWorkload): string | undefined => w.metadata.labels?.[APP_NAME_LABEL] || podTemplate(w)?.metadata?.labels?.[APP_NAME_LABEL] || undefined;
 
 /**
+ * Every App id a workload is observed under, sorted; none means skip it.
+ *
+ *   - A CloudNativePG Cluster: its Flux owner, the HelmRelease
+ *     (`helm.toolkit.fluxcd.io/name`) else the Kustomization
+ *     (`kustomize.toolkit.fluxcd.io/name`), else its own name.
+ *   - Any other workload: `workloadAppId`, plus its HelmRelease's name when
+ *     that differs. helm-controller stamps the label on everything it
+ *     renders, and the release is named `${APP}`, so a chart that names its
+ *     workloads after the component (crowdsec's) still meets the declared
+ *     app. A workload with only the helm label is observed under that alone.
+ */
+export function workloadAppIds(w: K8sWorkload): string[] {
+  const labels = w.metadata.labels ?? {};
+  if (w.kind === "CnpgCluster") return [labels[HELM_NAME_LABEL] || labels[KUSTOMIZE_NAME_LABEL] || w.metadata.name];
+  return uniq([workloadAppId(w), labels[HELM_NAME_LABEL] || undefined]).sort();
+}
+
+/**
  * Whether the workload is asked to run anything: replicas above zero (absent
- * is one), a DaemonSet scheduled on some node, a CronJob not suspended. Not
- * health: a crash-looping Deployment is still `running`.
+ * is one), a DaemonSet scheduled on some node, a CronJob not suspended, a
+ * CNPG cluster with instances and not hibernated. Not health: a
+ * crash-looping Deployment is still `running`.
  */
 export function workloadRunning(w: K8sWorkload): boolean {
   switch (w.kind) {
+    case "CnpgCluster":
+      return (w.spec?.instances ?? 1) > 0 && w.metadata.annotations?.[CNPG_HIBERNATION] !== "on";
     case "CronJob":
       return w.spec?.suspend !== true;
     case "DaemonSet":
@@ -209,15 +244,15 @@ export function parseKubernetes(input: { nodes: K8sNode[]; services: K8sService[
   }
 
   for (const w of input.workloads ?? []) {
-    const appId = workloadAppId(w);
-    if (!appId) continue;
-    const app = appFor(appId);
-    app.via.add("workload");
-    app.workloadKinds.add(w.kind);
-    app.workloads.add(`${w.metadata.namespace}/${w.kind}/${w.metadata.name}`);
-    if (w.metadata.namespace) app.namespaces.add(w.metadata.namespace);
-    // Running when any of its workloads is.
-    app.running = app.running === true || workloadRunning(w);
+    for (const appId of workloadAppIds(w)) {
+      const app = appFor(appId);
+      app.via.add("workload");
+      app.workloadKinds.add(w.kind);
+      app.workloads.add(`${w.metadata.namespace}/${w.kind}/${w.metadata.name}`);
+      if (w.metadata.namespace) app.namespaces.add(w.metadata.namespace);
+      // Running when any of its workloads is.
+      app.running = app.running === true || workloadRunning(w);
+    }
   }
 
   const sorted = <T extends string>(values: Set<T>) => [...values].sort();
