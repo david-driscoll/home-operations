@@ -11,7 +11,7 @@ import { describe, it } from "node:test";
 import { httpHomelableClient, memoryHomelable } from "./client.ts";
 import { loadHomelableConfig } from "./config.ts";
 import { fixtureGraph, graphBuilder } from "./fixture.test.ts";
-import { syncHomelable } from "./sync.ts";
+import { cleanInventory, type DesignOutcome, syncHomelable } from "./sync.ts";
 
 describe("syncHomelable", () => {
   it("adopts the empty Network Topology design for UniFi and creates the rest", async () => {
@@ -92,6 +92,79 @@ describe("syncHomelable", () => {
   });
 });
 
+describe("cleanInventory", () => {
+  const owned = [{ key: "managed-by", value: "network-map", icon: null, visible: false }];
+  const allOk = (): DesignOutcome[] => ["UniFi", "Tailscale", "NetBird", "Apps"].map(design => ({ design, status: "ok" }) as DesignOutcome);
+
+  it("deletes only the owned rows no design draws any more", async () => {
+    const hl = memoryHomelable({
+      inventory: [
+        { id: "scanner-row", label: "printer", properties: [] },
+        { id: "hand-row", label: "nas", properties: [{ key: "managed-by", value: "someone-else", icon: null, visible: false }] },
+      ],
+    });
+    const first = await syncHomelable(fixtureGraph(), hl.client);
+    const drawn = new Set([...hl.canvases.values()].flatMap(c => c.nodes.map(n => n.device_id)));
+    // A machine leaves the map: its node goes, its row stays behind.
+    const gone = [...drawn].find(Boolean) as string;
+    for (const c of hl.canvases.values()) c.nodes = c.nodes.filter(n => n.device_id !== gone);
+    const result = await cleanInventory(hl.client, first);
+    assert.equal(result.status, "ok");
+    assert.deepEqual(hl.deleted, [gone]);
+    assert.ok(hl.inventory.has("scanner-row") && hl.inventory.has("hand-row"), "rows without the exact marker are never touched");
+    assert.ok(
+      [...drawn].filter(id => id && id !== gone).every(id => hl.inventory.has(id as string)),
+      "drawn rows stay",
+    );
+  });
+
+  it("does nothing unless every design saved this run", async () => {
+    const hl = memoryHomelable({ inventory: [{ id: "orphan", properties: owned }] });
+    const outcomes = allOk();
+    outcomes[2] = { design: "NetBird", status: "failed", error: "HTTP 500" };
+    const result = await cleanInventory(hl.client, outcomes);
+    assert.equal(result.status, "skipped");
+    assert.match(result.reason ?? "", /NetBird/);
+    assert.deepEqual(hl.calls, [], "not even the inventory is read");
+    assert.deepEqual((await cleanInventory(hl.client, [])).status, "skipped");
+  });
+
+  it("refuses a run that would delete more than a quarter of the owned rows", async () => {
+    const rows = Array.from({ length: 20 }, (_, i) => ({ id: `row-${String(i).padStart(2, "0")}`, properties: owned }));
+    const hl = memoryHomelable({ inventory: rows });
+    // Only 10 of 20 drawn: 10 unreferenced > max(3, 20 * 0.25 = 5).
+    hl.canvases.set("d", { nodes: rows.slice(0, 10).map(r => ({ id: `n-${r.id}`, type: "server", device_id: r.id })), edges: [], viewport: {} });
+    const refused = await cleanInventory(hl.client, allOk());
+    assert.equal(refused.status, "refused");
+    assert.deepEqual({ owned: refused.owned, unreferenced: refused.unreferenced, deleted: hl.deleted }, { owned: 20, unreferenced: 10, deleted: [] });
+
+    // Within the cap (5 of 20), they go.
+    hl.canvases.set("d", { nodes: rows.slice(0, 15).map(r => ({ id: `n-${r.id}`, type: "server", device_id: r.id })), edges: [], viewport: {} });
+    const ok = await cleanInventory(hl.client, allOk());
+    assert.equal(ok.status, "ok");
+    assert.deepEqual(
+      hl.deleted,
+      rows.slice(15).map(r => r.id),
+    );
+  });
+
+  it("records a refused delete and carries on; a row with no count is left alone", async () => {
+    const hl = memoryHomelable({
+      inventory: [
+        { id: "a", properties: owned },
+        { id: "b", properties: owned },
+      ],
+    });
+    hl.fail.set("deleteInventory", id => id === "a");
+    const listed = hl.client.listInventory;
+    hl.client.listInventory = async () => [...(await listed()), { id: "c", properties: owned, canvas_count: null }];
+    const result = await cleanInventory(hl.client, allOk());
+    assert.deepEqual(hl.deleted, ["b"]);
+    assert.equal(result.errors?.length, 1);
+    assert.match(result.errors?.[0] ?? "", /^a: /);
+  });
+});
+
 describe("httpHomelableClient", () => {
   it("sends the service key and JSON, and never puts the key in an error", async () => {
     const requests: { url: string; method?: string; headers: Record<string, string>; body?: string }[] = [];
@@ -111,6 +184,21 @@ describe("httpHomelableClient", () => {
     assert.equal(requests[1].method, "POST");
     assert.equal(requests[1].headers["Content-Type"], "application/json");
     assert.deepEqual(JSON.parse(requests[1].body ?? "{}").design_id, "d1");
+  });
+
+  it("lists and deletes inventory rows at 3.6.0's scan/pending endpoints", async () => {
+    const requests: { url: string; method?: string }[] = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      requests.push({ url, method: init.method });
+      return new Response(init.method === "DELETE" ? '{"deleted":true}' : "[]", { status: 200 });
+    }) as unknown as typeof fetch;
+    const client = httpHomelableClient({ baseUrl: "http://backend:8000", serviceKey: "k", fetchImpl });
+    await client.listInventory();
+    await client.deleteInventory("row/1");
+    assert.deepEqual(requests, [
+      { url: "http://backend:8000/api/v1/scan/pending", method: "GET" },
+      { url: "http://backend:8000/api/v1/scan/pending/row%2F1", method: "DELETE" },
+    ]);
   });
 });
 

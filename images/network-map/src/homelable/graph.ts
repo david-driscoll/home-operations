@@ -8,7 +8,9 @@
  * Drift (GLOSSARY.md) is computed here, once, the way ../drift.ts and
  * ../declares.ts see the two layers:
  *
- *   - an observed node is `undeclared` when no declared node DECLARES it and,
+ *   - an observed node is `undeclared` (amber) when no declared node DECLARES
+ *     it, it is not a client Machine (`kind: client`: phones, laptops, IoT,
+ *     which NetworkMapUnknownClient covers instead), and,
  *     for the labels both layers key alike (App, Group, Route, Network:
  *     ../declares.ts SAME_KEY_LABELS), no declared node has its key. The key
  *     match covers a node the collector re-created since the link last ran,
@@ -117,12 +119,14 @@ export function buildMapGraph(nodes: MapNode[], rels: MapRel[]): MapGraph {
     const other: Layer = n.layer === "observed" ? "declared" : "observed";
     return SAME_KEY_LABELS.some(({ label, key }) => n.labels.includes(label) && n.props[key] !== undefined && n.props[key] !== null && sameKey.has(keyId(label, other, String(n.props[key]))));
   };
+  /** A client Machine (a phone, a laptop, an IoT device) is never amber: an unknown client is NetworkMapUnknownClient's to report (../drift.ts). */
+  const isClient = (n: MapNode) => n.labels.includes("Machine") && n.props.kind === "client";
   /** The label a node is judged as: Device over Machine, else its labels. */
   const judgedLabels = (n: MapNode) => (n.labels.includes("Device") ? ["Device"] : n.labels);
   const drift = new Map<string, Drift>();
   for (const n of nodes) {
     if (!judgedLabels(n).some(l => declaredLabels.has(l))) continue;
-    if (n.layer === "observed" && !(incoming.get(`${n.id}|DECLARES`) ?? []).length && !counterpartByKey(n)) drift.set(n.id, "undeclared");
+    if (n.layer === "observed" && !isClient(n) && !(incoming.get(`${n.id}|DECLARES`) ?? []).length && !counterpartByKey(n)) drift.set(n.id, "undeclared");
     if (n.layer === "declared" && !(outgoing.get(`${n.id}|DECLARES`) ?? []).length && !counterpartByKey(n)) drift.set(n.id, "unobserved");
   }
   const declaredBy = (id: string) => {

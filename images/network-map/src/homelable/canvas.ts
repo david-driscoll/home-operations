@@ -213,16 +213,28 @@ export function canvasBuilder(design: DesignName): CanvasBuilder {
   return builder;
 }
 
+/**
+ * The ownership marker on every node the sync draws, and so on the inventory
+ * row behind it (properties are a device fact, replaced by each save). The
+ * clean-up in ./sync.ts deletes only rows carrying exactly this key and value.
+ */
+export const OWNER_PROPERTY = { key: "managed-by", value: "network-map" } as const;
+
+/** Whether an inventory row carries the sync's ownership marker. */
+export const isOwnedRow = (properties: readonly { key?: unknown; value?: unknown }[] | null | undefined): boolean => (properties ?? []).some(p => p?.key === OWNER_PROPERTY.key && p?.value === OWNER_PROPERTY.value);
+
 /** A spec's properties as Homelable's list, in key order, with drift first. */
 export function nodeProperties(spec: NodeSpec): NodeProperty[] {
   const out: NodeProperty[] = [];
   if (spec.drift) out.push({ key: "drift", value: DRIFT_TEXT[spec.drift], icon: null, visible: true });
   for (const [key, raw] of Object.entries(spec.properties ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    if (raw === undefined || raw === "" || (Array.isArray(raw) && raw.length === 0)) continue;
+    if (raw === undefined || raw === "" || key === OWNER_PROPERTY.key || (Array.isArray(raw) && raw.length === 0)) continue;
     out.push({ key, value: Array.isArray(raw) ? raw.join(", ") : String(raw), icon: null, visible: false });
   }
-  // A marker that the sync owns this node; hand edits are replaced within the hour.
-  out.push({ key: "managed-by", value: "network-map", icon: null, visible: false });
+  // The sync owns this node and the inventory row it lands on: hand edits are
+  // replaced within the hour, and the clean-up deletes such a row once no
+  // design draws it. Always last.
+  out.push({ key: OWNER_PROPERTY.key, value: OWNER_PROPERTY.value, icon: null, visible: false });
   return out;
 }
 
