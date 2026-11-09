@@ -11,7 +11,7 @@ import { describe, it } from "node:test";
 import { httpHomelableClient, memoryHomelable } from "./client.ts";
 import { loadHomelableConfig } from "./config.ts";
 import { fixtureGraph, graphBuilder } from "./fixture.test.ts";
-import { cleanInventory, type DesignOutcome, syncHomelable } from "./sync.ts";
+import { cleanInventory, type DesignOutcome, pickDesign, syncHomelable } from "./sync.ts";
 
 describe("syncHomelable", () => {
   it("adopts the empty Network Topology design for UniFi and creates the rest", async () => {
@@ -89,6 +89,76 @@ describe("syncHomelable", () => {
     const outcomes = await syncHomelable(graphBuilder().graph(), empty.client);
     assert.ok(outcomes.every(o => o.status === "failed" && /empty/.test(o.error ?? "")));
     assert.deepEqual(empty.calls, []);
+  });
+});
+
+describe("duplicate designs", () => {
+  const at = (s: number) => new Date(Date.UTC(2025, 0, 1, 0, 0, s)).toISOString();
+  const design = (id: string, name: string, created: number, nodes = 0) => ({ id, name, design_type: "network", node_count: nodes, group_count: 0, text_count: 0, created_at: at(created) });
+  const canvasWith = (n: number) => ({ nodes: Array.from({ length: n }, (_, i) => ({ id: `x${i}`, type: "server", device_id: null })), edges: [], viewport: {} });
+
+  it("picks the design with the most on it, then the oldest, then the lowest id", () => {
+    assert.equal(pickDesign([design("b", "Apps", 2, 0), design("a", "Apps", 1, 0)]).id, "a");
+    assert.equal(pickDesign([design("old", "Apps", 1, 0), design("new", "Apps", 2, 5)]).id, "new");
+    assert.equal(pickDesign([design("z", "Apps", 1, 3), design("y", "Apps", 1, 3)]).id, "y");
+  });
+
+  it("saves into one and deletes the EMPTY duplicates only", async () => {
+    const hl = memoryHomelable({
+      designs: [design("apps-full", "Apps", 1), design("apps-empty", "Apps", 2), design("apps-drawn", "Apps", 3), design("nb-a", "NetBird", 4), design("nb-b", "NetBird", 5)],
+      canvases: { "apps-full": canvasWith(10), "apps-drawn": canvasWith(2) },
+    });
+    const outcomes = await syncHomelable(fixtureGraph(), hl.client);
+    const apps = outcomes.find(o => o.design === "Apps");
+    const netbird = outcomes.find(o => o.design === "NetBird");
+    assert.deepEqual({ id: apps?.designId, removed: apps?.duplicatesRemoved, kept: apps?.duplicatesKept }, { id: "apps-full", removed: ["apps-empty"], kept: ["apps-drawn"] });
+    assert.deepEqual({ id: netbird?.designId, removed: netbird?.duplicatesRemoved }, { id: "nb-a", removed: ["nb-b"] });
+    assert.deepEqual(hl.deletedDesigns.sort(), ["apps-empty", "nb-b"]);
+    assert.ok(
+      hl.designs.some(d => d.id === "apps-drawn"),
+      "a design with anything on it is never deleted",
+    );
+  });
+
+  it("re-checks a duplicate's canvas just before deleting it", async () => {
+    const hl = memoryHomelable({ designs: [design("t1", "Tailscale", 1, 4), design("t2", "Tailscale", 2, 0)], canvases: { t1: canvasWith(4) } });
+    // The list says t2 is empty, but something was drawn on it since.
+    const load = hl.client.loadCanvas;
+    hl.client.loadCanvas = async id => (id === "t2" ? canvasWith(1) : load(id));
+    const [, ts] = await syncHomelable(fixtureGraph(), hl.client);
+    assert.deepEqual({ id: ts.designId, kept: ts.duplicatesKept }, { id: "t1", kept: ["t2"] });
+    assert.deepEqual(hl.deletedDesigns, []);
+  });
+
+  it("re-lists right before creating, and uses a design another run created meanwhile", async () => {
+    const hl = memoryHomelable();
+    // Another run creates Apps between this run's first list and its per-design check.
+    let lists = 0;
+    const list = hl.client.listDesigns;
+    hl.client.listDesigns = async () => {
+      lists += 1;
+      if (lists === 2) hl.designs.push(design("theirs", "Apps", 0));
+      return list();
+    };
+    const outcomes = await syncHomelable(fixtureGraph(), hl.client, [{ name: "Apps", project: (await import("./project-apps.ts")).projectApps }]);
+    assert.deepEqual({ id: outcomes[0].designId, created: outcomes[0].created }, { id: "theirs", created: false });
+    assert.ok(!hl.calls.some(c => c.startsWith("createDesign")), "nothing created");
+  });
+
+  it("two syncs started in the same second end with one design per name", async () => {
+    const hl = memoryHomelable();
+    const [a, b] = await Promise.all([syncHomelable(fixtureGraph(), hl.client), syncHomelable(fixtureGraph(), hl.client)]);
+    // The in-memory backend interleaves the two at every await, so both did create each design...
+    assert.equal(hl.calls.filter(c => c.startsWith("createDesign")).length, 8);
+    assert.equal(hl.deletedDesigns.length, 4, "...and the four losers, still empty, were deleted");
+    assert.deepEqual(
+      a.map(o => o.designId),
+      b.map(o => o.designId),
+      "both saved into the same designs",
+    );
+    const names = hl.designs.map(d => d.name).sort();
+    assert.deepEqual(names, ["Apps", "NetBird", "Tailscale", "UniFi"]);
+    for (const d of hl.designs) assert.ok((hl.canvases.get(d.id)?.nodes.length ?? 0) > 0, `${d.name} is the one drawn on`);
   });
 });
 

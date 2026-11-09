@@ -4,8 +4,11 @@
  *
  * One run:
  *   1. project all four designs from one read of the graph (pure, ./project-*.ts);
- *   2. find each design by name, or create it. The UniFi design adopts the
- *      empty "Network Topology" design Homelable starts with, by renaming it;
+ *   2. find each design by name on a fresh list, or create it. The UniFi
+ *      design adopts the empty "Network Topology" design Homelable starts
+ *      with, by renaming it. Several designs with one name (two runs at once)
+ *      resolve to one by `pickDesign`, and the EMPTY others are deleted
+ *      (`ensureDesign` has the rules);
  *   3. per design: read its current canvas, for the inventory row each node
  *      already points at and the viewport someone last left it at, then save
  *      the projection over it;
@@ -20,6 +23,8 @@
  *
  * Designs the sync does not own are never touched.
  */
+
+import { HttpError } from "../http.ts";
 import { type Canvas, type DesignName, isOwnedRow, savePayload } from "./canvas.ts";
 import type { Design, HomelableClient, InventoryRow } from "./client.ts";
 import type { MapGraph } from "./graph.ts";
@@ -50,25 +55,88 @@ export interface DesignOutcome {
   edges?: number;
   drift?: number;
   created?: boolean;
+  /** Empty designs with this name the run deleted (left by a concurrent run). */
+  duplicatesRemoved?: string[];
+  /** Designs with this name it left alone: something is drawn on them. Worth a look by hand. */
+  duplicatesKept?: string[];
 }
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
-const isEmpty = (d: Design) => !d.node_count && !d.group_count && !d.text_count;
+const contents = (d: Design) => (d.node_count ?? 0) + (d.group_count ?? 0) + (d.text_count ?? 0);
+const isEmpty = (d: Design) => contents(d) === 0;
 
-/** The design to save into, creating or adopting one when it is missing. */
-async function ensureDesign(client: HomelableClient, existing: Design[], plan: DesignPlan): Promise<{ design: Design; created: boolean }> {
-  // Oldest first (the API lists by created_at), so a duplicate name resolves the same way every run.
-  const found = existing.find(d => d.name === plan.name);
-  if (found) return { design: found, created: false };
-  const adoptable = plan.adopt ? existing.find(d => d.name === plan.adopt && isEmpty(d)) : undefined;
-  if (adoptable) {
-    const renamed = await client.renameDesign(adoptable.id, plan.name);
-    adoptable.name = plan.name;
-    return { design: { ...adoptable, ...renamed }, created: true };
+/**
+ * Which of several designs sharing a name the sync uses: the one with the
+ * most on it, then the oldest, then the lowest id. Every concurrent run
+ * picks the same one from the same list, so two syncs that both created a
+ * design converge on one of them.
+ */
+export function pickDesign(candidates: Design[]): Design {
+  return [...candidates].sort((a, b) => contents(b) - contents(a) || (a.created_at ?? "").localeCompare(b.created_at ?? "") || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+}
+
+export interface EnsuredDesign {
+  design: Design;
+  created: boolean;
+  /** Empty duplicates of the name this run deleted. */
+  removed: string[];
+  /** Duplicates left alone because something is drawn on them, or whose delete failed. */
+  kept: string[];
+}
+
+/**
+ * The design to save into, from a FRESH list (not the run's first one: a
+ * concurrent sync, or a manual Job started in the same second, may have
+ * created it since). Missing, it is adopted or created, and the list read
+ * again afterwards, so two runs that both created one resolve to the same
+ * design by `pickDesign`.
+ *
+ * The other designs with the name are deleted only when they are empty, of
+ * type network, and still empty on a fresh read of their canvas just before
+ * the delete; a duplicate with anything on it is never deleted, only
+ * reported in `kept`. A failed delete is reported the same way and never
+ * fails the design.
+ *
+ * Why no lease: with this, concurrent runs converge on one design and each
+ * writes the same full replace into it, and the duplicate inventory rows two
+ * first saves can mint are owned, undrawn rows the next clean-up removes. A
+ * lease would add a second store and an expiry to tune for no change in the
+ * end state.
+ */
+async function ensureDesign(client: HomelableClient, plan: DesignPlan): Promise<EnsuredDesign> {
+  let designs = await client.listDesigns();
+  let created = false;
+  if (!designs.some(d => d.name === plan.name)) {
+    const adoptable = plan.adopt ? designs.find(d => d.name === plan.adopt && isEmpty(d)) : undefined;
+    if (adoptable) await client.renameDesign(adoptable.id, plan.name);
+    else await client.createDesign(plan.name);
+    created = true;
+    designs = await client.listDesigns();
   }
-  const created = await client.createDesign(plan.name);
-  existing.push(created);
-  return { design: created, created: true };
+  const matches = designs.filter(d => d.name === plan.name);
+  if (matches.length === 0) throw new Error(`design ${plan.name} is missing right after it was created`);
+  const design = pickDesign(matches);
+  const removed: string[] = [];
+  const kept: string[] = [];
+  for (const other of matches.filter(d => d.id !== design.id)) {
+    if (!isEmpty(other) || other.design_type !== "network") {
+      kept.push(other.id);
+      continue;
+    }
+    try {
+      const canvas = await client.loadCanvas(other.id);
+      if (canvas.nodes.length > 0 || canvas.edges.length > 0) {
+        kept.push(other.id);
+        continue;
+      }
+      await client.deleteDesign(other.id);
+      removed.push(other.id);
+    } catch (error) {
+      // 404: a concurrent run deleted it first, which is the outcome wanted.
+      if (!(error instanceof HttpError && error.status === 404)) kept.push(other.id);
+    }
+  }
+  return { design, created, removed, kept };
 }
 
 export async function syncHomelable(graph: MapGraph, client: HomelableClient, plans: DesignPlan[] = DESIGNS): Promise<DesignOutcome[]> {
@@ -76,9 +144,8 @@ export async function syncHomelable(graph: MapGraph, client: HomelableClient, pl
     // An empty observed layer (Neo4j just rebuilt) would wipe every design; leave them until the collector has run.
     return plans.map(p => ({ design: p.name, status: "failed", error: "the observed layer is empty; designs left as they were" }));
   }
-  let existing: Design[];
   try {
-    existing = await client.listDesigns();
+    await client.listDesigns();
   } catch (error) {
     return plans.map(p => ({ design: p.name, status: "failed", error: `listing designs: ${message(error)}` }));
   }
@@ -87,12 +154,22 @@ export async function syncHomelable(graph: MapGraph, client: HomelableClient, pl
   for (const plan of plans) {
     try {
       const canvas = plan.project(graph);
-      const { design, created } = await ensureDesign(client, existing, plan);
+      const { design, created, removed, kept } = await ensureDesign(client, plan);
       const current = await client.loadCanvas(design.id);
       const deviceIds = new Map(current.nodes.filter(n => n.device_id).map(n => [n.id, n.device_id as string]));
       const body = savePayload(canvas, design.id, { deviceIds, viewport: current.viewport, customStyle: current.custom_style ?? null });
       await client.saveCanvas(body);
-      outcomes.push({ design: plan.name, status: "ok", designId: design.id, created, nodes: body.nodes.length, edges: body.edges.length, drift: canvas.nodes.filter(n => n.drift).length });
+      outcomes.push({
+        design: plan.name,
+        status: "ok",
+        designId: design.id,
+        created,
+        nodes: body.nodes.length,
+        edges: body.edges.length,
+        drift: canvas.nodes.filter(n => n.drift).length,
+        duplicatesRemoved: removed.length > 0 ? removed : undefined,
+        duplicatesKept: kept.length > 0 ? kept : undefined,
+      });
     } catch (error) {
       outcomes.push({ design: plan.name, status: "failed", error: message(error) });
     }
