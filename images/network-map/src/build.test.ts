@@ -198,6 +198,10 @@ describe("buildGraph: the schema's example, all six sources", async () => {
     assert.deepEqual(lan.props.sources, ["proxmox", "unifi"]);
     assert.equal(lan.source, "unifi");
     assert.equal(lan.firstSeen, "2026-01-01T00:00:00.000Z");
+    // UniFi's own first sight, apart from firstSeen, for the unknown-client alert.
+    assert.equal(lan.props.unifiFirstSeen, "2026-01-01T00:00:00.000Z");
+    const tailnet = node(plan, "Interface", "tailscale:tailnet:100.101.1.20")!;
+    assert.equal(tailnet.props.unifiFirstSeen, undefined);
     assert.ok(rel(plan, "ON", lan.key, "unifi:lan"));
     assert.ok(rel(plan, "MEMBER_OF", "tailscale:tailnet:100.101.1.20", "tailscale:tag:dockge"));
   });
