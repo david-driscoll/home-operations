@@ -29,7 +29,10 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
-          files: kubernetes/**
+          files: |
+            kubernetes/**
+            scripts/flate-supply
+            .github/workflows/flux-local.yaml
 
   test:
     name: Test
@@ -48,7 +51,8 @@ jobs:
           cache: true
 
       - name: Run flate test
-        run: flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10
+        # Placeholder cluster-secrets/shared-secrets per namespace: see scripts/flate-supply.
+        run: scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply -
 
   # `flate test` renders Helm charts. It does NOT run Flux postBuild envsubst
   # and it does NOT run the external-secrets template engine, so it passes
@@ -101,7 +105,7 @@ jobs:
       - name: Run flate diff
         id: diff
         run: |
-          flate diff all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 -o github > diff.patch
+          scripts/flate-supply | flate diff all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply - -o github > diff.patch
           cat diff.patch >> "$GITHUB_STEP_SUMMARY"
           {
             echo 'diff<<EOF'
