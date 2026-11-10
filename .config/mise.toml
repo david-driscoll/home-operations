@@ -144,9 +144,10 @@ description = 'Run flate'
 # repo and tries to parse every JSON/TS file it finds, emitting a
 # `loader: file failed to parse` line for each sdks/*/tsconfig.json before
 # arriving at the same 350 resources. Scoped, the run drops from ~5s to ~1.5s.
-# Kept in step with the `flate` step in .config/hk.pkl.
+# Kept in step with the `flate` step in .config/hk.pkl; scripts/flate-supply
+# explains the piped placeholder Secrets.
 run = [
-  'flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10',
+  'scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply -',
 ]
 
 [tasks.eso-values-lint]
