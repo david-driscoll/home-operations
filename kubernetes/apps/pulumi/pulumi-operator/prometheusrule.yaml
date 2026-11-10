@@ -12,7 +12,12 @@ spec:
           # Fires when a stack has accumulated failures (covers both "failed" and
           # "retryingAfterFailure" states). lastUpdate.failures is a reliable counter
           # that increments on every failed run regardless of which condition type is set.
-          expr: kube_stack_last_update_failures > 5
+          # The threshold must stay at or below 3: the operator gives up after the third
+          # failed `up` ("up failed 3 times; not retrying until the spec or source
+          # changes"), so the counter never climbs past 3 and the old `> 5` could not fire.
+          # On 2026-11-09 a GitHub outage stalled authentik and unifi-network for ~18h
+          # without a page.
+          expr: kube_stack_last_update_failures >= 3
           for: 5m
           labels:
             severity: critical
@@ -21,15 +26,19 @@ spec:
             description: "Stack {{ $labels.namespace }}/{{ $labels.name }} has {{ $value }} consecutive failures. Check the stack logs for details."
 
         - alert: PulumiStackStalled
-          # Fires when a stack has last_update_state == 0 (not succeeded) AND
-          # has been stuck for a long time with high failure count.
-          expr: kube_stack_last_update_failures > 100
-          for: 30m
+          # Fires when the operator has stopped retrying a failed update: the Stalled
+          # condition with reason UpdateFailed. It stays stalled until the spec or
+          # source changes or someone sets pulumi.com/reconciliation-request, even when
+          # the cause was temporary (a GitHub provider download timing out). This
+          # replaces `kube_stack_last_update_failures > 100`, which could never fire
+          # because the counter stops at 3.
+          expr: kube_stack_status_condition{type="Stalled", reason="UpdateFailed"} == 1
+          for: 15m
           labels:
             severity: critical
           annotations:
             summary: "Pulumi Stack {{ $labels.name }} is stalled"
-            description: "Stack {{ $labels.namespace }}/{{ $labels.name }} has {{ $value }} failures and cannot make progress."
+            description: "Stack {{ $labels.namespace }}/{{ $labels.name }} gave up after repeated failed updates and will not retry on its own. Read status.lastUpdate.message for the cause, fix it, then re-run with `kubectl annotate stack -n {{ $labels.namespace }} {{ $labels.name }} pulumi.com/reconciliation-request=$(date +%s) --overwrite`."
 
         - alert: PulumiStackPrerequisiteNotSatisfied
           # Reconciling condition has type="Reconciling" status="True" reason="PrerequisiteNotSatisfied"
