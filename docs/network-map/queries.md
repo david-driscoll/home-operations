@@ -295,26 +295,46 @@ ORDER BY name
 
 ### Unknown clients on Home and IoT
 
-Which machines that nothing declares joined the Home or IoT network in the
-last 24 hours? Guest is left out. Alert `NetworkMapUnknownClient`, which
-clears 24 hours after the client was first seen. **Needs the declared layer**
-(it stays silent while there are no declared machines).
+Which clients that nothing declares did UniFi first see on the Home or IoT
+VLAN in the last 24 hours? Guest is left out. Alert `NetworkMapUnknownClient`,
+which clears 24 hours after UniFi first saw the client. **Needs the declared
+layer** (it stays silent while there are no declared machines). The alert also
+skips randomised MACs (locally administered: second hex digit 2, 6, A or E),
+which phones rotate and UniFi then sees as new; the query below still lists
+them.
 
 ```cypher
 // :param networks => ['home', 'iot']
 // :param sinceMs => datetime().epochMillis - 24 * 3600 * 1000
-MATCH (m:Machine {layer: 'observed'})-[:HAS_INTERFACE]->(i:Interface {layer: 'observed'})-[:ON]->(n:Network {layer: 'observed', source: 'unifi'})
-WHERE toLower(n.name) IN $networks
-  AND m.firstSeen.epochMillis >= $sinceMs
-  AND NOT EXISTS { MATCH (:Machine {layer: 'declared'})-[:DECLARES]->(m) }
+MATCH (m:Machine {layer: 'observed', kind: 'client'})-[:HAS_INTERFACE]->(i:Interface {layer: 'observed'})-[:ON]->(n:Network {layer: 'observed', kind: 'vlan'})
+WHERE NOT m:Device
+  AND n.networkId STARTS WITH 'unifi:'
+  AND toLower(n.name) IN $networks
+  AND NOT EXISTS { MATCH ({layer: 'declared'})-[:DECLARES]->(m) }
   AND NOT EXISTS { MATCH ({layer: 'declared'})-[:DECLARES]->(i) }
-RETURN m.machineId AS machineId, m.name AS name, m.kind AS kind, m.firstSeen.epochMillis AS firstSeenMs,
-       n.name AS network, i.mac AS mac, coalesce(i.ips, []) AS ips, i.hostname AS hostname
-ORDER BY firstSeenMs DESC
+WITH m, i, n, datetime(i.unifiFirstSeen).epochMillis AS unifiFirstSeenMs
+WHERE coalesce(unifiFirstSeenMs, m.firstSeen.epochMillis) >= $sinceMs
+RETURN m.machineId AS machineId, m.name AS name, m.kind AS kind, m:Device AS isDevice,
+       unifiFirstSeenMs, m.firstSeen.epochMillis AS firstSeenMs,
+       n.networkId AS networkId, n.kind AS networkKind, n.name AS network,
+       i.mac AS mac, coalesce(i.ips, []) AS ips, i.hostname AS hostname
+ORDER BY machineId
 ```
 
-The network names are lowercased. The CronJob sets them with
-`UNKNOWN_CLIENT_NETWORKS`.
+What counts:
+
+- **Only clients.** `kind: 'client'` and not a `:Device`: a UniFi switch or
+  AP is a Machine too, and a machine joined to a Proxmox guest or a node takes
+  that kind instead.
+- **Only UniFi VLANs**, by the UniFi network's name (lowercased; the CronJob
+  sets them with `UNKNOWN_CLIENT_NETWORKS`). The network must have a `unifi:`
+  id: an interface UniFi could not place lands on the `site-lan:<site>`
+  fallback, whose name is the site (`home`), and overlay peers' LAN NICs land
+  there too.
+- **New by UniFi's clock.** `unifiFirstSeen` on the interface is UniFi's own
+  `first_seen` for the client. The Machine's `firstSeen` is only the fallback
+  for an interface without one: it is the collector's first sighting, so every
+  client looked new on the day the graph started.
 
 ### Reach drift
 

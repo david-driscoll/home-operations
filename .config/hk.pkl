@@ -109,20 +109,23 @@ local linters = new Mapping<String, Step> {
   // `loader: file failed to parse` for each sdks/*/tsconfig.json. Scoped, the
   // run drops from ~5s to ~1.5s warm.
   //
-  // `--allow-missing-secrets` is what lets this run off-cluster at all: the
-  // ${VAR}s from cluster-secrets/shared-secrets render as placeholders. That
-  // is also this step's blind spot — flate does NOT run Flux postBuild envsubst
-  // or the external-secrets template engine, so it passes cleanly on a values
+  // `scripts/flate-supply | ... --allow-missing-kinds Secret --supply -` is
+  // what lets this run off-cluster at all. Since flate v0.7 SOPS keys are
+  // unreadable and a missing substituteFrom Secret blocks the Kustomization,
+  // so the script pipes in cluster-secrets/shared-secrets for every namespace
+  // with the real key names and placeholder values. That is also this step's
+  // blind spot — the ${VAR}s render as placeholders, and flate does NOT run
+  // the external-secrets template engine, so it passes cleanly on a values
   // file that would take an app to zero pods.
   //
   // Cold cache: the first run pulls every Helm chart and OCI source over the
-  // network and is far slower than the warm number above. `--source-retry-attempts 10`
-  // absorbs transient registry flake. If you need to commit offline with a cold
+  // network and is far slower than the warm number above. v0.7 dropped
+  // `--source-retry-attempts`. If you need to commit offline with a cold
   // cache, `HK=0 git commit` bypasses the hook entirely.
   ["flate"] = new Step {
     glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml")
     check =
-      "flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 --no-progress"
+      "scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply - --no-progress"
   }
 
   // Closes the blind spot named in the `flate` comment directly above: this is

@@ -18,7 +18,7 @@ kind: MCPServer
 metadata:
   name: toolhive-docs
 spec:
-  image: ghcr.io/stackloklabs/toolhive-doc-mcp:v0.0.22@sha256:9d56bde409f030bdd5486d73b755cd7655f390b6bd9cf23df044cb4772471aca
+  image: ghcr.io/stackloklabs/toolhive-doc-mcp:v0.0.23@sha256:3650903bbc700651ea303a4865bddde21931974c17c55720a9000924fa7b1a73
 
   # The image speaks Streamable HTTP directly, so `proxyMode` does not apply --
   # that field is read only when transport is `stdio`.

@@ -16,6 +16,7 @@ import {
   declaredReachQuery,
   evaluate,
   fingerprint,
+  isRandomizedMac,
   JOB,
   normalizePorts,
   type ObservedReachRow,
@@ -24,6 +25,7 @@ import {
   resolutions,
   routesQuery,
   sourcesQuery,
+  type UnknownClientRow,
   unknownClientsQuery,
 } from "./drift.ts";
 
@@ -109,19 +111,59 @@ describe("classifyPresence", () => {
   });
 });
 
+describe("isRandomizedMac", () => {
+  it("is true for locally administered MACs (second hex digit 2, 6, A or E)", () => {
+    for (const mac of ["02:00:00:00:00:01", "46:9f:8d:f6:41:09", "7e:1c:4d:89:64:5c", "a2:26:d7:71:72:f7", "3e:49:79:2f:fd:f3"]) assert.equal(isRandomizedMac(mac), true, mac);
+  });
+  it("is false for vendor MACs and missing ones", () => {
+    for (const mac of ["94:2a:6f:9a:b0:63", "84:78:48:a4:56:b9", "00:1a:2b:00:00:bb", undefined, ""]) assert.equal(isRandomizedMac(mac), false, String(mac));
+  });
+});
+
 describe("classifyUnknownClients", () => {
-  it("keeps recent clients on watched networks, one finding per machine, and leaves Guest out", () => {
-    const findings = classifyUnknownClients(
-      [
-        { machineId: "m1", name: "phone", firstSeenMs: hoursAgo(2), network: "Home", mac: "aa:bb", ips: ["10.0.0.5"] },
-        { machineId: "m1", name: "phone", firstSeenMs: hoursAgo(2), network: "IoT", mac: "aa:cc", ips: ["10.1.0.5"] },
-        { machineId: "m2", name: "visitor", firstSeenMs: hoursAgo(1), network: "Guest", mac: "dd:ee", ips: [] },
-        { machineId: "m3", name: "old", firstSeenMs: hoursAgo(30), network: "Home", mac: "ff:00", ips: [] },
-      ],
-      ["Home", "IoT"],
-      now,
-    );
-    assert.deepEqual(findings, [{ machineId: "m1", name: "phone", firstSeenMs: hoursAgo(2), networks: ["Home", "IoT"], macs: ["aa:bb", "aa:cc"], ips: ["10.0.0.5", "10.1.0.5"] }]);
+  const row = (over: Partial<UnknownClientRow>): UnknownClientRow => ({
+    machineId: "unifi:client:aa:bb",
+    name: "phone",
+    kind: "client",
+    isDevice: false,
+    unifiFirstSeenMs: hoursAgo(2),
+    firstSeenMs: hoursAgo(2),
+    networkId: "unifi:home-id",
+    networkKind: "vlan",
+    network: "Home",
+    mac: "00:1a:2b:00:00:bb",
+    ips: [],
+    ...over,
+  });
+
+  it("skips a new client whose MAC is randomised (private Wi-Fi address)", () => {
+    assert.deepEqual(classifyUnknownClients([row({ mac: "a2:26:d7:71:72:f7" })], ["Home", "IoT"], now), []);
+  });
+
+  it("flags a genuinely new client, one finding per machine across Home and IoT", () => {
+    const findings = classifyUnknownClients([row({ ips: ["10.0.0.5"] }), row({ networkId: "unifi:iot-id", network: "IoT", mac: "00:1a:2b:00:00:cc", ips: ["10.1.0.5"] })], ["Home", "IoT"], now);
+    assert.deepEqual(findings, [{ machineId: "unifi:client:aa:bb", name: "phone", firstSeenMs: hoursAgo(2), networks: ["Home", "IoT"], macs: ["00:1a:2b:00:00:bb", "00:1a:2b:00:00:cc"], ips: ["10.0.0.5", "10.1.0.5"] }]);
+  });
+
+  it("does not flag an old UniFi client the collector only saw recently", () => {
+    // The graph started yesterday, so the collector's firstSeen is recent; UniFi has known it for months.
+    assert.deepEqual(classifyUnknownClients([row({ unifiFirstSeenMs: hoursAgo(24 * 90), firstSeenMs: hoursAgo(2) })], ["Home"], now), []);
+    // With no UniFi first-seen, the collector's is the fallback.
+    assert.equal(classifyUnknownClients([row({ unifiFirstSeenMs: null, firstSeenMs: hoursAgo(2) })], ["Home"], now).length, 1);
+    assert.deepEqual(classifyUnknownClients([row({ unifiFirstSeenMs: null, firstSeenMs: hoursAgo(30) })], ["Home"], now), []);
+  });
+
+  it("excludes UniFi Devices: a switch is a Machine too", () => {
+    const usw = row({ machineId: "mac:94:2a:6f:9a:b0:63", name: "USW Flex 2.5G 8 PoE", kind: "physical", isDevice: true });
+    assert.deepEqual(classifyUnknownClients([usw, row({ machineId: usw.machineId, kind: "client", isDevice: true })], ["Home"], now), []);
+    // Nor a joined infrastructure machine (an LXC UniFi also lists as a client).
+    assert.deepEqual(classifyUnknownClients([row({ kind: "lxc" })], ["Home"], now), []);
+  });
+
+  it("excludes an overlay-only peer on a site-lan fallback network, and Guest", () => {
+    const peer = row({ machineId: "netbird:spitfire", name: "spitfire-lqtsj", networkId: "site-lan:home", networkKind: "site-lan", network: "home" });
+    assert.deepEqual(classifyUnknownClients([peer, row({ networkId: "netbird:netbird", networkKind: "netbird", network: "netbird" })], ["Home", "IoT"], now), []);
+    assert.deepEqual(classifyUnknownClients([row({ networkId: "unifi:guest-id", network: "Guest" })], ["Home", "IoT"], now), []);
   });
 });
 
@@ -205,7 +247,21 @@ function everything(machines: number, apps: number, reachSystems: string[]): Dri
       { kind: "machine", nodeKey: "gateway-luna", name: "gateway-luna", declaredSinceMs: hoursAgo(100), observedLastSeenMs: [hoursAgo(8)] },
       { kind: "app", nodeKey: "jellyfin", name: "jellyfin", declaredSinceMs: hoursAgo(100), observedLastSeenMs: [] },
     ],
-    unknownClients: [{ machineId: "unifi:client:aa:bb", name: "phone", firstSeenMs: hoursAgo(1), network: "Home", mac: "aa:bb", ips: [] }],
+    unknownClients: [
+      {
+        machineId: "unifi:client:aa:bb",
+        name: "phone",
+        kind: "client",
+        isDevice: false,
+        unifiFirstSeenMs: hoursAgo(1),
+        firstSeenMs: hoursAgo(1),
+        networkId: "unifi:home-id",
+        networkKind: "vlan",
+        network: "Home",
+        mac: "00:1a:2b:00:00:bb",
+        ips: [],
+      },
+    ],
     declaredReach: [{ system: "netbird", fromKey: "netbird:admins", toKey: "netbird:servers", ports: [], fromObserved: ["netbird:admins"], toObserved: ["netbird:servers"] }],
     observedReach: [],
     sources: [{ source: "docker", status: "failed", lastSuccessMs: hoursAgo(7) }],

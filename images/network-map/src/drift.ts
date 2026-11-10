@@ -13,8 +13,9 @@
  *                                     NetBird route with no router at all
  *   NetworkMapDeclaredNotObserved     a declared machine (gateways included)
  *                                     or app nothing has observed for 6h
- *   NetworkMapUnknownClient           a machine on Home or IoT that nothing
- *                                     declares, first seen in the last 24h
+ *   NetworkMapUnknownClient           a client (not a UniFi device) on the
+ *                                     Home or IoT VLAN that nothing declares,
+ *                                     first seen by UniFi in the last 24h
  *   NetworkMapReachDrift              live Tailscale/NetBird/UniFi reach that
  *                                     differs from the declared reach
  *   NetworkMapCollectorSourceStale    a collector source with no full
@@ -142,18 +143,33 @@ export const declaredPresenceQuery: Statement = {
   params: {},
 };
 
-/** Undeclared machines on the named UniFi networks, first seen since `$sinceMs`. */
+/**
+ * Candidate unknown clients: the interfaces of undeclared observed machines
+ * on the named UniFi networks, first seen since `$sinceMs`. Only `unifi:`
+ * networks: the `site-lan:<site>` fallbacks are named after their site, so
+ * `home` would match an overlay peer's LAN NIC too. "First seen" is UniFi's
+ * own first sight of the client (`unifiFirstSeen`, ./build.ts), falling back
+ * to the collector's only when UniFi gave none: the collector's first
+ * sighting of an old phone is just the day the graph started.
+ * Only `kind: client` machines that are not UniFi Devices (a switch or AP is
+ * a Machine too); classifyUnknownClients applies the same rules again.
+ */
 export function unknownClientsQuery(networks: string[], sinceMs: number): Statement {
   return {
     text: [
-      "MATCH (m:Machine {layer: 'observed'})-[:HAS_INTERFACE]->(i:Interface {layer: 'observed'})-[:ON]->(n:Network {layer: 'observed', source: 'unifi'})",
-      "WHERE toLower(n.name) IN $networks",
-      "  AND m.firstSeen.epochMillis >= $sinceMs",
-      "  AND NOT EXISTS { MATCH (:Machine {layer: 'declared'})-[:DECLARES]->(m) }",
+      "MATCH (m:Machine {layer: 'observed', kind: 'client'})-[:HAS_INTERFACE]->(i:Interface {layer: 'observed'})-[:ON]->(n:Network {layer: 'observed', kind: 'vlan'})",
+      "WHERE NOT m:Device",
+      "  AND n.networkId STARTS WITH 'unifi:'",
+      "  AND toLower(n.name) IN $networks",
+      "  AND NOT EXISTS { MATCH ({layer: 'declared'})-[:DECLARES]->(m) }",
       "  AND NOT EXISTS { MATCH ({layer: 'declared'})-[:DECLARES]->(i) }",
-      "RETURN m.machineId AS machineId, m.name AS name, m.kind AS kind, m.firstSeen.epochMillis AS firstSeenMs,",
-      "       n.name AS network, i.mac AS mac, coalesce(i.ips, []) AS ips, i.hostname AS hostname",
-      "ORDER BY firstSeenMs DESC",
+      "WITH m, i, n, datetime(i.unifiFirstSeen).epochMillis AS unifiFirstSeenMs",
+      "WHERE coalesce(unifiFirstSeenMs, m.firstSeen.epochMillis) >= $sinceMs",
+      "RETURN m.machineId AS machineId, m.name AS name, m.kind AS kind, m:Device AS isDevice,",
+      "       unifiFirstSeenMs, m.firstSeen.epochMillis AS firstSeenMs,",
+      "       n.networkId AS networkId, n.kind AS networkKind, n.name AS network,",
+      "       i.mac AS mac, coalesce(i.ips, []) AS ips, i.hostname AS hostname",
+      "ORDER BY machineId",
     ].join("\n"),
     params: { networks: networks.map(n => n.toLowerCase()), sinceMs },
   };
@@ -225,7 +241,14 @@ export interface UnknownClientRow {
   machineId: string;
   name?: string | null;
   kind?: string | null;
-  firstSeenMs: number;
+  /** The machine is also a UniFi Device (gateway, switch, AP). */
+  isDevice?: boolean | null;
+  /** UniFi's own first sight of this client, when it reported one. */
+  unifiFirstSeenMs?: number | null;
+  /** The collector's first sight of the machine. */
+  firstSeenMs?: number | null;
+  networkId: string;
+  networkKind?: string | null;
   network: string;
   mac?: string | null;
   ips: string[];
@@ -347,14 +370,39 @@ export interface UnknownClientFinding {
   ips: string[];
 }
 
-/** One finding per machine, however many of its interfaces are on the watched networks. */
+/**
+ * An unknown client: a `kind: client` machine that is not UniFi
+ * infrastructure (a switch or AP is a Machine and a Device), with an
+ * interface on a watched UniFi VLAN (by name; never a `site-lan:` fallback or
+ * an overlay), first seen by UniFi within `hours`. The collector's own first
+ * sighting counts only when UniFi reported none. Declared machines never get
+ * here: the query drops them. One finding per machine, however many of its
+ * interfaces are on the watched networks.
+ */
+/**
+ * A locally administered MAC (the 0x02 bit of the first octet: second hex digit
+ * 2, 6, A or E) -- what phones and laptops use for private/rotating Wi-Fi
+ * addresses. Each rotation is a "new" UniFi client, so the unknown-client alert
+ * skips them (user decision 2026-11-10); a new device with a vendor MAC still
+ * alerts.
+ */
+export function isRandomizedMac(mac: string | undefined): boolean {
+  const m = /^\s*([0-9a-f]{2})[:-]/i.exec(mac ?? "");
+  return m !== null && (Number.parseInt(m[1], 16) & 0x02) !== 0;
+}
+
 export function classifyUnknownClients(rows: UnknownClientRow[], networks: string[], now: Date, hours: number = UNKNOWN_CLIENT_HOURS): UnknownClientFinding[] {
   const watched = new Set(networks.map(n => n.toLowerCase()));
   const cutoff = now.getTime() - hours * HOUR_MS;
   const byMachine = new Map<string, UnknownClientFinding>();
   for (const row of rows) {
-    if (!watched.has(row.network.toLowerCase()) || row.firstSeenMs < cutoff) continue;
-    const f = byMachine.get(row.machineId) ?? { machineId: row.machineId, name: row.name || row.hostname || row.mac || row.machineId, firstSeenMs: row.firstSeenMs, networks: [], macs: [], ips: [] };
+    if (row.isDevice === true || row.kind !== "client") continue;
+    if (isRandomizedMac(row.mac)) continue;
+    if (!row.networkId.startsWith("unifi:") || (row.networkKind ?? "vlan") !== "vlan" || !watched.has(row.network.toLowerCase())) continue;
+    const firstSeenMs = typeof row.unifiFirstSeenMs === "number" ? row.unifiFirstSeenMs : row.firstSeenMs;
+    if (typeof firstSeenMs !== "number" || firstSeenMs < cutoff) continue;
+    const f = byMachine.get(row.machineId) ?? { machineId: row.machineId, name: row.name || row.hostname || row.mac || row.machineId, firstSeenMs, networks: [], macs: [], ips: [] };
+    f.firstSeenMs = Math.min(f.firstSeenMs, firstSeenMs);
     f.networks = uniqSorted([...f.networks, row.network]);
     f.macs = uniqSorted([...f.macs, ...(row.mac ? [row.mac] : [])]);
     f.ips = uniqSorted([...f.ips, ...row.ips]);

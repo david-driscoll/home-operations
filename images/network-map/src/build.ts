@@ -176,6 +176,10 @@ export function buildGraph(results: SourceResult[], ctx: BuildContext): BuildOut
       p.nic ??= iface.nic;
       if (iface.online !== undefined) p.online = p.online === true || iface.online;
       node.firstSeen = minIso([node.firstSeen, iface.firstSeen]);
+      // UniFi's own first sight of the client, kept apart from firstSeen (which
+      // other sources and the collector's first run also feed), for the
+      // unknown-client alert (./drift.ts).
+      if (o.source === "unifi" && iface.firstSeen) p.unifiFirstSeen = minIso([p.unifiFirstSeen as string | undefined, iface.firstSeen]);
       node.lastSeen = maxIso([node.lastSeen, iface.lastSeen]);
       for (const ip of iface.ips) if (!machineByIp.has(ip)) machineByIp.set(ip, m.machineId);
 

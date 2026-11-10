@@ -24,7 +24,7 @@ talosctl = "1.14.4"
 # `mise run talos:validate-config` refuses to run when the vendored minor is
 # older than topf.yaml's talosVersion. Review `talos:diff` on every bump.
 "aqua:postfinance/topf" = "0.6.2"
-yq = "4.54.2"
+yq = "4.54.3"
 jq = "1.8.2"
 sops = "3.13.3"
 flux2 = "2.10.0"
@@ -68,7 +68,7 @@ node = "26.13.0"
 pulumi = "3.274.1"
 "github:microsoft/apm" = { version = "v0.35.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
-"github:home-operations/flate" = "v0.6.5"
+"github:home-operations/flate" = "v0.7.3"
 dotnet = { version = "10.0.403" }
 # Secret-reference resolver for ref+openbao:// inside documents
 # (components/store/refs.ts, PLAN §D.1). Keep this version in step with the
@@ -144,9 +144,10 @@ description = 'Run flate'
 # repo and tries to parse every JSON/TS file it finds, emitting a
 # `loader: file failed to parse` line for each sdks/*/tsconfig.json before
 # arriving at the same 350 resources. Scoped, the run drops from ~5s to ~1.5s.
-# Kept in step with the `flate` step in .config/hk.pkl.
+# Kept in step with the `flate` step in .config/hk.pkl; scripts/flate-supply
+# explains the piped placeholder Secrets.
 run = [
-  'flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10',
+  'scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply -',
 ]
 
 [tasks.eso-values-lint]

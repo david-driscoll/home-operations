@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# flate-supply -- print placeholder Secrets for `flate --supply -`.
+#
+# WHY. Since flate v0.7.0, SOPS-encrypted keys are unreadable to it, and a
+# `substituteFrom` Secret it cannot find blocks the whole Kustomization (the
+# old --allow-missing-secrets flag is gone; --allow-missing-kinds Secret does
+# not cover substituteFrom). Every Kustomization and HelmRelease here
+# substitutes from `cluster-secrets` and `shared-secrets`
+# (kubernetes/components/common), which exist in Git only in flux-system,
+# SOPS-encrypted; the reflector copies them into each namespace on the
+# cluster. So offline, nothing renders.
+#
+# This prints both Secrets for flux-system and for every namespace a
+# Kustomization lives in or targets. They have the real KEY NAMES, read from
+# the SOPS files' plaintext keys, and made-up values shaped like the real ones
+# (an IP for *_IP, a domain for *_DOMAIN...). Empty values fail chart schemas
+# and `required` checks. The values are never real: no domain, address or
+# credential of the estate is printed (see CLAUDE.md "Safety").
+#
+# Usage: scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster \
+#          --allow-missing-kinds Secret --supply -
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+meta="${repo_root}/kubernetes/flux/meta"
+
+placeholder() {
+  case "$1" in
+    LOADBALANCER_RANGE) echo "10.0.0" ;; # used as "${LOADBALANCER_RANGE}.100"
+    *_NETWORK) echo "10.0.0.0/16" ;;
+    *_IP | *_VIP) echo "10.0.0.1" ;;
+    *_EMAIL) echo "admin@example.com" ;;
+    *_DOMAIN | *_CNAME | *_SERVICE) echo "example.com" ;;
+    OIDC_ISSUER) echo "https://auth.example.com/application/o/example/" ;;
+    PUID | PGID | *_ID) echo "1000" ;;
+    *_CPU) echo "100m" ;;
+    *_MEMORY) echo "128Mi" ;;
+    *_CAPACITY) echo "1Gi" ;;
+    *_SHARED_BUFFERS) echo "128MB" ;;
+    TIMEZONE) echo "Etc/UTC" ;;
+    LOCATION) echo "us-east-1" ;;
+    *) echo "placeholder" ;;
+  esac
+}
+
+namespaces() {
+  echo flux-system
+  find "${repo_root}/kubernetes" -name ks.yaml -print0 |
+    xargs -0 yq -N 'explode(.) | [.metadata.namespace, .spec.targetNamespace] | .[] | select(. != null)'
+}
+
+secret() {
+  local name="$1" file="$2" key
+  local -a keys
+  mapfile -t keys < <(yq '(.stringData // .data) | keys | .[]' "${file}")
+  while read -r ns; do
+    printf -- '---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: %s\n  namespace: %s\nstringData:\n' "${name}" "${ns}"
+    for key in "${keys[@]}"; do
+      printf '  %s: "%s"\n' "${key}" "$(placeholder "${key}")"
+    done
+  done < <(namespaces | grep -E '^[a-z0-9-]+$' | sort -u)
+}
+
+secret cluster-secrets "${meta}/cluster-secrets.sops.yaml"
+secret shared-secrets "${meta}/shared-secrets.sops.yaml"
