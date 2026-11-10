@@ -2,23 +2,24 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
 #
 # tailscale-mcp-server (github.com/HexSleeves/tailscale-mcp,
-# @hexsleeves/tailscale-mcp-server on npm) authenticates with a STATIC-
-# looking `TAILSCALE_API_KEY` -- confirmed live via its own README, which
-# documents no OAuth-client-credentials support of its own.
+# @hexsleeves/tailscale-mcp-server on npm) authenticates with an OAuth
+# client: since 1.3.x it takes TAILSCALE_OAUTH_CLIENT_ID/_SECRET, exchanges
+# them at /api/v2/oauth/token itself, and re-mints the access token a
+# minute before it expires.
 #
-# No manual step: stacks/unifi-network/tailscale-api-token.ts mints one
-# automatically, every run of that stack (every 5 minutes --
-# kubernetes/apps/pulumi/unifi-network/stack.yaml's
-# resyncFrequencySeconds), by exchanging this estate's existing Tailscale
-# OAuth client credential (third-party-tokens/tailscale/pulumi-oauth) for a
-# short-lived access token and writing it to THIS path
-# (third-party-tokens/tailscale/api-key). Tailscale's REST API accepts an
-# OAuth-exchanged access token as a Bearer credential exactly like a
-# `tskey-api-...` key, so the swap is transparent to this MCP server --
-# see that file's header for why it lives in stacks/unifi-network
-# specifically (its 5-minute cadence is what keeps this inside the
-# token's ~1h lifetime; stacks/vault's 30 min and stacks/system's 24h
-# were both considered and rejected).
+# It used to read a TAILSCALE_API_KEY that stacks/unifi-network minted
+# every 5 minutes (third-party-tokens/tailscale/api-key, ~1h lifetime).
+# That tied this server to the health of an unrelated stack: on 2026-11-09
+# unifi-network stalled on a GitHub outage, the token expired an hour later,
+# and every API call failed. The failure surfaced only as the CLI fallback's
+# "spawn tailscale ENOENT" (see TAILSCALE_TAILNET below).
+#
+# The credential is the same OAuth client unifi-network minted from
+# (third-party-tokens/tailscale/pulumi-oauth, also read by
+# ../../database/network-map/externalsecret.yaml), so its reach is
+# unchanged. The server's own TAILSCALE_ALLOWED_TOOL_RISK default ("read")
+# still gates its write tools. The api-key path keeps being minted for
+# ../../coder/setup-status.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -28,13 +29,14 @@ spec:
     kind: ClusterSecretStore
     name: openbao
   refreshPolicy: Periodic
-  refreshInterval: 4m
+  refreshInterval: 1h
   target:
     name: toolhive-tailscale
     creationPolicy: Owner
     template:
       data:
-        TAILSCALE_API_KEY: "{{ .api_key }}"
+        TAILSCALE_OAUTH_CLIENT_ID: "{{ .client_id }}"
+        TAILSCALE_OAUTH_CLIENT_SECRET: "{{ .client_secret }}"
         # "-" is Tailscale's alias for "the default tailnet of whatever
         # credential is presenting", NOT a placeholder left unfilled.
         #
@@ -71,10 +73,14 @@ spec:
         # literal name.
         TAILSCALE_TAILNET: "-"
   data:
-    - secretKey: api_key
+    - secretKey: client_id
       remoteRef:
-        key: third-party-tokens/tailscale/api-key
-        property: key
+        key: third-party-tokens/tailscale/pulumi-oauth
+        property: username
+    - secretKey: client_secret
+      remoteRef:
+        key: third-party-tokens/tailscale/pulumi-oauth
+        property: credential
 
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
@@ -88,9 +94,8 @@ spec:
 # but npx-on-node matches this rollout's existing convention for npm-native
 # MCP packages better than pulling a second, less-established image.
 #
-# See this file's own ExternalSecret header (above): TAILSCALE_API_KEY is
-# auto-minted by stacks/unifi-network/tailscale-api-token.ts, no manual
-# step required.
+# See this file's own ExternalSecret header (above): the server reads the
+# OAuth client and mints its own tokens; no manual step required.
 #
 # NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
 # header. This server joins ../agent-tools-mcp's MCPGroup instead.
