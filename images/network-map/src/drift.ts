@@ -379,12 +379,25 @@ export interface UnknownClientFinding {
  * here: the query drops them. One finding per machine, however many of its
  * interfaces are on the watched networks.
  */
+/**
+ * A locally administered MAC (the 0x02 bit of the first octet: second hex digit
+ * 2, 6, A or E) -- what phones and laptops use for private/rotating Wi-Fi
+ * addresses. Each rotation is a "new" UniFi client, so the unknown-client alert
+ * skips them (user decision 2026-11-10); a new device with a vendor MAC still
+ * alerts.
+ */
+export function isRandomizedMac(mac: string | undefined): boolean {
+  const m = /^\s*([0-9a-f]{2})[:-]/i.exec(mac ?? "");
+  return m !== null && (Number.parseInt(m[1], 16) & 0x02) !== 0;
+}
+
 export function classifyUnknownClients(rows: UnknownClientRow[], networks: string[], now: Date, hours: number = UNKNOWN_CLIENT_HOURS): UnknownClientFinding[] {
   const watched = new Set(networks.map(n => n.toLowerCase()));
   const cutoff = now.getTime() - hours * HOUR_MS;
   const byMachine = new Map<string, UnknownClientFinding>();
   for (const row of rows) {
     if (row.isDevice === true || row.kind !== "client") continue;
+    if (isRandomizedMac(row.mac)) continue;
     if (!row.networkId.startsWith("unifi:") || (row.networkKind ?? "vlan") !== "vlan" || !watched.has(row.network.toLowerCase())) continue;
     const firstSeenMs = typeof row.unifiFirstSeenMs === "number" ? row.unifiFirstSeenMs : row.firstSeenMs;
     if (typeof firstSeenMs !== "number" || firstSeenMs < cutoff) continue;

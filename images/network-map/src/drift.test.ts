@@ -16,6 +16,7 @@ import {
   declaredReachQuery,
   evaluate,
   fingerprint,
+  isRandomizedMac,
   JOB,
   normalizePorts,
   type ObservedReachRow,
@@ -110,6 +111,15 @@ describe("classifyPresence", () => {
   });
 });
 
+describe("isRandomizedMac", () => {
+  it("is true for locally administered MACs (second hex digit 2, 6, A or E)", () => {
+    for (const mac of ["02:00:00:00:00:01", "46:9f:8d:f6:41:09", "7e:1c:4d:89:64:5c", "a2:26:d7:71:72:f7", "3e:49:79:2f:fd:f3"]) assert.equal(isRandomizedMac(mac), true, mac);
+  });
+  it("is false for vendor MACs and missing ones", () => {
+    for (const mac of ["94:2a:6f:9a:b0:63", "84:78:48:a4:56:b9", "00:1a:2b:00:00:bb", undefined, ""]) assert.equal(isRandomizedMac(mac), false, String(mac));
+  });
+});
+
 describe("classifyUnknownClients", () => {
   const row = (over: Partial<UnknownClientRow>): UnknownClientRow => ({
     machineId: "unifi:client:aa:bb",
@@ -121,14 +131,18 @@ describe("classifyUnknownClients", () => {
     networkId: "unifi:home-id",
     networkKind: "vlan",
     network: "Home",
-    mac: "aa:bb",
+    mac: "00:1a:2b:00:00:bb",
     ips: [],
     ...over,
   });
 
+  it("skips a new client whose MAC is randomised (private Wi-Fi address)", () => {
+    assert.deepEqual(classifyUnknownClients([row({ mac: "a2:26:d7:71:72:f7" })], ["Home", "IoT"], now), []);
+  });
+
   it("flags a genuinely new client, one finding per machine across Home and IoT", () => {
-    const findings = classifyUnknownClients([row({ ips: ["10.0.0.5"] }), row({ networkId: "unifi:iot-id", network: "IoT", mac: "aa:cc", ips: ["10.1.0.5"] })], ["Home", "IoT"], now);
-    assert.deepEqual(findings, [{ machineId: "unifi:client:aa:bb", name: "phone", firstSeenMs: hoursAgo(2), networks: ["Home", "IoT"], macs: ["aa:bb", "aa:cc"], ips: ["10.0.0.5", "10.1.0.5"] }]);
+    const findings = classifyUnknownClients([row({ ips: ["10.0.0.5"] }), row({ networkId: "unifi:iot-id", network: "IoT", mac: "00:1a:2b:00:00:cc", ips: ["10.1.0.5"] })], ["Home", "IoT"], now);
+    assert.deepEqual(findings, [{ machineId: "unifi:client:aa:bb", name: "phone", firstSeenMs: hoursAgo(2), networks: ["Home", "IoT"], macs: ["00:1a:2b:00:00:bb", "00:1a:2b:00:00:cc"], ips: ["10.0.0.5", "10.1.0.5"] }]);
   });
 
   it("does not flag an old UniFi client the collector only saw recently", () => {
@@ -244,7 +258,7 @@ function everything(machines: number, apps: number, reachSystems: string[]): Dri
         networkId: "unifi:home-id",
         networkKind: "vlan",
         network: "Home",
-        mac: "aa:bb",
+        mac: "00:1a:2b:00:00:bb",
         ips: [],
       },
     ],
