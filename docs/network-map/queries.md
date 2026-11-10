@@ -298,7 +298,10 @@ ORDER BY name
 Which clients that nothing declares did UniFi first see on the Home or IoT
 VLAN in the last 24 hours? Guest is left out. Alert `NetworkMapUnknownClient`,
 which clears 24 hours after UniFi first saw the client. **Needs the declared
-layer** (it stays silent while there are no declared machines).
+layer** (it stays silent while there are no declared machines). The alert also
+skips randomised MACs (locally administered: second hex digit 2, 6, A or E),
+which phones rotate and UniFi then sees as new; the query below still lists
+them.
 
 ```cypher
 // :param networks => ['home', 'iot']
