@@ -68,7 +68,7 @@ node = "26.13.0"
 pulumi = "3.274.1"
 "github:microsoft/apm" = { version = "v0.35.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
-"github:home-operations/flate" = "v0.6.5"
+"github:home-operations/flate" = "v0.7.3"
 dotnet = { version = "10.0.403" }
 # Secret-reference resolver for ref+openbao:// inside documents
 # (components/store/refs.ts, PLAN §D.1). Keep this version in step with the
