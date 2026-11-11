@@ -583,20 +583,19 @@
       },
     },
     {
-      // NetBird's server, relays and client are tagged from one upstream
-      // release: the combined server and the Azure relays
+      // NetBird's server, relays, client, reverse proxy and dashboard move in
+      // one PR: the combined server and the Azure relays
       // (components/netbird/compose.yaml), the home relay
-      // (docker/celestia/netbird-relay) and the site gateways
-      // (docker/_common/netbird-gateway). A split PR would leave a relay a
-      // release behind its management server, or the home relay behind the
-      // Azure ones. Not the dashboard: it is versioned on its own.
+      // (docker/celestia/netbird-relay), the site gateways
+      // (docker/_common/netbird-gateway), the in-cluster client and the
+      // reverse-proxy (kubernetes/apps/netbird-system). The ghcr.io copies of
+      // each image are included. The dashboard is versioned on its own
+      // upstream, but is grouped so a NetBird update lands as one change.
       description: "NetBird Group",
       groupName: "NetBird",
       matchDatasources: ["docker"],
       matchPackageNames: [
-        "netbirdio/netbird",
-        "netbirdio/netbird-server",
-        "netbirdio/relay"
+        "/^(ghcr\\.io\\/)?netbirdio\\/(netbird|netbird-server|relay|reverse-proxy|dashboard)$/"
       ],
       group: {
         commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
