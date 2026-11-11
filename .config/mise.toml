@@ -40,7 +40,7 @@ gh = "2.103.3"
 hk = "2.12.0"
 pkl = "0.33.0"
 biome = "2.5.2"
-typos = "1.52.1"
+typos = "1.52.2"
 # Linters invoked by hk. The same pinning rule as hk applies -- an unpinned
 # shim here fails the individual step rather than the whole commit, but still
 # breaks the hook.
