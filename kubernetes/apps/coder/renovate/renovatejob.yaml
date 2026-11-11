@@ -51,19 +51,14 @@ spec:
     # Not the public hostname: that would hairpin every API call out to
     # Traefik and back for a Service two DNS labels away.
     endpoint: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000/api/v1
-    # No `publicEndpoint`, so the operator UI links projects to the endpoint
-    # above rather than to https://git.<domain>.
+    # Where the operator UI's project and pull-request links point. UI links
+    # only: every API call, clone and webhook still goes to `endpoint` above.
+    # The operator's policy.allowedHosts has to list this host too (see
+    # ../renovate-operator), or it refuses the whole job.
     #
-    # It is omitted to keep the domain out of the manifests: the operator's
-    # policy.allowedHosts must list the host of every endpoint it is given, and
-    # allowedHosts is the one Helm value in this estate that gets schema-
-    # validated against a hostname pattern -- which an offline `flate` render
-    # cannot satisfy for a `${ROOT_DOMAIN}` that lives in a SOPS Secret. See
-    # the long note on `policy.allowedHosts` in ../renovate-operator.
-    #
-    # Cloning is NOT affected by this being absent -- but it IS affected by
-    # `endpoint` above, which is a different thing and cost a failed run to
-    # learn. See `gitUrl` in the config below.
+    # `endpoint` is a different thing from this and affects cloning; see
+    # `gitUrl` in the config below.
+    publicEndpoint: https://git.${ROOT_DOMAIN}
 
   # Cheap insurance rather than a live concern: a fork of an upstream repo
   # would otherwise get its own nightly run and its own PRs against a tree

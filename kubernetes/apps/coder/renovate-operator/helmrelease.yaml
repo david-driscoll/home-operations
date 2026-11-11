@@ -164,44 +164,18 @@ spec:
       # rights to anything with write access to `coder`.
       enabled: true
       allowedHosts:
-        # ONE ENTRY, AND NO PUBLIC HOSTNAME. That is deliberate and it is the
-        # reason `provider.publicEndpoint` is not set on the RenovateJob.
+        # Every host the operator may be pointed at: the in-cluster Forgejo
+        # Service that `provider.endpoint` uses, and the public hostname that
+        # `provider.publicEndpoint` uses for UI links. The operator validates
+        # both against this list.
         #
-        # This chart ships a values.schema.json constraining each entry to
-        # `^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$`, and it is the only chart
-        # in the estate that validates a hostname. `${ROOT_DOMAIN}` comes from
-        # the SOPS-encrypted `shared-secrets` Secret, which an offline render
-        # cannot decrypt -- flate implements no `spec.decryption` -- so
-        # `git.${ROOT_DOMAIN}` renders as the bare `git.`, a trailing dot,
-        # which fails that pattern and makes `mise run flate` reject the WHOLE
-        # HelmRelease. Not a warning: `✗ 1 failed`, and the hk `flate` step
-        # gates the commit.
-        #
-        # There is no spelling that survives it. flate's own answer for SOPS
-        # values is a placeholder (`..PLACEHOLDER_ROOT_DOMAIN..`), which
-        # contains `_` and fails the same pattern; an envsubst default puts the
-        # domain back as a literal; a `valuesFrom` ConfigMap is still rendered
-        # and still validated. So the domain does not go in here at all.
-        #
-        # The cost is confined to one thing: the operator UI links a project to
-        # the endpoint it reconciles against, which is now the ClusterIP name
-        # below rather than https://git.<domain>.
-        #
-        # Cloning is NOT free here, contrary to what this comment first said.
-        # Renovate keys its git credential to the ENDPOINT host, so with the
-        # endpoint in-cluster it could not authenticate against the public
-        # clone URL Forgejo advertises. That is fixed in the RenovateJob with
-        # `gitUrl: 'endpoint'`; see the note there. The API and the webhook are
-        # genuinely unaffected.
-        #
-        # `${NAMESPACE}` resolves offline (it is in this app's
-        # postBuild.substitute map, not in a Secret), so this entry renders
-        # `forgejo-http.coder.svc.cluster.local` in flate and in-cluster alike.
-        #
-        # The chart appends the webhook base URL's host
-        # (renovate-operator.coder.svc.cluster.local) on its own, because it
-        # comes from `webhook.baseUrl` below and is therefore already approved.
+        # This chart's values.schema.json constrains each entry to a hostname
+        # pattern. That once failed an offline `flate` render, because
+        # the root domain lives in a SOPS Secret and rendered as a bare `git.`.
+        # It no longer does: flate is fed placeholder values by
+        # scripts/flate-supply, and the render passes.
         - forgejo-http.${NAMESPACE}.svc.cluster.local
+        - git.${ROOT_DOMAIN}
       allowedImages:
         # Only the GHCR spelling. The chart's default also allows the two
         # Docker Hub forms; nothing here pulls Renovate from Docker Hub, and an
