@@ -34,10 +34,18 @@ spec:
     namespace: flux-system
   components:
     - ../../../components/failover/fast-node-eviction
+    # <app>.<tailnet> and <app>.nb.<root domain>. Both redirect to the app route
+    # (docs/adr/0004), so the passkey's RP_ID/RP_ORIGIN stay on that one host and
+    # one passkey works from every network. TAILSCALE_HOST renames the host; see postBuild.
+    - ../../../components/tailscale
     - ../../../components/volsync
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      # The hostname is git-dashboard everywhere; the Service and PVC stay forge-dashboard.
+      TAILSCALE_HOST: git-dashboard
+      TAILSCALE_SERVICE: forge-dashboard
+      TAILSCALE_PORT: http
       # One SQLite file: passkeys, sessions, encrypted tokens, a refillable cache.
       VOLSYNC_CAPACITY: 1Gi

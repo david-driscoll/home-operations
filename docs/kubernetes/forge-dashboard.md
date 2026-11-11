@@ -2,7 +2,7 @@
 
 [alrayyes/forge-dashboard](https://github.com/alrayyes/forge-dashboard): one page of open pull
 requests, issues and CI status across GitHub and the in-cluster Forgejo.
-Manifests: `kubernetes/apps/coder/forge-dashboard`. URL: `forge-dashboard.<root domain>`,
+Manifests: `kubernetes/apps/coder/forge-dashboard`. URL: `git-dashboard.<root domain>` (also `git-dashboard.<tailnet>` and `git-dashboard.nb.<root domain>`, which redirect to it),
 internal gateway only.
 
 ## First-run setup (manual, once)

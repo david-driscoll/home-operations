@@ -56,8 +56,8 @@ spec:
               DB_PATH: /data/forge-dashboard.db
               # A passkey is bound to this host and origin: change either and
               # every registered passkey stops working.
-              RP_ID: forge-dashboard.${ROOT_DOMAIN}
-              RP_ORIGIN: https://forge-dashboard.${ROOT_DOMAIN}
+              RP_ID: git-dashboard.${ROOT_DOMAIN}
+              RP_ORIGIN: https://git-dashboard.${ROOT_DOMAIN}
             envFrom:
               - secretRef:
                   name: *app
@@ -119,7 +119,7 @@ spec:
             namespace: network
             kind: Gateway
         hostnames:
-          - "forge-dashboard.${ROOT_DOMAIN}"
+          - "git-dashboard.${ROOT_DOMAIN}"
         rules:
           - backendRefs:
               - identifier: app
