@@ -734,9 +734,9 @@ checksum = "sha256:e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a2474f
 url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-win-x64.zip"
 
 [[tools."npm:typescript"]]
-version = "5.9.3"
+version = "7.0.2"
 backend = "npm:typescript"
-specifiers = ["5.9.3"]
+specifiers = ["7.0.2"]
 
 [[tools.openbao]]
 version = "2.7.2"
