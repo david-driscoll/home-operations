@@ -8,7 +8,7 @@ spec:
   name: Forge Dashboard
   category: Development
   description: Open pull requests, issues and CI status across GitHub and Forgejo
-  url: &url https://forge-dashboard.${ROOT_DOMAIN}
+  url: &url https://git-dashboard.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/forgejo.svg
   access_policy:
     groups:
