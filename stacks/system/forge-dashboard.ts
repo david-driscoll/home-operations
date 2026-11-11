@@ -16,10 +16,11 @@
  * ExternalSecret retries until it does, so a first deploy that merges ahead of
  * this stack simply waits.
  */
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
-import type { GlobalResources } from "@components/globals.ts";
+
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
+import { baoKvSecret, baoProvenance } from "components/bao.ts";
+import type { GlobalResources } from "components/globals.ts";
 
 export function configureForgeDashboard(globals: GlobalResources): void {
   const key = new random.RandomBytes("forge-dashboard-encryption-key", { length: 32 });
