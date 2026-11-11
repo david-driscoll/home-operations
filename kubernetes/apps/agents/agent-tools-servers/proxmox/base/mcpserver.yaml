@@ -2,9 +2,12 @@
 # No `yaml-language-server: $schema=` line -- see ../../docs.yaml.
 #
 # ProxmoxMCP-Plus (github.com/RekklesNA/ProxmoxMCP-Plus), one per
-# hypervisor. Published image confirmed live:
-# ghcr.io/rekklesna/proxmoxmcp-plus:latest -- no digest pin yet, add one
-# before merging. Three transport modes exist (stdio via PyPI, native MCP
+# hypervisor. Pinned by version and digest: this ran `:latest` until
+# 2026-11-10, when a new upstream image started refusing to serve native
+# MCP HTTP without an API key and the two pods that happened to restart
+# crash-looped (see MCP_ALLOW_UNAUTHENTICATED_HTTP below). Renovate bumps
+# the pin, so a breaking release arrives as a PR rather than on a pod
+# restart. Three transport modes exist (stdio via PyPI, native MCP
 # HTTP on :8000, or an OpenAPI bridge on :8811 by default); this uses the
 # native HTTP mode, same no-stdio-wrapper shape as ../../degoog.yaml -- see
 # its header for why that needs no podTemplateSpec command override.
@@ -64,7 +67,7 @@ kind: MCPServer
 metadata:
   name: REPLACE-ME-name
 spec:
-  image: ghcr.io/rekklesna/proxmoxmcp-plus:latest
+  image: ghcr.io/rekklesna/proxmoxmcp-plus:v0.6.10@sha256:744b8826933d9cd1605e0fe2feae53afe0c4086c12bcfc6a276d51a683c63a16
   transport: streamable-http
   proxyPort: 8000
   mcpPort: 8000
@@ -118,6 +121,16 @@ spec:
     # inserted above it.
     - name: PROXMOX_JOBS_SQLITE_PATH
       value: /tmp/proxmox-jobs.sqlite3
+    # Upstream now refuses native MCP HTTP without MCP_API_KEY and exits
+    # with "MCP_API_KEY must be set ... explicitly set
+    # MCP_ALLOW_UNAUTHENTICATED_HTTP=true". This keeps the posture the
+    # server always had: the ToolHive proxy in front of it has no auth
+    # either (no oidcConfigRef, see the header), and toolport is the only
+    # client. Unlike ../../technitium.yaml there is no NetworkPolicy
+    # narrowing who can reach the port yet. Appended last for the same
+    # index reason as the entry above.
+    - name: MCP_ALLOW_UNAUTHENTICATED_HTTP
+      value: "true"
 
   podTemplateSpec:
     # WHY THIS IS ON THE POD TEMPLATE AND NOT THE SECRET. Read
