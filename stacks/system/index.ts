@@ -90,6 +90,7 @@ import { configureAuthentikPg } from "./authentik-pg.ts";
 import { configureAuthentikVip } from "./authentik-vip.ts";
 import { CoderTemplatesComponent } from "./coder-templates.ts";
 import { configureFluxWebhooks } from "./flux-webhooks.ts";
+import { configureForgeDashboard } from "./forge-dashboard.ts";
 import { configureForgejoAppRepositories } from "./forgejo-app-repos.ts";
 import { ForgejoGithubMirrorComponent } from "./forgejo-github-mirror.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
@@ -161,6 +162,9 @@ configureAuthentikVip(globals);
 // Forgejo components further down it never calls Forgejo's API, so it cannot
 // fail on a forge outage. See forgejo-signing.ts.
 configureForgejoSigning(globals);
+
+// forge-dashboard's token-encryption key, into OpenBao only. See forge-dashboard.ts.
+configureForgeDashboard(globals);
 
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
