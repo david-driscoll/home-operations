@@ -62,8 +62,10 @@ jobs:
           git merge --quiet --no-edit "origin/${BASE_REF}"
           # flate is told the base by name; make sure the name resolves.
           git branch --force "${BASE_REF}" "origin/${BASE_REF}"
-          if git diff --quiet "origin/${BASE_REF}" HEAD -- kubernetes/; then
-            echo "Nothing under kubernetes/ changed: nothing to render."
+          # Same set as the GitHub file's changed-files filter: the placeholder
+          # Secrets script and this workflow change the render too.
+          if git diff --quiet "origin/${BASE_REF}" HEAD -- kubernetes/ scripts/flate-supply .forgejo/workflows/flate.yml; then
+            echo "Nothing flate renders changed: nothing to render."
             echo "kubernetes=false" >> "$GITHUB_OUTPUT"
           else
             echo "kubernetes=true" >> "$GITHUB_OUTPUT"
@@ -99,7 +101,12 @@ jobs:
 
       - name: Run flate test
         if: ${{ steps.merged.outputs.kubernetes == 'true' }}
-        run: flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10
+        # v0.7 dropped --allow-missing-secrets and --source-retry-attempts.
+        # Placeholder cluster-secrets/shared-secrets per namespace: see
+        # scripts/flate-supply. Kept in step with .github/workflows/flux-local.yaml.
+        run: |
+          set -euo pipefail
+          scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply -
 
       # After a failed test as well: the diff is what a person reads to see why.
       - name: Run flate diff
@@ -107,7 +114,7 @@ jobs:
         if: ${{ !cancelled() && steps.merged.outputs.kubernetes == 'true' }}
         run: |
           set -euo pipefail
-          flate diff all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 -o github > diff.patch
+          scripts/flate-supply | flate diff all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply - -o github > diff.patch
           cat diff.patch
           if [ -s diff.patch ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
 
