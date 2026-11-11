@@ -19,6 +19,9 @@ resources:
   # whenever Flux reports a new commit on GitHub.
   - ./forgejo-github-sync/ks.yaml
   - ./git-pages/ks.yaml
+  # Open PRs, issues and CI across GitHub and Forgejo; its Forgejo token is the
+  # renovate bot's, entered on its Settings page (docs/kubernetes/forge-dashboard.md).
+  - ./forge-dashboard/ks.yaml
   # The API behind the setup guide's My apps page, on git-pages' setup host.
   - ./setup-status/ks.yaml
   # The operator first: ./renovate/ks.yaml is nothing but a RenovateJob, and

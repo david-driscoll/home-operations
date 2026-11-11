@@ -1,0 +1,133 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# https://github.com/alrayyes/forge-dashboard -- one page of open pull requests,
+# issues and CI across GitHub and the in-cluster Forgejo. Distroless Go binary
+# with a SQLite file in /data; passkey login, so the first visitor to register
+# owns it (registration closes once one passkey exists).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app forge-dashboard
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # One SQLite writer on an RWO volume: never two pods at once.
+        strategy: Recreate
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+        containers:
+          app:
+            image:
+              repository: ghcr.io/alrayyes/forge-dashboard
+              tag: 9.19.0@sha256:aff7ef0373aee2348217d15149985e6d9c566abe7dab38049c9197e418e70e05
+            env:
+              TZ: ${TIMEZONE}
+              ADDR: :8080
+              DB_PATH: /data/forge-dashboard.db
+              # A passkey is bound to this host and origin: change either and
+              # every registered passkey stops working.
+              RP_ID: forge-dashboard.${ROOT_DOMAIN}
+              RP_ORIGIN: https://forge-dashboard.${ROOT_DOMAIN}
+            envFrom:
+              - secretRef:
+                  name: *app
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &port 8080
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /readyz
+                    port: *port
+                  periodSeconds: 10
+              startup:
+                enabled: false
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /data
+      tmpfs:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+
+    route:
+      app:
+        annotations:
+          external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "forge-dashboard.${ROOT_DOMAIN}"
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              # Network-gated in addition to the app's own passkey login.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
