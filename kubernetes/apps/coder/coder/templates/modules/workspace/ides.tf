@@ -33,7 +33,7 @@ module "code_server" {
 module "jetbrains" {
   count   = data.coder_workspace.me.start_count
   source  = "registry.coder.com/coder/jetbrains/coder"
-  version = "1.4.0"
+  version = "1.4.1"
 
   agent_id = coder_agent.main.id
   folder   = var.folder
