@@ -1,5 +1,12 @@
 # Arcane + PDM: celestia → equestria cutover
 
+> **PDM was removed on 2026-11-11** (unused). Its last volsync backup stays in
+> the `pdm` restic repository on Garage, and its OpenBao secrets at
+> `clusters/equestria/apps/pdm/*` were left in place. To bring it back, restore
+> `kubernetes/apps/equestria/utils/pdm` from git history; its restore will need
+> `volsync.backube/privileged-movers` on the namespace, because the config is
+> `root:www-data` and an unprivileged mover cannot chown it.
+
 Moves two services off the celestia Dockge host, to free memory there for the
 replacement control-plane VM:
 

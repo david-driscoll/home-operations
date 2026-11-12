@@ -9,4 +9,3 @@ resources:
   - ./lan-orangutan/ks.yaml
   - ./patchmon/ks.yaml
   - ./arcane/ks.yaml
-  - ./pdm/ks.yaml
