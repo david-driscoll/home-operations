@@ -511,7 +511,7 @@ spec:
           picker: &picker
             image:
               repository: git.${ROOT_DOMAIN}/estate-images/wonderbolts-agent
-              tag: 0.1.2@sha256:4e90a8c2b5d7e506e6009941a909bfa414b695f09d7c9f0a8afce103f841f374
+              tag: 0.1.4@sha256:551fea47258f9a5e0c93df6da9e7fbc75a914e38d4ab77bbad1232187e01ba09
             # The image's own cmd, spelled out: Node strips the types itself.
             command: ["node", "/app/picker.ts"]
             env: &picker-env
