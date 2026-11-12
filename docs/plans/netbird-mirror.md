@@ -223,9 +223,15 @@ availability on Azure before its first promotion. Pre-issue it with DNS-01.
   the Authentik VIP. It does nothing else.
   - **As built (#2889):** the operator's `NetworkResource` (v0.9.0) can only publish a Service's ClusterIP, and
     IP/CIDR targets are an open upstream issue (netbirdio/kubernetes-operator#305). So `stacks/netbird` owns the
-    `equestria` network, its two /32 resources (group `equestria-entry`), its router (peer group `k8s-routers`) and
-    the DNS zone the operator requires. `kubernetes/apps/netbird-system/router` owns only the pods, which enrol with
-    the `k8s-router` setup key through a `workloadOverride.podTemplate` patch.
+    two /32 resources (group `equestria-entry`), a router (peer group `k8s-routers`) and the DNS zone the operator
+    requires. `kubernetes/apps/netbird-system/router` owns only the pods, which enrol with the `k8s-router` setup key
+    through a `workloadOverride.podTemplate` patch.
+  - **The network is the operator's (#3163, D57).** The `NetworkRouter` CR always creates a network named after
+    itself (`equestria-routers`), with its own router, group and setup key, and re-asserts the name every 15 minutes.
+    v0.9.0 has no setting to skip that or to use an existing network. A second, Pulumi-owned `equestria` network
+    left the operator's empty, so `stacks/netbird` now looks the operator's network up by name each run
+    (`routerNetwork.ts`) and puts its router and the two resources there. Deleting the CR deletes that network,
+    and with it everything `stacks/netbird` put in it, until the next run finds the new one.
 
 ## H. Dockge hosts publish LAN IPs
 
@@ -391,6 +397,7 @@ NetBird client ─▶ private proxy (Equestria, NB_PROXY_PRIVATE, group: members
 | D54 | 11-05 | Equestria's in-cluster routing peers (`k8s-routers`, §G) also serve **`exit-home`**, beside the `gateway-home` gateways: one more way out of the same home WAN (via their node's Cilium SNAT) that keeps the home exit up while the Dockge gateways are down. Exit only: they are not in `gateway-home`, so they never route `lan-home`. `users-exit-equestria` (ICMP to `k8s-routers`) connects users to them. Briefly a separate `exit-equestria` route; folded into `exit-home` the same day. Mirrors the cluster's Tailscale exit node (`primary-connector`) |
 | D55 | 11-05 | **A demotion restarts Traefik.** Every fence stop of a running management (demote, and stop on a shared or unknown lease) ends in `compose restart traefik`, so clients redial and follow the lease; in the #2892 drill they otherwise stayed ~18 minutes on the old host. Accepts a moment's drop for that host's relay clients. A fenced inner Traefik behind an SNI TCP router (relay-safe) was turned down as more moving parts. Also from the drill: the first deploy step waits 5 minutes for a rebuilt VM to join the tailnet, and `fenceResults` is renamed `deployFenceResults`. OCI stays parked (D48) as a possible third host |
 | D56 | 11-05 | **Names: `nbd` for devices, `nb` for apps.** The peer DNS domain moves from `nb.<root domain>` to `nbd.<root domain>` (device names `<device>.nbd`). Then the app services move from `<app>.app.<root domain>` to `<app>.nb.<root domain>`, in a second PR once every client has the new peer domain: until then a client answers `*.nb` itself. Hard cutover; the old `app` names stop resolving. Only the DNS label changes: identifiers keep "app" (`APP_SUBDOMAIN`, `netbird-app-wildcard-tls`, OpenBao `apps/netbird/app-wildcard-tls`), meaning app service |
+| D57 | 11-12 | **The Equestria entry lives in the operator's network** (#3163). The operator creates `equestria-routers` unconditionally, so `stacks/netbird` drops its own `equestria` network and declares its router and the `equestria-internal-gateway`/`authentik-vip` resources in the operator's, found by name. The pods keep the `k8s-router` key and stay in `k8s-routers` (it also serves `exit-home`, the DNS zone and policy.ts), so the network has two routers: ours (metric 100, `k8s-routers`) and the operator's (metric 9999, its own group, no peers). They never write each other's. The resources are `deleteBeforeReplace`: NetBird refuses two resources of one name in an account |
 
 ### Forward-auth apps on every name (D45, 2026-11-04)
 

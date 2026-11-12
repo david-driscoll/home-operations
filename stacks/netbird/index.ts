@@ -15,7 +15,8 @@
  *   6. Technitium as every peer's nameserver: each node's NetBird sidecar
  *      once it has enrolled, its LAN address until then (dns.ts);
  *   7. a service user whose PAT the in-cluster operator uses (#2889);
- *   8. the `equestria` network the operator's routing peers serve (#2889);
+ *   8. the Equestria entry: a router and two resources in the operator's
+ *      network, which its routing peers serve (#2889, #3163);
  *   9. the client-access policy (#2888, policy.ts);
  *  10. nbidp: the private reverse proxy's token, its custom domain, and the private service in
  *      front of Dex (#2891, nbidp.ts);
@@ -54,6 +55,7 @@ import { ACCESS_RULES, DEVICE_GROUPS, homeResourceGroups, USER_GROUPS, unresolve
 import { clusterCnames, declareCustomDomain, validationCname } from "./proxyDomains.ts";
 import { declareRegionExitDevices } from "./region-exit-devices.ts";
 import { REGION_EXIT_USER_GROUPS, REGION_EXITS, regionExitNetbird } from "./regionExits.ts";
+import { type LiveNetwork, OPERATOR_NETWORK_NAME, operatorNetworkId } from "./routerNetwork.ts";
 import { type LiveUser, selfAccessPlan } from "./selfAccess.ts";
 import { GATEWAY_SITE_STACKS, gatewayGroupName, gatewayGroupPeers, gatewayHosts, type LiveGatewayPeer, routedSites, SITES, siteProblems, siteStackOf } from "./sites.ts";
 
@@ -486,8 +488,8 @@ export const tokenExpiresAtSeconds = pulumi.unsecret(
 // The second way into the cluster (#2889, plan §G): the routing peers that
 // kubernetes/apps/netbird-system/router runs through the NetBird operator.
 // They enrol with the `k8s-router` key above, so they sit in `k8s-routers`,
-// and this network's router names that group. Everything NetBird-side lives
-// here, and the operator only runs pods: its own NetworkResource can publish
+// and the router below names that group. Everything NetBird-side that carries
+// meaning lives here, and the operator only runs pods: its own NetworkResource can publish
 // nothing but a Service's ClusterIP (operator v0.9.0; IP targets are
 // netbirdio/kubernetes-operator#305), and clients reach the cluster on the
 // Gateway's LoadBalancer IP and the Authentik VIP.
@@ -514,14 +516,41 @@ function internalGatewayIp(): string {
 const routerZoneName = "equestria.netbird.internal";
 new netbird.DnsZone("equestria-routers", { name: routerZoneName, domain: routerZoneName, enabled: true, enableSearchDomain: false, distributionGroups: [groups.k8sRouters.id] }, { ...opts, dependsOn: [settings] });
 
-const equestria = new netbird.Network("equestria", { name: "equestria", description: "Equestria internal Gateway + Authentik VIP, via the in-cluster routers (stacks/netbird, #2889)" }, opts);
-new netbird.NetworkRouter("equestria", { networkId: equestria.id, peerGroups: [groups.k8sRouters.id], masquerade: true, metric: 100, enabled: true }, opts);
-
 /** What #2888's client-access policy names as its destination. */
 const equestriaEntry = group("equestria-entry");
-const entryResource = (name: string, address: string) => new netbird.NetworkResource(name, { networkId: equestria.id, name, address, groups: [equestriaEntry.id], enabled: true }, opts);
-entryResource("equestria-internal-gateway", `${internalGatewayIp()}/32`);
-entryResource("authentik-vip", `${authentikVip}/32`);
+
+// The network is the operator's, not this stack's (#3163). The NetworkRouter
+// CR always creates one named after itself (`equestria-routers`) and re-asserts
+// its name every 15 minutes; operator v0.9.0 cannot be pointed at an existing
+// network. A network of our own beside it left the operator's empty, so the
+// router and the two resources go in the operator's, found by name
+// (routerNetwork.ts). Read live: on a fresh estate the operator only creates
+// it once the DNS zone above exists, so until then there is nothing to put in
+// it, and the next run does.
+//
+// Two routers then sit in that network, and they do not fight: the operator's
+// (metric 9999) names its own `networkrouter-<suffix>` group, which no peer
+// joins because networkrouter.yaml swaps in the `k8s-router` key, and the
+// operator only ever writes that router by id. This one names `k8s-routers`,
+// the group the pods are in, which also serves `exit-home`, the DNS zone and
+// policy.ts, so the pods stay there rather than move to the operator's group.
+//
+// deleteBeforeReplace on the resources: NetBird refuses a second resource of
+// the same name anywhere in the account, so moving one between networks
+// (networkId forces a replace) must delete the old before creating the new.
+// For those seconds clients fall back to the gateways' site-LAN routes.
+const entryAddresses = { "equestria-internal-gateway": `${internalGatewayIp()}/32`, "authentik-vip": `${authentikVip}/32` };
+pulumi.output(api).apply(async ({ managementUrl: url, token }) => {
+  const networkId = operatorNetworkId(await netbirdGet<LiveNetwork[]>(url, token, "/api/networks"));
+  if (!networkId) {
+    pulumi.log.warn(`Equestria entry: no NetBird network named ${OPERATOR_NETWORK_NAME} yet; the operator creates it once the ${routerZoneName} zone exists. Its router and resources come on the next run.`);
+    return;
+  }
+  const router = new netbird.NetworkRouter("equestria", { networkId, peerGroups: [groups.k8sRouters.id], masquerade: true, metric: 100, enabled: true }, opts);
+  for (const [name, address] of Object.entries(entryAddresses)) {
+    new netbird.NetworkResource(name, { networkId, name, address, groups: [equestriaEntry.id], enabled: true }, { ...opts, dependsOn: [router], deleteBeforeReplace: true });
+  }
+});
 
 // ── 9. Client-access policy (#2888) ───────────────────────────────────────
 // policy.ts says who reaches what by NAME, and every name is a group this
