@@ -159,6 +159,13 @@ spec:
       ruleFile: /conf/rules/*.yml
       replicaCount: 1
       existingConfigmap: thanos-ruler
+      # The ruler reads /conf/rules once at start and has no reload sidecar, so
+      # an edit to resources/ruler.yml reached the ConfigMap but not the running
+      # rules until the pod happened to restart (seen 2026-11-11: a merged fix
+      # sat unloaded while the old expressions kept firing). Reloader rolls the
+      # StatefulSet when the ConfigMap changes.
+      statefulsetAnnotations:
+        reloader.stakater.com/auto: "true"
       dnsDiscovery:
         enabled: false
       persistence:
