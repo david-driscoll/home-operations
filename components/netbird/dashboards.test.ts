@@ -16,7 +16,7 @@ import { describe, it } from "node:test";
 const repo = new URL("../../", import.meta.url);
 const dashboards = new URL("kubernetes/apps/observability/grafana/dashboards/", repo);
 
-/** `0.82.0`, from the netbird-server image in compose.yaml. A regex, not a YAML parse: CI runs this without `npm ci`. */
+/** `0.82.1`, from the netbird-server image in compose.yaml. A regex, not a YAML parse: CI runs this without `npm ci`. */
 function serverRelease(): string {
   const compose = readFileSync(new URL("./compose.yaml", import.meta.url), "utf8");
   const images = [...compose.matchAll(/^\s*image: netbirdio\/netbird-server:(\d+\.\d+\.\d+)(@\S+)?\s*$/gm)];
