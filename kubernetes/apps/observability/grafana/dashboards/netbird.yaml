@@ -1,9 +1,10 @@
 ---
 # NetBird's own dashboards (docs.netbird.io/selfhosted/observability/dashboards),
-# from the netbird repo at the release the estate runs. Management is vendored
-# (see its object below); Signal and Relay are pulled by URL. Bump the tag with the
-# NetBird Renovate group (components/netbird/compose.yaml), so the panels track
-# the metric names the servers actually export.
+# pulled by URL from the netbird repo at the release the estate runs, so the
+# panels track the metric names the servers actually export. Renovate moves the
+# tag in these URLs on the netbird-server image's branch, in the NetBird group:
+# the "NetBird dashboards" customManager in .github/renovate.json5 reports each
+# URL as that image. components/netbird/dashboards.test.ts holds both ends.
 #
 # Where the series come from:
 #   - Management and Signal: the combined netbird-server on each netbird-edge
@@ -38,15 +39,14 @@ spec:
     matchLabels:
       dashboards: "grafana"
   folder: "netbird"
-  # Vendored, not by URL: upstream's panel "Percentage of Recreated channels"
-  # names its expression datasource `${DS_EXPRESSION}`, an input nothing
-  # fills, so it errored. ./netbird/management-<release>.json is upstream's file
-  # at that release with that one uid set to `__expr__`. Refresh it with the
-  # NetBird Renovate group: components/netbird/dashboards.test.ts fails while
-  # its release differs from the netbird-server image.
-  configMapRef:
-    name: netbird-management-dashboard
-    key: management.json
+  # Upstream's panel "Percentage of Recreated channels" names its expression
+  # datasource by an input, DS_EXPRESSION, that nothing fills, so it errored.
+  # The operator replaces each input reference with datasourceName in the
+  # fetched JSON, which turns that uid into Grafana's expression datasource.
+  datasources:
+    - datasourceName: __expr__
+      inputName: DS_EXPRESSION
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.1/infrastructure_files/observability/grafana/dashboards/management.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard

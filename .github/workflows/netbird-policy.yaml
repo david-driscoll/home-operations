@@ -9,7 +9,8 @@ name: "NetBird Policy"
 # Also the pure half of `mise run netbird:invite` (stacks/netbird/invite.ts)
 # and the Technitium nameserver selection (stacks/netbird/dns.ts).
 # And the dashboards' release check (components/netbird/dashboards.test.ts):
-# a NetBird image bump fails here until the vendored dashboard follows.
+# the Grafana dashboard URLs sit at the server's release, and the Renovate
+# customManager that bumps them with the image still matches all three.
 # The tests import only pure modules, so no `npm ci`.
 
 on:
@@ -43,7 +44,7 @@ jobs:
             components/netbird/dashboards.test.ts
             kubernetes/apps/observability/grafana/dashboards/netbird.yaml
             kubernetes/apps/observability/grafana/dashboards/kustomization.yaml
-            kubernetes/apps/observability/grafana/dashboards/netbird/**
+            .github/renovate.json5
             .github/workflows/netbird-policy.yaml
 
   test:

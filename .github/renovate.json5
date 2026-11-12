@@ -591,6 +591,8 @@
       // reverse-proxy (kubernetes/apps/netbird-system). The ghcr.io copies of
       // each image are included. The dashboard is versioned on its own
       // upstream, but is grouped so a NetBird update lands as one change.
+      // The Grafana dashboard URLs ride along as netbirdio/netbird-server (the
+      // "NetBird dashboards" customManager).
       description: "NetBird Group",
       groupName: "NetBird",
       matchDatasources: ["docker"],
@@ -1772,6 +1774,33 @@
         "raw\\.githubusercontent\\.com/bjw-s-labs/helm-charts/app-template-(?<currentValue>\\d+\\.\\d+\\.\\d+)/charts/other/app-template/",
       ],
       depNameTemplate: "ghcr.io/bjw-s-labs/helm/app-template",
+      datasourceTemplate: "docker",
+    },
+    {
+      // NetBird's Grafana dashboards are fetched by URL from the netbird repo
+      // at the release tag (kubernetes/apps/observability/grafana/dashboards/
+      // netbird.yaml). The same trick as app-template above: each URL is
+      // reported as the netbirdio/netbird-server image itself -- same depName,
+      // same datasource -- so the tag moves on the image's branch, in the
+      // NetBird group, and the boards never lag the server that feeds them.
+      //
+      // No annotation, on purpose. An annotation above a `url: https://...`
+      // line also matches the "full docker image reference" pattern of the
+      // annotated-deps manager below (`url` : `https` : <rest of the URL>),
+      // which makes a junk twin whose currentValue is the URL tail.
+      //
+      // The image tag is `0.82.1` and the git tag `v0.82.1`, so the `v` stays
+      // outside the capture. components/netbird/dashboards.test.ts runs this
+      // pattern over the file and fails if it stops matching all three boards.
+      description: "NetBird dashboards follow the netbird-server image",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)kubernetes/apps/observability/grafana/dashboards/netbird\\.yaml$/",
+      ],
+      matchStrings: [
+        "raw\\.githubusercontent\\.com/netbirdio/netbird/v(?<currentValue>\\d+\\.\\d+\\.\\d+)/infrastructure_files/",
+      ],
+      depNameTemplate: "netbirdio/netbird-server",
       datasourceTemplate: "docker",
     },
     {
