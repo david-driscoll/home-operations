@@ -10,7 +10,7 @@
     "test": "node --test src/*.test.ts src/sources/*.test.ts declared/*.test.ts src/homelable/*.test.ts"
   },
   "dependencies": {
-    "neo4j-driver": "^6.3.0"
+    "neo4j-driver": "^6.3.2"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
