@@ -151,9 +151,10 @@ local linters = new Mapping<String, Step> {
   // A kustomization that means to put a `pod-security.kubernetes.io/*` label
   // on its Namespace must actually render it. `metadata.labels` on a
   // kustomization.yaml looks right and is silently dropped by kustomize; six
-  // namespaces shipped unlabelled that way (#3162). The repo pattern is a JSON
-  // patch on the Namespace. Same `go -C` rules as `eso-values-lint` above, and
-  // the same job layout in .github/workflows/flux-local.yaml.
+  // namespaces shipped unlabelled that way (#3162). The repo pattern is the
+  // kubernetes/components/privileged-namespace component. Same `go -C` rules
+  // as `eso-values-lint` above, and the same job layout in
+  // .github/workflows/flux-local.yaml.
   ["podsecurity-label-lint"] = new Step {
     glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml")
     check =

@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Labels a namespace's Namespace (from ../common) PodSecurity `privileged`.
+# List it under `components:` AFTER ../common, which supplies the Namespace.
+#
+# Why a component: kustomize ignores `metadata.labels` on a kustomization.yaml,
+# so six namespaces that set the label that way rendered without it (#3162).
+# scripts/podsecurity-label-lint fails when an intended label stops rendering.
+#
+# A strategic-merge patch, not JSON6902: it adds this one key, creating
+# `metadata.labels` when the Namespace has none and keeping any labels it
+# already has. A JSON `add` of `/metadata/labels` would replace the whole map,
+# and a JSON `add` of the single key fails when the map does not exist yet.
+#
+# A no-op today: talos/control-plane/10-cluster.yaml deletes the PodSecurity
+# admission config, so the built-in default is already privileged.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      kind: Namespace
+    patch: |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: not-used
+        labels:
+          pod-security.kubernetes.io/enforce: privileged

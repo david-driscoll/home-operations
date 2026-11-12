@@ -10,22 +10,25 @@ Copy-paste templates for all configuration files needed when deploying a new app
 <APP_NAME>_VERSION="x.y.z"
 ```
 
-## namespaces.yaml Entry
+## Namespace PodSecurity Level
+
+Each namespace's Namespace object comes from `kubernetes/components/common`.
+A namespace with no PodSecurity label needs nothing more.
+
+For apps requiring elevated privileges, add the `privileged-namespace`
+component after `common` in `kubernetes/apps/<namespace>/kustomization.yaml`:
 
 ```yaml
-# kubernetes/platform/namespaces.yaml - add to inputs array
-- name: <namespace>
-  labels:
-    pod-security.kubernetes.io/enforce: baseline
+components:
+  - ../../components/alerts
+  - ../../components/common
+  - ../../components/privileged-namespace
 ```
 
-For apps requiring elevated privileges:
-```yaml
-- name: <namespace>
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/warn: privileged
-```
+Do not put `metadata.labels` on the kustomization.yaml: kustomize ignores it
+and the Namespace renders unlabelled (#3162). `scripts/podsecurity-label-lint`
+(an hk step and a flux-local CI job) fails when an intended label does not
+render.
 
 ## helm-charts.yaml Entry
 

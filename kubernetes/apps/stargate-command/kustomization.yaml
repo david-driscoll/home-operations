@@ -6,6 +6,7 @@ namespace: stargate-command
 components:
   - ../../components/alerts
   - ../../components/common
+  - ../../components/privileged-namespace
   - ../../components/repos/app-template
 # Failed installs and upgrades are RETRIED here, never rolled back -- the same
 # decision equestria made on 2026-09-15, arriving two days late for authentik.
@@ -44,17 +45,6 @@ components:
 # today. If one ever needs to, a strategic merge REPLACES that list and this has
 # to move.
 patches:
-  # The Namespace's PodSecurity level. A JSON patch, because kustomize ignores
-  # `metadata.labels` on this file (#3162); scripts/podsecurity-label-lint fails
-  # if it stops rendering. A no-op today: talos/control-plane/10-cluster.yaml
-  # deletes the PodSecurity config, so the default is already privileged.
-  - target:
-      kind: Namespace
-    patch: |-
-      - op: add
-        path: /metadata/labels
-        value:
-          pod-security.kubernetes.io/enforce: privileged
   - target:
       group: kustomize.toolkit.fluxcd.io
       kind: Kustomization

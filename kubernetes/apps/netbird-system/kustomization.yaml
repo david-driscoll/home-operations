@@ -13,6 +13,7 @@ namespace: netbird-system
 components:
   - ../../components/alerts
   - ../../components/common
+  - ../../components/privileged-namespace
   # nbidp's HelmRelease (#2891).
   - ../../components/repos/app-template
 resources:
@@ -36,15 +37,3 @@ resources:
   # applied here so flate sees the GitRepository before rendering).
   - ./wonderbolts/source.yaml
   - ./wonderbolts/ks.yaml
-patches:
-  # The Namespace's PodSecurity level. A JSON patch, because kustomize ignores
-  # `metadata.labels` on this file (#3162); scripts/podsecurity-label-lint fails
-  # if it stops rendering. A no-op today: talos/control-plane/10-cluster.yaml
-  # deletes the PodSecurity config, so the default is already privileged.
-  - target:
-      kind: Namespace
-    patch: |-
-      - op: add
-        path: /metadata/labels
-        value:
-          pod-security.kubernetes.io/enforce: privileged
