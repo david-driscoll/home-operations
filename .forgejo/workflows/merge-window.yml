@@ -86,8 +86,10 @@ jobs:
     # and image-check, ten runner pods pulling at once -- that pull alone took
     # five minutes on 2026-10-17, and at `5` the job died in `docker create`
     # before the script ran, leaving the pull request without its status.
-    # Same budget as image-check.
-    timeout-minutes: 15
+    # Same budget as image-check, plus the merges: inside the window a
+    # scheduled run waits for each one to land before the next status
+    # (merge-window.py caps that waiting at 25 minutes in all).
+    timeout-minutes: 40
     steps:
       # Only the script: the whole tree is over 100 MiB, fetched for one file.
       - name: Checkout
@@ -125,6 +127,17 @@ jobs:
           MERGE_WINDOW_TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_number }}
           # Empty except on a hand-run dispatch.
           MERGE_WINDOW_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          # Who schedules "Merge when checks succeed" again on every gated
+          # pull request, since Forgejo drops it without a word when a merge
+          # fails. A real account: Forgejo merges later AS the scheduler, and
+          # the job token's Actions user cannot push to a protected main (see
+          # the branch rule in stacks/system/forgejo-github-mirror.ts). The
+          # sync bot has write here. Only on schedule and dispatch: a
+          # pull_request run reads this file from the pull request's branch.
+          MERGE_WINDOW_MERGE_TOKEN: ${{ github.event_name != 'pull_request' && secrets.MIRROR_SYNC_TOKEN || '' }}
+          # The branch rule, so "ready to merge" means what Forgejo means by
+          # it: the required patterns, not every status on the pull request.
+          MERGE_WINDOW_PROTECTION: ${{ vars.MIRROR_MAIN_PROTECTION }}
           UPSTREAM: ${{ vars.MIRROR_UPSTREAM }}
         run: |
           set -euo pipefail

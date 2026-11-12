@@ -170,11 +170,12 @@ iptables-nft -t nat -C POSTROUTING -s 10.100.0.0/16 -o tun0 -j MASQUERADE 2>/dev
 # so gluetun's INPUT policy cannot keep overlay clients off the pod's own
 # ports either. Drop them in mangle INPUT: gluetun's control server (8000) and
 # health server (9999), and the region picker's port (8080, #3140), which is
-# meant to be reached only through the internal Gateway behind Authentik.
+# meant to be reached only through the internal Gateway behind Authentik,
+# and NetBird's local metrics (9191, #3164), which the picker reads on loopback.
 # wt0 is NetBird's interface (#3139); a rule naming an absent interface is
 # valid and matches once it exists. A new pod-local listener goes in this list.
 for iface in tailscale0 wt0; do
-  for port in 8000 8080 9999; do
+  for port in 8000 8080 9191 9999; do
     iptables-nft -t mangle -C INPUT -i "$iface" -p tcp --dport "$port" -j DROP 2>/dev/null \
       || iptables-nft -t mangle -A INPUT -i "$iface" -p tcp --dport "$port" -j DROP
     ip6tables-nft -t mangle -C INPUT -i "$iface" -p tcp --dport "$port" -j DROP 2>/dev/null \

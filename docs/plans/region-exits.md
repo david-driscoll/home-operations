@@ -346,16 +346,31 @@ old pod is gone within seconds.
   which of the two a dual-stack client sees.
 - **No locking.** A family member can move a region exit someone else is using. The picker
   warns before it switches.
-- **NetBird "connected" is only wt0 up.** The picker reports NetBird connected while `wt0`
-  exists and is `IFF_UP` (`overlays.ts`), which the engine tears down when management is lost
-  for good. It misses a stalled signal or relay connection. The stronger reads all need more
-  than the picker should have: `netbird status --check startup` (v0.82.0: management, signal
-  and a relay connected) goes through the daemon's gRPC socket, which has no read-only mode and
-  would let the picker run `down` or rewrite the config. WireGuard handshake times come only from
-  generic netlink, which needs `NET_ADMIN` in the pod's namespace and so would also reach the kill
-  switch (§G6); sysfs has no per-peer state. The same check as an exec probe on the netbird
-  container would fail the whole pod's readiness and take its picker off the route. Revisit if
-  NetBird grows a read-only status endpoint.
+- ~~**NetBird "connected" is only wt0 up.**~~ **Resolved by #3164: wt0 up, and management and
+  signal connected.** The picker used to report NetBird connected while `wt0` existed and was
+  `IFF_UP`, which the engine tears down only when management is lost for good, so a stalled
+  management or signal stream with wt0 still up read as connected and
+  `RegionExitOverlayOffline` missed it. NetBird 0.82.1 grew the read-only endpoint this item
+  waited for: `netbird up --enable-local-metrics` serves Prometheus `/metrics` on
+  `127.0.0.1:9191` (`client/internal/localmetrics`), GET only, with `netbird_management_connected`
+  and `netbird_signal_connected` read live from the daemon's status recorder. The netbird
+  container sets `NB_ENABLE_LOCAL_METRICS` and `NB_LOCAL_METRICS_ADDRESS`; `up` reads
+  `NB_<FLAG>` for each of its flags (`client/cmd/root.go` `SetFlagsFromEnvVars`), and every pod
+  enrols fresh, so it always takes them. The picker shares the pod's network namespace and
+  reads it over loopback, which gluetun's firewall accepts (`-i lo`/`-o lo`, `enable.go`,
+  v3.41.3); 9191 is in routing.sh's mangle INPUT drop on tailscale0 and wt0 with the pod's
+  other local ports. `region_exit_overlay_connected{overlay="netbird"}` is now 1 only when wt0
+  is up **and** both samples are 1 (wonderbolts `agent/overlays.ts`). An endpoint that does not
+  answer, answers an error or lacks either sample reads as 0: fail closed. That makes the order
+  matter: the netbird container must serve the endpoint before an agent that reads it rolls
+  out, or every region exit shows NetBird offline. An older agent ignores the endpoint.
+
+  The rejected reads still stand rejected: `netbird status` goes through the daemon's gRPC
+  socket, which has no read-only mode and would let the picker run `down` or rewrite the
+  config; WireGuard handshake times need generic netlink and so `NET_ADMIN`, which would also
+  reach the kill switch (§G6). **Still not seen:** relay health. The endpoint has no relay
+  gauge, only `netbird_peers_connected{connection_type}`, and a routing peer with no clients
+  has no connected peers to count, so neither is part of the verdict.
 - ~~**A restart costs about 10 minutes on NetBird.**~~ **Resolved 2026-11-07 by per-pod
   hostnames; old peers age out on their own.** Each pod enrols a fresh ephemeral peer (state in
   an emptyDir), and management won't register a second peer with the same hostname while the old
@@ -496,5 +511,6 @@ them.
    **mangle** table's FORWARD chain (`-i tailscale0 ! -o tun0`, and all IPv6 from tailscale0),
    set by the init container. It is another base chain on the forward hook, where a drop is
    final whatever `filter` accepts. The same holds for INPUT: `ts-input` accepts all of
-   tailscale0, so the pod's own ports (gluetun's 8000 and 9999, the picker's 8080) are dropped
+   tailscale0, so the pod's own ports (gluetun's 8000 and 9999, the picker's 8080, NetBird's
+   local metrics on 9191) are dropped
    on tailscale0 and wt0 in mangle INPUT too.

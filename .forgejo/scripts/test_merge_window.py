@@ -326,5 +326,224 @@ class Reconcile(unittest.TestCase):
         self.assertIn("set MERGE_WINDOW_TOKEN", lines[0])
 
 
+    def test_reads_forgejos_status_field(self):
+        # Forgejo's statuses list says `status`, not `state`. Read wrongly,
+        # every pull request looked like one without a status and was posted
+        # again on every run.
+        forge = FakeForge(
+            pulls=[pr(1, "a")],
+            statuses={"a" * 40: [{"id": 7, "context": "merge-window", "status": "success"}]},
+        )
+        _, lines = self.run_once(forge)
+        self.assertEqual(forge.posted, [])
+        self.assertEqual(lines, ["o/r#1 aaaaaaa success unchanged"])
+
+
+PROTECTION = (
+    '{"enable_status_check": true,'
+    ' "status_check_contexts": ["merge-window", "flate*", "renovate/stability-days"]}'
+)
+GREEN = [
+    {"id": 1, "context": "flate / Test and Diff (pull_request)", "status": "success"},
+    {"id": 2, "context": "flate / ESO Values Lint (pull_request)", "status": "success"},
+    {"id": 3, "context": "renovate/stability-days", "status": "success"},
+]
+
+
+class MergingForge(FakeForge):
+    """Schedules merges, and merges a scheduled pull request a little after a
+    status lands on it -- the way Forgejo does, in the background."""
+
+    def __init__(self, pulls, statuses, scheduled=(), refuse=()):
+        super().__init__(pulls, statuses)
+        self.scheduled = set(scheduled)
+        self.refuse = set(refuse)
+        self.events = []
+
+    def schedule_merge(self, repo, number, style):
+        if number in self.refuse:
+            raise mw.ApiError("POST", "u", 405, "PR not in mergeable state")
+        self.events.append(("schedule", number, style))
+        if number in self.scheduled:
+            return False
+        self.scheduled.add(number)
+        return True
+
+    def post_status(self, repo, sha, body):
+        super().post_status(repo, sha, body)
+        self.events.append(("status", sha[0], body["state"]))
+        pull = next(pull for pull in self.pulls if pull["head"]["sha"] == sha)
+        others = mw.newest_by_context(self._statuses.get(sha, []))
+        others[body["context"]] = body["state"]
+        if pull["number"] in self.scheduled and mw.ready_to_merge(
+            others, mw.required_contexts(PROTECTION)
+        ):
+            pull["_merges_after_polls"] = 1
+
+    def pull(self, repo, number):
+        pull = super().pull(repo, number)
+        if pull.get("_merges_after_polls") is not None:
+            if pull["_merges_after_polls"] <= 0:
+                pull["merged"] = True
+                self.events.append(("merged", number))
+            pull["_merges_after_polls"] -= 1
+        return pull
+
+
+class Merges(unittest.TestCase):
+    open_verdict = Reconcile.open_verdict
+    closed_verdict = Reconcile.closed_verdict
+
+    def merging(self, forge, **kwargs):
+        clock = {"now": 0.0}
+
+        def sleep(seconds):
+            clock["now"] += seconds
+
+        options = {
+            "scheduler": forge,
+            "required": mw.required_contexts(PROTECTION),
+            "wait": 120,
+            "sleep": sleep,
+            "clock": lambda: clock["now"],
+        }
+        options.update(kwargs)
+        return mw.Merging(**options), clock
+
+    def run_once(self, forge, merging, verdict=None, dry_run=False):
+        lines = []
+        failures = mw.reconcile_repo(
+            forge, "o/r", verdict or self.open_verdict, "merge-window", "u", dry_run, lines.append,
+            merging=merging,
+        )
+        return failures, lines
+
+    def test_merges_land_one_at_a_time(self):
+        forge = MergingForge(
+            pulls=[pr(1, "a"), pr(2, "b")],
+            statuses={"a" * 40: list(GREEN), "b" * 40: list(GREEN)},
+            scheduled={1, 2},
+        )
+        merging, _ = self.merging(forge)
+        failures, lines = self.run_once(forge, merging)
+        self.assertEqual(failures, 0)
+        # b's status waits until a has merged.
+        self.assertEqual(
+            [event for event in forge.events if event[0] != "schedule"],
+            [("status", "a", "success"), ("merged", 1), ("status", "b", "success"), ("merged", 2)],
+        )
+        self.assertIn("o/r#1 aaaaaaa merged", lines)
+
+    def test_a_dropped_schedule_is_set_again(self):
+        # Green, inside the window, status already success -- but a failed
+        # merge left it unscheduled. Scheduling alone sets nothing off, so the
+        # status goes up again.
+        forge = MergingForge(
+            pulls=[pr(1, "a")],
+            statuses={"a" * 40: GREEN + [{"id": 9, "context": "merge-window", "status": "success"}]},
+        )
+        merging, _ = self.merging(forge)
+        _, lines = self.run_once(forge, merging)
+        self.assertEqual(forge.events[0], ("schedule", 1, "rebase"))
+        self.assertEqual(
+            lines,
+            [
+                "o/r#1 aaaaaaa merge scheduled again",
+                "o/r#1 aaaaaaa success -> success",
+                "o/r#1 aaaaaaa merged",
+            ],
+        )
+
+    def test_already_scheduled_and_unchanged_is_left_alone(self):
+        forge = MergingForge(
+            pulls=[pr(1, "a")],
+            statuses={"a" * 40: GREEN + [{"id": 9, "context": "merge-window", "status": "success"}]},
+            scheduled={1},
+        )
+        merging, _ = self.merging(forge)
+        _, lines = self.run_once(forge, merging)
+        self.assertEqual(forge.posted, [])
+        self.assertEqual(lines, ["o/r#1 aaaaaaa success unchanged"])
+
+    def test_scheduled_outside_the_window_but_not_waited_for(self):
+        forge = MergingForge(pulls=[pr(1, "a")], statuses={"a" * 40: list(GREEN)})
+        merging, clock = self.merging(forge)
+        _, lines = self.run_once(forge, merging, verdict=self.closed_verdict)
+        self.assertEqual(forge.scheduled, {1})
+        self.assertEqual(lines, ["o/r#1 aaaaaaa merge scheduled again", "o/r#1 aaaaaaa none -> pending"])
+        self.assertEqual(clock["now"], 0)
+
+    def test_only_gated_pull_requests_are_scheduled(self):
+        forge = MergingForge(pulls=[pr(1, "a", labels=[])], statuses={"a" * 40: list(GREEN)})
+        merging, _ = self.merging(forge)
+        self.run_once(forge, merging)
+        self.assertEqual(forge.scheduled, set())
+
+    def test_no_wait_for_one_that_is_not_ready(self):
+        pending_flate = [dict(GREEN[0], status="pending")] + GREEN[1:]
+        forge = MergingForge(pulls=[pr(1, "a")], statuses={"a" * 40: pending_flate}, scheduled={1})
+        merging, clock = self.merging(forge)
+        _, lines = self.run_once(forge, merging)
+        self.assertEqual(lines, ["o/r#1 aaaaaaa none -> success"])
+        self.assertEqual(clock["now"], 0)
+
+    def test_a_missing_required_status_is_not_ready(self):
+        # #910: no flate status at all. Forgejo counts that as pending.
+        self.assertFalse(
+            mw.ready_to_merge(
+                {"merge-window": "success", "renovate/stability-days": "success"},
+                mw.required_contexts(PROTECTION),
+            )
+        )
+        # A check the rule does not require does not hold it.
+        self.assertTrue(
+            mw.ready_to_merge(
+                {**mw.newest_by_context(GREEN), "merge-window": "success", "Image Check": "failure"},
+                mw.required_contexts(PROTECTION),
+            )
+        )
+
+    def test_without_a_rule_every_status_must_be_green(self):
+        self.assertEqual(mw.required_contexts(""), [])
+        self.assertTrue(mw.ready_to_merge({"a": "success", "b": "success"}, []))
+        self.assertFalse(mw.ready_to_merge({"a": "success", "b": "failure"}, []))
+
+    def test_a_merge_that_never_lands_is_given_up_on(self):
+        forge = MergingForge(pulls=[pr(1, "a"), pr(2, "b")], statuses={"a" * 40: list(GREEN), "b" * 40: list(GREEN)})
+        forge.schedule_merge = lambda repo, number, style: False  # "scheduled", but nothing merges
+        merging, clock = self.merging(forge, wait=30)
+        failures, lines = self.run_once(forge, merging)
+        self.assertEqual(failures, 0)
+        self.assertIn("o/r#1 aaaaaaa not merged after 30s, moving on", lines)
+        self.assertEqual(clock["now"], 60)
+
+    def test_the_budget_caps_all_waiting(self):
+        pulls = [pr(number, chr(ord("a") + number)) for number in range(4)]
+        forge = MergingForge(pulls=pulls, statuses={pull["head"]["sha"]: list(GREEN) for pull in pulls})
+        forge.schedule_merge = lambda repo, number, style: False
+        merging, clock = self.merging(forge, wait=30, budget=45)
+        self.run_once(forge, merging)
+        self.assertEqual(len(forge.posted), 4)
+        self.assertEqual(clock["now"], 45)
+
+    def test_cannot_schedule_is_not_a_failure(self):
+        forge = MergingForge(pulls=[pr(1, "a")], statuses={}, refuse={1})
+        merging, _ = self.merging(forge)
+        failures, lines = self.run_once(forge, merging, verdict=self.closed_verdict)
+        self.assertEqual(failures, 0)
+        self.assertTrue(lines[0].startswith("o/r#1 aaaaaaa cannot schedule its merge: "))
+
+    def test_dry_run_schedules_nothing(self):
+        forge = MergingForge(pulls=[pr(1, "a")], statuses={"a" * 40: list(GREEN)})
+        merging, _ = self.merging(forge)
+        _, lines = self.run_once(forge, merging, dry_run=True)
+        self.assertEqual((forge.scheduled, forge.posted), (set(), []))
+        self.assertEqual(lines[0], "o/r#1 aaaaaaa would schedule its merge (dry run)")
+
+    def test_a_bad_rule_is_refused(self):
+        with self.assertRaises(ValueError):
+            mw.required_contexts("{not json")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,18 @@ The window gates only what merges unattended: a pull request labelled
 `renovate/automerge` (and not `renovate/automerge-hold`). Every other one is
 `success` at any hour -- a person merging it is the gate.
 
+Two things keep those unattended merges from being lost:
+
+* One at a time. Turning every pull request green in the same second sent
+  Forgejo into all their merges at once; the first moved `main` and the rest
+  failed (`PushRejected`, `PushOutOfDate`). So inside the window, after a
+  status that leaves a pull request ready to merge, this waits for the merge
+  to land before it touches the next one.
+* Scheduled again. A merge that fails makes Forgejo drop the pull request's
+  "Merge when checks succeed" without a word, and Renovate sets it only when
+  it opens the pull request. With MERGE_WINDOW_MERGE_TOKEN set, every gated
+  pull request is scheduled again on each run (a 409 means it still is).
+
 Run by .forgejo/workflows/merge-window.yml. Standard library only, so it runs
 on the runner image as it is. Configured by environment variables (each one
 also a flag, see --help):
@@ -29,6 +41,16 @@ also a flag, see --help):
   MERGE_WINDOW_PULL        one pull request number: bring only that one up to
                            date (needs exactly one repository). Unset: all open
   MERGE_WINDOW_DRY_RUN     true: report what would change and post nothing
+  MERGE_WINDOW_MERGE_TOKEN a real account's token with write on the repository,
+                           to schedule "Merge when checks succeed" with. Unset:
+                           nothing is scheduled. Not the job token: Forgejo
+                           stores the scheduler and merges as it later, and the
+                           Actions user (-2) cannot push to a protected branch
+  MERGE_WINDOW_MERGE_STYLE the style to schedule with (default rebase)
+  MERGE_WINDOW_PROTECTION  the branch rule as JSON (its status_check_contexts
+                           decide when a pull request is ready). Unset: ready
+                           when every status on it is green
+  MERGE_WINDOW_MERGE_WAIT  seconds to wait for one merge to land (default 120)
 
 Tests: python3 -m unittest discover -s .forgejo/scripts
 """
@@ -38,14 +60,16 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import datetime as dt
+import fnmatch
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from typing import Any, Protocol
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -58,6 +82,13 @@ AUTOMERGE_LABEL = "renovate/automerge"
 HOLD_LABEL = "renovate/automerge-hold"
 PAGE_SIZE = 50
 HTTP_TIMEOUT_SECONDS = 30
+DEFAULT_MERGE_STYLE = "rebase"
+DEFAULT_MERGE_WAIT_SECONDS = 120
+MERGE_POLL_SECONDS = 5
+# All the waiting one run may do, so a night of merges that never land still
+# finishes inside the job's timeout-minutes (merge-window.yml). Past it the
+# rest are posted without waiting, as before.
+MERGE_WAIT_BUDGET_SECONDS = 25 * 60
 
 
 # --- The window --------------------------------------------------------------
@@ -206,9 +237,11 @@ class Forge(Protocol):
 
     def post_status(self, repo: str, sha: str, body: dict[str, str]) -> None: ...
 
+    def schedule_merge(self, repo: str, number: int, style: str) -> bool: ...
+
 
 class ForgejoApi:
-    """The three calls this needs from Forgejo's v1 API."""
+    """The calls this needs from Forgejo's v1 API."""
 
     def __init__(self, server: str, token: str):
         self.base = server.rstrip("/") + "/api/v1"
@@ -268,16 +301,115 @@ class ForgejoApi:
     def post_status(self, repo: str, sha: str, body: dict[str, str]) -> None:
         self._request("POST", f"{self._repo_path(repo)}/statuses/{sha}", body=body)
 
+    def schedule_merge(self, repo: str, number: int, style: str) -> bool:
+        """Set "Merge when checks succeed". True if it was not set before.
+
+        Forgejo always schedules here, even on a pull request that is already
+        green -- it does not merge on the spot -- and answers 201. 409 is its
+        "already scheduled". Anything else (405: conflicting, closed, no
+        permission) is raised.
+        """
+        try:
+            self._request(
+                "POST",
+                f"{self._repo_path(repo)}/pulls/{number}/merge",
+                body={"Do": style, "merge_when_checks_succeed": True},
+            )
+        except ApiError as error:
+            if error.status == 409:
+                return False
+            raise
+        return True
+
 
 # --- Reconciling -------------------------------------------------------------
 
 
+def status_state(status: dict[str, Any]) -> str | None:
+    """A status's state. Forgejo's statuses list calls it `status`; only the
+    combined status says `state`. Reading `state` alone found nothing, so
+    every run took each pull request for one without a status."""
+    return status.get("status") or status.get("state")
+
+
+def newest_by_context(statuses: Iterable[dict[str, Any]]) -> dict[str, str | None]:
+    """Each context's newest state (highest id wins)."""
+    newest: dict[str, dict[str, Any]] = {}
+    for status in statuses:
+        context = status.get("context") or ""
+        if context not in newest or status.get("id", 0) > newest[context].get("id", 0):
+            newest[context] = status
+    return {context: status_state(status) for context, status in newest.items()}
+
+
 def latest_state(statuses: Iterable[dict[str, Any]], context: str) -> str | None:
     """The state of the newest status with this context, or None."""
-    ours = [status for status in statuses if status.get("context") == context]
-    if not ours:
-        return None
-    return max(ours, key=lambda status: status.get("id", 0)).get("state")
+    return newest_by_context(statuses).get(context)
+
+
+def required_contexts(protection: str) -> list[str]:
+    """The status patterns a branch rule (Forgejo's JSON) requires."""
+    if not protection.strip():
+        return []
+    rule = json.loads(protection)
+    if not rule.get("enable_status_check"):
+        return []
+    return [pattern for pattern in rule.get("status_check_contexts") or [] if pattern]
+
+
+def ready_to_merge(states: dict[str, str | None], required: list[str]) -> bool:
+    """Would Forgejo merge with these statuses? As it decides it: each
+    required pattern must match a status, and every match must be green.
+    With no rule to go by, every status must be green."""
+    if not required:
+        return bool(states) and all(state == "success" for state in states.values())
+    for pattern in required:
+        matched = [state for context, state in states.items() if fnmatch.fnmatchcase(context, pattern)]
+        if not matched or any(state != "success" for state in matched):
+            return False
+    return True
+
+
+@dataclasses.dataclass
+class Merging:
+    """How a scheduled run hands the open window's merges to Forgejo.
+
+    `scheduler` sets "Merge when checks succeed" (None: leave it to
+    Renovate). `wait` > 0 makes the run wait for each merge it sets off
+    before the next status, so the merges land one at a time.
+    """
+
+    scheduler: Forge | None = None
+    style: str = DEFAULT_MERGE_STYLE
+    required: list[str] = dataclasses.field(default_factory=list)
+    wait: float = 0
+    budget: float = MERGE_WAIT_BUDGET_SECONDS
+    poll: float = MERGE_POLL_SECONDS
+    sleep: Callable[[float], None] = time.sleep
+    clock: Callable[[], float] = time.monotonic
+
+
+def wait_for_merge(forge: Forge, repo: str, number: int, merging: Merging, prefix: str, log: Any) -> None:
+    deadline = merging.clock() + min(merging.wait, merging.budget)
+    started = merging.clock()
+    try:
+        while True:
+            merging.sleep(merging.poll)
+            pull = forge.pull(repo, number)
+            if pull.get("merged"):
+                log(f"{prefix} merged")
+                return
+            if pull.get("state", "open") != "open":
+                log(f"{prefix} closed without merging")
+                return
+            if merging.clock() >= deadline:
+                # Forgejo said nothing: checks it waits for that this did not
+                # see, or a merge that failed and unscheduled itself. The
+                # next run schedules it again.
+                log(f"{prefix} not merged after {merging.clock() - started:.0f}s, moving on")
+                return
+    finally:
+        merging.budget -= merging.clock() - started
 
 
 def reconcile_repo(
@@ -289,13 +421,18 @@ def reconcile_repo(
     dry_run: bool,
     log: Any = print,
     only: int | None = None,
+    merging: Merging | None = None,
 ) -> int:
     """Bring every open, non-draft pull request to `verdict`, or to `UNGATED`
     if it is not set to automerge. Returns failures.
 
     `only` narrows that to one pull request, as a `pull_request` run does: it
     has one new head commit to label, not the whole list to re-read.
+
+    `merging`, for the scheduled runs: schedule each gated pull request's
+    merge again, and inside the window let one merge land before the next.
     """
+    merging = merging or Merging()
     failures = 0
     pulls = [forge.pull(repo, only)] if only is not None else forge.open_pulls(repo)
     for pull in pulls:
@@ -308,11 +445,33 @@ def reconcile_repo(
         if pull.get("draft"):
             log(f"{prefix} draft, skipped")
             continue
-        wanted = verdict if is_gated(pull) else UNGATED
+        gated = is_gated(pull)
+        wanted = verdict if gated else UNGATED
         desired = wanted.state
         try:
-            current = latest_state(forge.statuses(repo, sha), context)
-            if current == desired:
+            # Scheduled first, so the status below is what sets it off.
+            newly_scheduled = False
+            if gated and merging.scheduler is not None:
+                if dry_run:
+                    log(f"{prefix} would schedule its merge (dry run)")
+                else:
+                    try:
+                        newly_scheduled = merging.scheduler.schedule_merge(repo, number, merging.style)
+                    except ApiError as error:
+                        # Conflicting, or otherwise not mergeable: Renovate's
+                        # to sort out, not a failure of this run.
+                        log(f"{prefix} cannot schedule its merge: {error}")
+                    else:
+                        if newly_scheduled:
+                            log(f"{prefix} merge scheduled again")
+
+            states = newest_by_context(forge.statuses(repo, sha))
+            current = states.get(context)
+            # Scheduling sets nothing off by itself; Forgejo looks again only
+            # when a status lands. So a pull request already green gets its
+            # status again.
+            repost = newly_scheduled and verdict.is_open and current == desired
+            if current == desired and not repost:
                 log(f"{prefix} {desired} unchanged")
                 continue
             if not dry_run:
@@ -327,6 +486,16 @@ def reconcile_repo(
                     },
                 )
             log(f"{prefix} {current or 'none'} -> {desired}{' (dry run)' if dry_run else ''}")
+            states[context] = desired
+            if (
+                gated
+                and verdict.is_open
+                and not dry_run
+                and merging.wait > 0
+                and merging.budget > 0
+                and ready_to_merge(states, merging.required)
+            ):
+                wait_for_merge(forge, repo, number, merging, prefix, log)
         except ApiError as error:
             failures += 1
             hint = ""
@@ -370,6 +539,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--pull", default=env("MERGE_WINDOW_PULL", ""), help="one pull request number")
     parser.add_argument("--now", help="ISO 8601 instant to evaluate instead of the clock")
+    parser.add_argument("--merge-style", default=env("MERGE_WINDOW_MERGE_STYLE") or DEFAULT_MERGE_STYLE)
+    parser.add_argument(
+        "--merge-wait",
+        type=float,
+        default=float(env("MERGE_WINDOW_MERGE_WAIT") or DEFAULT_MERGE_WAIT_SECONDS),
+        help="seconds to wait for each merge to land; 0 to not wait",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -381,6 +557,7 @@ def main(argv: list[str] | None = None) -> int:
         now = dt.datetime.fromisoformat(args.now) if args.now else dt.datetime.now(dt.timezone.utc)
         if now.tzinfo is None:
             raise ValueError("--now needs an offset, e.g. 2026-10-17T02:00:00-04:00")
+        required = required_contexts(env("MERGE_WINDOW_PROTECTION", ""))
     except ValueError as error:
         print(f"merge-window: {error}", file=sys.stderr)
         return 2
@@ -395,11 +572,19 @@ def main(argv: list[str] | None = None) -> int:
     verdict = evaluate(now, window)
     print(f"{verdict.state}: {verdict.description}")
     forge = ForgejoApi(args.server, token)
+    merge_token = env("MERGE_WINDOW_MERGE_TOKEN", "")
+    merging = Merging(
+        scheduler=ForgejoApi(args.server, merge_token) if merge_token else None,
+        style=args.merge_style,
+        required=required,
+        # One pull request's run has no next one to keep apart from.
+        wait=args.merge_wait if only is None else 0,
+    )
     failures = 0
     for repo in repos:
         try:
             failures += reconcile_repo(
-                forge, repo, verdict, args.context, args.target_url, args.dry_run, only=only
+                forge, repo, verdict, args.context, args.target_url, args.dry_run, only=only, merging=merging
             )
         except ApiError as error:
             # Reading the pull requests failed: nothing in this repository was touched.

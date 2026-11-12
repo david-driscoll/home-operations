@@ -489,6 +489,15 @@ spec:
               # Fixed for gluetun's FIREWALL_INPUT_PORTS, and clear of
               # tailscale's 41641. Change both together.
               NB_WIREGUARD_PORT: "51821"
+              # The daemon's read-only Prometheus /metrics, for the picker's
+              # region_exit_overlay_connected (plan §F, #3164):
+              # netbird_management_connected and netbird_signal_connected.
+              # `up` reads NB_<FLAG> for each of its flags
+              # (client/cmd/root.go SetFlagsFromEnvVars, v0.82.1). Loopback
+              # only, which gluetun's firewall accepts; nothing off the pod
+              # can reach it, and NetBird warns if it is ever not loopback.
+              NB_ENABLE_LOCAL_METRICS: "true"
+              NB_LOCAL_METRICS_ADDRESS: "127.0.0.1:9191"
               NB_LOG_LEVEL: info
               NB_LOG_FILE: console
             securityContext: *privileged
@@ -502,14 +511,16 @@ spec:
           picker: &picker
             image:
               repository: git.${ROOT_DOMAIN}/estate-images/wonderbolts-agent
-              tag: 0.1.1@sha256:31343780485623fe46cc916cfa54d497410db57b5b049da75c4b09dec888fd53
+              tag: 0.1.2@sha256:4e90a8c2b5d7e506e6009941a909bfa414b695f09d7c9f0a8afce103f841f374
             # The image's own cmd, spelled out: Node strips the types itself.
             command: ["node", "/app/picker.ts"]
             env: &picker-env
               REGION_EXIT_NAME: spitfire
               PORT: "8080"
-              # tailscale's TS_SOCKET; NetBird is read from wt0 in sysfs, not
-              # its gRPC socket, which has no read-only mode (wonderbolts agent/overlays.ts).
+              # tailscale's TS_SOCKET. NetBird is read from wt0 in sysfs and,
+              # from agents built for #3164, its local /metrics on
+              # 127.0.0.1:9191 (NB_ENABLE_LOCAL_METRICS above), never its gRPC
+              # socket, which has no read-only mode (wonderbolts agent/overlays.ts).
               TAILSCALE_SOCKET: /var/run/tailscale/tailscaled.sock
               POD_NAMESPACE:
                 valueFrom:
