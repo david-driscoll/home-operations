@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# flate-check -- the hk `flate` step (.config/hk.pkl), one run at a time.
+#
+# WHY. A `flate test all` over ./kubernetes/flux/cluster holds ~2.5 GB of
+# memory while it renders. Where several agents share one container (Paseo:
+# every agent the daemon spawns runs in its `app` container, 8 Gi limit), two
+# agents committing at once start two of these from their pre-commit hooks. On
+# 2026-11-12 that filled the container to its limit: no OOM kill, just ~98%
+# memory pressure for over an hour, the daemon taking 15-25 s per request,
+# and both hooks still running 67 minutes later. Killing them did not help --
+# the agents retried the commit and the pair was back within seconds.
+#
+# So the step takes an exclusive lock first. The lock lives in the temp dir,
+# not the repo: each agent commits from its own worktree or clone, but they
+# all share the container's /tmp. A second commit waits for the first render
+# instead of racing it, and the warm cache makes the second one quick.
+#
+# No `flock` (stock macOS) -> runs unlocked, as before. A run that waits past
+# FLATE_LOCK_TIMEOUT seconds fails the hook rather than blocking forever
+# behind a hung render; `HK=0 git commit` skips the hook.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+lock="${TMPDIR:-/tmp}/home-operations-flate.lock"
+timeout="${FLATE_LOCK_TIMEOUT:-1200}"
+
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"${lock}"
+  if ! flock -n 9; then
+    echo "flate-check: another flate run holds ${lock}; waiting up to ${timeout}s" >&2
+    if ! flock -w "${timeout}" 9; then
+      echo "flate-check: still locked after ${timeout}s; giving up (HK=0 git commit skips the hook)" >&2
+      exit 1
+    fi
+  fi
+fi
+
+scripts/flate-supply |
+  flate test all --path ./kubernetes/flux/cluster \
+    --allow-missing-kinds Secret --supply - --no-progress
