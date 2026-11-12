@@ -164,6 +164,14 @@ run = [
   'go -C scripts/eso-values-lint run . "$(git rev-parse --show-toplevel)/kubernetes"',
 ]
 
+[tasks.podsecurity-label-lint]
+description = 'Fail when a namespace kustomization asks for a PodSecurity label that does not render'
+# kustomize drops `metadata.labels` on a kustomization.yaml (#3162). Kept in
+# step with the hk step and the flux-local.yaml job of the same name.
+run = [
+  'go -C scripts/podsecurity-label-lint run . "$(git rev-parse --show-toplevel)/kubernetes"',
+]
+
 [tasks.pkl-vscode]
 description = 'Install the Pkl VS Code extension (not on the marketplace; installed from VSIX)'
 # Ported from rocketsurgeonsguild/Specular. Not part of [hooks] postinstall on

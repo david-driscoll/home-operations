@@ -82,6 +82,28 @@ jobs:
       - name: Run eso-values-lint
         run: go -C scripts/eso-values-lint run . "${GITHUB_WORKSPACE}/kubernetes"
 
+  # kustomize silently drops `metadata.labels` on a kustomization.yaml, so a
+  # namespace can look PodSecurity-labelled and render without it (#3162).
+  # Neither flate nor the cluster complains. Ungated, like eso-values-lint.
+  podsecurity-label-lint:
+    name: PodSecurity Label Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: scripts/podsecurity-label-lint/go.mod
+          cache-dependency-path: scripts/podsecurity-label-lint/go.sum
+
+      - name: Test podsecurity-label-lint
+        run: go -C scripts/podsecurity-label-lint test ./...
+
+      - name: Run podsecurity-label-lint
+        run: go -C scripts/podsecurity-label-lint run . "${GITHUB_WORKSPACE}/kubernetes"
+
   diff:
     name: Diff
     needs: pre-job
@@ -147,7 +169,7 @@ jobs:
 
   flux-local-status:
     name: flate Success
-    needs: ["test", "diff", "eso-values-lint"]
+    needs: ["test", "diff", "eso-values-lint", "podsecurity-label-lint"]
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
