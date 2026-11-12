@@ -152,10 +152,16 @@ groups:
             order: the LAPI log for CROWDSEC_EDGE_REGISTER (the machine registered?), the
             crowdsec-netbird-edge Secret in `network`, the `netbird-edge-crowdsec` tailnet grant, and
             `docker logs netbird-crowdsec` on the host for the login error.
+        # `exported_machine`, NOT `machine`. The crowdsec chart's ServiceMonitor
+        # relabels __meta_kubernetes_pod_node_name into a target label called
+        # `machine`, so Prometheus renames CrowdSec's own `machine` label (the
+        # LAPI machine id) to `exported_machine`. Keyed on `machine`, every series
+        # read as the LAPI pod's node and this fired for both edge hosts while
+        # both were heartbeating (2026-11-10..11).
         expr: |
           up{cluster="netbird-edge", job="crowdsec"} == 1
             unless on (lapi_name)
-          label_replace(sum by (machine) (increase(cs_lapi_machine_requests_total[30m])) > 0, "lapi_name", "$1", "machine", "(.+)")
+          label_replace(sum by (exported_machine) (increase(cs_lapi_machine_requests_total[30m])) > 0, "lapi_name", "$1", "exported_machine", "(.+)")
         for: 30m
         labels:
           severity: warning
@@ -167,6 +173,13 @@ groups:
       # host list; the bouncer itself lives in Traefik. A bouncer polling from a
       # new address gets a row named <name>@<ip> (api_key.go authPlain), hence
       # the regex. GET only: AppSec validates the same key with HEAD.
+      #
+      # Gated on the host's netbird-server being up, i.e. on the lease holder.
+      # The plugin's New() only runs when a router uses the middleware, and the
+      # only routers that do (netbird-api, netbird-dashboard) are labels on the
+      # netbird-server and netbird-dashboard containers, which the fence keeps
+      # stopped on a standby. So a standby's bouncer never polls, and has nothing
+      # to protect: ungated, this fired for netbird-azure-cus permanently.
       - alert: NetbirdCrowdsecBouncerNotPolling
         annotations:
           summary: "{{ $labels.host }}: the edge Traefik bouncer is not fetching decisions."
@@ -179,6 +192,7 @@ groups:
             handleStreamTicker errors.
         expr: |
           up{cluster="netbird-edge", job="crowdsec"} == 1
+            and on (host) up{cluster="netbird-edge", job="netbird-server"} == 1
             unless on (lapi_name)
           label_replace(sum by (bouncer) (increase(cs_lapi_bouncer_requests_total{route="/v1/decisions/stream", method="GET"}[30m])) > 0, "lapi_name", "$1", "bouncer", "([^@]+)(@.+)?")
         for: 30m
