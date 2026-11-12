@@ -6,7 +6,7 @@
 #
 # Why a component: kustomize ignores `metadata.labels` on a kustomization.yaml,
 # so six namespaces that set the label that way rendered without it (#3162).
-# scripts/podsecurity-label-lint fails when an intended label stops rendering.
+# scripts/podsecurity-label-lint.ts fails when an intended label stops rendering.
 #
 # A strategic-merge patch, not JSON6902: it adds this one key, creating
 # `metadata.labels` when the Namespace has none and keeping any labels it
