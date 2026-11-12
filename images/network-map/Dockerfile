@@ -12,13 +12,13 @@
 #
 # The LAST FROM line is the base both builds use: the workflow reads its
 # digest from here, and Renovate bumps it.
-FROM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS build
+FROM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS build
 RUN apk add --no-cache bash
 # Only what ./inputs.sh lists gets this far (./Dockerfile.dockerignore).
 COPY . /src
 RUN /src/images/network-map/bake.sh /src /out
 
-FROM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216
+FROM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
 COPY --from=build /out/app /app
 USER 1000
 CMD ["node", "/app/src/main.ts"]
