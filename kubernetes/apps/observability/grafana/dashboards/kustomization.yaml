@@ -17,12 +17,3 @@ resources:
   - ./thanos.yaml
 generatorOptions:
   disableNameSuffixHash: true
-configMapGenerator:
-  # NetBird's Management board, vendored (netbird.yaml). Flux would rewrite
-  # every ${...} in it, the dashboard's own variables included, to empty.
-  - name: netbird-management-dashboard
-    files:
-      - management.json=./netbird/management-v0.82.1.json
-    options:
-      annotations:
-        kustomize.toolkit.fluxcd.io/substitute: disabled
