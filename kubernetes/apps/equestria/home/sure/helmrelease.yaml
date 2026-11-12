@@ -87,7 +87,7 @@ spec:
       # THIS LINE IS WHAT DECIDES WHICH SURE RUNS. Leave it out and the chart
       # falls back to its `appVersion`, which for a chart "updated" from a
       # hotfix to its base is the older build.
-      tag: stable@sha256:61cd4c1fa9917200f8db4434b45d968235f375c52cdbdc81bf4a4df555a2f090
+      tag: stable@sha256:002cde609f3af4b69ba2564c2482f3996e1fe29092dd169962b9b6ed943fcb10
       pullPolicy: IfNotPresent
 
     # ---- Bundled dependencies: all off ------------------------------------
