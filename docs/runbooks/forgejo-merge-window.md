@@ -72,8 +72,48 @@ github-mirror/home-operations#416 c04e1d9 draft, skipped
 ```
 
 Forgejo re-checks every scheduled merge on a commit whenever a status is posted
-on that commit. The `pending` → `success` flip is what sets the merge off;
-nothing else has to poll.
+on that commit. The `pending` → `success` flip is what sets the merge off.
+
+### One merge at a time, and scheduled again
+
+Until 2026-11-12 the opening run turned every pull request green within a
+second, and Forgejo started all their merges at once. The first moved `main`,
+and the rest failed with `PushRejected: cannot lock ref 'refs/heads/main'` or
+`PushOutOfDate` (9 to 15 a night, Forgejo's log, `handlePullRequestAutoMerge`).
+A failed merge also makes Forgejo **drop the pull request's "Merge when checks
+succeed" without a comment**, and Renovate sets it only when it opens the pull
+request. So each loser stayed green and never merged.
+
+Two things in the scheduled and hand-run runs stop that:
+
+- **Scheduled again.** Every gated pull request gets "Merge when checks
+  succeed" (`rebase`) on every run, with the sync bot's token
+  (`MIRROR_SYNC_TOKEN`, as `MERGE_WINDOW_MERGE_TOKEN`). Forgejo answers 409 when
+  it is already set, which is the usual case. Scheduling sets nothing off by
+  itself, so inside the window a pull request that was already `success` gets
+  its status again. Not the job token: Forgejo merges later as whoever
+  scheduled, and the Actions user cannot push to the protected `main`. Not in a
+  `pull_request` run either, which reads this workflow from the pull request's
+  own branch.
+- **One at a time.** Inside the window, after a status leaves a pull request
+  ready to merge (every pattern the branch rule requires matched and green,
+  read from `MIRROR_MAIN_PROTECTION`), the run waits up to two minutes for it
+  to merge before it touches the next one. A night's waiting is capped at 25
+  minutes; past that the rest are posted without waiting.
+
+The log shows both:
+
+```text
+github-mirror/home-operations#1252 732698f merge scheduled again
+github-mirror/home-operations#1252 732698f pending -> success
+github-mirror/home-operations#1252 732698f merged
+github-mirror/home-operations#1209 a609dc6 pending -> success
+```
+
+Pull request #1209 above was not waited for: its `flate` is red, so Forgejo will not merge
+it. `not merged after 120s, moving on` means Forgejo did not merge one that
+looked ready, most often because the merge failed. The next run schedules it
+again.
 
 The window can run past midnight: a window that opens Friday 22:00 and ends
 02:00 is open in the small hours of Saturday. Daylight saving changes follow
@@ -316,6 +356,14 @@ that found nothing to do says so.
 
 **`time zone 'X' not found`.** `MERGE_WINDOW_TZ` is misspelled, or the runner
 image has lost its tzdata.
+
+**A green pull request set to automerge did not merge in the window.** Search
+Forgejo's log for `handlePullRequestAutoMerge` around 00:01 New York. `has
+unsuccessful status checks` means a required status is red or missing (a
+branch cut before a fix to `flate.yml` keeps failing until it is rebased, since
+Renovate rebases only on conflict). `PushRejected` or `PushOutOfDate` means
+it lost a race. Either way the next run schedules it again; a *Run workflow*
+inside the window does it at once.
 
 **Tests.** They need no network:
 
