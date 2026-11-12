@@ -11,18 +11,25 @@
 # carries as an externalIP. An IP/CIDR target is upstream's open issue
 # netbirdio/kubernetes-operator#305. So:
 #
-#   stacks/netbird (Pulumi) owns every NetBird object that carries meaning:
-#     the `equestria` network, its two /32 resources (resource group
-#     `equestria-entry`), the network router whose peer group is `k8s-routers`,
-#     the `k8s-router` setup key that enrols into that group, and the DNS zone
-#     named below. The policy that lets users reach `equestria-entry` is #2888.
+#   The operator always creates a network named after this object
+#     (`equestria-routers`), with its own router, group and ephemeral setup
+#     key; v0.9.0 cannot be pointed at an existing network. That network is
+#     the Equestria entry's (#3163): stacks/netbird finds it by this name
+#     (stacks/netbird/routerNetwork.ts, whose test pins it), so RENAMING OR
+#     DELETING THIS OBJECT replaces the network and takes the entry down
+#     until the next stacks/netbird run.
+#   stacks/netbird (Pulumi) owns every NetBird object that carries meaning,
+#     inside that network: the two /32 resources (resource group
+#     `equestria-entry`) and a router whose peer group is `k8s-routers`; and
+#     outside it the `k8s-router` setup key that enrols into that group, and
+#     the DNS zone named below. The policy that lets users reach
+#     `equestria-entry` is #2888.
 #   This file owns only the routing-peer pods. The operator runs them as a
 #     Deployment with a PDB, probes and restart-on-logout, and podTemplate
-#     below swaps its generated setup key for stacks/netbird's.
-#
-# Side effect: the operator still creates a network named after this object,
-# plus a router, a group and an ephemeral setup key, none of which any peer
-# uses. That network has no resources, so it routes nothing.
+#     below swaps its generated setup key for stacks/netbird's, so the pods
+#     sit in `k8s-routers` (which also serves `exit-home`) and the operator's
+#     own router and group stay empty. Two routers, one network, no fight:
+#     each side only ever writes its own router by id.
 #
 # No NetworkResource, ClusterProxy, SidecarProfile or NetworkEgress anywhere.
 apiVersion: netbird.io/v1alpha1
