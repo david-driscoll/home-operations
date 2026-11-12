@@ -43,6 +43,14 @@ kind: KubeAPIServerConfig
 extraArgs:
   # https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
   enable-aggregator-routing: "true"
+  # Clients hold one long-lived HTTP/2 connection to whichever apiserver they
+  # reached first, and never move. After kube-apiserver-milky-way restarted on
+  # 2026-11-11 its clients piled onto the other two: pegasus went from 87 to
+  # 146 req/s (1.7 cores, NodeSystemSaturation on a 4-core node) while
+  # milky-way served 4. A 1-in-1000 chance of GOAWAY per request makes clients
+  # reconnect, and rebalance across the VIP, within minutes. 0.001 is the
+  # upstream-recommended value; it only applies to HTTP/2 and skips watches.
+  goaway-chance: "0.001"
 resources:
   requests:
     cpu: 200m
