@@ -1,0 +1,10 @@
+{
+  // Typechecks the PodSecurity label lint on its own, under the root
+  // tsconfig's rules: scripts/ is outside the root project, and the root
+  // project pulls in every component. Run by the podsecurity-label-lint job
+  // in .github/workflows/flux-local.yaml.
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "composite": false, "types": ["node"] },
+  "include": [],
+  "files": ["podsecurity-label-lint.ts", "podsecurity-label-lint.test.ts"]
+}

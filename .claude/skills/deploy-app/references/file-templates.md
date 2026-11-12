@@ -26,7 +26,7 @@ components:
 ```
 
 Do not put `metadata.labels` on the kustomization.yaml: kustomize ignores it
-and the Namespace renders unlabelled (#3162). `scripts/podsecurity-label-lint`
+and the Namespace renders unlabelled (#3162). `scripts/podsecurity-label-lint.ts`
 (an hk step and a flux-local CI job) fails when an intended label does not
 render.
 

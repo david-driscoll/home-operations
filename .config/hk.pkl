@@ -152,13 +152,12 @@ local linters = new Mapping<String, Step> {
   // on its Namespace must actually render it. `metadata.labels` on a
   // kustomization.yaml looks right and is silently dropped by kustomize; six
   // namespaces shipped unlabelled that way (#3162). The repo pattern is the
-  // kubernetes/components/privileged-namespace component. Same `go -C` rules
-  // as `eso-values-lint` above, and the same job layout in
-  // .github/workflows/flux-local.yaml.
+  // kubernetes/components/privileged-namespace component. Renders with
+  // `kubectl kustomize`; node and kubectl are both pinned in .config/mise.toml.
+  // Kept in step with the mise task and the flux-local.yaml job of the same name.
   ["podsecurity-label-lint"] = new Step {
-    glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml")
-    check =
-      "go -C scripts/podsecurity-label-lint run . \"$(git rev-parse --show-toplevel)/kubernetes\""
+    glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml", "scripts/podsecurity-label-lint*.ts")
+    check = "node scripts/podsecurity-label-lint.ts \"$(git rev-parse --show-toplevel)/kubernetes\""
   }
 
   // Configured by `.yamllint`, which disables the purely cosmetic rules and

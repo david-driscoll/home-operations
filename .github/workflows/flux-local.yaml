@@ -92,17 +92,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      # The node and kubectl the repo pins for everyone else, read from the
+      # mise config rather than repeated here (as in oci-free-tier-policy.yaml).
+      - name: Read pinned versions
+        id: pins
+        run: |
+          {
+            echo "node=$(yq -p toml -oy '.tools.node' .config/mise.toml)"
+            echo "kubectl=$(yq -p toml -oy '.tools.kubectl' .config/mise.toml)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          go-version-file: scripts/podsecurity-label-lint/go.mod
-          cache-dependency-path: scripts/podsecurity-label-lint/go.sum
+          node-version: ${{ steps.pins.outputs.node }}
+
+      # The linter renders with `kubectl kustomize`. Straight from dl.k8s.io,
+      # checksum-verified, at the mise pin.
+      - name: Setup kubectl
+        env:
+          KUBECTL_VERSION: ${{ steps.pins.outputs.kubectl }}
+        run: |
+          base="https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64"
+          curl -fsSLo "$RUNNER_TEMP/kubectl" "$base/kubectl"
+          echo "$(curl -fsSL "$base/kubectl.sha256")  $RUNNER_TEMP/kubectl" | sha256sum --check
+          install -m 0755 "$RUNNER_TEMP/kubectl" /usr/local/bin/kubectl
+          kubectl version --client
+
+      # --ignore-scripts: the sdks/* postinstall regenerates bridged SDKs. The
+      # linter needs only the `yaml` package (and tsc, for the typecheck).
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck podsecurity-label-lint
+        run: npx --no-install tsc -p scripts/tsconfig.podsecurity-label-lint.json
 
       - name: Test podsecurity-label-lint
-        run: go -C scripts/podsecurity-label-lint test ./...
+        run: node --test scripts/podsecurity-label-lint.test.ts
 
       - name: Run podsecurity-label-lint
-        run: go -C scripts/podsecurity-label-lint run . "${GITHUB_WORKSPACE}/kubernetes"
+        run: node scripts/podsecurity-label-lint.ts "${GITHUB_WORKSPACE}/kubernetes"
 
   diff:
     name: Diff

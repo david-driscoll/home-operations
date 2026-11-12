@@ -50,19 +50,17 @@ typos = "1.52.2"
 # second, independent reason shellcheck is pinned rather than assumed.
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
-# Same rule, third instance. hk's `eso-values-lint` and `podsecurity-label-lint`
-# steps run `go -C scripts/<name> run .`, and `go` was never pinned -- it worked
+# Same rule, third instance. hk's `eso-values-lint` step runs
+# `go -C scripts/eso-values-lint run .`, and `go` was never pinned -- it worked
 # only where Go happened to be installed system-wide, exactly like `pipx` below.
 # In the agentboard pod it was not, so the step died with `sh: 1: go: not found`
 # and took the whole pre-push hook down with it once the hooks were registered.
 # CI does not catch this: .github/workflows/flux-local.yaml installs Go from
-# each module's go.mod (scripts/eso-values-lint/go.mod,
-# scripts/podsecurity-label-lint/go.mod) via actions/setup-go, so the workflow
-# passes on a machine the local hook cannot reproduce.
+# scripts/eso-values-lint/go.mod via actions/setup-go, so the workflow passes on
+# a machine the local hook cannot reproduce.
 #
-# Keep the MAJOR.MINOR in step with both go.mods' `go 1.27.0` directive, which
-# is the version CI resolves; the patch floats on Renovate. 1.27 is the floor:
-# podsecurity-label-lint's kustomize dependencies (k8s.io/kube-openapi) need it.
+# Keep the MAJOR.MINOR in step with that go.mod's `go 1.24` directive, which is
+# the version CI resolves; the patch floats on Renovate.
 go = "1.27.4"
 "pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
@@ -171,7 +169,7 @@ description = 'Fail when a namespace kustomization asks for a PodSecurity label 
 # kustomize drops `metadata.labels` on a kustomization.yaml (#3162). Kept in
 # step with the hk step and the flux-local.yaml job of the same name.
 run = [
-  'go -C scripts/podsecurity-label-lint run . "$(git rev-parse --show-toplevel)/kubernetes"',
+  'node scripts/podsecurity-label-lint.ts "$(git rev-parse --show-toplevel)/kubernetes"',
 ]
 
 [tasks.pkl-vscode]
