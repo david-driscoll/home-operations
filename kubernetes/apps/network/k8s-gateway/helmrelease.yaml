@@ -15,8 +15,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 3.4.1
-    digest: sha256:2dbb60de1f0bb24363a1abe3d59f83db0a6ce23b66776675f8a024fa4bbb7cb9
+    tag: 3.7.2
+    digest: sha256:3783b0b4bc414e040d6b72e81cf78071542b27a4779d3e462f547bbfd23651fc
   url: oci://ghcr.io/k8s-gateway/charts/k8s-gateway
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
