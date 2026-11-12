@@ -122,10 +122,14 @@ local linters = new Mapping<String, Step> {
   // network and is far slower than the warm number above. v0.7 dropped
   // `--source-retry-attempts`. If you need to commit offline with a cold
   // cache, `HK=0 git commit` bypasses the hook entirely.
+  //
+  // Through scripts/flate-check, which runs exactly the pipeline above but
+  // behind a machine-wide lock: a render holds ~2.5 GB, and two agents
+  // committing at once in Paseo's shared container pinned it at its memory
+  // limit for over an hour (the script's header has the incident).
   ["flate"] = new Step {
     glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml")
-    check =
-      "scripts/flate-supply | flate test all --path ./kubernetes/flux/cluster --allow-missing-kinds Secret --supply - --no-progress"
+    check = "scripts/flate-check"
   }
 
   // Closes the blind spot named in the `flate` comment directly above: this is
