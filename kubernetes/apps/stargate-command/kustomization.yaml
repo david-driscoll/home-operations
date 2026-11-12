@@ -3,9 +3,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: stargate-command
-metadata:
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
 components:
   - ../../components/alerts
   - ../../components/common
@@ -47,6 +44,17 @@ components:
 # today. If one ever needs to, a strategic merge REPLACES that list and this has
 # to move.
 patches:
+  # The Namespace's PodSecurity level. A JSON patch, because kustomize ignores
+  # `metadata.labels` on this file (#3162); scripts/podsecurity-label-lint fails
+  # if it stops rendering. A no-op today: talos/control-plane/10-cluster.yaml
+  # deletes the PodSecurity config, so the default is already privileged.
+  - target:
+      kind: Namespace
+    patch: |-
+      - op: add
+        path: /metadata/labels
+        value:
+          pod-security.kubernetes.io/enforce: privileged
   - target:
       group: kustomize.toolkit.fluxcd.io
       kind: Kustomization
