@@ -66,7 +66,7 @@ go = "1.27.4"
 "npm:typescript" = "5.9.3"
 node = "26.13.1"
 pulumi = "3.274.1"
-"github:microsoft/apm" = { version = "v0.35.0", bin = "apm" }
+"github:microsoft/apm" = { version = "v0.35.1", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
 "github:home-operations/flate" = "v0.7.3"
 dotnet = { version = "10.0.403" }
