@@ -932,7 +932,7 @@ url = "https://github.com/PowerShell/PowerShell/releases/download/v7.7.0-rc.1/Po
 url_api = "https://api.github.com/repos/PowerShell/PowerShell/releases/assets/690119346"
 
 [[tools.pulumi]]
-version = "3.274.1"
+version = "3.275.0"
 backend = "aqua:pulumi/pulumi"
 specifiers = ["3.274.1"]
 
