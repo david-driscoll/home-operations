@@ -43,7 +43,7 @@ spec:
             image:
               # Docker Hub is the only published registry (upstream lives on GitLab).
               repository: docker.io/g33kphr33k/musicgrabber
-              tag: 4.5.3@sha256:fb9e2e45f37e14904d238af42035f44635d92eb270b0fd967cd3ab79b674a188
+              tag: 4.5.4@sha256:ee8b6519e78581269a6688063c76fa5d498727fffe3bf3e44a97ac92695634f1
               pullPolicy: IfNotPresent
             # https://gitlab.com/g33kphr33k/musicgrabber/-/blob/main/docker-compose.yml
             # Everything else is configured in the Settings tab and stored in
