@@ -46,7 +46,7 @@ spec:
   datasources:
     - datasourceName: __expr__
       inputName: DS_EXPRESSION
-  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.1/infrastructure_files/observability/grafana/dashboards/management.json
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.83.0/infrastructure_files/observability/grafana/dashboards/management.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
@@ -60,7 +60,7 @@ spec:
   datasources:
     - datasourceName: Prometheus
       inputName: DS_PROMETHEUS
-  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.1/infrastructure_files/observability/grafana/dashboards/signal.json
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.83.0/infrastructure_files/observability/grafana/dashboards/signal.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
@@ -71,4 +71,4 @@ spec:
     matchLabels:
       dashboards: "grafana"
   folder: "netbird"
-  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.82.1/infrastructure_files/observability/grafana/dashboards/relay.json
+  url: https://raw.githubusercontent.com/netbirdio/netbird/v0.83.0/infrastructure_files/observability/grafana/dashboards/relay.json

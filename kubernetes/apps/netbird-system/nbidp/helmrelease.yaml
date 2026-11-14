@@ -62,7 +62,7 @@ spec:
           proxy:
             image:
               repository: ghcr.io/netbirdio/reverse-proxy
-              tag: 0.82.1@sha256:dc92ce5c361d9f7bffd484d9502077390020c2bb39ca1e27dd1834c80adb7ce0
+              tag: 0.83.1@sha256:7c8e11d39dfd88bd9f5a9e281b802b7e5772dc11869f53be81685283800816c5
             env:
               NB_PROXY_MANAGEMENT_ADDRESS: https://netbird.${ROOT_DOMAIN}:443
               # The cluster address, `ek.<root domain>`
