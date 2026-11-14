@@ -73,9 +73,15 @@ export class TailnetSettings extends pulumi.CustomResource {
      */
     declare public readonly postureIdentityCollectionOn: pulumi.Output<boolean>;
     /**
-     * Whether regional routing is enabled for the tailnet
+     * Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+     *
+     * @deprecated Deprecated
      */
     declare public readonly regionalRoutingOn: pulumi.Output<boolean>;
+    /**
+     * The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
+     */
+    declare public readonly routeSelection: pulumi.Output<string>;
     /**
      * Whether user approval is enabled for this tailnet
      */
@@ -107,6 +113,7 @@ export class TailnetSettings extends pulumi.CustomResource {
             resourceInputs["networkFlowLoggingOn"] = state?.networkFlowLoggingOn;
             resourceInputs["postureIdentityCollectionOn"] = state?.postureIdentityCollectionOn;
             resourceInputs["regionalRoutingOn"] = state?.regionalRoutingOn;
+            resourceInputs["routeSelection"] = state?.routeSelection;
             resourceInputs["usersApprovalOn"] = state?.usersApprovalOn;
             resourceInputs["usersRoleAllowedToJoinExternalTailnet"] = state?.usersRoleAllowedToJoinExternalTailnet;
         } else {
@@ -120,6 +127,7 @@ export class TailnetSettings extends pulumi.CustomResource {
             resourceInputs["networkFlowLoggingOn"] = args?.networkFlowLoggingOn;
             resourceInputs["postureIdentityCollectionOn"] = args?.postureIdentityCollectionOn;
             resourceInputs["regionalRoutingOn"] = args?.regionalRoutingOn;
+            resourceInputs["routeSelection"] = args?.routeSelection;
             resourceInputs["usersApprovalOn"] = args?.usersApprovalOn;
             resourceInputs["usersRoleAllowedToJoinExternalTailnet"] = args?.usersRoleAllowedToJoinExternalTailnet;
         }
@@ -162,9 +170,15 @@ export interface TailnetSettingsState {
      */
     postureIdentityCollectionOn?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether regional routing is enabled for the tailnet
+     * Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+     *
+     * @deprecated Deprecated
      */
     regionalRoutingOn?: pulumi.Input<boolean | undefined>;
+    /**
+     * The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
+     */
+    routeSelection?: pulumi.Input<string | undefined>;
     /**
      * Whether user approval is enabled for this tailnet
      */
@@ -209,9 +223,15 @@ export interface TailnetSettingsArgs {
      */
     postureIdentityCollectionOn?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether regional routing is enabled for the tailnet
+     * Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+     *
+     * @deprecated Deprecated
      */
     regionalRoutingOn?: pulumi.Input<boolean | undefined>;
+    /**
+     * The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
+     */
+    routeSelection?: pulumi.Input<string | undefined>;
     /**
      * Whether user approval is enabled for this tailnet
      */
