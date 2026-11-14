@@ -29,7 +29,7 @@ packages:
   tailscale:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/tailscale/tailscale, 0.29.3]
+    parameters: [registry.terraform.io/tailscale/tailscale, 0.30.0]
   netbird:
     source: terraform-provider
     version: 0.14.0
