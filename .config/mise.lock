@@ -511,51 +511,51 @@ url = "https://github.com/microsoft/apm/releases/download/v0.35.1/apm-windows-x8
 url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/737095996"
 
 [[tools."github:stacklok/toolhive"]]
-version = "0.64.0"
+version = "0.65.0"
 backend = "github:stacklok/toolhive"
-specifiers = ["v0.64.0"]
+specifiers = ["v0.65.0"]
 
 [tools."github:stacklok/toolhive"."platforms.linux-arm64"]
-checksum = "sha256:a1c98f9a95370c75d70f71941744088946b17d534fd2c438738904412243d324"
+checksum = "sha256:3391fc8eae22852d5d7fce8ce5a28ba3528697dfe05f405830f995a922f8269e"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290493"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448115"
 
 [tools."github:stacklok/toolhive"."platforms.linux-arm64-musl"]
-checksum = "sha256:a1c98f9a95370c75d70f71941744088946b17d534fd2c438738904412243d324"
+checksum = "sha256:3391fc8eae22852d5d7fce8ce5a28ba3528697dfe05f405830f995a922f8269e"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290493"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448115"
 
 [tools."github:stacklok/toolhive"."platforms.linux-x64"]
-checksum = "sha256:2aff5b4b61ce917f4c42ceba902fb610fd6d2871cae82b562c874432600ebb63"
+checksum = "sha256:4fb9ec83fd8172f2281accefc8d43af682ef096fa6b7e31db04b75b110f7a0f4"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290357"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448111"
 
 [tools."github:stacklok/toolhive"."platforms.linux-x64-musl"]
-checksum = "sha256:2aff5b4b61ce917f4c42ceba902fb610fd6d2871cae82b562c874432600ebb63"
+checksum = "sha256:4fb9ec83fd8172f2281accefc8d43af682ef096fa6b7e31db04b75b110f7a0f4"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290357"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448111"
 
 [tools."github:stacklok/toolhive"."platforms.macos-arm64"]
-checksum = "sha256:730737694794febaa92de0873a0ab046c94cd476ed3bc9d853174ce4992a9fc7"
+checksum = "sha256:9d3475e26b7390809925a312c4aab4af985a092e79ae5f9e88f45af9844a33c2"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290358"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448261"
 
 [tools."github:stacklok/toolhive"."platforms.macos-x64"]
-checksum = "sha256:4b9c07c3fdd8f8125af238bf0671035fca0c31e133d9cdb7579b7a8c85e9bfd1"
+checksum = "sha256:15a9e42ed174097370ae5f99b33b37212ebf0f164154d38e997776930c34067b"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290504"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448273"
 
 [tools."github:stacklok/toolhive"."platforms.windows-x64"]
-checksum = "sha256:b8fc1cbcbf3e19c438d9173b3e450546419c8090a9e04d098d453f989b0d0e8b"
+checksum = "sha256:1b482199be1f22414f529bf2e4bf24220159a962ea29eefc25c34ca5c6cd8269"
 checksum_source = "mise-versions"
-url = "https://github.com/stacklok/toolhive/releases/download/v0.64.0/toolhive_0.64.0_windows_amd64.zip"
-url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/731290359"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.65.0/toolhive_0.65.0_windows_amd64.zip"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/743448108"
 
 [[tools.go]]
 version = "1.27.4"
