@@ -23,7 +23,7 @@ uv = "0.13.8"
 # ./apm.yml at user scope -- see ./apm-refresh.sh.
 "pipx:apm-cli" = "0.35.1"
 "npm:@anthropic-ai/claude-code" = { version = "2.1.323", allow_builds = true }
-"npm:@openai/codex" = "0.167.1"
+"npm:@openai/codex" = "0.169.0"
 
 [settings]
 experimental = true
