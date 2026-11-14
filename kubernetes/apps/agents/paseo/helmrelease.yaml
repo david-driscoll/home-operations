@@ -214,8 +214,12 @@ spec:
                 cpu: 100m
                 memory: 512Mi
               limits:
-                # Headroom for several agent CLIs running side by side.
-                memory: 8Gi
+                # Headroom for several agent CLIs running side by side, plus
+                # their commit hooks: one `flate` render is ~2.5 GB
+                # (scripts/flate-check now runs them one at a time). At 8Gi the
+                # container sat at its limit, never OOM-killed, thrashing at
+                # ~98% memory pressure for over an hour (2026-11-12).
+                memory: 12Gi
           # Installs and refreshes the user-scope agent packages in
           # ./resources/apm.yml (./resources/apm-refresh.sh): once at start,
           # then daily. Beside the daemon rather than in `tools` so a start
