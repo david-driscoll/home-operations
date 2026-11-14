@@ -16,7 +16,7 @@ powershell-core = "7.7.0"
 # the two and refuses to validate a machine config with a mismatched schema.
 # Renovate bumps both in one PR (the "Siderolabs Talos" group, which tracks
 # siderolabs/talos releases and ghcr.io/siderolabs/talosctl).
-talosctl = "1.14.4"
+talosctl = "1.14.6"
 # TOPF renders and applies talos/'s machine config (talos/topf.yaml + patch
 # tree). It vendors its own Talos machinery -- `topf --version` prints it, e.g.
 # "0.6.2 (Talos v1.14.4)" -- and generates configs against THAT, so a TOPF
