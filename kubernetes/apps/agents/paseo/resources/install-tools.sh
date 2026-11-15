@@ -8,6 +8,35 @@
 # safe here.
 set -euo pipefail
 
+# Everything below that can be downloaded again lives on the `paseo-toolcache`
+# volume (../pvc.yaml), mounted at $PASEO_TOOLCACHE, NOT on the home volume.
+# The home volume is under VolSync; these directories were ~38 GiB and ~370k
+# files of it, and restic's metadata cache for that many files outgrew its
+# volume -- the backup failed `no space left on device` from 2026-11-13.
+#
+# Symlinks rather than environment variables, so every tool (and every agent's
+# own `go`, `npm`, `pulumi`, playwright, ...) follows them without being told.
+# Symlinks rather than subPath mounts, because the kubelet creates a missing
+# subPath directory as root, which `paseo` then cannot write.
+#
+# A real directory where a link belongs is the copy from before the move: it
+# is all re-downloadable, so delete it rather than spend minutes copying it
+# onto the new volume. Only ever a real directory -- a link is left alone.
+toolcache="${PASEO_TOOLCACHE:?PASEO_TOOLCACHE is not set}"
+for rel in .local/share/mise .cache .npm .pulumi/plugins go/pkg; do
+  link="/home/paseo/$rel"
+  target="$toolcache/$rel"
+  mkdir -p "$target" "$(dirname "$link")"
+  if [ -L "$link" ]; then
+    [ "$(readlink "$link")" = "$target" ] && continue
+    rm -f "$link"
+  elif [ -d "$link" ]; then
+    echo "==> moving $rel off the backed-up home volume (deleting the old copy)"
+    rm -rf -- "$link"
+  fi
+  ln -s "$target" "$link"
+done
+
 mise_bin="$MISE_INSTALL_PATH"
 want="${MISE_VERSION#v}"
 have="$("$mise_bin" --version 2>/dev/null | awk '{print $1}' || true)"

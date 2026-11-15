@@ -48,6 +48,16 @@ spec:
       # was at 84% by 2026-10-23. Only ever raise this
       # (components/volsync/AGENTS.md).
       VOLSYNC_CAPACITY: 60Gi
+      # restic's metadata cache, up from the 2Gi default, which filled and
+      # failed every backup from 2026-11-13 (`no space left on device`). It
+      # scales with FILE COUNT, not bytes: the home volume was ~850k files.
+      # The re-downloadable ~370k now live on the un-backed-up `${APP}-toolcache`
+      # volume (./pvc.yaml), but ~490k remain, nearly all agent git worktrees
+      # in ~/.paseo/worktrees, and the retained snapshots from before the move
+      # keep their trees in the repository for up to a year. VolSync does not
+      # resize an existing cache PVC: delete `volsync-src-paseo-cache` after
+      # changing this and the next mover recreates it.
+      VOLSYNC_CACHE_CAPACITY: 8Gi
       # The image's `paseo` user.
       VOLSYNC_PUID: "1000"
       VOLSYNC_PGID: "1000"

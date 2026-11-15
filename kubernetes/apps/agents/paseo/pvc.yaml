@@ -14,3 +14,26 @@ spec:
   resources:
     requests:
       storage: 20Gi
+---
+# /var/cache/paseo -- everything on the home directory that can be downloaded
+# again: mise's tool installs and cache, ~/.cache, ~/.npm, Pulumi's plugins and
+# Go's module cache. ./resources/install-tools.sh symlinks those paths here.
+#
+# Not under VolSync, which is the point. On the home volume these were ~38 GiB
+# and ~370k files, and restic's metadata cache for them outgrew its volume:
+# the paseo backup failed `no space left on device` from 2026-11-13. Losing
+# this volume costs one slow pod start while the init container reinstalls.
+#
+# `longhorn-cache` (2 replicas, no data locality) because it is disposable but
+# must still follow the pod to whichever node it lands on.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}-toolcache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-cache
+  resources:
+    requests:
+      storage: 60Gi

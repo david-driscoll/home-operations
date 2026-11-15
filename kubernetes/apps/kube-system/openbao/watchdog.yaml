@@ -26,9 +26,18 @@ rules:
   # The resourceNames pin these rules to the three replicas in helmrelease.yaml
   # (server.ha.replicas). Add a name here if replicas grow, or the new pod's
   # probe comes back `unreachable` and the job never acts on it.
+  #
+  # The `:8200` is part of the name RBAC checks. ./resources/watchdog.sh asks
+  # for `pods/openbao-0:8200/proxy`, and the apiserver authorizes that as the
+  # resource name `openbao-0:8200`, NOT `openbao-0`. With the bare pod names
+  # here every probe was a 403, every pod read `unreachable`, and every run
+  # since the job landed (2026-11-07) failed with "found 0 active" while
+  # OpenBao was healthy. Check with:
+  #   kubectl get --raw /api/v1/namespaces/kube-system/pods/openbao-0:8200/proxy/v1/sys/seal-status \
+  #     --as=system:serviceaccount:kube-system:openbao-watchdog
   - apiGroups: [""]
     resources: ["pods/proxy"]
-    resourceNames: ["openbao-0", "openbao-1", "openbao-2"]
+    resourceNames: ["openbao-0:8200", "openbao-1:8200", "openbao-2:8200"]
     verbs: ["get"]
   # Eviction, never delete: eviction honours the PodDisruptionBudget, so the
   # job cannot take down a second pod while one is already gone.
