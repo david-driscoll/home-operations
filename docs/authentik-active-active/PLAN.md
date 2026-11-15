@@ -126,6 +126,17 @@ Rejected: `longhorn-critical` for the same pods (3 × 3 copies buys nothing
 once the pods are pinned), and "accept it, promote the Pi in a Battery window"
 (a runbook for a scheduled event is a regression, not a design).
 
+**Amended 2026-11-15: two control planes plus shining-armor, not milky-way.**
+The `nodeSelector` became a required hostname allowlist (`othalla`, `pegasus`,
+`shining-armor`). milky-way, the smallest control plane (~7.3G, with
+kube-apiserver alone at 2.5–3.5G), ran out of memory that night. Talos's OOM
+controller killed `authentik-pg-3` there, every leader-elected controller in the
+cluster lost its lease, and authentik failed over and restarted its servers about
+11 times. shining-armor is the one worker that stays on through a Battery window
+(doc 24: it is a VM and hosts the backup volumes), so the goal of this decision
+still holds: all three instances keep running when the bare-metal workers are
+off.
+
 ## Phases
 
 Each phase is its own commit (or PR).
