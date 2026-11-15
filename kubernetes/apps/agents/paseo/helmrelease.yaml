@@ -87,6 +87,11 @@ spec:
               MISE_DATA_DIR: /home/paseo/.local/share/mise
               MISE_CONFIG_DIR: /home/paseo/.config/mise
               MISE_CACHE_DIR: /home/paseo/.cache/mise
+              # The disposable, un-backed-up volume (./pvc.yaml, `${APP}-toolcache`).
+              # ./resources/install-tools.sh links MISE_DATA_DIR, ~/.cache and
+              # the other re-downloadable directories into it, so the paths
+              # above stay as they are.
+              PASEO_TOOLCACHE: /var/cache/paseo
               MISE_INSTALL_PATH: /home/paseo/.local/bin/mise
               # The mise binary itself, read by ./resources/install-tools.sh.
               # renovate: datasource=github-releases depName=jdx/mise
@@ -291,6 +296,11 @@ spec:
         existingClaim: ${APP}-workspace
         globalMounts:
           - path: /workspace
+      # Every container, because every container runs mise's tools.
+      toolcache:
+        existingClaim: ${APP}-toolcache
+        globalMounts:
+          - path: /var/cache/paseo
       github-token:
         type: secret
         # NOT `${APP}` -- the estate-wide Secret
