@@ -991,6 +991,52 @@
         commitMessageExtra: "",
       },
     },
+    // The two below are the exception to "needed a human anyway": most of
+    // their copies sit under the app automerge paths (equestria/, agents/,
+    // docker/) and merged themselves. A group branch automerges only when
+    // EVERY update in it would, so with the kube-system / tailscale-system /
+    // volsync-system / pulumi / netbird-system copies in the same branch each
+    // bump now waits for a human. That is the trade taken on purpose: one
+    // manual PR per release instead of three to five PRs of which only some
+    // merged on their own. To get automerge back, add both spellings to the
+    // "Automerge named dependencies" rule rather than splitting the group.
+    {
+      // `busybox` (app-template `repository: busybox`, compose, cronjobs) and
+      // `docker.io/library/busybox` (toolhive-registry, the volsync mover
+      // MutatingAdmissionPolicy). One digest moved as five PRs at once.
+      description: "busybox Group",
+      groupName: "busybox",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "busybox",
+        "docker.io/library/busybox"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // The node IMAGE (agent-tools-servers, netbird-system cronjobs,
+      // headlamp's plugin manager, images/network-map/Dockerfile). The
+      // datasource filter keeps out the mise `node` tool (node-version) and
+      // @types/node (npm), which move on their own lines.
+      description: "Node.js image Group",
+      groupName: "Node.js image",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "node",
+        "docker.io/library/node"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
     {
       // The shared preset extends `:automergePatch`, so before this rule EVERY
       // patch in this repo automerged once its checks went green -- Talos,
