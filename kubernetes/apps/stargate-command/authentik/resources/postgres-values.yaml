@@ -62,20 +62,28 @@ cluster:
   # No TimescaleDB, no PostGIS: authentik uses neither, and every extension
   # here would have to exist in the standby image too.
   imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm@sha256:17c0ee85fd74ed54e696e745bb0d9418643db3b8cb7fd9e67e6007a105b575a9
-  # TIER 1, ON THE CONTROL PLANES (PLAN.md decision A, option 1). Identity has
-  # to survive a Battery window, when the workers are off and only the three
-  # control planes run (docs/cluster-consolidation/20-low-power-tier.md §4).
+  # TIER 1, ON THE ALWAYS-ON NODES (PLAN.md decision A, option 1). Identity has
+  # to survive a Battery window, when the bare-metal workers are off and only
+  # the three control planes and shining-armor run
+  # (docs/cluster-consolidation/20-low-power-tier.md §4, 24-power-states.md).
   #
-  #   - nodeSelector pins every instance to a control plane. Three instances,
-  #     three control planes, required anti-affinity per hostname: one each. A
-  #     control plane down leaves that instance Pending and the other two
-  #     serving, which is the intended shape.
-  #   - the toleration is what lets them land there at all;
+  #   - nodeAffinity allows exactly three nodes: othalla, pegasus and
+  #     shining-armor. Three instances, required anti-affinity per hostname:
+  #     one each. A node down leaves that instance Pending and the other two
+  #     serving, which is the intended shape. No synchronous replication, so a
+  #     missing instance never blocks writes.
+  #   - NOT milky-way. It was the third control plane until 2026-11-15, when it
+  #     ran out of memory (~7.3G total, kube-apiserver alone 2.5-3.5G), Talos's
+  #     OOM controller killed authentik-pg-3 there, every leader-elected
+  #     controller in the cluster lost its lease, and authentik failed over and
+  #     restarted its servers ~11 times. A control plane that small has no room
+  #     for a database. shining-armor (48G VM, stays on through Battery) does.
+  #   - the toleration is what lets them land on the control planes at all;
   #   - critical-tier, not system-cluster-critical: an application pod must not
   #     preempt genuine control-plane components on a 4-core node.
   #   - longhorn-local (one replica, strict-local): the volume lives on the
-  #     control plane's own disk, and CNPG's three instances are the redundancy.
-  #     Losing a control-plane disk costs a re-clone of that instance from the
+  #     node's own disk, and CNPG's three instances are the redundancy.
+  #     Losing a node's disk costs a re-clone of that instance from the
   #     primary, not data. longhorn-critical would be 3 x 3 copies for no
   #     additional survivability.
   priorityClassName: critical-tier
@@ -92,8 +100,13 @@ cluster:
   affinity:
     topologyKey: kubernetes.io/hostname
     podAntiAffinityType: required
-    nodeSelector:
-      node-role.kubernetes.io/control-plane: ""
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: ["othalla", "pegasus", "shining-armor"]
     tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
