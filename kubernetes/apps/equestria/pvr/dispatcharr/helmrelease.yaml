@@ -147,6 +147,43 @@ spec:
               DJANGO_SETTINGS_MODULE: dispatcharr.settings
               PYTHONUNBUFFERED: "1"
             envFrom: *postgresEnv
+            probes:
+              # The entrypoint backgrounds beat (`celery beat &`) and only the
+              # default worker holds the foreground, so a dead beat or dvr
+              # worker never ends the container. On 2026-11-06 a refused
+              # Postgres connection killed beat, and every EPG/M3U refresh,
+              # backup and recording schedule stopped for a week while the
+              # container stayed "healthy". Restart it when any of the three
+              # processes is gone. `[d]` keeps pgrep from matching the probe's
+              # own `sh -c`.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - >-
+                        pgrep -f '[d]ispatcharr beat' &&
+                        pgrep -f '[d]ispatcharr worker -Q celery' &&
+                        pgrep -f '[d]ispatcharr worker -Q dvr'
+                  periodSeconds: 60
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              # Nothing starts until /data/jwt exists and migrations pass (up to
+              # 300 s on its own), so hold liveness off for up to 10 minutes.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - pgrep -f '[d]ispatcharr beat'
+                  periodSeconds: 10
+                  failureThreshold: 60
             # No GPU share: Celery does no transcoding, and a second i915
             # request would take another of the node's shared slots.
             resources:

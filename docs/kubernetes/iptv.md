@@ -415,6 +415,18 @@ or a guide that runs out part-way through the day; see *Plan* 1.
 
 ### "The guide is blank for channel X"
 
+**Blank on nearly every channel, with only Teamarr, Twitch and placeholder
+rows left?** Celery beat is down, so no source has refreshed. The sources
+still say `success`, but their `updated_at` has stopped moving. Check that
+beat is running in the `celery` container (`pgrep -f '[d]ispatcharr beat'`)
+and that `last_run_at` in `django_celery_beat_periodictask` is recent
+(`scan-files` runs every few seconds). The entrypoint runs beat in the
+background, so beat can die while the workers keep the container up. That
+happened when Postgres refused a connection on 2026-11-06, and the guide ran
+dry over the following week. The container's liveness probe now restarts it
+within ~3 minutes of beat dying. If beat is still down, restart the container.
+Beat catches up on overdue refreshes by itself.
+
 0. **Blank only for part of the day, on many channels at once?** That's a
    source whose file reaches less far ahead than its refresh interval, not a
    bad link. Compare the source's last `<programme stop=...>` with its
