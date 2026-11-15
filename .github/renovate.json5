@@ -795,6 +795,37 @@
       },
     },
     {
+      // The Docker Hub library image, every spelling and every variant, in ONE
+      // PR. Without this a single upstream rebuild arrived as three PRs (e.g.
+      // forge #1376-#1378, all to the same digest), because Renovate names a
+      // digest branch after the depName AND the tag: `postgres` vs
+      // `docker.io/library/postgres` and `18-alpine` vs `18.7-alpine` each got
+      // their own. Users today:
+      //   - 18-alpine:    docker/_common/postgres (shared instance),
+      //                   docker/alpha-site/bao-standby (break-glass),
+      //                   kube-system/openbao-replica (restore drill)
+      //   - 18.x-bookworm: docker/alpha-site/authentik-pg-standby
+      //   - 18.x-trixie:  equestria/media/jellyfin-pg (pg_dump client)
+      // A Postgres minor ships every variant on the same day, so grouping the
+      // version bumps costs nothing either. Majors are still dropped by the
+      // rule below; this rule only decides which branch an update lands on.
+      // Not ghcr.io/cloudnative-pg/postgresql: that is a separately built
+      // operand with its own group above, and a CNPG rollout restarts clusters.
+      description: "PostgreSQL (library image) Group",
+      groupName: "PostgreSQL",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "docker.io/library/postgres",
+        "postgres"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
       // A Postgres major is not an image bump: PGDATA is bound to the major that
       // created it, so crossing one is a pg_upgrade or a dump/restore, never a
       // tag change. Postgres 18 additionally moved its data directory layout and
@@ -871,6 +902,89 @@
       ],
       matchPackageNames: [
         "/spegel/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    // ── One image, several spellings ─────────────────────────────────────────
+    // Renovate keys a branch on the depName exactly as the manifest wrote it,
+    // so `rclone/rclone` and `docker.io/rclone/rclone` -- the same image -- get
+    // a PR each for one release. Each group below is one upstream image that
+    // the merged history shows arriving as two or three PRs at a time. All of
+    // them are on the never-unattended list (or mostly outside the automerge
+    // paths), so every split PR was a separate manual merge. No datasource
+    // filter where a ghcr image is involved: the Forgejo copy looks those up
+    // as `custom.ghcr`.
+    {
+      // ghcr.io in docker/alpha-site/bao-{standby,transit} and
+      // kube-system/openbao-replica; quay.io (annotated) in kube-system/openbao.
+      // 2.7.1 -> 2.7.2 landed as two PRs. A standby or replica on a different
+      // release from the server it restores is exactly what not to drift into.
+      // The chart (ghcr.io/openbao/charts/openbao) and the `openbao` CLI in
+      // .config/mise.toml are versioned on their own and stay out.
+      description: "OpenBao server image Group",
+      groupName: "OpenBao",
+      matchPackageNames: [
+        "ghcr.io/openbao/openbao",
+        "quay.io/openbao/openbao"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // `rclone/rclone` in the docker/ composes and pulumi/history-pruner;
+      // `docker.io/rclone/rclone` in volsync-system/lock-canceller.
+      description: "rclone Group",
+      groupName: "rclone",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "rclone/rclone",
+        "docker.io/rclone/rclone"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // `docker.io/restic/restic` in database/postgres/backups, kube-system/etcd
+      // and volsync-system; `restic/restic` in components/netbird/compose.yaml.
+      // Every one of them reads or writes the same repositories.
+      description: "restic Group",
+      groupName: "restic",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "restic/restic",
+        "docker.io/restic/restic"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
+        commitMessageExtra: "",
+      },
+    },
+    {
+      // `grafana/alloy` in docker/_common/prometheus and components/netbird;
+      // `docker.io/grafana/alloy` in observability/talos-logs. v1.21.3 ->
+      // v1.22.0 was three PRs. The prometheus compose copy used to automerge
+      // on its own; in the group it waits with the other two, which needed a
+      // human anyway. Not the Helm chart mirror
+      // (ghcr.io/home-operations/charts-mirror/alloy): different version line.
+      description: "Grafana Alloy image Group",
+      groupName: "Grafana Alloy",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "grafana/alloy",
+        "docker.io/grafana/alloy"
       ],
       group: {
         commitMessageTopic: "{{{groupName}}} group {{#if isDigest}}( {{{currentDigestShort}}} → {{{newDigestShort}}} ){{else}}( {{{currentVersion}}} → {{{newVersion}}} ){{/if}}",
