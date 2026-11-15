@@ -1,6 +1,6 @@
 services:
   arcane-agent:
-    image: ghcr.io/getarcaneapp/agent:latest@sha256:c6e804848544372e5ec783df0bfd1023ca5160c0dc527cb84ef6bbccfdcb5f9b
+    image: ghcr.io/getarcaneapp/agent:latest@sha256:4285608a7a085acb8296c5a76261fd1b738a40760dcf46e48a4361240cd94692
     container_name: arcane-agent
     environment:
       # Edge mode: the agent dials OUT to the manager at MANAGER_API_URL
