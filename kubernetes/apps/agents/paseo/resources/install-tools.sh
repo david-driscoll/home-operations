@@ -32,6 +32,10 @@ for rel in .local/share/mise .cache .npm .pulumi/plugins go/pkg; do
     rm -f "$link"
   elif [ -d "$link" ]; then
     echo "==> moving $rel off the backed-up home volume (deleting the old copy)"
+    # Go makes its module cache read-only (0555 directories), so a plain
+    # `rm -rf` of go/pkg fails "Permission denied" and the pod crash-loops --
+    # as it did on the first rollout, 2026-11-15.
+    chmod -R u+w -- "$link"
     rm -rf -- "$link"
   fi
   ln -s "$target" "$link"
