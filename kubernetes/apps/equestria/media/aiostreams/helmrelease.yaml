@@ -43,7 +43,7 @@ spec:
             image:
               # Stable releases only: upstream also pushes a nightly per commit.
               repository: ghcr.io/viren070/aiostreams
-              tag: v2.37.0@sha256:bcfd8580695a50c8f464578a0e25af065f3bd17eac35ed82a733a18342ca9718
+              tag: v2.38.1@sha256:1b90bc2fda70f365dff2ce98fc311a24708cca9841efe09aefe309cd4da1fb2c
               pullPolicy: IfNotPresent
             env:
               TZ: ${TIMEZONE}
