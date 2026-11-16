@@ -77,6 +77,20 @@ spec:
               # Removing the samples by hand is not enough on its own: without
               # this flag they come back the next time this pod restarts.
               SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES: "true"
+              # Connection pool caps, read by config_template.yaml (1.29.7)
+              # into persistence.datastores.{default,visibility}.sql. Every one
+              # of the four in-process services opens its OWN pool per store,
+              # so the image defaults (20/20 default, 10/10 visibility) allow
+              # 4 x 30 = 120 backends and kept up to 45 open, all idle, on the
+              # shared database/postgres cluster (max_connections 300;
+              # CNPGClusterHighConnectionsWarning, 2026-11-15). The idle caps
+              # are what lower the steady state -- to about 4 x (2 + 1) = 12 --
+              # while the max caps still give one low-volume consumer (Postiz)
+              # 4 x 12 = 48 under burst.
+              SQL_MAX_CONNS: "8"
+              SQL_MAX_IDLE_CONNS: "2"
+              SQL_VIS_MAX_CONNS: "4"
+              SQL_VIS_MAX_IDLE_CONNS: "1"
             envFrom:
               - secretRef:
                   name: ${APP}-env
