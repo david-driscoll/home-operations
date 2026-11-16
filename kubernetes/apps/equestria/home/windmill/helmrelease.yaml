@@ -112,6 +112,17 @@ spec:
         # groups do), so this is the only in-values place to express the intent.
         annotations:
           reloader.stakater.com/auto: "true"
+        extraEnv:
+          # Pool cap per app replica. Unset, a server takes 50
+          # (DEFAULT_MAX_CONNECTIONS_SERVER, backend/src/db_connect.rs at
+          # v1.874.0) and, unlike a worker, has no 60s idle timeout -- so two
+          # replicas held 47 idle backends between them on the shared
+          # database/postgres cluster, whose max_connections is 300, and
+          # windmill peaked at 80 (CNPGClusterHighConnectionsWarning,
+          # 2026-11-15). 20 x appReplicas bounds the app at 40. Workers are
+          # left alone: they default to 5 with the idle timeout and sat at 3.
+          - name: DATABASE_CONNECTIONS
+            value: "20"
         volumes: &volumes
           - name: media
             persistentVolumeClaim:
