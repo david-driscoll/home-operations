@@ -8,6 +8,16 @@ resources:
   - ./definition.yaml
   - ./externalsecret.yaml
   - ./bucket.yaml
+  - ./simplefin-health.yaml
+  - ./loki-rules.yaml
+configMapGenerator:
+  # Mounted by ./simplefin-health.yaml. No hash suffix so the HelmRelease can
+  # name it; the CronJob reads it fresh on every run anyway.
+  - name: sure-simplefin-health-script
+    files:
+      - simplefin_health.rb=./resources/simplefin_health.rb
+generatorOptions:
+  disableNameSuffixHash: true
 patches:
   # PGCRYPTO, declared on the CNPG `Database` rather than left to the app's
   # own `db:prepare`. Sure's db/schema.rb has exactly two:

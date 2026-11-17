@@ -1,0 +1,124 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# Daily SimpleFIN account health check: ./resources/simplefin_health.rb run as
+# `bin/rails runner` on Sure's own image. Alerts live in ./loki-rules.yaml.
+#
+# Why Sure's image and not a small standalone checker: Sure keeps each
+# SimpleFIN access URL encrypted with its Active Record keys, and "is this
+# account linked to an active Sure account" is a Sure question. Running inside
+# Sure answers both with no second copy of the access URL anywhere.
+#
+# Its own pod on purpose. A second Rails process inside sure-worker OOMKilled
+# that container at its 2Gi limit on 2026-11-16 (Sidekiq had grown since its
+# last start); a Job pod has its own limit and touches nothing else.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app sure-simplefin-health
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  dependsOn:
+    - name: sure
+  values:
+    controllers:
+      *app :
+        type: cronjob
+        cronjob:
+          # 08:00 local: after the bridge's overnight refresh and Sure's own
+          # 02:22 UTC auto-sync, and when someone is awake to read the alert.
+          schedule: "0 8 * * *"
+          timeZone: ${TIMEZONE}
+          concurrencyPolicy: Forbid
+          # The script retries SimpleFIN itself and always reports, so a Job
+          # retry would only repeat the same slow calls. A crash before the
+          # `run` line is caught by SimplefinHealthCheckMissing instead.
+          backoffLimit: 0
+          activeDeadlineSeconds: 3600
+          successfulJobsHistory: 3
+          failedJobsHistory: 3
+        pod:
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+        containers:
+          # This name is the `container` label ./loki-rules.yaml selects on.
+          simplefin-health:
+            image:
+              # Kept identical to `image` in ./helmrelease.yaml: the script
+              # uses Sure's models, so it must run the release that owns the
+              # schema. Renovate updates both in the same PR.
+              repository: ghcr.io/we-promise/sure
+              tag: stable@sha256:9cbcc5a21654d95ff784da7f0425f2bd1c8363252d898a09e749772f666436ce
+              pullPolicy: IfNotPresent
+            command: ["bin/rails", "runner", "/scripts/simplefin_health.rb"]
+            env:
+              RAILS_ENV: production
+              SELF_HOSTED: "true"
+              TZ: ${TIMEZONE}
+              # Same Valkey index as ./helmrelease.yaml, so boot-time
+              # initializers see the same Sidekiq they would in the worker.
+              REDIS_URL: "redis://valkey.database.svc.cluster.local:6379/13"
+              SIMPLEFIN_STALE_DAYS: "3"
+              # One SimpleFIN account id (ACT-...) per line; these accounts are
+              # never checked. Ids, not names, because this repo is public and
+              # account names identify people. Find an id in the job's own log:
+              # every line carries `account` and `account_id`.
+              SIMPLEFIN_HEALTH_IGNORE: |
+                ACT-b7101005-f04c-4f24-96a3-5a170d814fdf
+                ACT-6f211414-86f3-43fd-b806-2b53127015a6
+                ACT-05c5de7f-b79b-4478-b314-af8ed37dec4e
+                ACT-15202d25-e2de-4154-98da-f147d57949ed
+                ACT-1e541668-848c-49a4-8b17-0d7ebf88a5ae
+                ACT-8ddb8ba2-fe27-46d2-9531-5c7e6bf4bfb7
+            envFrom:
+              # SECRET_KEY_BASE, the three ACTIVE_RECORD_ENCRYPTION_* keys
+              # (needed to decrypt the access URL) and the Postgres
+              # credential -- the chart's `rails.existingSecret`.
+              - secretRef:
+                  name: ${APP}-env
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 50m
+                memory: 512Mi
+              limits:
+                memory: 1Gi
+
+    persistence:
+      script:
+        type: configMap
+        name: sure-simplefin-health-script
+        advancedMounts:
+          *app :
+            simplefin-health:
+              - path: /scripts/simplefin_health.rb
+                subPath: simplefin_health.rb
+                readOnly: true
