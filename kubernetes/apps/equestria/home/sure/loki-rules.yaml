@@ -1,0 +1,97 @@
+---
+# Loki ruler rules for the daily SimpleFIN health check (./simplefin-health.yaml,
+# ./resources/simplefin_health.rb). The loki-sc-rules sidecar picks up a
+# ConfigMap labelled `loki_rule` from ANY namespace; see
+# observability/loki/rules/credential-drift-rules.yaml for the plumbing and how
+# to prove a rule loaded (`/loki/api/v1/rules`).
+#
+# HOW AN ALERT PERSISTS. The check runs once a day, so there is no live metric
+# to watch. Instead each run logs `ok` (1/0) per (account, check), and these
+# rules take `last_over_time ... by (account, account_id, institution, check)`:
+# the most recent result for that account and check, whichever Job pod wrote it.
+# An account that failed stays firing (re-evaluated every minute) until a later
+# run logs it ok=1. A run that cannot reach SimpleFIN logs nothing per account,
+# so the previous state holds. Grouping across pods was verified against live
+# Loki on 2026-11-17: the grouped value is the newest pod's.
+#
+# Window: 49h, so state survives one failed or missed daily run. An account that
+# drops out of every run (removed, or added to the ignore list) clears within
+# 49h.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${APP}-loki-rules
+  labels:
+    loki_rule: "true"
+data:
+  sure-simplefin-health.yaml: |
+    groups:
+      - name: sure-simplefin-health
+        rules:
+          - alert: SimplefinAccountUnhealthy
+            expr: |
+              last_over_time(
+                {namespace="${NAMESPACE}", container="simplefin-health"}
+                  |= `"event":"simplefin_health"`
+                  | json
+                  | __error__="" and check!="run"
+                  | unwrap ok
+                [49h]
+              ) by (account, account_id, institution, check) == 0
+            labels:
+              severity: critical
+            annotations:
+              summary: 'SimpleFIN account "{{ $labels.account }}" failed its {{ $labels.check }} check.'
+              description: >-
+                {{ $labels.institution }} / {{ $labels.account }} ({{ $labels.account_id }}) failed
+                the daily `{{ $labels.check }}` check, and stays firing until a later run passes it.
+                connection: SimpleFIN reports an error for this account's bank connection (usually
+                the login needs redoing in the SimpleFIN Bridge web UI). stale: its balance has not
+                updated for more than 3 days. missing: it is linked to a Sure account but SimpleFIN
+                no longer returns it (closed, re-added, or a duplicate). The exact error is in the
+                Job's `detail` field:
+                {namespace="${NAMESPACE}", container="simplefin-health"} |= `{{ $labels.account_id }}`
+                To stop checking an account, add its account_id to SIMPLEFIN_HEALTH_IGNORE in
+                kubernetes/apps/equestria/home/sure/simplefin-health.yaml.
+
+          - alert: SimplefinHealthCheckFailing
+            # The run itself could not finish: SimpleFIN unreachable after
+            # every retry, access revoked (402/403), or an exception. Account
+            # alerts keep their previous state while this fires.
+            expr: |
+              last_over_time(
+                {namespace="${NAMESPACE}", container="simplefin-health"}
+                  |= `"event":"simplefin_health"`
+                  | json
+                  | __error__="" and check="run"
+                  | unwrap ok
+                [26h]
+              ) by (check) == 0
+            labels:
+              severity: warning
+            annotations:
+              summary: The daily SimpleFIN health check could not check every account.
+              description: >-
+                The last sure-simplefin-health run could not check every account, so the
+                per-account alerts show the previous run's results. Its reason is in the run line's
+                `detail` field: {namespace="${NAMESPACE}", container="simplefin-health"} |= `"check":"run"`.
+                A 307 or 524 means SimpleFIN Bridge was too slow (try again later); 402/403 means
+                the access URL was revoked or the subscription lapsed.
+
+          - alert: SimplefinHealthCheckMissing
+            # No run line in 26h: the CronJob did not run, or the script
+            # crashed before reporting (Rails failed to boot, OOM).
+            expr: |
+              absent_over_time(
+                {namespace="${NAMESPACE}", container="simplefin-health"}
+                  |= `"check":"run"`
+                [26h]
+              )
+            labels:
+              severity: warning
+            annotations:
+              summary: The daily SimpleFIN health check has not reported in 26 hours.
+              description: >-
+                No sure-simplefin-health run has finished in 26 hours, so the SimpleFIN account
+                alerts are no longer being refreshed. Check the CronJob and its last Job's pod
+                logs in ${NAMESPACE}.
