@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Donetick"
+  category: Applications
+  description: "Donetick — shared household chores and task scheduling"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/donetick.svg
+  access_policy:
+    groups:
+      - admins
+      - family
+  authentik:
+    oauth2:
+      clientType: confidential
+      # The web frontend builds its redirect from the browser's own origin:
+      # `${window.location.origin}/auth/oauth2` (frontend LoginView.jsx), hence
+      # both hostnames. The mobile app uses the `donetick://auth/oauth2` deep
+      # link and exchanges the code through this same server-side client.
+      #
+      # The backend's DT_OAUTH2_REDIRECT_URL (./helmrelease.yaml) is pinned to
+      # the root-domain form, so the token exchange from the tailnet hostname
+      # may fail on redirect_uri mismatch -- use the root-domain URL.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/auth/oauth2"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/oauth2"
+        - url: "donetick://auth/oauth2"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # Donetick syncs roles from the `groups` userinfo claim on every OIDC
+        # login (DT_OAUTH2_ADMIN_GROUPS in ./helmrelease.yaml).
+        - groups
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      # The unauthenticated health endpoint the image's own HEALTHCHECK uses.
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

@@ -1,0 +1,51 @@
+---
+# Donetick's file store: chore attachments, photo completions and avatars.
+#
+# Declared here rather than in garage-system for the same reason as
+# ../outline/bucket.yaml: the operator writes a GarageKey's credential Secret
+# into the GarageKey's OWN namespace, and the app has to be able to read it. The
+# cross-namespace clusterRef is authorised by the GarageReferenceGrant in
+# kubernetes/apps/garage-system/cluster/referencegrant.yaml.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageBucket
+metadata:
+  name: ${APP}
+  annotations:
+    # Opts this bucket into the estate's backup system
+    # (stacks/system/application-backups.ts). Bucket backups are opt-IN:
+    # without this, every uploaded file lives only here, unbacked.
+    driscoll.dev/backup: "true"
+spec:
+  clusterRef:
+    name: garage
+    namespace: garage-system
+  globalAlias: ${APP}
+  # Retain: a Flux prune must not take the objects with it.
+  deletionPolicy: Retain
+  keyPermissions:
+    - keyRef:
+        name: ${APP}
+      read: true
+      write: true
+      owner: false
+---
+# Donetick's S3 identity.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: ${APP}
+spec:
+  clusterRef:
+    name: garage
+    namespace: garage-system
+  name: Donetick
+  neverExpires: true
+  permissions:
+    createBucket: false
+  secretTemplate:
+    # Consumed by ./externalsecret.yaml. No `includeBucketName`: the operator
+    # writes no `bucket` key when the grant is declared from the bucket side
+    # (see the long note in ../outline/bucket.yaml). The bucket name is the
+    # literal `${APP}` in ./helmrelease.yaml instead.
+    name: ${APP}-garage-credentials
+    includeRegion: true

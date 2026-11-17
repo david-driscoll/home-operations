@@ -1,0 +1,265 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# Donetick: https://github.com/donetick/donetick. A single Go binary that also
+# serves the web frontend.
+#
+# Configuration is split in two:
+#   - /config/selfhosted.yaml (the ConfigMap below) carries every NON-secret
+#     setting. The binary reads ./config/<DT_ENV>.yaml from its working dir `/`.
+#     A file must exist: with none, it tries to generate one (fails on the
+#     read-only root) and falls back to struct defaults, which leave
+#     `serve_frontend` false, `max_file_size` 0 (every upload rejected) and the
+#     scheduler intervals unset.
+#   - ./externalsecret.yaml supplies the secrets as DT_* env vars. Viper's
+#     AutomaticEnv lets those win over the file.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app donetick
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Recreate: migrations run at boot (`database.migration: true`), and
+        # the scheduler jobs would fire twice with two pods.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: docker.io/donetick/donetick
+              tag: v0.1.86@sha256:66253a32a8e8ed8c49c49418b43abe1181db23e07defe97748d2cb7508c487cd
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            env:
+              TZ: "${TIMEZONE}"
+              # Already the image default; stated so the config file name
+              # below cannot drift from it.
+              DT_ENV: selfhosted
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 512Mi
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # Unauthenticated, no DB query; the image's own HEALTHCHECK.
+                    path: /health
+                    port: &port 2021
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 4
+              readiness: *probes
+              # Migrations run before the listener comes up; the first boot
+              # against an empty database runs all of them.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+
+    defaultPodOptions:
+      securityContext:
+        # The image runs as root by default but needs nothing root-only: it
+        # binds 2021 and writes nothing outside /tmp.
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+
+    configMaps:
+      config:
+        data:
+          # Non-secret settings only. Keys follow upstream's
+          # config/selfhosted.yaml.example; anything secret is a DT_* env var.
+          selfhosted.yaml: |
+            name: "selfhosted"
+            is_done_tick_dot_com: false
+            is_user_creation_disabled: false
+            # One household: new OIDC users join the shared circle instead of
+            # each getting a personal one, and join/leave is disabled.
+            single_circle_instance: true
+            # SSO only. Password signup, login and reset are rejected. If
+            # authentik is down nobody can sign in -- flip this to false (and
+            # roll the pod) for break-glass access.
+            disable_password_auth: true
+            database:
+              type: "postgres"
+              # Automatic schema migrations on every boot.
+              migration: true
+            jwt:
+              session_time: 168h
+              max_refresh: 1440h
+            server:
+              port: 2021
+              read_timeout: 10s
+              write_timeout: 10s
+              rate_period: 60s
+              rate_limit: 300
+              serve_frontend: true
+              serve_swagger: false
+              public_host: "https://${APP}.${ROOT_DOMAIN}"
+              cors_allow_origins:
+                - "https://${APP}.${ROOT_DOMAIN}"
+                - "https://${APP}.${TAILSCALE_DOMAIN}"
+                # Required by the Android/iOS app (Capacitor webview).
+                - "https://localhost"
+                - "http://localhost"
+                - "capacitor://localhost"
+            logging:
+              level: "info"
+              encoding: "json"
+              development: false
+            # Every job every 30 minutes, so due / overdue / upcoming
+            # reminders (Pushover included) land within half an hour.
+            scheduler_jobs:
+              due_job: 30m
+              overdue_job: 30m
+              pre_due_job: 30m
+            oauth2:
+              name: "${CLUSTER_TITLE}"
+              # Must equal the redirect_uri the frontend sent, which is
+              # `<origin>/auth/oauth2` -- registered in ./definition.yaml.
+              redirect_url: "https://${APP}.${ROOT_DOMAIN}/auth/oauth2"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              # Exact, case-sensitive match on the `groups` claim. Members of
+              # `admins` become Donetick admins on every login; everyone else
+              # keeps the default member role.
+              admin_groups:
+                - admins
+            storage:
+              storage_type: "s3"
+              # ./bucket.yaml's globalAlias.
+              bucket_name: "${APP}"
+              base_path: "uploads"
+              # The PUBLIC (LAN/tailnet) Garage S3 hostname, not the in-cluster
+              # Service. Donetick hands the browser SigV4-presigned URLs built
+              # from this endpoint, so it has to be one a browser can fetch
+              # over https. The signature covers the host, so `public_host`
+              # rewriting cannot fix an in-cluster endpoint after the fact.
+              # In-cluster DNS resolves this through the upstream resolver.
+              endpoint: "https://s3.${ROOT_DOMAIN}"
+              # Garage serves path-style addressing only.
+              path_style: true
+              # Both default to 0, which rejects every upload. 50 MiB per file,
+              # 10 GiB for the whole circle.
+              #
+              # Upstream bug in v0.1.86 (storage_s3.go): Save writes
+              # `<base_path>/<path>` but Delete removes `<base_path><path>`, no
+              # slash, so a deleted attachment is orphaned in the bucket. No
+              # base_path value avoids it; the bucket only grows.
+              max_file_size: 52428800
+              max_user_storage: 10737418240
+            realtime:
+              enabled: true
+              sse_enabled: true
+              allowed_origins:
+                - "https://${APP}.${ROOT_DOMAIN}"
+                - "https://${APP}.${TAILSCALE_DOMAIN}"
+
+    persistence:
+      config:
+        type: configMap
+        identifier: config
+        advancedMounts:
+          *app :
+            *app :
+              - path: /config/selfhosted.yaml
+                subPath: selfhosted.yaml
+                readOnly: true
+      # Uploads are buffered in memory, but Go's multipart parser spills large
+      # files to os.TempDir() and the root filesystem is read-only.
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            *app :
+              - path: /tmp
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: Donetick speaks OIDC
+              # itself and its mobile app calls the API with bearer tokens, so
+              # the authentik forward-auth outpost would break both.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

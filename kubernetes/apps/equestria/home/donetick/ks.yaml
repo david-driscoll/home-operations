@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app donetick
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: postgres
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+    # Ordering only, NOT readiness: garage-system/cluster/ks.yaml sets
+    # `wait: false`. The GarageBucket in ./bucket.yaml reconciles
+    # asynchronously either way.
+    - name: garage
+      namespace: garage-system
+  path: ./kubernetes/apps/equestria/home/donetick
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # ⚠️ A BRAND-NEW DATABASE. Expect the `system` stack to go
+    # Stalled/UpdateFailed once on merge day (it races CNPG creating the login
+    # role); the recovery is the ORDER OF OPERATIONS block in
+    # components/postgres/ks.yaml. Read it before merge.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    # No components/volsync, deliberately. Attachments and avatars go to Garage
+    # (./bucket.yaml, backed up by annotation) and everything else to Postgres
+    # (nightly pg_dump). The container keeps no local state.
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
