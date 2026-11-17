@@ -32,7 +32,7 @@ spec:
     spec:
       chart: keda
       # The Forgejo scaler arrived in 2.18.
-      version: 2.21.0
+      version: 2.21.1
       sourceRef:
         kind: HelmRepository
         name: keda
