@@ -48,7 +48,7 @@ spec:
           *app :
             image:
               repository: ghcr.io/degoog-org/degoog
-              tag: 1.1.1@sha256:d0fb85d394cbb41b95c7fbf1e733ae05cbd6472cc32e614028f684613c3464b6
+              tag: 1.2.0@sha256:c3a975a2c512300aae942b2d8713be643e457dabf2475adf187536a4a6c6b3dd
               pullPolicy: IfNotPresent
             # The image's ENTRYPOINT is deliberately bypassed. entrypoint.sh
             # runs `mkdir -p /app/data`, `chown -R $PUID:$PGID /app/data` and
