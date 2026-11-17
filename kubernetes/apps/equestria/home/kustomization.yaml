@@ -44,3 +44,4 @@ resources:
   - ./nextcloud/ks.yaml
   - ./actual-budget/ks.yaml
   - ./paperless/ks.yaml
+  - ./donetick/ks.yaml
