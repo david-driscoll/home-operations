@@ -73,7 +73,7 @@ spec:
           app:
             image:
               repository: ghcr.io/291-group/lan-orangutan
-              tag: 3.4.2@sha256:5f2ca8cfa4ee7721b021c697f0fcff8672019adb2a7ae1db1f1925d7a71dae08
+              tag: 4.0.0@sha256:902298992cc69ea6836920727056f6518fa8c0e1c7f07306eafae72afe68f0ab
               pullPolicy: IfNotPresent
             # https://github.com/291-Group/LAN-Orangutan/blob/main/config.example.ini
             env:
