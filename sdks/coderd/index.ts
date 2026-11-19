@@ -25,6 +25,11 @@ export type AgentsSystemPrompt = import("./agentsSystemPrompt").AgentsSystemProm
 export const AgentsSystemPrompt: typeof import("./agentsSystemPrompt").AgentsSystemPrompt = null as any;
 utilities.lazyLoad(exports, ["AgentsSystemPrompt"], () => require("./agentsSystemPrompt"));
 
+export { AiGroupBudgetArgs, AiGroupBudgetState } from "./aiGroupBudget";
+export type AiGroupBudget = import("./aiGroupBudget").AiGroupBudget;
+export const AiGroupBudget: typeof import("./aiGroupBudget").AiGroupBudget = null as any;
+utilities.lazyLoad(exports, ["AiGroupBudget"], () => require("./aiGroupBudget"));
+
 export { AiModelPriceArgs, AiModelPriceState } from "./aiModelPrice";
 export type AiModelPrice = import("./aiModelPrice").AiModelPrice;
 export const AiModelPrice: typeof import("./aiModelPrice").AiModelPrice = null as any;
@@ -34,6 +39,11 @@ export { AiProviderArgs, AiProviderState } from "./aiProvider";
 export type AiProvider = import("./aiProvider").AiProvider;
 export const AiProvider: typeof import("./aiProvider").AiProvider = null as any;
 utilities.lazyLoad(exports, ["AiProvider"], () => require("./aiProvider"));
+
+export { AiUserBudgetOverrideArgs, AiUserBudgetOverrideState } from "./aiUserBudgetOverride";
+export type AiUserBudgetOverride = import("./aiUserBudgetOverride").AiUserBudgetOverride;
+export const AiUserBudgetOverride: typeof import("./aiUserBudgetOverride").AiUserBudgetOverride = null as any;
+utilities.lazyLoad(exports, ["AiUserBudgetOverride"], () => require("./aiUserBudgetOverride"));
 
 export { GetGroupArgs, GetGroupResult, GetGroupOutputArgs } from "./getGroup";
 export const getGroup: typeof import("./getGroup").getGroup = null as any;
@@ -130,10 +140,14 @@ const _module = {
                 return new AgentsModel(name, <any>undefined, { urn })
             case "coderd:index/agentsSystemPrompt:AgentsSystemPrompt":
                 return new AgentsSystemPrompt(name, <any>undefined, { urn })
+            case "coderd:index/aiGroupBudget:AiGroupBudget":
+                return new AiGroupBudget(name, <any>undefined, { urn })
             case "coderd:index/aiModelPrice:AiModelPrice":
                 return new AiModelPrice(name, <any>undefined, { urn })
             case "coderd:index/aiProvider:AiProvider":
                 return new AiProvider(name, <any>undefined, { urn })
+            case "coderd:index/aiUserBudgetOverride:AiUserBudgetOverride":
+                return new AiUserBudgetOverride(name, <any>undefined, { urn })
             case "coderd:index/group:Group":
                 return new Group(name, <any>undefined, { urn })
             case "coderd:index/license:License":
@@ -163,8 +177,10 @@ pulumi.runtime.registerResourceModule("coderd", "index/agentsDefaultModel", _mod
 pulumi.runtime.registerResourceModule("coderd", "index/agentsMcpServer", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/agentsModel", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/agentsSystemPrompt", _module)
+pulumi.runtime.registerResourceModule("coderd", "index/aiGroupBudget", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/aiModelPrice", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/aiProvider", _module)
+pulumi.runtime.registerResourceModule("coderd", "index/aiUserBudgetOverride", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/group", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/license", _module)
 pulumi.runtime.registerResourceModule("coderd", "index/oauth2ProviderSettings", _module)

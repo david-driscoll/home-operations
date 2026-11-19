@@ -1,6 +1,6 @@
 {
     "name": "@pulumi/coderd",
-    "version": "0.0.30",
+    "version": "0.0.31",
     "description": "A Pulumi provider dynamically bridged from coderd.",
     "repository": "https://github.com/coder/terraform-provider-coderd",
     "main": "bin/index.js",
@@ -19,8 +19,8 @@
         "version": "0.14.0",
         "parameterization": {
             "name": "coderd",
-            "version": "0.0.30",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2NvZGVyL2NvZGVyZCIsInZlcnNpb24iOiIwLjAuMzAifX0="
+            "version": "0.0.31",
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2NvZGVyL2NvZGVyZCIsInZlcnNpb24iOiIwLjAuMzEifX0="
         }
     }
 }

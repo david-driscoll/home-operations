@@ -50,7 +50,7 @@ export class AiProvider extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly apiKeyMasked: pulumi.Output<string>;
     /**
-     * Plaintext API key for the provider. Not valid for `bedrock` or `copilot`, or when `settings.bedrock` is set. Optional with `settings.claude_platform_aws`; see that attribute. Removing it from configuration does not delete a stored key; replace the resource to delete it. Bump `api_key_wo_version` to rotate it.
+     * Plaintext API key for the provider. Not valid for `bedrock` or `copilot`, or when `settings.bedrock` is set. Optional with `settings.claude_platform_aws`; see that attribute. Removing it from configuration keeps the stored key. Bump `api_key_wo_version` to rotate it, or set it to `""` and bump the version to delete the stored key.
      */
     declare public readonly apiKeyWo: pulumi.Output<string | undefined>;
     /**
@@ -73,6 +73,10 @@ export class AiProvider extends pulumi.CustomResource {
      * Whether this AI provider is enabled. Defaults to true.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
+    /**
+     * Relative path or external URL that specifies an icon to be displayed in the dashboard. If omitted, Coder shows the default icon for the provider type. Requires Coder v2.36.0 or later.
+     */
+    declare public readonly icon: pulumi.Output<string>;
     /**
      * Unique provider name. Must be lowercase alphanumeric words separated by hyphens.
      */
@@ -110,6 +114,7 @@ export class AiProvider extends pulumi.CustomResource {
             resourceInputs["createdAt"] = state?.createdAt;
             resourceInputs["displayName"] = state?.displayName;
             resourceInputs["enabled"] = state?.enabled;
+            resourceInputs["icon"] = state?.icon;
             resourceInputs["name"] = state?.name;
             resourceInputs["settings"] = state?.settings;
             resourceInputs["type"] = state?.type;
@@ -127,6 +132,7 @@ export class AiProvider extends pulumi.CustomResource {
             resourceInputs["baseUrl"] = args?.baseUrl;
             resourceInputs["displayName"] = args?.displayName;
             resourceInputs["enabled"] = args?.enabled;
+            resourceInputs["icon"] = args?.icon;
             resourceInputs["name"] = args?.name;
             resourceInputs["settings"] = args?.settings;
             resourceInputs["type"] = args?.type;
@@ -150,7 +156,7 @@ export interface AiProviderState {
      */
     apiKeyMasked?: pulumi.Input<string | undefined>;
     /**
-     * Plaintext API key for the provider. Not valid for `bedrock` or `copilot`, or when `settings.bedrock` is set. Optional with `settings.claude_platform_aws`; see that attribute. Removing it from configuration does not delete a stored key; replace the resource to delete it. Bump `api_key_wo_version` to rotate it.
+     * Plaintext API key for the provider. Not valid for `bedrock` or `copilot`, or when `settings.bedrock` is set. Optional with `settings.claude_platform_aws`; see that attribute. Removing it from configuration keeps the stored key. Bump `api_key_wo_version` to rotate it, or set it to `""` and bump the version to delete the stored key.
      */
     apiKeyWo?: pulumi.Input<string | undefined>;
     /**
@@ -174,6 +180,10 @@ export interface AiProviderState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
+     * Relative path or external URL that specifies an icon to be displayed in the dashboard. If omitted, Coder shows the default icon for the provider type. Requires Coder v2.36.0 or later.
+     */
+    icon?: pulumi.Input<string | undefined>;
+    /**
      * Unique provider name. Must be lowercase alphanumeric words separated by hyphens.
      */
     name?: pulumi.Input<string | undefined>;
@@ -196,7 +206,7 @@ export interface AiProviderState {
  */
 export interface AiProviderArgs {
     /**
-     * Plaintext API key for the provider. Not valid for `bedrock` or `copilot`, or when `settings.bedrock` is set. Optional with `settings.claude_platform_aws`; see that attribute. Removing it from configuration does not delete a stored key; replace the resource to delete it. Bump `api_key_wo_version` to rotate it.
+     * Plaintext API key for the provider. Not valid for `bedrock` or `copilot`, or when `settings.bedrock` is set. Optional with `settings.claude_platform_aws`; see that attribute. Removing it from configuration keeps the stored key. Bump `api_key_wo_version` to rotate it, or set it to `""` and bump the version to delete the stored key.
      */
     apiKeyWo?: pulumi.Input<string | undefined>;
     /**
@@ -215,6 +225,10 @@ export interface AiProviderArgs {
      * Whether this AI provider is enabled. Defaults to true.
      */
     enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * Relative path or external URL that specifies an icon to be displayed in the dashboard. If omitted, Coder shows the default icon for the provider type. Requires Coder v2.36.0 or later.
+     */
+    icon?: pulumi.Input<string | undefined>;
     /**
      * Unique provider name. Must be lowercase alphanumeric words separated by hyphens.
      */
