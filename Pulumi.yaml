@@ -45,4 +45,4 @@ packages:
   coderd:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/coder/coderd, 0.0.30]
+    parameters: [registry.terraform.io/coder/coderd, 0.0.31]
