@@ -101,11 +101,17 @@ spec:
               # to be the same clock as go-kube-downscaler's shed window.
               PAPERLESS_TIME_ZONE: "${TIMEZONE}"
               PAPERLESS_PORT: &port 8000
-              # The canonical URL. Paperless appends its host to ALLOWED_HOSTS
-              # (whose default stays `*`, which is what lets the kubelet's
-              # probes in by pod IP) and its origin to CSRF_TRUSTED_ORIGINS and
-              # CORS_ALLOWED_ORIGINS.
+              # The canonical URL. Paperless adds its host to ALLOWED_HOSTS and
+              # its origin to CSRF_TRUSTED_ORIGINS and CORS_ALLOWED_ORIGINS.
+              # Since 3.5.0 (paperless-ngx#14735) setting it also drops the
+              # ALLOWED_HOSTS default from `*` to that host plus `localhost`,
+              # which is why the readiness probe below sends `Host: localhost`.
               PAPERLESS_URL: "https://${APP}.${ROOT_DOMAIN}"
+              # The tailnet hostname, which PAPERLESS_URL cannot also carry.
+              # Without it Django answers 400 DisallowedHost to every request
+              # on the tailnet route. The PAPERLESS_URL host and `localhost`
+              # are appended to this list, so they need not be repeated.
+              PAPERLESS_ALLOWED_HOSTS: "${APP}.${TAILSCALE_DOMAIN}"
               # The tailnet origin, which PAPERLESS_URL cannot also carry.
               # Without it every form POST on the tailnet hostname -- sign-in
               # included -- fails Django's CSRF origin check, because Traefik
@@ -250,7 +256,10 @@ spec:
                   failureThreshold: 4
               # The sign-in page: unauthenticated, and it reads the database on
               # every render (see the gatus note in ./definition.yaml), so a
-              # pass means app and Postgres are both answering.
+              # pass means app and Postgres are both answering. The kubelet
+              # would otherwise send the pod IP as Host, which ALLOWED_HOSTS
+              # rejects with a 400 (see PAPERLESS_URL above); `localhost` is
+              # always allowed.
               readiness:
                 enabled: true
                 custom: true
@@ -258,6 +267,9 @@ spec:
                   httpGet:
                     path: /accounts/login/
                     port: *port
+                    httpHeaders:
+                      - name: Host
+                        value: localhost
                   periodSeconds: 30
                   timeoutSeconds: 10
                   failureThreshold: 3
