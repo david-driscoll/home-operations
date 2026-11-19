@@ -11,7 +11,7 @@ services:
     # A major bump is NOT an image bump: PGDATA is bound to the major that
     # created it, so 18 -> 19 is a pg_upgrade or dump/restore. renovate.json5
     # disables major updates for this image; minor/patch/digest still flow.
-    image: docker.io/library/postgres:18-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
+    image: docker.io/library/postgres:18-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff
     container_name: postgres
     hostname: postgres
     env_file:
@@ -101,7 +101,7 @@ services:
   # host with no consumers provisions nothing and this container exits 0.
   postgres-provision:
     # Same major + digest as the server above. See the note there.
-    image: docker.io/library/postgres:18-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
+    image: docker.io/library/postgres:18-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff
     container_name: postgres-provision
     depends_on:
       postgres:
@@ -159,7 +159,7 @@ services:
     # Same major + digest as the server above — this is the one that MUST match.
     # pg_dump aborts against a newer server and backup.sh only warns, so a skew
     # here fails every dump forever without ever failing the container.
-    image: docker.io/library/postgres:18-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
+    image: docker.io/library/postgres:18-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff
     container_name: postgres-backup
     depends_on:
       postgres:
