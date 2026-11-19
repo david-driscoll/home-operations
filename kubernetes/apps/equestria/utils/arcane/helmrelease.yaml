@@ -48,7 +48,7 @@ spec:
             image:
               # The same digest celestia ran under `latest`.
               repository: ghcr.io/getarcaneapp/manager
-              tag: v2.17.3@sha256:2e0dc9f5ef03599181a49baf6470055d82e24d9cb15bbc62498ea642c0f882a7
+              tag: v3.1.0@sha256:4151e7bc42ddec87c2ce5534d7611297465e2b05e6472f12382073eeca878c8e
               pullPolicy: IfNotPresent
             envFrom:
               - secretRef:
