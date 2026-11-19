@@ -78,7 +78,7 @@ module "dotfiles" {
 module "devcontainers_cli" {
   count   = local.docker && data.coder_parameter.image.value != "codercom/example-base:ubuntu" ? data.coder_workspace.me.start_count : 0
   source  = "registry.coder.com/coder/devcontainers-cli/coder"
-  version = "1.1.0"
+  version = "2.0.0"
 
   agent_id = coder_agent.main.id
 }
