@@ -28,7 +28,7 @@ clusterEndpoint: https://10.10.206.201:6443
 # version contract from it when rendering offline; `talos:apply-node` and
 # `talos:diff` render against the version the node actually RUNS instead.
 # renovate: datasource=github-releases depName=siderolabs/talos
-talosVersion: v1.14.4
+talosVersion: v1.14.6
 # Kept in lockstep with kubernetes/apps/system-upgrade/upgrades/kubernetes.yaml
 # and versions.env -- `mise run talos:validate-config` fails when they disagree.
 # That CR is what actually rolls Kubernetes; this value only sets the images in
