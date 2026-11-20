@@ -54,57 +54,56 @@ spec:
               - secretRef:
                   name: ${APP}-env
             env:
+              # v3 refuses to start while any v2 name is set: every Arcane
+              # variable carries the ARCANE_ prefix, and the boot check lists
+              # each leftover (backend/internal/config/schema/legacy.go).
               TZ: "${TIMEZONE}"
-              PORT: &port 3552
+              # The image already sets this; pinned here so the probes and the
+              # Service port cannot drift from it.
+              ARCANE_PORT: &port 3552
               # Read by the image's entrypoint. The pod already runs as this
               # uid (defaultPodOptions), so it has nothing to drop.
               PUID: "1000"
               PGID: "1000"
-              APP_URL: "https://${APP}.${ROOT_DOMAIN}"
+              ARCANE_APP_URL: "https://${APP}.${ROOT_DOMAIN}"
               # What the edge agents dial (docker/_common/arcane-agent/.env
               # sets the same URL on their side).
-              MANAGER_API_URL: "https://${APP}.${ROOT_DOMAIN}"
+              ARCANE_MANAGER_API_URL: "https://${APP}.${ROOT_DOMAIN}"
               # No DOCKER_HOST: there is no Docker daemon in this pod. The
               # built-in local environment (id 0) was celestia's own Docker;
               # celestia is now an edge environment like the other three, and
               # environment 0 is disabled in the migrated database.
-              ANALYTICS_DISABLED: "true"
+              ARCANE_ANALYTICS_ENABLED: "false"
 
               # --- oidc --------------------------------------------------
-              OIDC_ENABLED: "true"
-              OIDC_AUTO_REDIRECT_TO_PROVIDER: "true"
-              OIDC_SCOPES: "openid email profile arcane_groups"
-              OIDC_GROUPS_CLAIM: groups
-              OIDC_PROVIDER_NAME: Authentik
+              ARCANE_OIDC_ENABLED: "true"
+              ARCANE_OIDC_AUTO_REDIRECT_TO_PROVIDER: "true"
+              ARCANE_OIDC_SCOPES: "openid email profile arcane_groups"
+              ARCANE_OIDC_GROUPS_CLAIM: groups
+              ARCANE_OIDC_PROVIDER_NAME: Authentik
               # celestia's stack substituted its own cluster icon here; Flux has
               # no such variable, so it is authentik's logo, as coder uses.
-              OIDC_PROVIDER_LOGO_URL: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
-              OIDC_ROLE_MAPPINGS_FILE: /app/oidc-mapping.json
-              AUTH_LOCAL_ENABLED: "false"
-              AUTH_PASSWORD_POLICY: default
-              AUTH_SESSION_TIMEOUT: "3600"
+              ARCANE_OIDC_PROVIDER_LOGO_URL: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
+              ARCANE_OIDC_ROLE_MAPPINGS_FILE: /app/oidc-mapping.json
+              ARCANE_AUTH_LOCAL_ENABLED: "false"
+              ARCANE_AUTH_SESSION_TIMEOUT: "3600"
 
               # --- behaviour, carried over from celestia's .env ------------
-              AUTO_HEAL_ENABLED: "true"
-              AUTO_UPDATE: "false"
-              ENVIRONMENT_HEALTH_INTERVAL: "*/5 * * * *"
-              EVENT_CLEANUP_INTERVAL: "*/5 * * * *"
-              EXPIRED_SESSIONS_CLEANUP_INTERVAL: "*/5 * * * *"
-              ACTIVITY_HISTORY_MAX_ENTRIES: "0"
-              ACTIVITY_HISTORY_RETENTION_DAYS: "0"
-              MAX_CONCURRENT_ACTIVITIES: "0"
-              GPU_MONITORING_ENABLED: "true"
-              GPU_TYPE: auto
-              VULNERABILITY_SCAN_ENABLED: "true"
-              ENABLE_GRAVATAR: "true"
-              ICON_CATALOG: arcane
-              ANIMATIONS_ENABLED: "true"
-              APPLICATION_THEME: dark
-              GLASS_EFFECTS_ENABLED: "true"
-              KEYBOARD_SHORTCUTS_ENABLED: "true"
-              MOBILE_NAVIGATION_MODE: docked
-              MOBILE_NAVIGATION_SHOW_LABELS: "true"
-              SIDEBAR_HOVER_EXPANSION: "true"
+              # v2's AUTH_PASSWORD_POLICY and the UI preferences (theme, icon
+              # catalog, animations, navigation) are gone: v3 has per-rule
+              # password settings and keeps UI preferences per user.
+              ARCANE_AUTO_HEAL_ENABLED: "true"
+              ARCANE_AUTO_UPDATE: "false"
+              ARCANE_ENVIRONMENT_HEALTH_INTERVAL: "*/5 * * * *"
+              ARCANE_EVENT_CLEANUP_INTERVAL: "*/5 * * * *"
+              ARCANE_EXPIRED_SESSIONS_CLEANUP_INTERVAL: "*/5 * * * *"
+              ARCANE_ACTIVITY_HISTORY_MAX_ENTRIES: "0"
+              ARCANE_ACTIVITY_HISTORY_RETENTION_DAYS: "0"
+              ARCANE_MAX_CONCURRENT_ACTIVITIES: "0"
+              ARCANE_GPU_MONITORING_ENABLED: "true"
+              ARCANE_GPU_TYPE: auto
+              ARCANE_VULNERABILITY_SCAN_ENABLED: "true"
+              ARCANE_ENABLE_GRAVATAR: "true"
             probes:
               # `custom: true` is load-bearing: a handler-bearing spec without
               # it is silently swapped for a tcpSocket, and `enabled: true`
