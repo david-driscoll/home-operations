@@ -27,7 +27,7 @@ services:
     # arm64 vs the primary's amd64: unsupported by PostgreSQL, works in practice
     # (same endianness, alignment and float format). PLAN.md decision 2 — the
     # promotion rehearsal with amcheck is the gate.
-    image: postgres:18.7-bookworm@sha256:1757c628698dd1ca67ff7a5fc386bfd91040afc62a45484c346c788b0cbe5402
+    image: postgres:18.7-bookworm@sha256:194e55feb2597b1465dbee81cc9fd8d204566cd2eb42c8d22fd6c931a38781b1
     container_name: authentik-pg-standby
     hostname: authentik-pg-standby
     env_file:
@@ -85,7 +85,7 @@ services:
   # reverse. role.sh's header explains the three possible answers.
   # ---------------------------------------------------------------------------
   authentik-pg-standby-role:
-    image: postgres:18.7-bookworm@sha256:1757c628698dd1ca67ff7a5fc386bfd91040afc62a45484c346c788b0cbe5402
+    image: postgres:18.7-bookworm@sha256:194e55feb2597b1465dbee81cc9fd8d204566cd2eb42c8d22fd6c931a38781b1
     container_name: authentik-pg-standby-role
     user: "999:999"
     entrypoint: ["/bin/bash", "/role.sh"]
