@@ -27,7 +27,7 @@ talosctl = "1.14.4"
 yq = "4.54.3"
 jq = "1.8.2"
 sops = "3.13.3"
-flux2 = "2.10.0"
+flux2 = "2.10.1"
 age = "1.3.2"
 # The OpenBao CLI, for bootstrap/openbao/*.sh and `mise run bao:policies`.
 # Same version as the server (kubernetes/apps/kube-system/openbao/helmrelease.yaml).
