@@ -73,7 +73,7 @@ spec:
               # uses Sure's models, so it must run the release that owns the
               # schema. Renovate updates both in the same PR.
               repository: ghcr.io/we-promise/sure
-              tag: stable@sha256:002cde609f3af4b69ba2564c2482f3996e1fe29092dd169962b9b6ed943fcb10
+              tag: stable@sha256:08f4fb26cedd0e5743792178ee744c1ea8b3ccd8cd9da1941ffc3ba7ef16ae6c
               pullPolicy: IfNotPresent
             command: ["bin/rails", "runner", "/scripts/simplefin_health.rb"]
             env:
