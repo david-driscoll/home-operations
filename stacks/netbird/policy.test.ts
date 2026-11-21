@@ -30,8 +30,12 @@ describe("client access, mirroring member-home-subnet-access", () => {
     }
   });
 
-  it("lets every user group and the Apple TVs reach the Technitium sidecars on Do53 and DoT/DoQ, and nothing else there", () => {
-    for (const group of [...USER_GROUPS, "apple-tv"]) {
+  // Every peer, not only people: stacks/netbird hands the primary Technitium
+  // nameserver group to All, so a device group left out here (Equestria's
+  // routers were) gets nameservers it has no WireGuard peer for and every
+  // query fails with "required key not available".
+  it("lets every user group and every device group reach the Technitium sidecars on Do53 and DoT/DoQ, and nothing else there", () => {
+    for (const group of [...USER_GROUPS, ...DEVICE_GROUPS]) {
       for (const port of [53, 853]) {
         assert.ok(can(group, "dns-servers", port, "udp"), `${group} udp ${port}`);
         assert.ok(can(group, "dns-servers", port), `${group} tcp ${port}`);
@@ -39,7 +43,6 @@ describe("client access, mirroring member-home-subnet-access", () => {
       assert.ok(!can(group, "dns-servers", 5380), `${group} admin UI`);
       assert.ok(!can(group, "dns-servers", 22), `${group} ssh`);
     }
-    assert.ok(!can("gateways", "dns-servers", 53, "udp"));
   });
 
   it("gives non-admins nothing on the wider LAN: only the listed endpoints", () => {

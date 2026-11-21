@@ -62,6 +62,16 @@ export const DEVICE_GROUPS = ["apple-tv", "dns-servers", "gateways", "k8s-router
 /** Tailscale.ports.dns less 443: Do53 and DoT/DoQ. DoH is each host's Traefik, outside the Technitium netns the sidecars share. */
 const DNS_PORTS = [53, 853];
 
+/**
+ * Who resolves through the sidecars: every group the primary `Technitium`
+ * nameserver group reaches (stacks/netbird hands it to All), so the device
+ * groups too, not just the people. Leave a group out and its peers get
+ * nameservers they have no WireGuard peer for: every query fails with
+ * "required key not available", which is how Equestria's routers resolved
+ * nothing, not even their own relays, until this named them.
+ */
+const OVERLAY_DNS_CLIENTS = [...USER_GROUPS, ...DEVICE_GROUPS];
+
 /** Tailscale.ports.web, as ports: 80/443 plus 8443 and 7687, each on TCP and UDP (HTTP/3). */
 const WEB_PORTS = [80, 443, 8443, 7687];
 
@@ -105,7 +115,7 @@ export const ACCESS_RULES: AccessRule[] = [
   {
     name: "dns-servers-udp",
     description: "Technitium over the overlay, on each node's NetBird sidecar (Do53, DoQ)",
-    sources: [...USER_GROUPS, "apple-tv"],
+    sources: OVERLAY_DNS_CLIENTS,
     destination: "dns-servers",
     protocol: "udp",
     ports: DNS_PORTS,
@@ -114,7 +124,7 @@ export const ACCESS_RULES: AccessRule[] = [
   {
     name: "dns-servers-tcp",
     description: "Technitium over the overlay, on each node's NetBird sidecar (Do53 over TCP, DoT)",
-    sources: [...USER_GROUPS, "apple-tv"],
+    sources: OVERLAY_DNS_CLIENTS,
     destination: "dns-servers",
     protocol: "tcp",
     ports: DNS_PORTS,
