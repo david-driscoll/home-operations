@@ -1,7 +1,9 @@
 # Image Factory schematic for shining-armor, a VM (qemu-guest-agent) with an
-# AMD GPU passed through. Hashed locally by TOPF into b2443f14...; see
+# AMD GPU passed through. Hashed locally by TOPF into 762ff07d...; see
 # control-plane.yaml for how.
 customization:
+  extraKernelArgs:
+    - talos.auditd.disabled=1             # audit flood -- see intel-un1290.yaml
   systemExtensions:
     officialExtensions:
       - siderolabs/iscsi-tools

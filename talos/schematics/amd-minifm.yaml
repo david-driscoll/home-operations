@@ -1,6 +1,8 @@
 # Image Factory schematic for the AMD mini-PC worker (hard-hat).
-# Hashed locally by TOPF into 65cf8364...; see control-plane.yaml for how.
+# Hashed locally by TOPF into 2703b57f...; see control-plane.yaml for how.
 customization:
+  extraKernelArgs:
+    - talos.auditd.disabled=1             # audit flood -- see intel-un1290.yaml
   systemExtensions:
     officialExtensions:
       - siderolabs/amd-ucode

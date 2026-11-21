@@ -1,6 +1,13 @@
 # Image Factory schematic for the Intel UN1290 workers (fluttershy, kerfuffle).
-# Hashed locally by TOPF into 249d9135...; see control-plane.yaml for how.
+# Hashed locally by TOPF into e0973cff...; see control-plane.yaml for how.
 customization:
+  extraKernelArgs:
+    # Same as the control planes. With auditd on, these workers logged ~390k
+    # audit records an hour and the kernel dropped hundreds of millions more
+    # ("audit: rate limit exceeded", audit_lost=335M on fluttershy 2026-11-20),
+    # drowning the kernel log that the Longhorn iSCSI errors also land in.
+    # Takes effect only on a reinstall: `mise run talos:upgrade-node <ip>`.
+    - talos.auditd.disabled=1
   systemExtensions:
     officialExtensions:
       - siderolabs/i915
