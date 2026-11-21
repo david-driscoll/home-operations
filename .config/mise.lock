@@ -760,50 +760,50 @@ backend = "npm:typescript"
 specifiers = ["5.9.3"]
 
 [[tools.openbao]]
-version = "2.7.2"
+version = "v2.7.3"
 backend = "aqua:openbao/openbao/bao"
-specifiers = ["2.7.2"]
+specifiers = ["v2.7.3"]
 
 [tools.openbao."platforms.linux-arm64"]
-checksum = "sha256:5b97bf816fa820e5e521abec1db19c6161fcca2f666cf4a84e335089c0e83edd"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267309"
+checksum = "sha256:b505b07af4206fdf0e81b747fcb7e9e63f2c2b05e26ead973cce62d0ed07d0e0"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768932835"
 provenance = "cosign"
 
 [tools.openbao."platforms.linux-arm64-musl"]
-checksum = "sha256:5b97bf816fa820e5e521abec1db19c6161fcca2f666cf4a84e335089c0e83edd"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267309"
+checksum = "sha256:b505b07af4206fdf0e81b747fcb7e9e63f2c2b05e26ead973cce62d0ed07d0e0"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768932835"
 provenance = "cosign"
 
 [tools.openbao."platforms.linux-x64"]
-checksum = "sha256:582b1f3c2fdc5afd443b2d57a225ef654de75adea609fdb66731fd582a9cbc96"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267064"
+checksum = "sha256:131df9a21cf3dd2dff47107110b369c9974cbdaa482bcbc723b81b3403c68ecd"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768932611"
 provenance = "cosign"
 
 [tools.openbao."platforms.linux-x64-musl"]
-checksum = "sha256:582b1f3c2fdc5afd443b2d57a225ef654de75adea609fdb66731fd582a9cbc96"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679267064"
+checksum = "sha256:131df9a21cf3dd2dff47107110b369c9974cbdaa482bcbc723b81b3403c68ecd"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768932611"
 provenance = "cosign"
 
 [tools.openbao."platforms.macos-arm64"]
-checksum = "sha256:2b4fc131910f4b075b2e1c9a9de67c461489491a8f03fbdc73387294d67d9547"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679266561"
+checksum = "sha256:1189f85499b36c0134e8e6bf0bffe71dfe1b085ab5d223324a5bccc2a59d62f7"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768932097"
 provenance = "cosign"
 
 [tools.openbao."platforms.macos-x64"]
-checksum = "sha256:ea62ce00b81a2170a5daa8589f8420434e72d4d4ebcd2a4cbfa9add507a2602d"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679266497"
+checksum = "sha256:fff61d45dd5ca7bbae8668fc07e9d6c7a6662e94e5cdf729b798a8cfcb3a8196"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768932021"
 provenance = "cosign"
 
 [tools.openbao."platforms.windows-x64"]
-checksum = "sha256:b058d30eac461e78e56305d3aa7371c061405a060f364aa20999dc3a309264f4"
-url = "https://github.com/openbao/openbao/releases/download/v2.7.2/openbao_2.7.2_windows_amd64.zip"
-url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/679268686"
+checksum = "sha256:969e4872b21eeee7c9b4cd312e77027e624528ca7bc9dc2361311b97e34e6e90"
+url = "https://github.com/openbao/openbao/releases/download/v2.7.3/openbao_2.7.3_windows_amd64.zip"
+url_api = "https://api.github.com/repos/openbao/openbao/releases/assets/768934018"
 provenance = "cosign"
 
 [[tools.pipx]]
