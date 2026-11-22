@@ -163,6 +163,14 @@ spec:
           # and land on the full UI. One match entry, so path AND parameter
           # must both hold. Prowlarr's app sync does not need this at all: it
           # talks to the Service in-cluster, not through the gateway.
+          #
+          # No header-strip middleware here (unlike navidrome's /rest), checked
+          # 2026-11-22: the outpost never runs on this rule, so a client's own
+          # X-Authentik-Username reaches LazyLibrarian -- but `/api` ignores it.
+          # webServe.py `api()` hands straight to api.Api, which authenticates
+          # on the apikey alone and never calls serve_template, the only place
+          # PROXY_AUTH reads the header. Exact `/api` reaches no other handler.
+          # Re-check if LazyLibrarian ever reads users or cookies in api.py.
           - matches:
               - path:
                   type: Exact

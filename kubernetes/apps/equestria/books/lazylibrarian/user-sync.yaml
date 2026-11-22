@@ -1,0 +1,161 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The authentik API token ./resources/sync_users.py reads members with.
+#
+# The bootstrap (superuser) token, the same one apps/coder/setup-status and the
+# pulumi stacks use: the estate has no narrower authentik token yet. The script
+# only GETs /core/groups/ and /core/users/ with it. A read-only service account
+# (a role with view_user + view_group, minted by stacks/authentik into OpenBao)
+# would be the better credential; swap the remoteRef when one exists.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ${APP}-user-sync
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 1h
+  target:
+    name: ${APP}-user-sync
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        AUTHENTIK_TOKEN: "{{ .authentik_token }}"
+  data:
+    - secretKey: authentik_token
+      remoteRef:
+        key: clusters/alpha-site/apps/authentik/token
+        property: credential
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/batch/cronjob_v1.json
+#
+# Daily: authentik `media-managers` -> LazyLibrarian's `users` table.
+#
+# WHY: LazyLibrarian's PROXY_AUTH only logs in a user who already has a row, and
+# PROXY_REGISTER creates that row only after emailing a password. There is no
+# SMTP here, so every first visit failed ("Error sending Email") and `admin` was
+# the only user. LazyLibrarian has no API for users (lazylibrarian/api.py) and
+# its admin page's add-user needs the email too (webServe.py admin_users), so
+# this writes the rows directly. What it writes, and why it disables rather than
+# deletes, is at the top of ./resources/sync_users.py.
+#
+# HOW IT REACHES THE DATABASE: the live SQLite file on the app's own PVC, while
+# LazyLibrarian runs. The PVC is Longhorn ReadWriteOnce, which is per NODE, not
+# per pod: the required podAffinity below puts this pod on LazyLibrarian's node,
+# where the kubelet bind-mounts the same filesystem into both. Same kernel, same
+# inode, so SQLite's file locks and its WAL shared memory work across the two
+# processes exactly as they would for two processes in one pod. The script
+# takes one short BEGIN IMMEDIATE with a 30s busy timeout.
+#
+#   Not a sidecar: it would sit in the Deployment all day for a few seconds of
+#   work, and could not be run by hand (below).
+#   Not a CronJob that scales LazyLibrarian down first: needs RBAC on the
+#   Deployment and fights Flux and the downscaler, for no gain over the locks.
+#
+# If LazyLibrarian is not running, the affinity has no node to match and the
+# pod waits Pending until activeDeadlineSeconds ends the Job. Deliberate: with
+# the app down, Longhorn could attach the volume anywhere, and the app would
+# then wait on this pod instead.
+#
+# The image is LazyLibrarian's own, at the same digest as ./helmrelease.yaml:
+# it is already on that node, and its python3 has the sqlite3 module the app
+# itself writes with. Renovate bumps both references in one PR.
+#
+# Run it now, without waiting a day:
+#   kubectl -n equestria create job --from=cronjob/lazylibrarian-user-sync lazylibrarian-user-sync-manual
+# To rehearse without writing, render that with `--dry-run=client -o yaml`, set
+# DRY_RUN to "true" and `kubectl create -f` the result: it logs the same changes
+# and rolls the transaction back.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ${APP}-user-sync
+spec:
+  # 10:15 Eastern: well clear of the nightly 01:00-07:00 shed, which scales
+  # LazyLibrarian to 0 (and suspends CronJobs). No `downscaler/exclude`: outside
+  # the window there is nothing to exclude it from.
+  schedule: "15 10 * * *"
+  timeZone: ${TIMEZONE}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      # Normally done in seconds. This bounds the "LazyLibrarian is down, pod
+      # stays Pending" case above.
+      activeDeadlineSeconds: 900
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: ${APP}-user-sync
+        spec:
+          restartPolicy: OnFailure
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: ${APP}
+                      app.kubernetes.io/controller: app
+                  topologyKey: kubernetes.io/hostname
+          securityContext:
+            # The owner of /config and the database (the app's PUID:PGID), so
+            # the -wal/-shm files it touches stay the app's.
+            runAsNonRoot: true
+            runAsUser: ${PUID}
+            runAsGroup: ${PGID}
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: sync
+              image: ghcr.io/linuxserver/lazylibrarian:latest@sha256:0d477f7efdbbf3f5e1053c04f515c2f58f32e16cc21149c1f1b5e62889ce10f5
+              # Not the image's /init (s6, which wants root): just the script.
+              command: ["python3", "/scripts/sync_users.py"]
+              env:
+                - name: AUTHENTIK_URL
+                  value: http://authentik-server.stargate-command.svc.cluster.local
+                # The group on ./definition.yaml's access_policy. Keep the two
+                # in step: the policy decides who reaches LazyLibrarian, this
+                # decides who has an account once they do.
+                - name: SYNC_GROUP
+                  value: media-managers
+                - name: LAZYLIBRARIAN_DB
+                  value: /config/lazylibrarian.db
+                - name: DRY_RUN
+                  value: "false"
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+              envFrom:
+                - secretRef:
+                    name: ${APP}-user-sync
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                - name: script
+                  mountPath: /scripts
+                  readOnly: true
+          volumes:
+            - name: config
+              persistentVolumeClaim:
+                claimName: ${APP}
+            - name: script
+              configMap:
+                # ./kustomization.yaml's configMapGenerator; kustomize appends the
+                # content hash here, so a script change reaches the next run.
+                name: lazylibrarian-user-sync-script
