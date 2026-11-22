@@ -37,12 +37,8 @@ spec:
       allowedRedirectUris:
         - url: "https://${APP}.${ROOT_DOMAIN}/audiobookshelf/auth/openid/callback"
         - url: "https://${APP}.${ROOT_DOMAIN}/audiobookshelf/auth/openid/mobile-redirect"
-        - url: "https://${APP}.${TAILSCALE_DOMAIN}/audiobookshelf/auth/openid/callback"
-        - url: "https://${APP}.${TAILSCALE_DOMAIN}/audiobookshelf/auth/openid/mobile-redirect"
         - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid/callback"
         - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid/mobile-redirect"
-        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/openid/callback"
-        - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/openid/mobile-redirect"
       propertyMappings:
         - email
         - openid
