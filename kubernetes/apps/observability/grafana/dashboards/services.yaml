@@ -76,8 +76,992 @@ spec:
     matchLabels:
       dashboards: "grafana"
   folder: "services"
+  resyncPeriod: 10m
   datasources:
     - datasourceName: Prometheus
       inputName: DS_PROMETHEUS
-  grafanaCom:
-    id: 18089
+  # Written for spegel 0.8's metrics, inline because no published copy fits:
+  # grafana.com 18089 (2023) and the chart's own dashboard (dropped in 0.8.0)
+  # both query spegel_advertised_image_digests / _content_digests, which 0.8
+  # replaced with the single spegel_advertised_keys gauge. Metric names come
+  # from pkg/metrics and pkg/httpx in spegel v0.8.1.
+  #
+  # Datasource placeholders are `$${DS_PROMETHEUS}` for Flux's strict post-build
+  # substitution; see pecron.yaml.
+  json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "grafana",
+              "uid": "-- Grafana --"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [
+        {
+          "title": "spegel",
+          "type": "link",
+          "url": "https://github.com/spegel-org/spegel",
+          "targetBlank": true,
+          "icon": "external link"
+        }
+      ],
+      "panels": [
+        {
+          "collapsed": false,
+          "id": 1,
+          "type": "row",
+          "title": "At a glance",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "panels": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Spegel pods Prometheus is scraping. One per node is expected; a node without one pulls only from zot and upstream.",
+          "id": 2,
+          "type": "stat",
+          "title": "Spegel pods",
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "count(spegel_advertised_keys{pod=~\"$pod\"})",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Content keys (image and layer digests) advertised to peers, summed over every node. spegel 0.8 replaced the per-registry image and layer digest gauges with this one total.",
+          "id": 3,
+          "type": "stat",
+          "title": "Advertised keys",
+          "gridPos": {
+            "h": 5,
+            "w": 5,
+            "x": 4,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum(spegel_advertised_keys{pod=~\"$pod\"})",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Share of mirror requests over the dashboard range that a peer served. Misses fall through to zot, then upstream.",
+          "id": 4,
+          "type": "stat",
+          "title": "Cache hit ratio",
+          "gridPos": {
+            "h": 5,
+            "w": 5,
+            "x": 9,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum(increase(spegel_mirror_requests_total{pod=~\"$pod\", cache=\"hit\"}[$__range])) / sum(increase(spegel_mirror_requests_total{pod=~\"$pod\"}[$__range]))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "orange",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 0.25
+                  },
+                  {
+                    "color": "green",
+                    "value": 0.5
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Mirror requests per second across all nodes.",
+          "id": 5,
+          "type": "stat",
+          "title": "Mirror requests",
+          "gridPos": {
+            "h": 5,
+            "w": 5,
+            "x": 14,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(spegel_mirror_requests_total{pod=~\"$pod\"}[$__rate_interval]))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Time since any node last served a mirror request. A quiet cluster pulls rarely, so a large value alone is not an outage.",
+          "id": 6,
+          "type": "stat",
+          "title": "Last success",
+          "gridPos": {
+            "h": 5,
+            "w": 5,
+            "x": 19,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "time() - max(spegel_mirror_last_success_timestamp_seconds{pod=~\"$pod\"} > 0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 86400
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "textMode": "value",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "id": 7,
+          "type": "row",
+          "title": "Mirror",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 6
+          },
+          "panels": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "hit: a peer served it. miss: no peer had it.",
+          "id": 8,
+          "type": "timeseries",
+          "title": "Requests by cache result",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 7
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum by (cache) (rate(spegel_mirror_requests_total{pod=~\"$pod\"}[$__rate_interval]))",
+              "legendFormat": "{{cache}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Upstream registries whose pulls are being mirrored.",
+          "id": 9,
+          "type": "timeseries",
+          "title": "Requests by registry",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 7
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum by (registry) (rate(spegel_mirror_requests_total{pod=~\"$pod\"}[$__rate_interval]))",
+              "legendFormat": "{{registry}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Time for the router to find a peer holding a digest. containerd gives spegel a short dial timeout, so a high p99 turns hits into misses.",
+          "id": 10,
+          "type": "timeseries",
+          "title": "Peer resolve latency",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 15
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.5, sum by (le, router) (rate(spegel_resolve_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval])))",
+              "legendFormat": "p50 {{router}}",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum by (le, router) (rate(spegel_resolve_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval])))",
+              "legendFormat": "p99 {{router}}",
+              "refId": "B",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Keys each node advertises. A node near zero is not sharing what it holds.",
+          "id": 11,
+          "type": "timeseries",
+          "title": "Advertised keys per node",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 15
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "spegel_advertised_keys{pod=~\"$pod\"}",
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "id": 12,
+          "type": "row",
+          "title": "HTTP",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 23
+          },
+          "panels": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "",
+          "id": 13,
+          "type": "timeseries",
+          "title": "Request latency p99 by handler",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum by (le, handler) (rate(http_request_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval])))",
+              "legendFormat": "{{handler}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "",
+          "id": 14,
+          "type": "timeseries",
+          "title": "Responses by code",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum by (code) (rate(http_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval]))",
+              "legendFormat": "{{code}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Response throughput, mostly layer blobs sent to peers.",
+          "id": 15,
+          "type": "timeseries",
+          "title": "Bytes served",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 32
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum by (handler) (rate(http_response_size_bytes_sum{pod=~\"$pod\"}[$__rate_interval]))",
+              "legendFormat": "{{handler}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "",
+          "id": 16,
+          "type": "timeseries",
+          "title": "In-flight requests",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 32
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum by (handler) (http_requests_inflight{pod=~\"$pod\"})",
+              "legendFormat": "{{handler}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "decimals": 0,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ],
+      "refresh": "1m",
+      "schemaVersion": 39,
+      "tags": [
+        "spegel",
+        "registry",
+        "kubernetes"
+      ],
+      "templating": {
+        "list": [
+          {
+            "current": {},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "$${DS_PROMETHEUS}"
+            },
+            "definition": "label_values(spegel_advertised_keys, pod)",
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true,
+            "name": "pod",
+            "label": "Pod",
+            "options": [],
+            "query": {
+              "query": "label_values(spegel_advertised_keys, pod)",
+              "refId": "A"
+            },
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Spegel",
+      "uid": "spegel",
+      "weekStart": ""
+    }
