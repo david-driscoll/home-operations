@@ -89,7 +89,10 @@ check_ref() {
     repo="${name%:*}"
   fi
 
-  if ! out=$(crane_retry digest "$name"); then
+  # A digest-only reference (`repo@sha256:...`, as the spegel chart renders)
+  # has no tag to resolve: asking for `$name` would ask for `:latest`, which
+  # plenty of repositories never publish. The digest check below is the test.
+  if [[ -z "$digest" || "$repo" != "$name" ]] && ! out=$(crane_retry digest "$name"); then
     annotate error "image-check: $name does not resolve: $out"
     echo "| \`$ref\` | :x: tag does not resolve |" >>"$summary"
     failures=$((failures + 1))
