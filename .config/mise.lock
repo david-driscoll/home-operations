@@ -377,44 +377,51 @@ url_api = "https://api.github.com/repos/cloudnative-pg/cloudnative-pg/releases/a
 url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.30.1/multiple.intoto.jsonl"
 
 [[tools."github:eljulians/skillfile"]]
-version = "1.9.2"
+version = "1.9.3"
 backend = "github:eljulians/skillfile"
-specifiers = ["v1.9.2"]
+specifiers = ["v1.9.3"]
 
 [tools."github:eljulians/skillfile"."platforms.linux-arm64"]
-checksum = "sha256:d3509576c590b88e9a3c2d7b9bba9b9e44a94ff540fd4f6a1ab046d4075a1651"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-aarch64-linux"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681309"
+checksum = "sha256:ba953b671e2b30c1b5256944eec60f20e4c03ed3d47d6a376bff5f57103f5f92"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-aarch64-linux"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294799"
 
 [tools."github:eljulians/skillfile"."platforms.linux-arm64-musl"]
-checksum = "sha256:d3509576c590b88e9a3c2d7b9bba9b9e44a94ff540fd4f6a1ab046d4075a1651"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-aarch64-linux"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681309"
+checksum = "sha256:ba953b671e2b30c1b5256944eec60f20e4c03ed3d47d6a376bff5f57103f5f92"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-aarch64-linux"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294799"
 
 [tools."github:eljulians/skillfile"."platforms.linux-x64"]
-checksum = "sha256:a4af5a4cd6f7082ba1593d73015fd0b67cb34647cee0380429edd2ff804bc4a2"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-x86_64-linux"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681312"
+checksum = "sha256:6ce1ecb1ab7669af4ba5af91b46b628b33047f01088585df0344c43260fa1ac2"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-x86_64-linux"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294795"
 
 [tools."github:eljulians/skillfile"."platforms.linux-x64-musl"]
-checksum = "sha256:a4af5a4cd6f7082ba1593d73015fd0b67cb34647cee0380429edd2ff804bc4a2"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-x86_64-linux"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681312"
+checksum = "sha256:6ce1ecb1ab7669af4ba5af91b46b628b33047f01088585df0344c43260fa1ac2"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-x86_64-linux"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294795"
 
 [tools."github:eljulians/skillfile"."platforms.macos-arm64"]
-checksum = "sha256:e1e98e87dfc1b19897b36ee6dcb491b4361206a06a05825d68645d544473d895"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-aarch64-macos"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681308"
+checksum = "sha256:94d22d6ae08ba104f4405870f89460e788f43fb944d68dd28939168b0984e0b6"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-aarch64-macos"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294796"
 
 [tools."github:eljulians/skillfile"."platforms.macos-x64"]
-checksum = "sha256:321739270421b5f4c7a1e08c3a235f7280bc5007fdf5c1f5f75e90b2d29d3ceb"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-x86_64-macos"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681311"
+checksum = "sha256:4983159939455a226ca1ff4b88093f3f0df230c1ee7ea2aa9a769f5f8010790a"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-x86_64-macos"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294797"
 
 [tools."github:eljulians/skillfile"."platforms.windows-x64"]
-checksum = "sha256:b10a0519b6baa4b9177e0841866b6ad9c0b75be32ba8365eed0f863f2d0d8413"
-url = "https://github.com/eljulians/skillfile/releases/download/v1.9.2/skillfile-x86_64-windows.exe"
-url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/537681313"
+checksum = "sha256:83d44409e23cb683b9973b7eaa39c887cd2a80e291292de9849d83c7cd2fe942"
+checksum_source = "mise-versions"
+url = "https://github.com/eljulians/skillfile/releases/download/v1.9.3/skillfile-x86_64-windows.exe"
+url_api = "https://api.github.com/repos/eljulians/skillfile/releases/assets/775294794"
 
 [[tools."github:home-operations/flate"]]
 version = "0.7.3"
