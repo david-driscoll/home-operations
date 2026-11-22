@@ -740,6 +740,30 @@ spec:
         runAsGroup: 0
         seccompProfile:
           type: RuntimeDefault
+      # Spread the five region exits across the workers. Each is its own
+      # replicas: 1 controller, so with no constraint the scheduler put all
+      # five on one node (shining-armor, 2026-11-20), and losing that node
+      # took out every region exit at once. The selector matches the release
+      # label every controller shares. Hard, like the NetBird routers
+      # (../router/networkrouter.yaml): maxSkew 1 can always be met by the
+      # least-loaded worker, and Honor keeps the tainted control planes and a
+      # NotReady worker from counting as empty domains.
+      topologySpreadConstraints:
+        - topologyKey: kubernetes.io/hostname
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: *app
+      # The pods mount emptyDirs, so the descheduler's DefaultEvictor
+      # (evictLocalStoragePods: false) would never move one. Nothing in them
+      # outlives the pod: tailscaled keeps its state in a Secret and NetBird
+      # re-enrols from the setup key. Opt in, so
+      # RemovePodsViolatingTopologySpreadConstraint can respread them. A move
+      # drops that exit for about a minute.
+      annotations:
+        descheduler.alpha.kubernetes.io/evict: "true"
 
     persistence:
       routing:
