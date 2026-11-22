@@ -15,15 +15,16 @@ statuses at the merge, and a revert after it. The third is currently dormant
 ## What automerges
 
 The rules are in `.github/renovate.json5`: "Automerge app image ..." (one rule
-for patch/digest, one for minor), "Automerge named dependencies" and "Auto-merge
-GitHub Actions". The first three name only `github-mirror/home-operations`.
+for patch/digest, one for minor), "Automerge named dependencies", its patch-only twin and
+"Auto-merge GitHub Actions". The first four name only `github-mirror/home-operations`.
 The Actions rule names no repository; the GitHub bot's skip rule is what keeps
 it off GitHub.
 
 | Automerges | Never automerges |
 | --- | --- |
 | `docker`/`helm` patch, digest and minor bumps under `kubernetes/apps/{equestria,stargate-command,agents}/**` and `docker/**` | majors; minors of `0.x`; Home Assistant minors (the monthly release) |
-| named dependencies, minor/patch/digest, under "Automerge named dependencies": external-dns (chart + mirror), yq, pulumi, gh, hk, the UniFi network/protect/access MCP images, pulumi-nodejs, renovate-operator, renovate, unpoller, claude-code, biome, the mise image, 1password-cli, Dumpify, kube-prometheus-stack, immich server + machine-learning (its database stays manual), the Forgejo Helm chart (not the server image), dynacat, blackbox-exporter (the docker image and the Helm chart), k8s-sidecar, the openebs chart, dispatcharr, the alloy chart mirror, the coder chart, typos, graphify, the npm Pulumi providers `@axnic/pulumi-garage` and `@pulumi/cloudflare`, thanos, fnox, uv, the meilisearch and reflector charts, golink, and the unifi provider pin in `Pulumi.yaml` (merges once `pulumi-sdk-regen` has regenerated the SDK onto the branch) | the other `Pulumi.yaml` provider pins, which stay manual |
+| named dependencies, minor/patch/digest, under "Automerge named dependencies": external-dns (chart + mirror), yq, pulumi, gh, hk, the UniFi network/protect/access MCP images, pulumi-nodejs, renovate-operator, renovate, unpoller, claude-code, biome, the mise image, 1password-cli, Dumpify, kube-prometheus-stack, immich server + machine-learning (its database stays manual), the Forgejo Helm chart (not the server image), dynacat, blackbox-exporter (the docker image and the Helm chart), k8s-sidecar, the openebs chart, dispatcharr, the alloy chart mirror, the coder chart, typos, graphify, the npm Pulumi providers `@axnic/pulumi-garage` and `@pulumi/cloudflare`, thanos, fnox, uv, the meilisearch and reflector charts, golink, the unifi provider pin in `Pulumi.yaml` (merges once `pulumi-sdk-regen` has regenerated the SDK onto the branch), skillfile, apm (`github:` and `pipx:`), pkl, the npm Pulumi providers proxmoxve, azure-native and oci, FusionCache, the ToolHive group, aurral, the restic group and forge-dashboard | the other `Pulumi.yaml` provider pins, which stay manual |
+| named dependencies, **patch/digest only**, under "Automerge named dependencies (patch/digest only)": the n8n sandbox chart, the Flux Operator group and the Flux distribution pin, flux2, flate, the toolport group, the authentik group (not its chart or provider), OpenBao (chart, images, CLI), the loki chart, the cnpg kubectl plugin, bun and `@llamaduck/forgejo-ts` | their minors |
 | GitHub Actions minor/patch/digest (the older rule, `automergeType: branch`) | databases and anything that migrates on start (postgres, timescale, CNPG, mongo, couchdb, valkey/redis, mariadb/mysql, neo4j, meilisearch (its chart is opted in), immich's database, nextcloud, opencloud) |
 | | identity, secrets, ingress, DNS, tailnet, storage, backups, registry (authentik, openbao, garage, traefik, tailscale, technitium, keepalived, zot, docker-socket-proxy, backrest, rclone, arcane, toolport) |
 | | everything else: Talos, Kubernetes, Flux, CRDs, cluster infrastructure, mise tools, npm, Pulumi |
@@ -122,14 +123,15 @@ no Flux to report failures, so for them it is layer 1, autoheal, and Gatus.
 ## Operating it
 
 - **Stop all automerge:** set `automerge: false` on the two "Automerge app
-  image" rules, "Automerge named dependencies" and "Auto-merge GitHub Actions".
+  image" rules, both "Automerge named dependencies" rules and "Auto-merge
+  GitHub Actions".
   Check the open pull requests on the forge afterwards: one already set to
   merge when checks succeed may keep that setting until it is cancelled there.
 - **Hold one app:** add `"<app dir>/**",` between the `automerge-hold` markers.
   **Release it:** delete the line. Held PRs carry `renovate/automerge-hold`,
   and `merge-window` stops gating them.
 - **Opt in one dependency:** add its Renovate `packageName` to "Automerge named
-  dependencies". For mise tools that is the upstream repo (`cli/cli` for
+  dependencies" (minor and patch) or its patch-only twin. For mise tools that is the upstream repo (`cli/cli` for
   `gh`), not the tool name.
 - **Group PR titles** carry the versions in the group's `commitMessageTopic`,
   with `commitMessageExtra: ""`. Renovate drops `commitMessageExtra` from a

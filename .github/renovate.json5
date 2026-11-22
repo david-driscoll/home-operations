@@ -1662,7 +1662,93 @@
         // only with the SDK regenerated onto the branch; like the npm
         // providers above it is applied to live infrastructure by the next
         // stack run, with no watchdog revert outside kubernetes/**.
-        "ubiquiti-community/unifi"
+        "ubiquiti-community/unifi",
+        // mise tools: .config/mise.toml (`github:` tools by upstream repo,
+        // pkl by apple/pkl) and paseo's mise.toml (`pipx:apm-cli` by its
+        // PyPI name, prefixed spelling too, as for graphifyy)
+        "eljulians/skillfile",
+        "microsoft/apm",
+        "apm-cli",
+        "pipx:apm-cli",
+        "apple/pkl",
+        // npm Pulumi providers (components/, stacks/). Same caveat as the
+        // two above: applied to live infrastructure by the next Stack run.
+        "@muhlba91/pulumi-proxmoxve",
+        "@pulumi/azure-native",
+        "@pulumi/oci",
+        // FusionCache monorepo (NuGet): every member, so the group merges
+        "/^ZiggyCreatures\\.FusionCache/",
+        // The "ToolHive" group, every member: operator, CRDs chart and the
+        // registry server (kubernetes/apps/agents) plus the CLI
+        "/stacklok\\/toolhive/",
+        // kubernetes/apps/equestria/media/aurral. Minor/patch only; majors
+        // stay manual like everywhere else.
+        "ghcr.io/lklynet/aurral",
+        // The "restic" group, both spellings. Every backup path reads or
+        // writes the same repositories, so a bad release hits all of them.
+        "restic/restic",
+        "docker.io/restic/restic",
+        // kubernetes/apps/coder/forge-dashboard
+        "ghcr.io/alrayyes/forge-dashboard"
+      ],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+      ignoreTests: false,
+      minimumReleaseAge: "1 days",
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+      timezone: "America/New_York",
+      rebaseWhen: "conflicted",
+      addLabels: [
+        "renovate/automerge"
+      ],
+    },
+    {
+      // Like the rule above, but PATCH (and digest) only: dependencies trusted
+      // with a bug-fix release unattended but not a feature release. Several
+      // are on the app rules' never-unattended list (openbao, authentik,
+      // toolport, Flux) and are opted back in here for patches alone; their
+      // minors still wait for a human. Same gate, same placement reasons.
+      description: "Automerge named dependencies (patch/digest only) once CI is green",
+      matchRepositories: [
+        "david-driscoll/home-operations",
+        "github-mirror/home-operations"
+      ],
+      matchUpdateTypes: [
+        "patch",
+        "digest"
+      ],
+      matchPackageNames: [
+        // kubernetes/apps/equestria/home/n8n/sandbox: the Helm chart (0.x)
+        "ghcr.io/n8n-io/n8n-sandbox-service/n8n-sandbox-service",
+        // The "Flux Operator" group (operator + instance charts) and the
+        // distribution release pinned in flux-instance's values.yaml
+        "/flux-operator/",
+        "/flux-instance/",
+        "controlplaneio-fluxcd/distribution",
+        // The "toolport" group: the gateway image and the skill pin
+        "/btsouth\\/toolport/",
+        // The "authentik" group: server, proxy outpost, npm API client. The
+        // Helm chart and the Pulumi.yaml provider are not in it and stay manual.
+        "ghcr.io/goauthentik/server",
+        "ghcr.io/goauthentik/proxy",
+        "@goauthentik/api",
+        // OpenBao: the chart, the "OpenBao" group (both image spellings) and
+        // the CLI in .config/mise.toml, each on its own version line
+        "ghcr.io/openbao/charts/openbao",
+        "ghcr.io/openbao/openbao",
+        "quay.io/openbao/openbao",
+        "openbao/openbao",
+        // kubernetes/apps/observability/loki: the Helm chart
+        "ghcr.io/grafana/helm-charts/loki",
+        // mise tools by upstream repo: .config/mise.toml (flux2, flate, the
+        // cnpg kubectl plugin) and paseo's mise.toml (bun)
+        "fluxcd/flux2",
+        "home-operations/flate",
+        "cloudnative-pg/cloudnative-pg",
+        "oven-sh/bun",
+        // stacks/system/package.json (the Forgejo API client)
+        "@llamaduck/forgejo-ts"
       ],
       automerge: true,
       automergeType: "pr",
