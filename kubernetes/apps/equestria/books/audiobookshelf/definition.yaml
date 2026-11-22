@@ -28,7 +28,17 @@ spec:
       # where authentik returns the mobile apps; Audiobookshelf then bounces
       # them on to `audiobookshelf://oauth` (its "Allowed Mobile Redirect URIs"
       # setting, which already defaults to that).
+      #
+      # Both live under ABS's router base path, `/audiobookshelf` by default
+      # since 2.26 (ROUTER_BASE_PATH, unset here), and ABS builds the
+      # redirect_uri it sends from that -- so the unprefixed paths alone fail
+      # with "redirect URI is wrong". The unprefixed ones stay in case
+      # ROUTER_BASE_PATH is ever set to "".
       allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/audiobookshelf/auth/openid/callback"
+        - url: "https://${APP}.${ROOT_DOMAIN}/audiobookshelf/auth/openid/mobile-redirect"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/audiobookshelf/auth/openid/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/audiobookshelf/auth/openid/mobile-redirect"
         - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid/callback"
         - url: "https://${APP}.${ROOT_DOMAIN}/auth/openid/mobile-redirect"
         - url: "https://${APP}.${TAILSCALE_DOMAIN}/auth/openid/callback"
