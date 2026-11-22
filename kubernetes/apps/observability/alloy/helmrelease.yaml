@@ -61,8 +61,23 @@ spec:
         limits:
           cpu: 400m
           memory: 600Mi
+      # --storage.path (chart default /tmp/alloy) holds loki.source.kubernetes'
+      # read positions. Without a volume it lives in the container's writable
+      # layer and is wiped on every container restart, so a restarted alloy
+      # re-tails every log from the start: Loki rejects the replay as "entry
+      # too far behind" and the replay's memory spike OOMs it again. An
+      # emptyDir survives container restarts (not pod deletion).
+      mounts:
+        extra:
+          - name: storage
+            mountPath: /tmp/alloy
 
     controller:
+      volumes:
+        extra:
+          - name: storage
+            emptyDir:
+              sizeLimit: 1Gi
       podAnnotations:
         reloader.stakater.com/auto: "true"
       # alloy runs as a DaemonSet and scrapes/collects from the node it is on,

@@ -6,8 +6,17 @@ logging {
 
 // discovery.kubernetes allows you to find scrape targets from Kubernetes resources.
 // It watches cluster state and ensures targets are continually synced with what is currently running in your cluster
+//
+// Only this node's pods. alloy is a DaemonSet without clustering, so an
+// unfiltered pod role made all seven replicas tail every container in the
+// cluster: 7x the log traffic and each replica sitting near its memory limit.
+// HOSTNAME is spec.nodeName (set by the chart).
 discovery.kubernetes "pod" {
 	role = "pod"
+	selectors {
+		role  = "pod"
+		field = "spec.nodeName=" + sys.env("HOSTNAME")
+	}
 }
 
 discovery.kubernetes "service" {
