@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# ebook2audiobook -- turns an ebook (epub, pdf, mobi, docx, ...) into a
+# chaptered audiobook with a TTS model (XTTSv2 by default, plus Piper, Bark,
+# Fairseq, ... and voice cloning). A Gradio web UI: upload the book, pick a
+# voice, convert, download the m4b. Source: github.com/DrewThomasson/ebook2audiobook.
+#
+# Deployed for Tami. Unlike chaptarr/listenarr/readmeabook it does not touch
+# the shared audiobook library: output is downloaded from the UI.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app ebook2audiobook
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/books/ebook2audiobook
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  # The CPU image is ~3.8 GB compressed; a first pull onto a node can outlast
+  # the usual 10m.
+  timeout: 20m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: no database at all.
+    # No components/volsync: everything the app writes is regenerable -- TTS
+    # models and per-engine Python venvs it downloads, the default voice pack
+    # (an HF zip), and finished audiobooks the user has already downloaded.
+    # Backing up tens of GB of model weights with restic buys nothing. It all
+    # lives on ./pvc.yaml (longhorn-cache) instead.
+    - ../../../../components/tailscale
+  postBuild:
+    substitute:
+      # Browsers take the authentik chain on the tailnet too, mirroring the
+      # internal HTTPRoute's authenticated-user.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      APP: *app
+      NAMESPACE: *namespace
