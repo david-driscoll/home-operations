@@ -524,9 +524,13 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   /** The definition's redirect URIs, strict unless it says otherwise, plus their NetBird twins where netbirdApps is set. */
-  private resolveRedirectUris(uris?: RedirectUri[]): pulumi.Input<{ matching_mode: string; url: string }[]> | undefined {
+  private resolveRedirectUris(uris?: RedirectUri[]): pulumi.Input<{ matching_mode: string; url: string; redirect_uri_type: string }[]> | undefined {
     if (!uris) return undefined;
-    const declared = uris.map(uri => ({ matching_mode: uri.matching_mode ?? "strict", url: uri.url }));
+    // redirect_uri_type is spelled out because authentik stores it on every URI
+    // (default "authorization") and the TF provider reads it back into the map.
+    // Omitted, state never matched the inputs and every resync PUT every OAuth2
+    // provider -- ~6k writes a day, each one an outpost refresh.
+    const declared = uris.map(uri => ({ matching_mode: uri.matching_mode ?? "strict", url: uri.url, redirect_uri_type: "authorization" }));
     const netbird = this.args.netbirdApps;
     // A plain value when there is nothing to derive from: every tailnet name
     // ends in Tailscale's .ts.net, and an Output here would plan an update for
