@@ -1,0 +1,176 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ebook2audiobook
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 20m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+          # Always up: excluded from the nightly shed. A whole book on CPU runs
+          # for hours, and a conversion started in the evening would otherwise
+          # be killed at 01:00 with nothing to resume from.
+          downscaler/exclude: "true"
+        # One RWO cache volume, and a restart mid-conversion loses the run
+        # anyway: never two pods.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # Docker Hub only -- upstream publishes no GHCR/Quay image. Tags
+              # are `vYY.MM.DD-<device>`; only `cpu` and `cu130` are current.
+              # The `rocm`/`xpu` tags stopped at v25.6.2 (June 2025), and the
+              # cluster has no NVIDIA card, so CPU it is: hard-hat's AMD GPU
+              # and the Intel iGPUs have no maintained image to drive them.
+              # Digest is the multi-arch index.
+              repository: docker.io/athomasson2/ebook2audiobook
+              tag: v26.11.21-cpu@sha256:758915967c082c2f0e773fd4f6bd6c695cd024281c2bf599f8e6814264d7973f
+              pullPolicy: IfNotPresent
+            # The image's ENTRYPOINT (`bash ebook2audiobook.command
+            # --script_mode full_docker`) starts the Gradio UI on
+            # 0.0.0.0:7860 (lib/conf.py interface_host/interface_port).
+            # Upstream's compose runs it with a TTY; kept for parity.
+            tty: true
+            stdin: true
+            env:
+              TZ: ${TIMEZONE}
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: &port 7860
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  # Generous: a conversion pins every core, and Gradio's event
+                  # loop can be slow to answer while it does. Five minutes of
+                  # silence before a restart throws the run away.
+                  failureThreshold: 10
+              readiness: *probes
+              # First boot downloads the default voice pack and initial model
+              # weights before Gradio listens. 90 x 10s = 15 minutes.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 90
+            # Root, unlike most of the estate. The image is built and run as
+            # root with everything under a root-owned /app, and at runtime the
+            # app writes there well beyond the mounted dirs: /app/.uv_cache,
+            # /app/.installed, and a fresh venv per TTS engine on first use.
+            # Capabilities are still dropped except the three a root process
+            # needs to manage files it did not create itself.
+            securityContext:
+              runAsUser: 0
+              runAsGroup: 0
+              runAsNonRoot: false
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["CHOWN", "DAC_OVERRIDE", "FOWNER"]
+            resources:
+              requests:
+                cpu: "2"
+                memory: 4Gi
+              # No CPU limit: TTS inference is CPU-bound and should take idle
+              # cores; the request keeps the node's other tenants their share.
+              # XTTSv2 on CPU sits around 4-6 GiB; headroom for bigger engines.
+              limits:
+                memory: 16Gi
+
+    defaultPodOptions:
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      # The same directories upstream's docker-compose.yml bind-mounts from
+      # empty host folders, so an empty volume over them is what the app
+      # expects. See ./pvc.yaml for what each holds.
+      cache:
+        existingClaim: ${APP}-cache
+        globalMounts:
+          - path: /app/models
+            subPath: models
+          - path: /app/voices
+            subPath: voices
+          - path: /app/ebooks
+            subPath: ebooks
+          - path: /app/audiobooks
+            subPath: audiobooks
+          - path: /app/tmp
+            subPath: tmp
+          - path: /app/lib/classes/tts_engines/venvs
+            subPath: venvs
+      # run_dir: Gradio's upload cache, Calibre's temp/config and TMPDIR
+      # (lib/conf.py). Per-process scratch, so it starts clean on each boot.
+      run:
+        type: emptyDir
+        sizeLimit: 20Gi
+        globalMounts:
+          - path: /app/run
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user

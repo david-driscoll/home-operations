@@ -1,0 +1,11 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# No externalsecret.yaml: ebook2audiobook has no database, no OIDC client and
+# no API keys -- authentik forward auth in front is its only login.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./pvc.yaml
+  - ./helmrelease.yaml
+  - ./definition.yaml

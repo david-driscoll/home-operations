@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ebook2audiobook
+  category: Applications
+  description: Convert ebooks into chaptered audiobooks with text-to-speech and voice cloning
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # The same app under its tailnet name, so authentik has a provider for that
+  # hostname too. Paired with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  # Upstream's own favicon: neither selfhst nor dashboard-icons carries one.
+  icon: https://cdn.jsdelivr.net/gh/DrewThomasson/ebook2audiobook@main/favicon.ico
+  access_policy:
+    groups:
+      - family
+  # Forward auth: the Gradio UI has no login of its own and no OIDC, and
+  # anyone who reaches it can burn hours of CPU. authentik fronts every route.
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

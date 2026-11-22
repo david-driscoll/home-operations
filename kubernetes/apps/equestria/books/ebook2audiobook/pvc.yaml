@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/persistentvolumeclaim-v1.json
+#
+# A PLAIN PVC on longhorn-cache (2 replicas, "can be blown away safely"),
+# deliberately not components/volsync. Everything in it is re-downloadable or
+# regenerable:
+#   models/   TTS weights pulled from Hugging Face on first use (XTTSv2 alone
+#             is ~2 GB; every other engine adds its own)
+#   venvs/    a Python venv per non-default TTS engine, built on first use --
+#             each carries its own torch, so several GB apiece
+#   voices/   the default voice pack (an HF zip) plus any cloning samples
+#   ebooks/, audiobooks/, tmp/  uploads, finished books and work files
+# Losing it costs a re-download, not data.
+#
+# 50Gi so that trying a few engines does not fill it. Longhorn expands online:
+#   kubectl -n equestria patch pvc ebook2audiobook-cache \
+#     -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}-cache
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-cache
+  resources:
+    requests:
+      storage: 50Gi

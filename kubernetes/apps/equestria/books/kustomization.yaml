@@ -6,6 +6,7 @@ resources:
   - ./audiobookrequest/ks.yaml
   - ./audiobookshelf/ks.yaml
   - ./chaptarr/ks.yaml
+  - ./ebook2audiobook/ks.yaml
   - ./grimmory/ks.yaml
   - ./komga/ks.yaml
   - ./lazylibrarian/ks.yaml
