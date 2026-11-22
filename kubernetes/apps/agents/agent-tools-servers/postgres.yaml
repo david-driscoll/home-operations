@@ -134,7 +134,7 @@ metadata:
   name: toolhive-postgres
 spec:
   # Pinned to the tag every claim in the header was checked against.
-  image: bytebase/dbhub:2.0.1@sha256:00289fc52124dec779e672b0db646da2cb202c4ee3d1c42588c7c2b8e1a8e8f5
+  image: bytebase/dbhub:2.1.0@sha256:71e33fd6967072b63095e61e8b2108ce0cf80314cf5312374413081f8b760f9d
   transport: streamable-http
   proxyPort: 8080
   mcpPort: 8080
