@@ -350,6 +350,11 @@ spec:
                 subPath: comics
               - path: /media/audiobooks
                 subPath: audiobooks
+              # Books converted by ../ebook2audiobook, copied in by its `publish`
+              # sidecar. Read-only: that sidecar is the folder's only writer.
+              - path: /media/ai-audiobooks
+                subPath: ai-audiobooks
+                readOnly: true
               # The whole tree, not a subPath of shelfmark/ebooks: that folder
               # may not exist yet, and kubelet would create a missing subPath
               # as root.
