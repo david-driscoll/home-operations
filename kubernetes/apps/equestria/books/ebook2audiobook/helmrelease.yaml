@@ -115,9 +115,37 @@ spec:
               # XTTSv2 on CPU sits around 4-6 GiB; headroom for bigger engines.
               limits:
                 memory: 16Gi
+          # Copies each finished book to /media/ai-audiobooks/<Book>/ on the
+          # shared media share. Logic and "finished" detection:
+          # ./resources/publish-audiobooks.sh.
+          publish:
+            image:
+              repository: busybox
+              tag: 1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
+              pullPolicy: IfNotPresent
+            command: ["/bin/sh", "/scripts/publish-audiobooks.sh"]
+            env:
+              PUBLISH_INTERVAL: "60"
+            # 568, like every other writer on the share, so published books
+            # are owned the same way as the rest of the library.
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                memory: 128Mi
 
     defaultPodOptions:
       securityContext:
+        # Same groups as the other apps on truenas-media.
+        supplementalGroups: [0, 1, 44, 109, 303, 568, 10000]
         seccompProfile: { type: RuntimeDefault }
 
     service:
@@ -134,26 +162,53 @@ spec:
       # expects. See ./pvc.yaml for what each holds.
       cache:
         existingClaim: ${APP}-cache
-        globalMounts:
-          - path: /app/models
-            subPath: models
-          - path: /app/voices
-            subPath: voices
-          - path: /app/ebooks
-            subPath: ebooks
-          - path: /app/audiobooks
-            subPath: audiobooks
-          - path: /app/tmp
-            subPath: tmp
-          - path: /app/lib/classes/tts_engines/venvs
-            subPath: venvs
+        advancedMounts:
+          app:
+            app:
+              - path: /app/models
+                subPath: models
+              - path: /app/voices
+                subPath: voices
+              - path: /app/ebooks
+                subPath: ebooks
+              - path: /app/audiobooks
+                subPath: audiobooks
+              - path: /app/tmp
+                subPath: tmp
+              - path: /app/lib/classes/tts_engines/venvs
+                subPath: venvs
+            # Read-only: the sidecar only ever copies out of here.
+            publish:
+              - path: /app/audiobooks
+                subPath: audiobooks
+                readOnly: true
       # run_dir: Gradio's upload cache, Calibre's temp/config and TMPDIR
       # (lib/conf.py). Per-process scratch, so it starts clean on each boot.
       run:
         type: emptyDir
         sizeLimit: 20Gi
-        globalMounts:
-          - path: /app/run
+        advancedMounts:
+          app:
+            app:
+              - path: /app/run
+      # The WHOLE share, not `subPath: ai-audiobooks`, and only in the sidecar.
+      # The folder does not exist yet: as a subPath the kubelet would create it
+      # as root over NFS, whereas the share root is 568:568 rwxrwsr-x, so the
+      # sidecar (568) creates it itself with the right owner and group.
+      media:
+        existingClaim: truenas-media
+        advancedMounts:
+          app:
+            publish:
+              - path: /media
+      scripts:
+        type: configMap
+        name: ${APP}-publish
+        defaultMode: 0555
+        advancedMounts:
+          app:
+            publish:
+              - path: /scripts
 
     route:
       internal:
