@@ -6,3 +6,10 @@ resources:
   - ./helmrelease.yaml
   - ./definition.yaml
   - ./tailnet-api.yaml
+  - ./user-sync.yaml
+configMapGenerator:
+  # Mounted by ./user-sync.yaml's CronJob, which kustomize rewrites to the
+  # hashed name.
+  - name: lazylibrarian-user-sync-script
+    files:
+      - sync_users.py=./resources/sync_users.py
