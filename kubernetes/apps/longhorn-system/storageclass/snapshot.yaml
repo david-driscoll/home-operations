@@ -53,7 +53,10 @@ parameters:
   # uses, and piece 29 blocker C was exactly that kind of pin.
   dataLocality: strict-local
   numberOfReplicas: "1"
-  replicaAutoBalance: best-effort
+  # disabled, not best-effort: auto-balance can add a second replica that
+  # strict-local can never schedule, and Longhorn then refuses every detach
+  # of the volume. See the note in scratch.yaml.
+  replicaAutoBalance: disabled
   staleReplicaTimeout: "30"
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer

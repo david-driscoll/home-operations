@@ -236,3 +236,34 @@ spec:
       labels:
         issue: Longhorn node {{$labels.node}} experiences high CPU pressure.
         severity: warning
+    # A PV with reclaimPolicy Delete that is Released but still has a
+    # VolumeAttachment: the claim is gone, the provisioner wants to delete the
+    # volume, and the detach keeps failing (VolumeFailedDelete "still attached
+    # to node"). On a healthy cluster that lasts seconds.
+    #
+    # kube-state-metrics has NO deletion-timestamp metric for VolumeAttachments
+    # (checked 2026-11-22: only _created, _info, _labels,
+    # _spec_source_persistentvolume, _status_attached,
+    # _status_attachment_metadata), so this alerts on the PV side instead. It
+    # misses a VolumeAttachment whose PV is already gone.
+    #
+    # It would have caught the 2026-11 strict-local scratch volumes, stuck for up
+    # to 16 days behind Longhorn's "replica should be 1 for strict-local volume"
+    # webhook. See docs/cluster-consolidation/19-rotate-equestria-control-planes.md.
+    # `count by` because one PV can briefly have two VolumeAttachments.
+    - alert: PersistentVolumeStuckAttachedAfterRelease
+      annotations:
+        description: PV {{$labels.persistentvolume}} ({{$labels.storageclass}}) is Released with reclaimPolicy Delete but still has a VolumeAttachment after 1h, so it cannot be deleted. Check the VolumeAttachment's status.detachError.
+        summary: Released PV {{$labels.persistentvolume}} is still attached.
+      expr: |
+        count by (persistentvolume) (
+          label_replace(kube_volumeattachment_spec_source_persistentvolume, "persistentvolume", "$1", "volumename", "(.+)")
+        )
+        * on (persistentvolume) group_left (storageclass)
+          max by (persistentvolume, storageclass) (kube_persistentvolume_info{reclaim_policy="Delete"})
+        and on (persistentvolume)
+          (kube_persistentvolume_status_phase{phase="Released"} == 1)
+      for: 1h
+      labels:
+        issue: Released PV {{$labels.persistentvolume}} cannot be detached or deleted.
+        severity: warning
