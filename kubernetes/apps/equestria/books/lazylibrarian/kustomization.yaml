@@ -7,6 +7,8 @@ resources:
   - ./definition.yaml
   - ./tailnet-api.yaml
   - ./user-sync.yaml
+  # Only Traefik may reach the pod: PROXY_AUTH trusts X-Authentik-Username.
+  - ./ciliumnetworkpolicy.yaml
 configMapGenerator:
   # Mounted by ./user-sync.yaml's CronJob, which kustomize rewrites to the
   # hashed name.
