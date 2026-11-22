@@ -27,6 +27,10 @@ paths=(
   home/node/.npm
   home/node/.npmrc
   opt/npm
+  # The wrapper replaces the base image's file in place; pulumi.real is that
+  # file moved, so the layer carries the CLI a second time (~120 MB unpacked).
+  pulumi/bin/pulumi
+  pulumi/bin/pulumi.real
   usr/local/bin/npm
   usr/local/bin/npx
   usr/local/bin/vals

@@ -26,6 +26,11 @@
 #   /usr/local/bin/vals                   the ref+openbao:// resolver, which a
 #                                         jdxcode/mise init container used to
 #                                         install into an emptyDir every run
+#   /pulumi/bin/pulumi(.real)             ./pulumi-wrapper.sh in front of the
+#                                         base image's CLI: it kills the
+#                                         Terraform provider processes earlier
+#                                         runs leaked (not a download; a leak
+#                                         that grew retained pods to 6Gi)
 #
 # NOT baked: node_modules. The operator extracts the source into /share, an
 # emptyDir mounted over whatever the image has there, and `pulumi install`
@@ -190,6 +195,22 @@ while read -r -u 3 kind name version rest; do
 done 3<"$stage/plugins.txt"
 [ "$missing" -eq 0 ] || exit 1
 echo "all $(wc -l <"$stage/plugins.txt") plugins and providers present"
+echo "::endgroup::"
+
+echo "::group::pulumi wrapper"
+# After every `pulumi` above: from here on the CLI is the wrapper. It kills the
+# Terraform provider processes earlier runs leaked, then execs the real CLI,
+# which keeps its directory, so pulumi-language-* beside it still resolve.
+# The wrapper names /pulumi/bin/pulumi.real outright; stop here if the base
+# image ever moves the CLI.
+cli="$(command -v pulumi)"
+if [ "$cli" != /pulumi/bin/pulumi ]; then
+  echo "bake.sh: pulumi is at ${cli:-nowhere}, the wrapper expects /pulumi/bin/pulumi" >&2
+  exit 1
+fi
+mv /pulumi/bin/pulumi /pulumi/bin/pulumi.real
+install -m 0755 "$here/pulumi-wrapper.sh" /pulumi/bin/pulumi
+pulumi version
 echo "::endgroup::"
 
 echo "::group::tidy"

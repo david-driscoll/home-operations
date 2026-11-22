@@ -19,6 +19,22 @@ downloaded already inside it.
 | `/usr/local/bin/vals` | the `jdxcode/mise` init container that installed vals into an emptyDir |
 | `/opt/npm` (npm 11) | needed for the `overrides` below |
 
+One more change isn't a download. `/pulumi/bin/pulumi` is
+`images/pulumi-workspace/pulumi-wrapper.sh`, and the real CLI moves to
+`/pulumi/bin/pulumi.real`. A `terraform-provider` package run leaves its
+Terraform provider process running after the run ends; the process is
+reparented to the pod's PID 1 and nothing stops it. A retained workspace pod
+collected them until it hit its 6Gi limit, and at that limit it thrashed the
+node's disk instead of being OOM-killed. That happened on 2026-11-21: shining-armor's
+disk stalled `authentik-pg-3` and took the Authentik VIP down for about 50
+minutes. Before running the real CLI, the wrapper kills every process under
+`~/.pulumi/{plugins,dynamic_tf_plugins}` whose parent is PID 1. A plugin that
+still belongs to a run has that run's pulumi process as its parent, so the
+wrapper never touches it. It costs the image a second copy of the CLI, about
+120 MB unpacked, because an appended layer can only shadow the base image's
+file, not rename it. If `container_processes{namespace="pulumi"}` climbs steadily
+on one workspace, the wrapper is missing or bypassed.
+
 ## Measured
 
 The workspace install phase, emulated in Docker the same way both times:
