@@ -25,7 +25,10 @@ services:
       TZ: ${TIMEZONE}
     volumes:
       - ./config/config.json:/etc/zot/config.json
-      - ./data:/var/lib/registry
+      # Blobs live on celestia's ZFS pool, not ./data. ./data sat on the boot SSD
+      # (local-lvm), the same disk as milky-way's etcd: zot's syncs, scrub and GC
+      # wrote 30-50 GB per burst there and stalled etcd fsync for seconds.
+      - /data/zot:/var/lib/registry
     networks:
       - dockge_default
 networks:

@@ -5,7 +5,7 @@
     "commit": true,
     "gc": true,
     "gcDelay": "1h",
-    "gcInterval": "6h",
+    "gcInterval": "24h",
     "retention": {
       "dryRun": false,
       "delay": "12h",
@@ -36,7 +36,7 @@
     },
     "scrub": {
       "enable": true,
-      "interval": "24h"
+      "interval": "168h"
     },
     "metrics": {
       "enable": true,
