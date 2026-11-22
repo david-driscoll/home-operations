@@ -6,8 +6,10 @@
 # Fairseq, ... and voice cloning). A Gradio web UI: upload the book, pick a
 # voice, convert, download the m4b. Source: github.com/DrewThomasson/ebook2audiobook.
 #
-# Deployed for Tami. Unlike chaptarr/listenarr/readmeabook it does not touch
-# the shared audiobook library: output is downloaded from the UI.
+# Deployed for Tami. Finished books can be downloaded from the UI, and a
+# `publish` sidecar also copies each one to /media/ai-audiobooks/<Book>/ on
+# the shared media share -- its own folder, kept apart from the curated
+# /media/audiobooks that chaptarr/listenarr/readmeabook manage.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -23,6 +25,9 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
+    # The `publish` sidecar writes to /media/ai-audiobooks on truenas-media.
+    - name: truenas-volumes
+      namespace: equestria
     - name: tailscale-operator
       namespace: tailscale-system
   path: ./kubernetes/apps/equestria/books/ebook2audiobook

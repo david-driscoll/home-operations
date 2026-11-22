@@ -9,3 +9,17 @@ resources:
   - ./pvc.yaml
   - ./helmrelease.yaml
   - ./definition.yaml
+configMapGenerator:
+  # The `publish` sidecar's loop: copies finished books to
+  # /media/ai-audiobooks. The name is LITERAL, not `${APP}-publish`: the
+  # `substitute: disabled` annotation below switches Flux substitution off for
+  # the whole object, metadata.name included. ./helmrelease.yaml's
+  # `${APP}-publish` IS substituted and resolves to this same name.
+  - name: ebook2audiobook-publish
+    files:
+      - resources/publish-audiobooks.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        # Shell, full of `$var`. Flux would rewrite any `${...}` in it.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
