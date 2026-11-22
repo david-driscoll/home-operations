@@ -170,6 +170,11 @@ spec:
             subPath: downloads
           - path: /media/audiobooks
             subPath: audiobooks
+          # Books converted by ../ebook2audiobook, copied in by its `publish`
+          # sidecar. Read-only: that sidecar is the folder's only writer.
+          - path: /media/ai-audiobooks
+            subPath: ai-audiobooks
+            readOnly: true
 
     route:
       internal:

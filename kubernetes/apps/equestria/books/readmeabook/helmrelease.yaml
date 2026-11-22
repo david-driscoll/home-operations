@@ -191,6 +191,11 @@ spec:
           # RMAB's own default Media Directory.
           - path: /media/audiobooks
             subPath: audiobooks
+          # Books converted by ../ebook2audiobook, copied in by its `publish`
+          # sidecar. Read-only: that sidecar is the folder's only writer.
+          - path: /media/ai-audiobooks
+            subPath: ai-audiobooks
+            readOnly: true
       # The image's .next/cache is owned by uid 1000 from the build, and the
       # server runs as 568 -- Next's image/fetch cache needs a writable one.
       next-cache:
