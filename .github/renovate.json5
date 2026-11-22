@@ -1881,6 +1881,33 @@
       registryUrlTemplate: "https://{{{registryHost}}}",
     },
     {
+      // The same packages' OTHER pin: `version:` under `source:
+      // terraform-provider` is the Pulumi bridge plugin
+      // (pulumi/pulumi-terraform-provider) that runs every one of those
+      // Terraform providers, which the manager above does not see. It sat at
+      // 0.14.0 for over a year while upstream reached 1.5.1. All nine
+      // packages share it, so they move together: one depName, one branch.
+      //
+      // A half change in the same way as the providers: the SDKs' package.json
+      // and `baseProviderVersion` still name the old bridge until
+      // `pulumi install` regenerates them, which pulumi-sdk-regen does on
+      // Renovate's branch (the workflow triggers on any Pulumi.yaml change).
+      // Every stack imports these SDKs through components/globals.ts, so a
+      // bridge bump reaches every Stack's next `up`. Not automerged: preview
+      // the stacks before merging one.
+      description: "Pulumi terraform-provider bridge plugin (root Pulumi.yaml)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)Pulumi\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "source:\\s*terraform-provider\\s*\\n\\s*version:\\s*(?<currentValue>[^\\s#]+)",
+      ],
+      depNameTemplate: "pulumi/pulumi-terraform-provider",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+    {
       // The vendored toolport skill pins its upstream source by URL in a
       // header comment. A Markdown file is outside the annotated-deps manager
       // below (.env/.sh/.yaml only), and widening that to every *.md in the
