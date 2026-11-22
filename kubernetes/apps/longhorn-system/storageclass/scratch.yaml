@@ -27,6 +27,14 @@
 #    (longhorn-manager v1.13.0 datastore/longhorn.go, the jobLabelCount == 0
 #    check). Backups are VolSync's, per app, and never touch these.
 #  - unmapMarkSnapChainRemoved lets a trim inside the pod hand space back.
+#  - replicaAutoBalance: disabled, NOT the global `best-effort`. A class that
+#    leaves this unset inherits the global setting, and best-effort ignores
+#    strict-local: when a node's instance-manager blips, the zone auto-balance
+#    pass "replenishes" a second replica that strict-local can never schedule.
+#    It sits `stopped` with no nodeID, and from then on Longhorn's own webhook
+#    rejects every detach ("BUG: replica should be 1 for strict-local volume"),
+#    so the PV can never be reclaimed. On 2026-11-22 eleven scratch PVs were
+#    stuck that way, the oldest since 2026-11-06.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -40,5 +48,6 @@ parameters:
   fsType: ext4
   recurringJobSelector: '[{"name":"none","isGroup":true}]'
   unmapMarkSnapChainRemoved: enabled
+  replicaAutoBalance: disabled
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer

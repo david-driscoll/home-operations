@@ -227,16 +227,31 @@ instance a *new* PV under the *same* claim name. On kerfuffle:
 Both claim `database/postgres-1`. Deleting "the postgres-1 PV" without checking
 `creationTimestamp` destroys the live database volume.
 
-**A red herring to expect:** the detach can be rejected by Longhorn's own webhook with
+**The detach can be rejected by Longhorn's own webhook** with
 
 ```
 admission webhook "validator.longhorn.io" denied the request:
 BUG: replica should be 1 for strict-local volume
 ```
 
-That is **transient** — the window in which the replacement replica briefly makes the count 2 —
-and clears itself once the count settles; the CSI attacher's retry then succeeds. Forcing the
-PV finalizer at the first 500 orphans the Longhorn volume for nothing.
+The webhook counts the volume's Replica CRs. It is **transient only if the second replica is on
+its way out**, such as a replacement briefly overlapping the old one; the CSI attacher's retry
+then succeeds. It is **permanent** when the extra replica can never be scheduled: `stopped`,
+with an empty `spec.nodeID`, created after the real one. Replica auto-balance (`best-effort`)
+creates exactly that on strict-local volumes after an instance-manager blip. On 2026-11-22
+eleven `longhorn-scratch` PVs had been stuck this way for up to 16 days.
+
+Check before waiting:
+
+```bash
+kubectl -n longhorn-system get replicas.longhorn.io -l longhornvolume=<pv> \
+  -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeID,STATE:.status.currentState,CREATED:.metadata.creationTimestamp
+```
+
+If one replica has no node and is `stopped`, delete only that Replica CR; the attacher's next
+retry detaches. Never delete a replica that has a node or is `running`. Forcing the PV
+finalizer still orphans the Longhorn volume for nothing. Both strict-local classes now set
+`replicaAutoBalance: disabled` so new volumes cannot get into this state.
 
 ### 4. `Ready` is the wrong gate after a wipe — use Longhorn's own condition
 
