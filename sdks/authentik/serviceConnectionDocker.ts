@@ -44,7 +44,7 @@ export class ServiceConnectionDocker extends pulumi.CustomResource {
     }
 
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly local: pulumi.Output<boolean | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -94,7 +94,7 @@ export class ServiceConnectionDocker extends pulumi.CustomResource {
  */
 export interface ServiceConnectionDockerState {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     local?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -112,7 +112,7 @@ export interface ServiceConnectionDockerState {
  */
 export interface ServiceConnectionDockerArgs {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     local?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;

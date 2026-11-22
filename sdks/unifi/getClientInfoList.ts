@@ -28,10 +28,6 @@ export interface GetClientInfoListArgs {
  */
 export interface GetClientInfoListResult {
     readonly clients: outputs.GetClientInfoListClient[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly site: string;
     readonly timeouts?: outputs.GetClientInfoListTimeouts;
 }

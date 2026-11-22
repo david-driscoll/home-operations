@@ -48,7 +48,7 @@ export class Webhook extends pulumi.CustomResource {
      */
     declare public readonly endpointUrl: pulumi.Output<string>;
     /**
-     * The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are `slack`, `mattermost`, `googlechat`, and `discord`.
+     * The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are <span pulumi-lang-nodejs="`slack`" pulumi-lang-dotnet="`Slack`" pulumi-lang-go="`slack`" pulumi-lang-python="`slack`" pulumi-lang-yaml="`slack`" pulumi-lang-java="`slack`" pulumi-lang-hcl="`slack`">`slack`</span>, <span pulumi-lang-nodejs="`mattermost`" pulumi-lang-dotnet="`Mattermost`" pulumi-lang-go="`mattermost`" pulumi-lang-python="`mattermost`" pulumi-lang-yaml="`mattermost`" pulumi-lang-java="`mattermost`" pulumi-lang-hcl="`mattermost`">`mattermost`</span>, <span pulumi-lang-nodejs="`googlechat`" pulumi-lang-dotnet="`Googlechat`" pulumi-lang-go="`googlechat`" pulumi-lang-python="`googlechat`" pulumi-lang-yaml="`googlechat`" pulumi-lang-java="`googlechat`" pulumi-lang-hcl="`googlechat`">`googlechat`</span>, and <span pulumi-lang-nodejs="`discord`" pulumi-lang-dotnet="`Discord`" pulumi-lang-go="`discord`" pulumi-lang-python="`discord`" pulumi-lang-yaml="`discord`" pulumi-lang-java="`discord`" pulumi-lang-hcl="`discord`">`discord`</span>.
      */
     declare public readonly providerType: pulumi.Output<string | undefined>;
     /**
@@ -106,7 +106,7 @@ export interface WebhookState {
      */
     endpointUrl?: pulumi.Input<string | undefined>;
     /**
-     * The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are `slack`, `mattermost`, `googlechat`, and `discord`.
+     * The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are <span pulumi-lang-nodejs="`slack`" pulumi-lang-dotnet="`Slack`" pulumi-lang-go="`slack`" pulumi-lang-python="`slack`" pulumi-lang-yaml="`slack`" pulumi-lang-java="`slack`" pulumi-lang-hcl="`slack`">`slack`</span>, <span pulumi-lang-nodejs="`mattermost`" pulumi-lang-dotnet="`Mattermost`" pulumi-lang-go="`mattermost`" pulumi-lang-python="`mattermost`" pulumi-lang-yaml="`mattermost`" pulumi-lang-java="`mattermost`" pulumi-lang-hcl="`mattermost`">`mattermost`</span>, <span pulumi-lang-nodejs="`googlechat`" pulumi-lang-dotnet="`Googlechat`" pulumi-lang-go="`googlechat`" pulumi-lang-python="`googlechat`" pulumi-lang-yaml="`googlechat`" pulumi-lang-java="`googlechat`" pulumi-lang-hcl="`googlechat`">`googlechat`</span>, and <span pulumi-lang-nodejs="`discord`" pulumi-lang-dotnet="`Discord`" pulumi-lang-go="`discord`" pulumi-lang-python="`discord`" pulumi-lang-yaml="`discord`" pulumi-lang-java="`discord`" pulumi-lang-hcl="`discord`">`discord`</span>.
      */
     providerType?: pulumi.Input<string | undefined>;
     /**
@@ -128,7 +128,7 @@ export interface WebhookArgs {
      */
     endpointUrl: pulumi.Input<string>;
     /**
-     * The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are `slack`, `mattermost`, `googlechat`, and `discord`.
+     * The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are <span pulumi-lang-nodejs="`slack`" pulumi-lang-dotnet="`Slack`" pulumi-lang-go="`slack`" pulumi-lang-python="`slack`" pulumi-lang-yaml="`slack`" pulumi-lang-java="`slack`" pulumi-lang-hcl="`slack`">`slack`</span>, <span pulumi-lang-nodejs="`mattermost`" pulumi-lang-dotnet="`Mattermost`" pulumi-lang-go="`mattermost`" pulumi-lang-python="`mattermost`" pulumi-lang-yaml="`mattermost`" pulumi-lang-java="`mattermost`" pulumi-lang-hcl="`mattermost`">`mattermost`</span>, <span pulumi-lang-nodejs="`googlechat`" pulumi-lang-dotnet="`Googlechat`" pulumi-lang-go="`googlechat`" pulumi-lang-python="`googlechat`" pulumi-lang-yaml="`googlechat`" pulumi-lang-java="`googlechat`" pulumi-lang-hcl="`googlechat`">`googlechat`</span>, and <span pulumi-lang-nodejs="`discord`" pulumi-lang-dotnet="`Discord`" pulumi-lang-go="`discord`" pulumi-lang-python="`discord`" pulumi-lang-yaml="`discord`" pulumi-lang-java="`discord`" pulumi-lang-hcl="`discord`">`discord`</span>.
      */
     providerType?: pulumi.Input<string | undefined>;
     /**

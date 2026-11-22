@@ -67,6 +67,9 @@ export class Remote extends pulumi.CustomResource {
      * The unique identifier for the remote (3-32 characters).
      */
     declare public readonly name: pulumi.Output<string>;
+    /**
+     * Password or authentication token for the remote server. This value is write-only from the API perspective (not returned on GET), but will be stored in Terraform state as a sensitive value.
+     */
     declare public readonly password: pulumi.Output<string>;
     /**
      * The port number for the remote PBS server (default: 8007).
@@ -149,6 +152,9 @@ export interface RemoteState {
      * The unique identifier for the remote (3-32 characters).
      */
     name?: pulumi.Input<string | undefined>;
+    /**
+     * Password or authentication token for the remote server. This value is write-only from the API perspective (not returned on GET), but will be stored in Terraform state as a sensitive value.
+     */
     password?: pulumi.Input<string | undefined>;
     /**
      * The port number for the remote PBS server (default: 8007).
@@ -180,6 +186,9 @@ export interface RemoteArgs {
      * The unique identifier for the remote (3-32 characters).
      */
     name?: pulumi.Input<string | undefined>;
+    /**
+     * Password or authentication token for the remote server. This value is write-only from the API perspective (not returned on GET), but will be stored in Terraform state as a sensitive value.
+     */
     password: pulumi.Input<string>;
     /**
      * The port number for the remote PBS server (default: 8007).

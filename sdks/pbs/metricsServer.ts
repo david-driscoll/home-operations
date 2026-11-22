@@ -52,15 +52,15 @@ export class MetricsServer extends pulumi.CustomResource {
      */
     declare public readonly comment: pulumi.Output<string | undefined>;
     /**
-     * Enable or disable metrics export to this server. Defaults to `true`.
+     * Enable or disable metrics export to this server. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enable: pulumi.Output<boolean>;
     /**
-     * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to `25000000` (25MB).
+     * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`25000000`" pulumi-lang-dotnet="`25000000`" pulumi-lang-go="`25000000`" pulumi-lang-python="`25000000`" pulumi-lang-yaml="`25000000`" pulumi-lang-java="`25000000`" pulumi-lang-hcl="`25000000`">`25000000`</span> (25MB).
      */
     declare public readonly maxBodySize: pulumi.Output<number>;
     /**
-     * Maximum transmission unit for the metrics connection. Defaults to `1500`.
+     * Maximum transmission unit for the metrics connection. Defaults to <span pulumi-lang-nodejs="`1500`" pulumi-lang-dotnet="`1500`" pulumi-lang-go="`1500`" pulumi-lang-python="`1500`" pulumi-lang-yaml="`1500`" pulumi-lang-java="`1500`" pulumi-lang-hcl="`1500`">`1500`</span>.
      */
     declare public readonly mtu: pulumi.Output<number>;
     /**
@@ -72,19 +72,19 @@ export class MetricsServer extends pulumi.CustomResource {
      */
     declare public readonly organization: pulumi.Output<string | undefined>;
     /**
-     * The server port. Typical ports: `8089` (InfluxDB UDP), `8086` (InfluxDB HTTP). Can be used instead of `url` for backwards compatibility.
+     * The server port. Typical ports: <span pulumi-lang-nodejs="`8089`" pulumi-lang-dotnet="`8089`" pulumi-lang-go="`8089`" pulumi-lang-python="`8089`" pulumi-lang-yaml="`8089`" pulumi-lang-java="`8089`" pulumi-lang-hcl="`8089`">`8089`</span> (InfluxDB UDP), <span pulumi-lang-nodejs="`8086`" pulumi-lang-dotnet="`8086`" pulumi-lang-go="`8086`" pulumi-lang-python="`8086`" pulumi-lang-yaml="`8086`" pulumi-lang-java="`8086`" pulumi-lang-hcl="`8086`">`8086`</span> (InfluxDB HTTP). Can be used instead of <span pulumi-lang-nodejs="`url`" pulumi-lang-dotnet="`Url`" pulumi-lang-go="`url`" pulumi-lang-python="`url`" pulumi-lang-yaml="`url`" pulumi-lang-java="`url`" pulumi-lang-hcl="`url`">`url`</span> for backwards compatibility.
      */
     declare public readonly port: pulumi.Output<number | undefined>;
     /**
-     * Protocol for InfluxDB UDP connection. Valid values: `udp`, `tcp`. Only applicable for `influxdb-udp` type.
+     * Protocol for InfluxDB UDP connection. Valid values: <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>. Only applicable for `influxdb-udp` type.
      */
     declare public readonly protocol: pulumi.Output<string | undefined>;
     /**
-     * The server address (hostname or IP) of the metrics server. Can be used instead of `url` for backwards compatibility.
+     * The server address (hostname or IP) of the metrics server. Can be used instead of <span pulumi-lang-nodejs="`url`" pulumi-lang-dotnet="`Url`" pulumi-lang-go="`url`" pulumi-lang-python="`url`" pulumi-lang-yaml="`url`" pulumi-lang-java="`url`" pulumi-lang-hcl="`url`">`url`</span> for backwards compatibility.
      */
     declare public readonly server: pulumi.Output<string | undefined>;
     /**
-     * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to `5`.
+     * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`5`" pulumi-lang-dotnet="`5`" pulumi-lang-go="`5`" pulumi-lang-python="`5`" pulumi-lang-yaml="`5`" pulumi-lang-java="`5`" pulumi-lang-hcl="`5`">`5`</span>.
      */
     declare public readonly timeout: pulumi.Output<number>;
     /**
@@ -96,11 +96,11 @@ export class MetricsServer extends pulumi.CustomResource {
      */
     declare public readonly type: pulumi.Output<string>;
     /**
-     * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate `server` and `port` fields. Only applicable for `influxdb-http` type.
+     * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate <span pulumi-lang-nodejs="`server`" pulumi-lang-dotnet="`Server`" pulumi-lang-go="`server`" pulumi-lang-python="`server`" pulumi-lang-yaml="`server`" pulumi-lang-java="`server`" pulumi-lang-hcl="`server`">`server`</span> and <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> fields. Only applicable for `influxdb-http` type.
      */
     declare public readonly url: pulumi.Output<string | undefined>;
     /**
-     * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to `true`.
+     * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly verifyTls: pulumi.Output<boolean>;
 
@@ -173,15 +173,15 @@ export interface MetricsServerState {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Enable or disable metrics export to this server. Defaults to `true`.
+     * Enable or disable metrics export to this server. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enable?: pulumi.Input<boolean | undefined>;
     /**
-     * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to `25000000` (25MB).
+     * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`25000000`" pulumi-lang-dotnet="`25000000`" pulumi-lang-go="`25000000`" pulumi-lang-python="`25000000`" pulumi-lang-yaml="`25000000`" pulumi-lang-java="`25000000`" pulumi-lang-hcl="`25000000`">`25000000`</span> (25MB).
      */
     maxBodySize?: pulumi.Input<number | undefined>;
     /**
-     * Maximum transmission unit for the metrics connection. Defaults to `1500`.
+     * Maximum transmission unit for the metrics connection. Defaults to <span pulumi-lang-nodejs="`1500`" pulumi-lang-dotnet="`1500`" pulumi-lang-go="`1500`" pulumi-lang-python="`1500`" pulumi-lang-yaml="`1500`" pulumi-lang-java="`1500`" pulumi-lang-hcl="`1500`">`1500`</span>.
      */
     mtu?: pulumi.Input<number | undefined>;
     /**
@@ -193,19 +193,19 @@ export interface MetricsServerState {
      */
     organization?: pulumi.Input<string | undefined>;
     /**
-     * The server port. Typical ports: `8089` (InfluxDB UDP), `8086` (InfluxDB HTTP). Can be used instead of `url` for backwards compatibility.
+     * The server port. Typical ports: <span pulumi-lang-nodejs="`8089`" pulumi-lang-dotnet="`8089`" pulumi-lang-go="`8089`" pulumi-lang-python="`8089`" pulumi-lang-yaml="`8089`" pulumi-lang-java="`8089`" pulumi-lang-hcl="`8089`">`8089`</span> (InfluxDB UDP), <span pulumi-lang-nodejs="`8086`" pulumi-lang-dotnet="`8086`" pulumi-lang-go="`8086`" pulumi-lang-python="`8086`" pulumi-lang-yaml="`8086`" pulumi-lang-java="`8086`" pulumi-lang-hcl="`8086`">`8086`</span> (InfluxDB HTTP). Can be used instead of <span pulumi-lang-nodejs="`url`" pulumi-lang-dotnet="`Url`" pulumi-lang-go="`url`" pulumi-lang-python="`url`" pulumi-lang-yaml="`url`" pulumi-lang-java="`url`" pulumi-lang-hcl="`url`">`url`</span> for backwards compatibility.
      */
     port?: pulumi.Input<number | undefined>;
     /**
-     * Protocol for InfluxDB UDP connection. Valid values: `udp`, `tcp`. Only applicable for `influxdb-udp` type.
+     * Protocol for InfluxDB UDP connection. Valid values: <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>. Only applicable for `influxdb-udp` type.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * The server address (hostname or IP) of the metrics server. Can be used instead of `url` for backwards compatibility.
+     * The server address (hostname or IP) of the metrics server. Can be used instead of <span pulumi-lang-nodejs="`url`" pulumi-lang-dotnet="`Url`" pulumi-lang-go="`url`" pulumi-lang-python="`url`" pulumi-lang-yaml="`url`" pulumi-lang-java="`url`" pulumi-lang-hcl="`url`">`url`</span> for backwards compatibility.
      */
     server?: pulumi.Input<string | undefined>;
     /**
-     * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to `5`.
+     * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`5`" pulumi-lang-dotnet="`5`" pulumi-lang-go="`5`" pulumi-lang-python="`5`" pulumi-lang-yaml="`5`" pulumi-lang-java="`5`" pulumi-lang-hcl="`5`">`5`</span>.
      */
     timeout?: pulumi.Input<number | undefined>;
     /**
@@ -217,11 +217,11 @@ export interface MetricsServerState {
      */
     type?: pulumi.Input<string | undefined>;
     /**
-     * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate `server` and `port` fields. Only applicable for `influxdb-http` type.
+     * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate <span pulumi-lang-nodejs="`server`" pulumi-lang-dotnet="`Server`" pulumi-lang-go="`server`" pulumi-lang-python="`server`" pulumi-lang-yaml="`server`" pulumi-lang-java="`server`" pulumi-lang-hcl="`server`">`server`</span> and <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> fields. Only applicable for `influxdb-http` type.
      */
     url?: pulumi.Input<string | undefined>;
     /**
-     * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to `true`.
+     * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     verifyTls?: pulumi.Input<boolean | undefined>;
 }
@@ -239,15 +239,15 @@ export interface MetricsServerArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Enable or disable metrics export to this server. Defaults to `true`.
+     * Enable or disable metrics export to this server. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enable?: pulumi.Input<boolean | undefined>;
     /**
-     * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to `25000000` (25MB).
+     * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`25000000`" pulumi-lang-dotnet="`25000000`" pulumi-lang-go="`25000000`" pulumi-lang-python="`25000000`" pulumi-lang-yaml="`25000000`" pulumi-lang-java="`25000000`" pulumi-lang-hcl="`25000000`">`25000000`</span> (25MB).
      */
     maxBodySize?: pulumi.Input<number | undefined>;
     /**
-     * Maximum transmission unit for the metrics connection. Defaults to `1500`.
+     * Maximum transmission unit for the metrics connection. Defaults to <span pulumi-lang-nodejs="`1500`" pulumi-lang-dotnet="`1500`" pulumi-lang-go="`1500`" pulumi-lang-python="`1500`" pulumi-lang-yaml="`1500`" pulumi-lang-java="`1500`" pulumi-lang-hcl="`1500`">`1500`</span>.
      */
     mtu?: pulumi.Input<number | undefined>;
     /**
@@ -259,19 +259,19 @@ export interface MetricsServerArgs {
      */
     organization?: pulumi.Input<string | undefined>;
     /**
-     * The server port. Typical ports: `8089` (InfluxDB UDP), `8086` (InfluxDB HTTP). Can be used instead of `url` for backwards compatibility.
+     * The server port. Typical ports: <span pulumi-lang-nodejs="`8089`" pulumi-lang-dotnet="`8089`" pulumi-lang-go="`8089`" pulumi-lang-python="`8089`" pulumi-lang-yaml="`8089`" pulumi-lang-java="`8089`" pulumi-lang-hcl="`8089`">`8089`</span> (InfluxDB UDP), <span pulumi-lang-nodejs="`8086`" pulumi-lang-dotnet="`8086`" pulumi-lang-go="`8086`" pulumi-lang-python="`8086`" pulumi-lang-yaml="`8086`" pulumi-lang-java="`8086`" pulumi-lang-hcl="`8086`">`8086`</span> (InfluxDB HTTP). Can be used instead of <span pulumi-lang-nodejs="`url`" pulumi-lang-dotnet="`Url`" pulumi-lang-go="`url`" pulumi-lang-python="`url`" pulumi-lang-yaml="`url`" pulumi-lang-java="`url`" pulumi-lang-hcl="`url`">`url`</span> for backwards compatibility.
      */
     port?: pulumi.Input<number | undefined>;
     /**
-     * Protocol for InfluxDB UDP connection. Valid values: `udp`, `tcp`. Only applicable for `influxdb-udp` type.
+     * Protocol for InfluxDB UDP connection. Valid values: <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>. Only applicable for `influxdb-udp` type.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * The server address (hostname or IP) of the metrics server. Can be used instead of `url` for backwards compatibility.
+     * The server address (hostname or IP) of the metrics server. Can be used instead of <span pulumi-lang-nodejs="`url`" pulumi-lang-dotnet="`Url`" pulumi-lang-go="`url`" pulumi-lang-python="`url`" pulumi-lang-yaml="`url`" pulumi-lang-java="`url`" pulumi-lang-hcl="`url`">`url`</span> for backwards compatibility.
      */
     server?: pulumi.Input<string | undefined>;
     /**
-     * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to `5`.
+     * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`5`" pulumi-lang-dotnet="`5`" pulumi-lang-go="`5`" pulumi-lang-python="`5`" pulumi-lang-yaml="`5`" pulumi-lang-java="`5`" pulumi-lang-hcl="`5`">`5`</span>.
      */
     timeout?: pulumi.Input<number | undefined>;
     /**
@@ -283,11 +283,11 @@ export interface MetricsServerArgs {
      */
     type: pulumi.Input<string>;
     /**
-     * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate `server` and `port` fields. Only applicable for `influxdb-http` type.
+     * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate <span pulumi-lang-nodejs="`server`" pulumi-lang-dotnet="`Server`" pulumi-lang-go="`server`" pulumi-lang-python="`server`" pulumi-lang-yaml="`server`" pulumi-lang-java="`server`" pulumi-lang-hcl="`server`">`server`</span> and <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> fields. Only applicable for `influxdb-http` type.
      */
     url?: pulumi.Input<string | undefined>;
     /**
-     * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to `true`.
+     * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     verifyTls?: pulumi.Input<boolean | undefined>;
 }

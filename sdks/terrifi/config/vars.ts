@@ -19,7 +19,7 @@ Object.defineProperty(exports, "allowInsecure", {
 });
 
 /**
- * API key for the UniFi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If set, `username` and `password` are ignored.
+ * API key for the UniFi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If set, <span pulumi-lang-nodejs="`username`" pulumi-lang-dotnet="`Username`" pulumi-lang-go="`username`" pulumi-lang-python="`username`" pulumi-lang-yaml="`username`" pulumi-lang-java="`username`" pulumi-lang-hcl="`username`">`username`</span> and <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span> are ignored.
  */
 export declare const apiKey: string | undefined;
 Object.defineProperty(exports, "apiKey", {
@@ -51,6 +51,9 @@ Object.defineProperty(exports, "password", {
     enumerable: true,
 });
 
+/**
+ * Cache GET responses from v2 API endpoints during a single Terraform run. Reduces duplicate list-all calls for firewall zones and policies, which is especially helpful on low-end hardware (e.g., Raspberry Pi). Any write operation invalidates the cache. Can be specified with the `UNIFI_RESPONSE_CACHING` environment variable.
+ */
 export declare const responseCaching: boolean | undefined;
 Object.defineProperty(exports, "responseCaching", {
     get() {
@@ -60,7 +63,7 @@ Object.defineProperty(exports, "responseCaching", {
 });
 
 /**
- * The UniFi site to manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`.
+ * The UniFi site to manage. Can be specified with the `UNIFI_SITE` environment variable. Default: <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>.
  */
 export declare const site: string | undefined;
 Object.defineProperty(exports, "site", {

@@ -44,16 +44,16 @@ export class PolicyUniquePassword extends pulumi.CustomResource {
     }
 
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly executionLogging: pulumi.Output<boolean | undefined>;
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Defaults to `1`.
+     * Defaults to <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>.
      */
     declare public readonly numHistoricalPasswords: pulumi.Output<number | undefined>;
     /**
-     * Defaults to `password`.
+     * Defaults to <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>.
      */
     declare public readonly passwordField: pulumi.Output<string | undefined>;
     declare public readonly policyUniquePasswordId: pulumi.Output<string>;
@@ -94,16 +94,16 @@ export class PolicyUniquePassword extends pulumi.CustomResource {
  */
 export interface PolicyUniquePasswordState {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     executionLogging?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `1`.
+     * Defaults to <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>.
      */
     numHistoricalPasswords?: pulumi.Input<number | undefined>;
     /**
-     * Defaults to `password`.
+     * Defaults to <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>.
      */
     passwordField?: pulumi.Input<string | undefined>;
     policyUniquePasswordId?: pulumi.Input<string | undefined>;
@@ -114,16 +114,16 @@ export interface PolicyUniquePasswordState {
  */
 export interface PolicyUniquePasswordArgs {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     executionLogging?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `1`.
+     * Defaults to <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>.
      */
     numHistoricalPasswords?: pulumi.Input<number | undefined>;
     /**
-     * Defaults to `password`.
+     * Defaults to <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>.
      */
     passwordField?: pulumi.Input<string | undefined>;
     policyUniquePasswordId?: pulumi.Input<string | undefined>;

@@ -15,10 +15,6 @@ export function getDnsSettings(opts?: pulumi.InvokeOptions): Promise<GetDnsSetti
  */
 export interface GetDnsSettingsResult {
     readonly disabledManagementGroups: string[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
 }
 export function getDnsSettingsOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetDnsSettingsResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});

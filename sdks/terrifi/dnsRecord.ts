@@ -44,7 +44,7 @@ export class DnsRecord extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the DNS record is enabled. Default: `true`.
+     * Whether the DNS record is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -127,7 +127,7 @@ export class DnsRecord extends pulumi.CustomResource {
  */
 export interface DnsRecordState {
     /**
-     * Whether the DNS record is enabled. Default: `true`.
+     * Whether the DNS record is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -169,7 +169,7 @@ export interface DnsRecordState {
  */
 export interface DnsRecordArgs {
     /**
-     * Whether the DNS record is enabled. Default: `true`.
+     * Whether the DNS record is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**

@@ -60,7 +60,7 @@ export class SyncJob extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly digest: pulumi.Output<string>;
     /**
-     * Only sync encrypted backups. Defaults to `false`.
+     * Only sync encrypted backups. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly encryptedOnly: pulumi.Output<boolean>;
     /**
@@ -100,19 +100,19 @@ export class SyncJob extends pulumi.CustomResource {
      */
     declare public readonly remoteStore: pulumi.Output<string>;
     /**
-     * Remove backups locally that no longer exist on the remote. Defaults to `false`.
+     * Remove backups locally that no longer exist on the remote. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly removeVanished: pulumi.Output<boolean>;
     /**
-     * Resync snapshots whose data is corrupt. Defaults to `false`.
+     * Resync snapshots whose data is corrupt. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly resyncCorrupt: pulumi.Output<boolean>;
     /**
-     * Run the job immediately after the datastore is mounted. Defaults to `false`.
+     * Run the job immediately after the datastore is mounted. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly runOnMount: pulumi.Output<boolean>;
     /**
-     * When to run the sync job. Uses systemd calendar event format (e.g., `hourly`, `*:00/15`, `Mon,Wed,Fri 02:00`).
+     * When to run the sync job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`hourly`" pulumi-lang-dotnet="`Hourly`" pulumi-lang-go="`hourly`" pulumi-lang-python="`hourly`" pulumi-lang-yaml="`hourly`" pulumi-lang-java="`hourly`" pulumi-lang-hcl="`hourly`">`hourly`</span>, `*:00/15`, `Mon,Wed,Fri 02:00`).
      */
     declare public readonly schedule: pulumi.Output<string>;
     /**
@@ -120,7 +120,7 @@ export class SyncJob extends pulumi.CustomResource {
      */
     declare public readonly store: pulumi.Output<string>;
     /**
-     * Direction of synchronization. Must be either `pull` (default) or `push`.
+     * Direction of synchronization. Must be either <span pulumi-lang-nodejs="`pull`" pulumi-lang-dotnet="`Pull`" pulumi-lang-go="`pull`" pulumi-lang-python="`pull`" pulumi-lang-yaml="`pull`" pulumi-lang-java="`pull`" pulumi-lang-hcl="`pull`">`pull`</span> (default) or <span pulumi-lang-nodejs="`push`" pulumi-lang-dotnet="`Push`" pulumi-lang-go="`push`" pulumi-lang-python="`push`" pulumi-lang-yaml="`push`" pulumi-lang-java="`push`" pulumi-lang-hcl="`push`">`push`</span>.
      */
     declare public readonly syncDirection: pulumi.Output<string | undefined>;
     /**
@@ -132,7 +132,7 @@ export class SyncJob extends pulumi.CustomResource {
      */
     declare public readonly transferLast: pulumi.Output<number | undefined>;
     /**
-     * Only sync backups that were verified successfully. Defaults to `false`.
+     * Only sync backups that were verified successfully. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly verifiedOnly: pulumi.Output<boolean>;
 
@@ -239,7 +239,7 @@ export interface SyncJobState {
      */
     digest?: pulumi.Input<string | undefined>;
     /**
-     * Only sync encrypted backups. Defaults to `false`.
+     * Only sync encrypted backups. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     encryptedOnly?: pulumi.Input<boolean | undefined>;
     /**
@@ -279,19 +279,19 @@ export interface SyncJobState {
      */
     remoteStore?: pulumi.Input<string | undefined>;
     /**
-     * Remove backups locally that no longer exist on the remote. Defaults to `false`.
+     * Remove backups locally that no longer exist on the remote. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     removeVanished?: pulumi.Input<boolean | undefined>;
     /**
-     * Resync snapshots whose data is corrupt. Defaults to `false`.
+     * Resync snapshots whose data is corrupt. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     resyncCorrupt?: pulumi.Input<boolean | undefined>;
     /**
-     * Run the job immediately after the datastore is mounted. Defaults to `false`.
+     * Run the job immediately after the datastore is mounted. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     runOnMount?: pulumi.Input<boolean | undefined>;
     /**
-     * When to run the sync job. Uses systemd calendar event format (e.g., `hourly`, `*:00/15`, `Mon,Wed,Fri 02:00`).
+     * When to run the sync job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`hourly`" pulumi-lang-dotnet="`Hourly`" pulumi-lang-go="`hourly`" pulumi-lang-python="`hourly`" pulumi-lang-yaml="`hourly`" pulumi-lang-java="`hourly`" pulumi-lang-hcl="`hourly`">`hourly`</span>, `*:00/15`, `Mon,Wed,Fri 02:00`).
      */
     schedule?: pulumi.Input<string | undefined>;
     /**
@@ -299,7 +299,7 @@ export interface SyncJobState {
      */
     store?: pulumi.Input<string | undefined>;
     /**
-     * Direction of synchronization. Must be either `pull` (default) or `push`.
+     * Direction of synchronization. Must be either <span pulumi-lang-nodejs="`pull`" pulumi-lang-dotnet="`Pull`" pulumi-lang-go="`pull`" pulumi-lang-python="`pull`" pulumi-lang-yaml="`pull`" pulumi-lang-java="`pull`" pulumi-lang-hcl="`pull`">`pull`</span> (default) or <span pulumi-lang-nodejs="`push`" pulumi-lang-dotnet="`Push`" pulumi-lang-go="`push`" pulumi-lang-python="`push`" pulumi-lang-yaml="`push`" pulumi-lang-java="`push`" pulumi-lang-hcl="`push`">`push`</span>.
      */
     syncDirection?: pulumi.Input<string | undefined>;
     /**
@@ -311,7 +311,7 @@ export interface SyncJobState {
      */
     transferLast?: pulumi.Input<number | undefined>;
     /**
-     * Only sync backups that were verified successfully. Defaults to `false`.
+     * Only sync backups that were verified successfully. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     verifiedOnly?: pulumi.Input<boolean | undefined>;
 }
@@ -333,7 +333,7 @@ export interface SyncJobArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Only sync encrypted backups. Defaults to `false`.
+     * Only sync encrypted backups. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     encryptedOnly?: pulumi.Input<boolean | undefined>;
     /**
@@ -373,19 +373,19 @@ export interface SyncJobArgs {
      */
     remoteStore: pulumi.Input<string>;
     /**
-     * Remove backups locally that no longer exist on the remote. Defaults to `false`.
+     * Remove backups locally that no longer exist on the remote. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     removeVanished?: pulumi.Input<boolean | undefined>;
     /**
-     * Resync snapshots whose data is corrupt. Defaults to `false`.
+     * Resync snapshots whose data is corrupt. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     resyncCorrupt?: pulumi.Input<boolean | undefined>;
     /**
-     * Run the job immediately after the datastore is mounted. Defaults to `false`.
+     * Run the job immediately after the datastore is mounted. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     runOnMount?: pulumi.Input<boolean | undefined>;
     /**
-     * When to run the sync job. Uses systemd calendar event format (e.g., `hourly`, `*:00/15`, `Mon,Wed,Fri 02:00`).
+     * When to run the sync job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`hourly`" pulumi-lang-dotnet="`Hourly`" pulumi-lang-go="`hourly`" pulumi-lang-python="`hourly`" pulumi-lang-yaml="`hourly`" pulumi-lang-java="`hourly`" pulumi-lang-hcl="`hourly`">`hourly`</span>, `*:00/15`, `Mon,Wed,Fri 02:00`).
      */
     schedule: pulumi.Input<string>;
     /**
@@ -393,7 +393,7 @@ export interface SyncJobArgs {
      */
     store: pulumi.Input<string>;
     /**
-     * Direction of synchronization. Must be either `pull` (default) or `push`.
+     * Direction of synchronization. Must be either <span pulumi-lang-nodejs="`pull`" pulumi-lang-dotnet="`Pull`" pulumi-lang-go="`pull`" pulumi-lang-python="`pull`" pulumi-lang-yaml="`pull`" pulumi-lang-java="`pull`" pulumi-lang-hcl="`pull`">`pull`</span> (default) or <span pulumi-lang-nodejs="`push`" pulumi-lang-dotnet="`Push`" pulumi-lang-go="`push`" pulumi-lang-python="`push`" pulumi-lang-yaml="`push`" pulumi-lang-java="`push`" pulumi-lang-hcl="`push`">`push`</span>.
      */
     syncDirection?: pulumi.Input<string | undefined>;
     /**
@@ -405,7 +405,7 @@ export interface SyncJobArgs {
      */
     transferLast?: pulumi.Input<number | undefined>;
     /**
-     * Only sync backups that were verified successfully. Defaults to `false`.
+     * Only sync backups that were verified successfully. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     verifiedOnly?: pulumi.Input<boolean | undefined>;
 }

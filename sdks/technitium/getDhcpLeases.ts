@@ -25,10 +25,6 @@ export interface GetDhcpLeasesArgs {
  * A collection of values returned by getDhcpLeases.
  */
 export interface GetDhcpLeasesResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly leases: outputs.GetDhcpLeasesLease[];
     readonly scope?: string;
 }

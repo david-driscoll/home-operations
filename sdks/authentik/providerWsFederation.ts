@@ -75,11 +75,11 @@ export class ProviderWsFederation extends pulumi.CustomResource {
      */
     declare public readonly sessionValidNotOnOrAfter: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly signAssertion: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly signLogoutRequest: pulumi.Output<boolean | undefined>;
     /**
@@ -206,11 +206,11 @@ export interface ProviderWsFederationState {
      */
     sessionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     signAssertion?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signLogoutRequest?: pulumi.Input<boolean | undefined>;
     /**
@@ -267,11 +267,11 @@ export interface ProviderWsFederationArgs {
      */
     sessionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     signAssertion?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signLogoutRequest?: pulumi.Input<boolean | undefined>;
     /**

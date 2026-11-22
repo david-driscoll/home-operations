@@ -55,6 +55,9 @@ export class RepositoryWebhook extends pulumi.CustomResource {
      * List of allowed branches for push, branch creation and branch deletion events, specified as glob pattern. If empty or *, events for all branches are reported.
      */
     declare public readonly branchFilter: pulumi.Output<string>;
+    /**
+     * Map of configuration settings, e.g. <span pulumi-lang-nodejs=""contentType"" pulumi-lang-dotnet=""ContentType"" pulumi-lang-go=""contentType"" pulumi-lang-python=""content_type"" pulumi-lang-yaml=""contentType"" pulumi-lang-java=""contentType"" pulumi-lang-hcl=""content_type"">"contentType"</span> and "url". The "secret" key is write-only: Forgejo accepts it on create/update but never returns it, so the provider preserves the configured value instead of reading it back, and cannot detect changes made outside of Terraform.
+     */
     declare public readonly config: pulumi.Output<{[key: string]: string}>;
     /**
      * Time at which the webhook was created.
@@ -149,6 +152,9 @@ export interface RepositoryWebhookState {
      * List of allowed branches for push, branch creation and branch deletion events, specified as glob pattern. If empty or *, events for all branches are reported.
      */
     branchFilter?: pulumi.Input<string | undefined>;
+    /**
+     * Map of configuration settings, e.g. <span pulumi-lang-nodejs=""contentType"" pulumi-lang-dotnet=""ContentType"" pulumi-lang-go=""contentType"" pulumi-lang-python=""content_type"" pulumi-lang-yaml=""contentType"" pulumi-lang-java=""contentType"" pulumi-lang-hcl=""content_type"">"contentType"</span> and "url". The "secret" key is write-only: Forgejo accepts it on create/update but never returns it, so the provider preserves the configured value instead of reading it back, and cannot detect changes made outside of Terraform.
+     */
     config?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
      * Time at which the webhook was created.
@@ -192,6 +198,9 @@ export interface RepositoryWebhookArgs {
      * List of allowed branches for push, branch creation and branch deletion events, specified as glob pattern. If empty or *, events for all branches are reported.
      */
     branchFilter?: pulumi.Input<string | undefined>;
+    /**
+     * Map of configuration settings, e.g. <span pulumi-lang-nodejs=""contentType"" pulumi-lang-dotnet=""ContentType"" pulumi-lang-go=""contentType"" pulumi-lang-python=""content_type"" pulumi-lang-yaml=""contentType"" pulumi-lang-java=""contentType"" pulumi-lang-hcl=""content_type"">"contentType"</span> and "url". The "secret" key is write-only: Forgejo accepts it on create/update but never returns it, so the provider preserves the configured value instead of reading it back, and cannot detect changes made outside of Terraform.
+     */
     config: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
     /**
      * List of events which trigger the webhook.

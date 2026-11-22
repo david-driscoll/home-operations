@@ -56,12 +56,12 @@ export class Brand extends pulumi.CustomResource {
     declare public readonly brandingFavicon: pulumi.Output<string | undefined>;
     declare public readonly brandingLogo: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `authentik`.
+     * Defaults to <span pulumi-lang-nodejs="`authentik`" pulumi-lang-dotnet="`Authentik`" pulumi-lang-go="`authentik`" pulumi-lang-python="`authentik`" pulumi-lang-yaml="`authentik`" pulumi-lang-java="`authentik`" pulumi-lang-hcl="`authentik`">`authentik`</span>.
      */
     declare public readonly brandingTitle: pulumi.Output<string | undefined>;
     declare public readonly clientCertificates: pulumi.Output<string[] | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly default: pulumi.Output<boolean | undefined>;
     declare public readonly defaultApplication: pulumi.Output<string | undefined>;
@@ -157,12 +157,12 @@ export interface BrandState {
     brandingFavicon?: pulumi.Input<string | undefined>;
     brandingLogo?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `authentik`.
+     * Defaults to <span pulumi-lang-nodejs="`authentik`" pulumi-lang-dotnet="`Authentik`" pulumi-lang-go="`authentik`" pulumi-lang-python="`authentik`" pulumi-lang-yaml="`authentik`" pulumi-lang-java="`authentik`" pulumi-lang-hcl="`authentik`">`authentik`</span>.
      */
     brandingTitle?: pulumi.Input<string | undefined>;
     clientCertificates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     default?: pulumi.Input<boolean | undefined>;
     defaultApplication?: pulumi.Input<string | undefined>;
@@ -195,12 +195,12 @@ export interface BrandArgs {
     brandingFavicon?: pulumi.Input<string | undefined>;
     brandingLogo?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `authentik`.
+     * Defaults to <span pulumi-lang-nodejs="`authentik`" pulumi-lang-dotnet="`Authentik`" pulumi-lang-go="`authentik`" pulumi-lang-python="`authentik`" pulumi-lang-yaml="`authentik`" pulumi-lang-java="`authentik`" pulumi-lang-hcl="`authentik`">`authentik`</span>.
      */
     brandingTitle?: pulumi.Input<string | undefined>;
     clientCertificates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     default?: pulumi.Input<boolean | undefined>;
     defaultApplication?: pulumi.Input<string | undefined>;

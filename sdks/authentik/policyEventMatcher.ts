@@ -132,7 +132,7 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
     declare public readonly app: pulumi.Output<string | undefined>;
     declare public readonly clientIp: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly executionLogging: pulumi.Output<boolean | undefined>;
     /**
@@ -404,7 +404,7 @@ export interface PolicyEventMatcherState {
     app?: pulumi.Input<string | undefined>;
     clientIp?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     executionLogging?: pulumi.Input<boolean | undefined>;
     /**
@@ -640,7 +640,7 @@ export interface PolicyEventMatcherArgs {
     app?: pulumi.Input<string | undefined>;
     clientIp?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     executionLogging?: pulumi.Input<boolean | undefined>;
     /**

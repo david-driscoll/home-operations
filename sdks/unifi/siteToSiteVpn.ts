@@ -62,11 +62,11 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly ike: pulumi.Output<outputs.SiteToSiteVpnIke>;
     /**
-     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`). Defaults to `wan` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
+     * The local WAN interface the tunnel binds to (e.g. <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>). Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> does not move it (#544).
      */
     declare public readonly interface: pulumi.Output<string>;
     /**
-     * IKE key-exchange version. One of `ikev1` or `ikev2`. Defaults to `ikev2` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
+     * IKE key-exchange version. One of <span pulumi-lang-nodejs="`ikev1`" pulumi-lang-dotnet="`Ikev1`" pulumi-lang-go="`ikev1`" pulumi-lang-python="`ikev1`" pulumi-lang-yaml="`ikev1`" pulumi-lang-java="`ikev1`" pulumi-lang-hcl="`ikev1`">`ikev1`</span> or <span pulumi-lang-nodejs="`ikev2`" pulumi-lang-dotnet="`Ikev2`" pulumi-lang-go="`ikev2`" pulumi-lang-python="`ikev2`" pulumi-lang-yaml="`ikev2`" pulumi-lang-java="`ikev2`" pulumi-lang-hcl="`ikev2`">`ikev2`</span>. Defaults to <span pulumi-lang-nodejs="`ikev2`" pulumi-lang-dotnet="`Ikev2`" pulumi-lang-go="`ikev2`" pulumi-lang-python="`ikev2`" pulumi-lang-yaml="`ikev2`" pulumi-lang-java="`ikev2`" pulumi-lang-hcl="`ikev2`">`ikev2`</span> for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
      */
     declare public readonly keyExchange: pulumi.Output<string>;
     /**
@@ -74,7 +74,7 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly localIdentifier: pulumi.Output<string>;
     /**
-     * Whether the local identifier is used for authentication. Set automatically when `local_identifier` is configured; declare it explicitly to enable identifier authentication without pinning a value.
+     * Whether the local identifier is used for authentication. Set automatically when <span pulumi-lang-nodejs="`localIdentifier`" pulumi-lang-dotnet="`LocalIdentifier`" pulumi-lang-go="`localIdentifier`" pulumi-lang-python="`local_identifier`" pulumi-lang-yaml="`localIdentifier`" pulumi-lang-java="`localIdentifier`" pulumi-lang-hcl="`local_identifier`">`localIdentifier`</span> is configured; declare it explicitly to enable identifier authentication without pinning a value.
      */
     declare public readonly localIdentifierEnabled: pulumi.Output<boolean>;
     /**
@@ -94,20 +94,24 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly pfs: pulumi.Output<boolean>;
     /**
-     * The IPsec pre-shared key. Stored in state — use `pre_shared_key_wo` to avoid persisting the secret.
+     * The IPsec pre-shared key. Stored in state — use <span pulumi-lang-nodejs="`preSharedKeyWo`" pulumi-lang-dotnet="`PreSharedKeyWo`" pulumi-lang-go="`preSharedKeyWo`" pulumi-lang-python="`pre_shared_key_wo`" pulumi-lang-yaml="`preSharedKeyWo`" pulumi-lang-java="`preSharedKeyWo`" pulumi-lang-hcl="`pre_shared_key_wo`">`preSharedKeyWo`</span> to avoid persisting the secret.
      */
     declare public readonly preSharedKey: pulumi.Output<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`preSharedKey`" pulumi-lang-dotnet="`PreSharedKey`" pulumi-lang-go="`preSharedKey`" pulumi-lang-python="`pre_shared_key`" pulumi-lang-yaml="`preSharedKey`" pulumi-lang-java="`preSharedKey`" pulumi-lang-hcl="`pre_shared_key`">`preSharedKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource (e.g. a Vault secret). Mutually exclusive with <span pulumi-lang-nodejs="`preSharedKey`" pulumi-lang-dotnet="`PreSharedKey`" pulumi-lang-go="`preSharedKey`" pulumi-lang-python="`pre_shared_key`" pulumi-lang-yaml="`preSharedKey`" pulumi-lang-java="`preSharedKey`" pulumi-lang-hcl="`pre_shared_key`">`preSharedKey`</span>.
+     */
     declare public readonly preSharedKeyWo: pulumi.Output<string | undefined>;
     /**
-     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the `ike`/`esp` objects; the controller may derive the ESP values from the IKE ones.
+     * IPsec profile. One of <span pulumi-lang-nodejs="`customized`" pulumi-lang-dotnet="`Customized`" pulumi-lang-go="`customized`" pulumi-lang-python="`customized`" pulumi-lang-yaml="`customized`" pulumi-lang-java="`customized`" pulumi-lang-hcl="`customized`">`customized`</span>, <span pulumi-lang-nodejs="`azureDynamic`" pulumi-lang-dotnet="`AzureDynamic`" pulumi-lang-go="`azureDynamic`" pulumi-lang-python="`azure_dynamic`" pulumi-lang-yaml="`azureDynamic`" pulumi-lang-java="`azureDynamic`" pulumi-lang-hcl="`azure_dynamic`">`azureDynamic`</span>, or <span pulumi-lang-nodejs="`azureStatic`" pulumi-lang-dotnet="`AzureStatic`" pulumi-lang-go="`azureStatic`" pulumi-lang-python="`azure_static`" pulumi-lang-yaml="`azureStatic`" pulumi-lang-java="`azureStatic`" pulumi-lang-hcl="`azure_static`">`azureStatic`</span>. Set to <span pulumi-lang-nodejs="`customized`" pulumi-lang-dotnet="`Customized`" pulumi-lang-go="`customized`" pulumi-lang-python="`customized`" pulumi-lang-yaml="`customized`" pulumi-lang-java="`customized`" pulumi-lang-hcl="`customized`">`customized`</span> to tune the <span pulumi-lang-nodejs="`ike`" pulumi-lang-dotnet="`Ike`" pulumi-lang-go="`ike`" pulumi-lang-python="`ike`" pulumi-lang-yaml="`ike`" pulumi-lang-java="`ike`" pulumi-lang-hcl="`ike`">`ike`</span>/<span pulumi-lang-nodejs="`esp`" pulumi-lang-dotnet="`Esp`" pulumi-lang-go="`esp`" pulumi-lang-python="`esp`" pulumi-lang-yaml="`esp`" pulumi-lang-java="`esp`" pulumi-lang-hcl="`esp`">`esp`</span> objects; the controller may derive the ESP values from the IKE ones.
      */
     declare public readonly profile: pulumi.Output<string>;
     /**
-     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See `local_identifier`.
+     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See <span pulumi-lang-nodejs="`localIdentifier`" pulumi-lang-dotnet="`LocalIdentifier`" pulumi-lang-go="`localIdentifier`" pulumi-lang-python="`local_identifier`" pulumi-lang-yaml="`localIdentifier`" pulumi-lang-java="`localIdentifier`" pulumi-lang-hcl="`local_identifier`">`localIdentifier`</span>.
      */
     declare public readonly remoteIdentifier: pulumi.Output<string>;
     /**
-     * Whether the remote identifier is used for authentication. See `local_identifier_enabled`.
+     * Whether the remote identifier is used for authentication. See <span pulumi-lang-nodejs="`localIdentifierEnabled`" pulumi-lang-dotnet="`LocalIdentifierEnabled`" pulumi-lang-go="`localIdentifierEnabled`" pulumi-lang-python="`local_identifier_enabled`" pulumi-lang-yaml="`localIdentifierEnabled`" pulumi-lang-java="`localIdentifierEnabled`" pulumi-lang-hcl="`local_identifier_enabled`">`localIdentifierEnabled`</span>.
      */
     declare public readonly remoteIdentifierEnabled: pulumi.Output<boolean>;
     /**
@@ -115,7 +119,7 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
      */
     declare public readonly remoteSubnets: pulumi.Output<string[]>;
     /**
-     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when `dynamic_routing` is enabled and `remote_subnets` is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
+     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when <span pulumi-lang-nodejs="`dynamicRouting`" pulumi-lang-dotnet="`DynamicRouting`" pulumi-lang-go="`dynamicRouting`" pulumi-lang-python="`dynamic_routing`" pulumi-lang-yaml="`dynamicRouting`" pulumi-lang-java="`dynamicRouting`" pulumi-lang-hcl="`dynamic_routing`">`dynamicRouting`</span> is enabled and <span pulumi-lang-nodejs="`remoteSubnets`" pulumi-lang-dotnet="`RemoteSubnets`" pulumi-lang-go="`remoteSubnets`" pulumi-lang-python="`remote_subnets`" pulumi-lang-yaml="`remoteSubnets`" pulumi-lang-java="`remoteSubnets`" pulumi-lang-hcl="`remote_subnets`">`remoteSubnets`</span> is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
      */
     declare public readonly remoteVpnDynamicSubnetsEnabled: pulumi.Output<boolean>;
     /**
@@ -128,11 +132,11 @@ export class SiteToSiteVpn extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.SiteToSiteVpnTimeouts | undefined>;
     /**
-     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set `tunnel_ip_enabled = false` to stop using it.
+     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set <span pulumi-lang-nodejs="`tunnelIpEnabled " pulumi-lang-dotnet="`TunnelIpEnabled " pulumi-lang-go="`tunnelIpEnabled " pulumi-lang-python="`tunnel_ip_enabled " pulumi-lang-yaml="`tunnelIpEnabled " pulumi-lang-java="`tunnelIpEnabled " pulumi-lang-hcl="`tunnel_ip_enabled ">`tunnelIpEnabled </span>= false` to stop using it.
      */
     declare public readonly tunnelIp: pulumi.Output<string>;
     /**
-     * Whether the tunnel IP is used. Set automatically when `tunnel_ip` is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to `false` to disable it.
+     * Whether the tunnel IP is used. Set automatically when <span pulumi-lang-nodejs="`tunnelIp`" pulumi-lang-dotnet="`TunnelIp`" pulumi-lang-go="`tunnelIp`" pulumi-lang-python="`tunnel_ip`" pulumi-lang-yaml="`tunnelIp`" pulumi-lang-java="`tunnelIp`" pulumi-lang-hcl="`tunnel_ip`">`tunnelIp`</span> is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> to disable it.
      */
     declare public readonly tunnelIpEnabled: pulumi.Output<boolean>;
 
@@ -234,11 +238,11 @@ export interface SiteToSiteVpnState {
      */
     ike?: pulumi.Input<inputs.SiteToSiteVpnIke | undefined>;
     /**
-     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`). Defaults to `wan` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
+     * The local WAN interface the tunnel binds to (e.g. <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>). Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> does not move it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
-     * IKE key-exchange version. One of `ikev1` or `ikev2`. Defaults to `ikev2` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
+     * IKE key-exchange version. One of <span pulumi-lang-nodejs="`ikev1`" pulumi-lang-dotnet="`Ikev1`" pulumi-lang-go="`ikev1`" pulumi-lang-python="`ikev1`" pulumi-lang-yaml="`ikev1`" pulumi-lang-java="`ikev1`" pulumi-lang-hcl="`ikev1`">`ikev1`</span> or <span pulumi-lang-nodejs="`ikev2`" pulumi-lang-dotnet="`Ikev2`" pulumi-lang-go="`ikev2`" pulumi-lang-python="`ikev2`" pulumi-lang-yaml="`ikev2`" pulumi-lang-java="`ikev2`" pulumi-lang-hcl="`ikev2`">`ikev2`</span>. Defaults to <span pulumi-lang-nodejs="`ikev2`" pulumi-lang-dotnet="`Ikev2`" pulumi-lang-go="`ikev2`" pulumi-lang-python="`ikev2`" pulumi-lang-yaml="`ikev2`" pulumi-lang-java="`ikev2`" pulumi-lang-hcl="`ikev2`">`ikev2`</span> for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
      */
     keyExchange?: pulumi.Input<string | undefined>;
     /**
@@ -246,7 +250,7 @@ export interface SiteToSiteVpnState {
      */
     localIdentifier?: pulumi.Input<string | undefined>;
     /**
-     * Whether the local identifier is used for authentication. Set automatically when `local_identifier` is configured; declare it explicitly to enable identifier authentication without pinning a value.
+     * Whether the local identifier is used for authentication. Set automatically when <span pulumi-lang-nodejs="`localIdentifier`" pulumi-lang-dotnet="`LocalIdentifier`" pulumi-lang-go="`localIdentifier`" pulumi-lang-python="`local_identifier`" pulumi-lang-yaml="`localIdentifier`" pulumi-lang-java="`localIdentifier`" pulumi-lang-hcl="`local_identifier`">`localIdentifier`</span> is configured; declare it explicitly to enable identifier authentication without pinning a value.
      */
     localIdentifierEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -266,20 +270,24 @@ export interface SiteToSiteVpnState {
      */
     pfs?: pulumi.Input<boolean | undefined>;
     /**
-     * The IPsec pre-shared key. Stored in state — use `pre_shared_key_wo` to avoid persisting the secret.
+     * The IPsec pre-shared key. Stored in state — use <span pulumi-lang-nodejs="`preSharedKeyWo`" pulumi-lang-dotnet="`PreSharedKeyWo`" pulumi-lang-go="`preSharedKeyWo`" pulumi-lang-python="`pre_shared_key_wo`" pulumi-lang-yaml="`preSharedKeyWo`" pulumi-lang-java="`preSharedKeyWo`" pulumi-lang-hcl="`pre_shared_key_wo`">`preSharedKeyWo`</span> to avoid persisting the secret.
      */
     preSharedKey?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`preSharedKey`" pulumi-lang-dotnet="`PreSharedKey`" pulumi-lang-go="`preSharedKey`" pulumi-lang-python="`pre_shared_key`" pulumi-lang-yaml="`preSharedKey`" pulumi-lang-java="`preSharedKey`" pulumi-lang-hcl="`pre_shared_key`">`preSharedKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource (e.g. a Vault secret). Mutually exclusive with <span pulumi-lang-nodejs="`preSharedKey`" pulumi-lang-dotnet="`PreSharedKey`" pulumi-lang-go="`preSharedKey`" pulumi-lang-python="`pre_shared_key`" pulumi-lang-yaml="`preSharedKey`" pulumi-lang-java="`preSharedKey`" pulumi-lang-hcl="`pre_shared_key`">`preSharedKey`</span>.
+     */
     preSharedKeyWo?: pulumi.Input<string | undefined>;
     /**
-     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the `ike`/`esp` objects; the controller may derive the ESP values from the IKE ones.
+     * IPsec profile. One of <span pulumi-lang-nodejs="`customized`" pulumi-lang-dotnet="`Customized`" pulumi-lang-go="`customized`" pulumi-lang-python="`customized`" pulumi-lang-yaml="`customized`" pulumi-lang-java="`customized`" pulumi-lang-hcl="`customized`">`customized`</span>, <span pulumi-lang-nodejs="`azureDynamic`" pulumi-lang-dotnet="`AzureDynamic`" pulumi-lang-go="`azureDynamic`" pulumi-lang-python="`azure_dynamic`" pulumi-lang-yaml="`azureDynamic`" pulumi-lang-java="`azureDynamic`" pulumi-lang-hcl="`azure_dynamic`">`azureDynamic`</span>, or <span pulumi-lang-nodejs="`azureStatic`" pulumi-lang-dotnet="`AzureStatic`" pulumi-lang-go="`azureStatic`" pulumi-lang-python="`azure_static`" pulumi-lang-yaml="`azureStatic`" pulumi-lang-java="`azureStatic`" pulumi-lang-hcl="`azure_static`">`azureStatic`</span>. Set to <span pulumi-lang-nodejs="`customized`" pulumi-lang-dotnet="`Customized`" pulumi-lang-go="`customized`" pulumi-lang-python="`customized`" pulumi-lang-yaml="`customized`" pulumi-lang-java="`customized`" pulumi-lang-hcl="`customized`">`customized`</span> to tune the <span pulumi-lang-nodejs="`ike`" pulumi-lang-dotnet="`Ike`" pulumi-lang-go="`ike`" pulumi-lang-python="`ike`" pulumi-lang-yaml="`ike`" pulumi-lang-java="`ike`" pulumi-lang-hcl="`ike`">`ike`</span>/<span pulumi-lang-nodejs="`esp`" pulumi-lang-dotnet="`Esp`" pulumi-lang-go="`esp`" pulumi-lang-python="`esp`" pulumi-lang-yaml="`esp`" pulumi-lang-java="`esp`" pulumi-lang-hcl="`esp`">`esp`</span> objects; the controller may derive the ESP values from the IKE ones.
      */
     profile?: pulumi.Input<string | undefined>;
     /**
-     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See `local_identifier`.
+     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See <span pulumi-lang-nodejs="`localIdentifier`" pulumi-lang-dotnet="`LocalIdentifier`" pulumi-lang-go="`localIdentifier`" pulumi-lang-python="`local_identifier`" pulumi-lang-yaml="`localIdentifier`" pulumi-lang-java="`localIdentifier`" pulumi-lang-hcl="`local_identifier`">`localIdentifier`</span>.
      */
     remoteIdentifier?: pulumi.Input<string | undefined>;
     /**
-     * Whether the remote identifier is used for authentication. See `local_identifier_enabled`.
+     * Whether the remote identifier is used for authentication. See <span pulumi-lang-nodejs="`localIdentifierEnabled`" pulumi-lang-dotnet="`LocalIdentifierEnabled`" pulumi-lang-go="`localIdentifierEnabled`" pulumi-lang-python="`local_identifier_enabled`" pulumi-lang-yaml="`localIdentifierEnabled`" pulumi-lang-java="`localIdentifierEnabled`" pulumi-lang-hcl="`local_identifier_enabled`">`localIdentifierEnabled`</span>.
      */
     remoteIdentifierEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -287,7 +295,7 @@ export interface SiteToSiteVpnState {
      */
     remoteSubnets?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when `dynamic_routing` is enabled and `remote_subnets` is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
+     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when <span pulumi-lang-nodejs="`dynamicRouting`" pulumi-lang-dotnet="`DynamicRouting`" pulumi-lang-go="`dynamicRouting`" pulumi-lang-python="`dynamic_routing`" pulumi-lang-yaml="`dynamicRouting`" pulumi-lang-java="`dynamicRouting`" pulumi-lang-hcl="`dynamic_routing`">`dynamicRouting`</span> is enabled and <span pulumi-lang-nodejs="`remoteSubnets`" pulumi-lang-dotnet="`RemoteSubnets`" pulumi-lang-go="`remoteSubnets`" pulumi-lang-python="`remote_subnets`" pulumi-lang-yaml="`remoteSubnets`" pulumi-lang-java="`remoteSubnets`" pulumi-lang-hcl="`remote_subnets`">`remoteSubnets`</span> is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
      */
     remoteVpnDynamicSubnetsEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -300,11 +308,11 @@ export interface SiteToSiteVpnState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.SiteToSiteVpnTimeouts | undefined>;
     /**
-     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set `tunnel_ip_enabled = false` to stop using it.
+     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set <span pulumi-lang-nodejs="`tunnelIpEnabled " pulumi-lang-dotnet="`TunnelIpEnabled " pulumi-lang-go="`tunnelIpEnabled " pulumi-lang-python="`tunnel_ip_enabled " pulumi-lang-yaml="`tunnelIpEnabled " pulumi-lang-java="`tunnelIpEnabled " pulumi-lang-hcl="`tunnel_ip_enabled ">`tunnelIpEnabled </span>= false` to stop using it.
      */
     tunnelIp?: pulumi.Input<string | undefined>;
     /**
-     * Whether the tunnel IP is used. Set automatically when `tunnel_ip` is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to `false` to disable it.
+     * Whether the tunnel IP is used. Set automatically when <span pulumi-lang-nodejs="`tunnelIp`" pulumi-lang-dotnet="`TunnelIp`" pulumi-lang-go="`tunnelIp`" pulumi-lang-python="`tunnel_ip`" pulumi-lang-yaml="`tunnelIp`" pulumi-lang-java="`tunnelIp`" pulumi-lang-hcl="`tunnel_ip`">`tunnelIp`</span> is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> to disable it.
      */
     tunnelIpEnabled?: pulumi.Input<boolean | undefined>;
 }
@@ -330,11 +338,11 @@ export interface SiteToSiteVpnArgs {
      */
     ike?: pulumi.Input<inputs.SiteToSiteVpnIke | undefined>;
     /**
-     * The local WAN interface the tunnel binds to (e.g. `wan`, `wan2`). Defaults to `wan` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
+     * The local WAN interface the tunnel binds to (e.g. <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>). Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting a tunnel on <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> does not move it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
-     * IKE key-exchange version. One of `ikev1` or `ikev2`. Defaults to `ikev2` for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
+     * IKE key-exchange version. One of <span pulumi-lang-nodejs="`ikev1`" pulumi-lang-dotnet="`Ikev1`" pulumi-lang-go="`ikev1`" pulumi-lang-python="`ikev1`" pulumi-lang-yaml="`ikev1`" pulumi-lang-java="`ikev1`" pulumi-lang-hcl="`ikev1`">`ikev1`</span> or <span pulumi-lang-nodejs="`ikev2`" pulumi-lang-dotnet="`Ikev2`" pulumi-lang-go="`ikev2`" pulumi-lang-python="`ikev2`" pulumi-lang-yaml="`ikev2`" pulumi-lang-java="`ikev2`" pulumi-lang-hcl="`ikev2`">`ikev2`</span>. Defaults to <span pulumi-lang-nodejs="`ikev2`" pulumi-lang-dotnet="`Ikev2`" pulumi-lang-go="`ikev2`" pulumi-lang-python="`ikev2`" pulumi-lang-yaml="`ikev2`" pulumi-lang-java="`ikev2`" pulumi-lang-hcl="`ikev2`">`ikev2`</span> for a new tunnel; an existing tunnel keeps the controller's value when this is not set, so adopting an IKEv1 tunnel does not switch it to IKEv2 and break it (#544).
      */
     keyExchange?: pulumi.Input<string | undefined>;
     /**
@@ -342,7 +350,7 @@ export interface SiteToSiteVpnArgs {
      */
     localIdentifier?: pulumi.Input<string | undefined>;
     /**
-     * Whether the local identifier is used for authentication. Set automatically when `local_identifier` is configured; declare it explicitly to enable identifier authentication without pinning a value.
+     * Whether the local identifier is used for authentication. Set automatically when <span pulumi-lang-nodejs="`localIdentifier`" pulumi-lang-dotnet="`LocalIdentifier`" pulumi-lang-go="`localIdentifier`" pulumi-lang-python="`local_identifier`" pulumi-lang-yaml="`localIdentifier`" pulumi-lang-java="`localIdentifier`" pulumi-lang-hcl="`local_identifier`">`localIdentifier`</span> is configured; declare it explicitly to enable identifier authentication without pinning a value.
      */
     localIdentifierEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -362,20 +370,24 @@ export interface SiteToSiteVpnArgs {
      */
     pfs?: pulumi.Input<boolean | undefined>;
     /**
-     * The IPsec pre-shared key. Stored in state — use `pre_shared_key_wo` to avoid persisting the secret.
+     * The IPsec pre-shared key. Stored in state — use <span pulumi-lang-nodejs="`preSharedKeyWo`" pulumi-lang-dotnet="`PreSharedKeyWo`" pulumi-lang-go="`preSharedKeyWo`" pulumi-lang-python="`pre_shared_key_wo`" pulumi-lang-yaml="`preSharedKeyWo`" pulumi-lang-java="`preSharedKeyWo`" pulumi-lang-hcl="`pre_shared_key_wo`">`preSharedKeyWo`</span> to avoid persisting the secret.
      */
     preSharedKey?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`preSharedKey`" pulumi-lang-dotnet="`PreSharedKey`" pulumi-lang-go="`preSharedKey`" pulumi-lang-python="`pre_shared_key`" pulumi-lang-yaml="`preSharedKey`" pulumi-lang-java="`preSharedKey`" pulumi-lang-hcl="`pre_shared_key`">`preSharedKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource (e.g. a Vault secret). Mutually exclusive with <span pulumi-lang-nodejs="`preSharedKey`" pulumi-lang-dotnet="`PreSharedKey`" pulumi-lang-go="`preSharedKey`" pulumi-lang-python="`pre_shared_key`" pulumi-lang-yaml="`preSharedKey`" pulumi-lang-java="`preSharedKey`" pulumi-lang-hcl="`pre_shared_key`">`preSharedKey`</span>.
+     */
     preSharedKeyWo?: pulumi.Input<string | undefined>;
     /**
-     * IPsec profile. One of `customized`, `azure_dynamic`, or `azure_static`. Set to `customized` to tune the `ike`/`esp` objects; the controller may derive the ESP values from the IKE ones.
+     * IPsec profile. One of <span pulumi-lang-nodejs="`customized`" pulumi-lang-dotnet="`Customized`" pulumi-lang-go="`customized`" pulumi-lang-python="`customized`" pulumi-lang-yaml="`customized`" pulumi-lang-java="`customized`" pulumi-lang-hcl="`customized`">`customized`</span>, <span pulumi-lang-nodejs="`azureDynamic`" pulumi-lang-dotnet="`AzureDynamic`" pulumi-lang-go="`azureDynamic`" pulumi-lang-python="`azure_dynamic`" pulumi-lang-yaml="`azureDynamic`" pulumi-lang-java="`azureDynamic`" pulumi-lang-hcl="`azure_dynamic`">`azureDynamic`</span>, or <span pulumi-lang-nodejs="`azureStatic`" pulumi-lang-dotnet="`AzureStatic`" pulumi-lang-go="`azureStatic`" pulumi-lang-python="`azure_static`" pulumi-lang-yaml="`azureStatic`" pulumi-lang-java="`azureStatic`" pulumi-lang-hcl="`azure_static`">`azureStatic`</span>. Set to <span pulumi-lang-nodejs="`customized`" pulumi-lang-dotnet="`Customized`" pulumi-lang-go="`customized`" pulumi-lang-python="`customized`" pulumi-lang-yaml="`customized`" pulumi-lang-java="`customized`" pulumi-lang-hcl="`customized`">`customized`</span> to tune the <span pulumi-lang-nodejs="`ike`" pulumi-lang-dotnet="`Ike`" pulumi-lang-go="`ike`" pulumi-lang-python="`ike`" pulumi-lang-yaml="`ike`" pulumi-lang-java="`ike`" pulumi-lang-hcl="`ike`">`ike`</span>/<span pulumi-lang-nodejs="`esp`" pulumi-lang-dotnet="`Esp`" pulumi-lang-go="`esp`" pulumi-lang-python="`esp`" pulumi-lang-yaml="`esp`" pulumi-lang-java="`esp`" pulumi-lang-hcl="`esp`">`esp`</span> objects; the controller may derive the ESP values from the IKE ones.
      */
     profile?: pulumi.Input<string | undefined>;
     /**
-     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See `local_identifier`.
+     * IKE remote identifier used for peer authentication (the UI's "Remote Identifier"). See <span pulumi-lang-nodejs="`localIdentifier`" pulumi-lang-dotnet="`LocalIdentifier`" pulumi-lang-go="`localIdentifier`" pulumi-lang-python="`local_identifier`" pulumi-lang-yaml="`localIdentifier`" pulumi-lang-java="`localIdentifier`" pulumi-lang-hcl="`local_identifier`">`localIdentifier`</span>.
      */
     remoteIdentifier?: pulumi.Input<string | undefined>;
     /**
-     * Whether the remote identifier is used for authentication. See `local_identifier_enabled`.
+     * Whether the remote identifier is used for authentication. See <span pulumi-lang-nodejs="`localIdentifierEnabled`" pulumi-lang-dotnet="`LocalIdentifierEnabled`" pulumi-lang-go="`localIdentifierEnabled`" pulumi-lang-python="`local_identifier_enabled`" pulumi-lang-yaml="`localIdentifierEnabled`" pulumi-lang-java="`localIdentifierEnabled`" pulumi-lang-hcl="`local_identifier_enabled`">`localIdentifierEnabled`</span>.
      */
     remoteIdentifierEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -383,7 +395,7 @@ export interface SiteToSiteVpnArgs {
      */
     remoteSubnets: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when `dynamic_routing` is enabled and `remote_subnets` is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
+     * Whether the tunnel advertises dynamically learned subnets. It can be enabled manually, but it is forced on (and cannot be disabled) when <span pulumi-lang-nodejs="`dynamicRouting`" pulumi-lang-dotnet="`DynamicRouting`" pulumi-lang-go="`dynamicRouting`" pulumi-lang-python="`dynamic_routing`" pulumi-lang-yaml="`dynamicRouting`" pulumi-lang-java="`dynamicRouting`" pulumi-lang-hcl="`dynamic_routing`">`dynamicRouting`</span> is enabled and <span pulumi-lang-nodejs="`remoteSubnets`" pulumi-lang-dotnet="`RemoteSubnets`" pulumi-lang-go="`remoteSubnets`" pulumi-lang-python="`remote_subnets`" pulumi-lang-yaml="`remoteSubnets`" pulumi-lang-java="`remoteSubnets`" pulumi-lang-hcl="`remote_subnets`">`remoteSubnets`</span> is empty, since the tunnel then relies entirely on learned routes. When omitted (and not forced on), the current value is kept.
      */
     remoteVpnDynamicSubnetsEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -396,11 +408,11 @@ export interface SiteToSiteVpnArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.SiteToSiteVpnTimeouts | undefined>;
     /**
-     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set `tunnel_ip_enabled = false` to stop using it.
+     * The tunnel IP used for the IPsec connection, in CIDR notation (e.g. `169.254.0.1/30`). Removing it from the configuration keeps the controller's value (the API cannot clear it); set <span pulumi-lang-nodejs="`tunnelIpEnabled " pulumi-lang-dotnet="`TunnelIpEnabled " pulumi-lang-go="`tunnelIpEnabled " pulumi-lang-python="`tunnel_ip_enabled " pulumi-lang-yaml="`tunnelIpEnabled " pulumi-lang-java="`tunnelIpEnabled " pulumi-lang-hcl="`tunnel_ip_enabled ">`tunnelIpEnabled </span>= false` to stop using it.
      */
     tunnelIp?: pulumi.Input<string | undefined>;
     /**
-     * Whether the tunnel IP is used. Set automatically when `tunnel_ip` is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to `false` to disable it.
+     * Whether the tunnel IP is used. Set automatically when <span pulumi-lang-nodejs="`tunnelIp`" pulumi-lang-dotnet="`TunnelIp`" pulumi-lang-go="`tunnelIp`" pulumi-lang-python="`tunnel_ip`" pulumi-lang-yaml="`tunnelIp`" pulumi-lang-java="`tunnelIp`" pulumi-lang-hcl="`tunnel_ip`">`tunnelIp`</span> is configured; declare it explicitly to enable the tunnel IP without pinning a value, or set it to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> to disable it.
      */
     tunnelIpEnabled?: pulumi.Input<boolean | undefined>;
 }

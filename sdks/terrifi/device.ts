@@ -50,11 +50,11 @@ export class Device extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly adopted: pulumi.Output<boolean>;
     /**
-     * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with `ip`, `netmask`, and `gateway` set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
+     * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span>, <span pulumi-lang-nodejs="`netmask`" pulumi-lang-dotnet="`Netmask`" pulumi-lang-go="`netmask`" pulumi-lang-python="`netmask`" pulumi-lang-yaml="`netmask`" pulumi-lang-java="`netmask`" pulumi-lang-hcl="`netmask`">`netmask`</span>, and <span pulumi-lang-nodejs="`gateway`" pulumi-lang-dotnet="`Gateway`" pulumi-lang-go="`gateway`" pulumi-lang-python="`gateway`" pulumi-lang-yaml="`gateway`" pulumi-lang-java="`gateway`" pulumi-lang-hcl="`gateway`">`gateway`</span> set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
      */
     declare public readonly configNetwork: pulumi.Output<outputs.DeviceConfigNetwork | undefined>;
     /**
-     * Whether the device is administratively disabled. Defaults to `false`.
+     * Whether the device is administratively disabled. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly disabled: pulumi.Output<boolean>;
     /**
@@ -70,11 +70,11 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly ledColor: pulumi.Output<string | undefined>;
     /**
-     * Whether LEDs are enabled. `true` forces LEDs on, `false` forces LEDs off. Omit to follow the site default.
+     * Whether LEDs are enabled. <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> forces LEDs on, <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> forces LEDs off. Omit to follow the site default.
      */
     declare public readonly ledEnabled: pulumi.Output<boolean | undefined>;
     /**
-     * Whether the device is locked to prevent accidental removal. Defaults to `false`.
+     * Whether the device is locked to prevent accidental removal. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly locked: pulumi.Output<boolean>;
     /**
@@ -90,19 +90,19 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Outdoor mode override. `default` follows the device default, `on` enables outdoor mode, `off` disables it.
+     * Outdoor mode override. <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> follows the device default, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span> enables outdoor mode, <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span> disables it.
      */
     declare public readonly outdoorModeOverride: pulumi.Output<string | undefined>;
     /**
-     * Radio settings for the 2.4 GHz (`ng`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 2.4 GHz (<span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     declare public readonly radio24: pulumi.Output<outputs.DeviceRadio24 | undefined>;
     /**
-     * Radio settings for the 5 GHz (`na`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 5 GHz (<span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     declare public readonly radio5: pulumi.Output<outputs.DeviceRadio5 | undefined>;
     /**
-     * Radio settings for the 6 GHz (`6e`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 6 GHz (<span pulumi-lang-nodejs="`6e`" pulumi-lang-dotnet="`6e`" pulumi-lang-go="`6e`" pulumi-lang-python="`6e`" pulumi-lang-yaml="`6e`" pulumi-lang-java="`6e`" pulumi-lang-hcl="`6e`">`6e`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     declare public readonly radio6: pulumi.Output<outputs.DeviceRadio6 | undefined>;
     /**
@@ -122,7 +122,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly state: pulumi.Output<number>;
     /**
-     * The device type (e.g. `uap` for access point, `usw` for switch, `ugw` for gateway).
+     * The device type (e.g. <span pulumi-lang-nodejs="`uap`" pulumi-lang-dotnet="`Uap`" pulumi-lang-go="`uap`" pulumi-lang-python="`uap`" pulumi-lang-yaml="`uap`" pulumi-lang-java="`uap`" pulumi-lang-hcl="`uap`">`uap`</span> for access point, <span pulumi-lang-nodejs="`usw`" pulumi-lang-dotnet="`Usw`" pulumi-lang-go="`usw`" pulumi-lang-python="`usw`" pulumi-lang-yaml="`usw`" pulumi-lang-java="`usw`" pulumi-lang-hcl="`usw`">`usw`</span> for switch, <span pulumi-lang-nodejs="`ugw`" pulumi-lang-dotnet="`Ugw`" pulumi-lang-go="`ugw`" pulumi-lang-python="`ugw`" pulumi-lang-yaml="`ugw`" pulumi-lang-java="`ugw`" pulumi-lang-hcl="`ugw`">`ugw`</span> for gateway).
      */
     declare public /*out*/ readonly type: pulumi.Output<string>;
     /**
@@ -205,11 +205,11 @@ export interface DeviceState {
      */
     adopted?: pulumi.Input<boolean | undefined>;
     /**
-     * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with `ip`, `netmask`, and `gateway` set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
+     * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span>, <span pulumi-lang-nodejs="`netmask`" pulumi-lang-dotnet="`Netmask`" pulumi-lang-go="`netmask`" pulumi-lang-python="`netmask`" pulumi-lang-yaml="`netmask`" pulumi-lang-java="`netmask`" pulumi-lang-hcl="`netmask`">`netmask`</span>, and <span pulumi-lang-nodejs="`gateway`" pulumi-lang-dotnet="`Gateway`" pulumi-lang-go="`gateway`" pulumi-lang-python="`gateway`" pulumi-lang-yaml="`gateway`" pulumi-lang-java="`gateway`" pulumi-lang-hcl="`gateway`">`gateway`</span> set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
      */
     configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork | undefined>;
     /**
-     * Whether the device is administratively disabled. Defaults to `false`.
+     * Whether the device is administratively disabled. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -225,11 +225,11 @@ export interface DeviceState {
      */
     ledColor?: pulumi.Input<string | undefined>;
     /**
-     * Whether LEDs are enabled. `true` forces LEDs on, `false` forces LEDs off. Omit to follow the site default.
+     * Whether LEDs are enabled. <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> forces LEDs on, <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> forces LEDs off. Omit to follow the site default.
      */
     ledEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the device is locked to prevent accidental removal. Defaults to `false`.
+     * Whether the device is locked to prevent accidental removal. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     locked?: pulumi.Input<boolean | undefined>;
     /**
@@ -245,19 +245,19 @@ export interface DeviceState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Outdoor mode override. `default` follows the device default, `on` enables outdoor mode, `off` disables it.
+     * Outdoor mode override. <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> follows the device default, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span> enables outdoor mode, <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span> disables it.
      */
     outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
-     * Radio settings for the 2.4 GHz (`ng`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 2.4 GHz (<span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     radio24?: pulumi.Input<inputs.DeviceRadio24 | undefined>;
     /**
-     * Radio settings for the 5 GHz (`na`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 5 GHz (<span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     radio5?: pulumi.Input<inputs.DeviceRadio5 | undefined>;
     /**
-     * Radio settings for the 6 GHz (`6e`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 6 GHz (<span pulumi-lang-nodejs="`6e`" pulumi-lang-dotnet="`6e`" pulumi-lang-go="`6e`" pulumi-lang-python="`6e`" pulumi-lang-yaml="`6e`" pulumi-lang-java="`6e`" pulumi-lang-hcl="`6e`">`6e`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     radio6?: pulumi.Input<inputs.DeviceRadio6 | undefined>;
     /**
@@ -277,7 +277,7 @@ export interface DeviceState {
      */
     state?: pulumi.Input<number | undefined>;
     /**
-     * The device type (e.g. `uap` for access point, `usw` for switch, `ugw` for gateway).
+     * The device type (e.g. <span pulumi-lang-nodejs="`uap`" pulumi-lang-dotnet="`Uap`" pulumi-lang-go="`uap`" pulumi-lang-python="`uap`" pulumi-lang-yaml="`uap`" pulumi-lang-java="`uap`" pulumi-lang-hcl="`uap`">`uap`</span> for access point, <span pulumi-lang-nodejs="`usw`" pulumi-lang-dotnet="`Usw`" pulumi-lang-go="`usw`" pulumi-lang-python="`usw`" pulumi-lang-yaml="`usw`" pulumi-lang-java="`usw`" pulumi-lang-hcl="`usw`">`usw`</span> for switch, <span pulumi-lang-nodejs="`ugw`" pulumi-lang-dotnet="`Ugw`" pulumi-lang-go="`ugw`" pulumi-lang-python="`ugw`" pulumi-lang-yaml="`ugw`" pulumi-lang-java="`ugw`" pulumi-lang-hcl="`ugw`">`ugw`</span> for gateway).
      */
     type?: pulumi.Input<string | undefined>;
     /**
@@ -291,11 +291,11 @@ export interface DeviceState {
  */
 export interface DeviceArgs {
     /**
-     * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with `ip`, `netmask`, and `gateway` set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
+     * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span>, <span pulumi-lang-nodejs="`netmask`" pulumi-lang-dotnet="`Netmask`" pulumi-lang-go="`netmask`" pulumi-lang-python="`netmask`" pulumi-lang-yaml="`netmask`" pulumi-lang-java="`netmask`" pulumi-lang-hcl="`netmask`">`netmask`</span>, and <span pulumi-lang-nodejs="`gateway`" pulumi-lang-dotnet="`Gateway`" pulumi-lang-go="`gateway`" pulumi-lang-python="`gateway`" pulumi-lang-yaml="`gateway`" pulumi-lang-java="`gateway`" pulumi-lang-hcl="`gateway`">`gateway`</span> set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
      */
     configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork | undefined>;
     /**
-     * Whether the device is administratively disabled. Defaults to `false`.
+     * Whether the device is administratively disabled. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -307,11 +307,11 @@ export interface DeviceArgs {
      */
     ledColor?: pulumi.Input<string | undefined>;
     /**
-     * Whether LEDs are enabled. `true` forces LEDs on, `false` forces LEDs off. Omit to follow the site default.
+     * Whether LEDs are enabled. <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> forces LEDs on, <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> forces LEDs off. Omit to follow the site default.
      */
     ledEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the device is locked to prevent accidental removal. Defaults to `false`.
+     * Whether the device is locked to prevent accidental removal. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     locked?: pulumi.Input<boolean | undefined>;
     /**
@@ -323,19 +323,19 @@ export interface DeviceArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Outdoor mode override. `default` follows the device default, `on` enables outdoor mode, `off` disables it.
+     * Outdoor mode override. <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> follows the device default, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span> enables outdoor mode, <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span> disables it.
      */
     outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
-     * Radio settings for the 2.4 GHz (`ng`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 2.4 GHz (<span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     radio24?: pulumi.Input<inputs.DeviceRadio24 | undefined>;
     /**
-     * Radio settings for the 5 GHz (`na`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 5 GHz (<span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     radio5?: pulumi.Input<inputs.DeviceRadio5 | undefined>;
     /**
-     * Radio settings for the 6 GHz (`6e`) radio on an access point. Omit to leave this radio's settings unchanged.
+     * Radio settings for the 6 GHz (<span pulumi-lang-nodejs="`6e`" pulumi-lang-dotnet="`6e`" pulumi-lang-go="`6e`" pulumi-lang-python="`6e`" pulumi-lang-yaml="`6e`" pulumi-lang-java="`6e`" pulumi-lang-hcl="`6e`">`6e`</span>) radio on an access point. Omit to leave this radio's settings unchanged.
      */
     radio6?: pulumi.Input<inputs.DeviceRadio6 | undefined>;
     /**

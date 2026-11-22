@@ -6,21 +6,21 @@ import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
 export interface GpgKeyEmail {
-    email: pulumi.Input<string>;
-    verified: pulumi.Input<boolean>;
+    email?: pulumi.Input<string | undefined>;
+    verified?: pulumi.Input<boolean | undefined>;
 }
 
 export interface GpgKeySubkey {
-    canCertify: pulumi.Input<boolean>;
-    canEncryptComms: pulumi.Input<boolean>;
-    canEncryptStorage: pulumi.Input<boolean>;
-    canSign: pulumi.Input<boolean>;
-    createdAt: pulumi.Input<string>;
-    expiresAt: pulumi.Input<string>;
-    id: pulumi.Input<number>;
-    keyId: pulumi.Input<string>;
-    primaryKeyId: pulumi.Input<string>;
-    publicKey: pulumi.Input<string>;
+    canCertify?: pulumi.Input<boolean | undefined>;
+    canEncryptComms?: pulumi.Input<boolean | undefined>;
+    canEncryptStorage?: pulumi.Input<boolean | undefined>;
+    canSign?: pulumi.Input<boolean | undefined>;
+    createdAt?: pulumi.Input<string | undefined>;
+    expiresAt?: pulumi.Input<string | undefined>;
+    id?: pulumi.Input<number | undefined>;
+    keyId?: pulumi.Input<string | undefined>;
+    primaryKeyId?: pulumi.Input<string | undefined>;
+    publicKey?: pulumi.Input<string | undefined>;
 }
 
 export interface RepositoryExternalTracker {

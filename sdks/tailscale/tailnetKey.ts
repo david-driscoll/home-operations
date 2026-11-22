@@ -52,7 +52,7 @@ export class TailnetKey extends pulumi.CustomResource {
      */
     declare public readonly description: pulumi.Output<string>;
     /**
-     * Indicates if the key is ephemeral. Defaults to `false`.
+     * Indicates if the key is ephemeral. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly ephemeral: pulumi.Output<boolean>;
     /**
@@ -60,7 +60,7 @@ export class TailnetKey extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly expiresAt: pulumi.Output<string>;
     /**
-     * The expiry of the key in seconds. Defaults to `7776000` (90 days).
+     * The expiry of the key in seconds. Defaults to <span pulumi-lang-nodejs="`7776000`" pulumi-lang-dotnet="`7776000`" pulumi-lang-go="`7776000`" pulumi-lang-python="`7776000`" pulumi-lang-yaml="`7776000`" pulumi-lang-java="`7776000`" pulumi-lang-hcl="`7776000`">`7776000`</span> (90 days).
      */
     declare public readonly expiry: pulumi.Output<number>;
     /**
@@ -72,7 +72,7 @@ export class TailnetKey extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly key: pulumi.Output<string>;
     /**
-     * Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.
+     * Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly preauthorized: pulumi.Output<boolean>;
     /**
@@ -80,7 +80,7 @@ export class TailnetKey extends pulumi.CustomResource {
      */
     declare public readonly recreateIfInvalid: pulumi.Output<string | undefined>;
     /**
-     * Indicates if the key is reusable or single-use. Defaults to `false`.
+     * Indicates if the key is reusable or single-use. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly reusable: pulumi.Output<boolean>;
     /**
@@ -152,7 +152,7 @@ export interface TailnetKeyState {
      */
     description?: pulumi.Input<string | undefined>;
     /**
-     * Indicates if the key is ephemeral. Defaults to `false`.
+     * Indicates if the key is ephemeral. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     ephemeral?: pulumi.Input<boolean | undefined>;
     /**
@@ -160,7 +160,7 @@ export interface TailnetKeyState {
      */
     expiresAt?: pulumi.Input<string | undefined>;
     /**
-     * The expiry of the key in seconds. Defaults to `7776000` (90 days).
+     * The expiry of the key in seconds. Defaults to <span pulumi-lang-nodejs="`7776000`" pulumi-lang-dotnet="`7776000`" pulumi-lang-go="`7776000`" pulumi-lang-python="`7776000`" pulumi-lang-yaml="`7776000`" pulumi-lang-java="`7776000`" pulumi-lang-hcl="`7776000`">`7776000`</span> (90 days).
      */
     expiry?: pulumi.Input<number | undefined>;
     /**
@@ -172,7 +172,7 @@ export interface TailnetKeyState {
      */
     key?: pulumi.Input<string | undefined>;
     /**
-     * Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.
+     * Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     preauthorized?: pulumi.Input<boolean | undefined>;
     /**
@@ -180,7 +180,7 @@ export interface TailnetKeyState {
      */
     recreateIfInvalid?: pulumi.Input<string | undefined>;
     /**
-     * Indicates if the key is reusable or single-use. Defaults to `false`.
+     * Indicates if the key is reusable or single-use. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     reusable?: pulumi.Input<boolean | undefined>;
     /**
@@ -202,15 +202,15 @@ export interface TailnetKeyArgs {
      */
     description?: pulumi.Input<string | undefined>;
     /**
-     * Indicates if the key is ephemeral. Defaults to `false`.
+     * Indicates if the key is ephemeral. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     ephemeral?: pulumi.Input<boolean | undefined>;
     /**
-     * The expiry of the key in seconds. Defaults to `7776000` (90 days).
+     * The expiry of the key in seconds. Defaults to <span pulumi-lang-nodejs="`7776000`" pulumi-lang-dotnet="`7776000`" pulumi-lang-go="`7776000`" pulumi-lang-python="`7776000`" pulumi-lang-yaml="`7776000`" pulumi-lang-java="`7776000`" pulumi-lang-hcl="`7776000`">`7776000`</span> (90 days).
      */
     expiry?: pulumi.Input<number | undefined>;
     /**
-     * Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.
+     * Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     preauthorized?: pulumi.Input<boolean | undefined>;
     /**
@@ -218,7 +218,7 @@ export interface TailnetKeyArgs {
      */
     recreateIfInvalid?: pulumi.Input<string | undefined>;
     /**
-     * Indicates if the key is reusable or single-use. Defaults to `false`.
+     * Indicates if the key is reusable or single-use. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     reusable?: pulumi.Input<boolean | undefined>;
     /**

@@ -16,10 +16,6 @@ export function getDatastores(opts?: pulumi.InvokeOptions): Promise<GetDatastore
  * A collection of values returned by getDatastores.
  */
 export interface GetDatastoresResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly stores: outputs.GetDatastoresStore[];
 }
 export function getDatastoresOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetDatastoresResult> {

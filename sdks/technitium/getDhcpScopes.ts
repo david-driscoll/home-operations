@@ -16,10 +16,6 @@ export function getDhcpScopes(opts?: pulumi.InvokeOptions): Promise<GetDhcpScope
  * A collection of values returned by getDhcpScopes.
  */
 export interface GetDhcpScopesResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly scopes: outputs.GetDhcpScopesScope[];
 }
 export function getDhcpScopesOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetDhcpScopesResult> {

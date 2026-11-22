@@ -66,7 +66,7 @@ export class Zone extends pulumi.CustomResource {
      */
     declare public readonly dynamicUpdate: pulumi.Output<string | undefined>;
     /**
-     * Network ACL used when dynamic_update uses a specified network ACL.
+     * Network ACL used when<span pulumi-lang-nodejs=" dynamicUpdate " pulumi-lang-dotnet=" DynamicUpdate " pulumi-lang-go=" dynamicUpdate " pulumi-lang-python=" dynamic_update " pulumi-lang-yaml=" dynamicUpdate " pulumi-lang-java=" dynamicUpdate " pulumi-lang-hcl=" dynamic_update "> dynamicUpdate </span>uses a specified network ACL.
      */
     declare public readonly dynamicUpdateNetworkAcls: pulumi.Output<string[] | undefined>;
     /**
@@ -86,7 +86,7 @@ export class Zone extends pulumi.CustomResource {
      */
     declare public readonly queryAccess: pulumi.Output<string | undefined>;
     /**
-     * Network ACL used when query_access uses a specified network ACL.
+     * Network ACL used when<span pulumi-lang-nodejs=" queryAccess " pulumi-lang-dotnet=" QueryAccess " pulumi-lang-go=" queryAccess " pulumi-lang-python=" query_access " pulumi-lang-yaml=" queryAccess " pulumi-lang-java=" queryAccess " pulumi-lang-hcl=" query_access "> queryAccess </span>uses a specified network ACL.
      */
     declare public readonly queryAccessNetworkAcls: pulumi.Output<string[] | undefined>;
     /**
@@ -191,7 +191,7 @@ export interface ZoneState {
      */
     dynamicUpdate?: pulumi.Input<string | undefined>;
     /**
-     * Network ACL used when dynamic_update uses a specified network ACL.
+     * Network ACL used when<span pulumi-lang-nodejs=" dynamicUpdate " pulumi-lang-dotnet=" DynamicUpdate " pulumi-lang-go=" dynamicUpdate " pulumi-lang-python=" dynamic_update " pulumi-lang-yaml=" dynamicUpdate " pulumi-lang-java=" dynamicUpdate " pulumi-lang-hcl=" dynamic_update "> dynamicUpdate </span>uses a specified network ACL.
      */
     dynamicUpdateNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -211,7 +211,7 @@ export interface ZoneState {
      */
     queryAccess?: pulumi.Input<string | undefined>;
     /**
-     * Network ACL used when query_access uses a specified network ACL.
+     * Network ACL used when<span pulumi-lang-nodejs=" queryAccess " pulumi-lang-dotnet=" QueryAccess " pulumi-lang-go=" queryAccess " pulumi-lang-python=" query_access " pulumi-lang-yaml=" queryAccess " pulumi-lang-java=" queryAccess " pulumi-lang-hcl=" query_access "> queryAccess </span>uses a specified network ACL.
      */
     queryAccessNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -257,7 +257,7 @@ export interface ZoneArgs {
      */
     dynamicUpdate?: pulumi.Input<string | undefined>;
     /**
-     * Network ACL used when dynamic_update uses a specified network ACL.
+     * Network ACL used when<span pulumi-lang-nodejs=" dynamicUpdate " pulumi-lang-dotnet=" DynamicUpdate " pulumi-lang-go=" dynamicUpdate " pulumi-lang-python=" dynamic_update " pulumi-lang-yaml=" dynamicUpdate " pulumi-lang-java=" dynamicUpdate " pulumi-lang-hcl=" dynamic_update "> dynamicUpdate </span>uses a specified network ACL.
      */
     dynamicUpdateNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -277,7 +277,7 @@ export interface ZoneArgs {
      */
     queryAccess?: pulumi.Input<string | undefined>;
     /**
-     * Network ACL used when query_access uses a specified network ACL.
+     * Network ACL used when<span pulumi-lang-nodejs=" queryAccess " pulumi-lang-dotnet=" QueryAccess " pulumi-lang-go=" queryAccess " pulumi-lang-python=" query_access " pulumi-lang-yaml=" queryAccess " pulumi-lang-java=" queryAccess " pulumi-lang-hcl=" query_access "> queryAccess </span>uses a specified network ACL.
      */
     queryAccessNetworkAcls?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**

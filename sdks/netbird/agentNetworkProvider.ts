@@ -78,7 +78,7 @@ export class AgentNetworkProvider extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Catalog identifier for the upstream AI provider (e.g. `openai_api`, `anthropic_api`, `custom`)
+     * Catalog identifier for the upstream AI provider (e.g. <span pulumi-lang-nodejs="`openaiApi`" pulumi-lang-dotnet="`OpenaiApi`" pulumi-lang-go="`openaiApi`" pulumi-lang-python="`openai_api`" pulumi-lang-yaml="`openaiApi`" pulumi-lang-java="`openaiApi`" pulumi-lang-hcl="`openai_api`">`openaiApi`</span>, <span pulumi-lang-nodejs="`anthropicApi`" pulumi-lang-dotnet="`AnthropicApi`" pulumi-lang-go="`anthropicApi`" pulumi-lang-python="`anthropic_api`" pulumi-lang-yaml="`anthropicApi`" pulumi-lang-java="`anthropicApi`" pulumi-lang-hcl="`anthropic_api`">`anthropicApi`</span>, <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>)
      */
     declare public readonly providerId: pulumi.Output<string>;
     /**
@@ -181,7 +181,7 @@ export interface AgentNetworkProviderState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Catalog identifier for the upstream AI provider (e.g. `openai_api`, `anthropic_api`, `custom`)
+     * Catalog identifier for the upstream AI provider (e.g. <span pulumi-lang-nodejs="`openaiApi`" pulumi-lang-dotnet="`OpenaiApi`" pulumi-lang-go="`openaiApi`" pulumi-lang-python="`openai_api`" pulumi-lang-yaml="`openaiApi`" pulumi-lang-java="`openaiApi`" pulumi-lang-hcl="`openai_api`">`openaiApi`</span>, <span pulumi-lang-nodejs="`anthropicApi`" pulumi-lang-dotnet="`AnthropicApi`" pulumi-lang-go="`anthropicApi`" pulumi-lang-python="`anthropic_api`" pulumi-lang-yaml="`anthropicApi`" pulumi-lang-java="`anthropicApi`" pulumi-lang-hcl="`anthropic_api`">`anthropicApi`</span>, <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>)
      */
     providerId?: pulumi.Input<string | undefined>;
     /**
@@ -231,7 +231,7 @@ export interface AgentNetworkProviderArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Catalog identifier for the upstream AI provider (e.g. `openai_api`, `anthropic_api`, `custom`)
+     * Catalog identifier for the upstream AI provider (e.g. <span pulumi-lang-nodejs="`openaiApi`" pulumi-lang-dotnet="`OpenaiApi`" pulumi-lang-go="`openaiApi`" pulumi-lang-python="`openai_api`" pulumi-lang-yaml="`openaiApi`" pulumi-lang-java="`openaiApi`" pulumi-lang-hcl="`openai_api`">`openaiApi`</span>, <span pulumi-lang-nodejs="`anthropicApi`" pulumi-lang-dotnet="`AnthropicApi`" pulumi-lang-go="`anthropicApi`" pulumi-lang-python="`anthropic_api`" pulumi-lang-yaml="`anthropicApi`" pulumi-lang-java="`anthropicApi`" pulumi-lang-hcl="`anthropic_api`">`anthropicApi`</span>, <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>)
      */
     providerId: pulumi.Input<string>;
     /**

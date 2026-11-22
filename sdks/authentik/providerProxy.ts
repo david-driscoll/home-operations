@@ -50,7 +50,7 @@ export class ProviderProxy extends pulumi.CustomResource {
     declare public readonly authenticationFlow: pulumi.Output<string | undefined>;
     declare public readonly authorizationFlow: pulumi.Output<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly basicAuthEnabled: pulumi.Output<boolean | undefined>;
     declare public readonly basicAuthPasswordAttribute: pulumi.Output<string | undefined>;
@@ -62,17 +62,17 @@ export class ProviderProxy extends pulumi.CustomResource {
     declare public readonly cookieDomain: pulumi.Output<string | undefined>;
     declare public readonly externalHost: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly interceptHeaderAuth: pulumi.Output<boolean | undefined>;
     declare public readonly internalHost: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly internalHostSslValidation: pulumi.Output<boolean | undefined>;
     declare public readonly invalidationFlow: pulumi.Output<string>;
     /**
-     * Deprecated. Use `jwt_federation_sources` instead.
+     * Deprecated. Use <span pulumi-lang-nodejs="`jwtFederationSources`" pulumi-lang-dotnet="`JwtFederationSources`" pulumi-lang-go="`jwtFederationSources`" pulumi-lang-python="`jwt_federation_sources`" pulumi-lang-yaml="`jwtFederationSources`" pulumi-lang-java="`jwtFederationSources`" pulumi-lang-hcl="`jwt_federation_sources`">`jwtFederationSources`</span> instead.
      */
     declare public readonly jwksSources: pulumi.Output<string[] | undefined>;
     /**
@@ -85,10 +85,10 @@ export class ProviderProxy extends pulumi.CustomResource {
     declare public readonly jwtFederationSources: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `proxy`
-     *   - `forward_single`
-     *   - `forward_domain`
-     *      Defaults to `proxy`.
+     *   - <span pulumi-lang-nodejs="`proxy`" pulumi-lang-dotnet="`Proxy`" pulumi-lang-go="`proxy`" pulumi-lang-python="`proxy`" pulumi-lang-yaml="`proxy`" pulumi-lang-java="`proxy`" pulumi-lang-hcl="`proxy`">`proxy`</span>
+     *   - <span pulumi-lang-nodejs="`forwardSingle`" pulumi-lang-dotnet="`ForwardSingle`" pulumi-lang-go="`forwardSingle`" pulumi-lang-python="`forward_single`" pulumi-lang-yaml="`forwardSingle`" pulumi-lang-java="`forwardSingle`" pulumi-lang-hcl="`forward_single`">`forwardSingle`</span>
+     *   - <span pulumi-lang-nodejs="`forwardDomain`" pulumi-lang-dotnet="`ForwardDomain`" pulumi-lang-go="`forwardDomain`" pulumi-lang-python="`forward_domain`" pulumi-lang-yaml="`forwardDomain`" pulumi-lang-java="`forwardDomain`" pulumi-lang-hcl="`forward_domain`">`forwardDomain`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`proxy`" pulumi-lang-dotnet="`Proxy`" pulumi-lang-go="`proxy`" pulumi-lang-python="`proxy`" pulumi-lang-yaml="`proxy`" pulumi-lang-java="`proxy`" pulumi-lang-hcl="`proxy`">`proxy`</span>.
      */
     declare public readonly mode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -185,7 +185,7 @@ export interface ProviderProxyState {
     authenticationFlow?: pulumi.Input<string | undefined>;
     authorizationFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     basicAuthEnabled?: pulumi.Input<boolean | undefined>;
     basicAuthPasswordAttribute?: pulumi.Input<string | undefined>;
@@ -197,17 +197,17 @@ export interface ProviderProxyState {
     cookieDomain?: pulumi.Input<string | undefined>;
     externalHost?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     interceptHeaderAuth?: pulumi.Input<boolean | undefined>;
     internalHost?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     internalHostSslValidation?: pulumi.Input<boolean | undefined>;
     invalidationFlow?: pulumi.Input<string | undefined>;
     /**
-     * Deprecated. Use `jwt_federation_sources` instead.
+     * Deprecated. Use <span pulumi-lang-nodejs="`jwtFederationSources`" pulumi-lang-dotnet="`JwtFederationSources`" pulumi-lang-go="`jwtFederationSources`" pulumi-lang-python="`jwt_federation_sources`" pulumi-lang-yaml="`jwtFederationSources`" pulumi-lang-java="`jwtFederationSources`" pulumi-lang-hcl="`jwt_federation_sources`">`jwtFederationSources`</span> instead.
      */
     jwksSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -220,10 +220,10 @@ export interface ProviderProxyState {
     jwtFederationSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `proxy`
-     *   - `forward_single`
-     *   - `forward_domain`
-     *      Defaults to `proxy`.
+     *   - <span pulumi-lang-nodejs="`proxy`" pulumi-lang-dotnet="`Proxy`" pulumi-lang-go="`proxy`" pulumi-lang-python="`proxy`" pulumi-lang-yaml="`proxy`" pulumi-lang-java="`proxy`" pulumi-lang-hcl="`proxy`">`proxy`</span>
+     *   - <span pulumi-lang-nodejs="`forwardSingle`" pulumi-lang-dotnet="`ForwardSingle`" pulumi-lang-go="`forwardSingle`" pulumi-lang-python="`forward_single`" pulumi-lang-yaml="`forwardSingle`" pulumi-lang-java="`forwardSingle`" pulumi-lang-hcl="`forward_single`">`forwardSingle`</span>
+     *   - <span pulumi-lang-nodejs="`forwardDomain`" pulumi-lang-dotnet="`ForwardDomain`" pulumi-lang-go="`forwardDomain`" pulumi-lang-python="`forward_domain`" pulumi-lang-yaml="`forwardDomain`" pulumi-lang-java="`forwardDomain`" pulumi-lang-hcl="`forward_domain`">`forwardDomain`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`proxy`" pulumi-lang-dotnet="`Proxy`" pulumi-lang-go="`proxy`" pulumi-lang-python="`proxy`" pulumi-lang-yaml="`proxy`" pulumi-lang-java="`proxy`" pulumi-lang-hcl="`proxy`">`proxy`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -247,7 +247,7 @@ export interface ProviderProxyArgs {
     authenticationFlow?: pulumi.Input<string | undefined>;
     authorizationFlow: pulumi.Input<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     basicAuthEnabled?: pulumi.Input<boolean | undefined>;
     basicAuthPasswordAttribute?: pulumi.Input<string | undefined>;
@@ -255,17 +255,17 @@ export interface ProviderProxyArgs {
     cookieDomain?: pulumi.Input<string | undefined>;
     externalHost: pulumi.Input<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     interceptHeaderAuth?: pulumi.Input<boolean | undefined>;
     internalHost?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     internalHostSslValidation?: pulumi.Input<boolean | undefined>;
     invalidationFlow: pulumi.Input<string>;
     /**
-     * Deprecated. Use `jwt_federation_sources` instead.
+     * Deprecated. Use <span pulumi-lang-nodejs="`jwtFederationSources`" pulumi-lang-dotnet="`JwtFederationSources`" pulumi-lang-go="`jwtFederationSources`" pulumi-lang-python="`jwt_federation_sources`" pulumi-lang-yaml="`jwtFederationSources`" pulumi-lang-java="`jwtFederationSources`" pulumi-lang-hcl="`jwt_federation_sources`">`jwtFederationSources`</span> instead.
      */
     jwksSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -278,10 +278,10 @@ export interface ProviderProxyArgs {
     jwtFederationSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `proxy`
-     *   - `forward_single`
-     *   - `forward_domain`
-     *      Defaults to `proxy`.
+     *   - <span pulumi-lang-nodejs="`proxy`" pulumi-lang-dotnet="`Proxy`" pulumi-lang-go="`proxy`" pulumi-lang-python="`proxy`" pulumi-lang-yaml="`proxy`" pulumi-lang-java="`proxy`" pulumi-lang-hcl="`proxy`">`proxy`</span>
+     *   - <span pulumi-lang-nodejs="`forwardSingle`" pulumi-lang-dotnet="`ForwardSingle`" pulumi-lang-go="`forwardSingle`" pulumi-lang-python="`forward_single`" pulumi-lang-yaml="`forwardSingle`" pulumi-lang-java="`forwardSingle`" pulumi-lang-hcl="`forward_single`">`forwardSingle`</span>
+     *   - <span pulumi-lang-nodejs="`forwardDomain`" pulumi-lang-dotnet="`ForwardDomain`" pulumi-lang-go="`forwardDomain`" pulumi-lang-python="`forward_domain`" pulumi-lang-yaml="`forwardDomain`" pulumi-lang-java="`forwardDomain`" pulumi-lang-hcl="`forward_domain`">`forwardDomain`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`proxy`" pulumi-lang-dotnet="`Proxy`" pulumi-lang-go="`proxy`" pulumi-lang-python="`proxy`" pulumi-lang-yaml="`proxy`" pulumi-lang-java="`proxy`" pulumi-lang-hcl="`proxy`">`proxy`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;

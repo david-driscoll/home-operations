@@ -10,7 +10,7 @@ declare var exports: any;
 const __config = new pulumi.Config("technitium");
 
 /**
- * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either api_token or username/password must be configured.
+ * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either<span pulumi-lang-nodejs=" apiToken " pulumi-lang-dotnet=" ApiToken " pulumi-lang-go=" apiToken " pulumi-lang-python=" api_token " pulumi-lang-yaml=" apiToken " pulumi-lang-java=" apiToken " pulumi-lang-hcl=" api_token "> apiToken </span>or username/password must be configured.
  */
 export declare const apiToken: string | undefined;
 Object.defineProperty(exports, "apiToken", {
@@ -76,7 +76,7 @@ Object.defineProperty(exports, "serverUrl", {
 });
 
 /**
- * Skip TLS certificate verification. Generates STIG warning when stig_compliance is enabled (SC-8).
+ * Skip TLS certificate verification. Generates STIG warning when<span pulumi-lang-nodejs=" stigCompliance " pulumi-lang-dotnet=" StigCompliance " pulumi-lang-go=" stigCompliance " pulumi-lang-python=" stig_compliance " pulumi-lang-yaml=" stigCompliance " pulumi-lang-java=" stigCompliance " pulumi-lang-hcl=" stig_compliance "> stigCompliance </span>is enabled (SC-8).
  */
 export declare const skipTlsVerify: boolean | undefined;
 Object.defineProperty(exports, "skipTlsVerify", {
@@ -120,7 +120,7 @@ Object.defineProperty(exports, "tlsServerName", {
 });
 
 /**
- * Technitium username for session-token authentication, used when api_token is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
+ * Technitium username for session-token authentication, used when<span pulumi-lang-nodejs=" apiToken " pulumi-lang-dotnet=" ApiToken " pulumi-lang-go=" apiToken " pulumi-lang-python=" api_token " pulumi-lang-yaml=" apiToken " pulumi-lang-java=" apiToken " pulumi-lang-hcl=" api_token "> apiToken </span>is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
  */
 export declare const username: string | undefined;
 Object.defineProperty(exports, "username", {

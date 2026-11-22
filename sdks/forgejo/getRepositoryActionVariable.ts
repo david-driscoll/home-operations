@@ -25,10 +25,6 @@ export interface GetRepositoryActionVariableArgs {
  */
 export interface GetRepositoryActionVariableResult {
     readonly data: string;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly name: string;
     readonly repositoryId: number;
 }

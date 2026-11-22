@@ -46,7 +46,7 @@ export class FirewallRule extends pulumi.CustomResource {
     }
 
     /**
-     * The action of the firewall rule. Must be one of `drop`, `accept`, or `reject`.
+     * The action of the firewall rule. Must be one of <span pulumi-lang-nodejs="`drop`" pulumi-lang-dotnet="`Drop`" pulumi-lang-go="`drop`" pulumi-lang-python="`drop`" pulumi-lang-yaml="`drop`" pulumi-lang-java="`drop`" pulumi-lang-hcl="`drop`">`drop`</span>, <span pulumi-lang-nodejs="`accept`" pulumi-lang-dotnet="`Accept`" pulumi-lang-go="`accept`" pulumi-lang-python="`accept`" pulumi-lang-yaml="`accept`" pulumi-lang-java="`accept`" pulumi-lang-hcl="`accept`">`accept`</span>, or <span pulumi-lang-nodejs="`reject`" pulumi-lang-dotnet="`Reject`" pulumi-lang-go="`reject`" pulumi-lang-python="`reject`" pulumi-lang-yaml="`reject`" pulumi-lang-java="`reject`" pulumi-lang-hcl="`reject`">`reject`</span>.
      */
     declare public readonly action: pulumi.Output<string>;
     /**
@@ -54,7 +54,7 @@ export class FirewallRule extends pulumi.CustomResource {
      */
     declare public readonly destination: pulumi.Output<outputs.FirewallRuleDestination>;
     /**
-     * Specifies whether the rule should be enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
+     * Specifies whether the rule should be enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -94,7 +94,7 @@ export class FirewallRule extends pulumi.CustomResource {
      */
     declare public readonly ruleset: pulumi.Output<string>;
     /**
-     * Whether the rule is managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether the rule is managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     declare public readonly settingPreference: pulumi.Output<string>;
     /**
@@ -180,7 +180,7 @@ export class FirewallRule extends pulumi.CustomResource {
  */
 export interface FirewallRuleState {
     /**
-     * The action of the firewall rule. Must be one of `drop`, `accept`, or `reject`.
+     * The action of the firewall rule. Must be one of <span pulumi-lang-nodejs="`drop`" pulumi-lang-dotnet="`Drop`" pulumi-lang-go="`drop`" pulumi-lang-python="`drop`" pulumi-lang-yaml="`drop`" pulumi-lang-java="`drop`" pulumi-lang-hcl="`drop`">`drop`</span>, <span pulumi-lang-nodejs="`accept`" pulumi-lang-dotnet="`Accept`" pulumi-lang-go="`accept`" pulumi-lang-python="`accept`" pulumi-lang-yaml="`accept`" pulumi-lang-java="`accept`" pulumi-lang-hcl="`accept`">`accept`</span>, or <span pulumi-lang-nodejs="`reject`" pulumi-lang-dotnet="`Reject`" pulumi-lang-go="`reject`" pulumi-lang-python="`reject`" pulumi-lang-yaml="`reject`" pulumi-lang-java="`reject`" pulumi-lang-hcl="`reject`">`reject`</span>.
      */
     action?: pulumi.Input<string | undefined>;
     /**
@@ -188,7 +188,7 @@ export interface FirewallRuleState {
      */
     destination?: pulumi.Input<inputs.FirewallRuleDestination | undefined>;
     /**
-     * Specifies whether the rule should be enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
+     * Specifies whether the rule should be enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -228,7 +228,7 @@ export interface FirewallRuleState {
      */
     ruleset?: pulumi.Input<string | undefined>;
     /**
-     * Whether the rule is managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether the rule is managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -251,7 +251,7 @@ export interface FirewallRuleState {
  */
 export interface FirewallRuleArgs {
     /**
-     * The action of the firewall rule. Must be one of `drop`, `accept`, or `reject`.
+     * The action of the firewall rule. Must be one of <span pulumi-lang-nodejs="`drop`" pulumi-lang-dotnet="`Drop`" pulumi-lang-go="`drop`" pulumi-lang-python="`drop`" pulumi-lang-yaml="`drop`" pulumi-lang-java="`drop`" pulumi-lang-hcl="`drop`">`drop`</span>, <span pulumi-lang-nodejs="`accept`" pulumi-lang-dotnet="`Accept`" pulumi-lang-go="`accept`" pulumi-lang-python="`accept`" pulumi-lang-yaml="`accept`" pulumi-lang-java="`accept`" pulumi-lang-hcl="`accept`">`accept`</span>, or <span pulumi-lang-nodejs="`reject`" pulumi-lang-dotnet="`Reject`" pulumi-lang-go="`reject`" pulumi-lang-python="`reject`" pulumi-lang-yaml="`reject`" pulumi-lang-java="`reject`" pulumi-lang-hcl="`reject`">`reject`</span>.
      */
     action: pulumi.Input<string>;
     /**
@@ -259,7 +259,7 @@ export interface FirewallRuleArgs {
      */
     destination?: pulumi.Input<inputs.FirewallRuleDestination | undefined>;
     /**
-     * Specifies whether the rule should be enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
+     * Specifies whether the rule should be enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -299,7 +299,7 @@ export interface FirewallRuleArgs {
      */
     ruleset: pulumi.Input<string>;
     /**
-     * Whether the rule is managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether the rule is managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**

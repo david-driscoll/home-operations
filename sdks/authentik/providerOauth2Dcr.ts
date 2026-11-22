@@ -49,12 +49,12 @@ export class ProviderOauth2Dcr extends pulumi.CustomResource {
     declare public readonly accessTokenValidity: pulumi.Output<string>;
     /**
      * If empty, all grant types are allowed. Allowed values:
-     *   - `authorization_code`
-     *   - `implicit`
-     *   - `hybrid`
-     *   - `refresh_token`
-     *   - `client_credentials`
-     *   - `password`
+     *   - <span pulumi-lang-nodejs="`authorizationCode`" pulumi-lang-dotnet="`AuthorizationCode`" pulumi-lang-go="`authorizationCode`" pulumi-lang-python="`authorization_code`" pulumi-lang-yaml="`authorizationCode`" pulumi-lang-java="`authorizationCode`" pulumi-lang-hcl="`authorization_code`">`authorizationCode`</span>
+     *   - <span pulumi-lang-nodejs="`implicit`" pulumi-lang-dotnet="`Implicit`" pulumi-lang-go="`implicit`" pulumi-lang-python="`implicit`" pulumi-lang-yaml="`implicit`" pulumi-lang-java="`implicit`" pulumi-lang-hcl="`implicit`">`implicit`</span>
+     *   - <span pulumi-lang-nodejs="`hybrid`" pulumi-lang-dotnet="`Hybrid`" pulumi-lang-go="`hybrid`" pulumi-lang-python="`hybrid`" pulumi-lang-yaml="`hybrid`" pulumi-lang-java="`hybrid`" pulumi-lang-hcl="`hybrid`">`hybrid`</span>
+     *   - <span pulumi-lang-nodejs="`refreshToken`" pulumi-lang-dotnet="`RefreshToken`" pulumi-lang-go="`refreshToken`" pulumi-lang-python="`refresh_token`" pulumi-lang-yaml="`refreshToken`" pulumi-lang-java="`refreshToken`" pulumi-lang-hcl="`refresh_token`">`refreshToken`</span>
+     *   - <span pulumi-lang-nodejs="`clientCredentials`" pulumi-lang-dotnet="`ClientCredentials`" pulumi-lang-go="`clientCredentials`" pulumi-lang-python="`client_credentials`" pulumi-lang-yaml="`clientCredentials`" pulumi-lang-java="`clientCredentials`" pulumi-lang-hcl="`client_credentials`">`clientCredentials`</span>
+     *   - <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>
      *   - `urn:ietf:params:oauth:grant-type:device_code`
      *   - `urn:ietf:params:oauth:grant-type:token-exchange`
      */
@@ -75,8 +75,8 @@ export class ProviderOauth2Dcr extends pulumi.CustomResource {
     declare public readonly overridePropertyMappings: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     declare public readonly policyEngineMode: pulumi.Output<string>;
@@ -140,12 +140,12 @@ export interface ProviderOauth2DcrState {
     accessTokenValidity?: pulumi.Input<string | undefined>;
     /**
      * If empty, all grant types are allowed. Allowed values:
-     *   - `authorization_code`
-     *   - `implicit`
-     *   - `hybrid`
-     *   - `refresh_token`
-     *   - `client_credentials`
-     *   - `password`
+     *   - <span pulumi-lang-nodejs="`authorizationCode`" pulumi-lang-dotnet="`AuthorizationCode`" pulumi-lang-go="`authorizationCode`" pulumi-lang-python="`authorization_code`" pulumi-lang-yaml="`authorizationCode`" pulumi-lang-java="`authorizationCode`" pulumi-lang-hcl="`authorization_code`">`authorizationCode`</span>
+     *   - <span pulumi-lang-nodejs="`implicit`" pulumi-lang-dotnet="`Implicit`" pulumi-lang-go="`implicit`" pulumi-lang-python="`implicit`" pulumi-lang-yaml="`implicit`" pulumi-lang-java="`implicit`" pulumi-lang-hcl="`implicit`">`implicit`</span>
+     *   - <span pulumi-lang-nodejs="`hybrid`" pulumi-lang-dotnet="`Hybrid`" pulumi-lang-go="`hybrid`" pulumi-lang-python="`hybrid`" pulumi-lang-yaml="`hybrid`" pulumi-lang-java="`hybrid`" pulumi-lang-hcl="`hybrid`">`hybrid`</span>
+     *   - <span pulumi-lang-nodejs="`refreshToken`" pulumi-lang-dotnet="`RefreshToken`" pulumi-lang-go="`refreshToken`" pulumi-lang-python="`refresh_token`" pulumi-lang-yaml="`refreshToken`" pulumi-lang-java="`refreshToken`" pulumi-lang-hcl="`refresh_token`">`refreshToken`</span>
+     *   - <span pulumi-lang-nodejs="`clientCredentials`" pulumi-lang-dotnet="`ClientCredentials`" pulumi-lang-go="`clientCredentials`" pulumi-lang-python="`client_credentials`" pulumi-lang-yaml="`clientCredentials`" pulumi-lang-java="`clientCredentials`" pulumi-lang-hcl="`client_credentials`">`clientCredentials`</span>
+     *   - <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>
      *   - `urn:ietf:params:oauth:grant-type:device_code`
      *   - `urn:ietf:params:oauth:grant-type:token-exchange`
      */
@@ -166,8 +166,8 @@ export interface ProviderOauth2DcrState {
     overridePropertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
@@ -188,12 +188,12 @@ export interface ProviderOauth2DcrArgs {
     accessTokenValidity?: pulumi.Input<string | undefined>;
     /**
      * If empty, all grant types are allowed. Allowed values:
-     *   - `authorization_code`
-     *   - `implicit`
-     *   - `hybrid`
-     *   - `refresh_token`
-     *   - `client_credentials`
-     *   - `password`
+     *   - <span pulumi-lang-nodejs="`authorizationCode`" pulumi-lang-dotnet="`AuthorizationCode`" pulumi-lang-go="`authorizationCode`" pulumi-lang-python="`authorization_code`" pulumi-lang-yaml="`authorizationCode`" pulumi-lang-java="`authorizationCode`" pulumi-lang-hcl="`authorization_code`">`authorizationCode`</span>
+     *   - <span pulumi-lang-nodejs="`implicit`" pulumi-lang-dotnet="`Implicit`" pulumi-lang-go="`implicit`" pulumi-lang-python="`implicit`" pulumi-lang-yaml="`implicit`" pulumi-lang-java="`implicit`" pulumi-lang-hcl="`implicit`">`implicit`</span>
+     *   - <span pulumi-lang-nodejs="`hybrid`" pulumi-lang-dotnet="`Hybrid`" pulumi-lang-go="`hybrid`" pulumi-lang-python="`hybrid`" pulumi-lang-yaml="`hybrid`" pulumi-lang-java="`hybrid`" pulumi-lang-hcl="`hybrid`">`hybrid`</span>
+     *   - <span pulumi-lang-nodejs="`refreshToken`" pulumi-lang-dotnet="`RefreshToken`" pulumi-lang-go="`refreshToken`" pulumi-lang-python="`refresh_token`" pulumi-lang-yaml="`refreshToken`" pulumi-lang-java="`refreshToken`" pulumi-lang-hcl="`refresh_token`">`refreshToken`</span>
+     *   - <span pulumi-lang-nodejs="`clientCredentials`" pulumi-lang-dotnet="`ClientCredentials`" pulumi-lang-go="`clientCredentials`" pulumi-lang-python="`client_credentials`" pulumi-lang-yaml="`clientCredentials`" pulumi-lang-java="`clientCredentials`" pulumi-lang-hcl="`client_credentials`">`clientCredentials`</span>
+     *   - <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>
      *   - `urn:ietf:params:oauth:grant-type:device_code`
      *   - `urn:ietf:params:oauth:grant-type:token-exchange`
      */
@@ -214,8 +214,8 @@ export interface ProviderOauth2DcrArgs {
     overridePropertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;

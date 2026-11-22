@@ -44,27 +44,27 @@ export class PortProfile extends pulumi.CustomResource {
     }
 
     /**
-     * Whether BPDU guard is enabled. Default: `false`.
+     * Whether BPDU guard is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly bpduGuardEnabled: pulumi.Output<boolean>;
     /**
-     * Whether Energy Efficient Ethernet is enabled. Default: `false`.
+     * Whether Energy Efficient Ethernet is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly eeeEnabled: pulumi.Output<boolean>;
     /**
-     * Whether flow control is enabled. Default: `true`.
+     * Whether flow control is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly flowControlEnabled: pulumi.Output<boolean>;
     /**
-     * Link debounce. Unset is the UI's "Auto", `0` is "Off", and 100–5000 (in steps of 100) is "Custom" in milliseconds.
+     * Link debounce. Unset is the UI's "Auto", <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> is "Off", and 100–5000 (in steps of 100) is "Custom" in milliseconds.
      */
     declare public readonly linkDebounceMs: pulumi.Output<number | undefined>;
     /**
-     * Whether LLDP-MED is enabled. Default: `true`.
+     * Whether LLDP-MED is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly lldpmedEnabled: pulumi.Output<boolean>;
     /**
-     * Whether non-STP loop protection is enabled (`port_keepalive_enabled` in the API). Default: `false`.
+     * Whether non-STP loop protection is enabled (<span pulumi-lang-nodejs="`portKeepaliveEnabled`" pulumi-lang-dotnet="`PortKeepaliveEnabled`" pulumi-lang-go="`portKeepaliveEnabled`" pulumi-lang-python="`port_keepalive_enabled`" pulumi-lang-yaml="`portKeepaliveEnabled`" pulumi-lang-java="`portKeepaliveEnabled`" pulumi-lang-hcl="`port_keepalive_enabled`">`portKeepaliveEnabled`</span> in the API). Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly loopProtectionEnabled: pulumi.Output<boolean>;
     /**
@@ -76,15 +76,15 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly nativeNetworkId: pulumi.Output<string | undefined>;
     /**
-     * PoE mode. `auto` is the UI's "Auto PoE" checkbox ticked, `off` unticked. Default: `auto`.
+     * PoE mode. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> is the UI's "Auto PoE" checkbox ticked, <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span> unticked. Default: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>.
      */
     declare public readonly poeMode: pulumi.Output<string>;
     /**
-     * Whether port isolation is enabled. Default: `false`.
+     * Whether port isolation is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly portIsolationEnabled: pulumi.Output<boolean>;
     /**
-     * Whether Precision Time Protocol is enabled. Default: `true`.
+     * Whether Precision Time Protocol is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly ptpEnabled: pulumi.Output<boolean>;
     /**
@@ -100,7 +100,7 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly stormControlMulticast: pulumi.Output<number | undefined>;
     /**
-     * Storm-control threshold unit: `percentage` or `packets_per_second`. Default: `percentage`. With no thresholds, storm control is disabled.
+     * Storm-control threshold unit: <span pulumi-lang-nodejs="`percentage`" pulumi-lang-dotnet="`Percentage`" pulumi-lang-go="`percentage`" pulumi-lang-python="`percentage`" pulumi-lang-yaml="`percentage`" pulumi-lang-java="`percentage`" pulumi-lang-hcl="`percentage`">`percentage`</span> or <span pulumi-lang-nodejs="`packetsPerSecond`" pulumi-lang-dotnet="`PacketsPerSecond`" pulumi-lang-go="`packetsPerSecond`" pulumi-lang-python="`packets_per_second`" pulumi-lang-yaml="`packetsPerSecond`" pulumi-lang-java="`packetsPerSecond`" pulumi-lang-hcl="`packets_per_second`">`packetsPerSecond`</span>. Default: <span pulumi-lang-nodejs="`percentage`" pulumi-lang-dotnet="`Percentage`" pulumi-lang-go="`percentage`" pulumi-lang-python="`percentage`" pulumi-lang-yaml="`percentage`" pulumi-lang-java="`percentage`" pulumi-lang-hcl="`percentage`">`percentage`</span>. With no thresholds, storm control is disabled.
      */
     declare public readonly stormControlType: pulumi.Output<string>;
     /**
@@ -108,15 +108,15 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly stormControlUnknownUnicast: pulumi.Output<number | undefined>;
     /**
-     * Whether spanning tree (STP) is enabled. Default: `true`.
+     * Whether spanning tree (STP) is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly stpEnabled: pulumi.Output<boolean>;
     /**
-     * IDs of the networks tagged on the port, as selected in the UI. Required with `tagged_vlan_mode = "custom"`, not allowed otherwise. The controller stores the inverse (every other LAN network is excluded). New networks are excluded automatically, matching an unchanged allow-list once the controller finishes processing.
+     * IDs of the networks tagged on the port, as selected in the UI. Required with <span pulumi-lang-nodejs="`taggedVlanMode " pulumi-lang-dotnet="`TaggedVlanMode " pulumi-lang-go="`taggedVlanMode " pulumi-lang-python="`tagged_vlan_mode " pulumi-lang-yaml="`taggedVlanMode " pulumi-lang-java="`taggedVlanMode " pulumi-lang-hcl="`tagged_vlan_mode ">`taggedVlanMode </span>= "custom"`, not allowed otherwise. The controller stores the inverse (every other LAN network is excluded). New networks are excluded automatically, matching an unchanged allow-list once the controller finishes processing.
      */
     declare public readonly taggedNetworkIds: pulumi.Output<string[] | undefined>;
     /**
-     * Tagged VLAN management. `allow_all` (UI "Allow All") tags every network, `block_all` tags none, and `custom` tags the networks given by `tagged_network_ids`. Default: `allow_all`.
+     * Tagged VLAN management. <span pulumi-lang-nodejs="`allowAll`" pulumi-lang-dotnet="`AllowAll`" pulumi-lang-go="`allowAll`" pulumi-lang-python="`allow_all`" pulumi-lang-yaml="`allowAll`" pulumi-lang-java="`allowAll`" pulumi-lang-hcl="`allow_all`">`allowAll`</span> (UI "Allow All") tags every network, <span pulumi-lang-nodejs="`blockAll`" pulumi-lang-dotnet="`BlockAll`" pulumi-lang-go="`blockAll`" pulumi-lang-python="`block_all`" pulumi-lang-yaml="`blockAll`" pulumi-lang-java="`blockAll`" pulumi-lang-hcl="`block_all`">`blockAll`</span> tags none, and <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> tags the networks given by <span pulumi-lang-nodejs="`taggedNetworkIds`" pulumi-lang-dotnet="`TaggedNetworkIds`" pulumi-lang-go="`taggedNetworkIds`" pulumi-lang-python="`tagged_network_ids`" pulumi-lang-yaml="`taggedNetworkIds`" pulumi-lang-java="`taggedNetworkIds`" pulumi-lang-hcl="`tagged_network_ids`">`taggedNetworkIds`</span>. Default: <span pulumi-lang-nodejs="`allowAll`" pulumi-lang-dotnet="`AllowAll`" pulumi-lang-go="`allowAll`" pulumi-lang-python="`allow_all`" pulumi-lang-yaml="`allowAll`" pulumi-lang-java="`allowAll`" pulumi-lang-hcl="`allow_all`">`allowAll`</span>.
      */
     declare public readonly taggedVlanMode: pulumi.Output<string>;
 
@@ -184,27 +184,27 @@ export class PortProfile extends pulumi.CustomResource {
  */
 export interface PortProfileState {
     /**
-     * Whether BPDU guard is enabled. Default: `false`.
+     * Whether BPDU guard is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     bpduGuardEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether Energy Efficient Ethernet is enabled. Default: `false`.
+     * Whether Energy Efficient Ethernet is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     eeeEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether flow control is enabled. Default: `true`.
+     * Whether flow control is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     flowControlEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Link debounce. Unset is the UI's "Auto", `0` is "Off", and 100–5000 (in steps of 100) is "Custom" in milliseconds.
+     * Link debounce. Unset is the UI's "Auto", <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> is "Off", and 100–5000 (in steps of 100) is "Custom" in milliseconds.
      */
     linkDebounceMs?: pulumi.Input<number | undefined>;
     /**
-     * Whether LLDP-MED is enabled. Default: `true`.
+     * Whether LLDP-MED is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     lldpmedEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether non-STP loop protection is enabled (`port_keepalive_enabled` in the API). Default: `false`.
+     * Whether non-STP loop protection is enabled (<span pulumi-lang-nodejs="`portKeepaliveEnabled`" pulumi-lang-dotnet="`PortKeepaliveEnabled`" pulumi-lang-go="`portKeepaliveEnabled`" pulumi-lang-python="`port_keepalive_enabled`" pulumi-lang-yaml="`portKeepaliveEnabled`" pulumi-lang-java="`portKeepaliveEnabled`" pulumi-lang-hcl="`port_keepalive_enabled`">`portKeepaliveEnabled`</span> in the API). Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     loopProtectionEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -216,15 +216,15 @@ export interface PortProfileState {
      */
     nativeNetworkId?: pulumi.Input<string | undefined>;
     /**
-     * PoE mode. `auto` is the UI's "Auto PoE" checkbox ticked, `off` unticked. Default: `auto`.
+     * PoE mode. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> is the UI's "Auto PoE" checkbox ticked, <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span> unticked. Default: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>.
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Whether port isolation is enabled. Default: `false`.
+     * Whether port isolation is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     portIsolationEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether Precision Time Protocol is enabled. Default: `true`.
+     * Whether Precision Time Protocol is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     ptpEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -240,7 +240,7 @@ export interface PortProfileState {
      */
     stormControlMulticast?: pulumi.Input<number | undefined>;
     /**
-     * Storm-control threshold unit: `percentage` or `packets_per_second`. Default: `percentage`. With no thresholds, storm control is disabled.
+     * Storm-control threshold unit: <span pulumi-lang-nodejs="`percentage`" pulumi-lang-dotnet="`Percentage`" pulumi-lang-go="`percentage`" pulumi-lang-python="`percentage`" pulumi-lang-yaml="`percentage`" pulumi-lang-java="`percentage`" pulumi-lang-hcl="`percentage`">`percentage`</span> or <span pulumi-lang-nodejs="`packetsPerSecond`" pulumi-lang-dotnet="`PacketsPerSecond`" pulumi-lang-go="`packetsPerSecond`" pulumi-lang-python="`packets_per_second`" pulumi-lang-yaml="`packetsPerSecond`" pulumi-lang-java="`packetsPerSecond`" pulumi-lang-hcl="`packets_per_second`">`packetsPerSecond`</span>. Default: <span pulumi-lang-nodejs="`percentage`" pulumi-lang-dotnet="`Percentage`" pulumi-lang-go="`percentage`" pulumi-lang-python="`percentage`" pulumi-lang-yaml="`percentage`" pulumi-lang-java="`percentage`" pulumi-lang-hcl="`percentage`">`percentage`</span>. With no thresholds, storm control is disabled.
      */
     stormControlType?: pulumi.Input<string | undefined>;
     /**
@@ -248,15 +248,15 @@ export interface PortProfileState {
      */
     stormControlUnknownUnicast?: pulumi.Input<number | undefined>;
     /**
-     * Whether spanning tree (STP) is enabled. Default: `true`.
+     * Whether spanning tree (STP) is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     stpEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * IDs of the networks tagged on the port, as selected in the UI. Required with `tagged_vlan_mode = "custom"`, not allowed otherwise. The controller stores the inverse (every other LAN network is excluded). New networks are excluded automatically, matching an unchanged allow-list once the controller finishes processing.
+     * IDs of the networks tagged on the port, as selected in the UI. Required with <span pulumi-lang-nodejs="`taggedVlanMode " pulumi-lang-dotnet="`TaggedVlanMode " pulumi-lang-go="`taggedVlanMode " pulumi-lang-python="`tagged_vlan_mode " pulumi-lang-yaml="`taggedVlanMode " pulumi-lang-java="`taggedVlanMode " pulumi-lang-hcl="`tagged_vlan_mode ">`taggedVlanMode </span>= "custom"`, not allowed otherwise. The controller stores the inverse (every other LAN network is excluded). New networks are excluded automatically, matching an unchanged allow-list once the controller finishes processing.
      */
     taggedNetworkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Tagged VLAN management. `allow_all` (UI "Allow All") tags every network, `block_all` tags none, and `custom` tags the networks given by `tagged_network_ids`. Default: `allow_all`.
+     * Tagged VLAN management. <span pulumi-lang-nodejs="`allowAll`" pulumi-lang-dotnet="`AllowAll`" pulumi-lang-go="`allowAll`" pulumi-lang-python="`allow_all`" pulumi-lang-yaml="`allowAll`" pulumi-lang-java="`allowAll`" pulumi-lang-hcl="`allow_all`">`allowAll`</span> (UI "Allow All") tags every network, <span pulumi-lang-nodejs="`blockAll`" pulumi-lang-dotnet="`BlockAll`" pulumi-lang-go="`blockAll`" pulumi-lang-python="`block_all`" pulumi-lang-yaml="`blockAll`" pulumi-lang-java="`blockAll`" pulumi-lang-hcl="`block_all`">`blockAll`</span> tags none, and <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> tags the networks given by <span pulumi-lang-nodejs="`taggedNetworkIds`" pulumi-lang-dotnet="`TaggedNetworkIds`" pulumi-lang-go="`taggedNetworkIds`" pulumi-lang-python="`tagged_network_ids`" pulumi-lang-yaml="`taggedNetworkIds`" pulumi-lang-java="`taggedNetworkIds`" pulumi-lang-hcl="`tagged_network_ids`">`taggedNetworkIds`</span>. Default: <span pulumi-lang-nodejs="`allowAll`" pulumi-lang-dotnet="`AllowAll`" pulumi-lang-go="`allowAll`" pulumi-lang-python="`allow_all`" pulumi-lang-yaml="`allowAll`" pulumi-lang-java="`allowAll`" pulumi-lang-hcl="`allow_all`">`allowAll`</span>.
      */
     taggedVlanMode?: pulumi.Input<string | undefined>;
 }
@@ -266,27 +266,27 @@ export interface PortProfileState {
  */
 export interface PortProfileArgs {
     /**
-     * Whether BPDU guard is enabled. Default: `false`.
+     * Whether BPDU guard is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     bpduGuardEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether Energy Efficient Ethernet is enabled. Default: `false`.
+     * Whether Energy Efficient Ethernet is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     eeeEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether flow control is enabled. Default: `true`.
+     * Whether flow control is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     flowControlEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Link debounce. Unset is the UI's "Auto", `0` is "Off", and 100–5000 (in steps of 100) is "Custom" in milliseconds.
+     * Link debounce. Unset is the UI's "Auto", <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> is "Off", and 100–5000 (in steps of 100) is "Custom" in milliseconds.
      */
     linkDebounceMs?: pulumi.Input<number | undefined>;
     /**
-     * Whether LLDP-MED is enabled. Default: `true`.
+     * Whether LLDP-MED is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     lldpmedEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether non-STP loop protection is enabled (`port_keepalive_enabled` in the API). Default: `false`.
+     * Whether non-STP loop protection is enabled (<span pulumi-lang-nodejs="`portKeepaliveEnabled`" pulumi-lang-dotnet="`PortKeepaliveEnabled`" pulumi-lang-go="`portKeepaliveEnabled`" pulumi-lang-python="`port_keepalive_enabled`" pulumi-lang-yaml="`portKeepaliveEnabled`" pulumi-lang-java="`portKeepaliveEnabled`" pulumi-lang-hcl="`port_keepalive_enabled`">`portKeepaliveEnabled`</span> in the API). Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     loopProtectionEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -298,15 +298,15 @@ export interface PortProfileArgs {
      */
     nativeNetworkId?: pulumi.Input<string | undefined>;
     /**
-     * PoE mode. `auto` is the UI's "Auto PoE" checkbox ticked, `off` unticked. Default: `auto`.
+     * PoE mode. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> is the UI's "Auto PoE" checkbox ticked, <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span> unticked. Default: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>.
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Whether port isolation is enabled. Default: `false`.
+     * Whether port isolation is enabled. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     portIsolationEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether Precision Time Protocol is enabled. Default: `true`.
+     * Whether Precision Time Protocol is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     ptpEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -322,7 +322,7 @@ export interface PortProfileArgs {
      */
     stormControlMulticast?: pulumi.Input<number | undefined>;
     /**
-     * Storm-control threshold unit: `percentage` or `packets_per_second`. Default: `percentage`. With no thresholds, storm control is disabled.
+     * Storm-control threshold unit: <span pulumi-lang-nodejs="`percentage`" pulumi-lang-dotnet="`Percentage`" pulumi-lang-go="`percentage`" pulumi-lang-python="`percentage`" pulumi-lang-yaml="`percentage`" pulumi-lang-java="`percentage`" pulumi-lang-hcl="`percentage`">`percentage`</span> or <span pulumi-lang-nodejs="`packetsPerSecond`" pulumi-lang-dotnet="`PacketsPerSecond`" pulumi-lang-go="`packetsPerSecond`" pulumi-lang-python="`packets_per_second`" pulumi-lang-yaml="`packetsPerSecond`" pulumi-lang-java="`packetsPerSecond`" pulumi-lang-hcl="`packets_per_second`">`packetsPerSecond`</span>. Default: <span pulumi-lang-nodejs="`percentage`" pulumi-lang-dotnet="`Percentage`" pulumi-lang-go="`percentage`" pulumi-lang-python="`percentage`" pulumi-lang-yaml="`percentage`" pulumi-lang-java="`percentage`" pulumi-lang-hcl="`percentage`">`percentage`</span>. With no thresholds, storm control is disabled.
      */
     stormControlType?: pulumi.Input<string | undefined>;
     /**
@@ -330,15 +330,15 @@ export interface PortProfileArgs {
      */
     stormControlUnknownUnicast?: pulumi.Input<number | undefined>;
     /**
-     * Whether spanning tree (STP) is enabled. Default: `true`.
+     * Whether spanning tree (STP) is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     stpEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * IDs of the networks tagged on the port, as selected in the UI. Required with `tagged_vlan_mode = "custom"`, not allowed otherwise. The controller stores the inverse (every other LAN network is excluded). New networks are excluded automatically, matching an unchanged allow-list once the controller finishes processing.
+     * IDs of the networks tagged on the port, as selected in the UI. Required with <span pulumi-lang-nodejs="`taggedVlanMode " pulumi-lang-dotnet="`TaggedVlanMode " pulumi-lang-go="`taggedVlanMode " pulumi-lang-python="`tagged_vlan_mode " pulumi-lang-yaml="`taggedVlanMode " pulumi-lang-java="`taggedVlanMode " pulumi-lang-hcl="`tagged_vlan_mode ">`taggedVlanMode </span>= "custom"`, not allowed otherwise. The controller stores the inverse (every other LAN network is excluded). New networks are excluded automatically, matching an unchanged allow-list once the controller finishes processing.
      */
     taggedNetworkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Tagged VLAN management. `allow_all` (UI "Allow All") tags every network, `block_all` tags none, and `custom` tags the networks given by `tagged_network_ids`. Default: `allow_all`.
+     * Tagged VLAN management. <span pulumi-lang-nodejs="`allowAll`" pulumi-lang-dotnet="`AllowAll`" pulumi-lang-go="`allowAll`" pulumi-lang-python="`allow_all`" pulumi-lang-yaml="`allowAll`" pulumi-lang-java="`allowAll`" pulumi-lang-hcl="`allow_all`">`allowAll`</span> (UI "Allow All") tags every network, <span pulumi-lang-nodejs="`blockAll`" pulumi-lang-dotnet="`BlockAll`" pulumi-lang-go="`blockAll`" pulumi-lang-python="`block_all`" pulumi-lang-yaml="`blockAll`" pulumi-lang-java="`blockAll`" pulumi-lang-hcl="`block_all`">`blockAll`</span> tags none, and <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> tags the networks given by <span pulumi-lang-nodejs="`taggedNetworkIds`" pulumi-lang-dotnet="`TaggedNetworkIds`" pulumi-lang-go="`taggedNetworkIds`" pulumi-lang-python="`tagged_network_ids`" pulumi-lang-yaml="`taggedNetworkIds`" pulumi-lang-java="`taggedNetworkIds`" pulumi-lang-hcl="`tagged_network_ids`">`taggedNetworkIds`</span>. Default: <span pulumi-lang-nodejs="`allowAll`" pulumi-lang-dotnet="`AllowAll`" pulumi-lang-go="`allowAll`" pulumi-lang-python="`allow_all`" pulumi-lang-yaml="`allowAll`" pulumi-lang-java="`allowAll`" pulumi-lang-hcl="`allow_all`">`allowAll`</span>.
      */
     taggedVlanMode?: pulumi.Input<string | undefined>;
 }

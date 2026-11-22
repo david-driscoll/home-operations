@@ -17,10 +17,6 @@ export function getNotificationEndpoints(opts?: pulumi.InvokeOptions): Promise<G
  */
 export interface GetNotificationEndpointsResult {
     readonly endpoints: outputs.GetNotificationEndpointsEndpoint[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
 }
 export function getNotificationEndpointsOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetNotificationEndpointsResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});

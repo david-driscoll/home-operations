@@ -92,7 +92,7 @@ export class PruneJob extends pulumi.CustomResource {
      */
     declare public readonly pruneJobId: pulumi.Output<string>;
     /**
-     * When to run the prune job. Uses systemd calendar event format (e.g., `daily`, `weekly`, `Mon..Fri *-*-* 02:00:00`).
+     * When to run the prune job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, `Mon..Fri *-*-* 02:00:00`).
      */
     declare public readonly schedule: pulumi.Output<string>;
     /**
@@ -211,7 +211,7 @@ export interface PruneJobState {
      */
     pruneJobId?: pulumi.Input<string | undefined>;
     /**
-     * When to run the prune job. Uses systemd calendar event format (e.g., `daily`, `weekly`, `Mon..Fri *-*-* 02:00:00`).
+     * When to run the prune job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, `Mon..Fri *-*-* 02:00:00`).
      */
     schedule?: pulumi.Input<string | undefined>;
     /**
@@ -269,7 +269,7 @@ export interface PruneJobArgs {
      */
     pruneJobId: pulumi.Input<string>;
     /**
-     * When to run the prune job. Uses systemd calendar event format (e.g., `daily`, `weekly`, `Mon..Fri *-*-* 02:00:00`).
+     * When to run the prune job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, `Mon..Fri *-*-* 02:00:00`).
      */
     schedule: pulumi.Input<string>;
     /**

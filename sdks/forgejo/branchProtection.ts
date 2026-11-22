@@ -44,11 +44,11 @@ export class BranchProtection extends pulumi.CustomResource {
     }
 
     /**
-     * Whitelisted teams for reviewing. **Note**: This setting is only effective if `enable_approvals_whitelist` is `true`.
+     * Whitelisted teams for reviewing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableApprovalsWhitelist`" pulumi-lang-dotnet="`EnableApprovalsWhitelist`" pulumi-lang-go="`enableApprovalsWhitelist`" pulumi-lang-python="`enable_approvals_whitelist`" pulumi-lang-yaml="`enableApprovalsWhitelist`" pulumi-lang-java="`enableApprovalsWhitelist`" pulumi-lang-hcl="`enable_approvals_whitelist`">`enableApprovalsWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly approvalsWhitelistTeams: pulumi.Output<string[]>;
     /**
-     * Whitelisted users for reviewing. **Note**: This setting is only effective if `enable_approvals_whitelist` is `true`.
+     * Whitelisted users for reviewing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableApprovalsWhitelist`" pulumi-lang-dotnet="`EnableApprovalsWhitelist`" pulumi-lang-go="`enableApprovalsWhitelist`" pulumi-lang-python="`enable_approvals_whitelist`" pulumi-lang-yaml="`enableApprovalsWhitelist`" pulumi-lang-java="`enableApprovalsWhitelist`" pulumi-lang-hcl="`enable_approvals_whitelist`">`enableApprovalsWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly approvalsWhitelistUsernames: pulumi.Output<string[]>;
     /**
@@ -84,7 +84,7 @@ export class BranchProtection extends pulumi.CustomResource {
      */
     declare public readonly enablePush: pulumi.Output<boolean>;
     /**
-     * Restrict push to whitelisted users or teams. **Note**: This setting is only effective if `enable_push` is `true`.
+     * Restrict push to whitelisted users or teams. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePush`" pulumi-lang-dotnet="`EnablePush`" pulumi-lang-go="`enablePush`" pulumi-lang-python="`enable_push`" pulumi-lang-yaml="`enablePush`" pulumi-lang-java="`enablePush`" pulumi-lang-hcl="`enable_push`">`enablePush`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enablePushWhitelist: pulumi.Output<boolean>;
     /**
@@ -92,11 +92,11 @@ export class BranchProtection extends pulumi.CustomResource {
      */
     declare public readonly enableStatusCheck: pulumi.Output<boolean>;
     /**
-     * Whitelisted teams for merging. **Note**: This setting is only effective if `enable_merge_whitelist` is `true`.
+     * Whitelisted teams for merging. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableMergeWhitelist`" pulumi-lang-dotnet="`EnableMergeWhitelist`" pulumi-lang-go="`enableMergeWhitelist`" pulumi-lang-python="`enable_merge_whitelist`" pulumi-lang-yaml="`enableMergeWhitelist`" pulumi-lang-java="`enableMergeWhitelist`" pulumi-lang-hcl="`enable_merge_whitelist`">`enableMergeWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly mergeWhitelistTeams: pulumi.Output<string[]>;
     /**
-     * Whitelisted users for merging. **Note**: This setting is only effective if `enable_merge_whitelist` is `true`.
+     * Whitelisted users for merging. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableMergeWhitelist`" pulumi-lang-dotnet="`EnableMergeWhitelist`" pulumi-lang-go="`enableMergeWhitelist`" pulumi-lang-python="`enable_merge_whitelist`" pulumi-lang-yaml="`enableMergeWhitelist`" pulumi-lang-java="`enableMergeWhitelist`" pulumi-lang-hcl="`enable_merge_whitelist`">`enableMergeWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly mergeWhitelistUsernames: pulumi.Output<string[]>;
     /**
@@ -104,15 +104,15 @@ export class BranchProtection extends pulumi.CustomResource {
      */
     declare public readonly protectedFilePatterns: pulumi.Output<string>;
     /**
-     * Whitelist deploy keys with write access to push. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelist deploy keys with write access to push. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly pushWhitelistDeployKeys: pulumi.Output<boolean>;
     /**
-     * Whitelisted teams for pushing. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelisted teams for pushing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly pushWhitelistTeams: pulumi.Output<string[]>;
     /**
-     * Whitelisted users for pushing. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelisted users for pushing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly pushWhitelistUsernames: pulumi.Output<string[]>;
     /**
@@ -128,7 +128,7 @@ export class BranchProtection extends pulumi.CustomResource {
      */
     declare public readonly requiredApprovals: pulumi.Output<number>;
     /**
-     * Status check patterns. **Note**: This setting is only effective if `enable_status_check` is `true`.
+     * Status check patterns. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableStatusCheck`" pulumi-lang-dotnet="`EnableStatusCheck`" pulumi-lang-go="`enableStatusCheck`" pulumi-lang-python="`enable_status_check`" pulumi-lang-yaml="`enableStatusCheck`" pulumi-lang-java="`enableStatusCheck`" pulumi-lang-hcl="`enable_status_check`">`enableStatusCheck`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly statusCheckContexts: pulumi.Output<string[]>;
     /**
@@ -214,11 +214,11 @@ export class BranchProtection extends pulumi.CustomResource {
  */
 export interface BranchProtectionState {
     /**
-     * Whitelisted teams for reviewing. **Note**: This setting is only effective if `enable_approvals_whitelist` is `true`.
+     * Whitelisted teams for reviewing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableApprovalsWhitelist`" pulumi-lang-dotnet="`EnableApprovalsWhitelist`" pulumi-lang-go="`enableApprovalsWhitelist`" pulumi-lang-python="`enable_approvals_whitelist`" pulumi-lang-yaml="`enableApprovalsWhitelist`" pulumi-lang-java="`enableApprovalsWhitelist`" pulumi-lang-hcl="`enable_approvals_whitelist`">`enableApprovalsWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     approvalsWhitelistTeams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whitelisted users for reviewing. **Note**: This setting is only effective if `enable_approvals_whitelist` is `true`.
+     * Whitelisted users for reviewing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableApprovalsWhitelist`" pulumi-lang-dotnet="`EnableApprovalsWhitelist`" pulumi-lang-go="`enableApprovalsWhitelist`" pulumi-lang-python="`enable_approvals_whitelist`" pulumi-lang-yaml="`enableApprovalsWhitelist`" pulumi-lang-java="`enableApprovalsWhitelist`" pulumi-lang-hcl="`enable_approvals_whitelist`">`enableApprovalsWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     approvalsWhitelistUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -254,7 +254,7 @@ export interface BranchProtectionState {
      */
     enablePush?: pulumi.Input<boolean | undefined>;
     /**
-     * Restrict push to whitelisted users or teams. **Note**: This setting is only effective if `enable_push` is `true`.
+     * Restrict push to whitelisted users or teams. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePush`" pulumi-lang-dotnet="`EnablePush`" pulumi-lang-go="`enablePush`" pulumi-lang-python="`enable_push`" pulumi-lang-yaml="`enablePush`" pulumi-lang-java="`enablePush`" pulumi-lang-hcl="`enable_push`">`enablePush`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enablePushWhitelist?: pulumi.Input<boolean | undefined>;
     /**
@@ -262,11 +262,11 @@ export interface BranchProtectionState {
      */
     enableStatusCheck?: pulumi.Input<boolean | undefined>;
     /**
-     * Whitelisted teams for merging. **Note**: This setting is only effective if `enable_merge_whitelist` is `true`.
+     * Whitelisted teams for merging. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableMergeWhitelist`" pulumi-lang-dotnet="`EnableMergeWhitelist`" pulumi-lang-go="`enableMergeWhitelist`" pulumi-lang-python="`enable_merge_whitelist`" pulumi-lang-yaml="`enableMergeWhitelist`" pulumi-lang-java="`enableMergeWhitelist`" pulumi-lang-hcl="`enable_merge_whitelist`">`enableMergeWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     mergeWhitelistTeams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whitelisted users for merging. **Note**: This setting is only effective if `enable_merge_whitelist` is `true`.
+     * Whitelisted users for merging. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableMergeWhitelist`" pulumi-lang-dotnet="`EnableMergeWhitelist`" pulumi-lang-go="`enableMergeWhitelist`" pulumi-lang-python="`enable_merge_whitelist`" pulumi-lang-yaml="`enableMergeWhitelist`" pulumi-lang-java="`enableMergeWhitelist`" pulumi-lang-hcl="`enable_merge_whitelist`">`enableMergeWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     mergeWhitelistUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -274,15 +274,15 @@ export interface BranchProtectionState {
      */
     protectedFilePatterns?: pulumi.Input<string | undefined>;
     /**
-     * Whitelist deploy keys with write access to push. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelist deploy keys with write access to push. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     pushWhitelistDeployKeys?: pulumi.Input<boolean | undefined>;
     /**
-     * Whitelisted teams for pushing. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelisted teams for pushing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     pushWhitelistTeams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whitelisted users for pushing. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelisted users for pushing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     pushWhitelistUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -298,7 +298,7 @@ export interface BranchProtectionState {
      */
     requiredApprovals?: pulumi.Input<number | undefined>;
     /**
-     * Status check patterns. **Note**: This setting is only effective if `enable_status_check` is `true`.
+     * Status check patterns. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableStatusCheck`" pulumi-lang-dotnet="`EnableStatusCheck`" pulumi-lang-go="`enableStatusCheck`" pulumi-lang-python="`enable_status_check`" pulumi-lang-yaml="`enableStatusCheck`" pulumi-lang-java="`enableStatusCheck`" pulumi-lang-hcl="`enable_status_check`">`enableStatusCheck`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     statusCheckContexts?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -312,11 +312,11 @@ export interface BranchProtectionState {
  */
 export interface BranchProtectionArgs {
     /**
-     * Whitelisted teams for reviewing. **Note**: This setting is only effective if `enable_approvals_whitelist` is `true`.
+     * Whitelisted teams for reviewing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableApprovalsWhitelist`" pulumi-lang-dotnet="`EnableApprovalsWhitelist`" pulumi-lang-go="`enableApprovalsWhitelist`" pulumi-lang-python="`enable_approvals_whitelist`" pulumi-lang-yaml="`enableApprovalsWhitelist`" pulumi-lang-java="`enableApprovalsWhitelist`" pulumi-lang-hcl="`enable_approvals_whitelist`">`enableApprovalsWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     approvalsWhitelistTeams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whitelisted users for reviewing. **Note**: This setting is only effective if `enable_approvals_whitelist` is `true`.
+     * Whitelisted users for reviewing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableApprovalsWhitelist`" pulumi-lang-dotnet="`EnableApprovalsWhitelist`" pulumi-lang-go="`enableApprovalsWhitelist`" pulumi-lang-python="`enable_approvals_whitelist`" pulumi-lang-yaml="`enableApprovalsWhitelist`" pulumi-lang-java="`enableApprovalsWhitelist`" pulumi-lang-hcl="`enable_approvals_whitelist`">`enableApprovalsWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     approvalsWhitelistUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -352,7 +352,7 @@ export interface BranchProtectionArgs {
      */
     enablePush?: pulumi.Input<boolean | undefined>;
     /**
-     * Restrict push to whitelisted users or teams. **Note**: This setting is only effective if `enable_push` is `true`.
+     * Restrict push to whitelisted users or teams. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePush`" pulumi-lang-dotnet="`EnablePush`" pulumi-lang-go="`enablePush`" pulumi-lang-python="`enable_push`" pulumi-lang-yaml="`enablePush`" pulumi-lang-java="`enablePush`" pulumi-lang-hcl="`enable_push`">`enablePush`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enablePushWhitelist?: pulumi.Input<boolean | undefined>;
     /**
@@ -360,11 +360,11 @@ export interface BranchProtectionArgs {
      */
     enableStatusCheck?: pulumi.Input<boolean | undefined>;
     /**
-     * Whitelisted teams for merging. **Note**: This setting is only effective if `enable_merge_whitelist` is `true`.
+     * Whitelisted teams for merging. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableMergeWhitelist`" pulumi-lang-dotnet="`EnableMergeWhitelist`" pulumi-lang-go="`enableMergeWhitelist`" pulumi-lang-python="`enable_merge_whitelist`" pulumi-lang-yaml="`enableMergeWhitelist`" pulumi-lang-java="`enableMergeWhitelist`" pulumi-lang-hcl="`enable_merge_whitelist`">`enableMergeWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     mergeWhitelistTeams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whitelisted users for merging. **Note**: This setting is only effective if `enable_merge_whitelist` is `true`.
+     * Whitelisted users for merging. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableMergeWhitelist`" pulumi-lang-dotnet="`EnableMergeWhitelist`" pulumi-lang-go="`enableMergeWhitelist`" pulumi-lang-python="`enable_merge_whitelist`" pulumi-lang-yaml="`enableMergeWhitelist`" pulumi-lang-java="`enableMergeWhitelist`" pulumi-lang-hcl="`enable_merge_whitelist`">`enableMergeWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     mergeWhitelistUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -372,15 +372,15 @@ export interface BranchProtectionArgs {
      */
     protectedFilePatterns?: pulumi.Input<string | undefined>;
     /**
-     * Whitelist deploy keys with write access to push. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelist deploy keys with write access to push. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     pushWhitelistDeployKeys?: pulumi.Input<boolean | undefined>;
     /**
-     * Whitelisted teams for pushing. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelisted teams for pushing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     pushWhitelistTeams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whitelisted users for pushing. **Note**: This setting is only effective if `enable_push_whitelist` is `true`.
+     * Whitelisted users for pushing. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enablePushWhitelist`" pulumi-lang-dotnet="`EnablePushWhitelist`" pulumi-lang-go="`enablePushWhitelist`" pulumi-lang-python="`enable_push_whitelist`" pulumi-lang-yaml="`enablePushWhitelist`" pulumi-lang-java="`enablePushWhitelist`" pulumi-lang-hcl="`enable_push_whitelist`">`enablePushWhitelist`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     pushWhitelistUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -396,7 +396,7 @@ export interface BranchProtectionArgs {
      */
     requiredApprovals?: pulumi.Input<number | undefined>;
     /**
-     * Status check patterns. **Note**: This setting is only effective if `enable_status_check` is `true`.
+     * Status check patterns. **Note**: This setting is only effective if <span pulumi-lang-nodejs="`enableStatusCheck`" pulumi-lang-dotnet="`EnableStatusCheck`" pulumi-lang-go="`enableStatusCheck`" pulumi-lang-python="`enable_status_check`" pulumi-lang-yaml="`enableStatusCheck`" pulumi-lang-java="`enableStatusCheck`" pulumi-lang-hcl="`enable_status_check`">`enableStatusCheck`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     statusCheckContexts?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**

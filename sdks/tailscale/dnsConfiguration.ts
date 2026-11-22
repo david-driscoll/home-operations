@@ -50,11 +50,11 @@ export class DnsConfiguration extends pulumi.CustomResource {
      */
     declare public readonly magicDns: pulumi.Output<boolean>;
     /**
-     * Set the nameservers used by devices on your network to resolve DNS queries. `override_local_dns` must also be true to prefer these nameservers over local DNS configuration.
+     * Set the nameservers used by devices on your network to resolve DNS queries. <span pulumi-lang-nodejs="`overrideLocalDns`" pulumi-lang-dotnet="`OverrideLocalDns`" pulumi-lang-go="`overrideLocalDns`" pulumi-lang-python="`override_local_dns`" pulumi-lang-yaml="`overrideLocalDns`" pulumi-lang-java="`overrideLocalDns`" pulumi-lang-hcl="`override_local_dns`">`overrideLocalDns`</span> must also be true to prefer these nameservers over local DNS configuration.
      */
     declare public readonly nameservers: pulumi.Output<outputs.DnsConfigurationNameserver[] | undefined>;
     /**
-     * When enabled, use the configured DNS servers in `nameservers` to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
+     * When enabled, use the configured DNS servers in <span pulumi-lang-nodejs="`nameservers`" pulumi-lang-dotnet="`Nameservers`" pulumi-lang-go="`nameservers`" pulumi-lang-python="`nameservers`" pulumi-lang-yaml="`nameservers`" pulumi-lang-java="`nameservers`" pulumi-lang-hcl="`nameservers`">`nameservers`</span> to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
      */
     declare public readonly overrideLocalDns: pulumi.Output<boolean>;
     /**
@@ -62,7 +62,7 @@ export class DnsConfiguration extends pulumi.CustomResource {
      */
     declare public readonly searchPaths: pulumi.Output<string[]>;
     /**
-     * Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`.
+     * Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on <span pulumi-lang-nodejs="`overrideLocalDns`" pulumi-lang-dotnet="`OverrideLocalDns`" pulumi-lang-go="`overrideLocalDns`" pulumi-lang-python="`override_local_dns`" pulumi-lang-yaml="`overrideLocalDns`" pulumi-lang-java="`overrideLocalDns`" pulumi-lang-hcl="`override_local_dns`">`overrideLocalDns`</span>.
      */
     declare public readonly splitDns: pulumi.Output<outputs.DnsConfigurationSplitDn[] | undefined>;
 
@@ -106,11 +106,11 @@ export interface DnsConfigurationState {
      */
     magicDns?: pulumi.Input<boolean | undefined>;
     /**
-     * Set the nameservers used by devices on your network to resolve DNS queries. `override_local_dns` must also be true to prefer these nameservers over local DNS configuration.
+     * Set the nameservers used by devices on your network to resolve DNS queries. <span pulumi-lang-nodejs="`overrideLocalDns`" pulumi-lang-dotnet="`OverrideLocalDns`" pulumi-lang-go="`overrideLocalDns`" pulumi-lang-python="`override_local_dns`" pulumi-lang-yaml="`overrideLocalDns`" pulumi-lang-java="`overrideLocalDns`" pulumi-lang-hcl="`override_local_dns`">`overrideLocalDns`</span> must also be true to prefer these nameservers over local DNS configuration.
      */
     nameservers?: pulumi.Input<pulumi.Input<inputs.DnsConfigurationNameserver>[] | undefined>;
     /**
-     * When enabled, use the configured DNS servers in `nameservers` to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
+     * When enabled, use the configured DNS servers in <span pulumi-lang-nodejs="`nameservers`" pulumi-lang-dotnet="`Nameservers`" pulumi-lang-go="`nameservers`" pulumi-lang-python="`nameservers`" pulumi-lang-yaml="`nameservers`" pulumi-lang-java="`nameservers`" pulumi-lang-hcl="`nameservers`">`nameservers`</span> to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
      */
     overrideLocalDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -118,7 +118,7 @@ export interface DnsConfigurationState {
      */
     searchPaths?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`.
+     * Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on <span pulumi-lang-nodejs="`overrideLocalDns`" pulumi-lang-dotnet="`OverrideLocalDns`" pulumi-lang-go="`overrideLocalDns`" pulumi-lang-python="`override_local_dns`" pulumi-lang-yaml="`overrideLocalDns`" pulumi-lang-java="`overrideLocalDns`" pulumi-lang-hcl="`override_local_dns`">`overrideLocalDns`</span>.
      */
     splitDns?: pulumi.Input<pulumi.Input<inputs.DnsConfigurationSplitDn>[] | undefined>;
 }
@@ -132,11 +132,11 @@ export interface DnsConfigurationArgs {
      */
     magicDns?: pulumi.Input<boolean | undefined>;
     /**
-     * Set the nameservers used by devices on your network to resolve DNS queries. `override_local_dns` must also be true to prefer these nameservers over local DNS configuration.
+     * Set the nameservers used by devices on your network to resolve DNS queries. <span pulumi-lang-nodejs="`overrideLocalDns`" pulumi-lang-dotnet="`OverrideLocalDns`" pulumi-lang-go="`overrideLocalDns`" pulumi-lang-python="`override_local_dns`" pulumi-lang-yaml="`overrideLocalDns`" pulumi-lang-java="`overrideLocalDns`" pulumi-lang-hcl="`override_local_dns`">`overrideLocalDns`</span> must also be true to prefer these nameservers over local DNS configuration.
      */
     nameservers?: pulumi.Input<pulumi.Input<inputs.DnsConfigurationNameserver>[] | undefined>;
     /**
-     * When enabled, use the configured DNS servers in `nameservers` to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
+     * When enabled, use the configured DNS servers in <span pulumi-lang-nodejs="`nameservers`" pulumi-lang-dotnet="`Nameservers`" pulumi-lang-go="`nameservers`" pulumi-lang-python="`nameservers`" pulumi-lang-yaml="`nameservers`" pulumi-lang-java="`nameservers`" pulumi-lang-hcl="`nameservers`">`nameservers`</span> to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
      */
     overrideLocalDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -144,7 +144,7 @@ export interface DnsConfigurationArgs {
      */
     searchPaths?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`.
+     * Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on <span pulumi-lang-nodejs="`overrideLocalDns`" pulumi-lang-dotnet="`OverrideLocalDns`" pulumi-lang-go="`overrideLocalDns`" pulumi-lang-python="`override_local_dns`" pulumi-lang-yaml="`overrideLocalDns`" pulumi-lang-java="`overrideLocalDns`" pulumi-lang-hcl="`override_local_dns`">`overrideLocalDns`</span>.
      */
     splitDns?: pulumi.Input<pulumi.Input<inputs.DnsConfigurationSplitDn>[] | undefined>;
 }

@@ -24,10 +24,6 @@ export interface GetTeamMemberArgs {
  * A collection of values returned by getTeamMember.
  */
 export interface GetTeamMemberResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly teamId: number;
     readonly user: string;
 }

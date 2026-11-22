@@ -125,7 +125,7 @@ export interface ZoneDnssec {
      */
     algorithm: string;
     /**
-     * Operator acknowledgment authorizing a destructive DNSSEC transition on this zone. Set to "<ALGORITHM>/<CURVE>" (e.g. "ECDSA/P384"; bare "RSA" for RSA) to authorize an unsign/re-sign to those parameters, or "unsigned" to authorize unsigning (standing consent - remove after use). Required under stig_compliance enforcement "strict"; always required for in-place algorithm/curve changes. See the STIG compliance guide.
+     * Operator acknowledgment authorizing a destructive DNSSEC transition on this zone. Set to "<ALGORITHM>/<CURVE>" (e.g. "ECDSA/P384"; bare "RSA" for RSA) to authorize an unsign/re-sign to those parameters, or "unsigned" to authorize unsigning (standing consent - remove after use). Required under<span pulumi-lang-nodejs=" stigCompliance " pulumi-lang-dotnet=" StigCompliance " pulumi-lang-go=" stigCompliance " pulumi-lang-python=" stig_compliance " pulumi-lang-yaml=" stigCompliance " pulumi-lang-java=" stigCompliance " pulumi-lang-hcl=" stig_compliance "> stigCompliance </span>enforcement "strict"; always required for in-place algorithm/curve changes. See the STIG compliance guide.
      */
     changeAcknowledgment?: string;
     /**

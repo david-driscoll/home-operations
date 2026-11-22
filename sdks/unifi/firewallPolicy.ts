@@ -50,15 +50,15 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly action: pulumi.Output<string>;
     /**
-     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in `connection_states`). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
+     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in <span pulumi-lang-nodejs="`connectionStates`" pulumi-lang-dotnet="`ConnectionStates`" pulumi-lang-go="`connectionStates`" pulumi-lang-python="`connection_states`" pulumi-lang-yaml="`connectionStates`" pulumi-lang-java="`connectionStates`" pulumi-lang-hcl="`connection_states`">`connectionStates`</span>). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
      */
     declare public readonly connectionStateType: pulumi.Output<string>;
     /**
-     * Connection states matched when `connection_state_type` is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
+     * Connection states matched when <span pulumi-lang-nodejs="`connectionStateType`" pulumi-lang-dotnet="`ConnectionStateType`" pulumi-lang-go="`connectionStateType`" pulumi-lang-python="`connection_state_type`" pulumi-lang-yaml="`connectionStateType`" pulumi-lang-java="`connectionStateType`" pulumi-lang-hcl="`connection_state_type`">`connectionStateType`</span> is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
      */
     declare public readonly connectionStates: pulumi.Output<string[]>;
     /**
-     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
+     * When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     declare public readonly createAllowRespond: pulumi.Output<boolean>;
     /**
@@ -70,7 +70,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly destination: pulumi.Output<outputs.FirewallPolicyDestination>;
     /**
-     * Whether the policy is enabled. Defaults to `true` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
+     * Whether the policy is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -90,7 +90,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly logging: pulumi.Output<boolean>;
     /**
-     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
+     * Invert the protocol match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the policy matches every protocol **except** <span pulumi-lang-nodejs="`protocol`" pulumi-lang-dotnet="`Protocol`" pulumi-lang-go="`protocol`" pulumi-lang-python="`protocol`" pulumi-lang-yaml="`protocol`" pulumi-lang-java="`protocol`" pulumi-lang-hcl="`protocol`">`protocol`</span>. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     declare public readonly matchOppositeProtocol: pulumi.Output<boolean>;
     /**
@@ -98,11 +98,11 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns `all` to a new policy (#544).
+     * The protocol to match: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>, <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>, or <span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span>. Note: for <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>/<span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span> policies the controller rejects <span pulumi-lang-nodejs="`createAllowRespond " pulumi-lang-dotnet="`CreateAllowRespond " pulumi-lang-go="`createAllowRespond " pulumi-lang-python="`create_allow_respond " pulumi-lang-yaml="`createAllowRespond " pulumi-lang-java="`createAllowRespond " pulumi-lang-hcl="`create_allow_respond ">`createAllowRespond </span>= true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> to a new policy (#544).
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
-     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires <span pulumi-lang-nodejs="`date`" pulumi-lang-dotnet="`Date`" pulumi-lang-go="`date`" pulumi-lang-python="`date`" pulumi-lang-yaml="`date`" pulumi-lang-java="`date`" pulumi-lang-hcl="`date`">`date`</span> and a time range, and `CUSTOM` requires a date range and weekdays. Set <span pulumi-lang-nodejs="`normalize`" pulumi-lang-dotnet="`Normalize`" pulumi-lang-go="`normalize`" pulumi-lang-python="`normalize`" pulumi-lang-yaml="`normalize`" pulumi-lang-java="`normalize`" pulumi-lang-hcl="`normalize`">`normalize`</span> to clear inherited fields unused by the selected mode.
      */
     declare public readonly schedule: pulumi.Output<outputs.FirewallPolicySchedule>;
     /**
@@ -190,15 +190,15 @@ export interface FirewallPolicyState {
      */
     action?: pulumi.Input<string | undefined>;
     /**
-     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in `connection_states`). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
+     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in <span pulumi-lang-nodejs="`connectionStates`" pulumi-lang-dotnet="`ConnectionStates`" pulumi-lang-go="`connectionStates`" pulumi-lang-python="`connection_states`" pulumi-lang-yaml="`connectionStates`" pulumi-lang-java="`connectionStates`" pulumi-lang-hcl="`connection_states`">`connectionStates`</span>). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
      */
     connectionStateType?: pulumi.Input<string | undefined>;
     /**
-     * Connection states matched when `connection_state_type` is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
+     * Connection states matched when <span pulumi-lang-nodejs="`connectionStateType`" pulumi-lang-dotnet="`ConnectionStateType`" pulumi-lang-go="`connectionStateType`" pulumi-lang-python="`connection_state_type`" pulumi-lang-yaml="`connectionStateType`" pulumi-lang-java="`connectionStateType`" pulumi-lang-hcl="`connection_state_type`">`connectionStateType`</span> is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
+     * When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     createAllowRespond?: pulumi.Input<boolean | undefined>;
     /**
@@ -210,7 +210,7 @@ export interface FirewallPolicyState {
      */
     destination?: pulumi.Input<inputs.FirewallPolicyDestination | undefined>;
     /**
-     * Whether the policy is enabled. Defaults to `true` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
+     * Whether the policy is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -230,7 +230,7 @@ export interface FirewallPolicyState {
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
+     * Invert the protocol match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the policy matches every protocol **except** <span pulumi-lang-nodejs="`protocol`" pulumi-lang-dotnet="`Protocol`" pulumi-lang-go="`protocol`" pulumi-lang-python="`protocol`" pulumi-lang-yaml="`protocol`" pulumi-lang-java="`protocol`" pulumi-lang-hcl="`protocol`">`protocol`</span>. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     matchOppositeProtocol?: pulumi.Input<boolean | undefined>;
     /**
@@ -238,11 +238,11 @@ export interface FirewallPolicyState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns `all` to a new policy (#544).
+     * The protocol to match: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>, <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>, or <span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span>. Note: for <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>/<span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span> policies the controller rejects <span pulumi-lang-nodejs="`createAllowRespond " pulumi-lang-dotnet="`CreateAllowRespond " pulumi-lang-go="`createAllowRespond " pulumi-lang-python="`create_allow_respond " pulumi-lang-yaml="`createAllowRespond " pulumi-lang-java="`createAllowRespond " pulumi-lang-hcl="`create_allow_respond ">`createAllowRespond </span>= true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> to a new policy (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires <span pulumi-lang-nodejs="`date`" pulumi-lang-dotnet="`Date`" pulumi-lang-go="`date`" pulumi-lang-python="`date`" pulumi-lang-yaml="`date`" pulumi-lang-java="`date`" pulumi-lang-hcl="`date`">`date`</span> and a time range, and `CUSTOM` requires a date range and weekdays. Set <span pulumi-lang-nodejs="`normalize`" pulumi-lang-dotnet="`Normalize`" pulumi-lang-go="`normalize`" pulumi-lang-python="`normalize`" pulumi-lang-yaml="`normalize`" pulumi-lang-java="`normalize`" pulumi-lang-hcl="`normalize`">`normalize`</span> to clear inherited fields unused by the selected mode.
      */
     schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**
@@ -265,15 +265,15 @@ export interface FirewallPolicyArgs {
      */
     action: pulumi.Input<string>;
     /**
-     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in `connection_states`). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
+     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in <span pulumi-lang-nodejs="`connectionStates`" pulumi-lang-dotnet="`ConnectionStates`" pulumi-lang-go="`connectionStates`" pulumi-lang-python="`connection_states`" pulumi-lang-yaml="`connectionStates`" pulumi-lang-java="`connectionStates`" pulumi-lang-hcl="`connection_states`">`connectionStates`</span>). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
      */
     connectionStateType?: pulumi.Input<string | undefined>;
     /**
-     * Connection states matched when `connection_state_type` is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
+     * Connection states matched when <span pulumi-lang-nodejs="`connectionStateType`" pulumi-lang-dotnet="`ConnectionStateType`" pulumi-lang-go="`connectionStateType`" pulumi-lang-python="`connection_state_type`" pulumi-lang-yaml="`connectionStateType`" pulumi-lang-java="`connectionStateType`" pulumi-lang-hcl="`connection_state_type`">`connectionStateType`</span> is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
+     * When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     createAllowRespond?: pulumi.Input<boolean | undefined>;
     /**
@@ -285,7 +285,7 @@ export interface FirewallPolicyArgs {
      */
     destination: pulumi.Input<inputs.FirewallPolicyDestination>;
     /**
-     * Whether the policy is enabled. Defaults to `true` for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
+     * Whether the policy is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created policy; an existing policy keeps whatever the controller holds, so adopting a policy disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -297,7 +297,7 @@ export interface FirewallPolicyArgs {
      */
     logging?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the protocol match: when `true`, the policy matches every protocol **except** `protocol`. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
+     * Invert the protocol match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the policy matches every protocol **except** <span pulumi-lang-nodejs="`protocol`" pulumi-lang-dotnet="`Protocol`" pulumi-lang-go="`protocol`" pulumi-lang-python="`protocol`" pulumi-lang-yaml="`protocol`" pulumi-lang-java="`protocol`" pulumi-lang-hcl="`protocol`">`protocol`</span>. Corresponds to the "Match Opposite" toggle next to the protocol selector in the UniFi UI. Taken from the controller when not set; a new policy is created with it off (#544).
      */
     matchOppositeProtocol?: pulumi.Input<boolean | undefined>;
     /**
@@ -305,11 +305,11 @@ export interface FirewallPolicyArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol to match: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, or `icmpv6`. Note: for `icmp`/`icmpv6` policies the controller rejects `create_allow_respond = true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it `false` and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns `all` to a new policy (#544).
+     * The protocol to match: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>, <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>, or <span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span>. Note: for <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>/<span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span> policies the controller rejects <span pulumi-lang-nodejs="`createAllowRespond " pulumi-lang-dotnet="`CreateAllowRespond " pulumi-lang-go="`createAllowRespond " pulumi-lang-python="`create_allow_respond " pulumi-lang-yaml="`createAllowRespond " pulumi-lang-java="`createAllowRespond " pulumi-lang-hcl="`create_allow_respond ">`createAllowRespond </span>= true` (`FirewallPolicyCreateRespondTrafficPolicyNotAllowed`) — keep it <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> and add an explicit reverse policy if you need the reply. Taken from the controller when not set; the controller assigns <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> to a new policy (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires `date` and a time range, and `CUSTOM` requires a date range and weekdays. Set `normalize` to clear inherited fields unused by the selected mode.
+     * When the policy is active. The complete controller value is round-tripped so updating another policy field does not reset its schedule. Supported modes are `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, and `CUSTOM`. Timed modes require `time.all_day`; when false, both `time.range` boundaries are required. `EVERY_WEEK` also requires weekdays, `ONE_TIME_ONLY` requires <span pulumi-lang-nodejs="`date`" pulumi-lang-dotnet="`Date`" pulumi-lang-go="`date`" pulumi-lang-python="`date`" pulumi-lang-yaml="`date`" pulumi-lang-java="`date`" pulumi-lang-hcl="`date`">`date`</span> and a time range, and `CUSTOM` requires a date range and weekdays. Set <span pulumi-lang-nodejs="`normalize`" pulumi-lang-dotnet="`Normalize`" pulumi-lang-go="`normalize`" pulumi-lang-python="`normalize`" pulumi-lang-yaml="`normalize`" pulumi-lang-java="`normalize`" pulumi-lang-hcl="`normalize`">`normalize`</span> to clear inherited fields unused by the selected mode.
      */
     schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**

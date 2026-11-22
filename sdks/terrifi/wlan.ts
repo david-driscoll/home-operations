@@ -44,15 +44,15 @@ export class Wlan extends pulumi.CustomResource {
     }
 
     /**
-     * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
+     * The application type for this WLAN. Must be <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>, <span pulumi-lang-nodejs="`hotspot`" pulumi-lang-dotnet="`Hotspot`" pulumi-lang-go="`hotspot`" pulumi-lang-python="`hotspot`" pulumi-lang-yaml="`hotspot`" pulumi-lang-java="`hotspot`" pulumi-lang-hcl="`hotspot`">`hotspot`</span>, or <span pulumi-lang-nodejs="`iot`" pulumi-lang-dotnet="`Iot`" pulumi-lang-go="`iot`" pulumi-lang-python="`iot`" pulumi-lang-yaml="`iot`" pulumi-lang-java="`iot`" pulumi-lang-hcl="`iot`">`iot`</span>. <span pulumi-lang-nodejs="`hotspot`" pulumi-lang-dotnet="`Hotspot`" pulumi-lang-go="`hotspot`" pulumi-lang-python="`hotspot`" pulumi-lang-yaml="`hotspot`" pulumi-lang-java="`hotspot`" pulumi-lang-hcl="`hotspot`">`hotspot`</span> enables guest behavior (captive portal); <span pulumi-lang-nodejs="`iot`" pulumi-lang-dotnet="`Iot`" pulumi-lang-go="`iot`" pulumi-lang-python="`iot`" pulumi-lang-yaml="`iot`" pulumi-lang-java="`iot`" pulumi-lang-hcl="`iot`">`iot`</span> enables IoT-optimized behavior. Default: <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>.
      */
     declare public readonly application: pulumi.Output<string>;
     /**
-     * Whether the WLAN is enabled. Default: `true`.
+     * Whether the WLAN is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * Whether to hide the SSID from broadcast. Default: `false`.
+     * Whether to hide the SSID from broadcast. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly hideSsid: pulumi.Output<boolean>;
     /**
@@ -64,15 +64,15 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly networkId: pulumi.Output<string>;
     /**
-     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
+     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly optimizeIotConnectivity: pulumi.Output<boolean>;
     /**
-     * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
+     * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>.
      */
     declare public readonly passphrase: pulumi.Output<string | undefined>;
     /**
-     * The security protocol for this WLAN. Must be `open` or `wpapsk`. Default: `wpapsk`.
+     * The security protocol for this WLAN. Must be <span pulumi-lang-nodejs="`open`" pulumi-lang-dotnet="`Open`" pulumi-lang-go="`open`" pulumi-lang-python="`open`" pulumi-lang-yaml="`open`" pulumi-lang-java="`open`" pulumi-lang-hcl="`open`">`open`</span> or <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>. Default: <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>.
      */
     declare public readonly security: pulumi.Output<string>;
     /**
@@ -80,19 +80,19 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * The WiFi band for this WLAN. Must be `2g`, `5g`, or `both`. Default: `both`.
+     * The WiFi band for this WLAN. Must be <span pulumi-lang-nodejs="`2g`" pulumi-lang-dotnet="`2g`" pulumi-lang-go="`2g`" pulumi-lang-python="`2g`" pulumi-lang-yaml="`2g`" pulumi-lang-java="`2g`" pulumi-lang-hcl="`2g`">`2g`</span>, <span pulumi-lang-nodejs="`5g`" pulumi-lang-dotnet="`5g`" pulumi-lang-go="`5g`" pulumi-lang-python="`5g`" pulumi-lang-yaml="`5g`" pulumi-lang-java="`5g`" pulumi-lang-hcl="`5g`">`5g`</span>, or <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>. Default: <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>.
      */
     declare public readonly wifiBand: pulumi.Output<string>;
     /**
-     * Whether to enable WPA3 support. Default: `false`.
+     * Whether to enable WPA3 support. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly wpa3Support: pulumi.Output<boolean>;
     /**
-     * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: `false`.
+     * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly wpa3Transition: pulumi.Output<boolean>;
     /**
-     * The WPA mode for this WLAN. Must be `auto` or `wpa2`. Default: `wpa2`.
+     * The WPA mode for this WLAN. Must be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>. Default: <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>.
      */
     declare public readonly wpaMode: pulumi.Output<string>;
 
@@ -153,15 +153,15 @@ export class Wlan extends pulumi.CustomResource {
  */
 export interface WlanState {
     /**
-     * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
+     * The application type for this WLAN. Must be <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>, <span pulumi-lang-nodejs="`hotspot`" pulumi-lang-dotnet="`Hotspot`" pulumi-lang-go="`hotspot`" pulumi-lang-python="`hotspot`" pulumi-lang-yaml="`hotspot`" pulumi-lang-java="`hotspot`" pulumi-lang-hcl="`hotspot`">`hotspot`</span>, or <span pulumi-lang-nodejs="`iot`" pulumi-lang-dotnet="`Iot`" pulumi-lang-go="`iot`" pulumi-lang-python="`iot`" pulumi-lang-yaml="`iot`" pulumi-lang-java="`iot`" pulumi-lang-hcl="`iot`">`iot`</span>. <span pulumi-lang-nodejs="`hotspot`" pulumi-lang-dotnet="`Hotspot`" pulumi-lang-go="`hotspot`" pulumi-lang-python="`hotspot`" pulumi-lang-yaml="`hotspot`" pulumi-lang-java="`hotspot`" pulumi-lang-hcl="`hotspot`">`hotspot`</span> enables guest behavior (captive portal); <span pulumi-lang-nodejs="`iot`" pulumi-lang-dotnet="`Iot`" pulumi-lang-go="`iot`" pulumi-lang-python="`iot`" pulumi-lang-yaml="`iot`" pulumi-lang-java="`iot`" pulumi-lang-hcl="`iot`">`iot`</span> enables IoT-optimized behavior. Default: <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>.
      */
     application?: pulumi.Input<string | undefined>;
     /**
-     * Whether the WLAN is enabled. Default: `true`.
+     * Whether the WLAN is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether to hide the SSID from broadcast. Default: `false`.
+     * Whether to hide the SSID from broadcast. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     hideSsid?: pulumi.Input<boolean | undefined>;
     /**
@@ -173,15 +173,15 @@ export interface WlanState {
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
-     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
+     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     optimizeIotConnectivity?: pulumi.Input<boolean | undefined>;
     /**
-     * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
+     * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>.
      */
     passphrase?: pulumi.Input<string | undefined>;
     /**
-     * The security protocol for this WLAN. Must be `open` or `wpapsk`. Default: `wpapsk`.
+     * The security protocol for this WLAN. Must be <span pulumi-lang-nodejs="`open`" pulumi-lang-dotnet="`Open`" pulumi-lang-go="`open`" pulumi-lang-python="`open`" pulumi-lang-yaml="`open`" pulumi-lang-java="`open`" pulumi-lang-hcl="`open`">`open`</span> or <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>. Default: <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>.
      */
     security?: pulumi.Input<string | undefined>;
     /**
@@ -189,19 +189,19 @@ export interface WlanState {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The WiFi band for this WLAN. Must be `2g`, `5g`, or `both`. Default: `both`.
+     * The WiFi band for this WLAN. Must be <span pulumi-lang-nodejs="`2g`" pulumi-lang-dotnet="`2g`" pulumi-lang-go="`2g`" pulumi-lang-python="`2g`" pulumi-lang-yaml="`2g`" pulumi-lang-java="`2g`" pulumi-lang-hcl="`2g`">`2g`</span>, <span pulumi-lang-nodejs="`5g`" pulumi-lang-dotnet="`5g`" pulumi-lang-go="`5g`" pulumi-lang-python="`5g`" pulumi-lang-yaml="`5g`" pulumi-lang-java="`5g`" pulumi-lang-hcl="`5g`">`5g`</span>, or <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>. Default: <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>.
      */
     wifiBand?: pulumi.Input<string | undefined>;
     /**
-     * Whether to enable WPA3 support. Default: `false`.
+     * Whether to enable WPA3 support. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     wpa3Support?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: `false`.
+     * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     wpa3Transition?: pulumi.Input<boolean | undefined>;
     /**
-     * The WPA mode for this WLAN. Must be `auto` or `wpa2`. Default: `wpa2`.
+     * The WPA mode for this WLAN. Must be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>. Default: <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>.
      */
     wpaMode?: pulumi.Input<string | undefined>;
 }
@@ -211,15 +211,15 @@ export interface WlanState {
  */
 export interface WlanArgs {
     /**
-     * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
+     * The application type for this WLAN. Must be <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>, <span pulumi-lang-nodejs="`hotspot`" pulumi-lang-dotnet="`Hotspot`" pulumi-lang-go="`hotspot`" pulumi-lang-python="`hotspot`" pulumi-lang-yaml="`hotspot`" pulumi-lang-java="`hotspot`" pulumi-lang-hcl="`hotspot`">`hotspot`</span>, or <span pulumi-lang-nodejs="`iot`" pulumi-lang-dotnet="`Iot`" pulumi-lang-go="`iot`" pulumi-lang-python="`iot`" pulumi-lang-yaml="`iot`" pulumi-lang-java="`iot`" pulumi-lang-hcl="`iot`">`iot`</span>. <span pulumi-lang-nodejs="`hotspot`" pulumi-lang-dotnet="`Hotspot`" pulumi-lang-go="`hotspot`" pulumi-lang-python="`hotspot`" pulumi-lang-yaml="`hotspot`" pulumi-lang-java="`hotspot`" pulumi-lang-hcl="`hotspot`">`hotspot`</span> enables guest behavior (captive portal); <span pulumi-lang-nodejs="`iot`" pulumi-lang-dotnet="`Iot`" pulumi-lang-go="`iot`" pulumi-lang-python="`iot`" pulumi-lang-yaml="`iot`" pulumi-lang-java="`iot`" pulumi-lang-hcl="`iot`">`iot`</span> enables IoT-optimized behavior. Default: <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>.
      */
     application?: pulumi.Input<string | undefined>;
     /**
-     * Whether the WLAN is enabled. Default: `true`.
+     * Whether the WLAN is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether to hide the SSID from broadcast. Default: `false`.
+     * Whether to hide the SSID from broadcast. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     hideSsid?: pulumi.Input<boolean | undefined>;
     /**
@@ -231,15 +231,15 @@ export interface WlanArgs {
      */
     networkId: pulumi.Input<string>;
     /**
-     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
+     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     optimizeIotConnectivity?: pulumi.Input<boolean | undefined>;
     /**
-     * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
+     * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>.
      */
     passphrase?: pulumi.Input<string | undefined>;
     /**
-     * The security protocol for this WLAN. Must be `open` or `wpapsk`. Default: `wpapsk`.
+     * The security protocol for this WLAN. Must be <span pulumi-lang-nodejs="`open`" pulumi-lang-dotnet="`Open`" pulumi-lang-go="`open`" pulumi-lang-python="`open`" pulumi-lang-yaml="`open`" pulumi-lang-java="`open`" pulumi-lang-hcl="`open`">`open`</span> or <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>. Default: <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span>.
      */
     security?: pulumi.Input<string | undefined>;
     /**
@@ -247,19 +247,19 @@ export interface WlanArgs {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The WiFi band for this WLAN. Must be `2g`, `5g`, or `both`. Default: `both`.
+     * The WiFi band for this WLAN. Must be <span pulumi-lang-nodejs="`2g`" pulumi-lang-dotnet="`2g`" pulumi-lang-go="`2g`" pulumi-lang-python="`2g`" pulumi-lang-yaml="`2g`" pulumi-lang-java="`2g`" pulumi-lang-hcl="`2g`">`2g`</span>, <span pulumi-lang-nodejs="`5g`" pulumi-lang-dotnet="`5g`" pulumi-lang-go="`5g`" pulumi-lang-python="`5g`" pulumi-lang-yaml="`5g`" pulumi-lang-java="`5g`" pulumi-lang-hcl="`5g`">`5g`</span>, or <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>. Default: <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>.
      */
     wifiBand?: pulumi.Input<string | undefined>;
     /**
-     * Whether to enable WPA3 support. Default: `false`.
+     * Whether to enable WPA3 support. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     wpa3Support?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: `false`.
+     * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     wpa3Transition?: pulumi.Input<boolean | undefined>;
     /**
-     * The WPA mode for this WLAN. Must be `auto` or `wpa2`. Default: `wpa2`.
+     * The WPA mode for this WLAN. Must be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>. Default: <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>.
      */
     wpaMode?: pulumi.Input<string | undefined>;
 }

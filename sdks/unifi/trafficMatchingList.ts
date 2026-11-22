@@ -54,12 +54,12 @@ export class TrafficMatchingList extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The site the traffic matching list belongs to: a site name (for example `default`) or a site UUID. The UniFi Integration API addresses sites by UUID, so a name is resolved to its UUID automatically. Defaults to the provider's configured site.
+     * The site the traffic matching list belongs to: a site name (for example <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>) or a site UUID. The UniFi Integration API addresses sites by UUID, so a name is resolved to its UUID automatically. Defaults to the provider's configured site.
      */
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.TrafficMatchingListTimeouts | undefined>;
     /**
-     * The type of the list. One of `IPV4_ADDRESSES` or `PORTS`. This determines how `items` are interpreted.
+     * The type of the list. One of `IPV4_ADDRESSES` or `PORTS`. This determines how <span pulumi-lang-nodejs="`items`" pulumi-lang-dotnet="`Items`" pulumi-lang-go="`items`" pulumi-lang-python="`items`" pulumi-lang-yaml="`items`" pulumi-lang-java="`items`" pulumi-lang-hcl="`items`">`items`</span> are interpreted.
      */
     declare public readonly type: pulumi.Output<string>;
 
@@ -113,12 +113,12 @@ export interface TrafficMatchingListState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The site the traffic matching list belongs to: a site name (for example `default`) or a site UUID. The UniFi Integration API addresses sites by UUID, so a name is resolved to its UUID automatically. Defaults to the provider's configured site.
+     * The site the traffic matching list belongs to: a site name (for example <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>) or a site UUID. The UniFi Integration API addresses sites by UUID, so a name is resolved to its UUID automatically. Defaults to the provider's configured site.
      */
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.TrafficMatchingListTimeouts | undefined>;
     /**
-     * The type of the list. One of `IPV4_ADDRESSES` or `PORTS`. This determines how `items` are interpreted.
+     * The type of the list. One of `IPV4_ADDRESSES` or `PORTS`. This determines how <span pulumi-lang-nodejs="`items`" pulumi-lang-dotnet="`Items`" pulumi-lang-go="`items`" pulumi-lang-python="`items`" pulumi-lang-yaml="`items`" pulumi-lang-java="`items`" pulumi-lang-hcl="`items`">`items`</span> are interpreted.
      */
     type?: pulumi.Input<string | undefined>;
 }
@@ -136,12 +136,12 @@ export interface TrafficMatchingListArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The site the traffic matching list belongs to: a site name (for example `default`) or a site UUID. The UniFi Integration API addresses sites by UUID, so a name is resolved to its UUID automatically. Defaults to the provider's configured site.
+     * The site the traffic matching list belongs to: a site name (for example <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>) or a site UUID. The UniFi Integration API addresses sites by UUID, so a name is resolved to its UUID automatically. Defaults to the provider's configured site.
      */
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.TrafficMatchingListTimeouts | undefined>;
     /**
-     * The type of the list. One of `IPV4_ADDRESSES` or `PORTS`. This determines how `items` are interpreted.
+     * The type of the list. One of `IPV4_ADDRESSES` or `PORTS`. This determines how <span pulumi-lang-nodejs="`items`" pulumi-lang-dotnet="`Items`" pulumi-lang-go="`items`" pulumi-lang-python="`items`" pulumi-lang-yaml="`items`" pulumi-lang-java="`items`" pulumi-lang-hcl="`items`">`items`</span> are interpreted.
      */
     type: pulumi.Input<string>;
 }

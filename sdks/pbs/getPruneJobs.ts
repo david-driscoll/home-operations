@@ -25,10 +25,6 @@ export interface GetPruneJobsArgs {
  * A collection of values returned by getPruneJobs.
  */
 export interface GetPruneJobsResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly jobs: outputs.GetPruneJobsJob[];
     readonly store?: string;
 }

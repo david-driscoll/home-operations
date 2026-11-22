@@ -52,7 +52,7 @@ export class WebhookNotification extends pulumi.CustomResource {
      */
     declare public readonly comment: pulumi.Output<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly disable: pulumi.Output<boolean>;
     /**
@@ -60,7 +60,7 @@ export class WebhookNotification extends pulumi.CustomResource {
      */
     declare public readonly headers: pulumi.Output<{[key: string]: string} | undefined>;
     /**
-     * HTTP method for webhook requests. Valid values: `post`, `put`. Defaults to `post`.
+     * HTTP method for webhook requests. Valid values: <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>, <span pulumi-lang-nodejs="`put`" pulumi-lang-dotnet="`Put`" pulumi-lang-go="`put`" pulumi-lang-python="`put`" pulumi-lang-yaml="`put`" pulumi-lang-java="`put`" pulumi-lang-hcl="`put`">`put`</span>. Defaults to <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>.
      */
     declare public readonly method: pulumi.Output<string>;
     /**
@@ -68,7 +68,7 @@ export class WebhookNotification extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     declare public /*out*/ readonly origin: pulumi.Output<string>;
     /**
@@ -137,7 +137,7 @@ export interface WebhookNotificationState {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
@@ -145,7 +145,7 @@ export interface WebhookNotificationState {
      */
     headers?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
-     * HTTP method for webhook requests. Valid values: `post`, `put`. Defaults to `post`.
+     * HTTP method for webhook requests. Valid values: <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>, <span pulumi-lang-nodejs="`put`" pulumi-lang-dotnet="`Put`" pulumi-lang-go="`put`" pulumi-lang-python="`put`" pulumi-lang-yaml="`put`" pulumi-lang-java="`put`" pulumi-lang-hcl="`put`">`put`</span>. Defaults to <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>.
      */
     method?: pulumi.Input<string | undefined>;
     /**
@@ -153,7 +153,7 @@ export interface WebhookNotificationState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     origin?: pulumi.Input<string | undefined>;
     /**
@@ -179,7 +179,7 @@ export interface WebhookNotificationArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
@@ -187,7 +187,7 @@ export interface WebhookNotificationArgs {
      */
     headers?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
-     * HTTP method for webhook requests. Valid values: `post`, `put`. Defaults to `post`.
+     * HTTP method for webhook requests. Valid values: <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>, <span pulumi-lang-nodejs="`put`" pulumi-lang-dotnet="`Put`" pulumi-lang-go="`put`" pulumi-lang-python="`put`" pulumi-lang-yaml="`put`" pulumi-lang-java="`put`" pulumi-lang-hcl="`put`">`put`</span>. Defaults to <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>.
      */
     method?: pulumi.Input<string | undefined>;
     /**

@@ -44,7 +44,7 @@ export class AgentsSystemPrompt extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the custom prompt is appended to Coder's built-in system prompt (`true`, the default) or replaces it entirely (`false`).
+     * Whether the custom prompt is appended to Coder's built-in system prompt (<span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the default) or replaces it entirely (<span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>).
      */
     declare public readonly includeDefaultSystemPrompt: pulumi.Output<boolean>;
     /**
@@ -85,7 +85,7 @@ export class AgentsSystemPrompt extends pulumi.CustomResource {
  */
 export interface AgentsSystemPromptState {
     /**
-     * Whether the custom prompt is appended to Coder's built-in system prompt (`true`, the default) or replaces it entirely (`false`).
+     * Whether the custom prompt is appended to Coder's built-in system prompt (<span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the default) or replaces it entirely (<span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>).
      */
     includeDefaultSystemPrompt?: pulumi.Input<boolean | undefined>;
     /**
@@ -99,7 +99,7 @@ export interface AgentsSystemPromptState {
  */
 export interface AgentsSystemPromptArgs {
     /**
-     * Whether the custom prompt is appended to Coder's built-in system prompt (`true`, the default) or replaces it entirely (`false`).
+     * Whether the custom prompt is appended to Coder's built-in system prompt (<span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the default) or replaces it entirely (<span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>).
      */
     includeDefaultSystemPrompt?: pulumi.Input<boolean | undefined>;
     /**

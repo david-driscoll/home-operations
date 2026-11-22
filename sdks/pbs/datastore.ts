@@ -66,7 +66,7 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly fingerprint: pulumi.Output<string | undefined>;
     /**
-     * Garbage collection schedule in cron format (e.g., `daily`, `weekly`, or `0 3 * * 0`).
+     * Garbage collection schedule in cron format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, or `0 3 * * 0`).
      */
     declare public readonly gcSchedule: pulumi.Output<string | undefined>;
     /**
@@ -94,7 +94,7 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly keepYearly: pulumi.Output<number | undefined>;
     /**
-     * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
+     * Maintenance mode configuration allowing <span pulumi-lang-nodejs="`offline`" pulumi-lang-dotnet="`Offline`" pulumi-lang-go="`offline`" pulumi-lang-python="`offline`" pulumi-lang-yaml="`offline`" pulumi-lang-java="`offline`" pulumi-lang-hcl="`offline`">`offline`</span> or `read-only` modes with optional message.
      */
     declare public readonly maintenanceMode: pulumi.Output<outputs.DatastoreMaintenanceMode | undefined>;
     /**
@@ -110,7 +110,7 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly notify: pulumi.Output<outputs.DatastoreNotify | undefined>;
     /**
-     * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
+     * Notification level. Valid values: <span pulumi-lang-nodejs="`info`" pulumi-lang-dotnet="`Info`" pulumi-lang-go="`info`" pulumi-lang-python="`info`" pulumi-lang-yaml="`info`" pulumi-lang-java="`info`" pulumi-lang-hcl="`info`">`info`</span>, <span pulumi-lang-nodejs="`notice`" pulumi-lang-dotnet="`Notice`" pulumi-lang-go="`notice`" pulumi-lang-python="`notice`" pulumi-lang-yaml="`notice`" pulumi-lang-java="`notice`" pulumi-lang-hcl="`notice`">`notice`</span>, <span pulumi-lang-nodejs="`warning`" pulumi-lang-dotnet="`Warning`" pulumi-lang-go="`warning`" pulumi-lang-python="`warning`" pulumi-lang-yaml="`warning`" pulumi-lang-java="`warning`" pulumi-lang-hcl="`warning`">`warning`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>.
      */
     declare public readonly notifyLevel: pulumi.Output<string | undefined>;
     /**
@@ -126,13 +126,13 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly path: pulumi.Output<string | undefined>;
     /**
-     * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
+     * Prune schedule in cron format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, or `0 2 * * *`).
      *
      * @deprecated Deprecated
      */
     declare public readonly pruneSchedule: pulumi.Output<string | undefined>;
     /**
-     * Set to `true` to manage a removable datastore backed by a device UUID.
+     * Set to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> to manage a removable datastore backed by a device UUID.
      */
     declare public readonly removable: pulumi.Output<boolean>;
     /**
@@ -264,7 +264,7 @@ export interface DatastoreState {
      */
     fingerprint?: pulumi.Input<string | undefined>;
     /**
-     * Garbage collection schedule in cron format (e.g., `daily`, `weekly`, or `0 3 * * 0`).
+     * Garbage collection schedule in cron format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, or `0 3 * * 0`).
      */
     gcSchedule?: pulumi.Input<string | undefined>;
     /**
@@ -292,7 +292,7 @@ export interface DatastoreState {
      */
     keepYearly?: pulumi.Input<number | undefined>;
     /**
-     * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
+     * Maintenance mode configuration allowing <span pulumi-lang-nodejs="`offline`" pulumi-lang-dotnet="`Offline`" pulumi-lang-go="`offline`" pulumi-lang-python="`offline`" pulumi-lang-yaml="`offline`" pulumi-lang-java="`offline`" pulumi-lang-hcl="`offline`">`offline`</span> or `read-only` modes with optional message.
      */
     maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode | undefined>;
     /**
@@ -308,7 +308,7 @@ export interface DatastoreState {
      */
     notify?: pulumi.Input<inputs.DatastoreNotify | undefined>;
     /**
-     * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
+     * Notification level. Valid values: <span pulumi-lang-nodejs="`info`" pulumi-lang-dotnet="`Info`" pulumi-lang-go="`info`" pulumi-lang-python="`info`" pulumi-lang-yaml="`info`" pulumi-lang-java="`info`" pulumi-lang-hcl="`info`">`info`</span>, <span pulumi-lang-nodejs="`notice`" pulumi-lang-dotnet="`Notice`" pulumi-lang-go="`notice`" pulumi-lang-python="`notice`" pulumi-lang-yaml="`notice`" pulumi-lang-java="`notice`" pulumi-lang-hcl="`notice`">`notice`</span>, <span pulumi-lang-nodejs="`warning`" pulumi-lang-dotnet="`Warning`" pulumi-lang-go="`warning`" pulumi-lang-python="`warning`" pulumi-lang-yaml="`warning`" pulumi-lang-java="`warning`" pulumi-lang-hcl="`warning`">`warning`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>.
      */
     notifyLevel?: pulumi.Input<string | undefined>;
     /**
@@ -324,13 +324,13 @@ export interface DatastoreState {
      */
     path?: pulumi.Input<string | undefined>;
     /**
-     * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
+     * Prune schedule in cron format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, or `0 2 * * *`).
      *
      * @deprecated Deprecated
      */
     pruneSchedule?: pulumi.Input<string | undefined>;
     /**
-     * Set to `true` to manage a removable datastore backed by a device UUID.
+     * Set to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> to manage a removable datastore backed by a device UUID.
      */
     removable?: pulumi.Input<boolean | undefined>;
     /**
@@ -386,7 +386,7 @@ export interface DatastoreArgs {
      */
     fingerprint?: pulumi.Input<string | undefined>;
     /**
-     * Garbage collection schedule in cron format (e.g., `daily`, `weekly`, or `0 3 * * 0`).
+     * Garbage collection schedule in cron format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, or `0 3 * * 0`).
      */
     gcSchedule?: pulumi.Input<string | undefined>;
     /**
@@ -414,7 +414,7 @@ export interface DatastoreArgs {
      */
     keepYearly?: pulumi.Input<number | undefined>;
     /**
-     * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
+     * Maintenance mode configuration allowing <span pulumi-lang-nodejs="`offline`" pulumi-lang-dotnet="`Offline`" pulumi-lang-go="`offline`" pulumi-lang-python="`offline`" pulumi-lang-yaml="`offline`" pulumi-lang-java="`offline`" pulumi-lang-hcl="`offline`">`offline`</span> or `read-only` modes with optional message.
      */
     maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode | undefined>;
     /**
@@ -430,7 +430,7 @@ export interface DatastoreArgs {
      */
     notify?: pulumi.Input<inputs.DatastoreNotify | undefined>;
     /**
-     * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
+     * Notification level. Valid values: <span pulumi-lang-nodejs="`info`" pulumi-lang-dotnet="`Info`" pulumi-lang-go="`info`" pulumi-lang-python="`info`" pulumi-lang-yaml="`info`" pulumi-lang-java="`info`" pulumi-lang-hcl="`info`">`info`</span>, <span pulumi-lang-nodejs="`notice`" pulumi-lang-dotnet="`Notice`" pulumi-lang-go="`notice`" pulumi-lang-python="`notice`" pulumi-lang-yaml="`notice`" pulumi-lang-java="`notice`" pulumi-lang-hcl="`notice`">`notice`</span>, <span pulumi-lang-nodejs="`warning`" pulumi-lang-dotnet="`Warning`" pulumi-lang-go="`warning`" pulumi-lang-python="`warning`" pulumi-lang-yaml="`warning`" pulumi-lang-java="`warning`" pulumi-lang-hcl="`warning`">`warning`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>.
      */
     notifyLevel?: pulumi.Input<string | undefined>;
     /**
@@ -446,13 +446,13 @@ export interface DatastoreArgs {
      */
     path?: pulumi.Input<string | undefined>;
     /**
-     * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
+     * Prune schedule in cron format (e.g., <span pulumi-lang-nodejs="`daily`" pulumi-lang-dotnet="`Daily`" pulumi-lang-go="`daily`" pulumi-lang-python="`daily`" pulumi-lang-yaml="`daily`" pulumi-lang-java="`daily`" pulumi-lang-hcl="`daily`">`daily`</span>, <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, or `0 2 * * *`).
      *
      * @deprecated Deprecated
      */
     pruneSchedule?: pulumi.Input<string | undefined>;
     /**
-     * Set to `true` to manage a removable datastore backed by a device UUID.
+     * Set to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> to manage a removable datastore backed by a device UUID.
      */
     removable?: pulumi.Input<boolean | undefined>;
     /**

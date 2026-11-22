@@ -25,8 +25,17 @@ export class Provider extends pulumi.ProviderResource {
         return obj['__pulumiType'] === "pulumi:providers:" + Provider.__pulumiType;
     }
 
+    /**
+     * NetBird Management API URL, can be also set through NB_MANAGEMENT_URL Environment Variable, value defined in Terraform files takes precedence
+     */
     declare public readonly managementUrl: pulumi.Output<string | undefined>;
+    /**
+     * Account ID to impersonate, can be also set through NB_ACCOUNT Environment Variable, value defined in Terraform files takes precedence
+     */
     declare public readonly tenantAccount: pulumi.Output<string | undefined>;
+    /**
+     * Admin PAT for NetBird Management Server, can be also set through NB_PAT Environment Variable, value defined in Terraform files takes precedence
+     */
     declare public readonly token: pulumi.Output<string | undefined>;
 
     /**
@@ -65,8 +74,17 @@ export class Provider extends pulumi.ProviderResource {
  * The set of arguments for constructing a Provider resource.
  */
 export interface ProviderArgs {
+    /**
+     * NetBird Management API URL, can be also set through NB_MANAGEMENT_URL Environment Variable, value defined in Terraform files takes precedence
+     */
     managementUrl?: pulumi.Input<string | undefined>;
+    /**
+     * Account ID to impersonate, can be also set through NB_ACCOUNT Environment Variable, value defined in Terraform files takes precedence
+     */
     tenantAccount?: pulumi.Input<string | undefined>;
+    /**
+     * Admin PAT for NetBird Management Server, can be also set through NB_PAT Environment Variable, value defined in Terraform files takes precedence
+     */
     token?: pulumi.Input<string | undefined>;
 }
 

@@ -48,7 +48,7 @@ export class EndpointsConnectorAgent extends pulumi.CustomResource {
      */
     declare public readonly authSessionDuration: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly authTerminateSessionOnExpiry: pulumi.Output<boolean | undefined>;
     declare public readonly authorizationFlow: pulumi.Output<string | undefined>;
@@ -58,22 +58,22 @@ export class EndpointsConnectorAgent extends pulumi.CustomResource {
     declare public readonly challengeIdleTimeout: pulumi.Output<string | undefined>;
     declare public readonly challengeKey: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly challengeTriggerCheckIn: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean | undefined>;
     declare public readonly endpointsConnectorAgentId: pulumi.Output<string>;
     declare public readonly jwtFederationProviders: pulumi.Output<number[] | undefined>;
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Defaults to `4000`.
+     * Defaults to <span pulumi-lang-nodejs="`4000`" pulumi-lang-dotnet="`4000`" pulumi-lang-go="`4000`" pulumi-lang-python="`4000`" pulumi-lang-yaml="`4000`" pulumi-lang-java="`4000`" pulumi-lang-hcl="`4000`">`4000`</span>.
      */
     declare public readonly nssGidOffset: pulumi.Output<number | undefined>;
     /**
-     * Defaults to `2000`.
+     * Defaults to <span pulumi-lang-nodejs="`2000`" pulumi-lang-dotnet="`2000`" pulumi-lang-go="`2000`" pulumi-lang-python="`2000`" pulumi-lang-yaml="`2000`" pulumi-lang-java="`2000`" pulumi-lang-hcl="`2000`">`2000`</span>.
      */
     declare public readonly nssUidOffset: pulumi.Output<number | undefined>;
     /**
@@ -143,7 +143,7 @@ export interface EndpointsConnectorAgentState {
      */
     authSessionDuration?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     authTerminateSessionOnExpiry?: pulumi.Input<boolean | undefined>;
     authorizationFlow?: pulumi.Input<string | undefined>;
@@ -153,22 +153,22 @@ export interface EndpointsConnectorAgentState {
     challengeIdleTimeout?: pulumi.Input<string | undefined>;
     challengeKey?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     challengeTriggerCheckIn?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     endpointsConnectorAgentId?: pulumi.Input<string | undefined>;
     jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `4000`.
+     * Defaults to <span pulumi-lang-nodejs="`4000`" pulumi-lang-dotnet="`4000`" pulumi-lang-go="`4000`" pulumi-lang-python="`4000`" pulumi-lang-yaml="`4000`" pulumi-lang-java="`4000`" pulumi-lang-hcl="`4000`">`4000`</span>.
      */
     nssGidOffset?: pulumi.Input<number | undefined>;
     /**
-     * Defaults to `2000`.
+     * Defaults to <span pulumi-lang-nodejs="`2000`" pulumi-lang-dotnet="`2000`" pulumi-lang-go="`2000`" pulumi-lang-python="`2000`" pulumi-lang-yaml="`2000`" pulumi-lang-java="`2000`" pulumi-lang-hcl="`2000`">`2000`</span>.
      */
     nssUidOffset?: pulumi.Input<number | undefined>;
     /**
@@ -190,7 +190,7 @@ export interface EndpointsConnectorAgentArgs {
      */
     authSessionDuration?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     authTerminateSessionOnExpiry?: pulumi.Input<boolean | undefined>;
     authorizationFlow?: pulumi.Input<string | undefined>;
@@ -200,22 +200,22 @@ export interface EndpointsConnectorAgentArgs {
     challengeIdleTimeout?: pulumi.Input<string | undefined>;
     challengeKey?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     challengeTriggerCheckIn?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     endpointsConnectorAgentId?: pulumi.Input<string | undefined>;
     jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `4000`.
+     * Defaults to <span pulumi-lang-nodejs="`4000`" pulumi-lang-dotnet="`4000`" pulumi-lang-go="`4000`" pulumi-lang-python="`4000`" pulumi-lang-yaml="`4000`" pulumi-lang-java="`4000`" pulumi-lang-hcl="`4000`">`4000`</span>.
      */
     nssGidOffset?: pulumi.Input<number | undefined>;
     /**
-     * Defaults to `2000`.
+     * Defaults to <span pulumi-lang-nodejs="`2000`" pulumi-lang-dotnet="`2000`" pulumi-lang-go="`2000`" pulumi-lang-python="`2000`" pulumi-lang-yaml="`2000`" pulumi-lang-java="`2000`" pulumi-lang-hcl="`2000`">`2000`</span>.
      */
     nssUidOffset?: pulumi.Input<number | undefined>;
     /**

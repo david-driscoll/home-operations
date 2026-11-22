@@ -74,11 +74,11 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's `purpose` field.
+     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's <span pulumi-lang-nodejs="`purpose`" pulumi-lang-dotnet="`Purpose`" pulumi-lang-go="`purpose`" pulumi-lang-python="`purpose`" pulumi-lang-yaml="`purpose`" pulumi-lang-java="`purpose`" pulumi-lang-hcl="`purpose`">`purpose`</span> field.
      */
     declare public readonly firewallZoneId: pulumi.Output<string>;
     /**
-     * The gateway type. Must be one of `default` or `switch`. Defaults to `default` when a network is created; an existing network keeps the controller's value (#544).
+     * The gateway type. Must be one of <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>. Defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> when a network is created; an existing network keeps the controller's value (#544).
      */
     declare public readonly gatewayType: pulumi.Output<string>;
     /**
@@ -86,7 +86,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly igmpSnooping: pulumi.Output<boolean>;
     /**
-     * Specifies whether internet access is enabled. Defaults to `true` when a network is created; an existing network keeps the controller's value (#544).
+     * Specifies whether internet access is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when a network is created; an existing network keeps the controller's value (#544).
      */
     declare public readonly internetAccess: pulumi.Output<boolean>;
     /**
@@ -94,15 +94,15 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
-     * IPv6 settings for the network. When omitted, `interface_type` is taken from the controller and the remaining values are read from the controller.
+     * IPv6 settings for the network. When omitted, <span pulumi-lang-nodejs="`interfaceType`" pulumi-lang-dotnet="`InterfaceType`" pulumi-lang-go="`interfaceType`" pulumi-lang-python="`interface_type`" pulumi-lang-yaml="`interfaceType`" pulumi-lang-java="`interfaceType`" pulumi-lang-hcl="`interface_type`">`interfaceType`</span> is taken from the controller and the remaining values are read from the controller.
      */
     declare public readonly ipv6: pulumi.Output<outputs.NetworkIpv6>;
     /**
-     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
+     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's <span pulumi-lang-nodejs="`lteLanEnabled`" pulumi-lang-dotnet="`LteLanEnabled`" pulumi-lang-go="`lteLanEnabled`" pulumi-lang-python="`lte_lan_enabled`" pulumi-lang-yaml="`lteLanEnabled`" pulumi-lang-java="`lteLanEnabled`" pulumi-lang-hcl="`lte_lan_enabled`">`lteLanEnabled`</span> flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
     declare public readonly lteLan: pulumi.Output<boolean>;
     /**
-     * Specifies whether mDNS is enabled. This is read back from the controller rather than defaulted: some controllers (notably UniFi OS gateways) ignore `mdns_enabled` at create/update time and always store `false`, so forcing a `true` default produced a "provider produced inconsistent result after apply" error.
+     * Specifies whether mDNS is enabled. This is read back from the controller rather than defaulted: some controllers (notably UniFi OS gateways) ignore <span pulumi-lang-nodejs="`mdnsEnabled`" pulumi-lang-dotnet="`MdnsEnabled`" pulumi-lang-go="`mdnsEnabled`" pulumi-lang-python="`mdns_enabled`" pulumi-lang-yaml="`mdnsEnabled`" pulumi-lang-java="`mdnsEnabled`" pulumi-lang-hcl="`mdns_enabled`">`mdnsEnabled`</span> at create/update time and always store <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>, so forcing a <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> default produced a "provider produced inconsistent result after apply" error.
      */
     declare public readonly multicastDns: pulumi.Output<boolean>;
     /**
@@ -118,11 +118,11 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly networkIsolation: pulumi.Output<boolean>;
     /**
-     * The network purpose: `corporate` (default), `guest`, or `vlan-only`. Leave unset to let the controller manage it (a `third_party_gateway` network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a `guest` network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via `unifi.FirewallZone`), otherwise the controller rewrites it back to `corporate` and the apply fails with an inconsistent-result error.
+     * The network purpose: <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> (default), <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span>, or `vlan-only`. Leave unset to let the controller manage it (a <span pulumi-lang-nodejs="`thirdPartyGateway`" pulumi-lang-dotnet="`ThirdPartyGateway`" pulumi-lang-go="`thirdPartyGateway`" pulumi-lang-python="`third_party_gateway`" pulumi-lang-yaml="`thirdPartyGateway`" pulumi-lang-java="`thirdPartyGateway`" pulumi-lang-hcl="`third_party_gateway`">`thirdPartyGateway`</span> network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span> network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via <span pulumi-lang-nodejs="`unifi.FirewallZone`" pulumi-lang-dotnet="`unifi.FirewallZone`" pulumi-lang-go="`FirewallZone`" pulumi-lang-python="`FirewallZone`" pulumi-lang-yaml="`unifi.FirewallZone`" pulumi-lang-java="`unifi.FirewallZone`" pulumi-lang-hcl="`unifi_firewall_zone`">`unifi.FirewallZone`</span>), otherwise the controller rewrites it back to <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> and the apply fails with an inconsistent-result error.
      */
     declare public readonly purpose: pulumi.Output<string>;
     /**
-     * Setting preference. Must be one of `auto` or `manual`. Taken from the controller when not set; an adopted network keeps its own preference, so importing a `manual` network no longer proposes `auto` - which would also reset DHCP guarding (#544).
+     * Setting preference. Must be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>. Taken from the controller when not set; an adopted network keeps its own preference, so importing a <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span> network no longer proposes <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> - which would also reset DHCP guarding (#544).
      */
     declare public readonly settingPreference: pulumi.Output<string>;
     /**
@@ -130,11 +130,11 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
+     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for <span pulumi-lang-nodejs="`vlanOnly`" pulumi-lang-dotnet="`VlanOnly`" pulumi-lang-go="`vlanOnly`" pulumi-lang-python="`vlan_only`" pulumi-lang-yaml="`vlanOnly`" pulumi-lang-java="`vlanOnly`" pulumi-lang-hcl="`vlan_only`">`vlanOnly`</span> networks (<span pulumi-lang-nodejs="`thirdPartyGateway " pulumi-lang-dotnet="`ThirdPartyGateway " pulumi-lang-go="`thirdPartyGateway " pulumi-lang-python="`third_party_gateway " pulumi-lang-yaml="`thirdPartyGateway " pulumi-lang-java="`thirdPartyGateway " pulumi-lang-hcl="`third_party_gateway ">`thirdPartyGateway </span>= true`), where the UniFi controller does not manage the subnet.
      */
     declare public readonly subnet: pulumi.Output<string | undefined>;
     /**
-     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to `false` (#544).
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> (#544).
      */
     declare public readonly thirdPartyGateway: pulumi.Output<boolean>;
     declare public readonly timeouts: pulumi.Output<outputs.NetworkTimeouts | undefined>;
@@ -247,11 +247,11 @@ export interface NetworkState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's `purpose` field.
+     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's <span pulumi-lang-nodejs="`purpose`" pulumi-lang-dotnet="`Purpose`" pulumi-lang-go="`purpose`" pulumi-lang-python="`purpose`" pulumi-lang-yaml="`purpose`" pulumi-lang-java="`purpose`" pulumi-lang-hcl="`purpose`">`purpose`</span> field.
      */
     firewallZoneId?: pulumi.Input<string | undefined>;
     /**
-     * The gateway type. Must be one of `default` or `switch`. Defaults to `default` when a network is created; an existing network keeps the controller's value (#544).
+     * The gateway type. Must be one of <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>. Defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> when a network is created; an existing network keeps the controller's value (#544).
      */
     gatewayType?: pulumi.Input<string | undefined>;
     /**
@@ -259,7 +259,7 @@ export interface NetworkState {
      */
     igmpSnooping?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether internet access is enabled. Defaults to `true` when a network is created; an existing network keeps the controller's value (#544).
+     * Specifies whether internet access is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when a network is created; an existing network keeps the controller's value (#544).
      */
     internetAccess?: pulumi.Input<boolean | undefined>;
     /**
@@ -267,15 +267,15 @@ export interface NetworkState {
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * IPv6 settings for the network. When omitted, `interface_type` is taken from the controller and the remaining values are read from the controller.
+     * IPv6 settings for the network. When omitted, <span pulumi-lang-nodejs="`interfaceType`" pulumi-lang-dotnet="`InterfaceType`" pulumi-lang-go="`interfaceType`" pulumi-lang-python="`interface_type`" pulumi-lang-yaml="`interfaceType`" pulumi-lang-java="`interfaceType`" pulumi-lang-hcl="`interface_type`">`interfaceType`</span> is taken from the controller and the remaining values are read from the controller.
      */
     ipv6?: pulumi.Input<inputs.NetworkIpv6 | undefined>;
     /**
-     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
+     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's <span pulumi-lang-nodejs="`lteLanEnabled`" pulumi-lang-dotnet="`LteLanEnabled`" pulumi-lang-go="`lteLanEnabled`" pulumi-lang-python="`lte_lan_enabled`" pulumi-lang-yaml="`lteLanEnabled`" pulumi-lang-java="`lteLanEnabled`" pulumi-lang-hcl="`lte_lan_enabled`">`lteLanEnabled`</span> flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
     lteLan?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether mDNS is enabled. This is read back from the controller rather than defaulted: some controllers (notably UniFi OS gateways) ignore `mdns_enabled` at create/update time and always store `false`, so forcing a `true` default produced a "provider produced inconsistent result after apply" error.
+     * Specifies whether mDNS is enabled. This is read back from the controller rather than defaulted: some controllers (notably UniFi OS gateways) ignore <span pulumi-lang-nodejs="`mdnsEnabled`" pulumi-lang-dotnet="`MdnsEnabled`" pulumi-lang-go="`mdnsEnabled`" pulumi-lang-python="`mdns_enabled`" pulumi-lang-yaml="`mdnsEnabled`" pulumi-lang-java="`mdnsEnabled`" pulumi-lang-hcl="`mdns_enabled`">`mdnsEnabled`</span> at create/update time and always store <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>, so forcing a <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> default produced a "provider produced inconsistent result after apply" error.
      */
     multicastDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -291,11 +291,11 @@ export interface NetworkState {
      */
     networkIsolation?: pulumi.Input<boolean | undefined>;
     /**
-     * The network purpose: `corporate` (default), `guest`, or `vlan-only`. Leave unset to let the controller manage it (a `third_party_gateway` network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a `guest` network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via `unifi.FirewallZone`), otherwise the controller rewrites it back to `corporate` and the apply fails with an inconsistent-result error.
+     * The network purpose: <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> (default), <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span>, or `vlan-only`. Leave unset to let the controller manage it (a <span pulumi-lang-nodejs="`thirdPartyGateway`" pulumi-lang-dotnet="`ThirdPartyGateway`" pulumi-lang-go="`thirdPartyGateway`" pulumi-lang-python="`third_party_gateway`" pulumi-lang-yaml="`thirdPartyGateway`" pulumi-lang-java="`thirdPartyGateway`" pulumi-lang-hcl="`third_party_gateway`">`thirdPartyGateway`</span> network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span> network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via <span pulumi-lang-nodejs="`unifi.FirewallZone`" pulumi-lang-dotnet="`unifi.FirewallZone`" pulumi-lang-go="`FirewallZone`" pulumi-lang-python="`FirewallZone`" pulumi-lang-yaml="`unifi.FirewallZone`" pulumi-lang-java="`unifi.FirewallZone`" pulumi-lang-hcl="`unifi_firewall_zone`">`unifi.FirewallZone`</span>), otherwise the controller rewrites it back to <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> and the apply fails with an inconsistent-result error.
      */
     purpose?: pulumi.Input<string | undefined>;
     /**
-     * Setting preference. Must be one of `auto` or `manual`. Taken from the controller when not set; an adopted network keeps its own preference, so importing a `manual` network no longer proposes `auto` - which would also reset DHCP guarding (#544).
+     * Setting preference. Must be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>. Taken from the controller when not set; an adopted network keeps its own preference, so importing a <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span> network no longer proposes <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> - which would also reset DHCP guarding (#544).
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -303,11 +303,11 @@ export interface NetworkState {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
+     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for <span pulumi-lang-nodejs="`vlanOnly`" pulumi-lang-dotnet="`VlanOnly`" pulumi-lang-go="`vlanOnly`" pulumi-lang-python="`vlan_only`" pulumi-lang-yaml="`vlanOnly`" pulumi-lang-java="`vlanOnly`" pulumi-lang-hcl="`vlan_only`">`vlanOnly`</span> networks (<span pulumi-lang-nodejs="`thirdPartyGateway " pulumi-lang-dotnet="`ThirdPartyGateway " pulumi-lang-go="`thirdPartyGateway " pulumi-lang-python="`third_party_gateway " pulumi-lang-yaml="`thirdPartyGateway " pulumi-lang-java="`thirdPartyGateway " pulumi-lang-hcl="`third_party_gateway ">`thirdPartyGateway </span>= true`), where the UniFi controller does not manage the subnet.
      */
     subnet?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to `false` (#544).
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> (#544).
      */
     thirdPartyGateway?: pulumi.Input<boolean | undefined>;
     timeouts?: pulumi.Input<inputs.NetworkTimeouts | undefined>;
@@ -350,11 +350,11 @@ export interface NetworkArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's `purpose` field.
+     * The firewall zone ID assigned to this network. Note: This field is dual-managed and can compete with `unifi_firewall_zone.network_ids`. To prevent state drift loops, ensure you manage zone membership from exactly one side. On Zone-Based Firewall (ZBF) controllers, this field is tightly coupled to the network's <span pulumi-lang-nodejs="`purpose`" pulumi-lang-dotnet="`Purpose`" pulumi-lang-go="`purpose`" pulumi-lang-python="`purpose`" pulumi-lang-yaml="`purpose`" pulumi-lang-java="`purpose`" pulumi-lang-hcl="`purpose`">`purpose`</span> field.
      */
     firewallZoneId?: pulumi.Input<string | undefined>;
     /**
-     * The gateway type. Must be one of `default` or `switch`. Defaults to `default` when a network is created; an existing network keeps the controller's value (#544).
+     * The gateway type. Must be one of <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>. Defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> when a network is created; an existing network keeps the controller's value (#544).
      */
     gatewayType?: pulumi.Input<string | undefined>;
     /**
@@ -362,7 +362,7 @@ export interface NetworkArgs {
      */
     igmpSnooping?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether internet access is enabled. Defaults to `true` when a network is created; an existing network keeps the controller's value (#544).
+     * Specifies whether internet access is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when a network is created; an existing network keeps the controller's value (#544).
      */
     internetAccess?: pulumi.Input<boolean | undefined>;
     /**
@@ -370,15 +370,15 @@ export interface NetworkArgs {
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * IPv6 settings for the network. When omitted, `interface_type` is taken from the controller and the remaining values are read from the controller.
+     * IPv6 settings for the network. When omitted, <span pulumi-lang-nodejs="`interfaceType`" pulumi-lang-dotnet="`InterfaceType`" pulumi-lang-go="`interfaceType`" pulumi-lang-python="`interface_type`" pulumi-lang-yaml="`interfaceType`" pulumi-lang-java="`interfaceType`" pulumi-lang-hcl="`interface_type`">`interfaceType`</span> is taken from the controller and the remaining values are read from the controller.
      */
     ipv6?: pulumi.Input<inputs.NetworkIpv6 | undefined>;
     /**
-     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's `lte_lan_enabled` flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
+     * Whether this network/VLAN stays active when the gateway fails over to a UniFi LTE (cellular) backup WAN. Maps to the controller's <span pulumi-lang-nodejs="`lteLanEnabled`" pulumi-lang-dotnet="`LteLanEnabled`" pulumi-lang-go="`lteLanEnabled`" pulumi-lang-python="`lte_lan_enabled`" pulumi-lang-yaml="`lteLanEnabled`" pulumi-lang-java="`lteLanEnabled`" pulumi-lang-hcl="`lte_lan_enabled`">`lteLanEnabled`</span> flag and only matters when a UniFi LTE failover device is in use; otherwise it is cosmetic. The controller stores no default: left unset, the attribute is not written and whatever the controller holds is preserved, which is why existing networks show differing values.
      */
     lteLan?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies whether mDNS is enabled. This is read back from the controller rather than defaulted: some controllers (notably UniFi OS gateways) ignore `mdns_enabled` at create/update time and always store `false`, so forcing a `true` default produced a "provider produced inconsistent result after apply" error.
+     * Specifies whether mDNS is enabled. This is read back from the controller rather than defaulted: some controllers (notably UniFi OS gateways) ignore <span pulumi-lang-nodejs="`mdnsEnabled`" pulumi-lang-dotnet="`MdnsEnabled`" pulumi-lang-go="`mdnsEnabled`" pulumi-lang-python="`mdns_enabled`" pulumi-lang-yaml="`mdnsEnabled`" pulumi-lang-java="`mdnsEnabled`" pulumi-lang-hcl="`mdns_enabled`">`mdnsEnabled`</span> at create/update time and always store <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>, so forcing a <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> default produced a "provider produced inconsistent result after apply" error.
      */
     multicastDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -394,11 +394,11 @@ export interface NetworkArgs {
      */
     networkIsolation?: pulumi.Input<boolean | undefined>;
     /**
-     * The network purpose: `corporate` (default), `guest`, or `vlan-only`. Leave unset to let the controller manage it (a `third_party_gateway` network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a `guest` network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via `unifi.FirewallZone`), otherwise the controller rewrites it back to `corporate` and the apply fails with an inconsistent-result error.
+     * The network purpose: <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> (default), <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span>, or `vlan-only`. Leave unset to let the controller manage it (a <span pulumi-lang-nodejs="`thirdPartyGateway`" pulumi-lang-dotnet="`ThirdPartyGateway`" pulumi-lang-go="`thirdPartyGateway`" pulumi-lang-python="`third_party_gateway`" pulumi-lang-yaml="`thirdPartyGateway`" pulumi-lang-java="`thirdPartyGateway`" pulumi-lang-hcl="`third_party_gateway`">`thirdPartyGateway`</span> network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span> network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via <span pulumi-lang-nodejs="`unifi.FirewallZone`" pulumi-lang-dotnet="`unifi.FirewallZone`" pulumi-lang-go="`FirewallZone`" pulumi-lang-python="`FirewallZone`" pulumi-lang-yaml="`unifi.FirewallZone`" pulumi-lang-java="`unifi.FirewallZone`" pulumi-lang-hcl="`unifi_firewall_zone`">`unifi.FirewallZone`</span>), otherwise the controller rewrites it back to <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> and the apply fails with an inconsistent-result error.
      */
     purpose?: pulumi.Input<string | undefined>;
     /**
-     * Setting preference. Must be one of `auto` or `manual`. Taken from the controller when not set; an adopted network keeps its own preference, so importing a `manual` network no longer proposes `auto` - which would also reset DHCP guarding (#544).
+     * Setting preference. Must be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>. Taken from the controller when not set; an adopted network keeps its own preference, so importing a <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span> network no longer proposes <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> - which would also reset DHCP guarding (#544).
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -406,11 +406,11 @@ export interface NetworkArgs {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
+     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for <span pulumi-lang-nodejs="`vlanOnly`" pulumi-lang-dotnet="`VlanOnly`" pulumi-lang-go="`vlanOnly`" pulumi-lang-python="`vlan_only`" pulumi-lang-yaml="`vlanOnly`" pulumi-lang-java="`vlanOnly`" pulumi-lang-hcl="`vlan_only`">`vlanOnly`</span> networks (<span pulumi-lang-nodejs="`thirdPartyGateway " pulumi-lang-dotnet="`ThirdPartyGateway " pulumi-lang-go="`thirdPartyGateway " pulumi-lang-python="`third_party_gateway " pulumi-lang-yaml="`thirdPartyGateway " pulumi-lang-java="`thirdPartyGateway " pulumi-lang-hcl="`third_party_gateway ">`thirdPartyGateway </span>= true`), where the UniFi controller does not manage the subnet.
      */
     subnet?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to `false` (#544).
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured. Read from the network's purpose when not set, so an imported `vlan-only` network is not planned back to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> (#544).
      */
     thirdPartyGateway?: pulumi.Input<boolean | undefined>;
     timeouts?: pulumi.Input<inputs.NetworkTimeouts | undefined>;

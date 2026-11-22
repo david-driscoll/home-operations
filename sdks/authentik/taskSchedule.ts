@@ -185,7 +185,7 @@ export class TaskSchedule extends pulumi.CustomResource {
     declare public readonly crontab: pulumi.Output<string>;
     declare public readonly modelId: pulumi.Output<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly paused: pulumi.Output<boolean | undefined>;
     declare public readonly taskScheduleId: pulumi.Output<string>;
@@ -378,7 +378,7 @@ export interface TaskScheduleState {
     crontab?: pulumi.Input<string | undefined>;
     modelId?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     paused?: pulumi.Input<boolean | undefined>;
     taskScheduleId?: pulumi.Input<string | undefined>;
@@ -530,7 +530,7 @@ export interface TaskScheduleArgs {
     crontab: pulumi.Input<string>;
     modelId: pulumi.Input<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     paused?: pulumi.Input<boolean | undefined>;
     taskScheduleId?: pulumi.Input<string | undefined>;

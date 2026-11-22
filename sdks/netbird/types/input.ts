@@ -98,7 +98,7 @@ export interface GetPolicyRule {
      */
     action?: string;
     /**
-     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in `sources`. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
+     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in <span pulumi-lang-nodejs="`sources`" pulumi-lang-dotnet="`Sources`" pulumi-lang-go="`sources`" pulumi-lang-python="`sources`" pulumi-lang-yaml="`sources`" pulumi-lang-java="`sources`" pulumi-lang-hcl="`sources`">`sources`</span>. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
      */
     authorizedGroups?: {[key: string]: string[]};
     /**
@@ -157,7 +157,7 @@ export interface GetPolicyRuleArgs {
      */
     action?: pulumi.Input<string | undefined>;
     /**
-     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in `sources`. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
+     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in <span pulumi-lang-nodejs="`sources`" pulumi-lang-dotnet="`Sources`" pulumi-lang-go="`sources`" pulumi-lang-python="`sources`" pulumi-lang-yaml="`sources`" pulumi-lang-java="`sources`" pulumi-lang-hcl="`sources`">`sources`</span>. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
      */
     authorizedGroups?: pulumi.Input<{[key: string]: pulumi.Input<pulumi.Input<string>[]>} | undefined>;
     /**
@@ -211,13 +211,13 @@ export interface GetPolicyRuleArgs {
 }
 
 export interface GetPolicyRuleDestinationResource {
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
 }
 
 export interface GetPolicyRuleDestinationResourceArgs {
-    id: pulumi.Input<string>;
-    type: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 export interface GetPolicyRulePortRange {
@@ -231,13 +231,13 @@ export interface GetPolicyRulePortRangeArgs {
 }
 
 export interface GetPolicyRuleSourceResource {
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
 }
 
 export interface GetPolicyRuleSourceResourceArgs {
-    id: pulumi.Input<string>;
-    type: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 export interface NameserverGroupNameserver {
@@ -261,7 +261,7 @@ export interface PolicyRule {
      */
     action?: pulumi.Input<string | undefined>;
     /**
-     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in `sources`. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
+     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in <span pulumi-lang-nodejs="`sources`" pulumi-lang-dotnet="`Sources`" pulumi-lang-go="`sources`" pulumi-lang-python="`sources`" pulumi-lang-yaml="`sources`" pulumi-lang-java="`sources`" pulumi-lang-hcl="`sources`">`sources`</span>. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
      */
     authorizedGroups?: pulumi.Input<{[key: string]: pulumi.Input<pulumi.Input<string>[]>} | undefined>;
     /**
@@ -315,8 +315,8 @@ export interface PolicyRule {
 }
 
 export interface PolicyRuleDestinationResource {
-    id: pulumi.Input<string>;
-    type: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 export interface PolicyRulePortRange {
@@ -325,8 +325,8 @@ export interface PolicyRulePortRange {
 }
 
 export interface PolicyRuleSourceResource {
-    id: pulumi.Input<string>;
-    type: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 export interface PostureCheckGeoLocationCheck {

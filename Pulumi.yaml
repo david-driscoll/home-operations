@@ -12,37 +12,37 @@ config:
 packages:
   authentik:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/goauthentik/authentik, 2026.8.2]
   unifi:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/ubiquiti-community/unifi, 0.65.0]
   pbs:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/mcfitz2/pbs, 0.2.1]
   terrifi:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.opentofu.org/alexklibisz/terrifi, 0.12.0]
   tailscale:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/tailscale/tailscale, 0.30.0]
   netbird:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.opentofu.org/netbirdio/netbird, 0.0.11]
   technitium:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/darkhonor/technitium, 1.3.0]
   forgejo:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/svalabs/forgejo, 1.7.0]
   coderd:
     source: terraform-provider
-    version: 0.14.0
+    version: 1.5.1
     parameters: [registry.terraform.io/coder/coderd, 0.0.31]

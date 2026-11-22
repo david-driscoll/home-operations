@@ -44,15 +44,15 @@ export class AiModelPrice extends pulumi.CustomResource {
     }
 
     /**
-     * Price per 1M tokens read from the prompt cache, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M tokens read from the prompt cache, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     declare public readonly cacheReadPrice: pulumi.Output<number | undefined>;
     /**
-     * Price per 1M tokens written to the prompt cache, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M tokens written to the prompt cache, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     declare public readonly cacheWritePrice: pulumi.Output<number | undefined>;
     /**
-     * Price per 1M input tokens, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M input tokens, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     declare public readonly inputPrice: pulumi.Output<number | undefined>;
     /**
@@ -60,11 +60,11 @@ export class AiModelPrice extends pulumi.CustomResource {
      */
     declare public readonly model: pulumi.Output<string>;
     /**
-     * Price per 1M output tokens, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M output tokens, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     declare public readonly outputPrice: pulumi.Output<number | undefined>;
     /**
-     * AI provider type the price applies to. Valid values are `openai`, `anthropic`, `azure`, `bedrock`, `google`, `openrouter`, `vercel`, and `copilot`. `openai-compat` is not currently supported. Changing this forces a new resource.
+     * AI provider type the price applies to. Valid values are <span pulumi-lang-nodejs="`openai`" pulumi-lang-dotnet="`Openai`" pulumi-lang-go="`openai`" pulumi-lang-python="`openai`" pulumi-lang-yaml="`openai`" pulumi-lang-java="`openai`" pulumi-lang-hcl="`openai`">`openai`</span>, <span pulumi-lang-nodejs="`anthropic`" pulumi-lang-dotnet="`Anthropic`" pulumi-lang-go="`anthropic`" pulumi-lang-python="`anthropic`" pulumi-lang-yaml="`anthropic`" pulumi-lang-java="`anthropic`" pulumi-lang-hcl="`anthropic`">`anthropic`</span>, <span pulumi-lang-nodejs="`azure`" pulumi-lang-dotnet="`Azure`" pulumi-lang-go="`azure`" pulumi-lang-python="`azure`" pulumi-lang-yaml="`azure`" pulumi-lang-java="`azure`" pulumi-lang-hcl="`azure`">`azure`</span>, <span pulumi-lang-nodejs="`bedrock`" pulumi-lang-dotnet="`Bedrock`" pulumi-lang-go="`bedrock`" pulumi-lang-python="`bedrock`" pulumi-lang-yaml="`bedrock`" pulumi-lang-java="`bedrock`" pulumi-lang-hcl="`bedrock`">`bedrock`</span>, <span pulumi-lang-nodejs="`google`" pulumi-lang-dotnet="`Google`" pulumi-lang-go="`google`" pulumi-lang-python="`google`" pulumi-lang-yaml="`google`" pulumi-lang-java="`google`" pulumi-lang-hcl="`google`">`google`</span>, <span pulumi-lang-nodejs="`openrouter`" pulumi-lang-dotnet="`Openrouter`" pulumi-lang-go="`openrouter`" pulumi-lang-python="`openrouter`" pulumi-lang-yaml="`openrouter`" pulumi-lang-java="`openrouter`" pulumi-lang-hcl="`openrouter`">`openrouter`</span>, <span pulumi-lang-nodejs="`vercel`" pulumi-lang-dotnet="`Vercel`" pulumi-lang-go="`vercel`" pulumi-lang-python="`vercel`" pulumi-lang-yaml="`vercel`" pulumi-lang-java="`vercel`" pulumi-lang-hcl="`vercel`">`vercel`</span>, and <span pulumi-lang-nodejs="`copilot`" pulumi-lang-dotnet="`Copilot`" pulumi-lang-go="`copilot`" pulumi-lang-python="`copilot`" pulumi-lang-yaml="`copilot`" pulumi-lang-java="`copilot`" pulumi-lang-hcl="`copilot`">`copilot`</span>. `openai-compat` is not currently supported. Changing this forces a new resource.
      */
     declare public readonly providerType: pulumi.Output<string>;
 
@@ -112,15 +112,15 @@ export class AiModelPrice extends pulumi.CustomResource {
  */
 export interface AiModelPriceState {
     /**
-     * Price per 1M tokens read from the prompt cache, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M tokens read from the prompt cache, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     cacheReadPrice?: pulumi.Input<number | undefined>;
     /**
-     * Price per 1M tokens written to the prompt cache, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M tokens written to the prompt cache, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     cacheWritePrice?: pulumi.Input<number | undefined>;
     /**
-     * Price per 1M input tokens, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M input tokens, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     inputPrice?: pulumi.Input<number | undefined>;
     /**
@@ -128,11 +128,11 @@ export interface AiModelPriceState {
      */
     model?: pulumi.Input<string | undefined>;
     /**
-     * Price per 1M output tokens, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M output tokens, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     outputPrice?: pulumi.Input<number | undefined>;
     /**
-     * AI provider type the price applies to. Valid values are `openai`, `anthropic`, `azure`, `bedrock`, `google`, `openrouter`, `vercel`, and `copilot`. `openai-compat` is not currently supported. Changing this forces a new resource.
+     * AI provider type the price applies to. Valid values are <span pulumi-lang-nodejs="`openai`" pulumi-lang-dotnet="`Openai`" pulumi-lang-go="`openai`" pulumi-lang-python="`openai`" pulumi-lang-yaml="`openai`" pulumi-lang-java="`openai`" pulumi-lang-hcl="`openai`">`openai`</span>, <span pulumi-lang-nodejs="`anthropic`" pulumi-lang-dotnet="`Anthropic`" pulumi-lang-go="`anthropic`" pulumi-lang-python="`anthropic`" pulumi-lang-yaml="`anthropic`" pulumi-lang-java="`anthropic`" pulumi-lang-hcl="`anthropic`">`anthropic`</span>, <span pulumi-lang-nodejs="`azure`" pulumi-lang-dotnet="`Azure`" pulumi-lang-go="`azure`" pulumi-lang-python="`azure`" pulumi-lang-yaml="`azure`" pulumi-lang-java="`azure`" pulumi-lang-hcl="`azure`">`azure`</span>, <span pulumi-lang-nodejs="`bedrock`" pulumi-lang-dotnet="`Bedrock`" pulumi-lang-go="`bedrock`" pulumi-lang-python="`bedrock`" pulumi-lang-yaml="`bedrock`" pulumi-lang-java="`bedrock`" pulumi-lang-hcl="`bedrock`">`bedrock`</span>, <span pulumi-lang-nodejs="`google`" pulumi-lang-dotnet="`Google`" pulumi-lang-go="`google`" pulumi-lang-python="`google`" pulumi-lang-yaml="`google`" pulumi-lang-java="`google`" pulumi-lang-hcl="`google`">`google`</span>, <span pulumi-lang-nodejs="`openrouter`" pulumi-lang-dotnet="`Openrouter`" pulumi-lang-go="`openrouter`" pulumi-lang-python="`openrouter`" pulumi-lang-yaml="`openrouter`" pulumi-lang-java="`openrouter`" pulumi-lang-hcl="`openrouter`">`openrouter`</span>, <span pulumi-lang-nodejs="`vercel`" pulumi-lang-dotnet="`Vercel`" pulumi-lang-go="`vercel`" pulumi-lang-python="`vercel`" pulumi-lang-yaml="`vercel`" pulumi-lang-java="`vercel`" pulumi-lang-hcl="`vercel`">`vercel`</span>, and <span pulumi-lang-nodejs="`copilot`" pulumi-lang-dotnet="`Copilot`" pulumi-lang-go="`copilot`" pulumi-lang-python="`copilot`" pulumi-lang-yaml="`copilot`" pulumi-lang-java="`copilot`" pulumi-lang-hcl="`copilot`">`copilot`</span>. `openai-compat` is not currently supported. Changing this forces a new resource.
      */
     providerType?: pulumi.Input<string | undefined>;
 }
@@ -142,15 +142,15 @@ export interface AiModelPriceState {
  */
 export interface AiModelPriceArgs {
     /**
-     * Price per 1M tokens read from the prompt cache, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M tokens read from the prompt cache, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     cacheReadPrice?: pulumi.Input<number | undefined>;
     /**
-     * Price per 1M tokens written to the prompt cache, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M tokens written to the prompt cache, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     cacheWritePrice?: pulumi.Input<number | undefined>;
     /**
-     * Price per 1M input tokens, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M input tokens, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     inputPrice?: pulumi.Input<number | undefined>;
     /**
@@ -158,11 +158,11 @@ export interface AiModelPriceArgs {
      */
     model: pulumi.Input<string>;
     /**
-     * Price per 1M output tokens, in integer micro-units: `1000000` is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set `0` to declare the tokens free of charge.
+     * Price per 1M output tokens, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00 per 1M tokens. Omit it if the price is not known, which AI Gateway counts as zero cost. Set <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> to declare the tokens free of charge.
      */
     outputPrice?: pulumi.Input<number | undefined>;
     /**
-     * AI provider type the price applies to. Valid values are `openai`, `anthropic`, `azure`, `bedrock`, `google`, `openrouter`, `vercel`, and `copilot`. `openai-compat` is not currently supported. Changing this forces a new resource.
+     * AI provider type the price applies to. Valid values are <span pulumi-lang-nodejs="`openai`" pulumi-lang-dotnet="`Openai`" pulumi-lang-go="`openai`" pulumi-lang-python="`openai`" pulumi-lang-yaml="`openai`" pulumi-lang-java="`openai`" pulumi-lang-hcl="`openai`">`openai`</span>, <span pulumi-lang-nodejs="`anthropic`" pulumi-lang-dotnet="`Anthropic`" pulumi-lang-go="`anthropic`" pulumi-lang-python="`anthropic`" pulumi-lang-yaml="`anthropic`" pulumi-lang-java="`anthropic`" pulumi-lang-hcl="`anthropic`">`anthropic`</span>, <span pulumi-lang-nodejs="`azure`" pulumi-lang-dotnet="`Azure`" pulumi-lang-go="`azure`" pulumi-lang-python="`azure`" pulumi-lang-yaml="`azure`" pulumi-lang-java="`azure`" pulumi-lang-hcl="`azure`">`azure`</span>, <span pulumi-lang-nodejs="`bedrock`" pulumi-lang-dotnet="`Bedrock`" pulumi-lang-go="`bedrock`" pulumi-lang-python="`bedrock`" pulumi-lang-yaml="`bedrock`" pulumi-lang-java="`bedrock`" pulumi-lang-hcl="`bedrock`">`bedrock`</span>, <span pulumi-lang-nodejs="`google`" pulumi-lang-dotnet="`Google`" pulumi-lang-go="`google`" pulumi-lang-python="`google`" pulumi-lang-yaml="`google`" pulumi-lang-java="`google`" pulumi-lang-hcl="`google`">`google`</span>, <span pulumi-lang-nodejs="`openrouter`" pulumi-lang-dotnet="`Openrouter`" pulumi-lang-go="`openrouter`" pulumi-lang-python="`openrouter`" pulumi-lang-yaml="`openrouter`" pulumi-lang-java="`openrouter`" pulumi-lang-hcl="`openrouter`">`openrouter`</span>, <span pulumi-lang-nodejs="`vercel`" pulumi-lang-dotnet="`Vercel`" pulumi-lang-go="`vercel`" pulumi-lang-python="`vercel`" pulumi-lang-yaml="`vercel`" pulumi-lang-java="`vercel`" pulumi-lang-hcl="`vercel`">`vercel`</span>, and <span pulumi-lang-nodejs="`copilot`" pulumi-lang-dotnet="`Copilot`" pulumi-lang-go="`copilot`" pulumi-lang-python="`copilot`" pulumi-lang-yaml="`copilot`" pulumi-lang-java="`copilot`" pulumi-lang-hcl="`copilot`">`copilot`</span>. `openai-compat` is not currently supported. Changing this forces a new resource.
      */
     providerType: pulumi.Input<string>;
 }

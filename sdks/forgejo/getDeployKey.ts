@@ -26,10 +26,6 @@ export interface GetDeployKeyArgs {
 export interface GetDeployKeyResult {
     readonly createdAt: string;
     readonly fingerprint: string;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly key: string;
     readonly keyId: number;
     readonly readOnly: boolean;

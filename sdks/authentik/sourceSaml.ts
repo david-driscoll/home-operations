@@ -44,7 +44,7 @@ export class SourceSaml extends pulumi.CustomResource {
     }
 
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly allowIdpInitiated: pulumi.Output<boolean | undefined>;
     declare public readonly authenticationFlow: pulumi.Output<string | undefined>;
@@ -66,21 +66,21 @@ export class SourceSaml extends pulumi.CustomResource {
      */
     declare public readonly digestAlgorithm: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean | undefined>;
     declare public readonly encryptionKp: pulumi.Output<string | undefined>;
     declare public readonly enrollmentFlow: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly forceAuthn: pulumi.Output<boolean | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `name_link`
-     *   - `name_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`nameLink`" pulumi-lang-dotnet="`NameLink`" pulumi-lang-go="`nameLink`" pulumi-lang-python="`name_link`" pulumi-lang-yaml="`nameLink`" pulumi-lang-java="`nameLink`" pulumi-lang-hcl="`name_link`">`nameLink`</span>
+     *   - <span pulumi-lang-nodejs="`nameDeny`" pulumi-lang-dotnet="`NameDeny`" pulumi-lang-go="`nameDeny`" pulumi-lang-python="`name_deny`" pulumi-lang-yaml="`nameDeny`" pulumi-lang-java="`nameDeny`" pulumi-lang-hcl="`name_deny`">`nameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     declare public readonly groupMatchingMode: pulumi.Output<string | undefined>;
     declare public readonly issuer: pulumi.Output<string | undefined>;
@@ -102,14 +102,14 @@ export class SourceSaml extends pulumi.CustomResource {
     declare public readonly nameIdPolicy: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
-     *      Defaults to `any`.
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     declare public readonly preAuthenticationFlow: pulumi.Output<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly promoted: pulumi.Output<boolean | undefined>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
@@ -129,11 +129,11 @@ export class SourceSaml extends pulumi.CustomResource {
      */
     declare public readonly signatureAlgorithm: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly signedAssertion: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly signedResponse: pulumi.Output<boolean | undefined>;
     declare public readonly signingKp: pulumi.Output<string | undefined>;
@@ -147,12 +147,12 @@ export class SourceSaml extends pulumi.CustomResource {
     declare public readonly temporaryUserDeleteAfter: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `email_link`
-     *   - `email_deny`
-     *   - `username_link`
-     *   - `username_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`emailLink`" pulumi-lang-dotnet="`EmailLink`" pulumi-lang-go="`emailLink`" pulumi-lang-python="`email_link`" pulumi-lang-yaml="`emailLink`" pulumi-lang-java="`emailLink`" pulumi-lang-hcl="`email_link`">`emailLink`</span>
+     *   - <span pulumi-lang-nodejs="`emailDeny`" pulumi-lang-dotnet="`EmailDeny`" pulumi-lang-go="`emailDeny`" pulumi-lang-python="`email_deny`" pulumi-lang-yaml="`emailDeny`" pulumi-lang-java="`emailDeny`" pulumi-lang-hcl="`email_deny`">`emailDeny`</span>
+     *   - <span pulumi-lang-nodejs="`usernameLink`" pulumi-lang-dotnet="`UsernameLink`" pulumi-lang-go="`usernameLink`" pulumi-lang-python="`username_link`" pulumi-lang-yaml="`usernameLink`" pulumi-lang-java="`usernameLink`" pulumi-lang-hcl="`username_link`">`usernameLink`</span>
+     *   - <span pulumi-lang-nodejs="`usernameDeny`" pulumi-lang-dotnet="`UsernameDeny`" pulumi-lang-go="`usernameDeny`" pulumi-lang-python="`username_deny`" pulumi-lang-yaml="`usernameDeny`" pulumi-lang-java="`usernameDeny`" pulumi-lang-hcl="`username_deny`">`usernameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     declare public readonly userMatchingMode: pulumi.Output<string | undefined>;
     /**
@@ -262,7 +262,7 @@ export class SourceSaml extends pulumi.CustomResource {
  */
 export interface SourceSamlState {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     allowIdpInitiated?: pulumi.Input<boolean | undefined>;
     authenticationFlow?: pulumi.Input<string | undefined>;
@@ -284,21 +284,21 @@ export interface SourceSamlState {
      */
     digestAlgorithm?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     encryptionKp?: pulumi.Input<string | undefined>;
     enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     forceAuthn?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `name_link`
-     *   - `name_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`nameLink`" pulumi-lang-dotnet="`NameLink`" pulumi-lang-go="`nameLink`" pulumi-lang-python="`name_link`" pulumi-lang-yaml="`nameLink`" pulumi-lang-java="`nameLink`" pulumi-lang-hcl="`name_link`">`nameLink`</span>
+     *   - <span pulumi-lang-nodejs="`nameDeny`" pulumi-lang-dotnet="`NameDeny`" pulumi-lang-go="`nameDeny`" pulumi-lang-python="`name_deny`" pulumi-lang-yaml="`nameDeny`" pulumi-lang-java="`nameDeny`" pulumi-lang-hcl="`name_deny`">`nameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     issuer?: pulumi.Input<string | undefined>;
@@ -320,14 +320,14 @@ export interface SourceSamlState {
     nameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
-     *      Defaults to `any`.
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     promoted?: pulumi.Input<boolean | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -347,11 +347,11 @@ export interface SourceSamlState {
      */
     signatureAlgorithm?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signedAssertion?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signedResponse?: pulumi.Input<boolean | undefined>;
     signingKp?: pulumi.Input<string | undefined>;
@@ -365,12 +365,12 @@ export interface SourceSamlState {
     temporaryUserDeleteAfter?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `email_link`
-     *   - `email_deny`
-     *   - `username_link`
-     *   - `username_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`emailLink`" pulumi-lang-dotnet="`EmailLink`" pulumi-lang-go="`emailLink`" pulumi-lang-python="`email_link`" pulumi-lang-yaml="`emailLink`" pulumi-lang-java="`emailLink`" pulumi-lang-hcl="`email_link`">`emailLink`</span>
+     *   - <span pulumi-lang-nodejs="`emailDeny`" pulumi-lang-dotnet="`EmailDeny`" pulumi-lang-go="`emailDeny`" pulumi-lang-python="`email_deny`" pulumi-lang-yaml="`emailDeny`" pulumi-lang-java="`emailDeny`" pulumi-lang-hcl="`email_deny`">`emailDeny`</span>
+     *   - <span pulumi-lang-nodejs="`usernameLink`" pulumi-lang-dotnet="`UsernameLink`" pulumi-lang-go="`usernameLink`" pulumi-lang-python="`username_link`" pulumi-lang-yaml="`usernameLink`" pulumi-lang-java="`usernameLink`" pulumi-lang-hcl="`username_link`">`usernameLink`</span>
+     *   - <span pulumi-lang-nodejs="`usernameDeny`" pulumi-lang-dotnet="`UsernameDeny`" pulumi-lang-go="`usernameDeny`" pulumi-lang-python="`username_deny`" pulumi-lang-yaml="`usernameDeny`" pulumi-lang-java="`usernameDeny`" pulumi-lang-hcl="`username_deny`">`usernameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**
@@ -389,7 +389,7 @@ export interface SourceSamlState {
  */
 export interface SourceSamlArgs {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     allowIdpInitiated?: pulumi.Input<boolean | undefined>;
     authenticationFlow?: pulumi.Input<string | undefined>;
@@ -411,21 +411,21 @@ export interface SourceSamlArgs {
      */
     digestAlgorithm?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     encryptionKp?: pulumi.Input<string | undefined>;
     enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     forceAuthn?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `name_link`
-     *   - `name_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`nameLink`" pulumi-lang-dotnet="`NameLink`" pulumi-lang-go="`nameLink`" pulumi-lang-python="`name_link`" pulumi-lang-yaml="`nameLink`" pulumi-lang-java="`nameLink`" pulumi-lang-hcl="`name_link`">`nameLink`</span>
+     *   - <span pulumi-lang-nodejs="`nameDeny`" pulumi-lang-dotnet="`NameDeny`" pulumi-lang-go="`nameDeny`" pulumi-lang-python="`name_deny`" pulumi-lang-yaml="`nameDeny`" pulumi-lang-java="`nameDeny`" pulumi-lang-hcl="`name_deny`">`nameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     issuer?: pulumi.Input<string | undefined>;
@@ -443,14 +443,14 @@ export interface SourceSamlArgs {
     nameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
-     *      Defaults to `any`.
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow: pulumi.Input<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     promoted?: pulumi.Input<boolean | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -470,11 +470,11 @@ export interface SourceSamlArgs {
      */
     signatureAlgorithm?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signedAssertion?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signedResponse?: pulumi.Input<boolean | undefined>;
     signingKp?: pulumi.Input<string | undefined>;
@@ -488,12 +488,12 @@ export interface SourceSamlArgs {
     temporaryUserDeleteAfter?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `email_link`
-     *   - `email_deny`
-     *   - `username_link`
-     *   - `username_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`emailLink`" pulumi-lang-dotnet="`EmailLink`" pulumi-lang-go="`emailLink`" pulumi-lang-python="`email_link`" pulumi-lang-yaml="`emailLink`" pulumi-lang-java="`emailLink`" pulumi-lang-hcl="`email_link`">`emailLink`</span>
+     *   - <span pulumi-lang-nodejs="`emailDeny`" pulumi-lang-dotnet="`EmailDeny`" pulumi-lang-go="`emailDeny`" pulumi-lang-python="`email_deny`" pulumi-lang-yaml="`emailDeny`" pulumi-lang-java="`emailDeny`" pulumi-lang-hcl="`email_deny`">`emailDeny`</span>
+     *   - <span pulumi-lang-nodejs="`usernameLink`" pulumi-lang-dotnet="`UsernameLink`" pulumi-lang-go="`usernameLink`" pulumi-lang-python="`username_link`" pulumi-lang-yaml="`usernameLink`" pulumi-lang-java="`usernameLink`" pulumi-lang-hcl="`username_link`">`usernameLink`</span>
+     *   - <span pulumi-lang-nodejs="`usernameDeny`" pulumi-lang-dotnet="`UsernameDeny`" pulumi-lang-go="`usernameDeny`" pulumi-lang-python="`username_deny`" pulumi-lang-yaml="`usernameDeny`" pulumi-lang-java="`usernameDeny`" pulumi-lang-hcl="`username_deny`">`usernameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**

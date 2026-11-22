@@ -27,10 +27,6 @@ export interface GetOrganizationActionVariableArgs {
  */
 export interface GetOrganizationActionVariableResult {
     readonly data: string;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly name: string;
     readonly organization: string;
     readonly organizationId: number;

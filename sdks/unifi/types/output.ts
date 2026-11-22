@@ -26,15 +26,15 @@ export interface AccountTimeouts {
 
 export interface AccountTunnel {
     /**
-     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     * The tunnel configuration type. Can be <span pulumi-lang-nodejs="`vpn`" pulumi-lang-dotnet="`Vpn`" pulumi-lang-go="`vpn`" pulumi-lang-python="`vpn`" pulumi-lang-yaml="`vpn`" pulumi-lang-java="`vpn`" pulumi-lang-hcl="`vpn`">`vpn`</span>, `802.1x`, or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>.
      */
     configType?: string;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2. Defaults to `6` for a newly created account; an existing account keeps the controller's value, which may be none.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2. Defaults to <span pulumi-lang-nodejs="`6`" pulumi-lang-dotnet="`6`" pulumi-lang-go="`6`" pulumi-lang-python="`6`" pulumi-lang-yaml="`6`" pulumi-lang-java="`6`" pulumi-lang-hcl="`6`">`6`</span> for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     mediumType: number;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common. Defaults to `3` for a newly created account; an existing account keeps the controller's value, which may be none.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; <span pulumi-lang-nodejs="`13`" pulumi-lang-dotnet="`13`" pulumi-lang-go="`13`" pulumi-lang-python="`13`" pulumi-lang-yaml="`13`" pulumi-lang-java="`13`" pulumi-lang-hcl="`13`">`13`</span> (VLAN) is the most common. Defaults to <span pulumi-lang-nodejs="`3`" pulumi-lang-dotnet="`3`" pulumi-lang-go="`3`" pulumi-lang-python="`3`" pulumi-lang-yaml="`3`" pulumi-lang-java="`3`" pulumi-lang-hcl="`3`">`3`</span> for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     type: number;
 }
@@ -117,11 +117,11 @@ export interface ClientQosRate {
 
 export interface ClientQosRateQosRate {
     /**
-     * The QOS maximum download rate in kbps, `2` to `100000`, or `-1` for unlimited. `-1` for a new group when not set; taken from the controller otherwise.
+     * The QOS maximum download rate in kbps, <span pulumi-lang-nodejs="`2`" pulumi-lang-dotnet="`2`" pulumi-lang-go="`2`" pulumi-lang-python="`2`" pulumi-lang-yaml="`2`" pulumi-lang-java="`2`" pulumi-lang-hcl="`2`">`2`</span> to <span pulumi-lang-nodejs="`100000`" pulumi-lang-dotnet="`100000`" pulumi-lang-go="`100000`" pulumi-lang-python="`100000`" pulumi-lang-yaml="`100000`" pulumi-lang-java="`100000`" pulumi-lang-hcl="`100000`">`100000`</span>, or `-1` for unlimited. `-1` for a new group when not set; taken from the controller otherwise.
      */
     maxDown: number;
     /**
-     * The QOS maximum upload rate in kbps, `2` to `100000`, or `-1` for unlimited. `-1` for a new group when not set; taken from the controller otherwise.
+     * The QOS maximum upload rate in kbps, <span pulumi-lang-nodejs="`2`" pulumi-lang-dotnet="`2`" pulumi-lang-go="`2`" pulumi-lang-python="`2`" pulumi-lang-yaml="`2`" pulumi-lang-java="`2`" pulumi-lang-hcl="`2`">`2`</span> to <span pulumi-lang-nodejs="`100000`" pulumi-lang-dotnet="`100000`" pulumi-lang-go="`100000`" pulumi-lang-python="`100000`" pulumi-lang-yaml="`100000`" pulumi-lang-java="`100000`" pulumi-lang-hcl="`100000`">`100000`</span>, or `-1` for unlimited. `-1` for a new group when not set; taken from the controller otherwise.
      */
     maxUp: number;
 }
@@ -182,7 +182,7 @@ export interface ContentFilterSchedule {
      */
     mode: string;
     /**
-     * Days for `EVERY_WEEK`/`CUSTOM`: `mon` … `sun`.
+     * Days for `EVERY_WEEK`/`CUSTOM`: <span pulumi-lang-nodejs="`mon`" pulumi-lang-dotnet="`Mon`" pulumi-lang-go="`mon`" pulumi-lang-python="`mon`" pulumi-lang-yaml="`mon`" pulumi-lang-java="`mon`" pulumi-lang-hcl="`mon`">`mon`</span> … <span pulumi-lang-nodejs="`sun`" pulumi-lang-dotnet="`Sun`" pulumi-lang-go="`sun`" pulumi-lang-python="`sun`" pulumi-lang-yaml="`sun`" pulumi-lang-java="`sun`" pulumi-lang-hcl="`sun`">`sun`</span>.
      */
     repeatOnDays?: string[];
     /**
@@ -255,7 +255,7 @@ export interface DeviceConfigNetwork {
 
 export interface DeviceEtherlighting {
     /**
-     * LED behavior; valid values are `steady` and `breath`.
+     * LED behavior; valid values are <span pulumi-lang-nodejs="`steady`" pulumi-lang-dotnet="`Steady`" pulumi-lang-go="`steady`" pulumi-lang-python="`steady`" pulumi-lang-yaml="`steady`" pulumi-lang-java="`steady`" pulumi-lang-hcl="`steady`">`steady`</span> and <span pulumi-lang-nodejs="`breath`" pulumi-lang-dotnet="`Breath`" pulumi-lang-go="`breath`" pulumi-lang-python="`breath`" pulumi-lang-yaml="`breath`" pulumi-lang-java="`breath`" pulumi-lang-hcl="`breath`">`breath`</span>.
      */
     behavior: string;
     /**
@@ -263,11 +263,11 @@ export interface DeviceEtherlighting {
      */
     brightness: number;
     /**
-     * LED mode; valid values are `etherlighting` and `standard`.
+     * LED mode; valid values are <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> and <span pulumi-lang-nodejs="`standard`" pulumi-lang-dotnet="`Standard`" pulumi-lang-go="`standard`" pulumi-lang-python="`standard`" pulumi-lang-yaml="`standard`" pulumi-lang-java="`standard`" pulumi-lang-hcl="`standard`">`standard`</span>.
      */
     ledMode: string;
     /**
-     * What the port LEDs show; valid values are `speed` (color by link speed) and `network` (color by network).
+     * What the port LEDs show; valid values are <span pulumi-lang-nodejs="`speed`" pulumi-lang-dotnet="`Speed`" pulumi-lang-go="`speed`" pulumi-lang-python="`speed`" pulumi-lang-yaml="`speed`" pulumi-lang-java="`speed`" pulumi-lang-hcl="`speed`">`speed`</span> (color by link speed) and <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> (color by network).
      */
     mode: string;
 }
@@ -278,15 +278,15 @@ export interface DeviceLcm {
      */
     brightness: number;
     /**
-     * Override the site-wide LCM brightness with `brightness`.
+     * Override the site-wide LCM brightness with <span pulumi-lang-nodejs="`brightness`" pulumi-lang-dotnet="`Brightness`" pulumi-lang-go="`brightness`" pulumi-lang-python="`brightness`" pulumi-lang-yaml="`brightness`" pulumi-lang-java="`brightness`" pulumi-lang-hcl="`brightness`">`brightness`</span>.
      */
     brightnessOverride: boolean;
     /**
-     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
+     * LCM idle timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`10m`" pulumi-lang-dotnet="`10m`" pulumi-lang-go="`10m`" pulumi-lang-python="`10m`" pulumi-lang-yaml="`10m`" pulumi-lang-java="`10m`" pulumi-lang-hcl="`10m`">`10m`</span>, <span pulumi-lang-nodejs="`600s`" pulumi-lang-dotnet="`600s`" pulumi-lang-go="`600s`" pulumi-lang-python="`600s`" pulumi-lang-yaml="`600s`" pulumi-lang-java="`600s`" pulumi-lang-hcl="`600s`">`600s`</span>).
      */
     idleTimeout: string;
     /**
-     * Override the site-wide LCM idle timeout with `idle_timeout`.
+     * Override the site-wide LCM idle timeout with <span pulumi-lang-nodejs="`idleTimeout`" pulumi-lang-dotnet="`IdleTimeout`" pulumi-lang-go="`idleTimeout`" pulumi-lang-python="`idle_timeout`" pulumi-lang-yaml="`idleTimeout`" pulumi-lang-java="`idleTimeout`" pulumi-lang-hcl="`idle_timeout`">`idleTimeout`</span>.
      */
     idleTimeoutOverride: boolean;
     /**
@@ -316,7 +316,7 @@ export interface DeviceLed {
      */
     color: string;
     /**
-     * LED override setting; valid values are `default`, `on`, and `off`.
+     * LED override setting; valid values are <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     override: string;
 }
@@ -346,7 +346,7 @@ export interface DevicePortDot1x {
      */
     ctrl: string;
     /**
-     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     * 802.1X idle timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`5m`" pulumi-lang-dotnet="`5m`" pulumi-lang-go="`5m`" pulumi-lang-python="`5m`" pulumi-lang-yaml="`5m`" pulumi-lang-java="`5m`" pulumi-lang-hcl="`5m`">`5m`</span>, <span pulumi-lang-nodejs="`300s`" pulumi-lang-dotnet="`300s`" pulumi-lang-go="`300s`" pulumi-lang-python="`300s`" pulumi-lang-yaml="`300s`" pulumi-lang-java="`300s`" pulumi-lang-hcl="`300s`">`300s`</span>).
      */
     idleTimeout: string;
 }
@@ -375,7 +375,7 @@ export interface DevicePortLldpmed {
 
 export interface DevicePortOverride {
     /**
-     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
+     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when <span pulumi-lang-nodejs="`opMode`" pulumi-lang-dotnet="`OpMode`" pulumi-lang-go="`opMode`" pulumi-lang-python="`op_mode`" pulumi-lang-yaml="`opMode`" pulumi-lang-java="`opMode`" pulumi-lang-hcl="`op_mode`">`opMode`</span> is <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on this port.
      */
     aggregateMembers?: number[];
     /**
@@ -439,11 +439,11 @@ export interface DevicePortOverride {
      */
     nativeNetworkconfId?: string;
     /**
-     * Operating mode of the port: `switch` (default), `mirror`, or `aggregate`. Set `aggregate` on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in `aggregate_members`. Only written when not `switch`, as gateway devices (UDM) reject op_mode on update.
+     * Operating mode of the port: <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span> (default), <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>, or <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span>. Set <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in <span pulumi-lang-nodejs="`aggregateMembers`" pulumi-lang-dotnet="`AggregateMembers`" pulumi-lang-go="`aggregateMembers`" pulumi-lang-python="`aggregate_members`" pulumi-lang-yaml="`aggregateMembers`" pulumi-lang-java="`aggregateMembers`" pulumi-lang-hcl="`aggregate_members`">`aggregateMembers`</span>. Only written when not <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>, as gateway devices (UDM) reject<span pulumi-lang-nodejs=" opMode " pulumi-lang-dotnet=" OpMode " pulumi-lang-go=" opMode " pulumi-lang-python=" op_mode " pulumi-lang-yaml=" opMode " pulumi-lang-java=" opMode " pulumi-lang-hcl=" op_mode "> opMode </span>on update.
      */
     opMode: string;
     /**
-     * PoE mode of the port; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode of the port; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     poeMode?: string;
     /**
@@ -487,7 +487,7 @@ export interface DevicePortOverride {
      */
     stormctrl: outputs.DevicePortOverrideStormctrl;
     /**
-     * STP edge port mode; valid values are `enabled`, `disabled`, and `auto`. An edge port (the UI's Edge port mode, `enabled`) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. `auto` detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
+     * STP edge port mode; valid values are <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>, <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, and <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. An edge port (the UI's Edge port mode, <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
      */
     stpEdgeState?: string;
     /**
@@ -495,7 +495,7 @@ export interface DevicePortOverride {
      */
     stpPortMode: boolean;
     /**
-     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with `tagged_vlan_mgmt = "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
+     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with <span pulumi-lang-nodejs="`taggedVlanMgmt " pulumi-lang-dotnet="`TaggedVlanMgmt " pulumi-lang-go="`taggedVlanMgmt " pulumi-lang-python="`tagged_vlan_mgmt " pulumi-lang-yaml="`taggedVlanMgmt " pulumi-lang-java="`taggedVlanMgmt " pulumi-lang-hcl="`tagged_vlan_mgmt ">`taggedVlanMgmt </span>= "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
      */
     taggedNetworkconfIds?: string[];
     /**
@@ -514,7 +514,7 @@ export interface DevicePortOverrideDot1x {
      */
     ctrl: string;
     /**
-     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
+     * 802.1X idle timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`5m`" pulumi-lang-dotnet="`5m`" pulumi-lang-go="`5m`" pulumi-lang-python="`5m`" pulumi-lang-yaml="`5m`" pulumi-lang-java="`5m`" pulumi-lang-hcl="`5m`">`5m`</span>, <span pulumi-lang-nodejs="`300s`" pulumi-lang-dotnet="`300s`" pulumi-lang-go="`300s`" pulumi-lang-python="`300s`" pulumi-lang-yaml="`300s`" pulumi-lang-java="`300s`" pulumi-lang-hcl="`300s`">`300s`</span>).
      */
     idleTimeout: string;
 }
@@ -562,7 +562,7 @@ export interface DevicePortOverrideStormctrl {
      */
     mcast: outputs.DevicePortOverrideStormctrlMcast;
     /**
-     * Storm control type; `level` or `rate`.
+     * Storm control type; <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span> or <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     type: string;
     /**
@@ -577,11 +577,11 @@ export interface DevicePortOverrideStormctrlBcast {
      */
     enabled: boolean;
     /**
-     * Broadcast storm control level (percent), used when `type` is `level`.
+     * Broadcast storm control level (percent), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span>.
      */
     level: number;
     /**
-     * Broadcast storm control rate (packets per second), used when `type` is `rate`.
+     * Broadcast storm control rate (packets per second), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     rate: number;
 }
@@ -592,11 +592,11 @@ export interface DevicePortOverrideStormctrlMcast {
      */
     enabled: boolean;
     /**
-     * Multicast storm control level (percent), used when `type` is `level`.
+     * Multicast storm control level (percent), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span>.
      */
     level: number;
     /**
-     * Multicast storm control rate (packets per second), used when `type` is `rate`.
+     * Multicast storm control rate (packets per second), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     rate: number;
 }
@@ -607,11 +607,11 @@ export interface DevicePortOverrideStormctrlUcast {
      */
     enabled: boolean;
     /**
-     * Unknown unicast storm control level (percent), used when `type` is `level`.
+     * Unknown unicast storm control level (percent), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span>.
      */
     level: number;
     /**
-     * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
+     * Unknown unicast storm control rate (packets per second), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     rate: number;
 }
@@ -637,7 +637,7 @@ export interface DevicePortStormctrl {
      */
     mcast: outputs.DevicePortStormctrlMcast;
     /**
-     * Storm control type; `level` or `rate`.
+     * Storm control type; <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span> or <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     type: string;
     /**
@@ -652,11 +652,11 @@ export interface DevicePortStormctrlBcast {
      */
     enabled: boolean;
     /**
-     * Broadcast storm control level (percent), used when `type` is `level`.
+     * Broadcast storm control level (percent), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span>.
      */
     level: number;
     /**
-     * Broadcast storm control rate (packets per second), used when `type` is `rate`.
+     * Broadcast storm control rate (packets per second), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     rate: number;
 }
@@ -667,11 +667,11 @@ export interface DevicePortStormctrlMcast {
      */
     enabled: boolean;
     /**
-     * Multicast storm control level (percent), used when `type` is `level`.
+     * Multicast storm control level (percent), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span>.
      */
     level: number;
     /**
-     * Multicast storm control rate (packets per second), used when `type` is `rate`.
+     * Multicast storm control rate (packets per second), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     rate: number;
 }
@@ -682,11 +682,11 @@ export interface DevicePortStormctrlUcast {
      */
     enabled: boolean;
     /**
-     * Unknown unicast storm control level (percent), used when `type` is `level`.
+     * Unknown unicast storm control level (percent), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span>.
      */
     level: number;
     /**
-     * Unknown unicast storm control rate (packets per second), used when `type` is `rate`.
+     * Unknown unicast storm control rate (packets per second), used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     rate: number;
 }
@@ -799,7 +799,7 @@ export interface DeviceStp {
      */
     priority: number;
     /**
-     * STP version; valid values are `stp`, `rstp`, and `disabled`.
+     * STP version; valid values are <span pulumi-lang-nodejs="`stp`" pulumi-lang-dotnet="`Stp`" pulumi-lang-go="`stp`" pulumi-lang-python="`stp`" pulumi-lang-yaml="`stp`" pulumi-lang-java="`stp`" pulumi-lang-hcl="`stp`">`stp`</span>, <span pulumi-lang-nodejs="`rstp`" pulumi-lang-dotnet="`Rstp`" pulumi-lang-go="`rstp`" pulumi-lang-python="`rstp`" pulumi-lang-yaml="`rstp`" pulumi-lang-java="`rstp`" pulumi-lang-hcl="`rstp`">`rstp`</span>, and <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>.
      */
     version: string;
 }
@@ -882,47 +882,47 @@ export interface FirewallGroupTimeouts {
 
 export interface FirewallPolicyDestination {
     /**
-     * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
+     * List of client MAC addresses to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `CLIENT`.
      */
     clientMacs: string[];
     /**
-     * IPv6 interface identifier to match, written as `<address>/<mask>` with both parts in IPv6 notation (for example `::eaff:1eff:fed7:bf17/::ffff:ffff:ffff:ffff` matches the lower 64 bits, i.e. an EUI-64 interface ID under any prefix). Required when `matching_target` is `IID`, and only valid with it. Matching the interface ID instead of the full address keeps a rule working when the delegated IPv6 prefix changes. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     * IPv6 interface identifier to match, written as `<address>/<mask>` with both parts in IPv6 notation (for example `::eaff:1eff:fed7:bf17/::ffff:ffff:ffff:ffff` matches the lower 64 bits, i.e. an EUI-64 interface ID under any prefix). Required when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `IID`, and only valid with it. Matching the interface ID instead of the full address keeps a rule working when the delegated IPv6 prefix changes. An existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged (#544).
      */
     iid: string;
     /**
-     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`. Taken from the controller when not set (#544).
+     * ID of a <span pulumi-lang-nodejs="`unifi.FirewallGroup`" pulumi-lang-dotnet="`unifi.FirewallGroup`" pulumi-lang-go="`FirewallGroup`" pulumi-lang-python="`FirewallGroup`" pulumi-lang-yaml="`unifi.FirewallGroup`" pulumi-lang-java="`unifi.FirewallGroup`" pulumi-lang-hcl="`unifi_firewall_group`">`unifi.FirewallGroup`</span> (address-group type) to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `IP` with <span pulumi-lang-nodejs="`matchingTargetType " pulumi-lang-dotnet="`MatchingTargetType " pulumi-lang-go="`matchingTargetType " pulumi-lang-python="`matching_target_type " pulumi-lang-yaml="`matchingTargetType " pulumi-lang-java="`matchingTargetType " pulumi-lang-hcl="`matching_target_type ">`matchingTargetType </span>= OBJECT`. Taken from the controller when not set (#544).
      */
     ipGroupId: string;
     /**
-     * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
+     * List of IP addresses or CIDR ranges to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `IP`.
      */
     ips: string[];
     /**
-     * The MAC address bound to the source IP (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"` and `match_mac = true`, which in turn requires it. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     * The MAC address bound to the source IP (IP/MAC binding). Only valid on the <span pulumi-lang-nodejs="`source`" pulumi-lang-dotnet="`Source`" pulumi-lang-go="`source`" pulumi-lang-python="`source`" pulumi-lang-yaml="`source`" pulumi-lang-java="`source`" pulumi-lang-hcl="`source`">`source`</span> endpoint with <span pulumi-lang-nodejs="`matchingTarget " pulumi-lang-dotnet="`MatchingTarget " pulumi-lang-go="`matchingTarget " pulumi-lang-python="`matching_target " pulumi-lang-yaml="`matchingTarget " pulumi-lang-java="`matchingTarget " pulumi-lang-hcl="`matching_target ">`matchingTarget </span>= "IP"` and <span pulumi-lang-nodejs="`matchMac " pulumi-lang-dotnet="`MatchMac " pulumi-lang-go="`matchMac " pulumi-lang-python="`match_mac " pulumi-lang-yaml="`matchMac " pulumi-lang-java="`matchMac " pulumi-lang-hcl="`match_mac ">`matchMac </span>= true`, which in turn requires it. An existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged (#544).
      */
     mac: string;
     /**
-     * The controller's `match_mac` flag (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"`: the controller drops the flag on every other target (a `CLIENT` target already matches the clients in `client_macs` by MAC) and on the destination, so setting it to `true` anywhere else is rejected at plan time. On an `IP` source the controller also requires the bound MAC address, so `match_mac = true` also requires `mac`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged, so adopting an IP/MAC binding does not drop it (#544).
+     * The controller's <span pulumi-lang-nodejs="`matchMac`" pulumi-lang-dotnet="`MatchMac`" pulumi-lang-go="`matchMac`" pulumi-lang-python="`match_mac`" pulumi-lang-yaml="`matchMac`" pulumi-lang-java="`matchMac`" pulumi-lang-hcl="`match_mac`">`matchMac`</span> flag (IP/MAC binding). Only valid on the <span pulumi-lang-nodejs="`source`" pulumi-lang-dotnet="`Source`" pulumi-lang-go="`source`" pulumi-lang-python="`source`" pulumi-lang-yaml="`source`" pulumi-lang-java="`source`" pulumi-lang-hcl="`source`">`source`</span> endpoint with <span pulumi-lang-nodejs="`matchingTarget " pulumi-lang-dotnet="`MatchingTarget " pulumi-lang-go="`matchingTarget " pulumi-lang-python="`matching_target " pulumi-lang-yaml="`matchingTarget " pulumi-lang-java="`matchingTarget " pulumi-lang-hcl="`matching_target ">`matchingTarget </span>= "IP"`: the controller drops the flag on every other target (a `CLIENT` target already matches the clients in <span pulumi-lang-nodejs="`clientMacs`" pulumi-lang-dotnet="`ClientMacs`" pulumi-lang-go="`clientMacs`" pulumi-lang-python="`client_macs`" pulumi-lang-yaml="`clientMacs`" pulumi-lang-java="`clientMacs`" pulumi-lang-hcl="`client_macs`">`clientMacs`</span> by MAC) and on the destination, so setting it to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> anywhere else is rejected at plan time. On an `IP` source the controller also requires the bound MAC address, so <span pulumi-lang-nodejs="`matchMac " pulumi-lang-dotnet="`MatchMac " pulumi-lang-go="`matchMac " pulumi-lang-python="`match_mac " pulumi-lang-yaml="`matchMac " pulumi-lang-java="`matchMac " pulumi-lang-hcl="`match_mac ">`matchMac </span>= true` also requires <span pulumi-lang-nodejs="`mac`" pulumi-lang-dotnet="`Mac`" pulumi-lang-go="`mac`" pulumi-lang-python="`mac`" pulumi-lang-yaml="`mac`" pulumi-lang-java="`mac`" pulumi-lang-hcl="`mac`">`mac`</span>. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> for a new policy; an existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged, so adopting an IP/MAC binding does not drop it (#544).
      */
     matchMac: boolean;
     /**
-     * Invert the interface ID match: when `true`, the endpoint matches every address **except** those whose interface ID matches `iid`. Only valid with `matching_target = "IID"`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     * Invert the interface ID match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every address **except** those whose interface ID matches <span pulumi-lang-nodejs="`iid`" pulumi-lang-dotnet="`Iid`" pulumi-lang-go="`iid`" pulumi-lang-python="`iid`" pulumi-lang-yaml="`iid`" pulumi-lang-java="`iid`" pulumi-lang-hcl="`iid`">`iid`</span>. Only valid with <span pulumi-lang-nodejs="`matchingTarget " pulumi-lang-dotnet="`MatchingTarget " pulumi-lang-go="`matchingTarget " pulumi-lang-python="`matching_target " pulumi-lang-yaml="`matchingTarget " pulumi-lang-java="`matchingTarget " pulumi-lang-hcl="`matching_target ">`matchingTarget </span>= "IID"`. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> for a new policy; an existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged (#544).
      */
     matchOppositeIid: boolean;
     /**
-     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Taken from the controller when not set (#544).
+     * Invert the IP match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every address **except** those in <span pulumi-lang-nodejs="`ips`" pulumi-lang-dotnet="`Ips`" pulumi-lang-go="`ips`" pulumi-lang-python="`ips`" pulumi-lang-yaml="`ips`" pulumi-lang-java="`ips`" pulumi-lang-hcl="`ips`">`ips`</span> / <span pulumi-lang-nodejs="`ipGroupId`" pulumi-lang-dotnet="`IpGroupId`" pulumi-lang-go="`ipGroupId`" pulumi-lang-python="`ip_group_id`" pulumi-lang-yaml="`ipGroupId`" pulumi-lang-java="`ipGroupId`" pulumi-lang-hcl="`ip_group_id`">`ipGroupId`</span>. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeIps: boolean;
     /**
-     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Taken from the controller when not set (#544).
+     * Invert the network match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every network **except** those in <span pulumi-lang-nodejs="`networkIds`" pulumi-lang-dotnet="`NetworkIds`" pulumi-lang-go="`networkIds`" pulumi-lang-python="`network_ids`" pulumi-lang-yaml="`networkIds`" pulumi-lang-java="`networkIds`" pulumi-lang-hcl="`network_ids`">`networkIds`</span>. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeNetworks: boolean;
     /**
-     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Taken from the controller when not set (#544).
+     * Invert the port match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every port **except** those in <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> / <span pulumi-lang-nodejs="`portGroupId`" pulumi-lang-dotnet="`PortGroupId`" pulumi-lang-go="`portGroupId`" pulumi-lang-python="`port_group_id`" pulumi-lang-yaml="`portGroupId`" pulumi-lang-java="`portGroupId`" pulumi-lang-hcl="`port_group_id`">`portGroupId`</span>. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositePorts: boolean;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), `REGION` (country codes, set `regions`), or `IID` (IPv6 interface identifier, set `iid`). The controller only accepts `REGION` on an external zone.
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), `REGION` (country codes, set <span pulumi-lang-nodejs="`regions`" pulumi-lang-dotnet="`Regions`" pulumi-lang-go="`regions`" pulumi-lang-python="`regions`" pulumi-lang-yaml="`regions`" pulumi-lang-java="`regions`" pulumi-lang-hcl="`regions`">`regions`</span>), or `IID` (IPv6 interface identifier, set <span pulumi-lang-nodejs="`iid`" pulumi-lang-dotnet="`Iid`" pulumi-lang-go="`iid`" pulumi-lang-python="`iid`" pulumi-lang-yaml="`iid`" pulumi-lang-java="`iid`" pulumi-lang-hcl="`iid`">`iid`</span>). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: string;
     /**
@@ -930,15 +930,15 @@ export interface FirewallPolicyDestination {
      */
     matchingTargetType: string;
     /**
-     * List of UniFi network IDs to match. Used when `matching_target` is `NETWORK`.
+     * List of UniFi network IDs to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `NETWORK`.
      */
     networkIds: string[];
     /**
-     * Port(s) to match when `port_matching_type` is `SPECIFIC`. A single port (`161`) or a comma-separated list of ports/ranges (`80,443`, `8000-8100`). Leave unset for no port match.
+     * Port(s) to match when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `SPECIFIC`. A single port (<span pulumi-lang-nodejs="`161`" pulumi-lang-dotnet="`161`" pulumi-lang-go="`161`" pulumi-lang-python="`161`" pulumi-lang-yaml="`161`" pulumi-lang-java="`161`" pulumi-lang-hcl="`161`">`161`</span>) or a comma-separated list of ports/ranges (`80,443`, `8000-8100`). Leave unset for no port match.
      */
     port: string;
     /**
-     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`. Taken from the controller when not set (#544).
+     * ID of a <span pulumi-lang-nodejs="`unifi.FirewallGroup`" pulumi-lang-dotnet="`unifi.FirewallGroup`" pulumi-lang-go="`FirewallGroup`" pulumi-lang-python="`FirewallGroup`" pulumi-lang-yaml="`unifi.FirewallGroup`" pulumi-lang-java="`unifi.FirewallGroup`" pulumi-lang-hcl="`unifi_firewall_group`">`unifi.FirewallGroup`</span> (port-group type) to match. Used when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `OBJECT`. Taken from the controller when not set (#544).
      */
     portGroupId: string;
     /**
@@ -946,15 +946,15 @@ export interface FirewallPolicyDestination {
      */
     portMatchingType: string;
     /**
-     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when `matching_target` is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
+     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
      */
     regions: string[];
     /**
-     * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
+     * List of domains/FQDNs to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `WEB`.
      */
     webDomains: string[];
     /**
-     * The ID of the firewall zone this endpoint belongs to. Use the `unifi.FirewallZone` data source to look up zone IDs by name.
+     * The ID of the firewall zone this endpoint belongs to. Use the <span pulumi-lang-nodejs="`unifi.FirewallZone`" pulumi-lang-dotnet="`unifi.FirewallZone`" pulumi-lang-go="`FirewallZone`" pulumi-lang-python="`FirewallZone`" pulumi-lang-yaml="`unifi.FirewallZone`" pulumi-lang-java="`unifi.FirewallZone`" pulumi-lang-hcl="`unifi_firewall_zone`">`unifi.FirewallZone`</span> data source to look up zone IDs by name.
      */
     zoneId: string;
 }
@@ -1007,7 +1007,7 @@ export interface FirewallPolicyScheduleTime {
      */
     allDay: boolean;
     /**
-     * Time range during which the policy is active when `all_day` is false.
+     * Time range during which the policy is active when <span pulumi-lang-nodejs="`allDay`" pulumi-lang-dotnet="`AllDay`" pulumi-lang-go="`allDay`" pulumi-lang-python="`all_day`" pulumi-lang-yaml="`allDay`" pulumi-lang-java="`allDay`" pulumi-lang-hcl="`all_day`">`allDay`</span> is false.
      */
     range: outputs.FirewallPolicyScheduleTimeRange;
 }
@@ -1025,47 +1025,47 @@ export interface FirewallPolicyScheduleTimeRange {
 
 export interface FirewallPolicySource {
     /**
-     * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
+     * List of client MAC addresses to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `CLIENT`.
      */
     clientMacs: string[];
     /**
-     * IPv6 interface identifier to match, written as `<address>/<mask>` with both parts in IPv6 notation (for example `::eaff:1eff:fed7:bf17/::ffff:ffff:ffff:ffff` matches the lower 64 bits, i.e. an EUI-64 interface ID under any prefix). Required when `matching_target` is `IID`, and only valid with it. Matching the interface ID instead of the full address keeps a rule working when the delegated IPv6 prefix changes. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     * IPv6 interface identifier to match, written as `<address>/<mask>` with both parts in IPv6 notation (for example `::eaff:1eff:fed7:bf17/::ffff:ffff:ffff:ffff` matches the lower 64 bits, i.e. an EUI-64 interface ID under any prefix). Required when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `IID`, and only valid with it. Matching the interface ID instead of the full address keeps a rule working when the delegated IPv6 prefix changes. An existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged (#544).
      */
     iid: string;
     /**
-     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`. Taken from the controller when not set (#544).
+     * ID of a <span pulumi-lang-nodejs="`unifi.FirewallGroup`" pulumi-lang-dotnet="`unifi.FirewallGroup`" pulumi-lang-go="`FirewallGroup`" pulumi-lang-python="`FirewallGroup`" pulumi-lang-yaml="`unifi.FirewallGroup`" pulumi-lang-java="`unifi.FirewallGroup`" pulumi-lang-hcl="`unifi_firewall_group`">`unifi.FirewallGroup`</span> (address-group type) to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `IP` with <span pulumi-lang-nodejs="`matchingTargetType " pulumi-lang-dotnet="`MatchingTargetType " pulumi-lang-go="`matchingTargetType " pulumi-lang-python="`matching_target_type " pulumi-lang-yaml="`matchingTargetType " pulumi-lang-java="`matchingTargetType " pulumi-lang-hcl="`matching_target_type ">`matchingTargetType </span>= OBJECT`. Taken from the controller when not set (#544).
      */
     ipGroupId: string;
     /**
-     * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
+     * List of IP addresses or CIDR ranges to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `IP`.
      */
     ips: string[];
     /**
-     * The MAC address bound to the source IP (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"` and `match_mac = true`, which in turn requires it. An existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     * The MAC address bound to the source IP (IP/MAC binding). Only valid on the <span pulumi-lang-nodejs="`source`" pulumi-lang-dotnet="`Source`" pulumi-lang-go="`source`" pulumi-lang-python="`source`" pulumi-lang-yaml="`source`" pulumi-lang-java="`source`" pulumi-lang-hcl="`source`">`source`</span> endpoint with <span pulumi-lang-nodejs="`matchingTarget " pulumi-lang-dotnet="`MatchingTarget " pulumi-lang-go="`matchingTarget " pulumi-lang-python="`matching_target " pulumi-lang-yaml="`matchingTarget " pulumi-lang-java="`matchingTarget " pulumi-lang-hcl="`matching_target ">`matchingTarget </span>= "IP"` and <span pulumi-lang-nodejs="`matchMac " pulumi-lang-dotnet="`MatchMac " pulumi-lang-go="`matchMac " pulumi-lang-python="`match_mac " pulumi-lang-yaml="`matchMac " pulumi-lang-java="`matchMac " pulumi-lang-hcl="`match_mac ">`matchMac </span>= true`, which in turn requires it. An existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged (#544).
      */
     mac: string;
     /**
-     * The controller's `match_mac` flag (IP/MAC binding). Only valid on the `source` endpoint with `matching_target = "IP"`: the controller drops the flag on every other target (a `CLIENT` target already matches the clients in `client_macs` by MAC) and on the destination, so setting it to `true` anywhere else is rejected at plan time. On an `IP` source the controller also requires the bound MAC address, so `match_mac = true` also requires `mac`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged, so adopting an IP/MAC binding does not drop it (#544).
+     * The controller's <span pulumi-lang-nodejs="`matchMac`" pulumi-lang-dotnet="`MatchMac`" pulumi-lang-go="`matchMac`" pulumi-lang-python="`match_mac`" pulumi-lang-yaml="`matchMac`" pulumi-lang-java="`matchMac`" pulumi-lang-hcl="`match_mac`">`matchMac`</span> flag (IP/MAC binding). Only valid on the <span pulumi-lang-nodejs="`source`" pulumi-lang-dotnet="`Source`" pulumi-lang-go="`source`" pulumi-lang-python="`source`" pulumi-lang-yaml="`source`" pulumi-lang-java="`source`" pulumi-lang-hcl="`source`">`source`</span> endpoint with <span pulumi-lang-nodejs="`matchingTarget " pulumi-lang-dotnet="`MatchingTarget " pulumi-lang-go="`matchingTarget " pulumi-lang-python="`matching_target " pulumi-lang-yaml="`matchingTarget " pulumi-lang-java="`matchingTarget " pulumi-lang-hcl="`matching_target ">`matchingTarget </span>= "IP"`: the controller drops the flag on every other target (a `CLIENT` target already matches the clients in <span pulumi-lang-nodejs="`clientMacs`" pulumi-lang-dotnet="`ClientMacs`" pulumi-lang-go="`clientMacs`" pulumi-lang-python="`client_macs`" pulumi-lang-yaml="`clientMacs`" pulumi-lang-java="`clientMacs`" pulumi-lang-hcl="`client_macs`">`clientMacs`</span> by MAC) and on the destination, so setting it to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> anywhere else is rejected at plan time. On an `IP` source the controller also requires the bound MAC address, so <span pulumi-lang-nodejs="`matchMac " pulumi-lang-dotnet="`MatchMac " pulumi-lang-go="`matchMac " pulumi-lang-python="`match_mac " pulumi-lang-yaml="`matchMac " pulumi-lang-java="`matchMac " pulumi-lang-hcl="`match_mac ">`matchMac </span>= true` also requires <span pulumi-lang-nodejs="`mac`" pulumi-lang-dotnet="`Mac`" pulumi-lang-go="`mac`" pulumi-lang-python="`mac`" pulumi-lang-yaml="`mac`" pulumi-lang-java="`mac`" pulumi-lang-hcl="`mac`">`mac`</span>. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> for a new policy; an existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged, so adopting an IP/MAC binding does not drop it (#544).
      */
     matchMac: boolean;
     /**
-     * Invert the interface ID match: when `true`, the endpoint matches every address **except** those whose interface ID matches `iid`. Only valid with `matching_target = "IID"`. Defaults to `false` for a new policy; an existing policy keeps the controller's value while `matching_target` is unchanged (#544).
+     * Invert the interface ID match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every address **except** those whose interface ID matches <span pulumi-lang-nodejs="`iid`" pulumi-lang-dotnet="`Iid`" pulumi-lang-go="`iid`" pulumi-lang-python="`iid`" pulumi-lang-yaml="`iid`" pulumi-lang-java="`iid`" pulumi-lang-hcl="`iid`">`iid`</span>. Only valid with <span pulumi-lang-nodejs="`matchingTarget " pulumi-lang-dotnet="`MatchingTarget " pulumi-lang-go="`matchingTarget " pulumi-lang-python="`matching_target " pulumi-lang-yaml="`matchingTarget " pulumi-lang-java="`matchingTarget " pulumi-lang-hcl="`matching_target ">`matchingTarget </span>= "IID"`. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> for a new policy; an existing policy keeps the controller's value while <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is unchanged (#544).
      */
     matchOppositeIid: boolean;
     /**
-     * Invert the IP match: when `true`, the endpoint matches every address **except** those in `ips` / `ip_group_id`. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Taken from the controller when not set (#544).
+     * Invert the IP match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every address **except** those in <span pulumi-lang-nodejs="`ips`" pulumi-lang-dotnet="`Ips`" pulumi-lang-go="`ips`" pulumi-lang-python="`ips`" pulumi-lang-yaml="`ips`" pulumi-lang-java="`ips`" pulumi-lang-hcl="`ips`">`ips`</span> / <span pulumi-lang-nodejs="`ipGroupId`" pulumi-lang-dotnet="`IpGroupId`" pulumi-lang-go="`ipGroupId`" pulumi-lang-python="`ip_group_id`" pulumi-lang-yaml="`ipGroupId`" pulumi-lang-java="`ipGroupId`" pulumi-lang-hcl="`ip_group_id`">`ipGroupId`</span>. Corresponds to the "Match Opposite" toggle on an `IP` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeIps: boolean;
     /**
-     * Invert the network match: when `true`, the endpoint matches every network **except** those in `network_ids`. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Taken from the controller when not set (#544).
+     * Invert the network match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every network **except** those in <span pulumi-lang-nodejs="`networkIds`" pulumi-lang-dotnet="`NetworkIds`" pulumi-lang-go="`networkIds`" pulumi-lang-python="`network_ids`" pulumi-lang-yaml="`networkIds`" pulumi-lang-java="`networkIds`" pulumi-lang-hcl="`network_ids`">`networkIds`</span>. Corresponds to the "Match Opposite" toggle on a `NETWORK` matching target in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositeNetworks: boolean;
     /**
-     * Invert the port match: when `true`, the endpoint matches every port **except** those in `port` / `port_group_id`. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Taken from the controller when not set (#544).
+     * Invert the port match: when <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the endpoint matches every port **except** those in <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> / <span pulumi-lang-nodejs="`portGroupId`" pulumi-lang-dotnet="`PortGroupId`" pulumi-lang-go="`portGroupId`" pulumi-lang-python="`port_group_id`" pulumi-lang-yaml="`portGroupId`" pulumi-lang-java="`portGroupId`" pulumi-lang-hcl="`port_group_id`">`portGroupId`</span>. Corresponds to the "Match Opposite" toggle on the port selector in the UniFi UI. Taken from the controller when not set (#544).
      */
     matchOppositePorts: boolean;
     /**
-     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), `REGION` (country codes, set `regions`), or `IID` (IPv6 interface identifier, set `iid`). The controller only accepts `REGION` on an external zone.
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, `WEB` (domains/FQDN), `REGION` (country codes, set <span pulumi-lang-nodejs="`regions`" pulumi-lang-dotnet="`Regions`" pulumi-lang-go="`regions`" pulumi-lang-python="`regions`" pulumi-lang-yaml="`regions`" pulumi-lang-java="`regions`" pulumi-lang-hcl="`regions`">`regions`</span>), or `IID` (IPv6 interface identifier, set <span pulumi-lang-nodejs="`iid`" pulumi-lang-dotnet="`Iid`" pulumi-lang-go="`iid`" pulumi-lang-python="`iid`" pulumi-lang-yaml="`iid`" pulumi-lang-java="`iid`" pulumi-lang-hcl="`iid`">`iid`</span>). The controller only accepts `REGION` on an external zone.
      */
     matchingTarget: string;
     /**
@@ -1073,15 +1073,15 @@ export interface FirewallPolicySource {
      */
     matchingTargetType: string;
     /**
-     * List of UniFi network IDs to match. Used when `matching_target` is `NETWORK`.
+     * List of UniFi network IDs to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `NETWORK`.
      */
     networkIds: string[];
     /**
-     * Port(s) to match when `port_matching_type` is `SPECIFIC`. A single port (`161`) or a comma-separated list of ports/ranges (`80,443`, `8000-8100`). Leave unset for no port match.
+     * Port(s) to match when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `SPECIFIC`. A single port (<span pulumi-lang-nodejs="`161`" pulumi-lang-dotnet="`161`" pulumi-lang-go="`161`" pulumi-lang-python="`161`" pulumi-lang-yaml="`161`" pulumi-lang-java="`161`" pulumi-lang-hcl="`161`">`161`</span>) or a comma-separated list of ports/ranges (`80,443`, `8000-8100`). Leave unset for no port match.
      */
     port: string;
     /**
-     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`. Taken from the controller when not set (#544).
+     * ID of a <span pulumi-lang-nodejs="`unifi.FirewallGroup`" pulumi-lang-dotnet="`unifi.FirewallGroup`" pulumi-lang-go="`FirewallGroup`" pulumi-lang-python="`FirewallGroup`" pulumi-lang-yaml="`unifi.FirewallGroup`" pulumi-lang-java="`unifi.FirewallGroup`" pulumi-lang-hcl="`unifi_firewall_group`">`unifi.FirewallGroup`</span> (port-group type) to match. Used when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `OBJECT`. Taken from the controller when not set (#544).
      */
     portGroupId: string;
     /**
@@ -1089,15 +1089,15 @@ export interface FirewallPolicySource {
      */
     portMatchingType: string;
     /**
-     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when `matching_target` is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
+     * Two-letter ISO country codes to match (for example `["DE", "US"]`). Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `REGION`, which the controller only accepts on an external zone. The controller rejects an update that leaves the list empty, so a policy matching on region must always carry at least one code.
      */
     regions: string[];
     /**
-     * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
+     * List of domains/FQDNs to match. Used when <span pulumi-lang-nodejs="`matchingTarget`" pulumi-lang-dotnet="`MatchingTarget`" pulumi-lang-go="`matchingTarget`" pulumi-lang-python="`matching_target`" pulumi-lang-yaml="`matchingTarget`" pulumi-lang-java="`matchingTarget`" pulumi-lang-hcl="`matching_target`">`matchingTarget`</span> is `WEB`.
      */
     webDomains: string[];
     /**
-     * The ID of the firewall zone this endpoint belongs to. Use the `unifi.FirewallZone` data source to look up zone IDs by name.
+     * The ID of the firewall zone this endpoint belongs to. Use the <span pulumi-lang-nodejs="`unifi.FirewallZone`" pulumi-lang-dotnet="`unifi.FirewallZone`" pulumi-lang-go="`FirewallZone`" pulumi-lang-python="`FirewallZone`" pulumi-lang-yaml="`unifi.FirewallZone`" pulumi-lang-java="`unifi.FirewallZone`" pulumi-lang-hcl="`unifi_firewall_zone`">`unifi.FirewallZone`</span> data source to look up zone IDs by name.
      */
     zoneId: string;
 }
@@ -1976,7 +1976,7 @@ export interface GetNetworkDhcpV6Server {
 
 export interface GetNetworkDhcpV6ServerDns {
     /**
-     * When true, upstream DNS entries are propagated. When false, `servers` are used.
+     * When true, upstream DNS entries are propagated. When false, <span pulumi-lang-nodejs="`servers`" pulumi-lang-dotnet="`Servers`" pulumi-lang-go="`servers`" pulumi-lang-python="`servers`" pulumi-lang-yaml="`servers`" pulumi-lang-java="`servers`" pulumi-lang-hcl="`servers`">`servers`</span> are used.
      */
     auto: boolean;
     /**
@@ -2003,18 +2003,18 @@ export interface GetNetworkIpv6 {
      */
     ra: outputs.GetNetworkIpv6Ra;
     /**
-     * Whether the controller manages the IPv6 settings itself (`auto`) or uses the configured values (`manual`).
+     * Whether the controller manages the IPv6 settings itself (<span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>) or uses the configured values (<span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>).
      */
     settingPreference: string;
     /**
-     * The static IPv6 subnet (when `interface_type` is `static`).
+     * The static IPv6 subnet (when <span pulumi-lang-nodejs="`interfaceType`" pulumi-lang-dotnet="`InterfaceType`" pulumi-lang-go="`interfaceType`" pulumi-lang-python="`interface_type`" pulumi-lang-yaml="`interfaceType`" pulumi-lang-java="`interfaceType`" pulumi-lang-hcl="`interface_type`">`interfaceType`</span> is <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>).
      */
     staticSubnet: string;
 }
 
 export interface GetNetworkIpv6Pd {
     /**
-     * Specifies which WAN interface to use for IPv6 PD. One of `wan` or `wan2`.
+     * Specifies which WAN interface to use for IPv6 PD. One of <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> or <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>.
      */
     interface: string;
     /**
@@ -2022,11 +2022,11 @@ export interface GetNetworkIpv6Pd {
      */
     prefixid: string;
     /**
-     * Start address of the DHCPv6 range when `ipv6.interface_type` is `pd`.
+     * Start address of the DHCPv6 range when `ipv6.interface_type` is <span pulumi-lang-nodejs="`pd`" pulumi-lang-dotnet="`Pd`" pulumi-lang-go="`pd`" pulumi-lang-python="`pd`" pulumi-lang-yaml="`pd`" pulumi-lang-java="`pd`" pulumi-lang-hcl="`pd`">`pd`</span>.
      */
     start: string;
     /**
-     * End address of the DHCPv6 range when `ipv6.interface_type` is `pd`.
+     * End address of the DHCPv6 range when `ipv6.interface_type` is <span pulumi-lang-nodejs="`pd`" pulumi-lang-dotnet="`Pd`" pulumi-lang-go="`pd`" pulumi-lang-python="`pd`" pulumi-lang-yaml="`pd`" pulumi-lang-java="`pd`" pulumi-lang-hcl="`pd`">`pd`</span>.
      */
     stop: string;
 }
@@ -2041,7 +2041,7 @@ export interface GetNetworkIpv6Ra {
      */
     preferredLifetime: string;
     /**
-     * IPv6 router advertisement priority. One of `high`, `medium`, or `low`.
+     * IPv6 router advertisement priority. One of <span pulumi-lang-nodejs="`high`" pulumi-lang-dotnet="`High`" pulumi-lang-go="`high`" pulumi-lang-python="`high`" pulumi-lang-yaml="`high`" pulumi-lang-java="`high`" pulumi-lang-hcl="`high`">`high`</span>, <span pulumi-lang-nodejs="`medium`" pulumi-lang-dotnet="`Medium`" pulumi-lang-go="`medium`" pulumi-lang-python="`medium`" pulumi-lang-yaml="`medium`" pulumi-lang-java="`medium`" pulumi-lang-hcl="`medium`">`medium`</span>, or <span pulumi-lang-nodejs="`low`" pulumi-lang-dotnet="`Low`" pulumi-lang-go="`low`" pulumi-lang-python="`low`" pulumi-lang-yaml="`low`" pulumi-lang-java="`low`" pulumi-lang-hcl="`low`">`low`</span>.
      */
     priority: string;
     /**
@@ -2106,11 +2106,11 @@ export interface GetNetworkWan {
      */
     networkGroup: string;
     /**
-     * Specifies the IPv4 WAN connection type. One of `disabled`, `static`, `dhcp`, or `pppoe`.
+     * Specifies the IPv4 WAN connection type. One of <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, <span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span>, or <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>.
      */
     type: string;
     /**
-     * Specifies the IPv6 WAN connection type. One of `disabled`, `static`, or `dhcpv6`.
+     * Specifies the IPv6 WAN connection type. One of <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, or <span pulumi-lang-nodejs="`dhcpv6`" pulumi-lang-dotnet="`Dhcpv6`" pulumi-lang-go="`dhcpv6`" pulumi-lang-python="`dhcpv6`" pulumi-lang-yaml="`dhcpv6`" pulumi-lang-java="`dhcpv6`" pulumi-lang-hcl="`dhcpv6`">`dhcpv6`</span>.
      */
     typeV6: string;
     /**
@@ -2194,11 +2194,11 @@ export interface NatDestinationFilter {
      */
     firewallGroupIds?: string[];
     /**
-     * Match every address except `address`. Taken from the controller when not set (#544).
+     * Match every address except <span pulumi-lang-nodejs="`address`" pulumi-lang-dotnet="`Address`" pulumi-lang-go="`address`" pulumi-lang-python="`address`" pulumi-lang-yaml="`address`" pulumi-lang-java="`address`" pulumi-lang-hcl="`address`">`address`</span>. Taken from the controller when not set (#544).
      */
     invertAddress: boolean;
     /**
-     * Match every port except `port`. Taken from the controller when not set (#544).
+     * Match every port except <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span>. Taken from the controller when not set (#544).
      */
     invertPort: boolean;
     /**
@@ -2206,7 +2206,7 @@ export interface NatDestinationFilter {
      */
     networkConfId?: string;
     /**
-     * The port to match. Used with the `ADDRESS_AND_PORT` filter type, as a single port (`443`) or a range (`8080-8090`).
+     * The port to match. Used with the `ADDRESS_AND_PORT` filter type, as a single port (<span pulumi-lang-nodejs="`443`" pulumi-lang-dotnet="`443`" pulumi-lang-go="`443`" pulumi-lang-python="`443`" pulumi-lang-yaml="`443`" pulumi-lang-java="`443`" pulumi-lang-hcl="`443`">`443`</span>) or a range (`8080-8090`).
      */
     port?: string;
 }
@@ -2225,11 +2225,11 @@ export interface NatSourceFilter {
      */
     firewallGroupIds?: string[];
     /**
-     * Match every address except `address`. Taken from the controller when not set (#544).
+     * Match every address except <span pulumi-lang-nodejs="`address`" pulumi-lang-dotnet="`Address`" pulumi-lang-go="`address`" pulumi-lang-python="`address`" pulumi-lang-yaml="`address`" pulumi-lang-java="`address`" pulumi-lang-hcl="`address`">`address`</span>. Taken from the controller when not set (#544).
      */
     invertAddress: boolean;
     /**
-     * Match every port except `port`. Taken from the controller when not set (#544).
+     * Match every port except <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span>. Taken from the controller when not set (#544).
      */
     invertPort: boolean;
     /**
@@ -2237,7 +2237,7 @@ export interface NatSourceFilter {
      */
     networkConfId?: string;
     /**
-     * The port to match. Used with the `ADDRESS_AND_PORT` filter type, as a single port (`443`) or a range (`8080-8090`).
+     * The port to match. Used with the `ADDRESS_AND_PORT` filter type, as a single port (<span pulumi-lang-nodejs="`443`" pulumi-lang-dotnet="`443`" pulumi-lang-go="`443`" pulumi-lang-python="`443`" pulumi-lang-yaml="`443`" pulumi-lang-java="`443`" pulumi-lang-hcl="`443`">`443`</span>) or a range (`8080-8090`).
      */
     port?: string;
 }
@@ -2267,7 +2267,7 @@ export interface NetworkDhcpGuarding {
      */
     enabled: boolean;
     /**
-     * List of allowed DHCP server IP addresses (maximum 3). On `corporate` and `guest` networks the controller only honors DHCP guarding with `setting_preference = "manual"`; when `setting_preference` is not configured, the provider sets it to `manual` automatically whenever `dhcp_guarding.enabled` is `true`.
+     * List of allowed DHCP server IP addresses (maximum 3). On <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span> and <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span> networks the controller only honors DHCP guarding with <span pulumi-lang-nodejs="`settingPreference " pulumi-lang-dotnet="`SettingPreference " pulumi-lang-go="`settingPreference " pulumi-lang-python="`setting_preference " pulumi-lang-yaml="`settingPreference " pulumi-lang-java="`settingPreference " pulumi-lang-hcl="`setting_preference ">`settingPreference </span>= "manual"`; when <span pulumi-lang-nodejs="`settingPreference`" pulumi-lang-dotnet="`SettingPreference`" pulumi-lang-go="`settingPreference`" pulumi-lang-python="`setting_preference`" pulumi-lang-yaml="`settingPreference`" pulumi-lang-java="`settingPreference`" pulumi-lang-hcl="`setting_preference`">`settingPreference`</span> is not configured, the provider sets it to <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span> automatically whenever `dhcp_guarding.enabled` is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     servers?: string[];
 }
@@ -2289,7 +2289,7 @@ export interface NetworkDhcpServer {
      */
     boot: outputs.NetworkDhcpServerBoot;
     /**
-     * Specifies whether DHCP conflict checking is enabled. Defaults to `true` when the block is first configured; an existing network keeps the controller's value (#544).
+     * Specifies whether DHCP conflict checking is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when the block is first configured; an existing network keeps the controller's value (#544).
      */
     conflictChecking: boolean;
     /**
@@ -2297,7 +2297,7 @@ export interface NetworkDhcpServer {
      */
     dns: outputs.NetworkDhcpServerDns;
     /**
-     * Specifies whether DHCP server is enabled. Defaults to `true` when the block is first configured; an existing network keeps the controller's value (#544).
+     * Specifies whether DHCP server is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when the block is first configured; an existing network keeps the controller's value (#544).
      */
     enabled: boolean;
     /**
@@ -2305,7 +2305,7 @@ export interface NetworkDhcpServer {
      */
     gatewayEnabled: boolean;
     /**
-     * Specifies the DHCP lease time, as a Go duration string (e.g. `24h`, `86400s`). Defaults to `24h0m0s` when the DHCP server is first configured; an existing network keeps the controller's lease time (#544).
+     * Specifies the DHCP lease time, as a Go duration string (e.g. <span pulumi-lang-nodejs="`24h`" pulumi-lang-dotnet="`24h`" pulumi-lang-go="`24h`" pulumi-lang-python="`24h`" pulumi-lang-yaml="`24h`" pulumi-lang-java="`24h`" pulumi-lang-hcl="`24h`">`24h`</span>, <span pulumi-lang-nodejs="`86400s`" pulumi-lang-dotnet="`86400s`" pulumi-lang-go="`86400s`" pulumi-lang-python="`86400s`" pulumi-lang-yaml="`86400s`" pulumi-lang-java="`86400s`" pulumi-lang-hcl="`86400s`">`86400s`</span>). Defaults to <span pulumi-lang-nodejs="`24h0m0s`" pulumi-lang-dotnet="`24h0m0s`" pulumi-lang-go="`24h0m0s`" pulumi-lang-python="`24h0m0s`" pulumi-lang-yaml="`24h0m0s`" pulumi-lang-java="`24h0m0s`" pulumi-lang-hcl="`24h0m0s`">`24h0m0s`</span> when the DHCP server is first configured; an existing network keeps the controller's lease time (#544).
      */
     leasetime: string;
     /**
@@ -2430,15 +2430,15 @@ export interface NetworkIpv6 {
      */
     aliases: string[];
     /**
-     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of `slaac` (SLAAC only), `dhcpv6` (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
+     * How clients on this network obtain an IPv6 address (UI: Networks → IPv6 → Client Address Assignment). One of <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span> (SLAAC only), <span pulumi-lang-nodejs="`dhcpv6`" pulumi-lang-dotnet="`Dhcpv6`" pulumi-lang-go="`dhcpv6`" pulumi-lang-python="`dhcpv6`" pulumi-lang-yaml="`dhcpv6`" pulumi-lang-java="`dhcpv6`" pulumi-lang-hcl="`dhcpv6`">`dhcpv6`</span> (DHCPv6 only), or `slaac-dhcpv6` (both). Computed from the controller when not set.
      */
     clientAddressAssignment: string;
     /**
-     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
+     * Specifies which type of IPv6 connection to use. Must be one of <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`pd`" pulumi-lang-dotnet="`Pd`" pulumi-lang-go="`pd`" pulumi-lang-python="`pd`" pulumi-lang-yaml="`pd`" pulumi-lang-java="`pd`" pulumi-lang-hcl="`pd`">`pd`</span>, or <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>. Taken from the controller when not set; an adopted network keeps the type it already has (#544).
      */
     interfaceType: string;
     /**
-     * IPv6 Prefix Delegation (PD) settings, used when `interface_type` is `pd`.
+     * IPv6 Prefix Delegation (PD) settings, used when <span pulumi-lang-nodejs="`interfaceType`" pulumi-lang-dotnet="`InterfaceType`" pulumi-lang-go="`interfaceType`" pulumi-lang-python="`interface_type`" pulumi-lang-yaml="`interfaceType`" pulumi-lang-java="`interfaceType`" pulumi-lang-hcl="`interface_type`">`interfaceType`</span> is <span pulumi-lang-nodejs="`pd`" pulumi-lang-dotnet="`Pd`" pulumi-lang-go="`pd`" pulumi-lang-python="`pd`" pulumi-lang-yaml="`pd`" pulumi-lang-java="`pd`" pulumi-lang-hcl="`pd`">`pd`</span>.
      */
     pd: outputs.NetworkIpv6Pd;
     /**
@@ -2446,11 +2446,11 @@ export interface NetworkIpv6 {
      */
     ra: outputs.NetworkIpv6Ra;
     /**
-     * Whether the controller manages the IPv6 settings itself (`auto`) or uses the configured values (`manual`). The UniFi UI requires `manual` before IPv6 `aliases` can be set. Taken from the controller when not set (#699).
+     * Whether the controller manages the IPv6 settings itself (<span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>) or uses the configured values (<span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>). The UniFi UI requires <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span> before IPv6 <span pulumi-lang-nodejs="`aliases`" pulumi-lang-dotnet="`Aliases`" pulumi-lang-go="`aliases`" pulumi-lang-python="`aliases`" pulumi-lang-yaml="`aliases`" pulumi-lang-java="`aliases`" pulumi-lang-hcl="`aliases`">`aliases`</span> can be set. Taken from the controller when not set (#699).
      */
     settingPreference: string;
     /**
-     * The IPv6 static subnet of the network. Only used when `interface_type` is `static`.
+     * The IPv6 static subnet of the network. Only used when <span pulumi-lang-nodejs="`interfaceType`" pulumi-lang-dotnet="`InterfaceType`" pulumi-lang-go="`interfaceType`" pulumi-lang-python="`interface_type`" pulumi-lang-yaml="`interfaceType`" pulumi-lang-java="`interfaceType`" pulumi-lang-hcl="`interface_type`">`interfaceType`</span> is <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>.
      */
     staticSubnet?: string;
 }
@@ -2461,19 +2461,19 @@ export interface NetworkIpv6Pd {
      */
     autoPrefixidEnabled: boolean;
     /**
-     * The IPv6 Prefix Delegation WAN interface (e.g., `wan`, `wan2`).
+     * The IPv6 Prefix Delegation WAN interface (e.g., <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>).
      */
     interface?: string;
     /**
-     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., `0`, `1a`).
+     * The IPv6 Prefix Delegation prefix ID (hex string, e.g., <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>, <span pulumi-lang-nodejs="`1a`" pulumi-lang-dotnet="`1a`" pulumi-lang-go="`1a`" pulumi-lang-python="`1a`" pulumi-lang-yaml="`1a`" pulumi-lang-java="`1a`" pulumi-lang-hcl="`1a`">`1a`</span>).
      */
     prefixid?: string;
     /**
-     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with `stop` when `ipv6.interface_type` is `pd`, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
+     * The start of the IPv6 Prefix Delegation range (e.g. `::2`). Required together with <span pulumi-lang-nodejs="`stop`" pulumi-lang-dotnet="`Stop`" pulumi-lang-go="`stop`" pulumi-lang-python="`stop`" pulumi-lang-yaml="`stop`" pulumi-lang-java="`stop`" pulumi-lang-hcl="`stop`">`stop`</span> when `ipv6.interface_type` is <span pulumi-lang-nodejs="`pd`" pulumi-lang-dotnet="`Pd`" pulumi-lang-go="`pd`" pulumi-lang-python="`pd`" pulumi-lang-yaml="`pd`" pulumi-lang-java="`pd`" pulumi-lang-hcl="`pd`">`pd`</span>, otherwise the controller rejects the network with `api.err.InvalidIpv6Addr`.
      */
     start: string;
     /**
-     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with `start` when `ipv6.interface_type` is `pd`.
+     * The end of the IPv6 Prefix Delegation range (e.g. `::7d1`). Required together with <span pulumi-lang-nodejs="`start`" pulumi-lang-dotnet="`Start`" pulumi-lang-go="`start`" pulumi-lang-python="`start`" pulumi-lang-yaml="`start`" pulumi-lang-java="`start`" pulumi-lang-hcl="`start`">`start`</span> when `ipv6.interface_type` is <span pulumi-lang-nodejs="`pd`" pulumi-lang-dotnet="`Pd`" pulumi-lang-go="`pd`" pulumi-lang-python="`pd`" pulumi-lang-yaml="`pd`" pulumi-lang-java="`pd`" pulumi-lang-hcl="`pd`">`pd`</span>.
      */
     stop: string;
 }
@@ -2484,15 +2484,15 @@ export interface NetworkIpv6Ra {
      */
     enabled: boolean;
     /**
-     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. `14400s`, `4h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
+     * The IPv6 Router Advertisement preferred lifetime, as a Go duration string (e.g. <span pulumi-lang-nodejs="`14400s`" pulumi-lang-dotnet="`14400s`" pulumi-lang-go="`14400s`" pulumi-lang-python="`14400s`" pulumi-lang-yaml="`14400s`" pulumi-lang-java="`14400s`" pulumi-lang-hcl="`14400s`">`14400s`</span>, <span pulumi-lang-nodejs="`4h`" pulumi-lang-dotnet="`4h`" pulumi-lang-go="`4h`" pulumi-lang-python="`4h`" pulumi-lang-yaml="`4h`" pulumi-lang-java="`4h`" pulumi-lang-hcl="`4h`">`4h`</span>). Must be a whole number of seconds between <span pulumi-lang-nodejs="`0s`" pulumi-lang-dotnet="`0s`" pulumi-lang-go="`0s`" pulumi-lang-python="`0s`" pulumi-lang-yaml="`0s`" pulumi-lang-java="`0s`" pulumi-lang-hcl="`0s`">`0s`</span> and <span pulumi-lang-nodejs="`31536000s`" pulumi-lang-dotnet="`31536000s`" pulumi-lang-go="`31536000s`" pulumi-lang-python="`31536000s`" pulumi-lang-yaml="`31536000s`" pulumi-lang-java="`31536000s`" pulumi-lang-hcl="`31536000s`">`31536000s`</span> (1 year).
      */
     preferredLifetime: string;
     /**
-     * The IPv6 Router Advertisement priority. Must be one of `high`, `medium`, or `low`.
+     * The IPv6 Router Advertisement priority. Must be one of <span pulumi-lang-nodejs="`high`" pulumi-lang-dotnet="`High`" pulumi-lang-go="`high`" pulumi-lang-python="`high`" pulumi-lang-yaml="`high`" pulumi-lang-java="`high`" pulumi-lang-hcl="`high`">`high`</span>, <span pulumi-lang-nodejs="`medium`" pulumi-lang-dotnet="`Medium`" pulumi-lang-go="`medium`" pulumi-lang-python="`medium`" pulumi-lang-yaml="`medium`" pulumi-lang-java="`medium`" pulumi-lang-hcl="`medium`">`medium`</span>, or <span pulumi-lang-nodejs="`low`" pulumi-lang-dotnet="`Low`" pulumi-lang-go="`low`" pulumi-lang-python="`low`" pulumi-lang-yaml="`low`" pulumi-lang-java="`low`" pulumi-lang-hcl="`low`">`low`</span>.
      */
     priority: string;
     /**
-     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. `86400s`, `24h`). Must be a whole number of seconds between `0s` and `31536000s` (1 year).
+     * The IPv6 Router Advertisement valid lifetime, as a Go duration string (e.g. <span pulumi-lang-nodejs="`86400s`" pulumi-lang-dotnet="`86400s`" pulumi-lang-go="`86400s`" pulumi-lang-python="`86400s`" pulumi-lang-yaml="`86400s`" pulumi-lang-java="`86400s`" pulumi-lang-hcl="`86400s`">`86400s`</span>, <span pulumi-lang-nodejs="`24h`" pulumi-lang-dotnet="`24h`" pulumi-lang-go="`24h`" pulumi-lang-python="`24h`" pulumi-lang-yaml="`24h`" pulumi-lang-java="`24h`" pulumi-lang-hcl="`24h`">`24h`</span>). Must be a whole number of seconds between <span pulumi-lang-nodejs="`0s`" pulumi-lang-dotnet="`0s`" pulumi-lang-go="`0s`" pulumi-lang-python="`0s`" pulumi-lang-yaml="`0s`" pulumi-lang-java="`0s`" pulumi-lang-hcl="`0s`">`0s`</span> and <span pulumi-lang-nodejs="`31536000s`" pulumi-lang-dotnet="`31536000s`" pulumi-lang-go="`31536000s`" pulumi-lang-python="`31536000s`" pulumi-lang-yaml="`31536000s`" pulumi-lang-java="`31536000s`" pulumi-lang-hcl="`31536000s`">`31536000s`</span> (1 year).
      */
     validLifetime: string;
 }
@@ -2537,11 +2537,11 @@ export interface NetworkTimeouts {
 
 export interface PortForwardDestinationIp {
     /**
-     * The destination IPv4 address. Use `any` for all addresses.
+     * The destination IPv4 address. Use <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> for all addresses.
      */
     destinationIp?: string;
     /**
-     * The WAN interface for this destination (e.g. `wan`, `wan2`).
+     * The WAN interface for this destination (e.g. <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>).
      */
     interface?: string;
 }
@@ -2567,11 +2567,11 @@ export interface PortForwardSourceLimiting {
      */
     firewallGroupId?: string;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`. Taken from the controller when not set, and not sent on create: the controller stores no source address for a rule that does not limit by IP (#544).
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>. Taken from the controller when not set, and not sent on create: the controller stores no source address for a rule that does not limit by IP (#544).
      */
     ip: string;
     /**
-     * The source limiting type. Can be `ip` or `firewall_group`. Inferred automatically when only one of `ip` or `firewall_group_id` is set.
+     * The source limiting type. Can be <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span> or <span pulumi-lang-nodejs="`firewallGroup`" pulumi-lang-dotnet="`FirewallGroup`" pulumi-lang-go="`firewallGroup`" pulumi-lang-python="`firewall_group`" pulumi-lang-yaml="`firewallGroup`" pulumi-lang-java="`firewallGroup`" pulumi-lang-hcl="`firewall_group`">`firewallGroup`</span>. Inferred automatically when only one of <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span> or <span pulumi-lang-nodejs="`firewallGroupId`" pulumi-lang-dotnet="`FirewallGroupId`" pulumi-lang-go="`firewallGroupId`" pulumi-lang-python="`firewall_group_id`" pulumi-lang-yaml="`firewallGroupId`" pulumi-lang-java="`firewallGroupId`" pulumi-lang-hcl="`firewall_group_id`">`firewallGroupId`</span> is set.
      */
     type: string;
 }
@@ -2597,11 +2597,11 @@ export interface PortForwardTimeouts {
 
 export interface PortForwardWan {
     /**
-     * The WAN interface. Can be `wan`, `wan2`, or `both`.
+     * The WAN interface. Can be <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>, or <span pulumi-lang-nodejs="`both`" pulumi-lang-dotnet="`Both`" pulumi-lang-go="`both`" pulumi-lang-python="`both`" pulumi-lang-yaml="`both`" pulumi-lang-java="`both`" pulumi-lang-hcl="`both`">`both`</span>.
      */
     interface?: string;
     /**
-     * The WAN IP address for the port forwarding rule. Use `any` for all addresses.
+     * The WAN IP address for the port forwarding rule. Use <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> for all addresses.
      */
     ipAddress: string;
     /**
@@ -2612,11 +2612,11 @@ export interface PortForwardWan {
 
 export interface PortProfileDot1x {
     /**
-     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized` for a newly created profile; an existing profile keeps the controller's value.
+     * The type of 802.1X control to use. Can be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`forceAuthorized`" pulumi-lang-dotnet="`ForceAuthorized`" pulumi-lang-go="`forceAuthorized`" pulumi-lang-python="`force_authorized`" pulumi-lang-yaml="`forceAuthorized`" pulumi-lang-java="`forceAuthorized`" pulumi-lang-hcl="`force_authorized`">`forceAuthorized`</span>, <span pulumi-lang-nodejs="`forceUnauthorized`" pulumi-lang-dotnet="`ForceUnauthorized`" pulumi-lang-go="`forceUnauthorized`" pulumi-lang-python="`force_unauthorized`" pulumi-lang-yaml="`forceUnauthorized`" pulumi-lang-java="`forceUnauthorized`" pulumi-lang-hcl="`force_unauthorized`">`forceUnauthorized`</span>, <span pulumi-lang-nodejs="`macBased`" pulumi-lang-dotnet="`MacBased`" pulumi-lang-go="`macBased`" pulumi-lang-python="`mac_based`" pulumi-lang-yaml="`macBased`" pulumi-lang-java="`macBased`" pulumi-lang-hcl="`mac_based`">`macBased`</span> or <span pulumi-lang-nodejs="`multiHost`" pulumi-lang-dotnet="`MultiHost`" pulumi-lang-go="`multiHost`" pulumi-lang-python="`multi_host`" pulumi-lang-yaml="`multiHost`" pulumi-lang-java="`multiHost`" pulumi-lang-hcl="`multi_host`">`multiHost`</span>. Defaults to <span pulumi-lang-nodejs="`forceAuthorized`" pulumi-lang-dotnet="`ForceAuthorized`" pulumi-lang-go="`forceAuthorized`" pulumi-lang-python="`force_authorized`" pulumi-lang-yaml="`forceAuthorized`" pulumi-lang-java="`forceAuthorized`" pulumi-lang-hcl="`force_authorized`">`forceAuthorized`</span> for a newly created profile; an existing profile keeps the controller's value.
      */
     ctrl: string;
     /**
-     * The idle timeout to use when using MAC Based 802.1X control, as a Go duration string (e.g. `5m`, `300s`). Defaults to `5m0s` for a newly created profile; an existing profile keeps the controller's value, which may be none.
+     * The idle timeout to use when using MAC Based 802.1X control, as a Go duration string (e.g. <span pulumi-lang-nodejs="`5m`" pulumi-lang-dotnet="`5m`" pulumi-lang-go="`5m`" pulumi-lang-python="`5m`" pulumi-lang-yaml="`5m`" pulumi-lang-java="`5m`" pulumi-lang-hcl="`5m`">`5m`</span>, <span pulumi-lang-nodejs="`300s`" pulumi-lang-dotnet="`300s`" pulumi-lang-go="`300s`" pulumi-lang-python="`300s`" pulumi-lang-yaml="`300s`" pulumi-lang-java="`300s`" pulumi-lang-hcl="`300s`">`300s`</span>). Defaults to <span pulumi-lang-nodejs="`5m0s`" pulumi-lang-dotnet="`5m0s`" pulumi-lang-go="`5m0s`" pulumi-lang-python="`5m0s`" pulumi-lang-yaml="`5m0s`" pulumi-lang-java="`5m0s`" pulumi-lang-hcl="`5m0s`">`5m0s`</span> for a newly created profile; an existing profile keeps the controller's value, which may be none.
      */
     idleTimeout: string;
 }
@@ -2627,14 +2627,14 @@ export interface PortProfileEgressRateLimit {
      */
     enabled: boolean;
     /**
-     * The egress rate limit, in kbps, for the port profile. Can be between `64` and `9999999`.
+     * The egress rate limit, in kbps, for the port profile. Can be between <span pulumi-lang-nodejs="`64`" pulumi-lang-dotnet="`64`" pulumi-lang-go="`64`" pulumi-lang-python="`64`" pulumi-lang-yaml="`64`" pulumi-lang-java="`64`" pulumi-lang-hcl="`64`">`64`</span> and <span pulumi-lang-nodejs="`9999999`" pulumi-lang-dotnet="`9999999`" pulumi-lang-go="`9999999`" pulumi-lang-python="`9999999`" pulumi-lang-yaml="`9999999`" pulumi-lang-java="`9999999`" pulumi-lang-hcl="`9999999`">`9999999`</span>.
      */
     kbps: number;
 }
 
 export interface PortProfileLldpmed {
     /**
-     * Enable LLDP-MED for the port profile. Defaults to `true` for a newly created profile; an existing profile keeps the controller's value.
+     * Enable LLDP-MED for the port profile. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created profile; an existing profile keeps the controller's value.
      */
     enabled: boolean;
     /**
@@ -2664,7 +2664,7 @@ export interface PortProfileStormctrl {
      */
     mcast: outputs.PortProfileStormctrlMcast;
     /**
-     * The type of Storm Control to use for the port profile. Can be `level` or `rate`.
+     * The type of Storm Control to use for the port profile. Can be <span pulumi-lang-nodejs="`level`" pulumi-lang-dotnet="`Level`" pulumi-lang-go="`level`" pulumi-lang-python="`level`" pulumi-lang-yaml="`level`" pulumi-lang-java="`level`" pulumi-lang-hcl="`level`">`level`</span> or <span pulumi-lang-nodejs="`rate`" pulumi-lang-dotnet="`Rate`" pulumi-lang-go="`rate`" pulumi-lang-python="`rate`" pulumi-lang-yaml="`rate`" pulumi-lang-java="`rate`" pulumi-lang-hcl="`rate`">`rate`</span>.
      */
     type: string;
     /**
@@ -2751,7 +2751,7 @@ export interface PowerSupervisorPowerSource {
      */
     powerSourceMac: string;
     /**
-     * Type of the upstream source (e.g. `poe_port`).
+     * Type of the upstream source (e.g. <span pulumi-lang-nodejs="`poePort`" pulumi-lang-dotnet="`PoePort`" pulumi-lang-go="`poePort`" pulumi-lang-python="`poe_port`" pulumi-lang-yaml="`poePort`" pulumi-lang-java="`poePort`" pulumi-lang-hcl="`poe_port`">`poePort`</span>).
      */
     powerSourceType: string;
 }
@@ -2797,7 +2797,7 @@ export interface QosRuleDestination {
      */
     ips?: string[];
     /**
-     * `ANY`, `APP` (`app_ids`), `APP_CATEGORY` (`app_category_ids`), `IP` (`ips` or `ip_group_id`), `IID` (`iid`), `REGION` (`regions`) or `WEB` (`web_domains` or `web_group_id`).
+     * `ANY`, `APP` (<span pulumi-lang-nodejs="`appIds`" pulumi-lang-dotnet="`AppIds`" pulumi-lang-go="`appIds`" pulumi-lang-python="`app_ids`" pulumi-lang-yaml="`appIds`" pulumi-lang-java="`appIds`" pulumi-lang-hcl="`app_ids`">`appIds`</span>), `APP_CATEGORY` (<span pulumi-lang-nodejs="`appCategoryIds`" pulumi-lang-dotnet="`AppCategoryIds`" pulumi-lang-go="`appCategoryIds`" pulumi-lang-python="`app_category_ids`" pulumi-lang-yaml="`appCategoryIds`" pulumi-lang-java="`appCategoryIds`" pulumi-lang-hcl="`app_category_ids`">`appCategoryIds`</span>), `IP` (<span pulumi-lang-nodejs="`ips`" pulumi-lang-dotnet="`Ips`" pulumi-lang-go="`ips`" pulumi-lang-python="`ips`" pulumi-lang-yaml="`ips`" pulumi-lang-java="`ips`" pulumi-lang-hcl="`ips`">`ips`</span> or <span pulumi-lang-nodejs="`ipGroupId`" pulumi-lang-dotnet="`IpGroupId`" pulumi-lang-go="`ipGroupId`" pulumi-lang-python="`ip_group_id`" pulumi-lang-yaml="`ipGroupId`" pulumi-lang-java="`ipGroupId`" pulumi-lang-hcl="`ip_group_id`">`ipGroupId`</span>), `IID` (<span pulumi-lang-nodejs="`iid`" pulumi-lang-dotnet="`Iid`" pulumi-lang-go="`iid`" pulumi-lang-python="`iid`" pulumi-lang-yaml="`iid`" pulumi-lang-java="`iid`" pulumi-lang-hcl="`iid`">`iid`</span>), `REGION` (<span pulumi-lang-nodejs="`regions`" pulumi-lang-dotnet="`Regions`" pulumi-lang-go="`regions`" pulumi-lang-python="`regions`" pulumi-lang-yaml="`regions`" pulumi-lang-java="`regions`" pulumi-lang-hcl="`regions`">`regions`</span>) or `WEB` (<span pulumi-lang-nodejs="`webDomains`" pulumi-lang-dotnet="`WebDomains`" pulumi-lang-go="`webDomains`" pulumi-lang-python="`web_domains`" pulumi-lang-yaml="`webDomains`" pulumi-lang-java="`webDomains`" pulumi-lang-hcl="`web_domains`">`webDomains`</span> or <span pulumi-lang-nodejs="`webGroupId`" pulumi-lang-dotnet="`WebGroupId`" pulumi-lang-go="`webGroupId`" pulumi-lang-python="`web_group_id`" pulumi-lang-yaml="`webGroupId`" pulumi-lang-java="`webGroupId`" pulumi-lang-hcl="`web_group_id`">`webGroupId`</span>).
      */
     matchingTarget: string;
     /**
@@ -2813,7 +2813,7 @@ export interface QosRuleDestination {
      */
     portGroupId?: string;
     /**
-     * `SPECIFIC` (`port`) or `OBJECT` (`port_group_id`). Omit for any port.
+     * `SPECIFIC` (<span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span>) or `OBJECT` (<span pulumi-lang-nodejs="`portGroupId`" pulumi-lang-dotnet="`PortGroupId`" pulumi-lang-go="`portGroupId`" pulumi-lang-python="`port_group_id`" pulumi-lang-yaml="`portGroupId`" pulumi-lang-java="`portGroupId`" pulumi-lang-hcl="`port_group_id`">`portGroupId`</span>). Omit for any port.
      */
     portMatchingType?: string;
     /**
@@ -2848,7 +2848,7 @@ export interface QosRuleSchedule {
      */
     mode: string;
     /**
-     * Days for `EVERY_WEEK`/`CUSTOM`: `mon` … `sun`.
+     * Days for `EVERY_WEEK`/`CUSTOM`: <span pulumi-lang-nodejs="`mon`" pulumi-lang-dotnet="`Mon`" pulumi-lang-go="`mon`" pulumi-lang-python="`mon`" pulumi-lang-yaml="`mon`" pulumi-lang-java="`mon`" pulumi-lang-hcl="`mon`">`mon`</span> … <span pulumi-lang-nodejs="`sun`" pulumi-lang-dotnet="`Sun`" pulumi-lang-go="`sun`" pulumi-lang-python="`sun`" pulumi-lang-yaml="`sun`" pulumi-lang-java="`sun`" pulumi-lang-hcl="`sun`">`sun`</span>.
      */
     repeatOnDays?: string[];
     /**
@@ -2871,7 +2871,7 @@ export interface QosRuleSource {
      */
     clientMacs?: string[];
     /**
-     * `ANY`, `CLIENT` (`client_macs`) or `NETWORK` (`network_ids`).
+     * `ANY`, `CLIENT` (<span pulumi-lang-nodejs="`clientMacs`" pulumi-lang-dotnet="`ClientMacs`" pulumi-lang-go="`clientMacs`" pulumi-lang-python="`client_macs`" pulumi-lang-yaml="`clientMacs`" pulumi-lang-java="`clientMacs`" pulumi-lang-hcl="`client_macs`">`clientMacs`</span>) or `NETWORK` (<span pulumi-lang-nodejs="`networkIds`" pulumi-lang-dotnet="`NetworkIds`" pulumi-lang-go="`networkIds`" pulumi-lang-python="`network_ids`" pulumi-lang-yaml="`networkIds`" pulumi-lang-java="`networkIds`" pulumi-lang-hcl="`network_ids`">`networkIds`</span>).
      */
     matchingTarget: string;
     /**
@@ -2905,7 +2905,7 @@ export interface RadiusProfileAcctServer {
      */
     ip?: string;
     /**
-     * Port of accounting service. Defaults to `1813` for a server added by the configuration; an existing server keeps the controller's port, which may be none.
+     * Port of accounting service. Defaults to <span pulumi-lang-nodejs="`1813`" pulumi-lang-dotnet="`1813`" pulumi-lang-go="`1813`" pulumi-lang-python="`1813`" pulumi-lang-yaml="`1813`" pulumi-lang-java="`1813`" pulumi-lang-hcl="`1813`">`1813`</span> for a server added by the configuration; an existing server keeps the controller's port, which may be none.
      */
     port: number;
     /**
@@ -2916,11 +2916,11 @@ export interface RadiusProfileAcctServer {
 
 export interface RadiusProfileAuthServer {
     /**
-     * IP address of the authentication server. Optional: the controller-managed default profile (e.g. the one created when a gateway RADIUS/VPN service is enabled, with `use_usg_auth_server = true`) returns a server entry without an IP, so importing it must not force one.
+     * IP address of the authentication server. Optional: the controller-managed default profile (e.g. the one created when a gateway RADIUS/VPN service is enabled, with <span pulumi-lang-nodejs="`useUsgAuthServer " pulumi-lang-dotnet="`UseUsgAuthServer " pulumi-lang-go="`useUsgAuthServer " pulumi-lang-python="`use_usg_auth_server " pulumi-lang-yaml="`useUsgAuthServer " pulumi-lang-java="`useUsgAuthServer " pulumi-lang-hcl="`use_usg_auth_server ">`useUsgAuthServer </span>= true`) returns a server entry without an IP, so importing it must not force one.
      */
     ip?: string;
     /**
-     * Port of authentication service. Defaults to `1812` for a server added by the configuration; an existing server keeps the controller's port, which may be none.
+     * Port of authentication service. Defaults to <span pulumi-lang-nodejs="`1812`" pulumi-lang-dotnet="`1812`" pulumi-lang-go="`1812`" pulumi-lang-python="`1812`" pulumi-lang-yaml="`1812`" pulumi-lang-java="`1812`" pulumi-lang-hcl="`1812`">`1812`</span> for a server added by the configuration; an existing server keeps the controller's port, which may be none.
      */
     port: number;
     /**
@@ -2935,7 +2935,7 @@ export interface RadiusProfileInterimUpdate {
      */
     enabled: boolean;
     /**
-     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s` for a newly created profile; an existing profile keeps the controller's value, which may be none.
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. <span pulumi-lang-nodejs="`1h`" pulumi-lang-dotnet="`1h`" pulumi-lang-go="`1h`" pulumi-lang-python="`1h`" pulumi-lang-yaml="`1h`" pulumi-lang-java="`1h`" pulumi-lang-hcl="`1h`">`1h`</span>, <span pulumi-lang-nodejs="`3600s`" pulumi-lang-dotnet="`3600s`" pulumi-lang-go="`3600s`" pulumi-lang-python="`3600s`" pulumi-lang-yaml="`3600s`" pulumi-lang-java="`3600s`" pulumi-lang-hcl="`3600s`">`3600s`</span>). Defaults to <span pulumi-lang-nodejs="`1h0m0s`" pulumi-lang-dotnet="`1h0m0s`" pulumi-lang-go="`1h0m0s`" pulumi-lang-python="`1h0m0s`" pulumi-lang-yaml="`1h0m0s`" pulumi-lang-java="`1h0m0s`" pulumi-lang-hcl="`1h0m0s`">`1h0m0s`</span> for a newly created profile; an existing profile keeps the controller's value, which may be none.
      */
     interval: string;
 }
@@ -2965,7 +2965,7 @@ export interface RadiusProfileVlan {
      */
     enabled: boolean;
     /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
+     * Specifies whether to use vlan on wireless connections. Must be one of <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>, or <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>.
      */
     wlanMode: string;
 }
@@ -2991,15 +2991,15 @@ export interface RadiusUserTimeouts {
 
 export interface RadiusUserTunnel {
     /**
-     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     * The tunnel configuration type. Can be <span pulumi-lang-nodejs="`vpn`" pulumi-lang-dotnet="`Vpn`" pulumi-lang-go="`vpn`" pulumi-lang-python="`vpn`" pulumi-lang-yaml="`vpn`" pulumi-lang-java="`vpn`" pulumi-lang-hcl="`vpn`">`vpn`</span>, `802.1x`, or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>.
      */
     configType?: string;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2. Defaults to `6` for a newly created account; an existing account keeps the controller's value, which may be none.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2. Defaults to <span pulumi-lang-nodejs="`6`" pulumi-lang-dotnet="`6`" pulumi-lang-go="`6`" pulumi-lang-python="`6`" pulumi-lang-yaml="`6`" pulumi-lang-java="`6`" pulumi-lang-hcl="`6`">`6`</span> for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     mediumType: number;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common. Defaults to `3` for a newly created account; an existing account keeps the controller's value, which may be none.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; <span pulumi-lang-nodejs="`13`" pulumi-lang-dotnet="`13`" pulumi-lang-go="`13`" pulumi-lang-python="`13`" pulumi-lang-yaml="`13`" pulumi-lang-java="`13`" pulumi-lang-hcl="`13`">`13`</span> (VLAN) is the most common. Defaults to <span pulumi-lang-nodejs="`3`" pulumi-lang-dotnet="`3`" pulumi-lang-go="`3`" pulumi-lang-python="`3`" pulumi-lang-yaml="`3`" pulumi-lang-java="`3`" pulumi-lang-hcl="`3`">`3`</span> for a newly created account; an existing account keeps the controller's value, which may be none.
      */
     type: number;
 }
@@ -3025,11 +3025,11 @@ export interface SettingConnectivity {
      */
     mloMeshEnabled: boolean;
     /**
-     * Host the site uses to verify connectivity when `uplink_type` is `internet`.
+     * Host the site uses to verify connectivity when <span pulumi-lang-nodejs="`uplinkType`" pulumi-lang-dotnet="`UplinkType`" pulumi-lang-go="`uplinkType`" pulumi-lang-python="`uplink_type`" pulumi-lang-yaml="`uplinkType`" pulumi-lang-java="`uplinkType`" pulumi-lang-hcl="`uplink_type`">`uplinkType`</span> is <span pulumi-lang-nodejs="`internet`" pulumi-lang-dotnet="`Internet`" pulumi-lang-go="`internet`" pulumi-lang-python="`internet`" pulumi-lang-yaml="`internet`" pulumi-lang-java="`internet`" pulumi-lang-hcl="`internet`">`internet`</span>.
      */
     uplinkHost: string;
     /**
-     * How the site reaches the controller: `gateway` or `internet`.
+     * How the site reaches the controller: <span pulumi-lang-nodejs="`gateway`" pulumi-lang-dotnet="`Gateway`" pulumi-lang-go="`gateway`" pulumi-lang-python="`gateway`" pulumi-lang-yaml="`gateway`" pulumi-lang-java="`gateway`" pulumi-lang-hcl="`gateway`">`gateway`</span> or <span pulumi-lang-nodejs="`internet`" pulumi-lang-dotnet="`Internet`" pulumi-lang-go="`internet`" pulumi-lang-python="`internet`" pulumi-lang-yaml="`internet`" pulumi-lang-java="`internet`" pulumi-lang-hcl="`internet`">`internet`</span>.
      */
     uplinkType: string;
 }
@@ -3073,7 +3073,7 @@ export interface SettingDohCustomServer {
 
 export interface SettingDpi {
     /**
-     * Whether DPI is enabled. Taken from the controller when not set, so declaring the `dpi` block for one attribute no longer turns deep packet inspection off (#544).
+     * Whether DPI is enabled. Taken from the controller when not set, so declaring the <span pulumi-lang-nodejs="`dpi`" pulumi-lang-dotnet="`Dpi`" pulumi-lang-go="`dpi`" pulumi-lang-python="`dpi`" pulumi-lang-yaml="`dpi`" pulumi-lang-java="`dpi`" pulumi-lang-hcl="`dpi`">`dpi`</span> block for one attribute no longer turns deep packet inspection off (#544).
      */
     enabled: boolean;
     /**
@@ -3095,7 +3095,7 @@ export interface SettingEtherlighting {
 
 export interface SettingEtherlightingNetworkOverride {
     /**
-     * 6-digit hex color without the leading `#` (e.g. `ff0000`).
+     * 6-digit hex color without the leading `#` (e.g. <span pulumi-lang-nodejs="`ff0000`" pulumi-lang-dotnet="`Ff0000`" pulumi-lang-go="`ff0000`" pulumi-lang-python="`ff0000`" pulumi-lang-yaml="`ff0000`" pulumi-lang-java="`ff0000`" pulumi-lang-hcl="`ff0000`">`ff0000`</span>).
      */
     color: string;
     /**
@@ -3106,7 +3106,7 @@ export interface SettingEtherlightingNetworkOverride {
 
 export interface SettingEtherlightingSpeedOverride {
     /**
-     * 6-digit hex color without the leading `#` (e.g. `ff0000`).
+     * 6-digit hex color without the leading `#` (e.g. <span pulumi-lang-nodejs="`ff0000`" pulumi-lang-dotnet="`Ff0000`" pulumi-lang-go="`ff0000`" pulumi-lang-python="`ff0000`" pulumi-lang-yaml="`ff0000`" pulumi-lang-java="`ff0000`" pulumi-lang-hcl="`ff0000`">`ff0000`</span>).
      */
     color: string;
     /**
@@ -3133,7 +3133,7 @@ export interface SettingGlobalSwitch {
      */
     jumboframeEnabled: boolean;
     /**
-     * Spanning Tree Protocol mode for all switches: `stp`, `rstp`, or `disabled`.
+     * Spanning Tree Protocol mode for all switches: <span pulumi-lang-nodejs="`stp`" pulumi-lang-dotnet="`Stp`" pulumi-lang-go="`stp`" pulumi-lang-python="`stp`" pulumi-lang-yaml="`stp`" pulumi-lang-java="`stp`" pulumi-lang-hcl="`stp`">`stp`</span>, <span pulumi-lang-nodejs="`rstp`" pulumi-lang-dotnet="`Rstp`" pulumi-lang-go="`rstp`" pulumi-lang-python="`rstp`" pulumi-lang-yaml="`rstp`" pulumi-lang-java="`rstp`" pulumi-lang-hcl="`rstp`">`rstp`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>.
      */
     stpVersion: string;
 }
@@ -3236,11 +3236,11 @@ export interface SettingIpsSuppressionAlert {
      */
     signature: string;
     /**
-     * Tracking specifications (used when `type` is `track`).
+     * Tracking specifications (used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`track`" pulumi-lang-dotnet="`Track`" pulumi-lang-go="`track`" pulumi-lang-python="`track`" pulumi-lang-yaml="`track`" pulumi-lang-java="`track`" pulumi-lang-hcl="`track`">`track`</span>).
      */
     trackings: outputs.SettingIpsSuppressionAlertTracking[];
     /**
-     * Suppression type: `all` (everywhere) or `track` (only the tracked sources/destinations).
+     * Suppression type: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> (everywhere) or <span pulumi-lang-nodejs="`track`" pulumi-lang-dotnet="`Track`" pulumi-lang-go="`track`" pulumi-lang-python="`track`" pulumi-lang-yaml="`track`" pulumi-lang-java="`track`" pulumi-lang-hcl="`track`">`track`</span> (only the tracked sources/destinations).
      */
     type: string;
 }
@@ -3300,23 +3300,23 @@ export interface SettingLcm {
 
 export interface SettingMdns {
     /**
-     * Additional services reflected in `custom` mode.
+     * Additional services reflected in <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> mode.
      */
     customServices: outputs.SettingMdnsCustomService[];
     /**
-     * Networks mDNS is enabled for: `all`, `some` (the networks with `multicast_dns` enabled on `unifi.Network`), or `none`.
+     * Networks mDNS is enabled for: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`some`" pulumi-lang-dotnet="`Some`" pulumi-lang-go="`some`" pulumi-lang-python="`some`" pulumi-lang-yaml="`some`" pulumi-lang-java="`some`" pulumi-lang-hcl="`some`">`some`</span> (the networks with <span pulumi-lang-nodejs="`multicastDns`" pulumi-lang-dotnet="`MulticastDns`" pulumi-lang-go="`multicastDns`" pulumi-lang-python="`multicast_dns`" pulumi-lang-yaml="`multicastDns`" pulumi-lang-java="`multicastDns`" pulumi-lang-hcl="`multicast_dns`">`multicastDns`</span> enabled on <span pulumi-lang-nodejs="`unifi.Network`" pulumi-lang-dotnet="`unifi.Network`" pulumi-lang-go="`Network`" pulumi-lang-python="`Network`" pulumi-lang-yaml="`unifi.Network`" pulumi-lang-java="`unifi.Network`" pulumi-lang-hcl="`unifi_network`">`unifi.Network`</span>), or <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     enabledFor: string;
     /**
-     * IDs of the networks mDNS is enabled for when `enabled_for` is `some`. Read-only: the controller derives this list from each network's `mdns_enabled` flag and ignores writes to it, so choose the networks with `multicast_dns` on `unifi.Network`.
+     * IDs of the networks mDNS is enabled for when <span pulumi-lang-nodejs="`enabledFor`" pulumi-lang-dotnet="`EnabledFor`" pulumi-lang-go="`enabledFor`" pulumi-lang-python="`enabled_for`" pulumi-lang-yaml="`enabledFor`" pulumi-lang-java="`enabledFor`" pulumi-lang-hcl="`enabled_for`">`enabledFor`</span> is <span pulumi-lang-nodejs="`some`" pulumi-lang-dotnet="`Some`" pulumi-lang-go="`some`" pulumi-lang-python="`some`" pulumi-lang-yaml="`some`" pulumi-lang-java="`some`" pulumi-lang-hcl="`some`">`some`</span>. Read-only: the controller derives this list from each network's <span pulumi-lang-nodejs="`mdnsEnabled`" pulumi-lang-dotnet="`MdnsEnabled`" pulumi-lang-go="`mdnsEnabled`" pulumi-lang-python="`mdns_enabled`" pulumi-lang-yaml="`mdnsEnabled`" pulumi-lang-java="`mdnsEnabled`" pulumi-lang-hcl="`mdns_enabled`">`mdnsEnabled`</span> flag and ignores writes to it, so choose the networks with <span pulumi-lang-nodejs="`multicastDns`" pulumi-lang-dotnet="`MulticastDns`" pulumi-lang-go="`multicastDns`" pulumi-lang-python="`multicast_dns`" pulumi-lang-yaml="`multicastDns`" pulumi-lang-java="`multicastDns`" pulumi-lang-hcl="`multicast_dns`">`multicastDns`</span> on <span pulumi-lang-nodejs="`unifi.Network`" pulumi-lang-dotnet="`unifi.Network`" pulumi-lang-go="`Network`" pulumi-lang-python="`Network`" pulumi-lang-yaml="`unifi.Network`" pulumi-lang-java="`unifi.Network`" pulumi-lang-hcl="`unifi_network`">`unifi.Network`</span>.
      */
     enabledForNetworkIds: string[];
     /**
-     * Which services are reflected: `all`, `auto`, or `custom` (only `predefined_services` and `custom_services`).
+     * Which services are reflected: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> (only <span pulumi-lang-nodejs="`predefinedServices`" pulumi-lang-dotnet="`PredefinedServices`" pulumi-lang-go="`predefinedServices`" pulumi-lang-python="`predefined_services`" pulumi-lang-yaml="`predefinedServices`" pulumi-lang-java="`predefinedServices`" pulumi-lang-hcl="`predefined_services`">`predefinedServices`</span> and <span pulumi-lang-nodejs="`customServices`" pulumi-lang-dotnet="`CustomServices`" pulumi-lang-go="`customServices`" pulumi-lang-python="`custom_services`" pulumi-lang-yaml="`customServices`" pulumi-lang-java="`customServices`" pulumi-lang-hcl="`custom_services`">`customServices`</span>).
      */
     mode: string;
     /**
-     * Codes of the predefined services reflected in `custom` mode, e.g. `google_chromecast`, `apple_airPlay`, `printers`.
+     * Codes of the predefined services reflected in <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> mode, e.g. <span pulumi-lang-nodejs="`googleChromecast`" pulumi-lang-dotnet="`GoogleChromecast`" pulumi-lang-go="`googleChromecast`" pulumi-lang-python="`google_chromecast`" pulumi-lang-yaml="`googleChromecast`" pulumi-lang-java="`googleChromecast`" pulumi-lang-hcl="`google_chromecast`">`googleChromecast`</span>, `apple_airPlay`, <span pulumi-lang-nodejs="`printers`" pulumi-lang-dotnet="`Printers`" pulumi-lang-go="`printers`" pulumi-lang-python="`printers`" pulumi-lang-yaml="`printers`" pulumi-lang-java="`printers`" pulumi-lang-hcl="`printers`">`printers`</span>.
      */
     predefinedServices: string[];
 }
@@ -3441,7 +3441,7 @@ export interface SettingNtp {
      */
     ntpServer4: string;
     /**
-     * Configuration mode: `auto` or `manual`.
+     * Configuration mode: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference: string;
 }
@@ -3452,11 +3452,11 @@ export interface SettingRadioAi {
      */
     autoAdjustChannelsToCountry: boolean;
     /**
-     * Channel preset: `maximum_speed`, `conservative` or `custom` (the `channels_*` lists).
+     * Channel preset: <span pulumi-lang-nodejs="`maximumSpeed`" pulumi-lang-dotnet="`MaximumSpeed`" pulumi-lang-go="`maximumSpeed`" pulumi-lang-python="`maximum_speed`" pulumi-lang-yaml="`maximumSpeed`" pulumi-lang-java="`maximumSpeed`" pulumi-lang-hcl="`maximum_speed`">`maximumSpeed`</span>, <span pulumi-lang-nodejs="`conservative`" pulumi-lang-dotnet="`Conservative`" pulumi-lang-go="`conservative`" pulumi-lang-python="`conservative`" pulumi-lang-yaml="`conservative`" pulumi-lang-java="`conservative`" pulumi-lang-hcl="`conservative`">`conservative`</span> or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> (the `channels_*` lists).
      */
     autoChannelPresetsType: string;
     /**
-     * The controller's `auto_enabled` flag: whether automatic channel optimization is enabled. It is a separate key from `enabled` and is written as given, without changing `enabled`. Left out of the configuration, the controller's value is kept (and not tracked when the controller does not report it).
+     * The controller's <span pulumi-lang-nodejs="`autoEnabled`" pulumi-lang-dotnet="`AutoEnabled`" pulumi-lang-go="`autoEnabled`" pulumi-lang-python="`auto_enabled`" pulumi-lang-yaml="`autoEnabled`" pulumi-lang-java="`autoEnabled`" pulumi-lang-hcl="`auto_enabled`">`autoEnabled`</span> flag: whether automatic channel optimization is enabled. It is a separate key from <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span> and is written as given, without changing <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>. Left out of the configuration, the controller's value is kept (and not tracked when the controller does not report it).
      */
     autoEnabled: boolean;
     /**
@@ -3468,7 +3468,7 @@ export interface SettingRadioAi {
      */
     channelsBlacklists: outputs.SettingRadioAiChannelsBlacklist[];
     /**
-     * 5 GHz channels the optimizer may choose from. The controller drops the DFS channels (52-144) when the `na` entry of `radios_configuration` has `dfs = false`, so listing them then fails the plan. It may also narrow the list to the site's country (`auto_adjust_channels_to_country`) or the preset (`auto_channel_presets_type` other than `custom`); leave the list out to keep what the controller derives.
+     * 5 GHz channels the optimizer may choose from. The controller drops the DFS channels (52-144) when the <span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span> entry of <span pulumi-lang-nodejs="`radiosConfiguration`" pulumi-lang-dotnet="`RadiosConfiguration`" pulumi-lang-go="`radiosConfiguration`" pulumi-lang-python="`radios_configuration`" pulumi-lang-yaml="`radiosConfiguration`" pulumi-lang-java="`radiosConfiguration`" pulumi-lang-hcl="`radios_configuration`">`radiosConfiguration`</span> has `dfs = false`, so listing them then fails the plan. It may also narrow the list to the site's country (<span pulumi-lang-nodejs="`autoAdjustChannelsToCountry`" pulumi-lang-dotnet="`AutoAdjustChannelsToCountry`" pulumi-lang-go="`autoAdjustChannelsToCountry`" pulumi-lang-python="`auto_adjust_channels_to_country`" pulumi-lang-yaml="`autoAdjustChannelsToCountry`" pulumi-lang-java="`autoAdjustChannelsToCountry`" pulumi-lang-hcl="`auto_adjust_channels_to_country`">`autoAdjustChannelsToCountry`</span>) or the preset (<span pulumi-lang-nodejs="`autoChannelPresetsType`" pulumi-lang-dotnet="`AutoChannelPresetsType`" pulumi-lang-go="`autoChannelPresetsType`" pulumi-lang-python="`auto_channel_presets_type`" pulumi-lang-yaml="`autoChannelPresetsType`" pulumi-lang-java="`autoChannelPresetsType`" pulumi-lang-hcl="`auto_channel_presets_type`">`autoChannelPresetsType`</span> other than <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>); leave the list out to keep what the controller derives.
      */
     channelsNas: number[];
     /**
@@ -3480,7 +3480,7 @@ export interface SettingRadioAi {
      */
     cronExpr: string;
     /**
-     * The controller's `enabled` flag for Channel AI: run the optimizer on its `cron_expr` schedule.
+     * The controller's <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span> flag for Channel AI: run the optimizer on its <span pulumi-lang-nodejs="`cronExpr`" pulumi-lang-dotnet="`CronExpr`" pulumi-lang-go="`cronExpr`" pulumi-lang-python="`cron_expr`" pulumi-lang-yaml="`cronExpr`" pulumi-lang-java="`cronExpr`" pulumi-lang-hcl="`cron_expr`">`cronExpr`</span> schedule.
      */
     enabled: boolean;
     /**
@@ -3492,19 +3492,19 @@ export interface SettingRadioAi {
      */
     highPriorityDevices: string[];
     /**
-     * 5 GHz channel widths (MHz) the optimizer may use: `20`, `40`, `80`, `160`. Each must be at most the `channel_width` of the `na` entry of `radios_configuration` (the controller drops wider ones), or the plan fails.
+     * 5 GHz channel widths (MHz) the optimizer may use: <span pulumi-lang-nodejs="`20`" pulumi-lang-dotnet="`20`" pulumi-lang-go="`20`" pulumi-lang-python="`20`" pulumi-lang-yaml="`20`" pulumi-lang-java="`20`" pulumi-lang-hcl="`20`">`20`</span>, <span pulumi-lang-nodejs="`40`" pulumi-lang-dotnet="`40`" pulumi-lang-go="`40`" pulumi-lang-python="`40`" pulumi-lang-yaml="`40`" pulumi-lang-java="`40`" pulumi-lang-hcl="`40`">`40`</span>, <span pulumi-lang-nodejs="`80`" pulumi-lang-dotnet="`80`" pulumi-lang-go="`80`" pulumi-lang-python="`80`" pulumi-lang-yaml="`80`" pulumi-lang-java="`80`" pulumi-lang-hcl="`80`">`80`</span>, <span pulumi-lang-nodejs="`160`" pulumi-lang-dotnet="`160`" pulumi-lang-go="`160`" pulumi-lang-python="`160`" pulumi-lang-yaml="`160`" pulumi-lang-java="`160`" pulumi-lang-hcl="`160`">`160`</span>. Each must be at most the <span pulumi-lang-nodejs="`channelWidth`" pulumi-lang-dotnet="`ChannelWidth`" pulumi-lang-go="`channelWidth`" pulumi-lang-python="`channel_width`" pulumi-lang-yaml="`channelWidth`" pulumi-lang-java="`channelWidth`" pulumi-lang-hcl="`channel_width`">`channelWidth`</span> of the <span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span> entry of <span pulumi-lang-nodejs="`radiosConfiguration`" pulumi-lang-dotnet="`RadiosConfiguration`" pulumi-lang-go="`radiosConfiguration`" pulumi-lang-python="`radios_configuration`" pulumi-lang-yaml="`radiosConfiguration`" pulumi-lang-java="`radiosConfiguration`" pulumi-lang-hcl="`radios_configuration`">`radiosConfiguration`</span> (the controller drops wider ones), or the plan fails.
      */
     htModesNas: number[];
     /**
-     * 2.4 GHz channel widths (MHz) the optimizer may use: `20`, `40`. Each must be at most the `channel_width` of the `ng` entry of `radios_configuration` (the controller drops wider ones), or the plan fails.
+     * 2.4 GHz channel widths (MHz) the optimizer may use: <span pulumi-lang-nodejs="`20`" pulumi-lang-dotnet="`20`" pulumi-lang-go="`20`" pulumi-lang-python="`20`" pulumi-lang-yaml="`20`" pulumi-lang-java="`20`" pulumi-lang-hcl="`20`">`20`</span>, <span pulumi-lang-nodejs="`40`" pulumi-lang-dotnet="`40`" pulumi-lang-go="`40`" pulumi-lang-python="`40`" pulumi-lang-yaml="`40`" pulumi-lang-java="`40`" pulumi-lang-hcl="`40`">`40`</span>. Each must be at most the <span pulumi-lang-nodejs="`channelWidth`" pulumi-lang-dotnet="`ChannelWidth`" pulumi-lang-go="`channelWidth`" pulumi-lang-python="`channel_width`" pulumi-lang-yaml="`channelWidth`" pulumi-lang-java="`channelWidth`" pulumi-lang-hcl="`channel_width`">`channelWidth`</span> of the <span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span> entry of <span pulumi-lang-nodejs="`radiosConfiguration`" pulumi-lang-dotnet="`RadiosConfiguration`" pulumi-lang-go="`radiosConfiguration`" pulumi-lang-python="`radios_configuration`" pulumi-lang-yaml="`radiosConfiguration`" pulumi-lang-java="`radiosConfiguration`" pulumi-lang-hcl="`radios_configuration`">`radiosConfiguration`</span> (the controller drops wider ones), or the plan fails.
      */
     htModesNgs: number[];
     /**
-     * What the optimizer adjusts: `channel`, `power`.
+     * What the optimizer adjusts: <span pulumi-lang-nodejs="`channel`" pulumi-lang-dotnet="`Channel`" pulumi-lang-go="`channel`" pulumi-lang-python="`channel`" pulumi-lang-yaml="`channel`" pulumi-lang-java="`channel`" pulumi-lang-hcl="`channel`">`channel`</span>, <span pulumi-lang-nodejs="`power`" pulumi-lang-dotnet="`Power`" pulumi-lang-go="`power`" pulumi-lang-python="`power`" pulumi-lang-yaml="`power`" pulumi-lang-java="`power`" pulumi-lang-hcl="`power`">`power`</span>.
      */
     optimizes: string[];
     /**
-     * Bands the optimizer may change: `ng` (2.4 GHz), `na` (5 GHz), `6e` (6 GHz).
+     * Bands the optimizer may change: <span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span> (2.4 GHz), <span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span> (5 GHz), <span pulumi-lang-nodejs="`6e`" pulumi-lang-dotnet="`6e`" pulumi-lang-go="`6e`" pulumi-lang-python="`6e`" pulumi-lang-yaml="`6e`" pulumi-lang-java="`6e`" pulumi-lang-hcl="`6e`">`6e`</span> (6 GHz).
      */
     radios: string[];
     /**
@@ -3512,7 +3512,7 @@ export interface SettingRadioAi {
      */
     radiosConfigurations: outputs.SettingRadioAiRadiosConfiguration[];
     /**
-     * `auto` or `manual`.
+     * <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference: string;
 }
@@ -3527,7 +3527,7 @@ export interface SettingRadioAiChannelsBlacklist {
      */
     channelWidth: number;
     /**
-     * Band: `ng`, `na` or `6e`.
+     * Band: <span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span>, <span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span> or <span pulumi-lang-nodejs="`6e`" pulumi-lang-dotnet="`6e`" pulumi-lang-go="`6e`" pulumi-lang-python="`6e`" pulumi-lang-yaml="`6e`" pulumi-lang-java="`6e`" pulumi-lang-hcl="`6e`">`6e`</span>.
      */
     radio: string;
 }
@@ -3542,7 +3542,7 @@ export interface SettingRadioAiRadiosConfiguration {
      */
     dfs: boolean;
     /**
-     * Band: `ng`, `na` or `6e`.
+     * Band: <span pulumi-lang-nodejs="`ng`" pulumi-lang-dotnet="`Ng`" pulumi-lang-go="`ng`" pulumi-lang-python="`ng`" pulumi-lang-yaml="`ng`" pulumi-lang-java="`ng`" pulumi-lang-hcl="`ng`">`ng`</span>, <span pulumi-lang-nodejs="`na`" pulumi-lang-dotnet="`Na`" pulumi-lang-go="`na`" pulumi-lang-python="`na`" pulumi-lang-yaml="`na`" pulumi-lang-java="`na`" pulumi-lang-hcl="`na`">`na`</span> or <span pulumi-lang-nodejs="`6e`" pulumi-lang-dotnet="`6e`" pulumi-lang-go="`6e`" pulumi-lang-python="`6e`" pulumi-lang-yaml="`6e`" pulumi-lang-java="`6e`" pulumi-lang-hcl="`6e`">`6e`</span>.
      */
     radio: string;
 }
@@ -3561,11 +3561,11 @@ export interface SettingRadius {
      */
     authPort: number;
     /**
-     * Interim update interval, as a Go duration string (e.g. `1h`, `3600s`).
+     * Interim update interval, as a Go duration string (e.g. <span pulumi-lang-nodejs="`1h`" pulumi-lang-dotnet="`1h`" pulumi-lang-go="`1h`" pulumi-lang-python="`1h`" pulumi-lang-yaml="`1h`" pulumi-lang-java="`1h`" pulumi-lang-hcl="`1h`">`1h`</span>, <span pulumi-lang-nodejs="`3600s`" pulumi-lang-dotnet="`3600s`" pulumi-lang-go="`3600s`" pulumi-lang-python="`3600s`" pulumi-lang-yaml="`3600s`" pulumi-lang-java="`3600s`" pulumi-lang-hcl="`3600s`">`3600s`</span>).
      */
     interimUpdateInterval: string;
     /**
-     * RADIUS shared secret. Stored in state; use the root-level `radius_secret_wo` to avoid persisting the secret.
+     * RADIUS shared secret. Stored in state; use the root-level <span pulumi-lang-nodejs="`radiusSecretWo`" pulumi-lang-dotnet="`RadiusSecretWo`" pulumi-lang-go="`radiusSecretWo`" pulumi-lang-python="`radius_secret_wo`" pulumi-lang-yaml="`radiusSecretWo`" pulumi-lang-java="`radiusSecretWo`" pulumi-lang-hcl="`radius_secret_wo`">`radiusSecretWo`</span> to avoid persisting the secret.
      */
     secret: string;
 }
@@ -3584,12 +3584,16 @@ export interface SettingSnmp {
      */
     enabledV3: boolean;
     /**
-     * SNMPv3 password, stored in state. The configured value is preserved on read because controllers may omit or mask the password. External password changes are not detected. Mutually exclusive with `password_wo`.
+     * SNMPv3 password, stored in state. The configured value is preserved on read because controllers may omit or mask the password. External password changes are not detected. Mutually exclusive with <span pulumi-lang-nodejs="`passwordWo`" pulumi-lang-dotnet="`PasswordWo`" pulumi-lang-go="`passwordWo`" pulumi-lang-python="`password_wo`" pulumi-lang-yaml="`passwordWo`" pulumi-lang-java="`passwordWo`" pulumi-lang-hcl="`password_wo`">`passwordWo`</span>.
      */
     password?: string;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only SNMPv3 password (Terraform 1.11+), never stored in plan or state; accepts ephemeral values. Mutually exclusive with <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>. Set <span pulumi-lang-nodejs="`passwordWoVersion`" pulumi-lang-dotnet="`PasswordWoVersion`" pulumi-lang-go="`passwordWoVersion`" pulumi-lang-python="`password_wo_version`" pulumi-lang-yaml="`passwordWoVersion`" pulumi-lang-java="`passwordWoVersion`" pulumi-lang-hcl="`password_wo_version`">`passwordWoVersion`</span> and change it to rotate this password. Changing only this value does not trigger an update. External password changes are not detected.
+     */
     passwordWo?: string;
     /**
-     * Positive version for `password_wo`. Required with `password_wo`; change it whenever the write-only password should be applied. The version is stored in state. An unchanged version preserves the controller password during other updates.
+     * Positive version for <span pulumi-lang-nodejs="`passwordWo`" pulumi-lang-dotnet="`PasswordWo`" pulumi-lang-go="`passwordWo`" pulumi-lang-python="`password_wo`" pulumi-lang-yaml="`passwordWo`" pulumi-lang-java="`passwordWo`" pulumi-lang-hcl="`password_wo`">`passwordWo`</span>. Required with <span pulumi-lang-nodejs="`passwordWo`" pulumi-lang-dotnet="`PasswordWo`" pulumi-lang-go="`passwordWo`" pulumi-lang-python="`password_wo`" pulumi-lang-yaml="`passwordWo`" pulumi-lang-java="`passwordWo`" pulumi-lang-hcl="`password_wo`">`passwordWo`</span>; change it whenever the write-only password should be applied. The version is stored in state. An unchanged version preserves the controller password during other updates.
      */
     passwordWoVersion?: number;
     /**
@@ -3600,7 +3604,7 @@ export interface SettingSnmp {
 
 export interface SettingSyslog {
     /**
-     * Logged facilities (e.g. `device`, `client`, `firewall_default_policy`, `triggers`, `updates`, `admin_activity`, `critical`, `security_detections`, `vpn`).
+     * Logged facilities (e.g. <span pulumi-lang-nodejs="`device`" pulumi-lang-dotnet="`Device`" pulumi-lang-go="`device`" pulumi-lang-python="`device`" pulumi-lang-yaml="`device`" pulumi-lang-java="`device`" pulumi-lang-hcl="`device`">`device`</span>, <span pulumi-lang-nodejs="`client`" pulumi-lang-dotnet="`Client`" pulumi-lang-go="`client`" pulumi-lang-python="`client`" pulumi-lang-yaml="`client`" pulumi-lang-java="`client`" pulumi-lang-hcl="`client`">`client`</span>, <span pulumi-lang-nodejs="`firewallDefaultPolicy`" pulumi-lang-dotnet="`FirewallDefaultPolicy`" pulumi-lang-go="`firewallDefaultPolicy`" pulumi-lang-python="`firewall_default_policy`" pulumi-lang-yaml="`firewallDefaultPolicy`" pulumi-lang-java="`firewallDefaultPolicy`" pulumi-lang-hcl="`firewall_default_policy`">`firewallDefaultPolicy`</span>, <span pulumi-lang-nodejs="`triggers`" pulumi-lang-dotnet="`Triggers`" pulumi-lang-go="`triggers`" pulumi-lang-python="`triggers`" pulumi-lang-yaml="`triggers`" pulumi-lang-java="`triggers`" pulumi-lang-hcl="`triggers`">`triggers`</span>, <span pulumi-lang-nodejs="`updates`" pulumi-lang-dotnet="`Updates`" pulumi-lang-go="`updates`" pulumi-lang-python="`updates`" pulumi-lang-yaml="`updates`" pulumi-lang-java="`updates`" pulumi-lang-hcl="`updates`">`updates`</span>, <span pulumi-lang-nodejs="`adminActivity`" pulumi-lang-dotnet="`AdminActivity`" pulumi-lang-go="`adminActivity`" pulumi-lang-python="`admin_activity`" pulumi-lang-yaml="`adminActivity`" pulumi-lang-java="`adminActivity`" pulumi-lang-hcl="`admin_activity`">`adminActivity`</span>, <span pulumi-lang-nodejs="`critical`" pulumi-lang-dotnet="`Critical`" pulumi-lang-go="`critical`" pulumi-lang-python="`critical`" pulumi-lang-yaml="`critical`" pulumi-lang-java="`critical`" pulumi-lang-hcl="`critical`">`critical`</span>, <span pulumi-lang-nodejs="`securityDetections`" pulumi-lang-dotnet="`SecurityDetections`" pulumi-lang-go="`securityDetections`" pulumi-lang-python="`security_detections`" pulumi-lang-yaml="`securityDetections`" pulumi-lang-java="`securityDetections`" pulumi-lang-hcl="`security_detections`">`securityDetections`</span>, <span pulumi-lang-nodejs="`vpn`" pulumi-lang-dotnet="`Vpn`" pulumi-lang-go="`vpn`" pulumi-lang-python="`vpn`" pulumi-lang-yaml="`vpn`" pulumi-lang-java="`vpn`" pulumi-lang-hcl="`vpn`">`vpn`</span>).
      */
     contents: string[];
     /**
@@ -3608,7 +3612,7 @@ export interface SettingSyslog {
      */
     debug: boolean;
     /**
-     * Whether remote syslog is enabled. Taken from the controller when not set, so declaring the `syslog` block to manage its server address no longer disables logging (#544).
+     * Whether remote syslog is enabled. Taken from the controller when not set, so declaring the <span pulumi-lang-nodejs="`syslog`" pulumi-lang-dotnet="`Syslog`" pulumi-lang-go="`syslog`" pulumi-lang-python="`syslog`" pulumi-lang-yaml="`syslog`" pulumi-lang-java="`syslog`" pulumi-lang-hcl="`syslog`">`syslog`</span> block to manage its server address no longer disables logging (#544).
      */
     enabled: boolean;
     /**
@@ -3635,7 +3639,7 @@ export interface SettingSyslog {
 
 export interface SettingSyslogNetconsole {
     /**
-     * Whether netconsole logging is enabled. Defaults to `false` when `syslog` is configured and this is not set.
+     * Whether netconsole logging is enabled. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> when <span pulumi-lang-nodejs="`syslog`" pulumi-lang-dotnet="`Syslog`" pulumi-lang-go="`syslog`" pulumi-lang-python="`syslog`" pulumi-lang-yaml="`syslog`" pulumi-lang-java="`syslog`" pulumi-lang-hcl="`syslog`">`syslog`</span> is configured and this is not set.
      */
     enabled: boolean;
     /**
@@ -3704,7 +3708,7 @@ export interface SettingUsg {
      */
     h323Module: boolean;
     /**
-     * ICMP connection timeout, as a Go duration string (e.g. `30s`, `1m`).
+     * ICMP connection timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`30s`" pulumi-lang-dotnet="`30s`" pulumi-lang-go="`30s`" pulumi-lang-python="`30s`" pulumi-lang-yaml="`30s`" pulumi-lang-java="`30s`" pulumi-lang-hcl="`30s`">`30s`</span>, <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span>).
      */
     icmpTimeout: string;
     /**
@@ -3716,7 +3720,7 @@ export interface SettingUsg {
      */
     offload: outputs.SettingUsgOffload;
     /**
-     * Other connections timeout, as a Go duration string (e.g. `600s`, `10m`).
+     * Other connections timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`600s`" pulumi-lang-dotnet="`600s`" pulumi-lang-go="`600s`" pulumi-lang-python="`600s`" pulumi-lang-yaml="`600s`" pulumi-lang-java="`600s`" pulumi-lang-hcl="`600s`">`600s`</span>, <span pulumi-lang-nodejs="`10m`" pulumi-lang-dotnet="`10m`" pulumi-lang-go="`10m`" pulumi-lang-python="`10m`" pulumi-lang-yaml="`10m`" pulumi-lang-java="`10m`" pulumi-lang-hcl="`10m`">`10m`</span>).
      */
     otherTimeout: string;
     /**
@@ -3820,46 +3824,46 @@ export interface SettingUsgOffload {
 
 export interface SettingUsgTcp {
     /**
-     * TCP close timeout, as a Go duration string (e.g. `10s`).
+     * TCP close timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`10s`" pulumi-lang-dotnet="`10s`" pulumi-lang-go="`10s`" pulumi-lang-python="`10s`" pulumi-lang-yaml="`10s`" pulumi-lang-java="`10s`" pulumi-lang-hcl="`10s`">`10s`</span>).
      */
     closeTimeout: string;
     /**
-     * TCP close wait timeout, as a Go duration string (e.g. `60s`, `1m`).
+     * TCP close wait timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`60s`" pulumi-lang-dotnet="`60s`" pulumi-lang-go="`60s`" pulumi-lang-python="`60s`" pulumi-lang-yaml="`60s`" pulumi-lang-java="`60s`" pulumi-lang-hcl="`60s`">`60s`</span>, <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span>).
      */
     closeWaitTimeout: string;
     /**
-     * TCP established connection timeout, as a Go duration string (e.g. `7440s`, `2h4m`).
+     * TCP established connection timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`7440s`" pulumi-lang-dotnet="`7440s`" pulumi-lang-go="`7440s`" pulumi-lang-python="`7440s`" pulumi-lang-yaml="`7440s`" pulumi-lang-java="`7440s`" pulumi-lang-hcl="`7440s`">`7440s`</span>, <span pulumi-lang-nodejs="`2h4m`" pulumi-lang-dotnet="`2h4m`" pulumi-lang-go="`2h4m`" pulumi-lang-python="`2h4m`" pulumi-lang-yaml="`2h4m`" pulumi-lang-java="`2h4m`" pulumi-lang-hcl="`2h4m`">`2h4m`</span>).
      */
     establishedTimeout: string;
     /**
-     * TCP fin wait timeout, as a Go duration string (e.g. `120s`, `2m`).
+     * TCP fin wait timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`120s`" pulumi-lang-dotnet="`120s`" pulumi-lang-go="`120s`" pulumi-lang-python="`120s`" pulumi-lang-yaml="`120s`" pulumi-lang-java="`120s`" pulumi-lang-hcl="`120s`">`120s`</span>, <span pulumi-lang-nodejs="`2m`" pulumi-lang-dotnet="`2m`" pulumi-lang-go="`2m`" pulumi-lang-python="`2m`" pulumi-lang-yaml="`2m`" pulumi-lang-java="`2m`" pulumi-lang-hcl="`2m`">`2m`</span>).
      */
     finWaitTimeout: string;
     /**
-     * TCP last ACK timeout, as a Go duration string (e.g. `30s`).
+     * TCP last ACK timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`30s`" pulumi-lang-dotnet="`30s`" pulumi-lang-go="`30s`" pulumi-lang-python="`30s`" pulumi-lang-yaml="`30s`" pulumi-lang-java="`30s`" pulumi-lang-hcl="`30s`">`30s`</span>).
      */
     lastAckTimeout: string;
     /**
-     * TCP SYN received timeout, as a Go duration string (e.g. `60s`, `1m`).
+     * TCP SYN received timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`60s`" pulumi-lang-dotnet="`60s`" pulumi-lang-go="`60s`" pulumi-lang-python="`60s`" pulumi-lang-yaml="`60s`" pulumi-lang-java="`60s`" pulumi-lang-hcl="`60s`">`60s`</span>, <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span>).
      */
     synRecvTimeout: string;
     /**
-     * TCP SYN sent timeout, as a Go duration string (e.g. `120s`, `2m`).
+     * TCP SYN sent timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`120s`" pulumi-lang-dotnet="`120s`" pulumi-lang-go="`120s`" pulumi-lang-python="`120s`" pulumi-lang-yaml="`120s`" pulumi-lang-java="`120s`" pulumi-lang-hcl="`120s`">`120s`</span>, <span pulumi-lang-nodejs="`2m`" pulumi-lang-dotnet="`2m`" pulumi-lang-go="`2m`" pulumi-lang-python="`2m`" pulumi-lang-yaml="`2m`" pulumi-lang-java="`2m`" pulumi-lang-hcl="`2m`">`2m`</span>).
      */
     synSentTimeout: string;
     /**
-     * TCP time wait timeout, as a Go duration string (e.g. `120s`, `2m`).
+     * TCP time wait timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`120s`" pulumi-lang-dotnet="`120s`" pulumi-lang-go="`120s`" pulumi-lang-python="`120s`" pulumi-lang-yaml="`120s`" pulumi-lang-java="`120s`" pulumi-lang-hcl="`120s`">`120s`</span>, <span pulumi-lang-nodejs="`2m`" pulumi-lang-dotnet="`2m`" pulumi-lang-go="`2m`" pulumi-lang-python="`2m`" pulumi-lang-yaml="`2m`" pulumi-lang-java="`2m`" pulumi-lang-hcl="`2m`">`2m`</span>).
      */
     timeWaitTimeout: string;
 }
 
 export interface SettingUsgUdp {
     /**
-     * UDP other timeout, as a Go duration string (e.g. `30s`).
+     * UDP other timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`30s`" pulumi-lang-dotnet="`30s`" pulumi-lang-go="`30s`" pulumi-lang-python="`30s`" pulumi-lang-yaml="`30s`" pulumi-lang-java="`30s`" pulumi-lang-hcl="`30s`">`30s`</span>).
      */
     otherTimeout: string;
     /**
-     * UDP stream timeout, as a Go duration string (e.g. `180s`, `3m`).
+     * UDP stream timeout, as a Go duration string (e.g. <span pulumi-lang-nodejs="`180s`" pulumi-lang-dotnet="`180s`" pulumi-lang-go="`180s`" pulumi-lang-python="`180s`" pulumi-lang-yaml="`180s`" pulumi-lang-java="`180s`" pulumi-lang-hcl="`180s`">`180s`</span>, <span pulumi-lang-nodejs="`3m`" pulumi-lang-dotnet="`3m`" pulumi-lang-go="`3m`" pulumi-lang-python="`3m`" pulumi-lang-yaml="`3m`" pulumi-lang-java="`3m`" pulumi-lang-hcl="`3m`">`3m`</span>).
      */
     streamTimeout: string;
 }
@@ -3916,7 +3920,7 @@ export interface SiteToSiteVpnEsp {
      */
     hash: string;
     /**
-     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. `1h`, `3600s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
+     * ESP (phase 2) security-association lifetime, as a Go duration string (e.g. <span pulumi-lang-nodejs="`1h`" pulumi-lang-dotnet="`1h`" pulumi-lang-go="`1h`" pulumi-lang-python="`1h`" pulumi-lang-yaml="`1h`" pulumi-lang-java="`1h`" pulumi-lang-hcl="`1h`">`1h`</span>, <span pulumi-lang-nodejs="`3600s`" pulumi-lang-dotnet="`3600s`" pulumi-lang-go="`3600s`" pulumi-lang-python="`3600s`" pulumi-lang-yaml="`3600s`" pulumi-lang-java="`3600s`" pulumi-lang-hcl="`3600s`">`3600s`</span>). Must be a whole number of seconds between <span pulumi-lang-nodejs="`30s`" pulumi-lang-dotnet="`30s`" pulumi-lang-go="`30s`" pulumi-lang-python="`30s`" pulumi-lang-yaml="`30s`" pulumi-lang-java="`30s`" pulumi-lang-hcl="`30s`">`30s`</span> and <span pulumi-lang-nodejs="`86400s`" pulumi-lang-dotnet="`86400s`" pulumi-lang-go="`86400s`" pulumi-lang-python="`86400s`" pulumi-lang-yaml="`86400s`" pulumi-lang-java="`86400s`" pulumi-lang-hcl="`86400s`">`86400s`</span> (24h).
      */
     lifetime: string;
 }
@@ -3935,7 +3939,7 @@ export interface SiteToSiteVpnIke {
      */
     hash: string;
     /**
-     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. `8h`, `28800s`). Must be a whole number of seconds between `30s` and `86400s` (24h).
+     * IKE (phase 1) security-association lifetime, as a Go duration string (e.g. <span pulumi-lang-nodejs="`8h`" pulumi-lang-dotnet="`8h`" pulumi-lang-go="`8h`" pulumi-lang-python="`8h`" pulumi-lang-yaml="`8h`" pulumi-lang-java="`8h`" pulumi-lang-hcl="`8h`">`8h`</span>, <span pulumi-lang-nodejs="`28800s`" pulumi-lang-dotnet="`28800s`" pulumi-lang-go="`28800s`" pulumi-lang-python="`28800s`" pulumi-lang-yaml="`28800s`" pulumi-lang-java="`28800s`" pulumi-lang-hcl="`28800s`">`28800s`</span>). Must be a whole number of seconds between <span pulumi-lang-nodejs="`30s`" pulumi-lang-dotnet="`30s`" pulumi-lang-go="`30s`" pulumi-lang-python="`30s`" pulumi-lang-yaml="`30s`" pulumi-lang-java="`30s`" pulumi-lang-hcl="`30s`">`30s`</span> and <span pulumi-lang-nodejs="`86400s`" pulumi-lang-dotnet="`86400s`" pulumi-lang-go="`86400s`" pulumi-lang-python="`86400s`" pulumi-lang-yaml="`86400s`" pulumi-lang-java="`86400s`" pulumi-lang-hcl="`86400s`">`86400s`</span> (24h).
      */
     lifetime: string;
 }
@@ -3961,11 +3965,11 @@ export interface SiteToSiteVpnTimeouts {
 
 export interface StaticRouteGateway {
     /**
-     * The MAC address of the gateway device, used when `type` is `switch`.
+     * The MAC address of the gateway device, used when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>.
      */
     device?: string;
     /**
-     * The type of gateway for the static route. Can be `default` or `switch`. A new route defaults to `default`; an existing route keeps the controller's value when this is not set, so adopting a switch route does not move it to the gateway (#544).
+     * The type of gateway for the static route. Can be <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>. A new route defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>; an existing route keeps the controller's value when this is not set, so adopting a switch route does not move it to the gateway (#544).
      */
     type: string;
 }
@@ -4029,7 +4033,7 @@ export interface TrafficRouteDestinationIp {
      */
     address: string;
     /**
-     * List of ports or port ranges to match. Use a single number (e.g. `80`) for individual ports, or a hyphenated range (e.g. `8080-8090`) for port ranges. Only supported for IP addresses and subnets, not IP ranges.
+     * List of ports or port ranges to match. Use a single number (e.g. <span pulumi-lang-nodejs="`80`" pulumi-lang-dotnet="`80`" pulumi-lang-go="`80`" pulumi-lang-python="`80`" pulumi-lang-yaml="`80`" pulumi-lang-java="`80`" pulumi-lang-hcl="`80`">`80`</span>) for individual ports, or a hyphenated range (e.g. `8080-8090`) for port ranges. Only supported for IP addresses and subnets, not IP ranges.
      */
     ports?: string[];
 }
@@ -4107,7 +4111,7 @@ export interface VpnClientWireguard {
      */
     dnsServers?: string[];
     /**
-     * WAN interface to use for the VPN connection (e.g., `wan`, `wan2`). Defaults to `wan` for a new client; an existing client keeps the controller's value when this is not set, so adopting a tunnel on `wan2` does not move it (#544).
+     * WAN interface to use for the VPN connection (e.g., <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>). Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new client; an existing client keeps the controller's value when this is not set, so adopting a tunnel on <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> does not move it (#544).
      */
     interface: string;
     /**
@@ -4115,20 +4119,24 @@ export interface VpnClientWireguard {
      */
     peer?: outputs.VpnClientWireguardPeer;
     /**
-     * WireGuard preshared key. Required when preshared_key_enabled is true.
+     * WireGuard preshared key. Required when<span pulumi-lang-nodejs=" presharedKeyEnabled " pulumi-lang-dotnet=" PresharedKeyEnabled " pulumi-lang-go=" presharedKeyEnabled " pulumi-lang-python=" preshared_key_enabled " pulumi-lang-yaml=" presharedKeyEnabled " pulumi-lang-java=" presharedKeyEnabled " pulumi-lang-hcl=" preshared_key_enabled "> presharedKeyEnabled </span>is true.
      */
     presharedKey?: string;
     /**
-     * Specifies whether to use a preshared key for additional security. Taken from the controller when not set (a new client gets `false`, or `true` when the configuration file carries a preshared key) (#544).
+     * Specifies whether to use a preshared key for additional security. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>, or <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when the configuration file carries a preshared key) (#544).
      */
     presharedKeyEnabled: boolean;
     /**
-     * WireGuard private key for this client. Stored in state; use `private_key_wo` to avoid persisting the secret.
+     * WireGuard private key for this client. Stored in state; use <span pulumi-lang-nodejs="`privateKeyWo`" pulumi-lang-dotnet="`PrivateKeyWo`" pulumi-lang-go="`privateKeyWo`" pulumi-lang-python="`private_key_wo`" pulumi-lang-yaml="`privateKeyWo`" pulumi-lang-java="`privateKeyWo`" pulumi-lang-hcl="`private_key_wo`">`privateKeyWo`</span> to avoid persisting the secret.
      */
     privateKey?: string;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`privateKey`" pulumi-lang-dotnet="`PrivateKey`" pulumi-lang-go="`privateKey`" pulumi-lang-python="`private_key`" pulumi-lang-yaml="`privateKey`" pulumi-lang-java="`privateKey`" pulumi-lang-hcl="`private_key`">`privateKey`</span> (Terraform 1.11+). Used at apply time but never written to state. Mutually exclusive with <span pulumi-lang-nodejs="`privateKey`" pulumi-lang-dotnet="`PrivateKey`" pulumi-lang-go="`privateKey`" pulumi-lang-python="`private_key`" pulumi-lang-yaml="`privateKey`" pulumi-lang-java="`privateKey`" pulumi-lang-hcl="`private_key`">`privateKey`</span>.
+     */
     privateKeyWo?: string;
     /**
-     * Version counter for `private_key_wo`. Increment this value to trigger a private key update.
+     * Version counter for <span pulumi-lang-nodejs="`privateKeyWo`" pulumi-lang-dotnet="`PrivateKeyWo`" pulumi-lang-go="`privateKeyWo`" pulumi-lang-python="`private_key_wo`" pulumi-lang-yaml="`privateKeyWo`" pulumi-lang-java="`privateKeyWo`" pulumi-lang-hcl="`private_key_wo`">`privateKeyWo`</span>. Increment this value to trigger a private key update.
      */
     privateKeyWoVersion?: number;
 }
@@ -4161,7 +4169,7 @@ export interface VpnClientWireguardPeer {
 
 export interface VpnServerDns {
     /**
-     * Specifies whether custom DNS servers are enabled for VPN clients. Defaults to `true` when `servers` is non-empty.
+     * Specifies whether custom DNS servers are enabled for VPN clients. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> when <span pulumi-lang-nodejs="`servers`" pulumi-lang-dotnet="`Servers`" pulumi-lang-go="`servers`" pulumi-lang-python="`servers`" pulumi-lang-yaml="`servers`" pulumi-lang-java="`servers`" pulumi-lang-hcl="`servers`">`servers`</span> is non-empty.
      */
     enabled: boolean;
     /**
@@ -4172,7 +4180,7 @@ export interface VpnServerDns {
 
 export interface VpnServerL2tp {
     /**
-     * Allow weak ciphers for L2TP connections. Taken from the controller when not set (a new server gets `false`) (#544).
+     * Allow weak ciphers for L2TP connections. Taken from the controller when not set (a new server gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>) (#544).
      */
     allowWeakCiphers: boolean;
     /**
@@ -4199,11 +4207,11 @@ export interface VpnServerOpenvpn {
      */
     encryptionCipher: string;
     /**
-     * OpenVPN mode. Defaults to `server` for a new server; an existing server keeps the controller's value when this is not set (#544).
+     * OpenVPN mode. Defaults to <span pulumi-lang-nodejs="`server`" pulumi-lang-dotnet="`Server`" pulumi-lang-go="`server`" pulumi-lang-python="`server`" pulumi-lang-yaml="`server`" pulumi-lang-java="`server`" pulumi-lang-hcl="`server`">`server`</span> for a new server; an existing server keeps the controller's value when this is not set (#544).
      */
     mode: string;
     /**
-     * Port for the OpenVPN server to listen on. Defaults to `1194` for a new server; an existing server keeps the controller's port when this is not set (#544).
+     * Port for the OpenVPN server to listen on. Defaults to <span pulumi-lang-nodejs="`1194`" pulumi-lang-dotnet="`1194`" pulumi-lang-go="`1194`" pulumi-lang-python="`1194`" pulumi-lang-yaml="`1194`" pulumi-lang-java="`1194`" pulumi-lang-hcl="`1194`">`1194`</span> for a new server; an existing server keeps the controller's port when this is not set (#544).
      */
     port: number;
     /**
@@ -4270,31 +4278,35 @@ export interface VpnServerTimeouts {
 
 export interface VpnServerWan {
     /**
-     * WAN interface to use for the VPN server (e.g., `wan`, `wan2`). Defaults to `wan` when the `wan` block is declared on a new server; an existing server keeps the controller's value when this is not set, so adopting a server bound to `wan2` does not move it (#544).
+     * WAN interface to use for the VPN server (e.g., <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span>, <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>). Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> when the <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> block is declared on a new server; an existing server keeps the controller's value when this is not set, so adopting a server bound to <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> does not move it (#544).
      */
     interface: string;
     /**
-     * Local WAN IP to bind the VPN server to. Use `any` to listen on all addresses. Defaults to `any` when the `wan` block is declared on a new server; an existing server keeps the controller's value when this is not set, including no value at all, which is how a server created in the UI is stored (#544).
+     * Local WAN IP to bind the VPN server to. Use <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> to listen on all addresses. Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> when the <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> block is declared on a new server; an existing server keeps the controller's value when this is not set, including no value at all, which is how a server created in the UI is stored (#544).
      */
     ip: string;
 }
 
 export interface VpnServerWireguard {
     /**
-     * The address family the server listens on, `v4` or `v6`: one per server (the UI's IP Address choice between the WAN's IPv4 and IPv6 addresses). Defaults to `v4` for a new server, which is also what a server without the setting does; an existing server keeps the controller's value when this is not set (#544).
+     * The address family the server listens on, <span pulumi-lang-nodejs="`v4`" pulumi-lang-dotnet="`V4`" pulumi-lang-go="`v4`" pulumi-lang-python="`v4`" pulumi-lang-yaml="`v4`" pulumi-lang-java="`v4`" pulumi-lang-hcl="`v4`">`v4`</span> or <span pulumi-lang-nodejs="`v6`" pulumi-lang-dotnet="`V6`" pulumi-lang-go="`v6`" pulumi-lang-python="`v6`" pulumi-lang-yaml="`v6`" pulumi-lang-java="`v6`" pulumi-lang-hcl="`v6`">`v6`</span>: one per server (the UI's IP Address choice between the WAN's IPv4 and IPv6 addresses). Defaults to <span pulumi-lang-nodejs="`v4`" pulumi-lang-dotnet="`V4`" pulumi-lang-go="`v4`" pulumi-lang-python="`v4`" pulumi-lang-yaml="`v4`" pulumi-lang-java="`v4`" pulumi-lang-hcl="`v4`">`v4`</span> for a new server, which is also what a server without the setting does; an existing server keeps the controller's value when this is not set (#544).
      */
     ipVersion: string;
     /**
-     * UDP port for the WireGuard server to listen on. Defaults to `51820` for a new server; an existing server keeps the controller's port when this is not set (#544).
+     * UDP port for the WireGuard server to listen on. Defaults to <span pulumi-lang-nodejs="`51820`" pulumi-lang-dotnet="`51820`" pulumi-lang-go="`51820`" pulumi-lang-python="`51820`" pulumi-lang-yaml="`51820`" pulumi-lang-java="`51820`" pulumi-lang-hcl="`51820`">`51820`</span> for a new server; an existing server keeps the controller's port when this is not set (#544).
      */
     port: number;
     /**
-     * WireGuard private key for this server (base64). If neither this nor `private_key_wo` is specified, the provider generates one at create time (the controller does not generate it and rejects a server without a key). Stored in state; use `private_key_wo` to avoid persisting the secret.
+     * WireGuard private key for this server (base64). If neither this nor <span pulumi-lang-nodejs="`privateKeyWo`" pulumi-lang-dotnet="`PrivateKeyWo`" pulumi-lang-go="`privateKeyWo`" pulumi-lang-python="`private_key_wo`" pulumi-lang-yaml="`privateKeyWo`" pulumi-lang-java="`privateKeyWo`" pulumi-lang-hcl="`private_key_wo`">`privateKeyWo`</span> is specified, the provider generates one at create time (the controller does not generate it and rejects a server without a key). Stored in state; use <span pulumi-lang-nodejs="`privateKeyWo`" pulumi-lang-dotnet="`PrivateKeyWo`" pulumi-lang-go="`privateKeyWo`" pulumi-lang-python="`private_key_wo`" pulumi-lang-yaml="`privateKeyWo`" pulumi-lang-java="`privateKeyWo`" pulumi-lang-hcl="`private_key_wo`">`privateKeyWo`</span> to avoid persisting the secret.
      */
     privateKey: string;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`privateKey`" pulumi-lang-dotnet="`PrivateKey`" pulumi-lang-go="`privateKey`" pulumi-lang-python="`private_key`" pulumi-lang-yaml="`privateKey`" pulumi-lang-java="`privateKey`" pulumi-lang-hcl="`private_key`">`privateKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource; <span pulumi-lang-nodejs="`privateKey`" pulumi-lang-dotnet="`PrivateKey`" pulumi-lang-go="`privateKey`" pulumi-lang-python="`private_key`" pulumi-lang-yaml="`privateKey`" pulumi-lang-java="`privateKey`" pulumi-lang-hcl="`private_key`">`privateKey`</span> then stays null in state too. The key is sent on create and whenever <span pulumi-lang-nodejs="`privateKeyWoVersion`" pulumi-lang-dotnet="`PrivateKeyWoVersion`" pulumi-lang-go="`privateKeyWoVersion`" pulumi-lang-python="`private_key_wo_version`" pulumi-lang-yaml="`privateKeyWoVersion`" pulumi-lang-java="`privateKeyWoVersion`" pulumi-lang-hcl="`private_key_wo_version`">`privateKeyWoVersion`</span> changes; other updates keep the key the controller holds. Mutually exclusive with <span pulumi-lang-nodejs="`privateKey`" pulumi-lang-dotnet="`PrivateKey`" pulumi-lang-go="`privateKey`" pulumi-lang-python="`private_key`" pulumi-lang-yaml="`privateKey`" pulumi-lang-java="`privateKey`" pulumi-lang-hcl="`private_key`">`privateKey`</span>.
+     */
     privateKeyWo?: string;
     /**
-     * Version counter for `private_key_wo`. Increment this value to send a new `private_key_wo` to the controller (key rotation).
+     * Version counter for <span pulumi-lang-nodejs="`privateKeyWo`" pulumi-lang-dotnet="`PrivateKeyWo`" pulumi-lang-go="`privateKeyWo`" pulumi-lang-python="`private_key_wo`" pulumi-lang-yaml="`privateKeyWo`" pulumi-lang-java="`privateKeyWo`" pulumi-lang-hcl="`private_key_wo`">`privateKeyWo`</span>. Increment this value to send a new <span pulumi-lang-nodejs="`privateKeyWo`" pulumi-lang-dotnet="`PrivateKeyWo`" pulumi-lang-go="`privateKeyWo`" pulumi-lang-python="`private_key_wo`" pulumi-lang-yaml="`privateKeyWo`" pulumi-lang-java="`privateKeyWo`" pulumi-lang-hcl="`private_key_wo`">`privateKeyWo`</span> to the controller (key rotation).
      */
     privateKeyWoVersion?: number;
     /**
@@ -4402,7 +4414,7 @@ export interface WanDnsIpv6 {
 
 export interface WanDslite {
     /**
-     * The DS-Lite AFTR remote host. Only used when `remote_host_auto` is disabled.
+     * The DS-Lite AFTR remote host. Only used when <span pulumi-lang-nodejs="`remoteHostAuto`" pulumi-lang-dotnet="`RemoteHostAuto`" pulumi-lang-go="`remoteHostAuto`" pulumi-lang-python="`remote_host_auto`" pulumi-lang-yaml="`remoteHostAuto`" pulumi-lang-java="`remoteHostAuto`" pulumi-lang-hcl="`remote_host_auto`">`remoteHostAuto`</span> is disabled.
      */
     remoteHost: string;
     /**
@@ -4417,18 +4429,18 @@ export interface WanEgressQos {
      */
     enabled: boolean;
     /**
-     * Egress QoS priority (802.1p CoS), `1`-`7`. Null when the controller holds no priority; it is never sent as `0`, which the controller rejects.
+     * Egress QoS priority (802.1p CoS), <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>-<span pulumi-lang-nodejs="`7`" pulumi-lang-dotnet="`7`" pulumi-lang-go="`7`" pulumi-lang-python="`7`" pulumi-lang-yaml="`7`" pulumi-lang-java="`7`" pulumi-lang-hcl="`7`">`7`</span>. Null when the controller holds no priority; it is never sent as <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>, which the controller rejects.
      */
     priority: number;
 }
 
 export interface WanIgmpProxy {
     /**
-     * IGMP proxy downstream target (`none`, `lan`, `guest`). UniFi OS gateways take the downstream side from `downstream_network_ids` instead and report `some` here while that set is non-empty; they reject `lan` and `guest`. Left unset it follows the set, so it is not carried over from state at plan time.
+     * IGMP proxy downstream target (<span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`lan`" pulumi-lang-dotnet="`Lan`" pulumi-lang-go="`lan`" pulumi-lang-python="`lan`" pulumi-lang-yaml="`lan`" pulumi-lang-java="`lan`" pulumi-lang-hcl="`lan`">`lan`</span>, <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span>). UniFi OS gateways take the downstream side from <span pulumi-lang-nodejs="`downstreamNetworkIds`" pulumi-lang-dotnet="`DownstreamNetworkIds`" pulumi-lang-go="`downstreamNetworkIds`" pulumi-lang-python="`downstream_network_ids`" pulumi-lang-yaml="`downstreamNetworkIds`" pulumi-lang-java="`downstreamNetworkIds`" pulumi-lang-hcl="`downstream_network_ids`">`downstreamNetworkIds`</span> instead and report <span pulumi-lang-nodejs="`some`" pulumi-lang-dotnet="`Some`" pulumi-lang-go="`some`" pulumi-lang-python="`some`" pulumi-lang-yaml="`some`" pulumi-lang-java="`some`" pulumi-lang-hcl="`some`">`some`</span> here while that set is non-empty; they reject <span pulumi-lang-nodejs="`lan`" pulumi-lang-dotnet="`Lan`" pulumi-lang-go="`lan`" pulumi-lang-python="`lan`" pulumi-lang-yaml="`lan`" pulumi-lang-java="`lan`" pulumi-lang-hcl="`lan`">`lan`</span> and <span pulumi-lang-nodejs="`guest`" pulumi-lang-dotnet="`Guest`" pulumi-lang-go="`guest`" pulumi-lang-python="`guest`" pulumi-lang-yaml="`guest`" pulumi-lang-java="`guest`" pulumi-lang-hcl="`guest`">`guest`</span>. Left unset it follows the set, so it is not carried over from state at plan time.
      */
     downstream: string;
     /**
-     * IDs of the LAN networks the proxy forwards multicast onto (UniFi OS gateways). Setting it also sets `downstream` to `some`, or `none` when empty, unless `downstream` names a target itself.
+     * IDs of the LAN networks the proxy forwards multicast onto (UniFi OS gateways). Setting it also sets <span pulumi-lang-nodejs="`downstream`" pulumi-lang-dotnet="`Downstream`" pulumi-lang-go="`downstream`" pulumi-lang-python="`downstream`" pulumi-lang-yaml="`downstream`" pulumi-lang-java="`downstream`" pulumi-lang-hcl="`downstream`">`downstream`</span> to <span pulumi-lang-nodejs="`some`" pulumi-lang-dotnet="`Some`" pulumi-lang-go="`some`" pulumi-lang-python="`some`" pulumi-lang-yaml="`some`" pulumi-lang-java="`some`" pulumi-lang-hcl="`some`">`some`</span>, or <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span> when empty, unless <span pulumi-lang-nodejs="`downstream`" pulumi-lang-dotnet="`Downstream`" pulumi-lang-go="`downstream`" pulumi-lang-python="`downstream`" pulumi-lang-yaml="`downstream`" pulumi-lang-java="`downstream`" pulumi-lang-hcl="`downstream`">`downstream`</span> names a target itself.
      */
     downstreamNetworkIds: string[];
     /**
@@ -4552,7 +4564,7 @@ export interface WlanApGroup {
      */
     ids?: string[];
     /**
-     * Access point group mode. Defaults to `all` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Access point group mode. Defaults to <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     mode: string;
 }
@@ -4563,11 +4575,11 @@ export interface WlanMacFilter {
      */
     enabled: boolean;
     /**
-     * List of MAC addresses to filter (only valid if `enabled` is `true`).
+     * List of MAC addresses to filter (only valid if <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>).
      */
     lists?: string[];
     /**
-     * MAC address filter policy (only valid if `enabled` is `true`). Defaults to `deny` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * MAC address filter policy (only valid if <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>). Defaults to <span pulumi-lang-nodejs="`deny`" pulumi-lang-dotnet="`Deny`" pulumi-lang-go="`deny`" pulumi-lang-python="`deny`" pulumi-lang-yaml="`deny`" pulumi-lang-java="`deny`" pulumi-lang-hcl="`deny`">`deny`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     policy: string;
 }
@@ -4585,11 +4597,11 @@ export interface WlanPrivatePresharedKey {
 
 export interface WlanRadius {
     /**
-     * Enable RADIUS MAC authentication. Defaults to `false` when not set.
+     * Enable RADIUS MAC authentication. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span> when not set.
      */
     macAuthEnabled: boolean;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
+     * ID of the RADIUS profile to use when security <span pulumi-lang-nodejs="`wpaeap`" pulumi-lang-dotnet="`Wpaeap`" pulumi-lang-go="`wpaeap`" pulumi-lang-python="`wpaeap`" pulumi-lang-yaml="`wpaeap`" pulumi-lang-java="`wpaeap`" pulumi-lang-hcl="`wpaeap`">`wpaeap`</span>. The controller may assign a default profile, so this is computed when unset.
      */
     profileId: string;
 }
@@ -4622,7 +4634,7 @@ export interface WlanSchedule {
      */
     dayOfWeek: string;
     /**
-     * Length of the block, as a Go duration string. The controller stores this value with one-minute resolution, so the duration must be at least `1m` and a whole multiple of one minute (e.g. `30m`, `2h`).
+     * Length of the block, as a Go duration string. The controller stores this value with one-minute resolution, so the duration must be at least <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span> and a whole multiple of one minute (e.g. <span pulumi-lang-nodejs="`30m`" pulumi-lang-dotnet="`30m`" pulumi-lang-go="`30m`" pulumi-lang-python="`30m`" pulumi-lang-yaml="`30m`" pulumi-lang-java="`30m`" pulumi-lang-hcl="`30m`">`30m`</span>, <span pulumi-lang-nodejs="`2h`" pulumi-lang-dotnet="`2h`" pulumi-lang-go="`2h`" pulumi-lang-python="`2h`" pulumi-lang-yaml="`2h`" pulumi-lang-java="`2h`" pulumi-lang-hcl="`2h`">`2h`</span>).
      */
     duration: string;
     /**
@@ -4667,11 +4679,11 @@ export interface WlanTimeouts {
 
 export interface WlanWpa {
     /**
-     * WPA encryption. Can be one of `auto`, `ccmp`, `gcmp`, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
+     * WPA encryption. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`ccmp`" pulumi-lang-dotnet="`Ccmp`" pulumi-lang-go="`ccmp`" pulumi-lang-python="`ccmp`" pulumi-lang-yaml="`ccmp`" pulumi-lang-java="`ccmp`" pulumi-lang-hcl="`ccmp`">`ccmp`</span>, <span pulumi-lang-nodejs="`gcmp`" pulumi-lang-dotnet="`Gcmp`" pulumi-lang-go="`gcmp`" pulumi-lang-python="`gcmp`" pulumi-lang-yaml="`gcmp`" pulumi-lang-java="`gcmp`" pulumi-lang-hcl="`gcmp`">`gcmp`</span>, `ccmp-256`, or `gcmp-256`. Computed from the controller when not set.
      */
     enc: string;
     /**
-     * WPA mode. Can be one of `auto`, `wpa1`, or `wpa2`. Defaults to `wpa2` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * WPA mode. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`wpa1`" pulumi-lang-dotnet="`Wpa1`" pulumi-lang-go="`wpa1`" pulumi-lang-python="`wpa1`" pulumi-lang-yaml="`wpa1`" pulumi-lang-java="`wpa1`" pulumi-lang-hcl="`wpa1`">`wpa1`</span>, or <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span>. Defaults to <span pulumi-lang-nodejs="`wpa2`" pulumi-lang-dotnet="`Wpa2`" pulumi-lang-go="`wpa2`" pulumi-lang-python="`wpa2`" pulumi-lang-yaml="`wpa2`" pulumi-lang-java="`wpa2`" pulumi-lang-hcl="`wpa2`">`wpa2`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     mode: string;
 }
@@ -4686,11 +4698,11 @@ export interface WlanWpa3 {
      */
     fastRoaming: boolean;
     /**
-     * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
+     * Enable WPA 3 support (security must be <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span> and PMF must be turned on).
      */
     support: boolean;
     /**
-     * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3.support` must be true).
+     * Enable WPA 3 and WPA 2 support (security must be <span pulumi-lang-nodejs="`wpapsk`" pulumi-lang-dotnet="`Wpapsk`" pulumi-lang-go="`wpapsk`" pulumi-lang-python="`wpapsk`" pulumi-lang-yaml="`wpapsk`" pulumi-lang-java="`wpapsk`" pulumi-lang-hcl="`wpapsk`">`wpapsk`</span> and `wpa3.support` must be true).
      */
     transition: boolean;
 }

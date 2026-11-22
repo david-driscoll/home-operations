@@ -44,7 +44,7 @@ export class AgentsDefaultModel extends pulumi.CustomResource {
     }
 
     /**
-     * ID of the `coderd.AgentsModel` to mark as the organization's default. Usually this is `coderd_agents_model.<name>.id`.
+     * ID of the <span pulumi-lang-nodejs="`coderd.AgentsModel`" pulumi-lang-dotnet="`coderd.AgentsModel`" pulumi-lang-go="`AgentsModel`" pulumi-lang-python="`AgentsModel`" pulumi-lang-yaml="`coderd.AgentsModel`" pulumi-lang-java="`coderd.AgentsModel`" pulumi-lang-hcl="`coderd_agents_model`">`coderd.AgentsModel`</span> to mark as the organization's default. Usually this is `coderd_agents_model.<name>.id`.
      */
     declare public readonly modelId: pulumi.Output<string>;
     /**
@@ -88,7 +88,7 @@ export class AgentsDefaultModel extends pulumi.CustomResource {
  */
 export interface AgentsDefaultModelState {
     /**
-     * ID of the `coderd.AgentsModel` to mark as the organization's default. Usually this is `coderd_agents_model.<name>.id`.
+     * ID of the <span pulumi-lang-nodejs="`coderd.AgentsModel`" pulumi-lang-dotnet="`coderd.AgentsModel`" pulumi-lang-go="`AgentsModel`" pulumi-lang-python="`AgentsModel`" pulumi-lang-yaml="`coderd.AgentsModel`" pulumi-lang-java="`coderd.AgentsModel`" pulumi-lang-hcl="`coderd_agents_model`">`coderd.AgentsModel`</span> to mark as the organization's default. Usually this is `coderd_agents_model.<name>.id`.
      */
     modelId?: pulumi.Input<string | undefined>;
     /**
@@ -102,7 +102,7 @@ export interface AgentsDefaultModelState {
  */
 export interface AgentsDefaultModelArgs {
     /**
-     * ID of the `coderd.AgentsModel` to mark as the organization's default. Usually this is `coderd_agents_model.<name>.id`.
+     * ID of the <span pulumi-lang-nodejs="`coderd.AgentsModel`" pulumi-lang-dotnet="`coderd.AgentsModel`" pulumi-lang-go="`AgentsModel`" pulumi-lang-python="`AgentsModel`" pulumi-lang-yaml="`coderd.AgentsModel`" pulumi-lang-java="`coderd.AgentsModel`" pulumi-lang-hcl="`coderd_agents_model`">`coderd.AgentsModel`</span> to mark as the organization's default. Usually this is `coderd_agents_model.<name>.id`.
      */
     modelId: pulumi.Input<string>;
     /**

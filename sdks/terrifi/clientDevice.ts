@@ -44,11 +44,11 @@ export class ClientDevice extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the client device is blocked from network access. Defaults to `false`.
+     * Whether the client device is blocked from network access. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly blocked: pulumi.Output<boolean>;
     /**
-     * Set of client group IDs to assign this device to. Use `terrifi.ClientGroup` to manage groups.
+     * Set of client group IDs to assign this device to. Use <span pulumi-lang-nodejs="`terrifi.ClientGroup`" pulumi-lang-dotnet="`terrifi.ClientGroup`" pulumi-lang-go="`ClientGroup`" pulumi-lang-python="`ClientGroup`" pulumi-lang-yaml="`terrifi.ClientGroup`" pulumi-lang-java="`terrifi.ClientGroup`" pulumi-lang-hcl="`terrifi_client_group`">`terrifi.ClientGroup`</span> to manage groups.
      */
     declare public readonly clientGroupIds: pulumi.Output<string[] | undefined>;
     /**
@@ -60,11 +60,11 @@ export class ClientDevice extends pulumi.CustomResource {
      */
     declare public readonly fixedApMac: pulumi.Output<string | undefined>;
     /**
-     * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
+     * A fixed IP address to assign to this client via DHCP reservation. Requires <span pulumi-lang-nodejs="`networkId`" pulumi-lang-dotnet="`NetworkId`" pulumi-lang-go="`networkId`" pulumi-lang-python="`network_id`" pulumi-lang-yaml="`networkId`" pulumi-lang-java="`networkId`" pulumi-lang-hcl="`network_id`">`networkId`</span> or <span pulumi-lang-nodejs="`networkOverrideId`" pulumi-lang-dotnet="`NetworkOverrideId`" pulumi-lang-go="`networkOverrideId`" pulumi-lang-python="`network_override_id`" pulumi-lang-yaml="`networkOverrideId`" pulumi-lang-java="`networkOverrideId`" pulumi-lang-hcl="`network_override_id`">`networkOverrideId`</span> to also be set.
      */
     declare public readonly fixedIp: pulumi.Output<string | undefined>;
     /**
-     * A local DNS hostname for this client device. Requires `fixed_ip` to also be set (controller requirement).
+     * A local DNS hostname for this client device. Requires <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span> to also be set (controller requirement).
      */
     declare public readonly localDnsRecord: pulumi.Output<string | undefined>;
     /**
@@ -76,7 +76,7 @@ export class ClientDevice extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The network ID for fixed IP assignment. Required when `fixed_ip` is set unless `network_override_id` provides the network context.
+     * The network ID for fixed IP assignment. Required when <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span> is set unless <span pulumi-lang-nodejs="`networkOverrideId`" pulumi-lang-dotnet="`NetworkOverrideId`" pulumi-lang-go="`networkOverrideId`" pulumi-lang-python="`network_override_id`" pulumi-lang-yaml="`networkOverrideId`" pulumi-lang-java="`networkOverrideId`" pulumi-lang-hcl="`network_override_id`">`networkOverrideId`</span> provides the network context.
      */
     declare public readonly networkId: pulumi.Output<string | undefined>;
     /**
@@ -86,7 +86,7 @@ export class ClientDevice extends pulumi.CustomResource {
     /**
      * A free-text note for the client device.
      *
-     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing `note` from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
+     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing <span pulumi-lang-nodejs="`note`" pulumi-lang-dotnet="`Note`" pulumi-lang-go="`note`" pulumi-lang-python="`note`" pulumi-lang-yaml="`note`" pulumi-lang-java="`note`" pulumi-lang-hcl="`note`">`note`</span> from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
      */
     declare public readonly note: pulumi.Output<string>;
     /**
@@ -147,11 +147,11 @@ export class ClientDevice extends pulumi.CustomResource {
  */
 export interface ClientDeviceState {
     /**
-     * Whether the client device is blocked from network access. Defaults to `false`.
+     * Whether the client device is blocked from network access. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     blocked?: pulumi.Input<boolean | undefined>;
     /**
-     * Set of client group IDs to assign this device to. Use `terrifi.ClientGroup` to manage groups.
+     * Set of client group IDs to assign this device to. Use <span pulumi-lang-nodejs="`terrifi.ClientGroup`" pulumi-lang-dotnet="`terrifi.ClientGroup`" pulumi-lang-go="`ClientGroup`" pulumi-lang-python="`ClientGroup`" pulumi-lang-yaml="`terrifi.ClientGroup`" pulumi-lang-java="`terrifi.ClientGroup`" pulumi-lang-hcl="`terrifi_client_group`">`terrifi.ClientGroup`</span> to manage groups.
      */
     clientGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -163,11 +163,11 @@ export interface ClientDeviceState {
      */
     fixedApMac?: pulumi.Input<string | undefined>;
     /**
-     * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
+     * A fixed IP address to assign to this client via DHCP reservation. Requires <span pulumi-lang-nodejs="`networkId`" pulumi-lang-dotnet="`NetworkId`" pulumi-lang-go="`networkId`" pulumi-lang-python="`network_id`" pulumi-lang-yaml="`networkId`" pulumi-lang-java="`networkId`" pulumi-lang-hcl="`network_id`">`networkId`</span> or <span pulumi-lang-nodejs="`networkOverrideId`" pulumi-lang-dotnet="`NetworkOverrideId`" pulumi-lang-go="`networkOverrideId`" pulumi-lang-python="`network_override_id`" pulumi-lang-yaml="`networkOverrideId`" pulumi-lang-java="`networkOverrideId`" pulumi-lang-hcl="`network_override_id`">`networkOverrideId`</span> to also be set.
      */
     fixedIp?: pulumi.Input<string | undefined>;
     /**
-     * A local DNS hostname for this client device. Requires `fixed_ip` to also be set (controller requirement).
+     * A local DNS hostname for this client device. Requires <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span> to also be set (controller requirement).
      */
     localDnsRecord?: pulumi.Input<string | undefined>;
     /**
@@ -179,7 +179,7 @@ export interface ClientDeviceState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The network ID for fixed IP assignment. Required when `fixed_ip` is set unless `network_override_id` provides the network context.
+     * The network ID for fixed IP assignment. Required when <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span> is set unless <span pulumi-lang-nodejs="`networkOverrideId`" pulumi-lang-dotnet="`NetworkOverrideId`" pulumi-lang-go="`networkOverrideId`" pulumi-lang-python="`network_override_id`" pulumi-lang-yaml="`networkOverrideId`" pulumi-lang-java="`networkOverrideId`" pulumi-lang-hcl="`network_override_id`">`networkOverrideId`</span> provides the network context.
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
@@ -189,7 +189,7 @@ export interface ClientDeviceState {
     /**
      * A free-text note for the client device.
      *
-     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing `note` from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
+     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing <span pulumi-lang-nodejs="`note`" pulumi-lang-dotnet="`Note`" pulumi-lang-go="`note`" pulumi-lang-python="`note`" pulumi-lang-yaml="`note`" pulumi-lang-java="`note`" pulumi-lang-hcl="`note`">`note`</span> from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
      */
     note?: pulumi.Input<string | undefined>;
     /**
@@ -203,11 +203,11 @@ export interface ClientDeviceState {
  */
 export interface ClientDeviceArgs {
     /**
-     * Whether the client device is blocked from network access. Defaults to `false`.
+     * Whether the client device is blocked from network access. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     blocked?: pulumi.Input<boolean | undefined>;
     /**
-     * Set of client group IDs to assign this device to. Use `terrifi.ClientGroup` to manage groups.
+     * Set of client group IDs to assign this device to. Use <span pulumi-lang-nodejs="`terrifi.ClientGroup`" pulumi-lang-dotnet="`terrifi.ClientGroup`" pulumi-lang-go="`ClientGroup`" pulumi-lang-python="`ClientGroup`" pulumi-lang-yaml="`terrifi.ClientGroup`" pulumi-lang-java="`terrifi.ClientGroup`" pulumi-lang-hcl="`terrifi_client_group`">`terrifi.ClientGroup`</span> to manage groups.
      */
     clientGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -219,11 +219,11 @@ export interface ClientDeviceArgs {
      */
     fixedApMac?: pulumi.Input<string | undefined>;
     /**
-     * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
+     * A fixed IP address to assign to this client via DHCP reservation. Requires <span pulumi-lang-nodejs="`networkId`" pulumi-lang-dotnet="`NetworkId`" pulumi-lang-go="`networkId`" pulumi-lang-python="`network_id`" pulumi-lang-yaml="`networkId`" pulumi-lang-java="`networkId`" pulumi-lang-hcl="`network_id`">`networkId`</span> or <span pulumi-lang-nodejs="`networkOverrideId`" pulumi-lang-dotnet="`NetworkOverrideId`" pulumi-lang-go="`networkOverrideId`" pulumi-lang-python="`network_override_id`" pulumi-lang-yaml="`networkOverrideId`" pulumi-lang-java="`networkOverrideId`" pulumi-lang-hcl="`network_override_id`">`networkOverrideId`</span> to also be set.
      */
     fixedIp?: pulumi.Input<string | undefined>;
     /**
-     * A local DNS hostname for this client device. Requires `fixed_ip` to also be set (controller requirement).
+     * A local DNS hostname for this client device. Requires <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span> to also be set (controller requirement).
      */
     localDnsRecord?: pulumi.Input<string | undefined>;
     /**
@@ -235,7 +235,7 @@ export interface ClientDeviceArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The network ID for fixed IP assignment. Required when `fixed_ip` is set unless `network_override_id` provides the network context.
+     * The network ID for fixed IP assignment. Required when <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span> is set unless <span pulumi-lang-nodejs="`networkOverrideId`" pulumi-lang-dotnet="`NetworkOverrideId`" pulumi-lang-go="`networkOverrideId`" pulumi-lang-python="`network_override_id`" pulumi-lang-yaml="`networkOverrideId`" pulumi-lang-java="`networkOverrideId`" pulumi-lang-hcl="`network_override_id`">`networkOverrideId`</span> provides the network context.
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
@@ -245,7 +245,7 @@ export interface ClientDeviceArgs {
     /**
      * A free-text note for the client device.
      *
-     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing `note` from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
+     * This attribute is optional *and* computed: when the configuration does not set it, whatever note the controller already holds (for example one added through the UI) is adopted into state instead of being reported as drift. Removing <span pulumi-lang-nodejs="`note`" pulumi-lang-dotnet="`Note`" pulumi-lang-go="`note`" pulumi-lang-python="`note`" pulumi-lang-yaml="`note`" pulumi-lang-java="`note`" pulumi-lang-hcl="`note`">`note`</span> from the configuration therefore does not clear it on the controller; the provider does not support clearing notes.
      */
     note?: pulumi.Input<string | undefined>;
     /**

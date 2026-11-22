@@ -50,7 +50,7 @@ export class AgentsModel extends pulumi.CustomResource {
      */
     declare public readonly acl: pulumi.Output<outputs.AgentsModelAcl>;
     /**
-     * AI provider ID that backs this model. Usually this is `coderd_ai_provider.<name>.id`. Updating it re-derives the read-only `provider_type` from the referenced provider.
+     * AI provider ID that backs this model. Usually this is `coderd_ai_provider.<name>.id`. Updating it re-derives the read-only <span pulumi-lang-nodejs="`providerType`" pulumi-lang-dotnet="`ProviderType`" pulumi-lang-go="`providerType`" pulumi-lang-python="`provider_type`" pulumi-lang-yaml="`providerType`" pulumi-lang-java="`providerType`" pulumi-lang-hcl="`provider_type`">`providerType`</span> from the referenced provider.
      */
     declare public readonly aiProviderId: pulumi.Output<string>;
     /**
@@ -78,7 +78,7 @@ export class AgentsModel extends pulumi.CustomResource {
      */
     declare public readonly model: pulumi.Output<string>;
     /**
-     * Optional JSON blob of per-call tuning for the model, such as `max_output_tokens`, `temperature`, `top_p`, and `provider_options`. See the field reference (including per-provider `provider_options`) at https://pkg.go.dev/github.com/coder/coder/v2/codersdk#ChatModelCallConfig.
+     * Optional JSON blob of per-call tuning for the model, such as <span pulumi-lang-nodejs="`maxOutputTokens`" pulumi-lang-dotnet="`MaxOutputTokens`" pulumi-lang-go="`maxOutputTokens`" pulumi-lang-python="`max_output_tokens`" pulumi-lang-yaml="`maxOutputTokens`" pulumi-lang-java="`maxOutputTokens`" pulumi-lang-hcl="`max_output_tokens`">`maxOutputTokens`</span>, <span pulumi-lang-nodejs="`temperature`" pulumi-lang-dotnet="`Temperature`" pulumi-lang-go="`temperature`" pulumi-lang-python="`temperature`" pulumi-lang-yaml="`temperature`" pulumi-lang-java="`temperature`" pulumi-lang-hcl="`temperature`">`temperature`</span>, <span pulumi-lang-nodejs="`topP`" pulumi-lang-dotnet="`TopP`" pulumi-lang-go="`topP`" pulumi-lang-python="`top_p`" pulumi-lang-yaml="`topP`" pulumi-lang-java="`topP`" pulumi-lang-hcl="`top_p`">`topP`</span>, and <span pulumi-lang-nodejs="`providerOptions`" pulumi-lang-dotnet="`ProviderOptions`" pulumi-lang-go="`providerOptions`" pulumi-lang-python="`provider_options`" pulumi-lang-yaml="`providerOptions`" pulumi-lang-java="`providerOptions`" pulumi-lang-hcl="`provider_options`">`providerOptions`</span>. See the field reference (including per-provider <span pulumi-lang-nodejs="`providerOptions`" pulumi-lang-dotnet="`ProviderOptions`" pulumi-lang-go="`providerOptions`" pulumi-lang-python="`provider_options`" pulumi-lang-yaml="`providerOptions`" pulumi-lang-java="`providerOptions`" pulumi-lang-hcl="`provider_options`">`providerOptions`</span>) at https://pkg.go.dev/github.com/coder/coder/v2/codersdk#ChatModelCallConfig.
      */
     declare public readonly modelConfig: pulumi.Output<string | undefined>;
     /**
@@ -86,7 +86,7 @@ export class AgentsModel extends pulumi.CustomResource {
      */
     declare public readonly organizationId: pulumi.Output<string>;
     /**
-     * Provider type derived by Coder from `ai_provider_id`, for example `openai`, `anthropic`, or `bedrock`.
+     * Provider type derived by Coder from <span pulumi-lang-nodejs="`aiProviderId`" pulumi-lang-dotnet="`AiProviderId`" pulumi-lang-go="`aiProviderId`" pulumi-lang-python="`ai_provider_id`" pulumi-lang-yaml="`aiProviderId`" pulumi-lang-java="`aiProviderId`" pulumi-lang-hcl="`ai_provider_id`">`aiProviderId`</span>, for example <span pulumi-lang-nodejs="`openai`" pulumi-lang-dotnet="`Openai`" pulumi-lang-go="`openai`" pulumi-lang-python="`openai`" pulumi-lang-yaml="`openai`" pulumi-lang-java="`openai`" pulumi-lang-hcl="`openai`">`openai`</span>, <span pulumi-lang-nodejs="`anthropic`" pulumi-lang-dotnet="`Anthropic`" pulumi-lang-go="`anthropic`" pulumi-lang-python="`anthropic`" pulumi-lang-yaml="`anthropic`" pulumi-lang-java="`anthropic`" pulumi-lang-hcl="`anthropic`">`anthropic`</span>, or <span pulumi-lang-nodejs="`bedrock`" pulumi-lang-dotnet="`Bedrock`" pulumi-lang-go="`bedrock`" pulumi-lang-python="`bedrock`" pulumi-lang-yaml="`bedrock`" pulumi-lang-java="`bedrock`" pulumi-lang-hcl="`bedrock`">`bedrock`</span>.
      */
     declare public /*out*/ readonly providerType: pulumi.Output<string>;
     /**
@@ -157,7 +157,7 @@ export interface AgentsModelState {
      */
     acl?: pulumi.Input<inputs.AgentsModelAcl | undefined>;
     /**
-     * AI provider ID that backs this model. Usually this is `coderd_ai_provider.<name>.id`. Updating it re-derives the read-only `provider_type` from the referenced provider.
+     * AI provider ID that backs this model. Usually this is `coderd_ai_provider.<name>.id`. Updating it re-derives the read-only <span pulumi-lang-nodejs="`providerType`" pulumi-lang-dotnet="`ProviderType`" pulumi-lang-go="`providerType`" pulumi-lang-python="`provider_type`" pulumi-lang-yaml="`providerType`" pulumi-lang-java="`providerType`" pulumi-lang-hcl="`provider_type`">`providerType`</span> from the referenced provider.
      */
     aiProviderId?: pulumi.Input<string | undefined>;
     /**
@@ -185,7 +185,7 @@ export interface AgentsModelState {
      */
     model?: pulumi.Input<string | undefined>;
     /**
-     * Optional JSON blob of per-call tuning for the model, such as `max_output_tokens`, `temperature`, `top_p`, and `provider_options`. See the field reference (including per-provider `provider_options`) at https://pkg.go.dev/github.com/coder/coder/v2/codersdk#ChatModelCallConfig.
+     * Optional JSON blob of per-call tuning for the model, such as <span pulumi-lang-nodejs="`maxOutputTokens`" pulumi-lang-dotnet="`MaxOutputTokens`" pulumi-lang-go="`maxOutputTokens`" pulumi-lang-python="`max_output_tokens`" pulumi-lang-yaml="`maxOutputTokens`" pulumi-lang-java="`maxOutputTokens`" pulumi-lang-hcl="`max_output_tokens`">`maxOutputTokens`</span>, <span pulumi-lang-nodejs="`temperature`" pulumi-lang-dotnet="`Temperature`" pulumi-lang-go="`temperature`" pulumi-lang-python="`temperature`" pulumi-lang-yaml="`temperature`" pulumi-lang-java="`temperature`" pulumi-lang-hcl="`temperature`">`temperature`</span>, <span pulumi-lang-nodejs="`topP`" pulumi-lang-dotnet="`TopP`" pulumi-lang-go="`topP`" pulumi-lang-python="`top_p`" pulumi-lang-yaml="`topP`" pulumi-lang-java="`topP`" pulumi-lang-hcl="`top_p`">`topP`</span>, and <span pulumi-lang-nodejs="`providerOptions`" pulumi-lang-dotnet="`ProviderOptions`" pulumi-lang-go="`providerOptions`" pulumi-lang-python="`provider_options`" pulumi-lang-yaml="`providerOptions`" pulumi-lang-java="`providerOptions`" pulumi-lang-hcl="`provider_options`">`providerOptions`</span>. See the field reference (including per-provider <span pulumi-lang-nodejs="`providerOptions`" pulumi-lang-dotnet="`ProviderOptions`" pulumi-lang-go="`providerOptions`" pulumi-lang-python="`provider_options`" pulumi-lang-yaml="`providerOptions`" pulumi-lang-java="`providerOptions`" pulumi-lang-hcl="`provider_options`">`providerOptions`</span>) at https://pkg.go.dev/github.com/coder/coder/v2/codersdk#ChatModelCallConfig.
      */
     modelConfig?: pulumi.Input<string | undefined>;
     /**
@@ -193,7 +193,7 @@ export interface AgentsModelState {
      */
     organizationId?: pulumi.Input<string | undefined>;
     /**
-     * Provider type derived by Coder from `ai_provider_id`, for example `openai`, `anthropic`, or `bedrock`.
+     * Provider type derived by Coder from <span pulumi-lang-nodejs="`aiProviderId`" pulumi-lang-dotnet="`AiProviderId`" pulumi-lang-go="`aiProviderId`" pulumi-lang-python="`ai_provider_id`" pulumi-lang-yaml="`aiProviderId`" pulumi-lang-java="`aiProviderId`" pulumi-lang-hcl="`ai_provider_id`">`aiProviderId`</span>, for example <span pulumi-lang-nodejs="`openai`" pulumi-lang-dotnet="`Openai`" pulumi-lang-go="`openai`" pulumi-lang-python="`openai`" pulumi-lang-yaml="`openai`" pulumi-lang-java="`openai`" pulumi-lang-hcl="`openai`">`openai`</span>, <span pulumi-lang-nodejs="`anthropic`" pulumi-lang-dotnet="`Anthropic`" pulumi-lang-go="`anthropic`" pulumi-lang-python="`anthropic`" pulumi-lang-yaml="`anthropic`" pulumi-lang-java="`anthropic`" pulumi-lang-hcl="`anthropic`">`anthropic`</span>, or <span pulumi-lang-nodejs="`bedrock`" pulumi-lang-dotnet="`Bedrock`" pulumi-lang-go="`bedrock`" pulumi-lang-python="`bedrock`" pulumi-lang-yaml="`bedrock`" pulumi-lang-java="`bedrock`" pulumi-lang-hcl="`bedrock`">`bedrock`</span>.
      */
     providerType?: pulumi.Input<string | undefined>;
     /**
@@ -211,7 +211,7 @@ export interface AgentsModelArgs {
      */
     acl?: pulumi.Input<inputs.AgentsModelAcl | undefined>;
     /**
-     * AI provider ID that backs this model. Usually this is `coderd_ai_provider.<name>.id`. Updating it re-derives the read-only `provider_type` from the referenced provider.
+     * AI provider ID that backs this model. Usually this is `coderd_ai_provider.<name>.id`. Updating it re-derives the read-only <span pulumi-lang-nodejs="`providerType`" pulumi-lang-dotnet="`ProviderType`" pulumi-lang-go="`providerType`" pulumi-lang-python="`provider_type`" pulumi-lang-yaml="`providerType`" pulumi-lang-java="`providerType`" pulumi-lang-hcl="`provider_type`">`providerType`</span> from the referenced provider.
      */
     aiProviderId: pulumi.Input<string>;
     /**
@@ -235,7 +235,7 @@ export interface AgentsModelArgs {
      */
     model: pulumi.Input<string>;
     /**
-     * Optional JSON blob of per-call tuning for the model, such as `max_output_tokens`, `temperature`, `top_p`, and `provider_options`. See the field reference (including per-provider `provider_options`) at https://pkg.go.dev/github.com/coder/coder/v2/codersdk#ChatModelCallConfig.
+     * Optional JSON blob of per-call tuning for the model, such as <span pulumi-lang-nodejs="`maxOutputTokens`" pulumi-lang-dotnet="`MaxOutputTokens`" pulumi-lang-go="`maxOutputTokens`" pulumi-lang-python="`max_output_tokens`" pulumi-lang-yaml="`maxOutputTokens`" pulumi-lang-java="`maxOutputTokens`" pulumi-lang-hcl="`max_output_tokens`">`maxOutputTokens`</span>, <span pulumi-lang-nodejs="`temperature`" pulumi-lang-dotnet="`Temperature`" pulumi-lang-go="`temperature`" pulumi-lang-python="`temperature`" pulumi-lang-yaml="`temperature`" pulumi-lang-java="`temperature`" pulumi-lang-hcl="`temperature`">`temperature`</span>, <span pulumi-lang-nodejs="`topP`" pulumi-lang-dotnet="`TopP`" pulumi-lang-go="`topP`" pulumi-lang-python="`top_p`" pulumi-lang-yaml="`topP`" pulumi-lang-java="`topP`" pulumi-lang-hcl="`top_p`">`topP`</span>, and <span pulumi-lang-nodejs="`providerOptions`" pulumi-lang-dotnet="`ProviderOptions`" pulumi-lang-go="`providerOptions`" pulumi-lang-python="`provider_options`" pulumi-lang-yaml="`providerOptions`" pulumi-lang-java="`providerOptions`" pulumi-lang-hcl="`provider_options`">`providerOptions`</span>. See the field reference (including per-provider <span pulumi-lang-nodejs="`providerOptions`" pulumi-lang-dotnet="`ProviderOptions`" pulumi-lang-go="`providerOptions`" pulumi-lang-python="`provider_options`" pulumi-lang-yaml="`providerOptions`" pulumi-lang-java="`providerOptions`" pulumi-lang-hcl="`provider_options`">`providerOptions`</span>) at https://pkg.go.dev/github.com/coder/coder/v2/codersdk#ChatModelCallConfig.
      */
     modelConfig?: pulumi.Input<string | undefined>;
     /**

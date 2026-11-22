@@ -24,10 +24,6 @@ export interface GetNotificationMatcherArgs {
 export interface GetNotificationMatcherResult {
     readonly comment: string;
     readonly disable: boolean;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly invertMatch: boolean;
     readonly matchCalendars: string[];
     readonly matchFields: string[];

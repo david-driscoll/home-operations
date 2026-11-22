@@ -79,7 +79,7 @@ export class StaticRoute extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.StaticRouteTimeouts | undefined>;
     /**
-     * The type of static route. Can be `interface-route`, `nexthop-route`, or `blackhole`.
+     * The type of static route. Can be `interface-route`, `nexthop-route`, or <span pulumi-lang-nodejs="`blackhole`" pulumi-lang-dotnet="`Blackhole`" pulumi-lang-go="`blackhole`" pulumi-lang-python="`blackhole`" pulumi-lang-yaml="`blackhole`" pulumi-lang-java="`blackhole`" pulumi-lang-hcl="`blackhole`">`blackhole`</span>.
      */
     declare public readonly type: pulumi.Output<string>;
 
@@ -171,7 +171,7 @@ export interface StaticRouteState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.StaticRouteTimeouts | undefined>;
     /**
-     * The type of static route. Can be `interface-route`, `nexthop-route`, or `blackhole`.
+     * The type of static route. Can be `interface-route`, `nexthop-route`, or <span pulumi-lang-nodejs="`blackhole`" pulumi-lang-dotnet="`Blackhole`" pulumi-lang-go="`blackhole`" pulumi-lang-python="`blackhole`" pulumi-lang-yaml="`blackhole`" pulumi-lang-java="`blackhole`" pulumi-lang-hcl="`blackhole`">`blackhole`</span>.
      */
     type?: pulumi.Input<string | undefined>;
 }
@@ -214,7 +214,7 @@ export interface StaticRouteArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.StaticRouteTimeouts | undefined>;
     /**
-     * The type of static route. Can be `interface-route`, `nexthop-route`, or `blackhole`.
+     * The type of static route. Can be `interface-route`, `nexthop-route`, or <span pulumi-lang-nodejs="`blackhole`" pulumi-lang-dotnet="`Blackhole`" pulumi-lang-go="`blackhole`" pulumi-lang-python="`blackhole`" pulumi-lang-yaml="`blackhole`" pulumi-lang-java="`blackhole`" pulumi-lang-hcl="`blackhole`">`blackhole`</span>.
      */
     type: pulumi.Input<string>;
 }

@@ -49,7 +49,7 @@ export class Group extends pulumi.CustomResource {
     declare public readonly attributes: pulumi.Output<string | undefined>;
     declare public readonly groupId: pulumi.Output<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly isSuperuser: pulumi.Output<boolean | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -105,7 +105,7 @@ export interface GroupState {
     attributes?: pulumi.Input<string | undefined>;
     groupId?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     isSuperuser?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -127,7 +127,7 @@ export interface GroupArgs {
     attributes?: pulumi.Input<string | undefined>;
     groupId?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     isSuperuser?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;

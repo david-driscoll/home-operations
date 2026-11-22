@@ -58,7 +58,7 @@ export class QosRule extends pulumi.CustomResource {
      */
     declare public readonly downloadLimitKbps: pulumi.Output<number | undefined>;
     /**
-     * Whether the rule is active. Defaults to `true` for a new rule; an existing rule keeps the controller's value when this is not set, so adopting a disabled rule does not re-enable it (#544).
+     * Whether the rule is active. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new rule; an existing rule keeps the controller's value when this is not set, so adopting a disabled rule does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -168,7 +168,7 @@ export interface QosRuleState {
      */
     downloadLimitKbps?: pulumi.Input<number | undefined>;
     /**
-     * Whether the rule is active. Defaults to `true` for a new rule; an existing rule keeps the controller's value when this is not set, so adopting a disabled rule does not re-enable it (#544).
+     * Whether the rule is active. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new rule; an existing rule keeps the controller's value when this is not set, so adopting a disabled rule does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -227,7 +227,7 @@ export interface QosRuleArgs {
      */
     downloadLimitKbps?: pulumi.Input<number | undefined>;
     /**
-     * Whether the rule is active. Defaults to `true` for a new rule; an existing rule keeps the controller's value when this is not set, so adopting a disabled rule does not re-enable it (#544).
+     * Whether the rule is active. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new rule; an existing rule keeps the controller's value when this is not set, so adopting a disabled rule does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**

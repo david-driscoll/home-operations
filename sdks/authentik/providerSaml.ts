@@ -91,10 +91,10 @@ export class ProviderSaml extends pulumi.CustomResource {
     declare public readonly issuerOverride: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `frontchannel_iframe`
-     *   - `frontchannel_native`
-     *   - `backchannel`
-     *      Defaults to `frontchannel_iframe`.
+     *   - <span pulumi-lang-nodejs="`frontchannelIframe`" pulumi-lang-dotnet="`FrontchannelIframe`" pulumi-lang-go="`frontchannelIframe`" pulumi-lang-python="`frontchannel_iframe`" pulumi-lang-yaml="`frontchannelIframe`" pulumi-lang-java="`frontchannelIframe`" pulumi-lang-hcl="`frontchannel_iframe`">`frontchannelIframe`</span>
+     *   - <span pulumi-lang-nodejs="`frontchannelNative`" pulumi-lang-dotnet="`FrontchannelNative`" pulumi-lang-go="`frontchannelNative`" pulumi-lang-python="`frontchannel_native`" pulumi-lang-yaml="`frontchannelNative`" pulumi-lang-java="`frontchannelNative`" pulumi-lang-hcl="`frontchannel_native`">`frontchannelNative`</span>
+     *   - <span pulumi-lang-nodejs="`backchannel`" pulumi-lang-dotnet="`Backchannel`" pulumi-lang-go="`backchannel`" pulumi-lang-python="`backchannel`" pulumi-lang-yaml="`backchannel`" pulumi-lang-java="`backchannel`" pulumi-lang-hcl="`backchannel`">`backchannel`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`frontchannelIframe`" pulumi-lang-dotnet="`FrontchannelIframe`" pulumi-lang-go="`frontchannelIframe`" pulumi-lang-python="`frontchannel_iframe`" pulumi-lang-yaml="`frontchannelIframe`" pulumi-lang-java="`frontchannelIframe`" pulumi-lang-hcl="`frontchannel_iframe`">`frontchannelIframe`</span>.
      */
     declare public readonly logoutMethod: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -106,19 +106,19 @@ export class ProviderSaml extends pulumi.CustomResource {
      */
     declare public readonly sessionValidNotOnOrAfter: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly signAssertion: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly signLogoutRequest: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly signLogoutResponse: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly signResponse: pulumi.Output<boolean | undefined>;
     /**
@@ -138,17 +138,17 @@ export class ProviderSaml extends pulumi.CustomResource {
     declare public readonly signingKp: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `redirect`
-     *   - `post`
-     *      Defaults to `redirect`.
+     *   - <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>
+     *   - <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>.
      */
     declare public readonly slsBinding: pulumi.Output<string | undefined>;
     declare public readonly slsUrl: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `redirect`
-     *   - `post`
-     *      Defaults to `redirect`.
+     *   - <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>
+     *   - <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>.
      */
     declare public readonly spBinding: pulumi.Output<string | undefined>;
     /**
@@ -323,10 +323,10 @@ export interface ProviderSamlState {
     issuerOverride?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `frontchannel_iframe`
-     *   - `frontchannel_native`
-     *   - `backchannel`
-     *      Defaults to `frontchannel_iframe`.
+     *   - <span pulumi-lang-nodejs="`frontchannelIframe`" pulumi-lang-dotnet="`FrontchannelIframe`" pulumi-lang-go="`frontchannelIframe`" pulumi-lang-python="`frontchannel_iframe`" pulumi-lang-yaml="`frontchannelIframe`" pulumi-lang-java="`frontchannelIframe`" pulumi-lang-hcl="`frontchannel_iframe`">`frontchannelIframe`</span>
+     *   - <span pulumi-lang-nodejs="`frontchannelNative`" pulumi-lang-dotnet="`FrontchannelNative`" pulumi-lang-go="`frontchannelNative`" pulumi-lang-python="`frontchannel_native`" pulumi-lang-yaml="`frontchannelNative`" pulumi-lang-java="`frontchannelNative`" pulumi-lang-hcl="`frontchannel_native`">`frontchannelNative`</span>
+     *   - <span pulumi-lang-nodejs="`backchannel`" pulumi-lang-dotnet="`Backchannel`" pulumi-lang-go="`backchannel`" pulumi-lang-python="`backchannel`" pulumi-lang-yaml="`backchannel`" pulumi-lang-java="`backchannel`" pulumi-lang-hcl="`backchannel`">`backchannel`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`frontchannelIframe`" pulumi-lang-dotnet="`FrontchannelIframe`" pulumi-lang-go="`frontchannelIframe`" pulumi-lang-python="`frontchannel_iframe`" pulumi-lang-yaml="`frontchannelIframe`" pulumi-lang-java="`frontchannelIframe`" pulumi-lang-hcl="`frontchannel_iframe`">`frontchannelIframe`</span>.
      */
     logoutMethod?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -338,19 +338,19 @@ export interface ProviderSamlState {
      */
     sessionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     signAssertion?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signLogoutRequest?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signLogoutResponse?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signResponse?: pulumi.Input<boolean | undefined>;
     /**
@@ -370,17 +370,17 @@ export interface ProviderSamlState {
     signingKp?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `redirect`
-     *   - `post`
-     *      Defaults to `redirect`.
+     *   - <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>
+     *   - <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>.
      */
     slsBinding?: pulumi.Input<string | undefined>;
     slsUrl?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `redirect`
-     *   - `post`
-     *      Defaults to `redirect`.
+     *   - <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>
+     *   - <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>.
      */
     spBinding?: pulumi.Input<string | undefined>;
     /**
@@ -458,10 +458,10 @@ export interface ProviderSamlArgs {
     issuerOverride?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `frontchannel_iframe`
-     *   - `frontchannel_native`
-     *   - `backchannel`
-     *      Defaults to `frontchannel_iframe`.
+     *   - <span pulumi-lang-nodejs="`frontchannelIframe`" pulumi-lang-dotnet="`FrontchannelIframe`" pulumi-lang-go="`frontchannelIframe`" pulumi-lang-python="`frontchannel_iframe`" pulumi-lang-yaml="`frontchannelIframe`" pulumi-lang-java="`frontchannelIframe`" pulumi-lang-hcl="`frontchannel_iframe`">`frontchannelIframe`</span>
+     *   - <span pulumi-lang-nodejs="`frontchannelNative`" pulumi-lang-dotnet="`FrontchannelNative`" pulumi-lang-go="`frontchannelNative`" pulumi-lang-python="`frontchannel_native`" pulumi-lang-yaml="`frontchannelNative`" pulumi-lang-java="`frontchannelNative`" pulumi-lang-hcl="`frontchannel_native`">`frontchannelNative`</span>
+     *   - <span pulumi-lang-nodejs="`backchannel`" pulumi-lang-dotnet="`Backchannel`" pulumi-lang-go="`backchannel`" pulumi-lang-python="`backchannel`" pulumi-lang-yaml="`backchannel`" pulumi-lang-java="`backchannel`" pulumi-lang-hcl="`backchannel`">`backchannel`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`frontchannelIframe`" pulumi-lang-dotnet="`FrontchannelIframe`" pulumi-lang-go="`frontchannelIframe`" pulumi-lang-python="`frontchannel_iframe`" pulumi-lang-yaml="`frontchannelIframe`" pulumi-lang-java="`frontchannelIframe`" pulumi-lang-hcl="`frontchannel_iframe`">`frontchannelIframe`</span>.
      */
     logoutMethod?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -473,19 +473,19 @@ export interface ProviderSamlArgs {
      */
     sessionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     signAssertion?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signLogoutRequest?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signLogoutResponse?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     signResponse?: pulumi.Input<boolean | undefined>;
     /**
@@ -505,17 +505,17 @@ export interface ProviderSamlArgs {
     signingKp?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `redirect`
-     *   - `post`
-     *      Defaults to `redirect`.
+     *   - <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>
+     *   - <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>.
      */
     slsBinding?: pulumi.Input<string | undefined>;
     slsUrl?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `redirect`
-     *   - `post`
-     *      Defaults to `redirect`.
+     *   - <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>
+     *   - <span pulumi-lang-nodejs="`post`" pulumi-lang-dotnet="`Post`" pulumi-lang-go="`post`" pulumi-lang-python="`post`" pulumi-lang-yaml="`post`" pulumi-lang-java="`post`" pulumi-lang-hcl="`post`">`post`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`redirect`" pulumi-lang-dotnet="`Redirect`" pulumi-lang-go="`redirect`" pulumi-lang-python="`redirect`" pulumi-lang-yaml="`redirect`" pulumi-lang-java="`redirect`" pulumi-lang-hcl="`redirect`">`redirect`</span>.
      */
     spBinding?: pulumi.Input<string | undefined>;
     /**

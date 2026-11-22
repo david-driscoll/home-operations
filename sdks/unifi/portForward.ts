@@ -68,7 +68,7 @@ export class PortForward extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. A new rule is created with `tcp_udp` when not set; an existing rule keeps the controller's value, so adopting a `tcp`-only rule does not widen it to UDP (#544).
+     * The protocol for the port forwarding rule. Can be <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, or <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>. A new rule is created with <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span> when not set; an existing rule keeps the controller's value, so adopting a <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>-only rule does not widen it to UDP (#544).
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -153,7 +153,7 @@ export interface PortForwardState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. A new rule is created with `tcp_udp` when not set; an existing rule keeps the controller's value, so adopting a `tcp`-only rule does not widen it to UDP (#544).
+     * The protocol for the port forwarding rule. Can be <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, or <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>. A new rule is created with <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span> when not set; an existing rule keeps the controller's value, so adopting a <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>-only rule does not widen it to UDP (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -198,7 +198,7 @@ export interface PortForwardArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. A new rule is created with `tcp_udp` when not set; an existing rule keeps the controller's value, so adopting a `tcp`-only rule does not widen it to UDP (#544).
+     * The protocol for the port forwarding rule. Can be <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, or <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>. A new rule is created with <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span> when not set; an existing rule keeps the controller's value, so adopting a <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>-only rule does not widen it to UDP (#544).
      */
     protocol?: pulumi.Input<string | undefined>;
     /**

@@ -164,7 +164,7 @@ export interface GetPolicyRule {
      */
     action: string;
     /**
-     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in `sources`. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
+     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in <span pulumi-lang-nodejs="`sources`" pulumi-lang-dotnet="`Sources`" pulumi-lang-go="`sources`" pulumi-lang-python="`sources`" pulumi-lang-yaml="`sources`" pulumi-lang-java="`sources`" pulumi-lang-hcl="`sources`">`sources`</span>. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
      */
     authorizedGroups: {[key: string]: string[]};
     /**
@@ -218,8 +218,8 @@ export interface GetPolicyRule {
 }
 
 export interface GetPolicyRuleDestinationResource {
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
 }
 
 export interface GetPolicyRulePortRange {
@@ -228,8 +228,8 @@ export interface GetPolicyRulePortRange {
 }
 
 export interface GetPolicyRuleSourceResource {
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
 }
 
 export interface GetPostureCheckGeoLocationCheck {
@@ -435,7 +435,7 @@ export interface PolicyRule {
      */
     action: string;
     /**
-     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in `sources`. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
+     * Map of source group IDs to a list of local users authorized for SSH access. Keys must be group IDs present in <span pulumi-lang-nodejs="`sources`" pulumi-lang-dotnet="`Sources`" pulumi-lang-go="`sources`" pulumi-lang-python="`sources`" pulumi-lang-yaml="`sources`" pulumi-lang-java="`sources`" pulumi-lang-hcl="`sources`">`sources`</span>. If not set, all local users are permitted. Only applicable when protocol is `netbird-ssh`.
      */
     authorizedGroups: {[key: string]: string[]};
     /**
@@ -489,8 +489,8 @@ export interface PolicyRule {
 }
 
 export interface PolicyRuleDestinationResource {
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
 }
 
 export interface PolicyRulePortRange {
@@ -499,8 +499,8 @@ export interface PolicyRulePortRange {
 }
 
 export interface PolicyRuleSourceResource {
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
 }
 
 export interface PostureCheckGeoLocationCheck {

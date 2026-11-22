@@ -66,7 +66,7 @@ export class DhcpScope extends pulumi.CustomResource {
      */
     declare public readonly dnsOverwriteForDynamicLease: pulumi.Output<boolean>;
     /**
-     * DNS server addresses for clients (option 6). Ignored when use_this_dns_server is true.
+     * DNS server addresses for clients (option 6). Ignored when<span pulumi-lang-nodejs=" useThisDnsServer " pulumi-lang-dotnet=" UseThisDnsServer " pulumi-lang-go=" useThisDnsServer " pulumi-lang-python=" use_this_dns_server " pulumi-lang-yaml=" useThisDnsServer " pulumi-lang-java=" useThisDnsServer " pulumi-lang-hcl=" use_this_dns_server "> useThisDnsServer </span>is true.
      */
     declare public readonly dnsServers: pulumi.Output<string[] | undefined>;
     /**
@@ -146,7 +146,7 @@ export class DhcpScope extends pulumi.CustomResource {
      */
     declare public readonly pingCheckTimeout: pulumi.Output<number>;
     /**
-     * Inline MAC-to-IP reservations. While this attribute has never been declared the scope leaves the server-side reservation list alone, so standalone technitium.DhcpReservedLease resources can manage it. Do not combine the two styles on the same scope — a declared list (even an empty one) overwrites the server's list on every scope update, and removing the attribute from config clears the list.
+     * Inline MAC-to-IP reservations. While this attribute has never been declared the scope leaves the server-side reservation list alone, so standalone<span pulumi-lang-nodejs=" technitium.DhcpReservedLease " pulumi-lang-dotnet=" technitium.DhcpReservedLease " pulumi-lang-go=" DhcpReservedLease " pulumi-lang-python=" DhcpReservedLease " pulumi-lang-yaml=" technitium.DhcpReservedLease " pulumi-lang-java=" technitium.DhcpReservedLease " pulumi-lang-hcl=" technitium_dhcp_reserved_lease "> technitium.DhcpReservedLease </span>resources can manage it. Do not combine the two styles on the same scope — a declared list (even an empty one) overwrites the server's list on every scope update, and removing the attribute from config clears the list.
      */
     declare public readonly reservedLeases: pulumi.Output<outputs.DhcpScopeReservedLease[] | undefined>;
     /**
@@ -317,7 +317,7 @@ export interface DhcpScopeState {
      */
     dnsOverwriteForDynamicLease?: pulumi.Input<boolean | undefined>;
     /**
-     * DNS server addresses for clients (option 6). Ignored when use_this_dns_server is true.
+     * DNS server addresses for clients (option 6). Ignored when<span pulumi-lang-nodejs=" useThisDnsServer " pulumi-lang-dotnet=" UseThisDnsServer " pulumi-lang-go=" useThisDnsServer " pulumi-lang-python=" use_this_dns_server " pulumi-lang-yaml=" useThisDnsServer " pulumi-lang-java=" useThisDnsServer " pulumi-lang-hcl=" use_this_dns_server "> useThisDnsServer </span>is true.
      */
     dnsServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -397,7 +397,7 @@ export interface DhcpScopeState {
      */
     pingCheckTimeout?: pulumi.Input<number | undefined>;
     /**
-     * Inline MAC-to-IP reservations. While this attribute has never been declared the scope leaves the server-side reservation list alone, so standalone technitium.DhcpReservedLease resources can manage it. Do not combine the two styles on the same scope — a declared list (even an empty one) overwrites the server's list on every scope update, and removing the attribute from config clears the list.
+     * Inline MAC-to-IP reservations. While this attribute has never been declared the scope leaves the server-side reservation list alone, so standalone<span pulumi-lang-nodejs=" technitium.DhcpReservedLease " pulumi-lang-dotnet=" technitium.DhcpReservedLease " pulumi-lang-go=" DhcpReservedLease " pulumi-lang-python=" DhcpReservedLease " pulumi-lang-yaml=" technitium.DhcpReservedLease " pulumi-lang-java=" technitium.DhcpReservedLease " pulumi-lang-hcl=" technitium_dhcp_reserved_lease "> technitium.DhcpReservedLease </span>resources can manage it. Do not combine the two styles on the same scope — a declared list (even an empty one) overwrites the server's list on every scope update, and removing the attribute from config clears the list.
      */
     reservedLeases?: pulumi.Input<pulumi.Input<inputs.DhcpScopeReservedLease>[] | undefined>;
     /**
@@ -467,7 +467,7 @@ export interface DhcpScopeArgs {
      */
     dnsOverwriteForDynamicLease?: pulumi.Input<boolean | undefined>;
     /**
-     * DNS server addresses for clients (option 6). Ignored when use_this_dns_server is true.
+     * DNS server addresses for clients (option 6). Ignored when<span pulumi-lang-nodejs=" useThisDnsServer " pulumi-lang-dotnet=" UseThisDnsServer " pulumi-lang-go=" useThisDnsServer " pulumi-lang-python=" use_this_dns_server " pulumi-lang-yaml=" useThisDnsServer " pulumi-lang-java=" useThisDnsServer " pulumi-lang-hcl=" use_this_dns_server "> useThisDnsServer </span>is true.
      */
     dnsServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -547,7 +547,7 @@ export interface DhcpScopeArgs {
      */
     pingCheckTimeout?: pulumi.Input<number | undefined>;
     /**
-     * Inline MAC-to-IP reservations. While this attribute has never been declared the scope leaves the server-side reservation list alone, so standalone technitium.DhcpReservedLease resources can manage it. Do not combine the two styles on the same scope — a declared list (even an empty one) overwrites the server's list on every scope update, and removing the attribute from config clears the list.
+     * Inline MAC-to-IP reservations. While this attribute has never been declared the scope leaves the server-side reservation list alone, so standalone<span pulumi-lang-nodejs=" technitium.DhcpReservedLease " pulumi-lang-dotnet=" technitium.DhcpReservedLease " pulumi-lang-go=" DhcpReservedLease " pulumi-lang-python=" DhcpReservedLease " pulumi-lang-yaml=" technitium.DhcpReservedLease " pulumi-lang-java=" technitium.DhcpReservedLease " pulumi-lang-hcl=" technitium_dhcp_reserved_lease "> technitium.DhcpReservedLease </span>resources can manage it. Do not combine the two styles on the same scope — a declared list (even an empty one) overwrites the server's list on every scope update, and removing the attribute from config clears the list.
      */
     reservedLeases?: pulumi.Input<pulumi.Input<inputs.DhcpScopeReservedLease>[] | undefined>;
     /**

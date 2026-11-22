@@ -26,7 +26,7 @@ export class Provider extends pulumi.ProviderResource {
     }
 
     /**
-     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
+     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the <span pulumi-lang-nodejs="`username`" pulumi-lang-dotnet="`Username`" pulumi-lang-go="`username`" pulumi-lang-python="`username`" pulumi-lang-yaml="`username`" pulumi-lang-java="`username`" pulumi-lang-hcl="`username`">`username`</span> and <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span> fields are ignored.
      */
     declare public readonly apiKey: pulumi.Output<string | undefined>;
     /**
@@ -34,7 +34,7 @@ export class Provider extends pulumi.ProviderResource {
      */
     declare public readonly apiUrl: pulumi.Output<string | undefined>;
     /**
-     * Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when `cloud_connector` is enabled.
+     * Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when <span pulumi-lang-nodejs="`cloudConnector`" pulumi-lang-dotnet="`CloudConnector`" pulumi-lang-go="`cloudConnector`" pulumi-lang-python="`cloud_connector`" pulumi-lang-yaml="`cloudConnector`" pulumi-lang-java="`cloudConnector`" pulumi-lang-hcl="`cloud_connector`">`cloudConnector`</span> is enabled.
      */
     declare public readonly hardwareId: pulumi.Output<string | undefined>;
     /**
@@ -42,7 +42,7 @@ export class Provider extends pulumi.ProviderResource {
      */
     declare public readonly password: pulumi.Output<string | undefined>;
     /**
-     * The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`
+     * The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>
      */
     declare public readonly site: pulumi.Output<string | undefined>;
     /**
@@ -92,11 +92,11 @@ export class Provider extends pulumi.ProviderResource {
  */
 export interface ProviderArgs {
     /**
-     * Skip verification of TLS certificates of API requests. You may need to set this to `true` if you are using your local API without setting up a signed certificate. Can be specified with the `UNIFI_INSECURE` environment variable. Ignored when `cloud_connector` is enabled.
+     * Skip verification of TLS certificates of API requests. You may need to set this to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> if you are using your local API without setting up a signed certificate. Can be specified with the `UNIFI_INSECURE` environment variable. Ignored when <span pulumi-lang-nodejs="`cloudConnector`" pulumi-lang-dotnet="`CloudConnector`" pulumi-lang-go="`cloudConnector`" pulumi-lang-python="`cloud_connector`" pulumi-lang-yaml="`cloudConnector`" pulumi-lang-java="`cloudConnector`" pulumi-lang-hcl="`cloud_connector`">`cloudConnector`</span> is enabled.
      */
     allowInsecure?: pulumi.Input<boolean | undefined>;
     /**
-     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
+     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the <span pulumi-lang-nodejs="`username`" pulumi-lang-dotnet="`Username`" pulumi-lang-go="`username`" pulumi-lang-python="`username`" pulumi-lang-yaml="`username`" pulumi-lang-java="`username`" pulumi-lang-hcl="`username`">`username`</span> and <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span> fields are ignored.
      */
     apiKey?: pulumi.Input<string | undefined>;
     /**
@@ -104,11 +104,11 @@ export interface ProviderArgs {
      */
     apiUrl?: pulumi.Input<string | undefined>;
     /**
-     * Use UniFi Cloud Connector API to access the controller. When enabled, requires `api_key` authentication and automatically routes requests through https://api.ui.com. Can be specified with the `UNIFI_CLOUD_CONNECTOR` environment variable. The `api_url` field is ignored when this is enabled.
+     * Use UniFi Cloud Connector API to access the controller. When enabled, requires <span pulumi-lang-nodejs="`apiKey`" pulumi-lang-dotnet="`ApiKey`" pulumi-lang-go="`apiKey`" pulumi-lang-python="`api_key`" pulumi-lang-yaml="`apiKey`" pulumi-lang-java="`apiKey`" pulumi-lang-hcl="`api_key`">`apiKey`</span> authentication and automatically routes requests through https://api.ui.com. Can be specified with the `UNIFI_CLOUD_CONNECTOR` environment variable. The <span pulumi-lang-nodejs="`apiUrl`" pulumi-lang-dotnet="`ApiUrl`" pulumi-lang-go="`apiUrl`" pulumi-lang-python="`api_url`" pulumi-lang-yaml="`apiUrl`" pulumi-lang-java="`apiUrl`" pulumi-lang-hcl="`api_url`">`apiUrl`</span> field is ignored when this is enabled.
      */
     cloudConnector?: pulumi.Input<boolean | undefined>;
     /**
-     * Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when `cloud_connector` is enabled.
+     * Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when <span pulumi-lang-nodejs="`cloudConnector`" pulumi-lang-dotnet="`CloudConnector`" pulumi-lang-go="`cloudConnector`" pulumi-lang-python="`cloud_connector`" pulumi-lang-yaml="`cloudConnector`" pulumi-lang-java="`cloudConnector`" pulumi-lang-hcl="`cloud_connector`">`cloudConnector`</span> is enabled.
      */
     hardwareId?: pulumi.Input<string | undefined>;
     /**
@@ -116,7 +116,7 @@ export interface ProviderArgs {
      */
     password?: pulumi.Input<string | undefined>;
     /**
-     * The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`
+     * The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>
      */
     site?: pulumi.Input<string | undefined>;
     /**

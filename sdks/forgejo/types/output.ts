@@ -6,21 +6,21 @@ import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
 export interface GetGpgKeyEmail {
-    email: string;
-    verified: boolean;
+    email?: string;
+    verified?: boolean;
 }
 
 export interface GetGpgKeySubkey {
-    canCertify: boolean;
-    canEncryptComms: boolean;
-    canEncryptStorage: boolean;
-    canSign: boolean;
-    createdAt: string;
-    expiresAt: string;
-    id: number;
-    keyId: string;
-    primaryKeyId: string;
-    publicKey: string;
+    canCertify?: boolean;
+    canEncryptComms?: boolean;
+    canEncryptStorage?: boolean;
+    canSign?: boolean;
+    createdAt?: string;
+    expiresAt?: string;
+    id?: number;
+    keyId?: string;
+    primaryKeyId?: string;
+    publicKey?: string;
 }
 
 export interface GetRepositoryExternalTracker {
@@ -80,21 +80,21 @@ export interface GetRepositoryPermissions {
 }
 
 export interface GpgKeyEmail {
-    email: string;
-    verified: boolean;
+    email?: string;
+    verified?: boolean;
 }
 
 export interface GpgKeySubkey {
-    canCertify: boolean;
-    canEncryptComms: boolean;
-    canEncryptStorage: boolean;
-    canSign: boolean;
-    createdAt: string;
-    expiresAt: string;
-    id: number;
-    keyId: string;
-    primaryKeyId: string;
-    publicKey: string;
+    canCertify?: boolean;
+    canEncryptComms?: boolean;
+    canEncryptStorage?: boolean;
+    canSign?: boolean;
+    createdAt?: string;
+    expiresAt?: string;
+    id?: number;
+    keyId?: string;
+    primaryKeyId?: string;
+    publicKey?: string;
 }
 
 export interface RepositoryExternalTracker {

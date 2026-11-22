@@ -16,7 +16,7 @@
     "pulumi": {
         "resource": true,
         "name": "terraform-provider",
-        "version": "0.14.0",
+        "version": "1.5.1",
         "parameterization": {
             "name": "tailscale",
             "version": "0.30.0",

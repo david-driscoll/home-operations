@@ -48,11 +48,11 @@ export class StageCaptcha extends pulumi.CustomResource {
      */
     declare public readonly apiUrl: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly errorOnInvalidScore: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly interactive: pulumi.Output<boolean | undefined>;
     /**
@@ -63,7 +63,7 @@ export class StageCaptcha extends pulumi.CustomResource {
     declare public readonly privateKey: pulumi.Output<string>;
     declare public readonly publicKey: pulumi.Output<string>;
     /**
-     * Defaults to `1`.
+     * Defaults to <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>.
      */
     declare public readonly scoreMaxThreshold: pulumi.Output<number | undefined>;
     /**
@@ -130,11 +130,11 @@ export interface StageCaptchaState {
      */
     apiUrl?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     errorOnInvalidScore?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     interactive?: pulumi.Input<boolean | undefined>;
     /**
@@ -145,7 +145,7 @@ export interface StageCaptchaState {
     privateKey?: pulumi.Input<string | undefined>;
     publicKey?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `1`.
+     * Defaults to <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>.
      */
     scoreMaxThreshold?: pulumi.Input<number | undefined>;
     /**
@@ -164,11 +164,11 @@ export interface StageCaptchaArgs {
      */
     apiUrl?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     errorOnInvalidScore?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     interactive?: pulumi.Input<boolean | undefined>;
     /**
@@ -179,7 +179,7 @@ export interface StageCaptchaArgs {
     privateKey: pulumi.Input<string>;
     publicKey: pulumi.Input<string>;
     /**
-     * Defaults to `1`.
+     * Defaults to <span pulumi-lang-nodejs="`1`" pulumi-lang-dotnet="`1`" pulumi-lang-go="`1`" pulumi-lang-python="`1`" pulumi-lang-yaml="`1`" pulumi-lang-java="`1`" pulumi-lang-hcl="`1`">`1`</span>.
      */
     scoreMaxThreshold?: pulumi.Input<number | undefined>;
     /**

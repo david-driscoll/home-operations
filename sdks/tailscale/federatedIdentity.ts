@@ -44,7 +44,7 @@ export class FederatedIdentity extends pulumi.CustomResource {
     }
 
     /**
-     * The value used when matching against the `aud` claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.
+     * The value used when matching against the <span pulumi-lang-nodejs="`aud`" pulumi-lang-dotnet="`Aud`" pulumi-lang-go="`aud`" pulumi-lang-python="`aud`" pulumi-lang-yaml="`aud`" pulumi-lang-java="`aud`" pulumi-lang-hcl="`aud`">`aud`</span> claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.
      */
     declare public readonly audience: pulumi.Output<string>;
     /**
@@ -68,11 +68,11 @@ export class FederatedIdentity extends pulumi.CustomResource {
      */
     declare public readonly scopes: pulumi.Output<string[]>;
     /**
-     * The pattern used when matching against the `sub` claim from an OIDC identity token. Patterns can include `*` characters to match against any character.
+     * The pattern used when matching against the <span pulumi-lang-nodejs="`sub`" pulumi-lang-dotnet="`Sub`" pulumi-lang-go="`sub`" pulumi-lang-python="`sub`" pulumi-lang-yaml="`sub`" pulumi-lang-java="`sub`" pulumi-lang-hcl="`sub`">`sub`</span> claim from an OIDC identity token. Patterns can include `*` characters to match against any character.
      */
     declare public readonly subject: pulumi.Output<string>;
     /**
-     * A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include "devices:core" or "auth_keys".
+     * A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include "devices:core" or <span pulumi-lang-nodejs=""authKeys"" pulumi-lang-dotnet=""AuthKeys"" pulumi-lang-go=""authKeys"" pulumi-lang-python=""auth_keys"" pulumi-lang-yaml=""authKeys"" pulumi-lang-java=""authKeys"" pulumi-lang-hcl=""auth_keys"">"authKeys"</span>.
      */
     declare public readonly tags: pulumi.Output<string[]>;
     /**
@@ -139,7 +139,7 @@ export class FederatedIdentity extends pulumi.CustomResource {
  */
 export interface FederatedIdentityState {
     /**
-     * The value used when matching against the `aud` claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.
+     * The value used when matching against the <span pulumi-lang-nodejs="`aud`" pulumi-lang-dotnet="`Aud`" pulumi-lang-go="`aud`" pulumi-lang-python="`aud`" pulumi-lang-yaml="`aud`" pulumi-lang-java="`aud`" pulumi-lang-hcl="`aud`">`aud`</span> claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.
      */
     audience?: pulumi.Input<string | undefined>;
     /**
@@ -163,11 +163,11 @@ export interface FederatedIdentityState {
      */
     scopes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * The pattern used when matching against the `sub` claim from an OIDC identity token. Patterns can include `*` characters to match against any character.
+     * The pattern used when matching against the <span pulumi-lang-nodejs="`sub`" pulumi-lang-dotnet="`Sub`" pulumi-lang-go="`sub`" pulumi-lang-python="`sub`" pulumi-lang-yaml="`sub`" pulumi-lang-java="`sub`" pulumi-lang-hcl="`sub`">`sub`</span> claim from an OIDC identity token. Patterns can include `*` characters to match against any character.
      */
     subject?: pulumi.Input<string | undefined>;
     /**
-     * A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include "devices:core" or "auth_keys".
+     * A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include "devices:core" or <span pulumi-lang-nodejs=""authKeys"" pulumi-lang-dotnet=""AuthKeys"" pulumi-lang-go=""authKeys"" pulumi-lang-python=""auth_keys"" pulumi-lang-yaml=""authKeys"" pulumi-lang-java=""authKeys"" pulumi-lang-hcl=""auth_keys"">"authKeys"</span>.
      */
     tags?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -185,7 +185,7 @@ export interface FederatedIdentityState {
  */
 export interface FederatedIdentityArgs {
     /**
-     * The value used when matching against the `aud` claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.
+     * The value used when matching against the <span pulumi-lang-nodejs="`aud`" pulumi-lang-dotnet="`Aud`" pulumi-lang-go="`aud`" pulumi-lang-python="`aud`" pulumi-lang-yaml="`aud`" pulumi-lang-java="`aud`" pulumi-lang-hcl="`aud`">`aud`</span> claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.
      */
     audience?: pulumi.Input<string | undefined>;
     /**
@@ -205,11 +205,11 @@ export interface FederatedIdentityArgs {
      */
     scopes: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * The pattern used when matching against the `sub` claim from an OIDC identity token. Patterns can include `*` characters to match against any character.
+     * The pattern used when matching against the <span pulumi-lang-nodejs="`sub`" pulumi-lang-dotnet="`Sub`" pulumi-lang-go="`sub`" pulumi-lang-python="`sub`" pulumi-lang-yaml="`sub`" pulumi-lang-java="`sub`" pulumi-lang-hcl="`sub`">`sub`</span> claim from an OIDC identity token. Patterns can include `*` characters to match against any character.
      */
     subject: pulumi.Input<string>;
     /**
-     * A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include "devices:core" or "auth_keys".
+     * A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include "devices:core" or <span pulumi-lang-nodejs=""authKeys"" pulumi-lang-dotnet=""AuthKeys"" pulumi-lang-go=""authKeys"" pulumi-lang-python=""auth_keys"" pulumi-lang-yaml=""authKeys"" pulumi-lang-java=""authKeys"" pulumi-lang-hcl=""auth_keys"">"authKeys"</span>.
      */
     tags?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }

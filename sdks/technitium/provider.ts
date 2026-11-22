@@ -28,7 +28,7 @@ export class Provider extends pulumi.ProviderResource {
     }
 
     /**
-     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either api_token or username/password must be configured.
+     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either<span pulumi-lang-nodejs=" apiToken " pulumi-lang-dotnet=" ApiToken " pulumi-lang-go=" apiToken " pulumi-lang-python=" api_token " pulumi-lang-yaml=" apiToken " pulumi-lang-java=" apiToken " pulumi-lang-hcl=" api_token "> apiToken </span>or username/password must be configured.
      */
     declare public readonly apiToken: pulumi.Output<string | undefined>;
     /**
@@ -56,7 +56,7 @@ export class Provider extends pulumi.ProviderResource {
      */
     declare public readonly tlsServerName: pulumi.Output<string | undefined>;
     /**
-     * Technitium username for session-token authentication, used when api_token is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
+     * Technitium username for session-token authentication, used when<span pulumi-lang-nodejs=" apiToken " pulumi-lang-dotnet=" ApiToken " pulumi-lang-go=" apiToken " pulumi-lang-python=" api_token " pulumi-lang-yaml=" apiToken " pulumi-lang-java=" apiToken " pulumi-lang-hcl=" api_token "> apiToken </span>is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
      */
     declare public readonly username: pulumi.Output<string | undefined>;
 
@@ -108,7 +108,7 @@ export class Provider extends pulumi.ProviderResource {
  */
 export interface ProviderArgs {
     /**
-     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either api_token or username/password must be configured.
+     * Technitium API token. Can also be set via TECHNITIUM_API_TOKEN env var. Either<span pulumi-lang-nodejs=" apiToken " pulumi-lang-dotnet=" ApiToken " pulumi-lang-go=" apiToken " pulumi-lang-python=" api_token " pulumi-lang-yaml=" apiToken " pulumi-lang-java=" apiToken " pulumi-lang-hcl=" api_token "> apiToken </span>or username/password must be configured.
      */
     apiToken?: pulumi.Input<string | undefined>;
     /**
@@ -132,7 +132,7 @@ export interface ProviderArgs {
      */
     serverUrl: pulumi.Input<string>;
     /**
-     * Skip TLS certificate verification. Generates STIG warning when stig_compliance is enabled (SC-8).
+     * Skip TLS certificate verification. Generates STIG warning when<span pulumi-lang-nodejs=" stigCompliance " pulumi-lang-dotnet=" StigCompliance " pulumi-lang-go=" stigCompliance " pulumi-lang-python=" stig_compliance " pulumi-lang-yaml=" stigCompliance " pulumi-lang-java=" stigCompliance " pulumi-lang-hcl=" stig_compliance "> stigCompliance </span>is enabled (SC-8).
      */
     skipTlsVerify?: pulumi.Input<boolean | undefined>;
     /**
@@ -148,7 +148,7 @@ export interface ProviderArgs {
      */
     tlsServerName?: pulumi.Input<string | undefined>;
     /**
-     * Technitium username for session-token authentication, used when api_token is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
+     * Technitium username for session-token authentication, used when<span pulumi-lang-nodejs=" apiToken " pulumi-lang-dotnet=" ApiToken " pulumi-lang-go=" apiToken " pulumi-lang-python=" api_token " pulumi-lang-yaml=" apiToken " pulumi-lang-java=" apiToken " pulumi-lang-hcl=" api_token "> apiToken </span>is not set (e.g. bootstrapping a fresh server). Can also be set via TECHNITIUM_USERNAME env var.
      */
     username?: pulumi.Input<string | undefined>;
 }

@@ -48,7 +48,7 @@ export class DeviceKey extends pulumi.CustomResource {
      */
     declare public readonly deviceId: pulumi.Output<string>;
     /**
-     * Determines whether or not the device's key will expire. Defaults to `false`.
+     * Determines whether or not the device's key will expire. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly keyExpiryDisabled: pulumi.Output<boolean>;
 
@@ -89,7 +89,7 @@ export interface DeviceKeyState {
      */
     deviceId?: pulumi.Input<string | undefined>;
     /**
-     * Determines whether or not the device's key will expire. Defaults to `false`.
+     * Determines whether or not the device's key will expire. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     keyExpiryDisabled?: pulumi.Input<boolean | undefined>;
 }
@@ -103,7 +103,7 @@ export interface DeviceKeyArgs {
      */
     deviceId: pulumi.Input<string>;
     /**
-     * Determines whether or not the device's key will expire. Defaults to `false`.
+     * Determines whether or not the device's key will expire. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     keyExpiryDisabled?: pulumi.Input<boolean | undefined>;
 }

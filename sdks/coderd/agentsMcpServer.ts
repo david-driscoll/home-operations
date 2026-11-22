@@ -48,11 +48,12 @@ export class AgentsMcpServer extends pulumi.CustomResource {
      */
     declare public readonly allowInPlanMode: pulumi.Output<boolean>;
     /**
-     * HTTP header used for API key authentication. It must be configured when creating a server with `auth_type = "api_key"` or changing its auth type to it.
+     * HTTP header used for API key authentication. It must be configured when creating a server with <span pulumi-lang-nodejs="`authType " pulumi-lang-dotnet="`AuthType " pulumi-lang-go="`authType " pulumi-lang-python="`auth_type " pulumi-lang-yaml="`authType " pulumi-lang-java="`authType " pulumi-lang-hcl="`auth_type ">`authType </span>= <span pulumi-lang-nodejs=""apiKey"" pulumi-lang-dotnet=""ApiKey"" pulumi-lang-go=""apiKey"" pulumi-lang-python=""api_key"" pulumi-lang-yaml=""apiKey"" pulumi-lang-java=""apiKey"" pulumi-lang-hcl=""api_key"">"apiKey"</span>` or changing its auth type to it.
      */
     declare public readonly apiKeyHeader: pulumi.Output<string>;
     /**
-     * API key value. Bump `api_key_value_wo_version` to rotate it.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * API key value. Bump <span pulumi-lang-nodejs="`apiKeyValueWoVersion`" pulumi-lang-dotnet="`ApiKeyValueWoVersion`" pulumi-lang-go="`apiKeyValueWoVersion`" pulumi-lang-python="`api_key_value_wo_version`" pulumi-lang-yaml="`apiKeyValueWoVersion`" pulumi-lang-java="`apiKeyValueWoVersion`" pulumi-lang-hcl="`api_key_value_wo_version`">`apiKeyValueWoVersion`</span> to rotate it.
      */
     declare public readonly apiKeyValueWo: pulumi.Output<string | undefined>;
     /**
@@ -60,11 +61,11 @@ export class AgentsMcpServer extends pulumi.CustomResource {
      */
     declare public readonly apiKeyValueWoVersion: pulumi.Output<number | undefined>;
     /**
-     * Authentication type. Valid values are `none`, `oauth2`, `api_key`, `custom_headers`, and `user_oidc`. Defaults to `none`. Changing this value invalidates users' stored OAuth tokens and clears secrets for the previous authentication type.
+     * Authentication type. Valid values are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`oauth2`" pulumi-lang-dotnet="`Oauth2`" pulumi-lang-go="`oauth2`" pulumi-lang-python="`oauth2`" pulumi-lang-yaml="`oauth2`" pulumi-lang-java="`oauth2`" pulumi-lang-hcl="`oauth2`">`oauth2`</span>, <span pulumi-lang-nodejs="`apiKey`" pulumi-lang-dotnet="`ApiKey`" pulumi-lang-go="`apiKey`" pulumi-lang-python="`api_key`" pulumi-lang-yaml="`apiKey`" pulumi-lang-java="`apiKey`" pulumi-lang-hcl="`api_key`">`apiKey`</span>, <span pulumi-lang-nodejs="`customHeaders`" pulumi-lang-dotnet="`CustomHeaders`" pulumi-lang-go="`customHeaders`" pulumi-lang-python="`custom_headers`" pulumi-lang-yaml="`customHeaders`" pulumi-lang-java="`customHeaders`" pulumi-lang-hcl="`custom_headers`">`customHeaders`</span>, and <span pulumi-lang-nodejs="`userOidc`" pulumi-lang-dotnet="`UserOidc`" pulumi-lang-go="`userOidc`" pulumi-lang-python="`user_oidc`" pulumi-lang-yaml="`userOidc`" pulumi-lang-java="`userOidc`" pulumi-lang-hcl="`user_oidc`">`userOidc`</span>. Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Changing this value invalidates users' stored OAuth tokens and clears secrets for the previous authentication type.
      */
     declare public readonly authType: pulumi.Output<string>;
     /**
-     * Availability policy. Valid values are `force_on`, `default_on`, and `default_off`. Defaults to `default_off`.
+     * Availability policy. Valid values are <span pulumi-lang-nodejs="`forceOn`" pulumi-lang-dotnet="`ForceOn`" pulumi-lang-go="`forceOn`" pulumi-lang-python="`force_on`" pulumi-lang-yaml="`forceOn`" pulumi-lang-java="`forceOn`" pulumi-lang-hcl="`force_on`">`forceOn`</span>, <span pulumi-lang-nodejs="`defaultOn`" pulumi-lang-dotnet="`DefaultOn`" pulumi-lang-go="`defaultOn`" pulumi-lang-python="`default_on`" pulumi-lang-yaml="`defaultOn`" pulumi-lang-java="`defaultOn`" pulumi-lang-hcl="`default_on`">`defaultOn`</span>, and <span pulumi-lang-nodejs="`defaultOff`" pulumi-lang-dotnet="`DefaultOff`" pulumi-lang-go="`defaultOff`" pulumi-lang-python="`default_off`" pulumi-lang-yaml="`defaultOff`" pulumi-lang-java="`defaultOff`" pulumi-lang-hcl="`default_off`">`defaultOff`</span>. Defaults to <span pulumi-lang-nodejs="`defaultOff`" pulumi-lang-dotnet="`DefaultOff`" pulumi-lang-go="`defaultOff`" pulumi-lang-python="`default_off`" pulumi-lang-yaml="`defaultOff`" pulumi-lang-java="`defaultOff`" pulumi-lang-hcl="`default_off`">`defaultOff`</span>.
      */
     declare public readonly availability: pulumi.Output<string>;
     /**
@@ -72,7 +73,8 @@ export class AgentsMcpServer extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly createdAt: pulumi.Output<number>;
     /**
-     * HTTP headers used for custom header authentication. Bump `custom_headers_wo_version` to replace them.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * HTTP headers used for custom header authentication. Bump <span pulumi-lang-nodejs="`customHeadersWoVersion`" pulumi-lang-dotnet="`CustomHeadersWoVersion`" pulumi-lang-go="`customHeadersWoVersion`" pulumi-lang-python="`custom_headers_wo_version`" pulumi-lang-yaml="`customHeadersWoVersion`" pulumi-lang-java="`customHeadersWoVersion`" pulumi-lang-hcl="`custom_headers_wo_version`">`customHeadersWoVersion`</span> to replace them.
      */
     declare public readonly customHeadersWo: pulumi.Output<{[key: string]: string} | undefined>;
     /**
@@ -108,11 +110,12 @@ export class AgentsMcpServer extends pulumi.CustomResource {
      */
     declare public readonly oauth2AuthUrl: pulumi.Output<string>;
     /**
-     * OAuth2 client ID. Leave this, `oauth2_auth_url`, and `oauth2_token_url` unset at creation to use OAuth discovery and dynamic client registration; switching an existing server back to discovery requires replacing the resource. Changing it invalidates users' stored OAuth tokens.
+     * OAuth2 client ID. Leave this, <span pulumi-lang-nodejs="`oauth2AuthUrl`" pulumi-lang-dotnet="`Oauth2AuthUrl`" pulumi-lang-go="`oauth2AuthUrl`" pulumi-lang-python="`oauth2_auth_url`" pulumi-lang-yaml="`oauth2AuthUrl`" pulumi-lang-java="`oauth2AuthUrl`" pulumi-lang-hcl="`oauth2_auth_url`">`oauth2AuthUrl`</span>, and <span pulumi-lang-nodejs="`oauth2TokenUrl`" pulumi-lang-dotnet="`Oauth2TokenUrl`" pulumi-lang-go="`oauth2TokenUrl`" pulumi-lang-python="`oauth2_token_url`" pulumi-lang-yaml="`oauth2TokenUrl`" pulumi-lang-java="`oauth2TokenUrl`" pulumi-lang-hcl="`oauth2_token_url`">`oauth2TokenUrl`</span> unset at creation to use OAuth discovery and dynamic client registration; switching an existing server back to discovery requires replacing the resource. Changing it invalidates users' stored OAuth tokens.
      */
     declare public readonly oauth2ClientId: pulumi.Output<string>;
     /**
-     * OAuth2 client secret. Bump `oauth2_client_secret_wo_version` to rotate it.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * OAuth2 client secret. Bump <span pulumi-lang-nodejs="`oauth2ClientSecretWoVersion`" pulumi-lang-dotnet="`Oauth2ClientSecretWoVersion`" pulumi-lang-go="`oauth2ClientSecretWoVersion`" pulumi-lang-python="`oauth2_client_secret_wo_version`" pulumi-lang-yaml="`oauth2ClientSecretWoVersion`" pulumi-lang-java="`oauth2ClientSecretWoVersion`" pulumi-lang-hcl="`oauth2_client_secret_wo_version`">`oauth2ClientSecretWoVersion`</span> to rotate it.
      */
     declare public readonly oauth2ClientSecretWo: pulumi.Output<string | undefined>;
     /**
@@ -148,7 +151,7 @@ export class AgentsMcpServer extends pulumi.CustomResource {
      */
     declare public readonly toolDenyLists: pulumi.Output<string[]>;
     /**
-     * MCP transport. Valid values are `streamable_http` and `sse`. Defaults to `streamable_http`.
+     * MCP transport. Valid values are <span pulumi-lang-nodejs="`streamableHttp`" pulumi-lang-dotnet="`StreamableHttp`" pulumi-lang-go="`streamableHttp`" pulumi-lang-python="`streamable_http`" pulumi-lang-yaml="`streamableHttp`" pulumi-lang-java="`streamableHttp`" pulumi-lang-hcl="`streamable_http`">`streamableHttp`</span> and <span pulumi-lang-nodejs="`sse`" pulumi-lang-dotnet="`Sse`" pulumi-lang-go="`sse`" pulumi-lang-python="`sse`" pulumi-lang-yaml="`sse`" pulumi-lang-java="`sse`" pulumi-lang-hcl="`sse`">`sse`</span>. Defaults to <span pulumi-lang-nodejs="`streamableHttp`" pulumi-lang-dotnet="`StreamableHttp`" pulumi-lang-go="`streamableHttp`" pulumi-lang-python="`streamable_http`" pulumi-lang-yaml="`streamableHttp`" pulumi-lang-java="`streamableHttp`" pulumi-lang-hcl="`streamable_http`">`streamableHttp`</span>.
      */
     declare public readonly transport: pulumi.Output<string>;
     /**
@@ -259,11 +262,12 @@ export interface AgentsMcpServerState {
      */
     allowInPlanMode?: pulumi.Input<boolean | undefined>;
     /**
-     * HTTP header used for API key authentication. It must be configured when creating a server with `auth_type = "api_key"` or changing its auth type to it.
+     * HTTP header used for API key authentication. It must be configured when creating a server with <span pulumi-lang-nodejs="`authType " pulumi-lang-dotnet="`AuthType " pulumi-lang-go="`authType " pulumi-lang-python="`auth_type " pulumi-lang-yaml="`authType " pulumi-lang-java="`authType " pulumi-lang-hcl="`auth_type ">`authType </span>= <span pulumi-lang-nodejs=""apiKey"" pulumi-lang-dotnet=""ApiKey"" pulumi-lang-go=""apiKey"" pulumi-lang-python=""api_key"" pulumi-lang-yaml=""apiKey"" pulumi-lang-java=""apiKey"" pulumi-lang-hcl=""api_key"">"apiKey"</span>` or changing its auth type to it.
      */
     apiKeyHeader?: pulumi.Input<string | undefined>;
     /**
-     * API key value. Bump `api_key_value_wo_version` to rotate it.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * API key value. Bump <span pulumi-lang-nodejs="`apiKeyValueWoVersion`" pulumi-lang-dotnet="`ApiKeyValueWoVersion`" pulumi-lang-go="`apiKeyValueWoVersion`" pulumi-lang-python="`api_key_value_wo_version`" pulumi-lang-yaml="`apiKeyValueWoVersion`" pulumi-lang-java="`apiKeyValueWoVersion`" pulumi-lang-hcl="`api_key_value_wo_version`">`apiKeyValueWoVersion`</span> to rotate it.
      */
     apiKeyValueWo?: pulumi.Input<string | undefined>;
     /**
@@ -271,11 +275,11 @@ export interface AgentsMcpServerState {
      */
     apiKeyValueWoVersion?: pulumi.Input<number | undefined>;
     /**
-     * Authentication type. Valid values are `none`, `oauth2`, `api_key`, `custom_headers`, and `user_oidc`. Defaults to `none`. Changing this value invalidates users' stored OAuth tokens and clears secrets for the previous authentication type.
+     * Authentication type. Valid values are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`oauth2`" pulumi-lang-dotnet="`Oauth2`" pulumi-lang-go="`oauth2`" pulumi-lang-python="`oauth2`" pulumi-lang-yaml="`oauth2`" pulumi-lang-java="`oauth2`" pulumi-lang-hcl="`oauth2`">`oauth2`</span>, <span pulumi-lang-nodejs="`apiKey`" pulumi-lang-dotnet="`ApiKey`" pulumi-lang-go="`apiKey`" pulumi-lang-python="`api_key`" pulumi-lang-yaml="`apiKey`" pulumi-lang-java="`apiKey`" pulumi-lang-hcl="`api_key`">`apiKey`</span>, <span pulumi-lang-nodejs="`customHeaders`" pulumi-lang-dotnet="`CustomHeaders`" pulumi-lang-go="`customHeaders`" pulumi-lang-python="`custom_headers`" pulumi-lang-yaml="`customHeaders`" pulumi-lang-java="`customHeaders`" pulumi-lang-hcl="`custom_headers`">`customHeaders`</span>, and <span pulumi-lang-nodejs="`userOidc`" pulumi-lang-dotnet="`UserOidc`" pulumi-lang-go="`userOidc`" pulumi-lang-python="`user_oidc`" pulumi-lang-yaml="`userOidc`" pulumi-lang-java="`userOidc`" pulumi-lang-hcl="`user_oidc`">`userOidc`</span>. Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Changing this value invalidates users' stored OAuth tokens and clears secrets for the previous authentication type.
      */
     authType?: pulumi.Input<string | undefined>;
     /**
-     * Availability policy. Valid values are `force_on`, `default_on`, and `default_off`. Defaults to `default_off`.
+     * Availability policy. Valid values are <span pulumi-lang-nodejs="`forceOn`" pulumi-lang-dotnet="`ForceOn`" pulumi-lang-go="`forceOn`" pulumi-lang-python="`force_on`" pulumi-lang-yaml="`forceOn`" pulumi-lang-java="`forceOn`" pulumi-lang-hcl="`force_on`">`forceOn`</span>, <span pulumi-lang-nodejs="`defaultOn`" pulumi-lang-dotnet="`DefaultOn`" pulumi-lang-go="`defaultOn`" pulumi-lang-python="`default_on`" pulumi-lang-yaml="`defaultOn`" pulumi-lang-java="`defaultOn`" pulumi-lang-hcl="`default_on`">`defaultOn`</span>, and <span pulumi-lang-nodejs="`defaultOff`" pulumi-lang-dotnet="`DefaultOff`" pulumi-lang-go="`defaultOff`" pulumi-lang-python="`default_off`" pulumi-lang-yaml="`defaultOff`" pulumi-lang-java="`defaultOff`" pulumi-lang-hcl="`default_off`">`defaultOff`</span>. Defaults to <span pulumi-lang-nodejs="`defaultOff`" pulumi-lang-dotnet="`DefaultOff`" pulumi-lang-go="`defaultOff`" pulumi-lang-python="`default_off`" pulumi-lang-yaml="`defaultOff`" pulumi-lang-java="`defaultOff`" pulumi-lang-hcl="`default_off`">`defaultOff`</span>.
      */
     availability?: pulumi.Input<string | undefined>;
     /**
@@ -283,7 +287,8 @@ export interface AgentsMcpServerState {
      */
     createdAt?: pulumi.Input<number | undefined>;
     /**
-     * HTTP headers used for custom header authentication. Bump `custom_headers_wo_version` to replace them.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * HTTP headers used for custom header authentication. Bump <span pulumi-lang-nodejs="`customHeadersWoVersion`" pulumi-lang-dotnet="`CustomHeadersWoVersion`" pulumi-lang-go="`customHeadersWoVersion`" pulumi-lang-python="`custom_headers_wo_version`" pulumi-lang-yaml="`customHeadersWoVersion`" pulumi-lang-java="`customHeadersWoVersion`" pulumi-lang-hcl="`custom_headers_wo_version`">`customHeadersWoVersion`</span> to replace them.
      */
     customHeadersWo?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
@@ -319,11 +324,12 @@ export interface AgentsMcpServerState {
      */
     oauth2AuthUrl?: pulumi.Input<string | undefined>;
     /**
-     * OAuth2 client ID. Leave this, `oauth2_auth_url`, and `oauth2_token_url` unset at creation to use OAuth discovery and dynamic client registration; switching an existing server back to discovery requires replacing the resource. Changing it invalidates users' stored OAuth tokens.
+     * OAuth2 client ID. Leave this, <span pulumi-lang-nodejs="`oauth2AuthUrl`" pulumi-lang-dotnet="`Oauth2AuthUrl`" pulumi-lang-go="`oauth2AuthUrl`" pulumi-lang-python="`oauth2_auth_url`" pulumi-lang-yaml="`oauth2AuthUrl`" pulumi-lang-java="`oauth2AuthUrl`" pulumi-lang-hcl="`oauth2_auth_url`">`oauth2AuthUrl`</span>, and <span pulumi-lang-nodejs="`oauth2TokenUrl`" pulumi-lang-dotnet="`Oauth2TokenUrl`" pulumi-lang-go="`oauth2TokenUrl`" pulumi-lang-python="`oauth2_token_url`" pulumi-lang-yaml="`oauth2TokenUrl`" pulumi-lang-java="`oauth2TokenUrl`" pulumi-lang-hcl="`oauth2_token_url`">`oauth2TokenUrl`</span> unset at creation to use OAuth discovery and dynamic client registration; switching an existing server back to discovery requires replacing the resource. Changing it invalidates users' stored OAuth tokens.
      */
     oauth2ClientId?: pulumi.Input<string | undefined>;
     /**
-     * OAuth2 client secret. Bump `oauth2_client_secret_wo_version` to rotate it.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * OAuth2 client secret. Bump <span pulumi-lang-nodejs="`oauth2ClientSecretWoVersion`" pulumi-lang-dotnet="`Oauth2ClientSecretWoVersion`" pulumi-lang-go="`oauth2ClientSecretWoVersion`" pulumi-lang-python="`oauth2_client_secret_wo_version`" pulumi-lang-yaml="`oauth2ClientSecretWoVersion`" pulumi-lang-java="`oauth2ClientSecretWoVersion`" pulumi-lang-hcl="`oauth2_client_secret_wo_version`">`oauth2ClientSecretWoVersion`</span> to rotate it.
      */
     oauth2ClientSecretWo?: pulumi.Input<string | undefined>;
     /**
@@ -359,7 +365,7 @@ export interface AgentsMcpServerState {
      */
     toolDenyLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * MCP transport. Valid values are `streamable_http` and `sse`. Defaults to `streamable_http`.
+     * MCP transport. Valid values are <span pulumi-lang-nodejs="`streamableHttp`" pulumi-lang-dotnet="`StreamableHttp`" pulumi-lang-go="`streamableHttp`" pulumi-lang-python="`streamable_http`" pulumi-lang-yaml="`streamableHttp`" pulumi-lang-java="`streamableHttp`" pulumi-lang-hcl="`streamable_http`">`streamableHttp`</span> and <span pulumi-lang-nodejs="`sse`" pulumi-lang-dotnet="`Sse`" pulumi-lang-go="`sse`" pulumi-lang-python="`sse`" pulumi-lang-yaml="`sse`" pulumi-lang-java="`sse`" pulumi-lang-hcl="`sse`">`sse`</span>. Defaults to <span pulumi-lang-nodejs="`streamableHttp`" pulumi-lang-dotnet="`StreamableHttp`" pulumi-lang-go="`streamableHttp`" pulumi-lang-python="`streamable_http`" pulumi-lang-yaml="`streamableHttp`" pulumi-lang-java="`streamableHttp`" pulumi-lang-hcl="`streamable_http`">`streamableHttp`</span>.
      */
     transport?: pulumi.Input<string | undefined>;
     /**
@@ -381,11 +387,12 @@ export interface AgentsMcpServerArgs {
      */
     allowInPlanMode?: pulumi.Input<boolean | undefined>;
     /**
-     * HTTP header used for API key authentication. It must be configured when creating a server with `auth_type = "api_key"` or changing its auth type to it.
+     * HTTP header used for API key authentication. It must be configured when creating a server with <span pulumi-lang-nodejs="`authType " pulumi-lang-dotnet="`AuthType " pulumi-lang-go="`authType " pulumi-lang-python="`auth_type " pulumi-lang-yaml="`authType " pulumi-lang-java="`authType " pulumi-lang-hcl="`auth_type ">`authType </span>= <span pulumi-lang-nodejs=""apiKey"" pulumi-lang-dotnet=""ApiKey"" pulumi-lang-go=""apiKey"" pulumi-lang-python=""api_key"" pulumi-lang-yaml=""apiKey"" pulumi-lang-java=""apiKey"" pulumi-lang-hcl=""api_key"">"apiKey"</span>` or changing its auth type to it.
      */
     apiKeyHeader?: pulumi.Input<string | undefined>;
     /**
-     * API key value. Bump `api_key_value_wo_version` to rotate it.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * API key value. Bump <span pulumi-lang-nodejs="`apiKeyValueWoVersion`" pulumi-lang-dotnet="`ApiKeyValueWoVersion`" pulumi-lang-go="`apiKeyValueWoVersion`" pulumi-lang-python="`api_key_value_wo_version`" pulumi-lang-yaml="`apiKeyValueWoVersion`" pulumi-lang-java="`apiKeyValueWoVersion`" pulumi-lang-hcl="`api_key_value_wo_version`">`apiKeyValueWoVersion`</span> to rotate it.
      */
     apiKeyValueWo?: pulumi.Input<string | undefined>;
     /**
@@ -393,15 +400,16 @@ export interface AgentsMcpServerArgs {
      */
     apiKeyValueWoVersion?: pulumi.Input<number | undefined>;
     /**
-     * Authentication type. Valid values are `none`, `oauth2`, `api_key`, `custom_headers`, and `user_oidc`. Defaults to `none`. Changing this value invalidates users' stored OAuth tokens and clears secrets for the previous authentication type.
+     * Authentication type. Valid values are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`oauth2`" pulumi-lang-dotnet="`Oauth2`" pulumi-lang-go="`oauth2`" pulumi-lang-python="`oauth2`" pulumi-lang-yaml="`oauth2`" pulumi-lang-java="`oauth2`" pulumi-lang-hcl="`oauth2`">`oauth2`</span>, <span pulumi-lang-nodejs="`apiKey`" pulumi-lang-dotnet="`ApiKey`" pulumi-lang-go="`apiKey`" pulumi-lang-python="`api_key`" pulumi-lang-yaml="`apiKey`" pulumi-lang-java="`apiKey`" pulumi-lang-hcl="`api_key`">`apiKey`</span>, <span pulumi-lang-nodejs="`customHeaders`" pulumi-lang-dotnet="`CustomHeaders`" pulumi-lang-go="`customHeaders`" pulumi-lang-python="`custom_headers`" pulumi-lang-yaml="`customHeaders`" pulumi-lang-java="`customHeaders`" pulumi-lang-hcl="`custom_headers`">`customHeaders`</span>, and <span pulumi-lang-nodejs="`userOidc`" pulumi-lang-dotnet="`UserOidc`" pulumi-lang-go="`userOidc`" pulumi-lang-python="`user_oidc`" pulumi-lang-yaml="`userOidc`" pulumi-lang-java="`userOidc`" pulumi-lang-hcl="`user_oidc`">`userOidc`</span>. Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Changing this value invalidates users' stored OAuth tokens and clears secrets for the previous authentication type.
      */
     authType?: pulumi.Input<string | undefined>;
     /**
-     * Availability policy. Valid values are `force_on`, `default_on`, and `default_off`. Defaults to `default_off`.
+     * Availability policy. Valid values are <span pulumi-lang-nodejs="`forceOn`" pulumi-lang-dotnet="`ForceOn`" pulumi-lang-go="`forceOn`" pulumi-lang-python="`force_on`" pulumi-lang-yaml="`forceOn`" pulumi-lang-java="`forceOn`" pulumi-lang-hcl="`force_on`">`forceOn`</span>, <span pulumi-lang-nodejs="`defaultOn`" pulumi-lang-dotnet="`DefaultOn`" pulumi-lang-go="`defaultOn`" pulumi-lang-python="`default_on`" pulumi-lang-yaml="`defaultOn`" pulumi-lang-java="`defaultOn`" pulumi-lang-hcl="`default_on`">`defaultOn`</span>, and <span pulumi-lang-nodejs="`defaultOff`" pulumi-lang-dotnet="`DefaultOff`" pulumi-lang-go="`defaultOff`" pulumi-lang-python="`default_off`" pulumi-lang-yaml="`defaultOff`" pulumi-lang-java="`defaultOff`" pulumi-lang-hcl="`default_off`">`defaultOff`</span>. Defaults to <span pulumi-lang-nodejs="`defaultOff`" pulumi-lang-dotnet="`DefaultOff`" pulumi-lang-go="`defaultOff`" pulumi-lang-python="`default_off`" pulumi-lang-yaml="`defaultOff`" pulumi-lang-java="`defaultOff`" pulumi-lang-hcl="`default_off`">`defaultOff`</span>.
      */
     availability?: pulumi.Input<string | undefined>;
     /**
-     * HTTP headers used for custom header authentication. Bump `custom_headers_wo_version` to replace them.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * HTTP headers used for custom header authentication. Bump <span pulumi-lang-nodejs="`customHeadersWoVersion`" pulumi-lang-dotnet="`CustomHeadersWoVersion`" pulumi-lang-go="`customHeadersWoVersion`" pulumi-lang-python="`custom_headers_wo_version`" pulumi-lang-yaml="`customHeadersWoVersion`" pulumi-lang-java="`customHeadersWoVersion`" pulumi-lang-hcl="`custom_headers_wo_version`">`customHeadersWoVersion`</span> to replace them.
      */
     customHeadersWo?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
@@ -437,11 +445,12 @@ export interface AgentsMcpServerArgs {
      */
     oauth2AuthUrl?: pulumi.Input<string | undefined>;
     /**
-     * OAuth2 client ID. Leave this, `oauth2_auth_url`, and `oauth2_token_url` unset at creation to use OAuth discovery and dynamic client registration; switching an existing server back to discovery requires replacing the resource. Changing it invalidates users' stored OAuth tokens.
+     * OAuth2 client ID. Leave this, <span pulumi-lang-nodejs="`oauth2AuthUrl`" pulumi-lang-dotnet="`Oauth2AuthUrl`" pulumi-lang-go="`oauth2AuthUrl`" pulumi-lang-python="`oauth2_auth_url`" pulumi-lang-yaml="`oauth2AuthUrl`" pulumi-lang-java="`oauth2AuthUrl`" pulumi-lang-hcl="`oauth2_auth_url`">`oauth2AuthUrl`</span>, and <span pulumi-lang-nodejs="`oauth2TokenUrl`" pulumi-lang-dotnet="`Oauth2TokenUrl`" pulumi-lang-go="`oauth2TokenUrl`" pulumi-lang-python="`oauth2_token_url`" pulumi-lang-yaml="`oauth2TokenUrl`" pulumi-lang-java="`oauth2TokenUrl`" pulumi-lang-hcl="`oauth2_token_url`">`oauth2TokenUrl`</span> unset at creation to use OAuth discovery and dynamic client registration; switching an existing server back to discovery requires replacing the resource. Changing it invalidates users' stored OAuth tokens.
      */
     oauth2ClientId?: pulumi.Input<string | undefined>;
     /**
-     * OAuth2 client secret. Bump `oauth2_client_secret_wo_version` to rotate it.
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * OAuth2 client secret. Bump <span pulumi-lang-nodejs="`oauth2ClientSecretWoVersion`" pulumi-lang-dotnet="`Oauth2ClientSecretWoVersion`" pulumi-lang-go="`oauth2ClientSecretWoVersion`" pulumi-lang-python="`oauth2_client_secret_wo_version`" pulumi-lang-yaml="`oauth2ClientSecretWoVersion`" pulumi-lang-java="`oauth2ClientSecretWoVersion`" pulumi-lang-hcl="`oauth2_client_secret_wo_version`">`oauth2ClientSecretWoVersion`</span> to rotate it.
      */
     oauth2ClientSecretWo?: pulumi.Input<string | undefined>;
     /**
@@ -477,7 +486,7 @@ export interface AgentsMcpServerArgs {
      */
     toolDenyLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * MCP transport. Valid values are `streamable_http` and `sse`. Defaults to `streamable_http`.
+     * MCP transport. Valid values are <span pulumi-lang-nodejs="`streamableHttp`" pulumi-lang-dotnet="`StreamableHttp`" pulumi-lang-go="`streamableHttp`" pulumi-lang-python="`streamable_http`" pulumi-lang-yaml="`streamableHttp`" pulumi-lang-java="`streamableHttp`" pulumi-lang-hcl="`streamable_http`">`streamableHttp`</span> and <span pulumi-lang-nodejs="`sse`" pulumi-lang-dotnet="`Sse`" pulumi-lang-go="`sse`" pulumi-lang-python="`sse`" pulumi-lang-yaml="`sse`" pulumi-lang-java="`sse`" pulumi-lang-hcl="`sse`">`sse`</span>. Defaults to <span pulumi-lang-nodejs="`streamableHttp`" pulumi-lang-dotnet="`StreamableHttp`" pulumi-lang-go="`streamableHttp`" pulumi-lang-python="`streamable_http`" pulumi-lang-yaml="`streamableHttp`" pulumi-lang-java="`streamableHttp`" pulumi-lang-hcl="`streamable_http`">`streamableHttp`</span>.
      */
     transport?: pulumi.Input<string | undefined>;
     /**

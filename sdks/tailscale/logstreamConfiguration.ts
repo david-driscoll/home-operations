@@ -44,11 +44,11 @@ export class LogstreamConfiguration extends pulumi.CustomResource {
     }
 
     /**
-     * The compression algorithm used for logs. Valid values are `none`, `zstd` or `gzip`. Defaults to `none`.
+     * The compression algorithm used for logs. Valid values are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`zstd`" pulumi-lang-dotnet="`Zstd`" pulumi-lang-go="`zstd`" pulumi-lang-python="`zstd`" pulumi-lang-yaml="`zstd`" pulumi-lang-java="`zstd`" pulumi-lang-hcl="`zstd`">`zstd`</span> or <span pulumi-lang-nodejs="`gzip`" pulumi-lang-dotnet="`Gzip`" pulumi-lang-go="`gzip`" pulumi-lang-python="`gzip`" pulumi-lang-yaml="`gzip`" pulumi-lang-java="`gzip`" pulumi-lang-hcl="`gzip`">`gzip`</span>. Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     declare public readonly compressionFormat: pulumi.Output<string>;
     /**
-     * The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `gcs`, `panther`, `splunk`, and `s3`.
+     * The type of SIEM platform to stream to. Valid values are <span pulumi-lang-nodejs="`axiom`" pulumi-lang-dotnet="`Axiom`" pulumi-lang-go="`axiom`" pulumi-lang-python="`axiom`" pulumi-lang-yaml="`axiom`" pulumi-lang-java="`axiom`" pulumi-lang-hcl="`axiom`">`axiom`</span>, <span pulumi-lang-nodejs="`cribl`" pulumi-lang-dotnet="`Cribl`" pulumi-lang-go="`cribl`" pulumi-lang-python="`cribl`" pulumi-lang-yaml="`cribl`" pulumi-lang-java="`cribl`" pulumi-lang-hcl="`cribl`">`cribl`</span>, <span pulumi-lang-nodejs="`datadog`" pulumi-lang-dotnet="`Datadog`" pulumi-lang-go="`datadog`" pulumi-lang-python="`datadog`" pulumi-lang-yaml="`datadog`" pulumi-lang-java="`datadog`" pulumi-lang-hcl="`datadog`">`datadog`</span>, <span pulumi-lang-nodejs="`elastic`" pulumi-lang-dotnet="`Elastic`" pulumi-lang-go="`elastic`" pulumi-lang-python="`elastic`" pulumi-lang-yaml="`elastic`" pulumi-lang-java="`elastic`" pulumi-lang-hcl="`elastic`">`elastic`</span>, <span pulumi-lang-nodejs="`gcs`" pulumi-lang-dotnet="`Gcs`" pulumi-lang-go="`gcs`" pulumi-lang-python="`gcs`" pulumi-lang-yaml="`gcs`" pulumi-lang-java="`gcs`" pulumi-lang-hcl="`gcs`">`gcs`</span>, <span pulumi-lang-nodejs="`panther`" pulumi-lang-dotnet="`Panther`" pulumi-lang-go="`panther`" pulumi-lang-python="`panther`" pulumi-lang-yaml="`panther`" pulumi-lang-java="`panther`" pulumi-lang-hcl="`panther`">`panther`</span>, <span pulumi-lang-nodejs="`splunk`" pulumi-lang-dotnet="`Splunk`" pulumi-lang-go="`splunk`" pulumi-lang-python="`splunk`" pulumi-lang-yaml="`splunk`" pulumi-lang-java="`splunk`" pulumi-lang-hcl="`splunk`">`splunk`</span>, and <span pulumi-lang-nodejs="`s3`" pulumi-lang-dotnet="`S3`" pulumi-lang-go="`s3`" pulumi-lang-python="`s3`" pulumi-lang-yaml="`s3`" pulumi-lang-java="`s3`" pulumi-lang-hcl="`s3`">`s3`</span>.
      */
     declare public readonly destinationType: pulumi.Output<string>;
     /**
@@ -68,23 +68,23 @@ export class LogstreamConfiguration extends pulumi.CustomResource {
      */
     declare public readonly gcsScopes: pulumi.Output<string[]>;
     /**
-     * The type of logs to stream. Valid values are `configuration` (configuration audit logs) and `network` (network flow logs).
+     * The type of logs to stream. Valid values are <span pulumi-lang-nodejs="`configuration`" pulumi-lang-dotnet="`Configuration`" pulumi-lang-go="`configuration`" pulumi-lang-python="`configuration`" pulumi-lang-yaml="`configuration`" pulumi-lang-java="`configuration`" pulumi-lang-hcl="`configuration`">`configuration`</span> (configuration audit logs) and <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> (network flow logs).
      */
     declare public readonly logType: pulumi.Output<string>;
     /**
-     * The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.
+     * The S3 access key ID. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is s3 and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'accesskey'.
      */
     declare public readonly s3AccessKeyId: pulumi.Output<string>;
     /**
-     * The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.
+     * The type of authentication to use for S3. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is <span pulumi-lang-nodejs="`s3`" pulumi-lang-dotnet="`S3`" pulumi-lang-go="`s3`" pulumi-lang-python="`s3`" pulumi-lang-yaml="`s3`" pulumi-lang-java="`s3`" pulumi-lang-hcl="`s3`">`s3`</span>. Valid values are <span pulumi-lang-nodejs="`accesskey`" pulumi-lang-dotnet="`Accesskey`" pulumi-lang-go="`accesskey`" pulumi-lang-python="`accesskey`" pulumi-lang-yaml="`accesskey`" pulumi-lang-java="`accesskey`" pulumi-lang-hcl="`accesskey`">`accesskey`</span> and <span pulumi-lang-nodejs="`rolearn`" pulumi-lang-dotnet="`Rolearn`" pulumi-lang-go="`rolearn`" pulumi-lang-python="`rolearn`" pulumi-lang-yaml="`rolearn`" pulumi-lang-java="`rolearn`" pulumi-lang-hcl="`rolearn`">`rolearn`</span>. Tailscale recommends using <span pulumi-lang-nodejs="`rolearn`" pulumi-lang-dotnet="`Rolearn`" pulumi-lang-go="`rolearn`" pulumi-lang-python="`rolearn`" pulumi-lang-yaml="`rolearn`" pulumi-lang-java="`rolearn`" pulumi-lang-hcl="`rolearn`">`rolearn`</span>.
      */
     declare public readonly s3AuthenticationType: pulumi.Output<string | undefined>;
     /**
-     * The S3 bucket name. Required if destination_type is 's3'.
+     * The S3 bucket name. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     declare public readonly s3Bucket: pulumi.Output<string>;
     /**
-     * The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale.AwsExternalId resource.
+     * The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'rolearn'. This can be obtained via the<span pulumi-lang-nodejs=" tailscale.AwsExternalId " pulumi-lang-dotnet=" tailscale.AwsExternalId " pulumi-lang-go=" AwsExternalId " pulumi-lang-python=" AwsExternalId " pulumi-lang-yaml=" tailscale.AwsExternalId " pulumi-lang-java=" tailscale.AwsExternalId " pulumi-lang-hcl=" tailscale_aws_external_id "> tailscale.AwsExternalId </span>resource.
      */
     declare public readonly s3ExternalId: pulumi.Output<string>;
     /**
@@ -92,19 +92,19 @@ export class LogstreamConfiguration extends pulumi.CustomResource {
      */
     declare public readonly s3KeyPrefix: pulumi.Output<string>;
     /**
-     * The region in which the S3 bucket is located. Required if destination_type is 's3'.
+     * The region in which the S3 bucket is located. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     declare public readonly s3Region: pulumi.Output<string>;
     /**
-     * ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.
+     * ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'rolearn'.
      */
     declare public readonly s3RoleArn: pulumi.Output<string>;
     /**
-     * The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.
+     * The S3 secret access key. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'accesskey'.
      */
     declare public readonly s3SecretAccessKey: pulumi.Output<string | undefined>;
     /**
-     * The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.
+     * The token/password with which log streams to this endpoint should be authenticated, required unless<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     declare public readonly token: pulumi.Output<string | undefined>;
     /**
@@ -112,11 +112,11 @@ export class LogstreamConfiguration extends pulumi.CustomResource {
      */
     declare public readonly uploadPeriodMinutes: pulumi.Output<number>;
     /**
-     * The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
+     * The URL to which log streams are being posted. If<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
      */
     declare public readonly url: pulumi.Output<string>;
     /**
-     * The username with which log streams to this endpoint are authenticated. Only required if destination_type is 'elastic', defaults to 'user' if not set.
+     * The username with which log streams to this endpoint are authenticated. Only required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 'elastic', defaults to 'user' if not set.
      */
     declare public readonly user: pulumi.Output<string>;
 
@@ -192,11 +192,11 @@ export class LogstreamConfiguration extends pulumi.CustomResource {
  */
 export interface LogstreamConfigurationState {
     /**
-     * The compression algorithm used for logs. Valid values are `none`, `zstd` or `gzip`. Defaults to `none`.
+     * The compression algorithm used for logs. Valid values are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`zstd`" pulumi-lang-dotnet="`Zstd`" pulumi-lang-go="`zstd`" pulumi-lang-python="`zstd`" pulumi-lang-yaml="`zstd`" pulumi-lang-java="`zstd`" pulumi-lang-hcl="`zstd`">`zstd`</span> or <span pulumi-lang-nodejs="`gzip`" pulumi-lang-dotnet="`Gzip`" pulumi-lang-go="`gzip`" pulumi-lang-python="`gzip`" pulumi-lang-yaml="`gzip`" pulumi-lang-java="`gzip`" pulumi-lang-hcl="`gzip`">`gzip`</span>. Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     compressionFormat?: pulumi.Input<string | undefined>;
     /**
-     * The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `gcs`, `panther`, `splunk`, and `s3`.
+     * The type of SIEM platform to stream to. Valid values are <span pulumi-lang-nodejs="`axiom`" pulumi-lang-dotnet="`Axiom`" pulumi-lang-go="`axiom`" pulumi-lang-python="`axiom`" pulumi-lang-yaml="`axiom`" pulumi-lang-java="`axiom`" pulumi-lang-hcl="`axiom`">`axiom`</span>, <span pulumi-lang-nodejs="`cribl`" pulumi-lang-dotnet="`Cribl`" pulumi-lang-go="`cribl`" pulumi-lang-python="`cribl`" pulumi-lang-yaml="`cribl`" pulumi-lang-java="`cribl`" pulumi-lang-hcl="`cribl`">`cribl`</span>, <span pulumi-lang-nodejs="`datadog`" pulumi-lang-dotnet="`Datadog`" pulumi-lang-go="`datadog`" pulumi-lang-python="`datadog`" pulumi-lang-yaml="`datadog`" pulumi-lang-java="`datadog`" pulumi-lang-hcl="`datadog`">`datadog`</span>, <span pulumi-lang-nodejs="`elastic`" pulumi-lang-dotnet="`Elastic`" pulumi-lang-go="`elastic`" pulumi-lang-python="`elastic`" pulumi-lang-yaml="`elastic`" pulumi-lang-java="`elastic`" pulumi-lang-hcl="`elastic`">`elastic`</span>, <span pulumi-lang-nodejs="`gcs`" pulumi-lang-dotnet="`Gcs`" pulumi-lang-go="`gcs`" pulumi-lang-python="`gcs`" pulumi-lang-yaml="`gcs`" pulumi-lang-java="`gcs`" pulumi-lang-hcl="`gcs`">`gcs`</span>, <span pulumi-lang-nodejs="`panther`" pulumi-lang-dotnet="`Panther`" pulumi-lang-go="`panther`" pulumi-lang-python="`panther`" pulumi-lang-yaml="`panther`" pulumi-lang-java="`panther`" pulumi-lang-hcl="`panther`">`panther`</span>, <span pulumi-lang-nodejs="`splunk`" pulumi-lang-dotnet="`Splunk`" pulumi-lang-go="`splunk`" pulumi-lang-python="`splunk`" pulumi-lang-yaml="`splunk`" pulumi-lang-java="`splunk`" pulumi-lang-hcl="`splunk`">`splunk`</span>, and <span pulumi-lang-nodejs="`s3`" pulumi-lang-dotnet="`S3`" pulumi-lang-go="`s3`" pulumi-lang-python="`s3`" pulumi-lang-yaml="`s3`" pulumi-lang-java="`s3`" pulumi-lang-hcl="`s3`">`s3`</span>.
      */
     destinationType?: pulumi.Input<string | undefined>;
     /**
@@ -216,23 +216,23 @@ export interface LogstreamConfigurationState {
      */
     gcsScopes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * The type of logs to stream. Valid values are `configuration` (configuration audit logs) and `network` (network flow logs).
+     * The type of logs to stream. Valid values are <span pulumi-lang-nodejs="`configuration`" pulumi-lang-dotnet="`Configuration`" pulumi-lang-go="`configuration`" pulumi-lang-python="`configuration`" pulumi-lang-yaml="`configuration`" pulumi-lang-java="`configuration`" pulumi-lang-hcl="`configuration`">`configuration`</span> (configuration audit logs) and <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> (network flow logs).
      */
     logType?: pulumi.Input<string | undefined>;
     /**
-     * The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.
+     * The S3 access key ID. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is s3 and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'accesskey'.
      */
     s3AccessKeyId?: pulumi.Input<string | undefined>;
     /**
-     * The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.
+     * The type of authentication to use for S3. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is <span pulumi-lang-nodejs="`s3`" pulumi-lang-dotnet="`S3`" pulumi-lang-go="`s3`" pulumi-lang-python="`s3`" pulumi-lang-yaml="`s3`" pulumi-lang-java="`s3`" pulumi-lang-hcl="`s3`">`s3`</span>. Valid values are <span pulumi-lang-nodejs="`accesskey`" pulumi-lang-dotnet="`Accesskey`" pulumi-lang-go="`accesskey`" pulumi-lang-python="`accesskey`" pulumi-lang-yaml="`accesskey`" pulumi-lang-java="`accesskey`" pulumi-lang-hcl="`accesskey`">`accesskey`</span> and <span pulumi-lang-nodejs="`rolearn`" pulumi-lang-dotnet="`Rolearn`" pulumi-lang-go="`rolearn`" pulumi-lang-python="`rolearn`" pulumi-lang-yaml="`rolearn`" pulumi-lang-java="`rolearn`" pulumi-lang-hcl="`rolearn`">`rolearn`</span>. Tailscale recommends using <span pulumi-lang-nodejs="`rolearn`" pulumi-lang-dotnet="`Rolearn`" pulumi-lang-go="`rolearn`" pulumi-lang-python="`rolearn`" pulumi-lang-yaml="`rolearn`" pulumi-lang-java="`rolearn`" pulumi-lang-hcl="`rolearn`">`rolearn`</span>.
      */
     s3AuthenticationType?: pulumi.Input<string | undefined>;
     /**
-     * The S3 bucket name. Required if destination_type is 's3'.
+     * The S3 bucket name. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     s3Bucket?: pulumi.Input<string | undefined>;
     /**
-     * The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale.AwsExternalId resource.
+     * The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'rolearn'. This can be obtained via the<span pulumi-lang-nodejs=" tailscale.AwsExternalId " pulumi-lang-dotnet=" tailscale.AwsExternalId " pulumi-lang-go=" AwsExternalId " pulumi-lang-python=" AwsExternalId " pulumi-lang-yaml=" tailscale.AwsExternalId " pulumi-lang-java=" tailscale.AwsExternalId " pulumi-lang-hcl=" tailscale_aws_external_id "> tailscale.AwsExternalId </span>resource.
      */
     s3ExternalId?: pulumi.Input<string | undefined>;
     /**
@@ -240,19 +240,19 @@ export interface LogstreamConfigurationState {
      */
     s3KeyPrefix?: pulumi.Input<string | undefined>;
     /**
-     * The region in which the S3 bucket is located. Required if destination_type is 's3'.
+     * The region in which the S3 bucket is located. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     s3Region?: pulumi.Input<string | undefined>;
     /**
-     * ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.
+     * ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'rolearn'.
      */
     s3RoleArn?: pulumi.Input<string | undefined>;
     /**
-     * The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.
+     * The S3 secret access key. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'accesskey'.
      */
     s3SecretAccessKey?: pulumi.Input<string | undefined>;
     /**
-     * The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.
+     * The token/password with which log streams to this endpoint should be authenticated, required unless<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     token?: pulumi.Input<string | undefined>;
     /**
@@ -260,11 +260,11 @@ export interface LogstreamConfigurationState {
      */
     uploadPeriodMinutes?: pulumi.Input<number | undefined>;
     /**
-     * The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
+     * The URL to which log streams are being posted. If<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
      */
     url?: pulumi.Input<string | undefined>;
     /**
-     * The username with which log streams to this endpoint are authenticated. Only required if destination_type is 'elastic', defaults to 'user' if not set.
+     * The username with which log streams to this endpoint are authenticated. Only required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 'elastic', defaults to 'user' if not set.
      */
     user?: pulumi.Input<string | undefined>;
 }
@@ -274,11 +274,11 @@ export interface LogstreamConfigurationState {
  */
 export interface LogstreamConfigurationArgs {
     /**
-     * The compression algorithm used for logs. Valid values are `none`, `zstd` or `gzip`. Defaults to `none`.
+     * The compression algorithm used for logs. Valid values are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`zstd`" pulumi-lang-dotnet="`Zstd`" pulumi-lang-go="`zstd`" pulumi-lang-python="`zstd`" pulumi-lang-yaml="`zstd`" pulumi-lang-java="`zstd`" pulumi-lang-hcl="`zstd`">`zstd`</span> or <span pulumi-lang-nodejs="`gzip`" pulumi-lang-dotnet="`Gzip`" pulumi-lang-go="`gzip`" pulumi-lang-python="`gzip`" pulumi-lang-yaml="`gzip`" pulumi-lang-java="`gzip`" pulumi-lang-hcl="`gzip`">`gzip`</span>. Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     compressionFormat?: pulumi.Input<string | undefined>;
     /**
-     * The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `gcs`, `panther`, `splunk`, and `s3`.
+     * The type of SIEM platform to stream to. Valid values are <span pulumi-lang-nodejs="`axiom`" pulumi-lang-dotnet="`Axiom`" pulumi-lang-go="`axiom`" pulumi-lang-python="`axiom`" pulumi-lang-yaml="`axiom`" pulumi-lang-java="`axiom`" pulumi-lang-hcl="`axiom`">`axiom`</span>, <span pulumi-lang-nodejs="`cribl`" pulumi-lang-dotnet="`Cribl`" pulumi-lang-go="`cribl`" pulumi-lang-python="`cribl`" pulumi-lang-yaml="`cribl`" pulumi-lang-java="`cribl`" pulumi-lang-hcl="`cribl`">`cribl`</span>, <span pulumi-lang-nodejs="`datadog`" pulumi-lang-dotnet="`Datadog`" pulumi-lang-go="`datadog`" pulumi-lang-python="`datadog`" pulumi-lang-yaml="`datadog`" pulumi-lang-java="`datadog`" pulumi-lang-hcl="`datadog`">`datadog`</span>, <span pulumi-lang-nodejs="`elastic`" pulumi-lang-dotnet="`Elastic`" pulumi-lang-go="`elastic`" pulumi-lang-python="`elastic`" pulumi-lang-yaml="`elastic`" pulumi-lang-java="`elastic`" pulumi-lang-hcl="`elastic`">`elastic`</span>, <span pulumi-lang-nodejs="`gcs`" pulumi-lang-dotnet="`Gcs`" pulumi-lang-go="`gcs`" pulumi-lang-python="`gcs`" pulumi-lang-yaml="`gcs`" pulumi-lang-java="`gcs`" pulumi-lang-hcl="`gcs`">`gcs`</span>, <span pulumi-lang-nodejs="`panther`" pulumi-lang-dotnet="`Panther`" pulumi-lang-go="`panther`" pulumi-lang-python="`panther`" pulumi-lang-yaml="`panther`" pulumi-lang-java="`panther`" pulumi-lang-hcl="`panther`">`panther`</span>, <span pulumi-lang-nodejs="`splunk`" pulumi-lang-dotnet="`Splunk`" pulumi-lang-go="`splunk`" pulumi-lang-python="`splunk`" pulumi-lang-yaml="`splunk`" pulumi-lang-java="`splunk`" pulumi-lang-hcl="`splunk`">`splunk`</span>, and <span pulumi-lang-nodejs="`s3`" pulumi-lang-dotnet="`S3`" pulumi-lang-go="`s3`" pulumi-lang-python="`s3`" pulumi-lang-yaml="`s3`" pulumi-lang-java="`s3`" pulumi-lang-hcl="`s3`">`s3`</span>.
      */
     destinationType: pulumi.Input<string>;
     /**
@@ -298,23 +298,23 @@ export interface LogstreamConfigurationArgs {
      */
     gcsScopes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * The type of logs to stream. Valid values are `configuration` (configuration audit logs) and `network` (network flow logs).
+     * The type of logs to stream. Valid values are <span pulumi-lang-nodejs="`configuration`" pulumi-lang-dotnet="`Configuration`" pulumi-lang-go="`configuration`" pulumi-lang-python="`configuration`" pulumi-lang-yaml="`configuration`" pulumi-lang-java="`configuration`" pulumi-lang-hcl="`configuration`">`configuration`</span> (configuration audit logs) and <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> (network flow logs).
      */
     logType: pulumi.Input<string>;
     /**
-     * The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.
+     * The S3 access key ID. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is s3 and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'accesskey'.
      */
     s3AccessKeyId?: pulumi.Input<string | undefined>;
     /**
-     * The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.
+     * The type of authentication to use for S3. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is <span pulumi-lang-nodejs="`s3`" pulumi-lang-dotnet="`S3`" pulumi-lang-go="`s3`" pulumi-lang-python="`s3`" pulumi-lang-yaml="`s3`" pulumi-lang-java="`s3`" pulumi-lang-hcl="`s3`">`s3`</span>. Valid values are <span pulumi-lang-nodejs="`accesskey`" pulumi-lang-dotnet="`Accesskey`" pulumi-lang-go="`accesskey`" pulumi-lang-python="`accesskey`" pulumi-lang-yaml="`accesskey`" pulumi-lang-java="`accesskey`" pulumi-lang-hcl="`accesskey`">`accesskey`</span> and <span pulumi-lang-nodejs="`rolearn`" pulumi-lang-dotnet="`Rolearn`" pulumi-lang-go="`rolearn`" pulumi-lang-python="`rolearn`" pulumi-lang-yaml="`rolearn`" pulumi-lang-java="`rolearn`" pulumi-lang-hcl="`rolearn`">`rolearn`</span>. Tailscale recommends using <span pulumi-lang-nodejs="`rolearn`" pulumi-lang-dotnet="`Rolearn`" pulumi-lang-go="`rolearn`" pulumi-lang-python="`rolearn`" pulumi-lang-yaml="`rolearn`" pulumi-lang-java="`rolearn`" pulumi-lang-hcl="`rolearn`">`rolearn`</span>.
      */
     s3AuthenticationType?: pulumi.Input<string | undefined>;
     /**
-     * The S3 bucket name. Required if destination_type is 's3'.
+     * The S3 bucket name. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     s3Bucket?: pulumi.Input<string | undefined>;
     /**
-     * The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale.AwsExternalId resource.
+     * The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'rolearn'. This can be obtained via the<span pulumi-lang-nodejs=" tailscale.AwsExternalId " pulumi-lang-dotnet=" tailscale.AwsExternalId " pulumi-lang-go=" AwsExternalId " pulumi-lang-python=" AwsExternalId " pulumi-lang-yaml=" tailscale.AwsExternalId " pulumi-lang-java=" tailscale.AwsExternalId " pulumi-lang-hcl=" tailscale_aws_external_id "> tailscale.AwsExternalId </span>resource.
      */
     s3ExternalId?: pulumi.Input<string | undefined>;
     /**
@@ -322,19 +322,19 @@ export interface LogstreamConfigurationArgs {
      */
     s3KeyPrefix?: pulumi.Input<string | undefined>;
     /**
-     * The region in which the S3 bucket is located. Required if destination_type is 's3'.
+     * The region in which the S3 bucket is located. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     s3Region?: pulumi.Input<string | undefined>;
     /**
-     * ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.
+     * ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'rolearn'.
      */
     s3RoleArn?: pulumi.Input<string | undefined>;
     /**
-     * The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.
+     * The S3 secret access key. Required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and<span pulumi-lang-nodejs=" s3AuthenticationType " pulumi-lang-dotnet=" S3AuthenticationType " pulumi-lang-go=" s3AuthenticationType " pulumi-lang-python=" s3_authentication_type " pulumi-lang-yaml=" s3AuthenticationType " pulumi-lang-java=" s3AuthenticationType " pulumi-lang-hcl=" s3_authentication_type "> s3AuthenticationType </span>is 'accesskey'.
      */
     s3SecretAccessKey?: pulumi.Input<string | undefined>;
     /**
-     * The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.
+     * The token/password with which log streams to this endpoint should be authenticated, required unless<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3'.
      */
     token?: pulumi.Input<string | undefined>;
     /**
@@ -342,11 +342,11 @@ export interface LogstreamConfigurationArgs {
      */
     uploadPeriodMinutes?: pulumi.Input<number | undefined>;
     /**
-     * The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
+     * The URL to which log streams are being posted. If<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
      */
     url?: pulumi.Input<string | undefined>;
     /**
-     * The username with which log streams to this endpoint are authenticated. Only required if destination_type is 'elastic', defaults to 'user' if not set.
+     * The username with which log streams to this endpoint are authenticated. Only required if<span pulumi-lang-nodejs=" destinationType " pulumi-lang-dotnet=" DestinationType " pulumi-lang-go=" destinationType " pulumi-lang-python=" destination_type " pulumi-lang-yaml=" destinationType " pulumi-lang-java=" destinationType " pulumi-lang-hcl=" destination_type "> destinationType </span>is 'elastic', defaults to 'user' if not set.
      */
     user?: pulumi.Input<string | undefined>;
 }

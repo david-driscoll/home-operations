@@ -52,7 +52,7 @@ export class EndpointsGoogleChromeConnector extends pulumi.CustomResource {
      */
     declare public readonly credentials: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean | undefined>;
     declare public readonly endpointsGoogleChromeConnectorId: pulumi.Output<string>;
@@ -105,7 +105,7 @@ export interface EndpointsGoogleChromeConnectorState {
      */
     credentials?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     endpointsGoogleChromeConnectorId?: pulumi.Input<string | undefined>;
@@ -121,7 +121,7 @@ export interface EndpointsGoogleChromeConnectorArgs {
      */
     credentials: pulumi.Input<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     endpointsGoogleChromeConnectorId?: pulumi.Input<string | undefined>;

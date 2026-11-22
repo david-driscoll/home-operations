@@ -74,11 +74,11 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly igmpProxy: pulumi.Output<outputs.WanIgmpProxy>;
     /**
-     * MTU of the WAN interface, in bytes. Only applied when `interface_mtu_enabled` is `true`. For PPPoE with RFC 4638 ("baby jumbo" frames), set `1508` so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
+     * MTU of the WAN interface, in bytes. Only applied when <span pulumi-lang-nodejs="`interfaceMtuEnabled`" pulumi-lang-dotnet="`InterfaceMtuEnabled`" pulumi-lang-go="`interfaceMtuEnabled`" pulumi-lang-python="`interface_mtu_enabled`" pulumi-lang-yaml="`interfaceMtuEnabled`" pulumi-lang-java="`interfaceMtuEnabled`" pulumi-lang-hcl="`interface_mtu_enabled`">`interfaceMtuEnabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>. For PPPoE with RFC 4638 ("baby jumbo" frames), set <span pulumi-lang-nodejs="`1508`" pulumi-lang-dotnet="`1508`" pulumi-lang-go="`1508`" pulumi-lang-python="`1508`" pulumi-lang-yaml="`1508`" pulumi-lang-java="`1508`" pulumi-lang-hcl="`1508`">`1508`</span> so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
      */
     declare public readonly interfaceMtu: pulumi.Output<number>;
     /**
-     * Whether `interface_mtu` overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
+     * Whether <span pulumi-lang-nodejs="`interfaceMtu`" pulumi-lang-dotnet="`InterfaceMtu`" pulumi-lang-go="`interfaceMtu`" pulumi-lang-python="`interface_mtu`" pulumi-lang-yaml="`interfaceMtu`" pulumi-lang-java="`interfaceMtu`" pulumi-lang-hcl="`interface_mtu`">`interfaceMtu`</span> overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
      */
     declare public readonly interfaceMtuEnabled: pulumi.Output<boolean>;
     /**
@@ -86,7 +86,7 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
-     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     declare public readonly ipv6SettingPreference: pulumi.Output<string>;
     /**
@@ -106,9 +106,13 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly networkgroup: pulumi.Output<string>;
     /**
-     * PPPoE password supplied by the ISP. Stored in state - use `password_wo` to avoid persisting the secret. Only meaningful when `type` is `pppoe`.
+     * PPPoE password supplied by the ISP. Stored in state - use <span pulumi-lang-nodejs="`passwordWo`" pulumi-lang-dotnet="`PasswordWo`" pulumi-lang-go="`passwordWo`" pulumi-lang-python="`password_wo`" pulumi-lang-yaml="`passwordWo`" pulumi-lang-java="`passwordWo`" pulumi-lang-hcl="`password_wo`">`passwordWo`</span> to avoid persisting the secret. Only meaningful when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>.
      */
     declare public readonly password: pulumi.Output<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource. Because nothing is stored, the provider cannot detect a password changed outside Terraform: such a change produces no diff. Mutually exclusive with <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>.
+     */
     declare public readonly passwordWo: pulumi.Output<string | undefined>;
     /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
@@ -119,11 +123,11 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly reportWanEvent: pulumi.Output<boolean>;
     /**
-     * Whether WAN settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether WAN settings are managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     declare public readonly settingPreference: pulumi.Output<string>;
     /**
-     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is `single_network`).
+     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is <span pulumi-lang-nodejs="`singleNetwork`" pulumi-lang-dotnet="`SingleNetwork`" pulumi-lang-go="`singleNetwork`" pulumi-lang-python="`single_network`" pulumi-lang-yaml="`singleNetwork`" pulumi-lang-java="`singleNetwork`" pulumi-lang-hcl="`single_network`">`singleNetwork`</span>).
      */
     declare public readonly singleNetworkLan: pulumi.Output<string>;
     /**
@@ -136,11 +140,11 @@ export class Wan extends pulumi.CustomResource {
     declare public readonly smartq: pulumi.Output<outputs.WanSmartq>;
     declare public readonly timeouts: pulumi.Output<outputs.WanTimeouts | undefined>;
     /**
-     * The WAN type (`dhcp`, `static`, `pppoe` or `disabled`). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to `dhcp` (#544).
+     * The WAN type (<span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span> or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to <span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span> (#544).
      */
     declare public readonly type: pulumi.Output<string>;
     /**
-     * The IPv6 WAN type. One of `dhcpv6`, `slaac`, `static`, or `disabled`. Note: the controller requires `slaac` when the IPv6 delegation type is `single_network` (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
+     * The IPv6 WAN type. One of <span pulumi-lang-nodejs="`dhcpv6`" pulumi-lang-dotnet="`Dhcpv6`" pulumi-lang-go="`dhcpv6`" pulumi-lang-python="`dhcpv6`" pulumi-lang-yaml="`dhcpv6`" pulumi-lang-java="`dhcpv6`" pulumi-lang-hcl="`dhcpv6`">`dhcpv6`</span>, <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>. Note: the controller requires <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span> when the IPv6 delegation type is <span pulumi-lang-nodejs="`singleNetwork`" pulumi-lang-dotnet="`SingleNetwork`" pulumi-lang-go="`singleNetwork`" pulumi-lang-python="`single_network`" pulumi-lang-yaml="`singleNetwork`" pulumi-lang-java="`singleNetwork`" pulumi-lang-hcl="`single_network`">`singleNetwork`</span> (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
      */
     declare public readonly typeV6: pulumi.Output<string>;
     /**
@@ -148,7 +152,7 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly upnp: pulumi.Output<outputs.WanUpnp>;
     /**
-     * PPPoE username supplied by the ISP. Only meaningful when `type` is `pppoe`. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
+     * PPPoE username supplied by the ISP. Only meaningful when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
      */
     declare public readonly username: pulumi.Output<string | undefined>;
     /**
@@ -270,11 +274,11 @@ export interface WanState {
      */
     igmpProxy?: pulumi.Input<inputs.WanIgmpProxy | undefined>;
     /**
-     * MTU of the WAN interface, in bytes. Only applied when `interface_mtu_enabled` is `true`. For PPPoE with RFC 4638 ("baby jumbo" frames), set `1508` so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
+     * MTU of the WAN interface, in bytes. Only applied when <span pulumi-lang-nodejs="`interfaceMtuEnabled`" pulumi-lang-dotnet="`InterfaceMtuEnabled`" pulumi-lang-go="`interfaceMtuEnabled`" pulumi-lang-python="`interface_mtu_enabled`" pulumi-lang-yaml="`interfaceMtuEnabled`" pulumi-lang-java="`interfaceMtuEnabled`" pulumi-lang-hcl="`interface_mtu_enabled`">`interfaceMtuEnabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>. For PPPoE with RFC 4638 ("baby jumbo" frames), set <span pulumi-lang-nodejs="`1508`" pulumi-lang-dotnet="`1508`" pulumi-lang-go="`1508`" pulumi-lang-python="`1508`" pulumi-lang-yaml="`1508`" pulumi-lang-java="`1508`" pulumi-lang-hcl="`1508`">`1508`</span> so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
      */
     interfaceMtu?: pulumi.Input<number | undefined>;
     /**
-     * Whether `interface_mtu` overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
+     * Whether <span pulumi-lang-nodejs="`interfaceMtu`" pulumi-lang-dotnet="`InterfaceMtu`" pulumi-lang-go="`interfaceMtu`" pulumi-lang-python="`interface_mtu`" pulumi-lang-yaml="`interfaceMtu`" pulumi-lang-java="`interfaceMtu`" pulumi-lang-hcl="`interface_mtu`">`interfaceMtu`</span> overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
      */
     interfaceMtuEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -282,7 +286,7 @@ export interface WanState {
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     ipv6SettingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -302,9 +306,13 @@ export interface WanState {
      */
     networkgroup?: pulumi.Input<string | undefined>;
     /**
-     * PPPoE password supplied by the ISP. Stored in state - use `password_wo` to avoid persisting the secret. Only meaningful when `type` is `pppoe`.
+     * PPPoE password supplied by the ISP. Stored in state - use <span pulumi-lang-nodejs="`passwordWo`" pulumi-lang-dotnet="`PasswordWo`" pulumi-lang-go="`passwordWo`" pulumi-lang-python="`password_wo`" pulumi-lang-yaml="`passwordWo`" pulumi-lang-java="`passwordWo`" pulumi-lang-hcl="`password_wo`">`passwordWo`</span> to avoid persisting the secret. Only meaningful when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>.
      */
     password?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource. Because nothing is stored, the provider cannot detect a password changed outside Terraform: such a change produces no diff. Mutually exclusive with <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>.
+     */
     passwordWo?: pulumi.Input<string | undefined>;
     /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
@@ -315,11 +323,11 @@ export interface WanState {
      */
     reportWanEvent?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether WAN settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether WAN settings are managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
-     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is `single_network`).
+     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is <span pulumi-lang-nodejs="`singleNetwork`" pulumi-lang-dotnet="`SingleNetwork`" pulumi-lang-go="`singleNetwork`" pulumi-lang-python="`single_network`" pulumi-lang-yaml="`singleNetwork`" pulumi-lang-java="`singleNetwork`" pulumi-lang-hcl="`single_network`">`singleNetwork`</span>).
      */
     singleNetworkLan?: pulumi.Input<string | undefined>;
     /**
@@ -332,11 +340,11 @@ export interface WanState {
     smartq?: pulumi.Input<inputs.WanSmartq | undefined>;
     timeouts?: pulumi.Input<inputs.WanTimeouts | undefined>;
     /**
-     * The WAN type (`dhcp`, `static`, `pppoe` or `disabled`). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to `dhcp` (#544).
+     * The WAN type (<span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span> or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to <span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span> (#544).
      */
     type?: pulumi.Input<string | undefined>;
     /**
-     * The IPv6 WAN type. One of `dhcpv6`, `slaac`, `static`, or `disabled`. Note: the controller requires `slaac` when the IPv6 delegation type is `single_network` (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
+     * The IPv6 WAN type. One of <span pulumi-lang-nodejs="`dhcpv6`" pulumi-lang-dotnet="`Dhcpv6`" pulumi-lang-go="`dhcpv6`" pulumi-lang-python="`dhcpv6`" pulumi-lang-yaml="`dhcpv6`" pulumi-lang-java="`dhcpv6`" pulumi-lang-hcl="`dhcpv6`">`dhcpv6`</span>, <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>. Note: the controller requires <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span> when the IPv6 delegation type is <span pulumi-lang-nodejs="`singleNetwork`" pulumi-lang-dotnet="`SingleNetwork`" pulumi-lang-go="`singleNetwork`" pulumi-lang-python="`single_network`" pulumi-lang-yaml="`singleNetwork`" pulumi-lang-java="`singleNetwork`" pulumi-lang-hcl="`single_network`">`singleNetwork`</span> (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
      */
     typeV6?: pulumi.Input<string | undefined>;
     /**
@@ -344,7 +352,7 @@ export interface WanState {
      */
     upnp?: pulumi.Input<inputs.WanUpnp | undefined>;
     /**
-     * PPPoE username supplied by the ISP. Only meaningful when `type` is `pppoe`. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
+     * PPPoE username supplied by the ISP. Only meaningful when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
      */
     username?: pulumi.Input<string | undefined>;
     /**
@@ -386,11 +394,11 @@ export interface WanArgs {
      */
     igmpProxy?: pulumi.Input<inputs.WanIgmpProxy | undefined>;
     /**
-     * MTU of the WAN interface, in bytes. Only applied when `interface_mtu_enabled` is `true`. For PPPoE with RFC 4638 ("baby jumbo" frames), set `1508` so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
+     * MTU of the WAN interface, in bytes. Only applied when <span pulumi-lang-nodejs="`interfaceMtuEnabled`" pulumi-lang-dotnet="`InterfaceMtuEnabled`" pulumi-lang-go="`interfaceMtuEnabled`" pulumi-lang-python="`interface_mtu_enabled`" pulumi-lang-yaml="`interfaceMtuEnabled`" pulumi-lang-java="`interfaceMtuEnabled`" pulumi-lang-hcl="`interface_mtu_enabled`">`interfaceMtuEnabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>. For PPPoE with RFC 4638 ("baby jumbo" frames), set <span pulumi-lang-nodejs="`1508`" pulumi-lang-dotnet="`1508`" pulumi-lang-go="`1508`" pulumi-lang-python="`1508`" pulumi-lang-yaml="`1508`" pulumi-lang-java="`1508`" pulumi-lang-hcl="`1508`">`1508`</span> so the PPPoE session itself can carry a 1500-byte MTU. Taken from the controller when not set.
      */
     interfaceMtu?: pulumi.Input<number | undefined>;
     /**
-     * Whether `interface_mtu` overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
+     * Whether <span pulumi-lang-nodejs="`interfaceMtu`" pulumi-lang-dotnet="`InterfaceMtu`" pulumi-lang-go="`interfaceMtu`" pulumi-lang-python="`interface_mtu`" pulumi-lang-yaml="`interfaceMtu`" pulumi-lang-java="`interfaceMtu`" pulumi-lang-hcl="`interface_mtu`">`interfaceMtu`</span> overrides the WAN interface's default MTU. Taken from the controller when not set, so an MTU configured in the UniFi UI is preserved by applies that do not manage it.
      */
     interfaceMtuEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -398,7 +406,7 @@ export interface WanArgs {
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     ipv6SettingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -418,9 +426,13 @@ export interface WanArgs {
      */
     networkgroup?: pulumi.Input<string | undefined>;
     /**
-     * PPPoE password supplied by the ISP. Stored in state - use `password_wo` to avoid persisting the secret. Only meaningful when `type` is `pppoe`.
+     * PPPoE password supplied by the ISP. Stored in state - use <span pulumi-lang-nodejs="`passwordWo`" pulumi-lang-dotnet="`PasswordWo`" pulumi-lang-go="`passwordWo`" pulumi-lang-python="`password_wo`" pulumi-lang-yaml="`passwordWo`" pulumi-lang-java="`passwordWo`" pulumi-lang-hcl="`password_wo`">`passwordWo`</span> to avoid persisting the secret. Only meaningful when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>.
      */
     password?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource. Because nothing is stored, the provider cannot detect a password changed outside Terraform: such a change produces no diff. Mutually exclusive with <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>.
+     */
     passwordWo?: pulumi.Input<string | undefined>;
     /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
@@ -431,11 +443,11 @@ export interface WanArgs {
      */
     reportWanEvent?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether WAN settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     * Whether WAN settings are managed automatically by the controller or manually. Can be one of <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
-     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is `single_network`).
+     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is <span pulumi-lang-nodejs="`singleNetwork`" pulumi-lang-dotnet="`SingleNetwork`" pulumi-lang-go="`singleNetwork`" pulumi-lang-python="`single_network`" pulumi-lang-yaml="`singleNetwork`" pulumi-lang-java="`singleNetwork`" pulumi-lang-hcl="`single_network`">`singleNetwork`</span>).
      */
     singleNetworkLan?: pulumi.Input<string | undefined>;
     /**
@@ -448,11 +460,11 @@ export interface WanArgs {
     smartq?: pulumi.Input<inputs.WanSmartq | undefined>;
     timeouts?: pulumi.Input<inputs.WanTimeouts | undefined>;
     /**
-     * The WAN type (`dhcp`, `static`, `pppoe` or `disabled`). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to `dhcp` (#544).
+     * The WAN type (<span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span> or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>). Taken from the controller when not set: an imported or adopted static or PPPoE uplink keeps its type instead of being planned back to <span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span> (#544).
      */
     type?: pulumi.Input<string | undefined>;
     /**
-     * The IPv6 WAN type. One of `dhcpv6`, `slaac`, `static`, or `disabled`. Note: the controller requires `slaac` when the IPv6 delegation type is `single_network` (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
+     * The IPv6 WAN type. One of <span pulumi-lang-nodejs="`dhcpv6`" pulumi-lang-dotnet="`Dhcpv6`" pulumi-lang-go="`dhcpv6`" pulumi-lang-python="`dhcpv6`" pulumi-lang-yaml="`dhcpv6`" pulumi-lang-java="`dhcpv6`" pulumi-lang-hcl="`dhcpv6`">`dhcpv6`</span>, <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span>, <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>. Note: the controller requires <span pulumi-lang-nodejs="`slaac`" pulumi-lang-dotnet="`Slaac`" pulumi-lang-go="`slaac`" pulumi-lang-python="`slaac`" pulumi-lang-yaml="`slaac`" pulumi-lang-java="`slaac`" pulumi-lang-hcl="`slaac`">`slaac`</span> when the IPv6 delegation type is <span pulumi-lang-nodejs="`singleNetwork`" pulumi-lang-dotnet="`SingleNetwork`" pulumi-lang-go="`singleNetwork`" pulumi-lang-python="`single_network`" pulumi-lang-yaml="`singleNetwork`" pulumi-lang-java="`singleNetwork`" pulumi-lang-hcl="`single_network`">`singleNetwork`</span> (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
      */
     typeV6?: pulumi.Input<string | undefined>;
     /**
@@ -460,7 +472,7 @@ export interface WanArgs {
      */
     upnp?: pulumi.Input<inputs.WanUpnp | undefined>;
     /**
-     * PPPoE username supplied by the ISP. Only meaningful when `type` is `pppoe`. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
+     * PPPoE username supplied by the ISP. Only meaningful when <span pulumi-lang-nodejs="`type`" pulumi-lang-dotnet="`Type`" pulumi-lang-go="`type`" pulumi-lang-python="`type`" pulumi-lang-yaml="`type`" pulumi-lang-java="`type`" pulumi-lang-hcl="`type`">`type`</span> is <span pulumi-lang-nodejs="`pppoe`" pulumi-lang-dotnet="`Pppoe`" pulumi-lang-go="`pppoe`" pulumi-lang-python="`pppoe`" pulumi-lang-yaml="`pppoe`" pulumi-lang-java="`pppoe`" pulumi-lang-hcl="`pppoe`">`pppoe`</span>. Left unset, the attribute is not written and whatever the controller holds is preserved, so an imported PPPoE uplink can be managed without touching its login.
      */
     username?: pulumi.Input<string | undefined>;
     /**

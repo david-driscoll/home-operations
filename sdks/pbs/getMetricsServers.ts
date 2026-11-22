@@ -16,10 +16,6 @@ export function getMetricsServers(opts?: pulumi.InvokeOptions): Promise<GetMetri
  * A collection of values returned by getMetricsServers.
  */
 export interface GetMetricsServersResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly servers: outputs.GetMetricsServersServer[];
 }
 export function getMetricsServersOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetMetricsServersResult> {

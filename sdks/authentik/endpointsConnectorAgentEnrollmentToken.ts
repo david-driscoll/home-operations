@@ -52,7 +52,7 @@ export class EndpointsConnectorAgentEnrollmentToken extends pulumi.CustomResourc
      */
     declare public /*out*/ readonly expiresIn: pulumi.Output<number>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly expiring: pulumi.Output<boolean | undefined>;
     /**
@@ -61,7 +61,7 @@ export class EndpointsConnectorAgentEnrollmentToken extends pulumi.CustomResourc
     declare public /*out*/ readonly key: pulumi.Output<string>;
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly retrieveKey: pulumi.Output<boolean | undefined>;
 
@@ -122,7 +122,7 @@ export interface EndpointsConnectorAgentEnrollmentTokenState {
      */
     expiresIn?: pulumi.Input<number | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     expiring?: pulumi.Input<boolean | undefined>;
     /**
@@ -131,7 +131,7 @@ export interface EndpointsConnectorAgentEnrollmentTokenState {
     key?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     retrieveKey?: pulumi.Input<boolean | undefined>;
 }
@@ -145,12 +145,12 @@ export interface EndpointsConnectorAgentEnrollmentTokenArgs {
     endpointsConnectorAgentEnrollmentTokenId?: pulumi.Input<string | undefined>;
     expires?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     expiring?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     retrieveKey?: pulumi.Input<boolean | undefined>;
 }

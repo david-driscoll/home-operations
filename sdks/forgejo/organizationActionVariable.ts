@@ -52,11 +52,11 @@ export class OrganizationActionVariable extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     declare public readonly organization: pulumi.Output<string>;
     /**
-     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     declare public readonly organizationId: pulumi.Output<number>;
 
@@ -105,11 +105,11 @@ export interface OrganizationActionVariableState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organization?: pulumi.Input<string | undefined>;
     /**
-     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organizationId?: pulumi.Input<number | undefined>;
 }
@@ -127,11 +127,11 @@ export interface OrganizationActionVariableArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organization?: pulumi.Input<string | undefined>;
     /**
-     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organizationId?: pulumi.Input<number | undefined>;
 }

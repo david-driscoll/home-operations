@@ -46,7 +46,7 @@ export class DevicePort extends pulumi.CustomResource {
     }
 
     /**
-     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
+     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when <span pulumi-lang-nodejs="`opMode`" pulumi-lang-dotnet="`OpMode`" pulumi-lang-go="`opMode`" pulumi-lang-python="`op_mode`" pulumi-lang-yaml="`opMode`" pulumi-lang-java="`opMode`" pulumi-lang-hcl="`op_mode`">`opMode`</span> is <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on this port.
      */
     declare public readonly aggregateMembers: pulumi.Output<number[] | undefined>;
     /**
@@ -114,11 +114,11 @@ export class DevicePort extends pulumi.CustomResource {
      */
     declare public readonly nativeNetworkconfId: pulumi.Output<string | undefined>;
     /**
-     * Operating mode of the port: `switch` (default), `mirror`, or `aggregate`. Set `aggregate` on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in `aggregate_members`. Only written when not `switch`, as gateway devices (UDM) reject op_mode on update.
+     * Operating mode of the port: <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span> (default), <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>, or <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span>. Set <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in <span pulumi-lang-nodejs="`aggregateMembers`" pulumi-lang-dotnet="`AggregateMembers`" pulumi-lang-go="`aggregateMembers`" pulumi-lang-python="`aggregate_members`" pulumi-lang-yaml="`aggregateMembers`" pulumi-lang-java="`aggregateMembers`" pulumi-lang-hcl="`aggregate_members`">`aggregateMembers`</span>. Only written when not <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>, as gateway devices (UDM) reject<span pulumi-lang-nodejs=" opMode " pulumi-lang-dotnet=" OpMode " pulumi-lang-go=" opMode " pulumi-lang-python=" op_mode " pulumi-lang-yaml=" opMode " pulumi-lang-java=" opMode " pulumi-lang-hcl=" op_mode "> opMode </span>on update.
      */
     declare public readonly opMode: pulumi.Output<string>;
     /**
-     * PoE mode of the port; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode of the port; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     declare public readonly poeMode: pulumi.Output<string | undefined>;
     /**
@@ -166,7 +166,7 @@ export class DevicePort extends pulumi.CustomResource {
      */
     declare public readonly stormctrl: pulumi.Output<outputs.DevicePortStormctrl>;
     /**
-     * STP edge port mode; valid values are `enabled`, `disabled`, and `auto`. An edge port (the UI's Edge port mode, `enabled`) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. `auto` detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
+     * STP edge port mode; valid values are <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>, <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, and <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. An edge port (the UI's Edge port mode, <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
      */
     declare public readonly stpEdgeState: pulumi.Output<string | undefined>;
     /**
@@ -174,7 +174,7 @@ export class DevicePort extends pulumi.CustomResource {
      */
     declare public readonly stpPortMode: pulumi.Output<boolean>;
     /**
-     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with `tagged_vlan_mgmt = "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
+     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with <span pulumi-lang-nodejs="`taggedVlanMgmt " pulumi-lang-dotnet="`TaggedVlanMgmt " pulumi-lang-go="`taggedVlanMgmt " pulumi-lang-python="`tagged_vlan_mgmt " pulumi-lang-yaml="`taggedVlanMgmt " pulumi-lang-java="`taggedVlanMgmt " pulumi-lang-hcl="`tagged_vlan_mgmt ">`taggedVlanMgmt </span>= "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
      */
     declare public readonly taggedNetworkconfIds: pulumi.Output<string[] | undefined>;
     /**
@@ -291,7 +291,7 @@ export class DevicePort extends pulumi.CustomResource {
  */
 export interface DevicePortState {
     /**
-     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
+     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when <span pulumi-lang-nodejs="`opMode`" pulumi-lang-dotnet="`OpMode`" pulumi-lang-go="`opMode`" pulumi-lang-python="`op_mode`" pulumi-lang-yaml="`opMode`" pulumi-lang-java="`opMode`" pulumi-lang-hcl="`op_mode`">`opMode`</span> is <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on this port.
      */
     aggregateMembers?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     /**
@@ -359,11 +359,11 @@ export interface DevicePortState {
      */
     nativeNetworkconfId?: pulumi.Input<string | undefined>;
     /**
-     * Operating mode of the port: `switch` (default), `mirror`, or `aggregate`. Set `aggregate` on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in `aggregate_members`. Only written when not `switch`, as gateway devices (UDM) reject op_mode on update.
+     * Operating mode of the port: <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span> (default), <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>, or <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span>. Set <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in <span pulumi-lang-nodejs="`aggregateMembers`" pulumi-lang-dotnet="`AggregateMembers`" pulumi-lang-go="`aggregateMembers`" pulumi-lang-python="`aggregate_members`" pulumi-lang-yaml="`aggregateMembers`" pulumi-lang-java="`aggregateMembers`" pulumi-lang-hcl="`aggregate_members`">`aggregateMembers`</span>. Only written when not <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>, as gateway devices (UDM) reject<span pulumi-lang-nodejs=" opMode " pulumi-lang-dotnet=" OpMode " pulumi-lang-go=" opMode " pulumi-lang-python=" op_mode " pulumi-lang-yaml=" opMode " pulumi-lang-java=" opMode " pulumi-lang-hcl=" op_mode "> opMode </span>on update.
      */
     opMode?: pulumi.Input<string | undefined>;
     /**
-     * PoE mode of the port; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode of the port; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
@@ -411,7 +411,7 @@ export interface DevicePortState {
      */
     stormctrl?: pulumi.Input<inputs.DevicePortStormctrl | undefined>;
     /**
-     * STP edge port mode; valid values are `enabled`, `disabled`, and `auto`. An edge port (the UI's Edge port mode, `enabled`) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. `auto` detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
+     * STP edge port mode; valid values are <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>, <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, and <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. An edge port (the UI's Edge port mode, <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
      */
     stpEdgeState?: pulumi.Input<string | undefined>;
     /**
@@ -419,7 +419,7 @@ export interface DevicePortState {
      */
     stpPortMode?: pulumi.Input<boolean | undefined>;
     /**
-     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with `tagged_vlan_mgmt = "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
+     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with <span pulumi-lang-nodejs="`taggedVlanMgmt " pulumi-lang-dotnet="`TaggedVlanMgmt " pulumi-lang-go="`taggedVlanMgmt " pulumi-lang-python="`tagged_vlan_mgmt " pulumi-lang-yaml="`taggedVlanMgmt " pulumi-lang-java="`taggedVlanMgmt " pulumi-lang-hcl="`tagged_vlan_mgmt ">`taggedVlanMgmt </span>= "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
      */
     taggedNetworkconfIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -438,7 +438,7 @@ export interface DevicePortState {
  */
 export interface DevicePortArgs {
     /**
-     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
+     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when <span pulumi-lang-nodejs="`opMode`" pulumi-lang-dotnet="`OpMode`" pulumi-lang-go="`opMode`" pulumi-lang-python="`op_mode`" pulumi-lang-yaml="`opMode`" pulumi-lang-java="`opMode`" pulumi-lang-hcl="`op_mode`">`opMode`</span> is <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on this port.
      */
     aggregateMembers?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     /**
@@ -506,11 +506,11 @@ export interface DevicePortArgs {
      */
     nativeNetworkconfId?: pulumi.Input<string | undefined>;
     /**
-     * Operating mode of the port: `switch` (default), `mirror`, or `aggregate`. Set `aggregate` on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in `aggregate_members`. Only written when not `switch`, as gateway devices (UDM) reject op_mode on update.
+     * Operating mode of the port: <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span> (default), <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>, or <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span>. Set <span pulumi-lang-nodejs="`aggregate`" pulumi-lang-dotnet="`Aggregate`" pulumi-lang-go="`aggregate`" pulumi-lang-python="`aggregate`" pulumi-lang-yaml="`aggregate`" pulumi-lang-java="`aggregate`" pulumi-lang-hcl="`aggregate`">`aggregate`</span> on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in <span pulumi-lang-nodejs="`aggregateMembers`" pulumi-lang-dotnet="`AggregateMembers`" pulumi-lang-go="`aggregateMembers`" pulumi-lang-python="`aggregate_members`" pulumi-lang-yaml="`aggregateMembers`" pulumi-lang-java="`aggregateMembers`" pulumi-lang-hcl="`aggregate_members`">`aggregateMembers`</span>. Only written when not <span pulumi-lang-nodejs="`switch`" pulumi-lang-dotnet="`Switch`" pulumi-lang-go="`switch`" pulumi-lang-python="`switch`" pulumi-lang-yaml="`switch`" pulumi-lang-java="`switch`" pulumi-lang-hcl="`switch`">`switch`</span>, as gateway devices (UDM) reject<span pulumi-lang-nodejs=" opMode " pulumi-lang-dotnet=" OpMode " pulumi-lang-go=" opMode " pulumi-lang-python=" op_mode " pulumi-lang-yaml=" opMode " pulumi-lang-java=" opMode " pulumi-lang-hcl=" op_mode "> opMode </span>on update.
      */
     opMode?: pulumi.Input<string | undefined>;
     /**
-     * PoE mode of the port; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode of the port; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
@@ -558,7 +558,7 @@ export interface DevicePortArgs {
      */
     stormctrl?: pulumi.Input<inputs.DevicePortStormctrl | undefined>;
     /**
-     * STP edge port mode; valid values are `enabled`, `disabled`, and `auto`. An edge port (the UI's Edge port mode, `enabled`) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. `auto` detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
+     * STP edge port mode; valid values are <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>, <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>, and <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. An edge port (the UI's Edge port mode, <span pulumi-lang-nodejs="`enabled`" pulumi-lang-dotnet="`Enabled`" pulumi-lang-go="`enabled`" pulumi-lang-python="`enabled`" pulumi-lang-yaml="`enabled`" pulumi-lang-java="`enabled`" pulumi-lang-hcl="`enabled`">`enabled`</span>) forwards as soon as its link comes up and sends no topology change when it goes up or down, for a port with an end device behind it. <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> detects edge ports (RSTP auto-edge). Only managed when set: leaving it unset keeps the port's current value.
      */
     stpEdgeState?: pulumi.Input<string | undefined>;
     /**
@@ -566,7 +566,7 @@ export interface DevicePortArgs {
      */
     stpPortMode?: pulumi.Input<boolean | undefined>;
     /**
-     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with `tagged_vlan_mgmt = "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
+     * Set of network IDs to tag on this port (the UI's Tagged VLAN Management "Custom" selection; pair with <span pulumi-lang-nodejs="`taggedVlanMgmt " pulumi-lang-dotnet="`TaggedVlanMgmt " pulumi-lang-go="`taggedVlanMgmt " pulumi-lang-python="`tagged_vlan_mgmt " pulumi-lang-yaml="`taggedVlanMgmt " pulumi-lang-java="`taggedVlanMgmt " pulumi-lang-hcl="`tagged_vlan_mgmt ">`taggedVlanMgmt </span>= "custom"`). Only managed when set: leaving it unset keeps the port's current tagged networks, and an empty set clears them.
      */
     taggedNetworkconfIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**

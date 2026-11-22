@@ -48,11 +48,11 @@ export class NotificationMatcher extends pulumi.CustomResource {
      */
     declare public readonly comment: pulumi.Output<string | undefined>;
     /**
-     * Disable this notification matcher. Defaults to `false`.
+     * Disable this notification matcher. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly disable: pulumi.Output<boolean>;
     /**
-     * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to `false`.
+     * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly invertMatch: pulumi.Output<boolean>;
     /**
@@ -64,11 +64,11 @@ export class NotificationMatcher extends pulumi.CustomResource {
      */
     declare public readonly matchFields: pulumi.Output<string[] | undefined>;
     /**
-     * List of severity levels to match. Valid values: `info`, `notice`, `warning`, `error`.
+     * List of severity levels to match. Valid values: <span pulumi-lang-nodejs="`info`" pulumi-lang-dotnet="`Info`" pulumi-lang-go="`info`" pulumi-lang-python="`info`" pulumi-lang-yaml="`info`" pulumi-lang-java="`info`" pulumi-lang-hcl="`info`">`info`</span>, <span pulumi-lang-nodejs="`notice`" pulumi-lang-dotnet="`Notice`" pulumi-lang-go="`notice`" pulumi-lang-python="`notice`" pulumi-lang-yaml="`notice`" pulumi-lang-java="`notice`" pulumi-lang-hcl="`notice`">`notice`</span>, <span pulumi-lang-nodejs="`warning`" pulumi-lang-dotnet="`Warning`" pulumi-lang-go="`warning`" pulumi-lang-python="`warning`" pulumi-lang-yaml="`warning`" pulumi-lang-java="`warning`" pulumi-lang-hcl="`warning`">`warning`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>.
      */
     declare public readonly matchSeverities: pulumi.Output<string[] | undefined>;
     /**
-     * Match mode: `all` (all conditions must match) or `any` (at least one condition must match). Defaults to `all`.
+     * Match mode: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> (all conditions must match) or <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> (at least one condition must match). Defaults to <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     declare public readonly mode: pulumi.Output<string>;
     /**
@@ -76,7 +76,7 @@ export class NotificationMatcher extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     declare public /*out*/ readonly origin: pulumi.Output<string>;
     /**
@@ -134,11 +134,11 @@ export interface NotificationMatcherState {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification matcher. Defaults to `false`.
+     * Disable this notification matcher. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to `false`.
+     * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     invertMatch?: pulumi.Input<boolean | undefined>;
     /**
@@ -150,11 +150,11 @@ export interface NotificationMatcherState {
      */
     matchFields?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * List of severity levels to match. Valid values: `info`, `notice`, `warning`, `error`.
+     * List of severity levels to match. Valid values: <span pulumi-lang-nodejs="`info`" pulumi-lang-dotnet="`Info`" pulumi-lang-go="`info`" pulumi-lang-python="`info`" pulumi-lang-yaml="`info`" pulumi-lang-java="`info`" pulumi-lang-hcl="`info`">`info`</span>, <span pulumi-lang-nodejs="`notice`" pulumi-lang-dotnet="`Notice`" pulumi-lang-go="`notice`" pulumi-lang-python="`notice`" pulumi-lang-yaml="`notice`" pulumi-lang-java="`notice`" pulumi-lang-hcl="`notice`">`notice`</span>, <span pulumi-lang-nodejs="`warning`" pulumi-lang-dotnet="`Warning`" pulumi-lang-go="`warning`" pulumi-lang-python="`warning`" pulumi-lang-yaml="`warning`" pulumi-lang-java="`warning`" pulumi-lang-hcl="`warning`">`warning`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>.
      */
     matchSeverities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Match mode: `all` (all conditions must match) or `any` (at least one condition must match). Defaults to `all`.
+     * Match mode: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> (all conditions must match) or <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> (at least one condition must match). Defaults to <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     /**
@@ -162,7 +162,7 @@ export interface NotificationMatcherState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     origin?: pulumi.Input<string | undefined>;
     /**
@@ -180,11 +180,11 @@ export interface NotificationMatcherArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification matcher. Defaults to `false`.
+     * Disable this notification matcher. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
-     * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to `false`.
+     * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     invertMatch?: pulumi.Input<boolean | undefined>;
     /**
@@ -196,11 +196,11 @@ export interface NotificationMatcherArgs {
      */
     matchFields?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * List of severity levels to match. Valid values: `info`, `notice`, `warning`, `error`.
+     * List of severity levels to match. Valid values: <span pulumi-lang-nodejs="`info`" pulumi-lang-dotnet="`Info`" pulumi-lang-go="`info`" pulumi-lang-python="`info`" pulumi-lang-yaml="`info`" pulumi-lang-java="`info`" pulumi-lang-hcl="`info`">`info`</span>, <span pulumi-lang-nodejs="`notice`" pulumi-lang-dotnet="`Notice`" pulumi-lang-go="`notice`" pulumi-lang-python="`notice`" pulumi-lang-yaml="`notice`" pulumi-lang-java="`notice`" pulumi-lang-hcl="`notice`">`notice`</span>, <span pulumi-lang-nodejs="`warning`" pulumi-lang-dotnet="`Warning`" pulumi-lang-go="`warning`" pulumi-lang-python="`warning`" pulumi-lang-yaml="`warning`" pulumi-lang-java="`warning`" pulumi-lang-hcl="`warning`">`warning`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>.
      */
     matchSeverities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Match mode: `all` (all conditions must match) or `any` (at least one condition must match). Defaults to `all`.
+     * Match mode: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> (all conditions must match) or <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> (at least one condition must match). Defaults to <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     /**

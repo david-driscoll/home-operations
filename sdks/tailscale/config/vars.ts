@@ -51,6 +51,9 @@ Object.defineProperty(exports, "identityToken", {
     enumerable: true,
 });
 
+/**
+ * The name of an environment variable to read the identity token from. This is useful when the identity token is provided by an external system (such as Terraform Cloud workload identity) in an environment variable you do not control. If the resolved value of the environment variable starts with 'file:' then it is treated as a path to a file on disk that contains identity token. Conflicts with 'identity_token'.
+ */
 export declare const identityTokenEnvironmentVariableName: string | undefined;
 Object.defineProperty(exports, "identityTokenEnvironmentVariableName", {
     get() {

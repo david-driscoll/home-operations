@@ -25,10 +25,6 @@ export interface GetVerifyJobsArgs {
  * A collection of values returned by getVerifyJobs.
  */
 export interface GetVerifyJobsResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly jobs: outputs.GetVerifyJobsJob[];
     readonly store?: string;
 }

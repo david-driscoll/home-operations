@@ -48,11 +48,11 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly dhcpDns: pulumi.Output<string[]>;
     /**
-     * Whether DHCP is enabled on this network. Default: `false`.
+     * Whether DHCP is enabled on this network. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly dhcpEnabled: pulumi.Output<boolean>;
     /**
-     * The DHCP lease time in seconds. Default: `86400` (24 hours).
+     * The DHCP lease time in seconds. Default: <span pulumi-lang-nodejs="`86400`" pulumi-lang-dotnet="`86400`" pulumi-lang-go="`86400`" pulumi-lang-python="`86400`" pulumi-lang-yaml="`86400`" pulumi-lang-java="`86400`" pulumi-lang-hcl="`86400`">`86400`</span> (24 hours).
      */
     declare public readonly dhcpLease: pulumi.Output<number>;
     /**
@@ -64,7 +64,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly dhcpStop: pulumi.Output<string>;
     /**
-     * Whether internet access is enabled on this network. Default: `true`.
+     * Whether internet access is enabled on this network. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly internetAccessEnabled: pulumi.Output<boolean>;
     /**
@@ -76,7 +76,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly networkGroup: pulumi.Output<string>;
     /**
-     * The purpose of the network. One of: `corporate`, `vlan-only`.
+     * The purpose of the network. One of: <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span>, `vlan-only`.
      */
     declare public readonly purpose: pulumi.Output<string>;
     /**
@@ -149,11 +149,11 @@ export interface NetworkState {
      */
     dhcpDns?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether DHCP is enabled on this network. Default: `false`.
+     * Whether DHCP is enabled on this network. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     dhcpEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The DHCP lease time in seconds. Default: `86400` (24 hours).
+     * The DHCP lease time in seconds. Default: <span pulumi-lang-nodejs="`86400`" pulumi-lang-dotnet="`86400`" pulumi-lang-go="`86400`" pulumi-lang-python="`86400`" pulumi-lang-yaml="`86400`" pulumi-lang-java="`86400`" pulumi-lang-hcl="`86400`">`86400`</span> (24 hours).
      */
     dhcpLease?: pulumi.Input<number | undefined>;
     /**
@@ -165,7 +165,7 @@ export interface NetworkState {
      */
     dhcpStop?: pulumi.Input<string | undefined>;
     /**
-     * Whether internet access is enabled on this network. Default: `true`.
+     * Whether internet access is enabled on this network. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     internetAccessEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -177,7 +177,7 @@ export interface NetworkState {
      */
     networkGroup?: pulumi.Input<string | undefined>;
     /**
-     * The purpose of the network. One of: `corporate`, `vlan-only`.
+     * The purpose of the network. One of: <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span>, `vlan-only`.
      */
     purpose?: pulumi.Input<string | undefined>;
     /**
@@ -203,11 +203,11 @@ export interface NetworkArgs {
      */
     dhcpDns?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether DHCP is enabled on this network. Default: `false`.
+     * Whether DHCP is enabled on this network. Default: <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     dhcpEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * The DHCP lease time in seconds. Default: `86400` (24 hours).
+     * The DHCP lease time in seconds. Default: <span pulumi-lang-nodejs="`86400`" pulumi-lang-dotnet="`86400`" pulumi-lang-go="`86400`" pulumi-lang-python="`86400`" pulumi-lang-yaml="`86400`" pulumi-lang-java="`86400`" pulumi-lang-hcl="`86400`">`86400`</span> (24 hours).
      */
     dhcpLease?: pulumi.Input<number | undefined>;
     /**
@@ -219,7 +219,7 @@ export interface NetworkArgs {
      */
     dhcpStop?: pulumi.Input<string | undefined>;
     /**
-     * Whether internet access is enabled on this network. Default: `true`.
+     * Whether internet access is enabled on this network. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     internetAccessEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -231,7 +231,7 @@ export interface NetworkArgs {
      */
     networkGroup?: pulumi.Input<string | undefined>;
     /**
-     * The purpose of the network. One of: `corporate`, `vlan-only`.
+     * The purpose of the network. One of: <span pulumi-lang-nodejs="`corporate`" pulumi-lang-dotnet="`Corporate`" pulumi-lang-go="`corporate`" pulumi-lang-python="`corporate`" pulumi-lang-yaml="`corporate`" pulumi-lang-java="`corporate`" pulumi-lang-hcl="`corporate`">`corporate`</span>, `vlan-only`.
      */
     purpose: pulumi.Input<string>;
     /**
