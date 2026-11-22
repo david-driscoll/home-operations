@@ -52,7 +52,7 @@ export class Scim extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * List of start_with string patterns for groups to sync
+     * List of<span pulumi-lang-nodejs=" startWith " pulumi-lang-dotnet=" StartWith " pulumi-lang-go=" startWith " pulumi-lang-python=" start_with " pulumi-lang-yaml=" startWith " pulumi-lang-java=" startWith " pulumi-lang-hcl=" start_with "> startWith </span>string patterns for groups to sync
      */
     declare public readonly groupPrefixes: pulumi.Output<string[]>;
     /**
@@ -68,7 +68,7 @@ export class Scim extends pulumi.CustomResource {
      */
     declare public readonly providerName: pulumi.Output<string>;
     /**
-     * List of start_with string patterns for groups which users to sync
+     * List of<span pulumi-lang-nodejs=" startWith " pulumi-lang-dotnet=" StartWith " pulumi-lang-go=" startWith " pulumi-lang-python=" start_with " pulumi-lang-yaml=" startWith " pulumi-lang-java=" startWith " pulumi-lang-hcl=" start_with "> startWith </span>string patterns for groups which users to sync
      */
     declare public readonly userGroupPrefixes: pulumi.Output<string[]>;
 
@@ -125,7 +125,7 @@ export interface ScimState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * List of start_with string patterns for groups to sync
+     * List of<span pulumi-lang-nodejs=" startWith " pulumi-lang-dotnet=" StartWith " pulumi-lang-go=" startWith " pulumi-lang-python=" start_with " pulumi-lang-yaml=" startWith " pulumi-lang-java=" startWith " pulumi-lang-hcl=" start_with "> startWith </span>string patterns for groups to sync
      */
     groupPrefixes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -141,7 +141,7 @@ export interface ScimState {
      */
     providerName?: pulumi.Input<string | undefined>;
     /**
-     * List of start_with string patterns for groups which users to sync
+     * List of<span pulumi-lang-nodejs=" startWith " pulumi-lang-dotnet=" StartWith " pulumi-lang-go=" startWith " pulumi-lang-python=" start_with " pulumi-lang-yaml=" startWith " pulumi-lang-java=" startWith " pulumi-lang-hcl=" start_with "> startWith </span>string patterns for groups which users to sync
      */
     userGroupPrefixes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
@@ -155,7 +155,7 @@ export interface ScimArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * List of start_with string patterns for groups to sync
+     * List of<span pulumi-lang-nodejs=" startWith " pulumi-lang-dotnet=" StartWith " pulumi-lang-go=" startWith " pulumi-lang-python=" start_with " pulumi-lang-yaml=" startWith " pulumi-lang-java=" startWith " pulumi-lang-hcl=" start_with "> startWith </span>string patterns for groups to sync
      */
     groupPrefixes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -167,7 +167,7 @@ export interface ScimArgs {
      */
     providerName: pulumi.Input<string>;
     /**
-     * List of start_with string patterns for groups which users to sync
+     * List of<span pulumi-lang-nodejs=" startWith " pulumi-lang-dotnet=" StartWith " pulumi-lang-go=" startWith " pulumi-lang-python=" start_with " pulumi-lang-yaml=" startWith " pulumi-lang-java=" startWith " pulumi-lang-hcl=" start_with "> startWith </span>string patterns for groups which users to sync
      */
     userGroupPrefixes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }

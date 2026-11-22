@@ -51,11 +51,11 @@ export class Agent extends pulumi.CustomResource {
     declare public readonly email: pulumi.Output<string | undefined>;
     declare public readonly expires: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly expiring: pulumi.Output<boolean | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly isActive: pulumi.Output<boolean | undefined>;
     /**
@@ -68,10 +68,10 @@ export class Agent extends pulumi.CustomResource {
     declare public readonly parent: pulumi.Output<number>;
     /**
      * Allowed values:
-     *   - `mirror`
-     *   - `copy`
-     *   - `none`
-     *      Mirroring/copying requires an explicit `parent`; without one the server falls back to `none`. Generated.
+     *   - <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>
+     *   - <span pulumi-lang-nodejs="`copy`" pulumi-lang-dotnet="`Copy`" pulumi-lang-go="`copy`" pulumi-lang-python="`copy`" pulumi-lang-yaml="`copy`" pulumi-lang-java="`copy`" pulumi-lang-hcl="`copy`">`copy`</span>
+     *   - <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>
+     *      Mirroring/copying requires an explicit <span pulumi-lang-nodejs="`parent`" pulumi-lang-dotnet="`Parent`" pulumi-lang-go="`parent`" pulumi-lang-python="`parent`" pulumi-lang-yaml="`parent`" pulumi-lang-java="`parent`" pulumi-lang-hcl="`parent`">`parent`</span>; without one the server falls back to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Generated.
      */
     declare public readonly policyBehavior: pulumi.Output<string>;
     /**
@@ -158,11 +158,11 @@ export interface AgentState {
     email?: pulumi.Input<string | undefined>;
     expires?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     expiring?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     isActive?: pulumi.Input<boolean | undefined>;
     /**
@@ -175,10 +175,10 @@ export interface AgentState {
     parent?: pulumi.Input<number | undefined>;
     /**
      * Allowed values:
-     *   - `mirror`
-     *   - `copy`
-     *   - `none`
-     *      Mirroring/copying requires an explicit `parent`; without one the server falls back to `none`. Generated.
+     *   - <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>
+     *   - <span pulumi-lang-nodejs="`copy`" pulumi-lang-dotnet="`Copy`" pulumi-lang-go="`copy`" pulumi-lang-python="`copy`" pulumi-lang-yaml="`copy`" pulumi-lang-java="`copy`" pulumi-lang-hcl="`copy`">`copy`</span>
+     *   - <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>
+     *      Mirroring/copying requires an explicit <span pulumi-lang-nodejs="`parent`" pulumi-lang-dotnet="`Parent`" pulumi-lang-go="`parent`" pulumi-lang-python="`parent`" pulumi-lang-yaml="`parent`" pulumi-lang-java="`parent`" pulumi-lang-hcl="`parent`">`parent`</span>; without one the server falls back to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Generated.
      */
     policyBehavior?: pulumi.Input<string | undefined>;
     /**
@@ -212,11 +212,11 @@ export interface AgentArgs {
     email?: pulumi.Input<string | undefined>;
     expires?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     expiring?: pulumi.Input<boolean | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     isActive?: pulumi.Input<boolean | undefined>;
     /**
@@ -229,10 +229,10 @@ export interface AgentArgs {
     parent?: pulumi.Input<number | undefined>;
     /**
      * Allowed values:
-     *   - `mirror`
-     *   - `copy`
-     *   - `none`
-     *      Mirroring/copying requires an explicit `parent`; without one the server falls back to `none`. Generated.
+     *   - <span pulumi-lang-nodejs="`mirror`" pulumi-lang-dotnet="`Mirror`" pulumi-lang-go="`mirror`" pulumi-lang-python="`mirror`" pulumi-lang-yaml="`mirror`" pulumi-lang-java="`mirror`" pulumi-lang-hcl="`mirror`">`mirror`</span>
+     *   - <span pulumi-lang-nodejs="`copy`" pulumi-lang-dotnet="`Copy`" pulumi-lang-go="`copy`" pulumi-lang-python="`copy`" pulumi-lang-yaml="`copy`" pulumi-lang-java="`copy`" pulumi-lang-hcl="`copy`">`copy`</span>
+     *   - <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>
+     *      Mirroring/copying requires an explicit <span pulumi-lang-nodejs="`parent`" pulumi-lang-dotnet="`Parent`" pulumi-lang-go="`parent`" pulumi-lang-python="`parent`" pulumi-lang-yaml="`parent`" pulumi-lang-java="`parent`" pulumi-lang-hcl="`parent`">`parent`</span>; without one the server falls back to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Generated.
      */
     policyBehavior?: pulumi.Input<string | undefined>;
     username: pulumi.Input<string>;

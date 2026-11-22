@@ -46,7 +46,7 @@ export class DnsRecord extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the DNS record is enabled. Defaults to `true` for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
+     * Whether the DNS record is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -71,7 +71,7 @@ export class DnsRecord extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.DnsRecordTimeouts | undefined>;
     /**
-     * The TTL of the DNS record, as a Go duration string (e.g. `1h`, `300s`). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
+     * The TTL of the DNS record, as a Go duration string (e.g. <span pulumi-lang-nodejs="`1h`" pulumi-lang-dotnet="`1h`" pulumi-lang-go="`1h`" pulumi-lang-python="`1h`" pulumi-lang-yaml="`1h`" pulumi-lang-java="`1h`" pulumi-lang-hcl="`1h`">`1h`</span>, <span pulumi-lang-nodejs="`300s`" pulumi-lang-dotnet="`300s`" pulumi-lang-go="`300s`" pulumi-lang-python="`300s`" pulumi-lang-yaml="`300s`" pulumi-lang-java="`300s`" pulumi-lang-hcl="`300s`">`300s`</span>). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
      */
     declare public readonly ttl: pulumi.Output<string | undefined>;
     /**
@@ -135,7 +135,7 @@ export class DnsRecord extends pulumi.CustomResource {
  */
 export interface DnsRecordState {
     /**
-     * Whether the DNS record is enabled. Defaults to `true` for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
+     * Whether the DNS record is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -160,7 +160,7 @@ export interface DnsRecordState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.DnsRecordTimeouts | undefined>;
     /**
-     * The TTL of the DNS record, as a Go duration string (e.g. `1h`, `300s`). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
+     * The TTL of the DNS record, as a Go duration string (e.g. <span pulumi-lang-nodejs="`1h`" pulumi-lang-dotnet="`1h`" pulumi-lang-go="`1h`" pulumi-lang-python="`1h`" pulumi-lang-yaml="`1h`" pulumi-lang-java="`1h`" pulumi-lang-hcl="`1h`">`1h`</span>, <span pulumi-lang-nodejs="`300s`" pulumi-lang-dotnet="`300s`" pulumi-lang-go="`300s`" pulumi-lang-python="`300s`" pulumi-lang-yaml="`300s`" pulumi-lang-java="`300s`" pulumi-lang-hcl="`300s`">`300s`</span>). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
      */
     ttl?: pulumi.Input<string | undefined>;
     /**
@@ -178,7 +178,7 @@ export interface DnsRecordState {
  */
 export interface DnsRecordArgs {
     /**
-     * Whether the DNS record is enabled. Defaults to `true` for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
+     * Whether the DNS record is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new record; an existing record keeps the controller's value when this is not set, so adopting a disabled record does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -203,7 +203,7 @@ export interface DnsRecordArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.DnsRecordTimeouts | undefined>;
     /**
-     * The TTL of the DNS record, as a Go duration string (e.g. `1h`, `300s`). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
+     * The TTL of the DNS record, as a Go duration string (e.g. <span pulumi-lang-nodejs="`1h`" pulumi-lang-dotnet="`1h`" pulumi-lang-go="`1h`" pulumi-lang-python="`1h`" pulumi-lang-yaml="`1h`" pulumi-lang-java="`1h`" pulumi-lang-hcl="`1h`">`1h`</span>, <span pulumi-lang-nodejs="`300s`" pulumi-lang-dotnet="`300s`" pulumi-lang-go="`300s`" pulumi-lang-python="`300s`" pulumi-lang-yaml="`300s`" pulumi-lang-java="`300s`" pulumi-lang-hcl="`300s`">`300s`</span>). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
      */
     ttl?: pulumi.Input<string | undefined>;
     /**

@@ -45,27 +45,27 @@ export class StageMutualTls extends pulumi.CustomResource {
 
     /**
      * Allowed values:
-     *   - `subject`
-     *   - `common_name`
-     *   - `email`
-     *      Defaults to `email`.
+     *   - <span pulumi-lang-nodejs="`subject`" pulumi-lang-dotnet="`Subject`" pulumi-lang-go="`subject`" pulumi-lang-python="`subject`" pulumi-lang-yaml="`subject`" pulumi-lang-java="`subject`" pulumi-lang-hcl="`subject`">`subject`</span>
+     *   - <span pulumi-lang-nodejs="`commonName`" pulumi-lang-dotnet="`CommonName`" pulumi-lang-go="`commonName`" pulumi-lang-python="`common_name`" pulumi-lang-yaml="`commonName`" pulumi-lang-java="`commonName`" pulumi-lang-hcl="`common_name`">`commonName`</span>
+     *   - <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>.
      */
     declare public readonly certAttribute: pulumi.Output<string | undefined>;
     declare public readonly certificateAuthorities: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `optional`
-     *   - `required`
-     *      Defaults to `optional`.
+     *   - <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>.
      */
     declare public readonly mode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
     declare public readonly stageMutualTlsId: pulumi.Output<string>;
     /**
      * Allowed values:
-     *   - `username`
-     *   - `email`
-     *      Defaults to `email`.
+     *   - <span pulumi-lang-nodejs="`username`" pulumi-lang-dotnet="`Username`" pulumi-lang-go="`username`" pulumi-lang-python="`username`" pulumi-lang-yaml="`username`" pulumi-lang-java="`username`" pulumi-lang-hcl="`username`">`username`</span>
+     *   - <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>.
      */
     declare public readonly userAttribute: pulumi.Output<string | undefined>;
 
@@ -108,27 +108,27 @@ export class StageMutualTls extends pulumi.CustomResource {
 export interface StageMutualTlsState {
     /**
      * Allowed values:
-     *   - `subject`
-     *   - `common_name`
-     *   - `email`
-     *      Defaults to `email`.
+     *   - <span pulumi-lang-nodejs="`subject`" pulumi-lang-dotnet="`Subject`" pulumi-lang-go="`subject`" pulumi-lang-python="`subject`" pulumi-lang-yaml="`subject`" pulumi-lang-java="`subject`" pulumi-lang-hcl="`subject`">`subject`</span>
+     *   - <span pulumi-lang-nodejs="`commonName`" pulumi-lang-dotnet="`CommonName`" pulumi-lang-go="`commonName`" pulumi-lang-python="`common_name`" pulumi-lang-yaml="`commonName`" pulumi-lang-java="`commonName`" pulumi-lang-hcl="`common_name`">`commonName`</span>
+     *   - <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>.
      */
     certAttribute?: pulumi.Input<string | undefined>;
     certificateAuthorities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `optional`
-     *   - `required`
-     *      Defaults to `optional`.
+     *   - <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
     stageMutualTlsId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `username`
-     *   - `email`
-     *      Defaults to `email`.
+     *   - <span pulumi-lang-nodejs="`username`" pulumi-lang-dotnet="`Username`" pulumi-lang-go="`username`" pulumi-lang-python="`username`" pulumi-lang-yaml="`username`" pulumi-lang-java="`username`" pulumi-lang-hcl="`username`">`username`</span>
+     *   - <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>.
      */
     userAttribute?: pulumi.Input<string | undefined>;
 }
@@ -139,27 +139,27 @@ export interface StageMutualTlsState {
 export interface StageMutualTlsArgs {
     /**
      * Allowed values:
-     *   - `subject`
-     *   - `common_name`
-     *   - `email`
-     *      Defaults to `email`.
+     *   - <span pulumi-lang-nodejs="`subject`" pulumi-lang-dotnet="`Subject`" pulumi-lang-go="`subject`" pulumi-lang-python="`subject`" pulumi-lang-yaml="`subject`" pulumi-lang-java="`subject`" pulumi-lang-hcl="`subject`">`subject`</span>
+     *   - <span pulumi-lang-nodejs="`commonName`" pulumi-lang-dotnet="`CommonName`" pulumi-lang-go="`commonName`" pulumi-lang-python="`common_name`" pulumi-lang-yaml="`commonName`" pulumi-lang-java="`commonName`" pulumi-lang-hcl="`common_name`">`commonName`</span>
+     *   - <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>.
      */
     certAttribute?: pulumi.Input<string | undefined>;
     certificateAuthorities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `optional`
-     *   - `required`
-     *      Defaults to `optional`.
+     *   - <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`optional`" pulumi-lang-dotnet="`Optional`" pulumi-lang-go="`optional`" pulumi-lang-python="`optional`" pulumi-lang-yaml="`optional`" pulumi-lang-java="`optional`" pulumi-lang-hcl="`optional`">`optional`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
     stageMutualTlsId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `username`
-     *   - `email`
-     *      Defaults to `email`.
+     *   - <span pulumi-lang-nodejs="`username`" pulumi-lang-dotnet="`Username`" pulumi-lang-go="`username`" pulumi-lang-python="`username`" pulumi-lang-yaml="`username`" pulumi-lang-java="`username`" pulumi-lang-hcl="`username`">`username`</span>
+     *   - <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`email`" pulumi-lang-dotnet="`Email`" pulumi-lang-go="`email`" pulumi-lang-python="`email`" pulumi-lang-yaml="`email`" pulumi-lang-java="`email`" pulumi-lang-hcl="`email`">`email`</span>.
      */
     userAttribute?: pulumi.Input<string | undefined>;
 }

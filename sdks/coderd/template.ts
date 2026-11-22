@@ -45,6 +45,9 @@ export class Template extends pulumi.CustomResource {
         return obj['__pulumiType'] === Template.__pulumiType;
     }
 
+    /**
+     * (Enterprise) Access control list for the template. If null, ACL policies will not be added, removed, or read by Terraform.
+     */
     declare public readonly acl: pulumi.Output<outputs.TemplateAcl | undefined>;
     /**
      * The activity bump duration for all workspaces created from this template, in milliseconds. Defaults to one hour.
@@ -75,7 +78,7 @@ export class Template extends pulumi.CustomResource {
      */
     declare public readonly autoStopRequirement: pulumi.Output<outputs.TemplateAutoStopRequirement>;
     /**
-     * The CORS behavior for workspace apps in this template. Valid values are `simple` (default CORS middleware) or `passthru` (bypass CORS middleware). Defaults to `simple`. Requires a Coder deployment running v2.26.0 or later.
+     * The CORS behavior for workspace apps in this template. Valid values are <span pulumi-lang-nodejs="`simple`" pulumi-lang-dotnet="`Simple`" pulumi-lang-go="`simple`" pulumi-lang-python="`simple`" pulumi-lang-yaml="`simple`" pulumi-lang-java="`simple`" pulumi-lang-hcl="`simple`">`simple`</span> (default CORS middleware) or <span pulumi-lang-nodejs="`passthru`" pulumi-lang-dotnet="`Passthru`" pulumi-lang-go="`passthru`" pulumi-lang-python="`passthru`" pulumi-lang-yaml="`passthru`" pulumi-lang-java="`passthru`" pulumi-lang-hcl="`passthru`">`passthru`</span> (bypass CORS middleware). Defaults to <span pulumi-lang-nodejs="`simple`" pulumi-lang-dotnet="`Simple`" pulumi-lang-go="`simple`" pulumi-lang-python="`simple`" pulumi-lang-yaml="`simple`" pulumi-lang-java="`simple`" pulumi-lang-hcl="`simple`">`simple`</span>. Requires a Coder deployment running v2.26.0 or later.
      */
     declare public readonly corsBehavior: pulumi.Output<string>;
     /**
@@ -103,7 +106,7 @@ export class Template extends pulumi.CustomResource {
      */
     declare public readonly icon: pulumi.Output<string>;
     /**
-     * (Enterprise) The maximum port share level for workspaces created from this template. Defaults to `owner` on an Enterprise deployment, or `public` otherwise.
+     * (Enterprise) The maximum port share level for workspaces created from this template. Defaults to <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> on an Enterprise deployment, or <span pulumi-lang-nodejs="`public`" pulumi-lang-dotnet="`Public`" pulumi-lang-go="`public`" pulumi-lang-python="`public`" pulumi-lang-yaml="`public`" pulumi-lang-java="`public`" pulumi-lang-hcl="`public`">`public`</span> otherwise.
      */
     declare public readonly maxPortShareLevel: pulumi.Output<string>;
     /**
@@ -130,6 +133,9 @@ export class Template extends pulumi.CustomResource {
      * If true, the classic parameter flow will be used when creating workspaces from this template. Defaults to false.
      */
     declare public readonly useClassicParameterFlow: pulumi.Output<boolean>;
+    /**
+     * The template versions to manage. If null, Terraform will not create, update, or read template versions, and will only manage the template's other settings. At least one version (with `active = true`) is required when creating a new template, since Coder templates cannot exist without a version.
+     */
     declare public readonly versions: pulumi.Output<outputs.TemplateVersion[] | undefined>;
 
     /**
@@ -203,6 +209,9 @@ export class Template extends pulumi.CustomResource {
  * Input properties used for looking up and filtering Template resources.
  */
 export interface TemplateState {
+    /**
+     * (Enterprise) Access control list for the template. If null, ACL policies will not be added, removed, or read by Terraform.
+     */
     acl?: pulumi.Input<inputs.TemplateAcl | undefined>;
     /**
      * The activity bump duration for all workspaces created from this template, in milliseconds. Defaults to one hour.
@@ -233,7 +242,7 @@ export interface TemplateState {
      */
     autoStopRequirement?: pulumi.Input<inputs.TemplateAutoStopRequirement | undefined>;
     /**
-     * The CORS behavior for workspace apps in this template. Valid values are `simple` (default CORS middleware) or `passthru` (bypass CORS middleware). Defaults to `simple`. Requires a Coder deployment running v2.26.0 or later.
+     * The CORS behavior for workspace apps in this template. Valid values are <span pulumi-lang-nodejs="`simple`" pulumi-lang-dotnet="`Simple`" pulumi-lang-go="`simple`" pulumi-lang-python="`simple`" pulumi-lang-yaml="`simple`" pulumi-lang-java="`simple`" pulumi-lang-hcl="`simple`">`simple`</span> (default CORS middleware) or <span pulumi-lang-nodejs="`passthru`" pulumi-lang-dotnet="`Passthru`" pulumi-lang-go="`passthru`" pulumi-lang-python="`passthru`" pulumi-lang-yaml="`passthru`" pulumi-lang-java="`passthru`" pulumi-lang-hcl="`passthru`">`passthru`</span> (bypass CORS middleware). Defaults to <span pulumi-lang-nodejs="`simple`" pulumi-lang-dotnet="`Simple`" pulumi-lang-go="`simple`" pulumi-lang-python="`simple`" pulumi-lang-yaml="`simple`" pulumi-lang-java="`simple`" pulumi-lang-hcl="`simple`">`simple`</span>. Requires a Coder deployment running v2.26.0 or later.
      */
     corsBehavior?: pulumi.Input<string | undefined>;
     /**
@@ -261,7 +270,7 @@ export interface TemplateState {
      */
     icon?: pulumi.Input<string | undefined>;
     /**
-     * (Enterprise) The maximum port share level for workspaces created from this template. Defaults to `owner` on an Enterprise deployment, or `public` otherwise.
+     * (Enterprise) The maximum port share level for workspaces created from this template. Defaults to <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> on an Enterprise deployment, or <span pulumi-lang-nodejs="`public`" pulumi-lang-dotnet="`Public`" pulumi-lang-go="`public`" pulumi-lang-python="`public`" pulumi-lang-yaml="`public`" pulumi-lang-java="`public`" pulumi-lang-hcl="`public`">`public`</span> otherwise.
      */
     maxPortShareLevel?: pulumi.Input<string | undefined>;
     /**
@@ -288,6 +297,9 @@ export interface TemplateState {
      * If true, the classic parameter flow will be used when creating workspaces from this template. Defaults to false.
      */
     useClassicParameterFlow?: pulumi.Input<boolean | undefined>;
+    /**
+     * The template versions to manage. If null, Terraform will not create, update, or read template versions, and will only manage the template's other settings. At least one version (with `active = true`) is required when creating a new template, since Coder templates cannot exist without a version.
+     */
     versions?: pulumi.Input<pulumi.Input<inputs.TemplateVersion>[] | undefined>;
 }
 
@@ -295,6 +307,9 @@ export interface TemplateState {
  * The set of arguments for constructing a Template resource.
  */
 export interface TemplateArgs {
+    /**
+     * (Enterprise) Access control list for the template. If null, ACL policies will not be added, removed, or read by Terraform.
+     */
     acl?: pulumi.Input<inputs.TemplateAcl | undefined>;
     /**
      * The activity bump duration for all workspaces created from this template, in milliseconds. Defaults to one hour.
@@ -325,7 +340,7 @@ export interface TemplateArgs {
      */
     autoStopRequirement?: pulumi.Input<inputs.TemplateAutoStopRequirement | undefined>;
     /**
-     * The CORS behavior for workspace apps in this template. Valid values are `simple` (default CORS middleware) or `passthru` (bypass CORS middleware). Defaults to `simple`. Requires a Coder deployment running v2.26.0 or later.
+     * The CORS behavior for workspace apps in this template. Valid values are <span pulumi-lang-nodejs="`simple`" pulumi-lang-dotnet="`Simple`" pulumi-lang-go="`simple`" pulumi-lang-python="`simple`" pulumi-lang-yaml="`simple`" pulumi-lang-java="`simple`" pulumi-lang-hcl="`simple`">`simple`</span> (default CORS middleware) or <span pulumi-lang-nodejs="`passthru`" pulumi-lang-dotnet="`Passthru`" pulumi-lang-go="`passthru`" pulumi-lang-python="`passthru`" pulumi-lang-yaml="`passthru`" pulumi-lang-java="`passthru`" pulumi-lang-hcl="`passthru`">`passthru`</span> (bypass CORS middleware). Defaults to <span pulumi-lang-nodejs="`simple`" pulumi-lang-dotnet="`Simple`" pulumi-lang-go="`simple`" pulumi-lang-python="`simple`" pulumi-lang-yaml="`simple`" pulumi-lang-java="`simple`" pulumi-lang-hcl="`simple`">`simple`</span>. Requires a Coder deployment running v2.26.0 or later.
      */
     corsBehavior?: pulumi.Input<string | undefined>;
     /**
@@ -353,7 +368,7 @@ export interface TemplateArgs {
      */
     icon?: pulumi.Input<string | undefined>;
     /**
-     * (Enterprise) The maximum port share level for workspaces created from this template. Defaults to `owner` on an Enterprise deployment, or `public` otherwise.
+     * (Enterprise) The maximum port share level for workspaces created from this template. Defaults to <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> on an Enterprise deployment, or <span pulumi-lang-nodejs="`public`" pulumi-lang-dotnet="`Public`" pulumi-lang-go="`public`" pulumi-lang-python="`public`" pulumi-lang-yaml="`public`" pulumi-lang-java="`public`" pulumi-lang-hcl="`public`">`public`</span> otherwise.
      */
     maxPortShareLevel?: pulumi.Input<string | undefined>;
     /**
@@ -380,5 +395,8 @@ export interface TemplateArgs {
      * If true, the classic parameter flow will be used when creating workspaces from this template. Defaults to false.
      */
     useClassicParameterFlow?: pulumi.Input<boolean | undefined>;
+    /**
+     * The template versions to manage. If null, Terraform will not create, update, or read template versions, and will only manage the template's other settings. At least one version (with `active = true`) is required when creating a new template, since Coder templates cannot exist without a version.
+     */
     versions?: pulumi.Input<pulumi.Input<inputs.TemplateVersion>[] | undefined>;
 }

@@ -30,10 +30,6 @@ export interface GetDatastoreResult {
     readonly disabled: boolean;
     readonly fingerprint: string;
     readonly gcSchedule: string;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly keepDaily: number;
     readonly keepHourly: number;
     readonly keepLast: number;

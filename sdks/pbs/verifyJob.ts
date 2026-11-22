@@ -52,7 +52,7 @@ export class VerifyJob extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly digest: pulumi.Output<string>;
     /**
-     * Skip backups that have been recently verified. Defaults to `false`.
+     * Skip backups that have been recently verified. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly ignoreVerified: pulumi.Output<boolean>;
     /**
@@ -60,15 +60,15 @@ export class VerifyJob extends pulumi.CustomResource {
      */
     declare public readonly maxDepth: pulumi.Output<number | undefined>;
     /**
-     * Namespace to verify. Optional, supports pattern matching (e.g., `ns1`, `ns1/sub`).
+     * Namespace to verify. Optional, supports pattern matching (e.g., <span pulumi-lang-nodejs="`ns1`" pulumi-lang-dotnet="`Ns1`" pulumi-lang-go="`ns1`" pulumi-lang-python="`ns1`" pulumi-lang-yaml="`ns1`" pulumi-lang-java="`ns1`" pulumi-lang-hcl="`ns1`">`ns1`</span>, `ns1/sub`).
      */
     declare public readonly namespace: pulumi.Output<string | undefined>;
     /**
-     * Number of days after which a backup is considered outdated and needs re-verification. Only applies when `ignore_verified` is `true`.
+     * Number of days after which a backup is considered outdated and needs re-verification. Only applies when <span pulumi-lang-nodejs="`ignoreVerified`" pulumi-lang-dotnet="`IgnoreVerified`" pulumi-lang-go="`ignoreVerified`" pulumi-lang-python="`ignore_verified`" pulumi-lang-yaml="`ignoreVerified`" pulumi-lang-java="`ignoreVerified`" pulumi-lang-hcl="`ignore_verified`">`ignoreVerified`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly outdatedAfter: pulumi.Output<number | undefined>;
     /**
-     * When to run the verification job. Uses systemd calendar event format (e.g., `weekly`, `Mon 03:00`).
+     * When to run the verification job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, `Mon 03:00`).
      */
     declare public readonly schedule: pulumi.Output<string>;
     /**
@@ -141,7 +141,7 @@ export interface VerifyJobState {
      */
     digest?: pulumi.Input<string | undefined>;
     /**
-     * Skip backups that have been recently verified. Defaults to `false`.
+     * Skip backups that have been recently verified. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     ignoreVerified?: pulumi.Input<boolean | undefined>;
     /**
@@ -149,15 +149,15 @@ export interface VerifyJobState {
      */
     maxDepth?: pulumi.Input<number | undefined>;
     /**
-     * Namespace to verify. Optional, supports pattern matching (e.g., `ns1`, `ns1/sub`).
+     * Namespace to verify. Optional, supports pattern matching (e.g., <span pulumi-lang-nodejs="`ns1`" pulumi-lang-dotnet="`Ns1`" pulumi-lang-go="`ns1`" pulumi-lang-python="`ns1`" pulumi-lang-yaml="`ns1`" pulumi-lang-java="`ns1`" pulumi-lang-hcl="`ns1`">`ns1`</span>, `ns1/sub`).
      */
     namespace?: pulumi.Input<string | undefined>;
     /**
-     * Number of days after which a backup is considered outdated and needs re-verification. Only applies when `ignore_verified` is `true`.
+     * Number of days after which a backup is considered outdated and needs re-verification. Only applies when <span pulumi-lang-nodejs="`ignoreVerified`" pulumi-lang-dotnet="`IgnoreVerified`" pulumi-lang-go="`ignoreVerified`" pulumi-lang-python="`ignore_verified`" pulumi-lang-yaml="`ignoreVerified`" pulumi-lang-java="`ignoreVerified`" pulumi-lang-hcl="`ignore_verified`">`ignoreVerified`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     outdatedAfter?: pulumi.Input<number | undefined>;
     /**
-     * When to run the verification job. Uses systemd calendar event format (e.g., `weekly`, `Mon 03:00`).
+     * When to run the verification job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, `Mon 03:00`).
      */
     schedule?: pulumi.Input<string | undefined>;
     /**
@@ -179,7 +179,7 @@ export interface VerifyJobArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Skip backups that have been recently verified. Defaults to `false`.
+     * Skip backups that have been recently verified. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     ignoreVerified?: pulumi.Input<boolean | undefined>;
     /**
@@ -187,15 +187,15 @@ export interface VerifyJobArgs {
      */
     maxDepth?: pulumi.Input<number | undefined>;
     /**
-     * Namespace to verify. Optional, supports pattern matching (e.g., `ns1`, `ns1/sub`).
+     * Namespace to verify. Optional, supports pattern matching (e.g., <span pulumi-lang-nodejs="`ns1`" pulumi-lang-dotnet="`Ns1`" pulumi-lang-go="`ns1`" pulumi-lang-python="`ns1`" pulumi-lang-yaml="`ns1`" pulumi-lang-java="`ns1`" pulumi-lang-hcl="`ns1`">`ns1`</span>, `ns1/sub`).
      */
     namespace?: pulumi.Input<string | undefined>;
     /**
-     * Number of days after which a backup is considered outdated and needs re-verification. Only applies when `ignore_verified` is `true`.
+     * Number of days after which a backup is considered outdated and needs re-verification. Only applies when <span pulumi-lang-nodejs="`ignoreVerified`" pulumi-lang-dotnet="`IgnoreVerified`" pulumi-lang-go="`ignoreVerified`" pulumi-lang-python="`ignore_verified`" pulumi-lang-yaml="`ignoreVerified`" pulumi-lang-java="`ignoreVerified`" pulumi-lang-hcl="`ignore_verified`">`ignoreVerified`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     outdatedAfter?: pulumi.Input<number | undefined>;
     /**
-     * When to run the verification job. Uses systemd calendar event format (e.g., `weekly`, `Mon 03:00`).
+     * When to run the verification job. Uses systemd calendar event format (e.g., <span pulumi-lang-nodejs="`weekly`" pulumi-lang-dotnet="`Weekly`" pulumi-lang-go="`weekly`" pulumi-lang-python="`weekly`" pulumi-lang-yaml="`weekly`" pulumi-lang-java="`weekly`" pulumi-lang-hcl="`weekly`">`weekly`</span>, `Mon 03:00`).
      */
     schedule: pulumi.Input<string>;
     /**

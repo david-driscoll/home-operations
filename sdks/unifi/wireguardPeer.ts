@@ -54,7 +54,7 @@ export class WireguardPeer extends pulumi.CustomResource {
      */
     declare public readonly interfaceIp: pulumi.Output<string>;
     /**
-     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with `subnet_ipv6`: within that subnet. Left unset, the peer has no IPv6 address.
+     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with <span pulumi-lang-nodejs="`subnetIpv6`" pulumi-lang-dotnet="`SubnetIpv6`" pulumi-lang-go="`subnetIpv6`" pulumi-lang-python="`subnet_ipv6`" pulumi-lang-yaml="`subnetIpv6`" pulumi-lang-java="`subnetIpv6`" pulumi-lang-hcl="`subnet_ipv6`">`subnetIpv6`</span>: within that subnet. Left unset, the peer has no IPv6 address.
      */
     declare public readonly interfaceIpv6: pulumi.Output<string | undefined>;
     /**
@@ -66,9 +66,13 @@ export class WireguardPeer extends pulumi.CustomResource {
      */
     declare public readonly networkId: pulumi.Output<string>;
     /**
-     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use `preshared_key_wo` to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
+     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use <span pulumi-lang-nodejs="`presharedKeyWo`" pulumi-lang-dotnet="`PresharedKeyWo`" pulumi-lang-go="`presharedKeyWo`" pulumi-lang-python="`preshared_key_wo`" pulumi-lang-yaml="`presharedKeyWo`" pulumi-lang-java="`presharedKeyWo`" pulumi-lang-hcl="`preshared_key_wo`">`presharedKeyWo`</span> to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
      */
     declare public readonly presharedKey: pulumi.Output<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`presharedKey`" pulumi-lang-dotnet="`PresharedKey`" pulumi-lang-go="`presharedKey`" pulumi-lang-python="`preshared_key`" pulumi-lang-yaml="`presharedKey`" pulumi-lang-java="`presharedKey`" pulumi-lang-hcl="`preshared_key`">`presharedKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource. Because nothing is stored, the provider cannot detect a key changed outside Terraform: such a change produces no diff. Mutually exclusive with <span pulumi-lang-nodejs="`presharedKey`" pulumi-lang-dotnet="`PresharedKey`" pulumi-lang-go="`presharedKey`" pulumi-lang-python="`preshared_key`" pulumi-lang-yaml="`presharedKey`" pulumi-lang-java="`presharedKey`" pulumi-lang-hcl="`preshared_key`">`presharedKey`</span>.
+     */
     declare public readonly presharedKeyWo: pulumi.Output<string | undefined>;
     /**
      * The WireGuard public key of the peer.
@@ -145,7 +149,7 @@ export interface WireguardPeerState {
      */
     interfaceIp?: pulumi.Input<string | undefined>;
     /**
-     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with `subnet_ipv6`: within that subnet. Left unset, the peer has no IPv6 address.
+     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with <span pulumi-lang-nodejs="`subnetIpv6`" pulumi-lang-dotnet="`SubnetIpv6`" pulumi-lang-go="`subnetIpv6`" pulumi-lang-python="`subnet_ipv6`" pulumi-lang-yaml="`subnetIpv6`" pulumi-lang-java="`subnetIpv6`" pulumi-lang-hcl="`subnet_ipv6`">`subnetIpv6`</span>: within that subnet. Left unset, the peer has no IPv6 address.
      */
     interfaceIpv6?: pulumi.Input<string | undefined>;
     /**
@@ -157,9 +161,13 @@ export interface WireguardPeerState {
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
-     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use `preshared_key_wo` to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
+     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use <span pulumi-lang-nodejs="`presharedKeyWo`" pulumi-lang-dotnet="`PresharedKeyWo`" pulumi-lang-go="`presharedKeyWo`" pulumi-lang-python="`preshared_key_wo`" pulumi-lang-yaml="`presharedKeyWo`" pulumi-lang-java="`presharedKeyWo`" pulumi-lang-hcl="`preshared_key_wo`">`presharedKeyWo`</span> to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
      */
     presharedKey?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`presharedKey`" pulumi-lang-dotnet="`PresharedKey`" pulumi-lang-go="`presharedKey`" pulumi-lang-python="`preshared_key`" pulumi-lang-yaml="`presharedKey`" pulumi-lang-java="`presharedKey`" pulumi-lang-hcl="`preshared_key`">`presharedKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource. Because nothing is stored, the provider cannot detect a key changed outside Terraform: such a change produces no diff. Mutually exclusive with <span pulumi-lang-nodejs="`presharedKey`" pulumi-lang-dotnet="`PresharedKey`" pulumi-lang-go="`presharedKey`" pulumi-lang-python="`preshared_key`" pulumi-lang-yaml="`presharedKey`" pulumi-lang-java="`presharedKey`" pulumi-lang-hcl="`preshared_key`">`presharedKey`</span>.
+     */
     presharedKeyWo?: pulumi.Input<string | undefined>;
     /**
      * The WireGuard public key of the peer.
@@ -185,7 +193,7 @@ export interface WireguardPeerArgs {
      */
     interfaceIp: pulumi.Input<string>;
     /**
-     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with `subnet_ipv6`: within that subnet. Left unset, the peer has no IPv6 address.
+     * The peer's IPv6 tunnel address, without prefix length (e.g. `fd00:db8::2`), for a server with <span pulumi-lang-nodejs="`subnetIpv6`" pulumi-lang-dotnet="`SubnetIpv6`" pulumi-lang-go="`subnetIpv6`" pulumi-lang-python="`subnet_ipv6`" pulumi-lang-yaml="`subnetIpv6`" pulumi-lang-java="`subnetIpv6`" pulumi-lang-hcl="`subnet_ipv6`">`subnetIpv6`</span>: within that subnet. Left unset, the peer has no IPv6 address.
      */
     interfaceIpv6?: pulumi.Input<string | undefined>;
     /**
@@ -197,9 +205,13 @@ export interface WireguardPeerArgs {
      */
     networkId: pulumi.Input<string>;
     /**
-     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use `preshared_key_wo` to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
+     * Optional WireGuard pre-shared key for this peer (the UI's Pre-Shared Key toggle), adding a layer of symmetric encryption on top of the key pair. The controller stores and returns it in clear text, so it is kept in state - use <span pulumi-lang-nodejs="`presharedKeyWo`" pulumi-lang-dotnet="`PresharedKeyWo`" pulumi-lang-go="`presharedKeyWo`" pulumi-lang-python="`preshared_key_wo`" pulumi-lang-yaml="`presharedKeyWo`" pulumi-lang-java="`presharedKeyWo`" pulumi-lang-hcl="`preshared_key_wo`">`presharedKeyWo`</span> to avoid persisting the secret. Left unset, the attribute is not written and a key configured out of band is preserved.
      */
     presharedKey?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`presharedKey`" pulumi-lang-dotnet="`PresharedKey`" pulumi-lang-go="`presharedKey`" pulumi-lang-python="`preshared_key`" pulumi-lang-yaml="`presharedKey`" pulumi-lang-java="`presharedKey`" pulumi-lang-hcl="`preshared_key`">`presharedKey`</span> (Terraform 1.11+). Used at apply time but never written to state, so it can be sourced from an ephemeral resource. Because nothing is stored, the provider cannot detect a key changed outside Terraform: such a change produces no diff. Mutually exclusive with <span pulumi-lang-nodejs="`presharedKey`" pulumi-lang-dotnet="`PresharedKey`" pulumi-lang-go="`presharedKey`" pulumi-lang-python="`preshared_key`" pulumi-lang-yaml="`presharedKey`" pulumi-lang-java="`presharedKey`" pulumi-lang-hcl="`preshared_key`">`presharedKey`</span>.
+     */
     presharedKeyWo?: pulumi.Input<string | undefined>;
     /**
      * The WireGuard public key of the peer.

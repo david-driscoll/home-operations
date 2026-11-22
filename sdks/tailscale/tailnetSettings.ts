@@ -47,6 +47,9 @@ export class TailnetSettings extends pulumi.CustomResource {
      * Link to your external ACL definition or management system. Must be a valid URL.
      */
     declare public readonly aclsExternalLink: pulumi.Output<string>;
+    /**
+     * Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.
+     */
     declare public readonly aclsExternallyManagedOn: pulumi.Output<boolean>;
     /**
      * Whether device approval is enabled for the tailnet
@@ -73,13 +76,13 @@ export class TailnetSettings extends pulumi.CustomResource {
      */
     declare public readonly postureIdentityCollectionOn: pulumi.Output<boolean>;
     /**
-     * Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+     * Whether regional routing is enabled for the tailnet. This is a deprecated view of <span pulumi-lang-nodejs="`routeSelection`" pulumi-lang-dotnet="`RouteSelection`" pulumi-lang-go="`routeSelection`" pulumi-lang-python="`route_selection`" pulumi-lang-yaml="`routeSelection`" pulumi-lang-java="`routeSelection`" pulumi-lang-hcl="`route_selection`">`routeSelection`</span>, and is equivalent to <span pulumi-lang-nodejs="`routeSelection " pulumi-lang-dotnet="`RouteSelection " pulumi-lang-go="`routeSelection " pulumi-lang-python="`route_selection " pulumi-lang-yaml="`routeSelection " pulumi-lang-java="`routeSelection " pulumi-lang-hcl="`route_selection ">`routeSelection </span>= "regional-routing"`. Setting both <span pulumi-lang-nodejs="`regionalRoutingOn`" pulumi-lang-dotnet="`RegionalRoutingOn`" pulumi-lang-go="`regionalRoutingOn`" pulumi-lang-python="`regional_routing_on`" pulumi-lang-yaml="`regionalRoutingOn`" pulumi-lang-java="`regionalRoutingOn`" pulumi-lang-hcl="`regional_routing_on`">`regionalRoutingOn`</span> and <span pulumi-lang-nodejs="`routeSelection`" pulumi-lang-dotnet="`RouteSelection`" pulumi-lang-go="`routeSelection`" pulumi-lang-python="`route_selection`" pulumi-lang-yaml="`routeSelection`" pulumi-lang-java="`routeSelection`" pulumi-lang-hcl="`route_selection`">`routeSelection`</span> in the same configuration is an error.
      *
      * @deprecated Deprecated
      */
     declare public readonly regionalRoutingOn: pulumi.Output<boolean>;
     /**
-     * The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
+     * The route selection algorithm in use by the tailnet. Supersedes the deprecated <span pulumi-lang-nodejs="`regionalRoutingOn`" pulumi-lang-dotnet="`RegionalRoutingOn`" pulumi-lang-go="`regionalRoutingOn`" pulumi-lang-python="`regional_routing_on`" pulumi-lang-yaml="`regionalRoutingOn`" pulumi-lang-java="`regionalRoutingOn`" pulumi-lang-hcl="`regional_routing_on`">`regionalRoutingOn`</span>; setting both in the same configuration is an error.
      */
     declare public readonly routeSelection: pulumi.Output<string>;
     /**
@@ -144,6 +147,9 @@ export interface TailnetSettingsState {
      * Link to your external ACL definition or management system. Must be a valid URL.
      */
     aclsExternalLink?: pulumi.Input<string | undefined>;
+    /**
+     * Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.
+     */
     aclsExternallyManagedOn?: pulumi.Input<boolean | undefined>;
     /**
      * Whether device approval is enabled for the tailnet
@@ -170,13 +176,13 @@ export interface TailnetSettingsState {
      */
     postureIdentityCollectionOn?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+     * Whether regional routing is enabled for the tailnet. This is a deprecated view of <span pulumi-lang-nodejs="`routeSelection`" pulumi-lang-dotnet="`RouteSelection`" pulumi-lang-go="`routeSelection`" pulumi-lang-python="`route_selection`" pulumi-lang-yaml="`routeSelection`" pulumi-lang-java="`routeSelection`" pulumi-lang-hcl="`route_selection`">`routeSelection`</span>, and is equivalent to <span pulumi-lang-nodejs="`routeSelection " pulumi-lang-dotnet="`RouteSelection " pulumi-lang-go="`routeSelection " pulumi-lang-python="`route_selection " pulumi-lang-yaml="`routeSelection " pulumi-lang-java="`routeSelection " pulumi-lang-hcl="`route_selection ">`routeSelection </span>= "regional-routing"`. Setting both <span pulumi-lang-nodejs="`regionalRoutingOn`" pulumi-lang-dotnet="`RegionalRoutingOn`" pulumi-lang-go="`regionalRoutingOn`" pulumi-lang-python="`regional_routing_on`" pulumi-lang-yaml="`regionalRoutingOn`" pulumi-lang-java="`regionalRoutingOn`" pulumi-lang-hcl="`regional_routing_on`">`regionalRoutingOn`</span> and <span pulumi-lang-nodejs="`routeSelection`" pulumi-lang-dotnet="`RouteSelection`" pulumi-lang-go="`routeSelection`" pulumi-lang-python="`route_selection`" pulumi-lang-yaml="`routeSelection`" pulumi-lang-java="`routeSelection`" pulumi-lang-hcl="`route_selection`">`routeSelection`</span> in the same configuration is an error.
      *
      * @deprecated Deprecated
      */
     regionalRoutingOn?: pulumi.Input<boolean | undefined>;
     /**
-     * The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
+     * The route selection algorithm in use by the tailnet. Supersedes the deprecated <span pulumi-lang-nodejs="`regionalRoutingOn`" pulumi-lang-dotnet="`RegionalRoutingOn`" pulumi-lang-go="`regionalRoutingOn`" pulumi-lang-python="`regional_routing_on`" pulumi-lang-yaml="`regionalRoutingOn`" pulumi-lang-java="`regionalRoutingOn`" pulumi-lang-hcl="`regional_routing_on`">`regionalRoutingOn`</span>; setting both in the same configuration is an error.
      */
     routeSelection?: pulumi.Input<string | undefined>;
     /**
@@ -197,6 +203,9 @@ export interface TailnetSettingsArgs {
      * Link to your external ACL definition or management system. Must be a valid URL.
      */
     aclsExternalLink?: pulumi.Input<string | undefined>;
+    /**
+     * Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.
+     */
     aclsExternallyManagedOn?: pulumi.Input<boolean | undefined>;
     /**
      * Whether device approval is enabled for the tailnet
@@ -223,13 +232,13 @@ export interface TailnetSettingsArgs {
      */
     postureIdentityCollectionOn?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+     * Whether regional routing is enabled for the tailnet. This is a deprecated view of <span pulumi-lang-nodejs="`routeSelection`" pulumi-lang-dotnet="`RouteSelection`" pulumi-lang-go="`routeSelection`" pulumi-lang-python="`route_selection`" pulumi-lang-yaml="`routeSelection`" pulumi-lang-java="`routeSelection`" pulumi-lang-hcl="`route_selection`">`routeSelection`</span>, and is equivalent to <span pulumi-lang-nodejs="`routeSelection " pulumi-lang-dotnet="`RouteSelection " pulumi-lang-go="`routeSelection " pulumi-lang-python="`route_selection " pulumi-lang-yaml="`routeSelection " pulumi-lang-java="`routeSelection " pulumi-lang-hcl="`route_selection ">`routeSelection </span>= "regional-routing"`. Setting both <span pulumi-lang-nodejs="`regionalRoutingOn`" pulumi-lang-dotnet="`RegionalRoutingOn`" pulumi-lang-go="`regionalRoutingOn`" pulumi-lang-python="`regional_routing_on`" pulumi-lang-yaml="`regionalRoutingOn`" pulumi-lang-java="`regionalRoutingOn`" pulumi-lang-hcl="`regional_routing_on`">`regionalRoutingOn`</span> and <span pulumi-lang-nodejs="`routeSelection`" pulumi-lang-dotnet="`RouteSelection`" pulumi-lang-go="`routeSelection`" pulumi-lang-python="`route_selection`" pulumi-lang-yaml="`routeSelection`" pulumi-lang-java="`routeSelection`" pulumi-lang-hcl="`route_selection`">`routeSelection`</span> in the same configuration is an error.
      *
      * @deprecated Deprecated
      */
     regionalRoutingOn?: pulumi.Input<boolean | undefined>;
     /**
-     * The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
+     * The route selection algorithm in use by the tailnet. Supersedes the deprecated <span pulumi-lang-nodejs="`regionalRoutingOn`" pulumi-lang-dotnet="`RegionalRoutingOn`" pulumi-lang-go="`regionalRoutingOn`" pulumi-lang-python="`regional_routing_on`" pulumi-lang-yaml="`regionalRoutingOn`" pulumi-lang-java="`regionalRoutingOn`" pulumi-lang-hcl="`regional_routing_on`">`regionalRoutingOn`</span>; setting both in the same configuration is an error.
      */
     routeSelection?: pulumi.Input<string | undefined>;
     /**

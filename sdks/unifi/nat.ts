@@ -54,7 +54,7 @@ export class Nat extends pulumi.CustomResource {
      */
     declare public readonly destinationFilter: pulumi.Output<outputs.NatDestinationFilter | undefined>;
     /**
-     * Whether the NAT rule is enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
+     * Whether the NAT rule is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -82,7 +82,7 @@ export class Nat extends pulumi.CustomResource {
      */
     declare public readonly outInterface: pulumi.Output<string | undefined>;
     /**
-     * The translated port, as a single port (`443`). Port ranges are only accepted in `source_filter.port` and `destination_filter.port`: the controller rejects a translated port range such as `8080-8090` with `NatRuleInvalidParameters`.
+     * The translated port, as a single port (<span pulumi-lang-nodejs="`443`" pulumi-lang-dotnet="`443`" pulumi-lang-go="`443`" pulumi-lang-python="`443`" pulumi-lang-yaml="`443`" pulumi-lang-java="`443`" pulumi-lang-hcl="`443`">`443`</span>). Port ranges are only accepted in `source_filter.port` and `destination_filter.port`: the controller rejects a translated port range such as `8080-8090` with `NatRuleInvalidParameters`.
      */
     declare public readonly port: pulumi.Output<string | undefined>;
     /**
@@ -90,7 +90,7 @@ export class Nat extends pulumi.CustomResource {
      */
     declare public readonly pppoeUseBaseInterface: pulumi.Output<boolean>;
     /**
-     * The protocol to match. Can be `all`, `tcp`, `udp` or `tcp_udp`.
+     * The protocol to match. Can be <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span> or <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>.
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -98,7 +98,7 @@ export class Nat extends pulumi.CustomResource {
      */
     declare public readonly ruleIndex: pulumi.Output<number>;
     /**
-     * Whether the rule is managed automatically or manually. Can be `auto` or `manual`.
+     * Whether the rule is managed automatically or manually. Can be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     declare public readonly settingPreference: pulumi.Output<string>;
     /**
@@ -191,7 +191,7 @@ export interface NatState {
      */
     destinationFilter?: pulumi.Input<inputs.NatDestinationFilter | undefined>;
     /**
-     * Whether the NAT rule is enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
+     * Whether the NAT rule is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -219,7 +219,7 @@ export interface NatState {
      */
     outInterface?: pulumi.Input<string | undefined>;
     /**
-     * The translated port, as a single port (`443`). Port ranges are only accepted in `source_filter.port` and `destination_filter.port`: the controller rejects a translated port range such as `8080-8090` with `NatRuleInvalidParameters`.
+     * The translated port, as a single port (<span pulumi-lang-nodejs="`443`" pulumi-lang-dotnet="`443`" pulumi-lang-go="`443`" pulumi-lang-python="`443`" pulumi-lang-yaml="`443`" pulumi-lang-java="`443`" pulumi-lang-hcl="`443`">`443`</span>). Port ranges are only accepted in `source_filter.port` and `destination_filter.port`: the controller rejects a translated port range such as `8080-8090` with `NatRuleInvalidParameters`.
      */
     port?: pulumi.Input<string | undefined>;
     /**
@@ -227,7 +227,7 @@ export interface NatState {
      */
     pppoeUseBaseInterface?: pulumi.Input<boolean | undefined>;
     /**
-     * The protocol to match. Can be `all`, `tcp`, `udp` or `tcp_udp`.
+     * The protocol to match. Can be <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span> or <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -235,7 +235,7 @@ export interface NatState {
      */
     ruleIndex?: pulumi.Input<number | undefined>;
     /**
-     * Whether the rule is managed automatically or manually. Can be `auto` or `manual`.
+     * Whether the rule is managed automatically or manually. Can be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -266,7 +266,7 @@ export interface NatArgs {
      */
     destinationFilter?: pulumi.Input<inputs.NatDestinationFilter | undefined>;
     /**
-     * Whether the NAT rule is enabled. Defaults to `true` for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
+     * Whether the NAT rule is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created rule; an existing rule keeps whatever the controller holds, so adopting a rule disabled in the UI does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -294,7 +294,7 @@ export interface NatArgs {
      */
     outInterface?: pulumi.Input<string | undefined>;
     /**
-     * The translated port, as a single port (`443`). Port ranges are only accepted in `source_filter.port` and `destination_filter.port`: the controller rejects a translated port range such as `8080-8090` with `NatRuleInvalidParameters`.
+     * The translated port, as a single port (<span pulumi-lang-nodejs="`443`" pulumi-lang-dotnet="`443`" pulumi-lang-go="`443`" pulumi-lang-python="`443`" pulumi-lang-yaml="`443`" pulumi-lang-java="`443`" pulumi-lang-hcl="`443`">`443`</span>). Port ranges are only accepted in `source_filter.port` and `destination_filter.port`: the controller rejects a translated port range such as `8080-8090` with `NatRuleInvalidParameters`.
      */
     port?: pulumi.Input<string | undefined>;
     /**
@@ -302,7 +302,7 @@ export interface NatArgs {
      */
     pppoeUseBaseInterface?: pulumi.Input<boolean | undefined>;
     /**
-     * The protocol to match. Can be `all`, `tcp`, `udp` or `tcp_udp`.
+     * The protocol to match. Can be <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span> or <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -310,7 +310,7 @@ export interface NatArgs {
      */
     ruleIndex?: pulumi.Input<number | undefined>;
     /**
-     * Whether the rule is managed automatically or manually. Can be `auto` or `manual`.
+     * Whether the rule is managed automatically or manually. Can be <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> or <span pulumi-lang-nodejs="`manual`" pulumi-lang-dotnet="`Manual`" pulumi-lang-go="`manual`" pulumi-lang-python="`manual`" pulumi-lang-yaml="`manual`" pulumi-lang-java="`manual`" pulumi-lang-hcl="`manual`">`manual`</span>.
      */
     settingPreference?: pulumi.Input<string | undefined>;
     /**

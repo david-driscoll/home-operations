@@ -43,7 +43,13 @@ export class CatalogMembership extends pulumi.CustomResource {
         return obj['__pulumiType'] === CatalogMembership.__pulumiType;
     }
 
+    /**
+     * The name of the catalog zone to which this zone is being assigned as a member. The catalog zone must exist by the time `terraform apply` reaches this resource and must be of type Catalog or SecondaryCatalog. The Technitium server returns an error at apply time if the catalog zone is missing or of a non-catalog type.
+     */
     declare public readonly catalogZone: pulumi.Output<string>;
+    /**
+     * The name of the member zone whose catalog membership is being managed. The zone must already exist by the time `terraform apply` reaches this resource; if the zone is created by another resource in the same configuration, declare an explicit dependency or rely on attribute reference ordering. Changing this attribute forces replacement.
+     */
     declare public readonly zone: pulumi.Output<string>;
 
     /**
@@ -81,7 +87,13 @@ export class CatalogMembership extends pulumi.CustomResource {
  * Input properties used for looking up and filtering CatalogMembership resources.
  */
 export interface CatalogMembershipState {
+    /**
+     * The name of the catalog zone to which this zone is being assigned as a member. The catalog zone must exist by the time `terraform apply` reaches this resource and must be of type Catalog or SecondaryCatalog. The Technitium server returns an error at apply time if the catalog zone is missing or of a non-catalog type.
+     */
     catalogZone?: pulumi.Input<string | undefined>;
+    /**
+     * The name of the member zone whose catalog membership is being managed. The zone must already exist by the time `terraform apply` reaches this resource; if the zone is created by another resource in the same configuration, declare an explicit dependency or rely on attribute reference ordering. Changing this attribute forces replacement.
+     */
     zone?: pulumi.Input<string | undefined>;
 }
 
@@ -89,6 +101,12 @@ export interface CatalogMembershipState {
  * The set of arguments for constructing a CatalogMembership resource.
  */
 export interface CatalogMembershipArgs {
+    /**
+     * The name of the catalog zone to which this zone is being assigned as a member. The catalog zone must exist by the time `terraform apply` reaches this resource and must be of type Catalog or SecondaryCatalog. The Technitium server returns an error at apply time if the catalog zone is missing or of a non-catalog type.
+     */
     catalogZone: pulumi.Input<string>;
+    /**
+     * The name of the member zone whose catalog membership is being managed. The zone must already exist by the time `terraform apply` reaches this resource; if the zone is created by another resource in the same configuration, declare an explicit dependency or rely on attribute reference ordering. Changing this attribute forces replacement.
+     */
     zone: pulumi.Input<string>;
 }

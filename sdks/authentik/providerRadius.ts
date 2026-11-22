@@ -51,7 +51,7 @@ export class ProviderRadius extends pulumi.CustomResource {
     declare public readonly clientNetworks: pulumi.Output<string | undefined>;
     declare public readonly invalidationFlow: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly mfaSupport: pulumi.Output<boolean | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -121,7 +121,7 @@ export interface ProviderRadiusState {
     clientNetworks?: pulumi.Input<string | undefined>;
     invalidationFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     mfaSupport?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -142,7 +142,7 @@ export interface ProviderRadiusArgs {
     clientNetworks?: pulumi.Input<string | undefined>;
     invalidationFlow: pulumi.Input<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     mfaSupport?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;

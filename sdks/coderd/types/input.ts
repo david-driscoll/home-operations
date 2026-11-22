@@ -7,11 +7,11 @@ import * as outputs from "../types/output";
 
 export interface AgentsModelAcl {
     /**
-     * IDs of groups that can use the model. Required if `acl` is set. Each group must belong to the model's organization. To keep access for the `Everyone` group, include the organization ID.
+     * IDs of groups that can use the model. Required if <span pulumi-lang-nodejs="`acl`" pulumi-lang-dotnet="`Acl`" pulumi-lang-go="`acl`" pulumi-lang-python="`acl`" pulumi-lang-yaml="`acl`" pulumi-lang-java="`acl`" pulumi-lang-hcl="`acl`">`acl`</span> is set. Each group must belong to the model's organization. To keep access for the `Everyone` group, include the organization ID.
      */
     groups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * IDs of users that can use the model. Required if `acl` is set. Each user must be a member of the model's organization.
+     * IDs of users that can use the model. Required if <span pulumi-lang-nodejs="`acl`" pulumi-lang-dotnet="`Acl`" pulumi-lang-go="`acl`" pulumi-lang-python="`acl`" pulumi-lang-yaml="`acl`" pulumi-lang-java="`acl`" pulumi-lang-hcl="`acl`">`acl`</span> is set. Each user must be a member of the model's organization.
      */
     users?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
@@ -22,17 +22,19 @@ export interface AiProviderSettings {
      */
     bedrock?: pulumi.Input<inputs.AiProviderSettingsBedrock | undefined>;
     /**
-     * Claude Platform for AWS settings. Valid only for `type = "anthropic"`. Coder authenticates each request with the first available of: the user's own key when Bring Your Own Key is enabled, the stored `api_key_wo` (a Claude Platform for AWS key, not an api.anthropic.com key), or SigV4 signing with the Coder server's ambient AWS credentials. Requires Coder v2.38.0 or later.
+     * Claude Platform for AWS settings. Valid only for `type = "anthropic"`. Coder authenticates each request with the first available of: the user's own key when Bring Your Own Key is enabled, the stored <span pulumi-lang-nodejs="`apiKeyWo`" pulumi-lang-dotnet="`ApiKeyWo`" pulumi-lang-go="`apiKeyWo`" pulumi-lang-python="`api_key_wo`" pulumi-lang-yaml="`apiKeyWo`" pulumi-lang-java="`apiKeyWo`" pulumi-lang-hcl="`api_key_wo`">`apiKeyWo`</span> (a Claude Platform for AWS key, not an api.anthropic.com key), or SigV4 signing with the Coder server's ambient AWS credentials. Requires Coder v2.38.0 or later.
      */
     claudePlatformAws?: pulumi.Input<inputs.AiProviderSettingsClaudePlatformAws | undefined>;
 }
 
 export interface AiProviderSettingsBedrock {
     /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
      * AWS secret access key for Bedrock.
      */
     accessKeySecretWo?: pulumi.Input<string | undefined>;
     /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
      * AWS access key ID for Bedrock. See [Coder's Amazon Bedrock provider docs](https://coder.com/docs/ai-coder/ai-gateway/providers#amazon-bedrock).
      */
     accessKeyWo?: pulumi.Input<string | undefined>;
@@ -41,7 +43,7 @@ export interface AiProviderSettingsBedrock {
      */
     credentialsWoVersion?: pulumi.Input<number | undefined>;
     /**
-     * STS external ID the server generates and sends on the AssumeRole call when `role_arn` is set. Reference it in the assumed role's trust policy `sts:ExternalId` condition. Null until `role_arn` is first configured; stable afterwards. Requires Coder v2.36.0 or later.
+     * STS external ID the server generates and sends on the AssumeRole call when <span pulumi-lang-nodejs="`roleArn`" pulumi-lang-dotnet="`RoleArn`" pulumi-lang-go="`roleArn`" pulumi-lang-python="`role_arn`" pulumi-lang-yaml="`roleArn`" pulumi-lang-java="`roleArn`" pulumi-lang-hcl="`role_arn`">`roleArn`</span> is set. Reference it in the assumed role's trust policy `sts:ExternalId` condition. Null until <span pulumi-lang-nodejs="`roleArn`" pulumi-lang-dotnet="`RoleArn`" pulumi-lang-go="`roleArn`" pulumi-lang-python="`role_arn`" pulumi-lang-yaml="`roleArn`" pulumi-lang-java="`roleArn`" pulumi-lang-hcl="`role_arn`">`roleArn`</span> is first configured; stable afterwards. Requires Coder v2.36.0 or later.
      */
     externalId?: pulumi.Input<string | undefined>;
     /**
@@ -49,11 +51,11 @@ export interface AiProviderSettingsBedrock {
      */
     model?: pulumi.Input<string | undefined>;
     /**
-     * Bedrock wire protocol. `"invoke-model"` (default) translates the native Messages request into Bedrock's InvokeModel format and requires `model` and `small_fast_model`. `"mantle"` forwards the native Messages request body unchanged with AWS SigV4 signing and passes through the client's model; requires `region` (the Mantle base URL is not a canonical Bedrock URL, so the region is never derived from `base_url`). Requires Coder v2.36.0 or later for the Mantle protocol. Omit (or set to `"invoke-model"`) to use the default. Removing the attribute clears it back to the default; Coder maps an empty value to `"invoke-model"`.
+     * Bedrock wire protocol. `"invoke-model"` (default) translates the native Messages request into Bedrock's InvokeModel format and requires <span pulumi-lang-nodejs="`model`" pulumi-lang-dotnet="`Model`" pulumi-lang-go="`model`" pulumi-lang-python="`model`" pulumi-lang-yaml="`model`" pulumi-lang-java="`model`" pulumi-lang-hcl="`model`">`model`</span> and <span pulumi-lang-nodejs="`smallFastModel`" pulumi-lang-dotnet="`SmallFastModel`" pulumi-lang-go="`smallFastModel`" pulumi-lang-python="`small_fast_model`" pulumi-lang-yaml="`smallFastModel`" pulumi-lang-java="`smallFastModel`" pulumi-lang-hcl="`small_fast_model`">`smallFastModel`</span>. `"mantle"` forwards the native Messages request body unchanged with AWS SigV4 signing and passes through the client's model; requires <span pulumi-lang-nodejs="`region`" pulumi-lang-dotnet="`Region`" pulumi-lang-go="`region`" pulumi-lang-python="`region`" pulumi-lang-yaml="`region`" pulumi-lang-java="`region`" pulumi-lang-hcl="`region`">`region`</span> (the Mantle base URL is not a canonical Bedrock URL, so the region is never derived from <span pulumi-lang-nodejs="`baseUrl`" pulumi-lang-dotnet="`BaseUrl`" pulumi-lang-go="`baseUrl`" pulumi-lang-python="`base_url`" pulumi-lang-yaml="`baseUrl`" pulumi-lang-java="`baseUrl`" pulumi-lang-hcl="`base_url`">`baseUrl`</span>). Requires Coder v2.36.0 or later for the Mantle protocol. Omit (or set to `"invoke-model"`) to use the default. Removing the attribute clears it back to the default; Coder maps an empty value to `"invoke-model"`.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
-     * AWS region for Bedrock. If omitted, derived from the canonical Bedrock `base_url` attribute.
+     * AWS region for Bedrock. If omitted, derived from the canonical Bedrock <span pulumi-lang-nodejs="`baseUrl`" pulumi-lang-dotnet="`BaseUrl`" pulumi-lang-go="`baseUrl`" pulumi-lang-python="`base_url`" pulumi-lang-yaml="`baseUrl`" pulumi-lang-java="`baseUrl`" pulumi-lang-hcl="`base_url`">`baseUrl`</span> attribute.
      */
     region?: pulumi.Input<string | undefined>;
     /**
@@ -68,7 +70,7 @@ export interface AiProviderSettingsBedrock {
 
 export interface AiProviderSettingsClaudePlatformAws {
     /**
-     * AWS region for the regional endpoint and SigV4 signing scope. Required even when `base_url` points to a proxy.
+     * AWS region for the regional endpoint and SigV4 signing scope. Required even when <span pulumi-lang-nodejs="`baseUrl`" pulumi-lang-dotnet="`BaseUrl`" pulumi-lang-go="`baseUrl`" pulumi-lang-python="`base_url`" pulumi-lang-yaml="`baseUrl`" pulumi-lang-java="`baseUrl`" pulumi-lang-hcl="`base_url`">`baseUrl`</span> points to a proxy.
      */
     region: pulumi.Input<string>;
     /**
@@ -115,7 +117,7 @@ export interface TemplateAcl {
 export interface TemplateAclGroup {
     id: pulumi.Input<string>;
     /**
-     * Role assigned to the user or group. Valid roles are `admin` and `use`.
+     * Role assigned to the user or group. Valid roles are <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> and <span pulumi-lang-nodejs="`use`" pulumi-lang-dotnet="`Use`" pulumi-lang-go="`use`" pulumi-lang-python="`use`" pulumi-lang-yaml="`use`" pulumi-lang-java="`use`" pulumi-lang-hcl="`use`">`use`</span>.
      */
     role: pulumi.Input<string>;
 }
@@ -123,7 +125,7 @@ export interface TemplateAclGroup {
 export interface TemplateAclUser {
     id: pulumi.Input<string>;
     /**
-     * Role assigned to the user or group. Valid roles are `admin` and `use`.
+     * Role assigned to the user or group. Valid roles are <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> and <span pulumi-lang-nodejs="`use`" pulumi-lang-dotnet="`Use`" pulumi-lang-go="`use`" pulumi-lang-python="`use`" pulumi-lang-yaml="`use`" pulumi-lang-java="`use`" pulumi-lang-hcl="`use`">`use`</span>.
      */
     role: pulumi.Input<string>;
 }
@@ -155,13 +157,16 @@ export interface TemplateVersion {
      */
     message?: pulumi.Input<string | undefined>;
     /**
-     * The name of the template version. Automatically generated if not provided. If provided, the name *must* change each time the directory contents, or the `tf_vars` attribute are updated.
+     * The name of the template version. Automatically generated if not provided. If provided, the name *must* change each time the directory contents, or the <span pulumi-lang-nodejs="`tfVars`" pulumi-lang-dotnet="`TfVars`" pulumi-lang-go="`tfVars`" pulumi-lang-python="`tf_vars`" pulumi-lang-yaml="`tfVars`" pulumi-lang-java="`tfVars`" pulumi-lang-hcl="`tf_vars`">`tfVars`</span> attribute are updated.
      */
     name?: pulumi.Input<string | undefined>;
     /**
      * Provisioner tags for the template version.
      */
     provisionerTags?: pulumi.Input<pulumi.Input<inputs.TemplateVersionProvisionerTag>[] | undefined>;
+    /**
+     * Terraform variables for the template version.
+     */
     tfVars?: pulumi.Input<pulumi.Input<inputs.TemplateVersionTfVar>[] | undefined>;
 }
 

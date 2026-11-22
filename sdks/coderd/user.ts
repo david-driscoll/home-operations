@@ -44,15 +44,15 @@ export class User extends pulumi.CustomResource {
     }
 
     /**
-     * Email address of the user. Required unless `is_service_account` is `true`, in which case it must be omitted (service accounts have no email).
+     * Email address of the user. Required unless <span pulumi-lang-nodejs="`isServiceAccount`" pulumi-lang-dotnet="`IsServiceAccount`" pulumi-lang-go="`isServiceAccount`" pulumi-lang-python="`is_service_account`" pulumi-lang-yaml="`isServiceAccount`" pulumi-lang-java="`isServiceAccount`" pulumi-lang-hcl="`is_service_account`">`isServiceAccount`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, in which case it must be omitted (service accounts have no email).
      */
     declare public readonly email: pulumi.Output<string>;
     /**
-     * Whether the user is a service account. Service accounts are admin-managed accounts that cannot log in interactively: they have no password or email and use `login_type` `none`. Unlike a regular `login_type = none` user, a service account does not consume a licensed user seat. Changing this attribute forces replacement.
+     * Whether the user is a service account. Service accounts are admin-managed accounts that cannot log in interactively: they have no password or email and use <span pulumi-lang-nodejs="`loginType`" pulumi-lang-dotnet="`LoginType`" pulumi-lang-go="`loginType`" pulumi-lang-python="`login_type`" pulumi-lang-yaml="`loginType`" pulumi-lang-java="`loginType`" pulumi-lang-hcl="`login_type`">`loginType`</span> <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Unlike a regular <span pulumi-lang-nodejs="`loginType " pulumi-lang-dotnet="`LoginType " pulumi-lang-go="`loginType " pulumi-lang-python="`login_type " pulumi-lang-yaml="`loginType " pulumi-lang-java="`loginType " pulumi-lang-hcl="`login_type ">`loginType </span>= none` user, a service account does not consume a licensed user seat. Changing this attribute forces replacement.
      */
     declare public readonly isServiceAccount: pulumi.Output<boolean>;
     /**
-     * Type of login for the user. Valid types are `none`, `password`, `github`, and `oidc`.
+     * Type of login for the user. Valid types are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>, <span pulumi-lang-nodejs="`github`" pulumi-lang-dotnet="`Github`" pulumi-lang-go="`github`" pulumi-lang-python="`github`" pulumi-lang-yaml="`github`" pulumi-lang-java="`github`" pulumi-lang-hcl="`github`">`github`</span>, and <span pulumi-lang-nodejs="`oidc`" pulumi-lang-dotnet="`Oidc`" pulumi-lang-go="`oidc`" pulumi-lang-python="`oidc`" pulumi-lang-yaml="`oidc`" pulumi-lang-java="`oidc`" pulumi-lang-hcl="`oidc`">`oidc`</span>.
      */
     declare public readonly loginType: pulumi.Output<string>;
     /**
@@ -60,9 +60,12 @@ export class User extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Password for the user. Required when `login_type` is `password`. Passwords are saved into the state as plain text and should only be used for testing purposes.
+     * Password for the user. Required when <span pulumi-lang-nodejs="`loginType`" pulumi-lang-dotnet="`LoginType`" pulumi-lang-go="`loginType`" pulumi-lang-python="`login_type`" pulumi-lang-yaml="`loginType`" pulumi-lang-java="`loginType`" pulumi-lang-hcl="`login_type`">`loginType`</span> is <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>. Passwords are saved into the state as plain text and should only be used for testing purposes.
      */
     declare public readonly password: pulumi.Output<string | undefined>;
+    /**
+     * Roles assigned to the user. Valid roles are <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span>, `template-admin`, `user-admin`, and <span pulumi-lang-nodejs="`auditor`" pulumi-lang-dotnet="`Auditor`" pulumi-lang-go="`auditor`" pulumi-lang-python="`auditor`" pulumi-lang-yaml="`auditor`" pulumi-lang-java="`auditor`" pulumi-lang-hcl="`auditor`">`auditor`</span>. If <span pulumi-lang-nodejs="`null`" pulumi-lang-dotnet="`Null`" pulumi-lang-go="`null`" pulumi-lang-python="`null`" pulumi-lang-yaml="`null`" pulumi-lang-java="`null`" pulumi-lang-hcl="`null`">`null`</span>, roles will not be managed by Terraform. This attribute must be null if the user is an OIDC user and role sync is configured
+     */
     declare public readonly roles: pulumi.Output<string[] | undefined>;
     /**
      * Whether the user is suspended.
@@ -120,15 +123,15 @@ export class User extends pulumi.CustomResource {
  */
 export interface UserState {
     /**
-     * Email address of the user. Required unless `is_service_account` is `true`, in which case it must be omitted (service accounts have no email).
+     * Email address of the user. Required unless <span pulumi-lang-nodejs="`isServiceAccount`" pulumi-lang-dotnet="`IsServiceAccount`" pulumi-lang-go="`isServiceAccount`" pulumi-lang-python="`is_service_account`" pulumi-lang-yaml="`isServiceAccount`" pulumi-lang-java="`isServiceAccount`" pulumi-lang-hcl="`is_service_account`">`isServiceAccount`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, in which case it must be omitted (service accounts have no email).
      */
     email?: pulumi.Input<string | undefined>;
     /**
-     * Whether the user is a service account. Service accounts are admin-managed accounts that cannot log in interactively: they have no password or email and use `login_type` `none`. Unlike a regular `login_type = none` user, a service account does not consume a licensed user seat. Changing this attribute forces replacement.
+     * Whether the user is a service account. Service accounts are admin-managed accounts that cannot log in interactively: they have no password or email and use <span pulumi-lang-nodejs="`loginType`" pulumi-lang-dotnet="`LoginType`" pulumi-lang-go="`loginType`" pulumi-lang-python="`login_type`" pulumi-lang-yaml="`loginType`" pulumi-lang-java="`loginType`" pulumi-lang-hcl="`login_type`">`loginType`</span> <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Unlike a regular <span pulumi-lang-nodejs="`loginType " pulumi-lang-dotnet="`LoginType " pulumi-lang-go="`loginType " pulumi-lang-python="`login_type " pulumi-lang-yaml="`loginType " pulumi-lang-java="`loginType " pulumi-lang-hcl="`login_type ">`loginType </span>= none` user, a service account does not consume a licensed user seat. Changing this attribute forces replacement.
      */
     isServiceAccount?: pulumi.Input<boolean | undefined>;
     /**
-     * Type of login for the user. Valid types are `none`, `password`, `github`, and `oidc`.
+     * Type of login for the user. Valid types are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>, <span pulumi-lang-nodejs="`github`" pulumi-lang-dotnet="`Github`" pulumi-lang-go="`github`" pulumi-lang-python="`github`" pulumi-lang-yaml="`github`" pulumi-lang-java="`github`" pulumi-lang-hcl="`github`">`github`</span>, and <span pulumi-lang-nodejs="`oidc`" pulumi-lang-dotnet="`Oidc`" pulumi-lang-go="`oidc`" pulumi-lang-python="`oidc`" pulumi-lang-yaml="`oidc`" pulumi-lang-java="`oidc`" pulumi-lang-hcl="`oidc`">`oidc`</span>.
      */
     loginType?: pulumi.Input<string | undefined>;
     /**
@@ -136,9 +139,12 @@ export interface UserState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Password for the user. Required when `login_type` is `password`. Passwords are saved into the state as plain text and should only be used for testing purposes.
+     * Password for the user. Required when <span pulumi-lang-nodejs="`loginType`" pulumi-lang-dotnet="`LoginType`" pulumi-lang-go="`loginType`" pulumi-lang-python="`login_type`" pulumi-lang-yaml="`loginType`" pulumi-lang-java="`loginType`" pulumi-lang-hcl="`login_type`">`loginType`</span> is <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>. Passwords are saved into the state as plain text and should only be used for testing purposes.
      */
     password?: pulumi.Input<string | undefined>;
+    /**
+     * Roles assigned to the user. Valid roles are <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span>, `template-admin`, `user-admin`, and <span pulumi-lang-nodejs="`auditor`" pulumi-lang-dotnet="`Auditor`" pulumi-lang-go="`auditor`" pulumi-lang-python="`auditor`" pulumi-lang-yaml="`auditor`" pulumi-lang-java="`auditor`" pulumi-lang-hcl="`auditor`">`auditor`</span>. If <span pulumi-lang-nodejs="`null`" pulumi-lang-dotnet="`Null`" pulumi-lang-go="`null`" pulumi-lang-python="`null`" pulumi-lang-yaml="`null`" pulumi-lang-java="`null`" pulumi-lang-hcl="`null`">`null`</span>, roles will not be managed by Terraform. This attribute must be null if the user is an OIDC user and role sync is configured
+     */
     roles?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether the user is suspended.
@@ -155,15 +161,15 @@ export interface UserState {
  */
 export interface UserArgs {
     /**
-     * Email address of the user. Required unless `is_service_account` is `true`, in which case it must be omitted (service accounts have no email).
+     * Email address of the user. Required unless <span pulumi-lang-nodejs="`isServiceAccount`" pulumi-lang-dotnet="`IsServiceAccount`" pulumi-lang-go="`isServiceAccount`" pulumi-lang-python="`is_service_account`" pulumi-lang-yaml="`isServiceAccount`" pulumi-lang-java="`isServiceAccount`" pulumi-lang-hcl="`is_service_account`">`isServiceAccount`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, in which case it must be omitted (service accounts have no email).
      */
     email?: pulumi.Input<string | undefined>;
     /**
-     * Whether the user is a service account. Service accounts are admin-managed accounts that cannot log in interactively: they have no password or email and use `login_type` `none`. Unlike a regular `login_type = none` user, a service account does not consume a licensed user seat. Changing this attribute forces replacement.
+     * Whether the user is a service account. Service accounts are admin-managed accounts that cannot log in interactively: they have no password or email and use <span pulumi-lang-nodejs="`loginType`" pulumi-lang-dotnet="`LoginType`" pulumi-lang-go="`loginType`" pulumi-lang-python="`login_type`" pulumi-lang-yaml="`loginType`" pulumi-lang-java="`loginType`" pulumi-lang-hcl="`login_type`">`loginType`</span> <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Unlike a regular <span pulumi-lang-nodejs="`loginType " pulumi-lang-dotnet="`LoginType " pulumi-lang-go="`loginType " pulumi-lang-python="`login_type " pulumi-lang-yaml="`loginType " pulumi-lang-java="`loginType " pulumi-lang-hcl="`login_type ">`loginType </span>= none` user, a service account does not consume a licensed user seat. Changing this attribute forces replacement.
      */
     isServiceAccount?: pulumi.Input<boolean | undefined>;
     /**
-     * Type of login for the user. Valid types are `none`, `password`, `github`, and `oidc`.
+     * Type of login for the user. Valid types are <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>, <span pulumi-lang-nodejs="`github`" pulumi-lang-dotnet="`Github`" pulumi-lang-go="`github`" pulumi-lang-python="`github`" pulumi-lang-yaml="`github`" pulumi-lang-java="`github`" pulumi-lang-hcl="`github`">`github`</span>, and <span pulumi-lang-nodejs="`oidc`" pulumi-lang-dotnet="`Oidc`" pulumi-lang-go="`oidc`" pulumi-lang-python="`oidc`" pulumi-lang-yaml="`oidc`" pulumi-lang-java="`oidc`" pulumi-lang-hcl="`oidc`">`oidc`</span>.
      */
     loginType?: pulumi.Input<string | undefined>;
     /**
@@ -171,9 +177,12 @@ export interface UserArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Password for the user. Required when `login_type` is `password`. Passwords are saved into the state as plain text and should only be used for testing purposes.
+     * Password for the user. Required when <span pulumi-lang-nodejs="`loginType`" pulumi-lang-dotnet="`LoginType`" pulumi-lang-go="`loginType`" pulumi-lang-python="`login_type`" pulumi-lang-yaml="`loginType`" pulumi-lang-java="`loginType`" pulumi-lang-hcl="`login_type`">`loginType`</span> is <span pulumi-lang-nodejs="`password`" pulumi-lang-dotnet="`Password`" pulumi-lang-go="`password`" pulumi-lang-python="`password`" pulumi-lang-yaml="`password`" pulumi-lang-java="`password`" pulumi-lang-hcl="`password`">`password`</span>. Passwords are saved into the state as plain text and should only be used for testing purposes.
      */
     password?: pulumi.Input<string | undefined>;
+    /**
+     * Roles assigned to the user. Valid roles are <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span>, `template-admin`, `user-admin`, and <span pulumi-lang-nodejs="`auditor`" pulumi-lang-dotnet="`Auditor`" pulumi-lang-go="`auditor`" pulumi-lang-python="`auditor`" pulumi-lang-yaml="`auditor`" pulumi-lang-java="`auditor`" pulumi-lang-hcl="`auditor`">`auditor`</span>. If <span pulumi-lang-nodejs="`null`" pulumi-lang-dotnet="`Null`" pulumi-lang-go="`null`" pulumi-lang-python="`null`" pulumi-lang-yaml="`null`" pulumi-lang-java="`null`" pulumi-lang-hcl="`null`">`null`</span>, roles will not be managed by Terraform. This attribute must be null if the user is an OIDC user and role sync is configured
+     */
     roles?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether the user is suspended.

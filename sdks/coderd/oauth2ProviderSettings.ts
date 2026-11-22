@@ -44,7 +44,7 @@ export class Oauth2ProviderSettings extends pulumi.CustomResource {
     }
 
     /**
-     * Whether OAuth2 Dynamic Client Registration ([RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591)) is enabled for the deployment. When disabled, `POST /oauth2/register` is rejected and the `registration_endpoint` is omitted from the authorization server metadata document.
+     * Whether OAuth2 Dynamic Client Registration ([RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591)) is enabled for the deployment. When disabled, `POST /oauth2/register` is rejected and the <span pulumi-lang-nodejs="`registrationEndpoint`" pulumi-lang-dotnet="`RegistrationEndpoint`" pulumi-lang-go="`registrationEndpoint`" pulumi-lang-python="`registration_endpoint`" pulumi-lang-yaml="`registrationEndpoint`" pulumi-lang-java="`registrationEndpoint`" pulumi-lang-hcl="`registration_endpoint`">`registrationEndpoint`</span> is omitted from the authorization server metadata document.
      */
     declare public readonly dynamicClientRegistrationEnabled: pulumi.Output<boolean>;
 
@@ -79,7 +79,7 @@ export class Oauth2ProviderSettings extends pulumi.CustomResource {
  */
 export interface Oauth2ProviderSettingsState {
     /**
-     * Whether OAuth2 Dynamic Client Registration ([RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591)) is enabled for the deployment. When disabled, `POST /oauth2/register` is rejected and the `registration_endpoint` is omitted from the authorization server metadata document.
+     * Whether OAuth2 Dynamic Client Registration ([RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591)) is enabled for the deployment. When disabled, `POST /oauth2/register` is rejected and the <span pulumi-lang-nodejs="`registrationEndpoint`" pulumi-lang-dotnet="`RegistrationEndpoint`" pulumi-lang-go="`registrationEndpoint`" pulumi-lang-python="`registration_endpoint`" pulumi-lang-yaml="`registrationEndpoint`" pulumi-lang-java="`registrationEndpoint`" pulumi-lang-hcl="`registration_endpoint`">`registrationEndpoint`</span> is omitted from the authorization server metadata document.
      */
     dynamicClientRegistrationEnabled?: pulumi.Input<boolean | undefined>;
 }
@@ -89,7 +89,7 @@ export interface Oauth2ProviderSettingsState {
  */
 export interface Oauth2ProviderSettingsArgs {
     /**
-     * Whether OAuth2 Dynamic Client Registration ([RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591)) is enabled for the deployment. When disabled, `POST /oauth2/register` is rejected and the `registration_endpoint` is omitted from the authorization server metadata document.
+     * Whether OAuth2 Dynamic Client Registration ([RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591)) is enabled for the deployment. When disabled, `POST /oauth2/register` is rejected and the <span pulumi-lang-nodejs="`registrationEndpoint`" pulumi-lang-dotnet="`RegistrationEndpoint`" pulumi-lang-go="`registrationEndpoint`" pulumi-lang-python="`registration_endpoint`" pulumi-lang-yaml="`registrationEndpoint`" pulumi-lang-java="`registrationEndpoint`" pulumi-lang-hcl="`registration_endpoint`">`registrationEndpoint`</span> is omitted from the authorization server metadata document.
      */
     dynamicClientRegistrationEnabled: pulumi.Input<boolean>;
 }

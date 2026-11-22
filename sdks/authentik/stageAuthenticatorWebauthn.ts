@@ -45,7 +45,7 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
 
     /**
      * Allowed values:
-     *   - `platform`
+     *   - <span pulumi-lang-nodejs="`platform`" pulumi-lang-dotnet="`Platform`" pulumi-lang-go="`platform`" pulumi-lang-python="`platform`" pulumi-lang-yaml="`platform`" pulumi-lang-java="`platform`" pulumi-lang-hcl="`platform`">`platform`</span>
      *   - `cross-platform`
      */
     declare public readonly authenticatorAttachment: pulumi.Output<string | undefined>;
@@ -60,19 +60,19 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
     declare public readonly name: pulumi.Output<string>;
     /**
      * Allowed values:
-     *   - `required`
-     *   - `preferred`
-     *   - `discouraged`
-     *      Defaults to `preferred`.
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *   - <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>
+     *   - <span pulumi-lang-nodejs="`discouraged`" pulumi-lang-dotnet="`Discouraged`" pulumi-lang-go="`discouraged`" pulumi-lang-python="`discouraged`" pulumi-lang-yaml="`discouraged`" pulumi-lang-java="`discouraged`" pulumi-lang-hcl="`discouraged`">`discouraged`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>.
      */
     declare public readonly residentKeyRequirement: pulumi.Output<string | undefined>;
     declare public readonly stageAuthenticatorWebauthnId: pulumi.Output<string>;
     /**
      * Allowed values:
-     *   - `required`
-     *   - `preferred`
-     *   - `discouraged`
-     *      Defaults to `preferred`.
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *   - <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>
+     *   - <span pulumi-lang-nodejs="`discouraged`" pulumi-lang-dotnet="`Discouraged`" pulumi-lang-go="`discouraged`" pulumi-lang-python="`discouraged`" pulumi-lang-yaml="`discouraged`" pulumi-lang-java="`discouraged`" pulumi-lang-hcl="`discouraged`">`discouraged`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>.
      */
     declare public readonly userVerification: pulumi.Output<string | undefined>;
 
@@ -123,7 +123,7 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
 export interface StageAuthenticatorWebauthnState {
     /**
      * Allowed values:
-     *   - `platform`
+     *   - <span pulumi-lang-nodejs="`platform`" pulumi-lang-dotnet="`Platform`" pulumi-lang-go="`platform`" pulumi-lang-python="`platform`" pulumi-lang-yaml="`platform`" pulumi-lang-java="`platform`" pulumi-lang-hcl="`platform`">`platform`</span>
      *   - `cross-platform`
      */
     authenticatorAttachment?: pulumi.Input<string | undefined>;
@@ -138,19 +138,19 @@ export interface StageAuthenticatorWebauthnState {
     name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `required`
-     *   - `preferred`
-     *   - `discouraged`
-     *      Defaults to `preferred`.
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *   - <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>
+     *   - <span pulumi-lang-nodejs="`discouraged`" pulumi-lang-dotnet="`Discouraged`" pulumi-lang-go="`discouraged`" pulumi-lang-python="`discouraged`" pulumi-lang-yaml="`discouraged`" pulumi-lang-java="`discouraged`" pulumi-lang-hcl="`discouraged`">`discouraged`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>.
      */
     residentKeyRequirement?: pulumi.Input<string | undefined>;
     stageAuthenticatorWebauthnId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `required`
-     *   - `preferred`
-     *   - `discouraged`
-     *      Defaults to `preferred`.
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *   - <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>
+     *   - <span pulumi-lang-nodejs="`discouraged`" pulumi-lang-dotnet="`Discouraged`" pulumi-lang-go="`discouraged`" pulumi-lang-python="`discouraged`" pulumi-lang-yaml="`discouraged`" pulumi-lang-java="`discouraged`" pulumi-lang-hcl="`discouraged`">`discouraged`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>.
      */
     userVerification?: pulumi.Input<string | undefined>;
 }
@@ -161,7 +161,7 @@ export interface StageAuthenticatorWebauthnState {
 export interface StageAuthenticatorWebauthnArgs {
     /**
      * Allowed values:
-     *   - `platform`
+     *   - <span pulumi-lang-nodejs="`platform`" pulumi-lang-dotnet="`Platform`" pulumi-lang-go="`platform`" pulumi-lang-python="`platform`" pulumi-lang-yaml="`platform`" pulumi-lang-java="`platform`" pulumi-lang-hcl="`platform`">`platform`</span>
      *   - `cross-platform`
      */
     authenticatorAttachment?: pulumi.Input<string | undefined>;
@@ -176,19 +176,19 @@ export interface StageAuthenticatorWebauthnArgs {
     name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `required`
-     *   - `preferred`
-     *   - `discouraged`
-     *      Defaults to `preferred`.
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *   - <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>
+     *   - <span pulumi-lang-nodejs="`discouraged`" pulumi-lang-dotnet="`Discouraged`" pulumi-lang-go="`discouraged`" pulumi-lang-python="`discouraged`" pulumi-lang-yaml="`discouraged`" pulumi-lang-java="`discouraged`" pulumi-lang-hcl="`discouraged`">`discouraged`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>.
      */
     residentKeyRequirement?: pulumi.Input<string | undefined>;
     stageAuthenticatorWebauthnId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `required`
-     *   - `preferred`
-     *   - `discouraged`
-     *      Defaults to `preferred`.
+     *   - <span pulumi-lang-nodejs="`required`" pulumi-lang-dotnet="`Required`" pulumi-lang-go="`required`" pulumi-lang-python="`required`" pulumi-lang-yaml="`required`" pulumi-lang-java="`required`" pulumi-lang-hcl="`required`">`required`</span>
+     *   - <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>
+     *   - <span pulumi-lang-nodejs="`discouraged`" pulumi-lang-dotnet="`Discouraged`" pulumi-lang-go="`discouraged`" pulumi-lang-python="`discouraged`" pulumi-lang-yaml="`discouraged`" pulumi-lang-java="`discouraged`" pulumi-lang-hcl="`discouraged`">`discouraged`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`preferred`" pulumi-lang-dotnet="`Preferred`" pulumi-lang-go="`preferred`" pulumi-lang-python="`preferred`" pulumi-lang-yaml="`preferred`" pulumi-lang-java="`preferred`" pulumi-lang-hcl="`preferred`">`preferred`</span>.
      */
     userVerification?: pulumi.Input<string | undefined>;
 }

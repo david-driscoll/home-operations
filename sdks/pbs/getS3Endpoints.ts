@@ -17,10 +17,6 @@ export function getS3Endpoints(opts?: pulumi.InvokeOptions): Promise<GetS3Endpoi
  */
 export interface GetS3EndpointsResult {
     readonly endpoints: outputs.GetS3EndpointsEndpoint[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
 }
 export function getS3EndpointsOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetS3EndpointsResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});

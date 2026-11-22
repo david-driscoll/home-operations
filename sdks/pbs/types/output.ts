@@ -11,33 +11,33 @@ export interface DatastoreMaintenanceMode {
      */
     message?: string;
     /**
-     * Maintenance mode type. Valid values: `offline`, `read-only`.
+     * Maintenance mode type. Valid values: <span pulumi-lang-nodejs="`offline`" pulumi-lang-dotnet="`Offline`" pulumi-lang-go="`offline`" pulumi-lang-python="`offline`" pulumi-lang-yaml="`offline`" pulumi-lang-java="`offline`" pulumi-lang-hcl="`offline`">`offline`</span>, `read-only`.
      */
     type: string;
 }
 
 export interface DatastoreNotify {
     /**
-     * Garbage collection notification level. Valid values: `always`, `error`, `never`.
+     * Garbage collection notification level. Valid values: <span pulumi-lang-nodejs="`always`" pulumi-lang-dotnet="`Always`" pulumi-lang-go="`always`" pulumi-lang-python="`always`" pulumi-lang-yaml="`always`" pulumi-lang-java="`always`" pulumi-lang-hcl="`always`">`always`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>, <span pulumi-lang-nodejs="`never`" pulumi-lang-dotnet="`Never`" pulumi-lang-go="`never`" pulumi-lang-python="`never`" pulumi-lang-yaml="`never`" pulumi-lang-java="`never`" pulumi-lang-hcl="`never`">`never`</span>.
      */
     gc?: string;
     /**
-     * Prune job notification level. Valid values: `always`, `error`, `never`.
+     * Prune job notification level. Valid values: <span pulumi-lang-nodejs="`always`" pulumi-lang-dotnet="`Always`" pulumi-lang-go="`always`" pulumi-lang-python="`always`" pulumi-lang-yaml="`always`" pulumi-lang-java="`always`" pulumi-lang-hcl="`always`">`always`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>, <span pulumi-lang-nodejs="`never`" pulumi-lang-dotnet="`Never`" pulumi-lang-go="`never`" pulumi-lang-python="`never`" pulumi-lang-yaml="`never`" pulumi-lang-java="`never`" pulumi-lang-hcl="`never`">`never`</span>.
      */
     prune?: string;
     /**
-     * Sync job notification level. Valid values: `always`, `error`, `never`.
+     * Sync job notification level. Valid values: <span pulumi-lang-nodejs="`always`" pulumi-lang-dotnet="`Always`" pulumi-lang-go="`always`" pulumi-lang-python="`always`" pulumi-lang-yaml="`always`" pulumi-lang-java="`always`" pulumi-lang-hcl="`always`">`always`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>, <span pulumi-lang-nodejs="`never`" pulumi-lang-dotnet="`Never`" pulumi-lang-go="`never`" pulumi-lang-python="`never`" pulumi-lang-yaml="`never`" pulumi-lang-java="`never`" pulumi-lang-hcl="`never`">`never`</span>.
      */
     sync?: string;
     /**
-     * Verification job notification level. Valid values: `always`, `error`, `never`.
+     * Verification job notification level. Valid values: <span pulumi-lang-nodejs="`always`" pulumi-lang-dotnet="`Always`" pulumi-lang-go="`always`" pulumi-lang-python="`always`" pulumi-lang-yaml="`always`" pulumi-lang-java="`always`" pulumi-lang-hcl="`always`">`always`</span>, <span pulumi-lang-nodejs="`error`" pulumi-lang-dotnet="`Error`" pulumi-lang-go="`error`" pulumi-lang-python="`error`" pulumi-lang-yaml="`error`" pulumi-lang-java="`error`" pulumi-lang-hcl="`error`">`error`</span>, <span pulumi-lang-nodejs="`never`" pulumi-lang-dotnet="`Never`" pulumi-lang-go="`never`" pulumi-lang-python="`never`" pulumi-lang-yaml="`never`" pulumi-lang-java="`never`" pulumi-lang-hcl="`never`">`never`</span>.
      */
     verify?: string;
 }
 
 export interface DatastoreTuning {
     /**
-     * Chunk iteration order. Valid values: `inode`, `none`.
+     * Chunk iteration order. Valid values: <span pulumi-lang-nodejs="`inode`" pulumi-lang-dotnet="`Inode`" pulumi-lang-go="`inode`" pulumi-lang-python="`inode`" pulumi-lang-yaml="`inode`" pulumi-lang-java="`inode`" pulumi-lang-hcl="`inode`">`inode`</span>, <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     chunkOrder?: string;
     /**
@@ -53,7 +53,7 @@ export interface DatastoreTuning {
      */
     gcCacheCapacity?: number;
     /**
-     * Datastore fsync level. Valid values: `none`, `filesystem`, `file`.
+     * Datastore fsync level. Valid values: <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>, <span pulumi-lang-nodejs="`filesystem`" pulumi-lang-dotnet="`Filesystem`" pulumi-lang-go="`filesystem`" pulumi-lang-python="`filesystem`" pulumi-lang-yaml="`filesystem`" pulumi-lang-java="`filesystem`" pulumi-lang-hcl="`filesystem`">`filesystem`</span>, <span pulumi-lang-nodejs="`file`" pulumi-lang-dotnet="`File`" pulumi-lang-go="`file`" pulumi-lang-python="`file`" pulumi-lang-yaml="`file`" pulumi-lang-java="`file`" pulumi-lang-hcl="`file`">`file`</span>.
      */
     syncLevel?: string;
 }
@@ -415,7 +415,7 @@ export interface GetNotificationMatchersMatcher {
      */
     matchSeverities: string[];
     /**
-     * Matching mode: `all` (AND logic) or `any` (OR logic). Default is `all`.
+     * Matching mode: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span> (AND logic) or <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span> (OR logic). Default is <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     mode: string;
     /**

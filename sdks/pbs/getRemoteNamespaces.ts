@@ -24,10 +24,6 @@ export interface GetRemoteNamespacesArgs {
  * A collection of values returned by getRemoteNamespaces.
  */
 export interface GetRemoteNamespacesResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly namespaces: string[];
     readonly remoteName: string;
     readonly store: string;

@@ -45,8 +45,8 @@ export class UserOffboarding extends pulumi.CustomResource {
 
     /**
      * Allowed values:
-     *   - `deactivate`
-     *   - `delete`
+     *   - <span pulumi-lang-nodejs="`deactivate`" pulumi-lang-dotnet="`Deactivate`" pulumi-lang-go="`deactivate`" pulumi-lang-python="`deactivate`" pulumi-lang-yaml="`deactivate`" pulumi-lang-java="`deactivate`" pulumi-lang-hcl="`deactivate`">`deactivate`</span>
+     *   - <span pulumi-lang-nodejs="`delete`" pulumi-lang-dotnet="`Delete`" pulumi-lang-go="`delete`" pulumi-lang-python="`delete`" pulumi-lang-yaml="`delete`" pulumi-lang-java="`delete`" pulumi-lang-hcl="`delete`">`delete`</span>
      *      Generated.
      */
     declare public readonly action: pulumi.Output<string>;
@@ -131,8 +131,8 @@ export class UserOffboarding extends pulumi.CustomResource {
 export interface UserOffboardingState {
     /**
      * Allowed values:
-     *   - `deactivate`
-     *   - `delete`
+     *   - <span pulumi-lang-nodejs="`deactivate`" pulumi-lang-dotnet="`Deactivate`" pulumi-lang-go="`deactivate`" pulumi-lang-python="`deactivate`" pulumi-lang-yaml="`deactivate`" pulumi-lang-java="`deactivate`" pulumi-lang-hcl="`deactivate`">`deactivate`</span>
+     *   - <span pulumi-lang-nodejs="`delete`" pulumi-lang-dotnet="`Delete`" pulumi-lang-go="`delete`" pulumi-lang-python="`delete`" pulumi-lang-yaml="`delete`" pulumi-lang-java="`delete`" pulumi-lang-hcl="`delete`">`delete`</span>
      *      Generated.
      */
     action?: pulumi.Input<string | undefined>;
@@ -173,8 +173,8 @@ export interface UserOffboardingState {
 export interface UserOffboardingArgs {
     /**
      * Allowed values:
-     *   - `deactivate`
-     *   - `delete`
+     *   - <span pulumi-lang-nodejs="`deactivate`" pulumi-lang-dotnet="`Deactivate`" pulumi-lang-go="`deactivate`" pulumi-lang-python="`deactivate`" pulumi-lang-yaml="`deactivate`" pulumi-lang-java="`deactivate`" pulumi-lang-hcl="`deactivate`">`deactivate`</span>
+     *   - <span pulumi-lang-nodejs="`delete`" pulumi-lang-dotnet="`Delete`" pulumi-lang-go="`delete`" pulumi-lang-python="`delete`" pulumi-lang-yaml="`delete`" pulumi-lang-java="`delete`" pulumi-lang-hcl="`delete`">`delete`</span>
      *      Generated.
      */
     action?: pulumi.Input<string | undefined>;

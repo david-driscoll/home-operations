@@ -57,7 +57,7 @@ export class Organization extends pulumi.CustomResource {
     /**
      * Group sync settings to sync groups from an IdP.
      *
-     * > **Deprecated** This block is deprecated. Use the `coderd.OrganizationGroupSync` resource instead.
+     * > **Deprecated** This block is deprecated. Use the <span pulumi-lang-nodejs="`coderd.OrganizationGroupSync`" pulumi-lang-dotnet="`coderd.OrganizationGroupSync`" pulumi-lang-go="`OrganizationGroupSync`" pulumi-lang-python="`OrganizationGroupSync`" pulumi-lang-yaml="`coderd.OrganizationGroupSync`" pulumi-lang-java="`coderd.OrganizationGroupSync`" pulumi-lang-hcl="`coderd_organization_group_sync`">`coderd.OrganizationGroupSync`</span> resource instead.
      *
      * @deprecated Deprecated
      */
@@ -76,7 +76,7 @@ export class Organization extends pulumi.CustomResource {
      */
     declare public readonly roleSync: pulumi.Output<outputs.OrganizationRoleSync | undefined>;
     /**
-     * Workspace sharing setting for the organization. Valid values are `everyone` and `none`. Requires a Coder Deployment running v2.32.0 or later.
+     * Workspace sharing setting for the organization. Valid values are <span pulumi-lang-nodejs="`everyone`" pulumi-lang-dotnet="`Everyone`" pulumi-lang-go="`everyone`" pulumi-lang-python="`everyone`" pulumi-lang-yaml="`everyone`" pulumi-lang-java="`everyone`" pulumi-lang-hcl="`everyone`">`everyone`</span> and <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Requires a Coder Deployment running v2.32.0 or later.
      */
     declare public readonly workspaceSharing: pulumi.Output<string>;
 
@@ -135,7 +135,7 @@ export interface OrganizationState {
     /**
      * Group sync settings to sync groups from an IdP.
      *
-     * > **Deprecated** This block is deprecated. Use the `coderd.OrganizationGroupSync` resource instead.
+     * > **Deprecated** This block is deprecated. Use the <span pulumi-lang-nodejs="`coderd.OrganizationGroupSync`" pulumi-lang-dotnet="`coderd.OrganizationGroupSync`" pulumi-lang-go="`OrganizationGroupSync`" pulumi-lang-python="`OrganizationGroupSync`" pulumi-lang-yaml="`coderd.OrganizationGroupSync`" pulumi-lang-java="`coderd.OrganizationGroupSync`" pulumi-lang-hcl="`coderd_organization_group_sync`">`coderd.OrganizationGroupSync`</span> resource instead.
      *
      * @deprecated Deprecated
      */
@@ -154,7 +154,7 @@ export interface OrganizationState {
      */
     roleSync?: pulumi.Input<inputs.OrganizationRoleSync | undefined>;
     /**
-     * Workspace sharing setting for the organization. Valid values are `everyone` and `none`. Requires a Coder Deployment running v2.32.0 or later.
+     * Workspace sharing setting for the organization. Valid values are <span pulumi-lang-nodejs="`everyone`" pulumi-lang-dotnet="`Everyone`" pulumi-lang-go="`everyone`" pulumi-lang-python="`everyone`" pulumi-lang-yaml="`everyone`" pulumi-lang-java="`everyone`" pulumi-lang-hcl="`everyone`">`everyone`</span> and <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Requires a Coder Deployment running v2.32.0 or later.
      */
     workspaceSharing?: pulumi.Input<string | undefined>;
 }
@@ -175,7 +175,7 @@ export interface OrganizationArgs {
     /**
      * Group sync settings to sync groups from an IdP.
      *
-     * > **Deprecated** This block is deprecated. Use the `coderd.OrganizationGroupSync` resource instead.
+     * > **Deprecated** This block is deprecated. Use the <span pulumi-lang-nodejs="`coderd.OrganizationGroupSync`" pulumi-lang-dotnet="`coderd.OrganizationGroupSync`" pulumi-lang-go="`OrganizationGroupSync`" pulumi-lang-python="`OrganizationGroupSync`" pulumi-lang-yaml="`coderd.OrganizationGroupSync`" pulumi-lang-java="`coderd.OrganizationGroupSync`" pulumi-lang-hcl="`coderd_organization_group_sync`">`coderd.OrganizationGroupSync`</span> resource instead.
      *
      * @deprecated Deprecated
      */
@@ -194,7 +194,7 @@ export interface OrganizationArgs {
      */
     roleSync?: pulumi.Input<inputs.OrganizationRoleSync | undefined>;
     /**
-     * Workspace sharing setting for the organization. Valid values are `everyone` and `none`. Requires a Coder Deployment running v2.32.0 or later.
+     * Workspace sharing setting for the organization. Valid values are <span pulumi-lang-nodejs="`everyone`" pulumi-lang-dotnet="`Everyone`" pulumi-lang-go="`everyone`" pulumi-lang-python="`everyone`" pulumi-lang-yaml="`everyone`" pulumi-lang-java="`everyone`" pulumi-lang-hcl="`everyone`">`everyone`</span> and <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>. Requires a Coder Deployment running v2.32.0 or later.
      */
     workspaceSharing?: pulumi.Input<string | undefined>;
 }

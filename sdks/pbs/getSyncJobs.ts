@@ -27,10 +27,6 @@ export interface GetSyncJobsArgs {
  * A collection of values returned by getSyncJobs.
  */
 export interface GetSyncJobsResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly jobs: outputs.GetSyncJobsJob[];
     readonly remote?: string;
     readonly store?: string;

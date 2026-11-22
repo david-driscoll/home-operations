@@ -51,6 +51,9 @@ export class Group extends pulumi.CustomResource {
      * The display name of the group. Defaults to the group name.
      */
     declare public readonly displayName: pulumi.Output<string>;
+    /**
+     * Members of the group, by ID. If <span pulumi-lang-nodejs="`null`" pulumi-lang-dotnet="`Null`" pulumi-lang-go="`null`" pulumi-lang-python="`null`" pulumi-lang-yaml="`null`" pulumi-lang-java="`null`" pulumi-lang-hcl="`null`">`null`</span>, members will not be added or removed by Terraform. To have a group resource with unmanaged members, but be able to read the members in Terraform, use `data.coderd_group`
+     */
     declare public readonly members: pulumi.Output<string[] | undefined>;
     /**
      * The unique name of the group.
@@ -110,6 +113,9 @@ export interface GroupState {
      * The display name of the group. Defaults to the group name.
      */
     displayName?: pulumi.Input<string | undefined>;
+    /**
+     * Members of the group, by ID. If <span pulumi-lang-nodejs="`null`" pulumi-lang-dotnet="`Null`" pulumi-lang-go="`null`" pulumi-lang-python="`null`" pulumi-lang-yaml="`null`" pulumi-lang-java="`null`" pulumi-lang-hcl="`null`">`null`</span>, members will not be added or removed by Terraform. To have a group resource with unmanaged members, but be able to read the members in Terraform, use `data.coderd_group`
+     */
     members?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The unique name of the group.
@@ -137,6 +143,9 @@ export interface GroupArgs {
      * The display name of the group. Defaults to the group name.
      */
     displayName?: pulumi.Input<string | undefined>;
+    /**
+     * Members of the group, by ID. If <span pulumi-lang-nodejs="`null`" pulumi-lang-dotnet="`Null`" pulumi-lang-go="`null`" pulumi-lang-python="`null`" pulumi-lang-yaml="`null`" pulumi-lang-java="`null`" pulumi-lang-hcl="`null`">`null`</span>, members will not be added or removed by Terraform. To have a group resource with unmanaged members, but be able to read the members in Terraform, use `data.coderd_group`
+     */
     members?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The unique name of the group.

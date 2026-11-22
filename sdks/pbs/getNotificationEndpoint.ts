@@ -30,10 +30,6 @@ export interface GetNotificationEndpointResult {
     readonly disable: boolean;
     readonly fromAddress: string;
     readonly headers: {[key: string]: string};
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly mailtoUsers: string[];
     readonly mailtos: string[];
     readonly method: string;

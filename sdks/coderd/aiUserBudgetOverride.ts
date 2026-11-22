@@ -48,7 +48,7 @@ export class AiUserBudgetOverride extends pulumi.CustomResource {
      */
     declare public readonly groupId: pulumi.Output<string>;
     /**
-     * Spend limit for the user in each budget period, in integer micro-units: `1000000` is $1.00. A limit of `0` allows no spend. The maximum is `1000000000000` ($1,000,000.00).
+     * Spend limit for the user in each budget period, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00. A limit of <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> allows no spend. The maximum is <span pulumi-lang-nodejs="`1000000000000`" pulumi-lang-dotnet="`1000000000000`" pulumi-lang-go="`1000000000000`" pulumi-lang-python="`1000000000000`" pulumi-lang-yaml="`1000000000000`" pulumi-lang-java="`1000000000000`" pulumi-lang-hcl="`1000000000000`">`1000000000000`</span> ($1,000,000.00).
      */
     declare public readonly spendLimit: pulumi.Output<number>;
     /**
@@ -101,7 +101,7 @@ export interface AiUserBudgetOverrideState {
      */
     groupId?: pulumi.Input<string | undefined>;
     /**
-     * Spend limit for the user in each budget period, in integer micro-units: `1000000` is $1.00. A limit of `0` allows no spend. The maximum is `1000000000000` ($1,000,000.00).
+     * Spend limit for the user in each budget period, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00. A limit of <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> allows no spend. The maximum is <span pulumi-lang-nodejs="`1000000000000`" pulumi-lang-dotnet="`1000000000000`" pulumi-lang-go="`1000000000000`" pulumi-lang-python="`1000000000000`" pulumi-lang-yaml="`1000000000000`" pulumi-lang-java="`1000000000000`" pulumi-lang-hcl="`1000000000000`">`1000000000000`</span> ($1,000,000.00).
      */
     spendLimit?: pulumi.Input<number | undefined>;
     /**
@@ -119,7 +119,7 @@ export interface AiUserBudgetOverrideArgs {
      */
     groupId: pulumi.Input<string>;
     /**
-     * Spend limit for the user in each budget period, in integer micro-units: `1000000` is $1.00. A limit of `0` allows no spend. The maximum is `1000000000000` ($1,000,000.00).
+     * Spend limit for the user in each budget period, in integer micro-units: <span pulumi-lang-nodejs="`1000000`" pulumi-lang-dotnet="`1000000`" pulumi-lang-go="`1000000`" pulumi-lang-python="`1000000`" pulumi-lang-yaml="`1000000`" pulumi-lang-java="`1000000`" pulumi-lang-hcl="`1000000`">`1000000`</span> is $1.00. A limit of <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span> allows no spend. The maximum is <span pulumi-lang-nodejs="`1000000000000`" pulumi-lang-dotnet="`1000000000000`" pulumi-lang-go="`1000000000000`" pulumi-lang-python="`1000000000000`" pulumi-lang-yaml="`1000000000000`" pulumi-lang-java="`1000000000000`" pulumi-lang-hcl="`1000000000000`">`1000000000000`</span> ($1,000,000.00).
      */
     spendLimit: pulumi.Input<number>;
     /**

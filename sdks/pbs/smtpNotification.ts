@@ -52,7 +52,7 @@ export class SmtpNotification extends pulumi.CustomResource {
      */
     declare public readonly comment: pulumi.Output<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly disable: pulumi.Output<boolean>;
     /**
@@ -68,7 +68,7 @@ export class SmtpNotification extends pulumi.CustomResource {
      */
     declare public readonly mailtos: pulumi.Output<string[] | undefined>;
     /**
-     * Connection mode for SMTP. Valid values: `insecure` (no encryption), `starttls` (upgrade to TLS), `tls` (direct TLS). Defaults to `insecure`.
+     * Connection mode for SMTP. Valid values: <span pulumi-lang-nodejs="`insecure`" pulumi-lang-dotnet="`Insecure`" pulumi-lang-go="`insecure`" pulumi-lang-python="`insecure`" pulumi-lang-yaml="`insecure`" pulumi-lang-java="`insecure`" pulumi-lang-hcl="`insecure`">`insecure`</span> (no encryption), <span pulumi-lang-nodejs="`starttls`" pulumi-lang-dotnet="`Starttls`" pulumi-lang-go="`starttls`" pulumi-lang-python="`starttls`" pulumi-lang-yaml="`starttls`" pulumi-lang-java="`starttls`" pulumi-lang-hcl="`starttls`">`starttls`</span> (upgrade to TLS), <span pulumi-lang-nodejs="`tls`" pulumi-lang-dotnet="`Tls`" pulumi-lang-go="`tls`" pulumi-lang-python="`tls`" pulumi-lang-yaml="`tls`" pulumi-lang-java="`tls`" pulumi-lang-hcl="`tls`">`tls`</span> (direct TLS). Defaults to <span pulumi-lang-nodejs="`insecure`" pulumi-lang-dotnet="`Insecure`" pulumi-lang-go="`insecure`" pulumi-lang-python="`insecure`" pulumi-lang-yaml="`insecure`" pulumi-lang-java="`insecure`" pulumi-lang-hcl="`insecure`">`insecure`</span>.
      */
     declare public readonly mode: pulumi.Output<string>;
     /**
@@ -76,7 +76,7 @@ export class SmtpNotification extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     declare public /*out*/ readonly origin: pulumi.Output<string>;
     /**
@@ -84,7 +84,7 @@ export class SmtpNotification extends pulumi.CustomResource {
      */
     declare public readonly password: pulumi.Output<string | undefined>;
     /**
-     * SMTP server port. Common values: `25` (unencrypted), `465` (TLS), `587` (STARTTLS). Defaults to `25`.
+     * SMTP server port. Common values: <span pulumi-lang-nodejs="`25`" pulumi-lang-dotnet="`25`" pulumi-lang-go="`25`" pulumi-lang-python="`25`" pulumi-lang-yaml="`25`" pulumi-lang-java="`25`" pulumi-lang-hcl="`25`">`25`</span> (unencrypted), <span pulumi-lang-nodejs="`465`" pulumi-lang-dotnet="`465`" pulumi-lang-go="`465`" pulumi-lang-python="`465`" pulumi-lang-yaml="`465`" pulumi-lang-java="`465`" pulumi-lang-hcl="`465`">`465`</span> (TLS), <span pulumi-lang-nodejs="`587`" pulumi-lang-dotnet="`587`" pulumi-lang-go="`587`" pulumi-lang-python="`587`" pulumi-lang-yaml="`587`" pulumi-lang-java="`587`" pulumi-lang-hcl="`587`">`587`</span> (STARTTLS). Defaults to <span pulumi-lang-nodejs="`25`" pulumi-lang-dotnet="`25`" pulumi-lang-go="`25`" pulumi-lang-python="`25`" pulumi-lang-yaml="`25`" pulumi-lang-java="`25`" pulumi-lang-hcl="`25`">`25`</span>.
      */
     declare public readonly port: pulumi.Output<number>;
     /**
@@ -164,7 +164,7 @@ export interface SmtpNotificationState {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
@@ -180,7 +180,7 @@ export interface SmtpNotificationState {
      */
     mailtos?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Connection mode for SMTP. Valid values: `insecure` (no encryption), `starttls` (upgrade to TLS), `tls` (direct TLS). Defaults to `insecure`.
+     * Connection mode for SMTP. Valid values: <span pulumi-lang-nodejs="`insecure`" pulumi-lang-dotnet="`Insecure`" pulumi-lang-go="`insecure`" pulumi-lang-python="`insecure`" pulumi-lang-yaml="`insecure`" pulumi-lang-java="`insecure`" pulumi-lang-hcl="`insecure`">`insecure`</span> (no encryption), <span pulumi-lang-nodejs="`starttls`" pulumi-lang-dotnet="`Starttls`" pulumi-lang-go="`starttls`" pulumi-lang-python="`starttls`" pulumi-lang-yaml="`starttls`" pulumi-lang-java="`starttls`" pulumi-lang-hcl="`starttls`">`starttls`</span> (upgrade to TLS), <span pulumi-lang-nodejs="`tls`" pulumi-lang-dotnet="`Tls`" pulumi-lang-go="`tls`" pulumi-lang-python="`tls`" pulumi-lang-yaml="`tls`" pulumi-lang-java="`tls`" pulumi-lang-hcl="`tls`">`tls`</span> (direct TLS). Defaults to <span pulumi-lang-nodejs="`insecure`" pulumi-lang-dotnet="`Insecure`" pulumi-lang-go="`insecure`" pulumi-lang-python="`insecure`" pulumi-lang-yaml="`insecure`" pulumi-lang-java="`insecure`" pulumi-lang-hcl="`insecure`">`insecure`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     /**
@@ -188,7 +188,7 @@ export interface SmtpNotificationState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     origin?: pulumi.Input<string | undefined>;
     /**
@@ -196,7 +196,7 @@ export interface SmtpNotificationState {
      */
     password?: pulumi.Input<string | undefined>;
     /**
-     * SMTP server port. Common values: `25` (unencrypted), `465` (TLS), `587` (STARTTLS). Defaults to `25`.
+     * SMTP server port. Common values: <span pulumi-lang-nodejs="`25`" pulumi-lang-dotnet="`25`" pulumi-lang-go="`25`" pulumi-lang-python="`25`" pulumi-lang-yaml="`25`" pulumi-lang-java="`25`" pulumi-lang-hcl="`25`">`25`</span> (unencrypted), <span pulumi-lang-nodejs="`465`" pulumi-lang-dotnet="`465`" pulumi-lang-go="`465`" pulumi-lang-python="`465`" pulumi-lang-yaml="`465`" pulumi-lang-java="`465`" pulumi-lang-hcl="`465`">`465`</span> (TLS), <span pulumi-lang-nodejs="`587`" pulumi-lang-dotnet="`587`" pulumi-lang-go="`587`" pulumi-lang-python="`587`" pulumi-lang-yaml="`587`" pulumi-lang-java="`587`" pulumi-lang-hcl="`587`">`587`</span> (STARTTLS). Defaults to <span pulumi-lang-nodejs="`25`" pulumi-lang-dotnet="`25`" pulumi-lang-go="`25`" pulumi-lang-python="`25`" pulumi-lang-yaml="`25`" pulumi-lang-java="`25`" pulumi-lang-hcl="`25`">`25`</span>.
      */
     port?: pulumi.Input<number | undefined>;
     /**
@@ -222,7 +222,7 @@ export interface SmtpNotificationArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
@@ -238,7 +238,7 @@ export interface SmtpNotificationArgs {
      */
     mailtos?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Connection mode for SMTP. Valid values: `insecure` (no encryption), `starttls` (upgrade to TLS), `tls` (direct TLS). Defaults to `insecure`.
+     * Connection mode for SMTP. Valid values: <span pulumi-lang-nodejs="`insecure`" pulumi-lang-dotnet="`Insecure`" pulumi-lang-go="`insecure`" pulumi-lang-python="`insecure`" pulumi-lang-yaml="`insecure`" pulumi-lang-java="`insecure`" pulumi-lang-hcl="`insecure`">`insecure`</span> (no encryption), <span pulumi-lang-nodejs="`starttls`" pulumi-lang-dotnet="`Starttls`" pulumi-lang-go="`starttls`" pulumi-lang-python="`starttls`" pulumi-lang-yaml="`starttls`" pulumi-lang-java="`starttls`" pulumi-lang-hcl="`starttls`">`starttls`</span> (upgrade to TLS), <span pulumi-lang-nodejs="`tls`" pulumi-lang-dotnet="`Tls`" pulumi-lang-go="`tls`" pulumi-lang-python="`tls`" pulumi-lang-yaml="`tls`" pulumi-lang-java="`tls`" pulumi-lang-hcl="`tls`">`tls`</span> (direct TLS). Defaults to <span pulumi-lang-nodejs="`insecure`" pulumi-lang-dotnet="`Insecure`" pulumi-lang-go="`insecure`" pulumi-lang-python="`insecure`" pulumi-lang-yaml="`insecure`" pulumi-lang-java="`insecure`" pulumi-lang-hcl="`insecure`">`insecure`</span>.
      */
     mode?: pulumi.Input<string | undefined>;
     /**
@@ -250,7 +250,7 @@ export interface SmtpNotificationArgs {
      */
     password?: pulumi.Input<string | undefined>;
     /**
-     * SMTP server port. Common values: `25` (unencrypted), `465` (TLS), `587` (STARTTLS). Defaults to `25`.
+     * SMTP server port. Common values: <span pulumi-lang-nodejs="`25`" pulumi-lang-dotnet="`25`" pulumi-lang-go="`25`" pulumi-lang-python="`25`" pulumi-lang-yaml="`25`" pulumi-lang-java="`25`" pulumi-lang-hcl="`25`">`25`</span> (unencrypted), <span pulumi-lang-nodejs="`465`" pulumi-lang-dotnet="`465`" pulumi-lang-go="`465`" pulumi-lang-python="`465`" pulumi-lang-yaml="`465`" pulumi-lang-java="`465`" pulumi-lang-hcl="`465`">`465`</span> (TLS), <span pulumi-lang-nodejs="`587`" pulumi-lang-dotnet="`587`" pulumi-lang-go="`587`" pulumi-lang-python="`587`" pulumi-lang-yaml="`587`" pulumi-lang-java="`587`" pulumi-lang-hcl="`587`">`587`</span> (STARTTLS). Defaults to <span pulumi-lang-nodejs="`25`" pulumi-lang-dotnet="`25`" pulumi-lang-go="`25`" pulumi-lang-python="`25`" pulumi-lang-yaml="`25`" pulumi-lang-java="`25`" pulumi-lang-hcl="`25`">`25`</span>.
      */
     port?: pulumi.Input<number | undefined>;
     /**

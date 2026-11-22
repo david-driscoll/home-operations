@@ -54,15 +54,15 @@ export class PowerSupervisor extends pulumi.CustomResource {
      */
     declare public readonly deviceMac: pulumi.Output<string>;
     /**
-     * Whether supervision is enabled. Defaults to `true` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * Whether supervision is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How often the controller probes the device, as a Go duration string (e.g. <span pulumi-lang-nodejs="`60s`" pulumi-lang-dotnet="`60s`" pulumi-lang-go="`60s`" pulumi-lang-python="`60s`" pulumi-lang-yaml="`60s`" pulumi-lang-java="`60s`" pulumi-lang-hcl="`60s`">`60s`</span>, <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span>). Defaults to <span pulumi-lang-nodejs="`1m0s`" pulumi-lang-dotnet="`1m0s`" pulumi-lang-go="`1m0s`" pulumi-lang-python="`1m0s`" pulumi-lang-yaml="`1m0s`" pulumi-lang-java="`1m0s`" pulumi-lang-hcl="`1m0s`">`1m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly heartbeatInterval: pulumi.Output<string>;
     /**
-     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. <span pulumi-lang-nodejs="`2m`" pulumi-lang-dotnet="`2m`" pulumi-lang-go="`2m`" pulumi-lang-python="`2m`" pulumi-lang-yaml="`2m`" pulumi-lang-java="`2m`" pulumi-lang-hcl="`2m`">`2m`</span>). Defaults to <span pulumi-lang-nodejs="`2m0s`" pulumi-lang-dotnet="`2m0s`" pulumi-lang-go="`2m0s`" pulumi-lang-python="`2m0s`" pulumi-lang-yaml="`2m0s`" pulumi-lang-java="`2m0s`" pulumi-lang-hcl="`2m0s`">`2m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly powerOffDuration: pulumi.Output<string>;
     /**
@@ -70,7 +70,7 @@ export class PowerSupervisor extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly powerSources: pulumi.Output<outputs.PowerSupervisorPowerSource[]>;
     /**
-     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. <span pulumi-lang-nodejs="`15m`" pulumi-lang-dotnet="`15m`" pulumi-lang-go="`15m`" pulumi-lang-python="`15m`" pulumi-lang-yaml="`15m`" pulumi-lang-java="`15m`" pulumi-lang-hcl="`15m`">`15m`</span>). Defaults to <span pulumi-lang-nodejs="`15m0s`" pulumi-lang-dotnet="`15m0s`" pulumi-lang-go="`15m0s`" pulumi-lang-python="`15m0s`" pulumi-lang-yaml="`15m0s`" pulumi-lang-java="`15m0s`" pulumi-lang-hcl="`15m0s`">`15m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     declare public readonly silenceThreshold: pulumi.Output<string>;
     /**
@@ -134,15 +134,15 @@ export interface PowerSupervisorState {
      */
     deviceMac?: pulumi.Input<string | undefined>;
     /**
-     * Whether supervision is enabled. Defaults to `true` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * Whether supervision is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How often the controller probes the device, as a Go duration string (e.g. <span pulumi-lang-nodejs="`60s`" pulumi-lang-dotnet="`60s`" pulumi-lang-go="`60s`" pulumi-lang-python="`60s`" pulumi-lang-yaml="`60s`" pulumi-lang-java="`60s`" pulumi-lang-hcl="`60s`">`60s`</span>, <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span>). Defaults to <span pulumi-lang-nodejs="`1m0s`" pulumi-lang-dotnet="`1m0s`" pulumi-lang-go="`1m0s`" pulumi-lang-python="`1m0s`" pulumi-lang-yaml="`1m0s`" pulumi-lang-java="`1m0s`" pulumi-lang-hcl="`1m0s`">`1m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     heartbeatInterval?: pulumi.Input<string | undefined>;
     /**
-     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. <span pulumi-lang-nodejs="`2m`" pulumi-lang-dotnet="`2m`" pulumi-lang-go="`2m`" pulumi-lang-python="`2m`" pulumi-lang-yaml="`2m`" pulumi-lang-java="`2m`" pulumi-lang-hcl="`2m`">`2m`</span>). Defaults to <span pulumi-lang-nodejs="`2m0s`" pulumi-lang-dotnet="`2m0s`" pulumi-lang-go="`2m0s`" pulumi-lang-python="`2m0s`" pulumi-lang-yaml="`2m0s`" pulumi-lang-java="`2m0s`" pulumi-lang-hcl="`2m0s`">`2m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     powerOffDuration?: pulumi.Input<string | undefined>;
     /**
@@ -150,7 +150,7 @@ export interface PowerSupervisorState {
      */
     powerSources?: pulumi.Input<pulumi.Input<inputs.PowerSupervisorPowerSource>[] | undefined>;
     /**
-     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. <span pulumi-lang-nodejs="`15m`" pulumi-lang-dotnet="`15m`" pulumi-lang-go="`15m`" pulumi-lang-python="`15m`" pulumi-lang-yaml="`15m`" pulumi-lang-java="`15m`" pulumi-lang-hcl="`15m`">`15m`</span>). Defaults to <span pulumi-lang-nodejs="`15m0s`" pulumi-lang-dotnet="`15m0s`" pulumi-lang-go="`15m0s`" pulumi-lang-python="`15m0s`" pulumi-lang-yaml="`15m0s`" pulumi-lang-java="`15m0s`" pulumi-lang-hcl="`15m0s`">`15m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     silenceThreshold?: pulumi.Input<string | undefined>;
     /**
@@ -169,19 +169,19 @@ export interface PowerSupervisorArgs {
      */
     deviceMac: pulumi.Input<string>;
     /**
-     * Whether supervision is enabled. Defaults to `true` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * Whether supervision is enabled. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * How often the controller probes the device, as a Go duration string (e.g. `60s`, `1m`). Defaults to `1m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How often the controller probes the device, as a Go duration string (e.g. <span pulumi-lang-nodejs="`60s`" pulumi-lang-dotnet="`60s`" pulumi-lang-go="`60s`" pulumi-lang-python="`60s`" pulumi-lang-yaml="`60s`" pulumi-lang-java="`60s`" pulumi-lang-hcl="`60s`">`60s`</span>, <span pulumi-lang-nodejs="`1m`" pulumi-lang-dotnet="`1m`" pulumi-lang-go="`1m`" pulumi-lang-python="`1m`" pulumi-lang-yaml="`1m`" pulumi-lang-java="`1m`" pulumi-lang-hcl="`1m`">`1m`</span>). Defaults to <span pulumi-lang-nodejs="`1m0s`" pulumi-lang-dotnet="`1m0s`" pulumi-lang-go="`1m0s`" pulumi-lang-python="`1m0s`" pulumi-lang-yaml="`1m0s`" pulumi-lang-java="`1m0s`" pulumi-lang-hcl="`1m0s`">`1m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     heartbeatInterval?: pulumi.Input<string | undefined>;
     /**
-     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. `2m`). Defaults to `2m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How long the upstream PoE source stays off during a power-cycle, as a Go duration string (e.g. <span pulumi-lang-nodejs="`2m`" pulumi-lang-dotnet="`2m`" pulumi-lang-go="`2m`" pulumi-lang-python="`2m`" pulumi-lang-yaml="`2m`" pulumi-lang-java="`2m`" pulumi-lang-hcl="`2m`">`2m`</span>). Defaults to <span pulumi-lang-nodejs="`2m0s`" pulumi-lang-dotnet="`2m0s`" pulumi-lang-go="`2m0s`" pulumi-lang-python="`2m0s`" pulumi-lang-yaml="`2m0s`" pulumi-lang-java="`2m0s`" pulumi-lang-hcl="`2m0s`">`2m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     powerOffDuration?: pulumi.Input<string | undefined>;
     /**
-     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. `15m`). Defaults to `15m0s` for a newly created supervisor; an existing supervisor keeps the controller's value.
+     * How long the device may be silent before the controller power-cycles its upstream PoE source, as a Go duration string (e.g. <span pulumi-lang-nodejs="`15m`" pulumi-lang-dotnet="`15m`" pulumi-lang-go="`15m`" pulumi-lang-python="`15m`" pulumi-lang-yaml="`15m`" pulumi-lang-java="`15m`" pulumi-lang-hcl="`15m`">`15m`</span>). Defaults to <span pulumi-lang-nodejs="`15m0s`" pulumi-lang-dotnet="`15m0s`" pulumi-lang-go="`15m0s`" pulumi-lang-python="`15m0s`" pulumi-lang-yaml="`15m0s`" pulumi-lang-java="`15m0s`" pulumi-lang-hcl="`15m0s`">`15m0s`</span> for a newly created supervisor; an existing supervisor keeps the controller's value.
      */
     silenceThreshold?: pulumi.Input<string | undefined>;
     /**

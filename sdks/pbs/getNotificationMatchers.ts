@@ -16,10 +16,6 @@ export function getNotificationMatchers(opts?: pulumi.InvokeOptions): Promise<Ge
  * A collection of values returned by getNotificationMatchers.
  */
 export interface GetNotificationMatchersResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly matchers: outputs.GetNotificationMatchersMatcher[];
 }
 export function getNotificationMatchersOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetNotificationMatchersResult> {

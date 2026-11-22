@@ -27,7 +27,7 @@ export interface DeviceConfigNetwork {
      */
     netmask?: pulumi.Input<string | undefined>;
     /**
-     * Addressing mode: `dhcp` or `static`.
+     * Addressing mode: <span pulumi-lang-nodejs="`dhcp`" pulumi-lang-dotnet="`Dhcp`" pulumi-lang-go="`dhcp`" pulumi-lang-python="`dhcp`" pulumi-lang-yaml="`dhcp`" pulumi-lang-java="`dhcp`" pulumi-lang-hcl="`dhcp`">`dhcp`</span> or <span pulumi-lang-nodejs="`static`" pulumi-lang-dotnet="`Static`" pulumi-lang-go="`static`" pulumi-lang-python="`static`" pulumi-lang-yaml="`static`" pulumi-lang-java="`static`" pulumi-lang-hcl="`static`">`static`</span>.
      */
     type: pulumi.Input<string>;
 }
@@ -42,22 +42,22 @@ export interface DevicePortsPorts {
      */
     nativeNetworkId?: pulumi.Input<string | undefined>;
     /**
-     * The ID of the `terrifi.PortProfile` to assign. The profile then controls every setting of the port, PoE included, and per-port settings are cleared. Use inline VLAN settings instead, or omit to remove the profile.
+     * The ID of the <span pulumi-lang-nodejs="`terrifi.PortProfile`" pulumi-lang-dotnet="`terrifi.PortProfile`" pulumi-lang-go="`PortProfile`" pulumi-lang-python="`PortProfile`" pulumi-lang-yaml="`terrifi.PortProfile`" pulumi-lang-java="`terrifi.PortProfile`" pulumi-lang-hcl="`terrifi_port_profile`">`terrifi.PortProfile`</span> to assign. The profile then controls every setting of the port, PoE included, and per-port settings are cleared. Use inline VLAN settings instead, or omit to remove the profile.
      */
     portProfileId?: pulumi.Input<string | undefined>;
     /**
-     * Tagged traffic: allow_all or block_all. Set with native_network_id; conflicts with port_profile_id.
+     * Tagged traffic:<span pulumi-lang-nodejs=" allowAll " pulumi-lang-dotnet=" AllowAll " pulumi-lang-go=" allowAll " pulumi-lang-python=" allow_all " pulumi-lang-yaml=" allowAll " pulumi-lang-java=" allowAll " pulumi-lang-hcl=" allow_all "> allowAll </span>or block_all. Set with native_network_id; conflicts with port_profile_id.
      */
     taggedVlanMode?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceRadio24 {
     /**
-     * Channel number or `auto`. Valid channels depend on the radio band and country.
+     * Channel number or <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. Valid channels depend on the radio band and country.
      */
     channel?: pulumi.Input<string | undefined>;
     /**
-     * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
+     * Channel width in MHz. Typical values: <span pulumi-lang-nodejs="`20`" pulumi-lang-dotnet="`20`" pulumi-lang-go="`20`" pulumi-lang-python="`20`" pulumi-lang-yaml="`20`" pulumi-lang-java="`20`" pulumi-lang-hcl="`20`">`20`</span>, <span pulumi-lang-nodejs="`40`" pulumi-lang-dotnet="`40`" pulumi-lang-go="`40`" pulumi-lang-python="`40`" pulumi-lang-yaml="`40`" pulumi-lang-java="`40`" pulumi-lang-hcl="`40`">`40`</span>, <span pulumi-lang-nodejs="`80`" pulumi-lang-dotnet="`80`" pulumi-lang-go="`80`" pulumi-lang-python="`80`" pulumi-lang-yaml="`80`" pulumi-lang-java="`80`" pulumi-lang-hcl="`80`">`80`</span>, <span pulumi-lang-nodejs="`160`" pulumi-lang-dotnet="`160`" pulumi-lang-go="`160`" pulumi-lang-python="`160`" pulumi-lang-yaml="`160`" pulumi-lang-java="`160`" pulumi-lang-hcl="`160`">`160`</span>.
      */
     channelWidth?: pulumi.Input<number | undefined>;
     /**
@@ -69,22 +69,22 @@ export interface DeviceRadio24 {
      */
     minRssiEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
+     * Transmit power in dBm. Only used when <span pulumi-lang-nodejs="`transmitPowerMode`" pulumi-lang-dotnet="`TransmitPowerMode`" pulumi-lang-go="`transmitPowerMode`" pulumi-lang-python="`transmit_power_mode`" pulumi-lang-yaml="`transmitPowerMode`" pulumi-lang-java="`transmitPowerMode`" pulumi-lang-hcl="`transmit_power_mode`">`transmitPowerMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>.
      */
     transmitPower?: pulumi.Input<string | undefined>;
     /**
-     * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
+     * Transmit power mode: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`high`" pulumi-lang-dotnet="`High`" pulumi-lang-go="`high`" pulumi-lang-python="`high`" pulumi-lang-yaml="`high`" pulumi-lang-java="`high`" pulumi-lang-hcl="`high`">`high`</span>, <span pulumi-lang-nodejs="`medium`" pulumi-lang-dotnet="`Medium`" pulumi-lang-go="`medium`" pulumi-lang-python="`medium`" pulumi-lang-yaml="`medium`" pulumi-lang-java="`medium`" pulumi-lang-hcl="`medium`">`medium`</span>, <span pulumi-lang-nodejs="`low`" pulumi-lang-dotnet="`Low`" pulumi-lang-go="`low`" pulumi-lang-python="`low`" pulumi-lang-yaml="`low`" pulumi-lang-java="`low`" pulumi-lang-hcl="`low`">`low`</span>, <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>.
      */
     transmitPowerMode?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceRadio5 {
     /**
-     * Channel number or `auto`. Valid channels depend on the radio band and country.
+     * Channel number or <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. Valid channels depend on the radio band and country.
      */
     channel?: pulumi.Input<string | undefined>;
     /**
-     * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
+     * Channel width in MHz. Typical values: <span pulumi-lang-nodejs="`20`" pulumi-lang-dotnet="`20`" pulumi-lang-go="`20`" pulumi-lang-python="`20`" pulumi-lang-yaml="`20`" pulumi-lang-java="`20`" pulumi-lang-hcl="`20`">`20`</span>, <span pulumi-lang-nodejs="`40`" pulumi-lang-dotnet="`40`" pulumi-lang-go="`40`" pulumi-lang-python="`40`" pulumi-lang-yaml="`40`" pulumi-lang-java="`40`" pulumi-lang-hcl="`40`">`40`</span>, <span pulumi-lang-nodejs="`80`" pulumi-lang-dotnet="`80`" pulumi-lang-go="`80`" pulumi-lang-python="`80`" pulumi-lang-yaml="`80`" pulumi-lang-java="`80`" pulumi-lang-hcl="`80`">`80`</span>, <span pulumi-lang-nodejs="`160`" pulumi-lang-dotnet="`160`" pulumi-lang-go="`160`" pulumi-lang-python="`160`" pulumi-lang-yaml="`160`" pulumi-lang-java="`160`" pulumi-lang-hcl="`160`">`160`</span>.
      */
     channelWidth?: pulumi.Input<number | undefined>;
     /**
@@ -96,22 +96,22 @@ export interface DeviceRadio5 {
      */
     minRssiEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
+     * Transmit power in dBm. Only used when <span pulumi-lang-nodejs="`transmitPowerMode`" pulumi-lang-dotnet="`TransmitPowerMode`" pulumi-lang-go="`transmitPowerMode`" pulumi-lang-python="`transmit_power_mode`" pulumi-lang-yaml="`transmitPowerMode`" pulumi-lang-java="`transmitPowerMode`" pulumi-lang-hcl="`transmit_power_mode`">`transmitPowerMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>.
      */
     transmitPower?: pulumi.Input<string | undefined>;
     /**
-     * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
+     * Transmit power mode: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`high`" pulumi-lang-dotnet="`High`" pulumi-lang-go="`high`" pulumi-lang-python="`high`" pulumi-lang-yaml="`high`" pulumi-lang-java="`high`" pulumi-lang-hcl="`high`">`high`</span>, <span pulumi-lang-nodejs="`medium`" pulumi-lang-dotnet="`Medium`" pulumi-lang-go="`medium`" pulumi-lang-python="`medium`" pulumi-lang-yaml="`medium`" pulumi-lang-java="`medium`" pulumi-lang-hcl="`medium`">`medium`</span>, <span pulumi-lang-nodejs="`low`" pulumi-lang-dotnet="`Low`" pulumi-lang-go="`low`" pulumi-lang-python="`low`" pulumi-lang-yaml="`low`" pulumi-lang-java="`low`" pulumi-lang-hcl="`low`">`low`</span>, <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>.
      */
     transmitPowerMode?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceRadio6 {
     /**
-     * Channel number or `auto`. Valid channels depend on the radio band and country.
+     * Channel number or <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>. Valid channels depend on the radio band and country.
      */
     channel?: pulumi.Input<string | undefined>;
     /**
-     * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
+     * Channel width in MHz. Typical values: <span pulumi-lang-nodejs="`20`" pulumi-lang-dotnet="`20`" pulumi-lang-go="`20`" pulumi-lang-python="`20`" pulumi-lang-yaml="`20`" pulumi-lang-java="`20`" pulumi-lang-hcl="`20`">`20`</span>, <span pulumi-lang-nodejs="`40`" pulumi-lang-dotnet="`40`" pulumi-lang-go="`40`" pulumi-lang-python="`40`" pulumi-lang-yaml="`40`" pulumi-lang-java="`40`" pulumi-lang-hcl="`40`">`40`</span>, <span pulumi-lang-nodejs="`80`" pulumi-lang-dotnet="`80`" pulumi-lang-go="`80`" pulumi-lang-python="`80`" pulumi-lang-yaml="`80`" pulumi-lang-java="`80`" pulumi-lang-hcl="`80`">`80`</span>, <span pulumi-lang-nodejs="`160`" pulumi-lang-dotnet="`160`" pulumi-lang-go="`160`" pulumi-lang-python="`160`" pulumi-lang-yaml="`160`" pulumi-lang-java="`160`" pulumi-lang-hcl="`160`">`160`</span>.
      */
     channelWidth?: pulumi.Input<number | undefined>;
     /**
@@ -123,18 +123,18 @@ export interface DeviceRadio6 {
      */
     minRssiEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
+     * Transmit power in dBm. Only used when <span pulumi-lang-nodejs="`transmitPowerMode`" pulumi-lang-dotnet="`TransmitPowerMode`" pulumi-lang-go="`transmitPowerMode`" pulumi-lang-python="`transmit_power_mode`" pulumi-lang-yaml="`transmitPowerMode`" pulumi-lang-java="`transmitPowerMode`" pulumi-lang-hcl="`transmit_power_mode`">`transmitPowerMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>.
      */
     transmitPower?: pulumi.Input<string | undefined>;
     /**
-     * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
+     * Transmit power mode: <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`high`" pulumi-lang-dotnet="`High`" pulumi-lang-go="`high`" pulumi-lang-python="`high`" pulumi-lang-yaml="`high`" pulumi-lang-java="`high`" pulumi-lang-hcl="`high`">`high`</span>, <span pulumi-lang-nodejs="`medium`" pulumi-lang-dotnet="`Medium`" pulumi-lang-go="`medium`" pulumi-lang-python="`medium`" pulumi-lang-yaml="`medium`" pulumi-lang-java="`medium`" pulumi-lang-hcl="`medium`">`medium`</span>, <span pulumi-lang-nodejs="`low`" pulumi-lang-dotnet="`Low`" pulumi-lang-go="`low`" pulumi-lang-python="`low`" pulumi-lang-yaml="`low`" pulumi-lang-java="`low`" pulumi-lang-hcl="`low`">`low`</span>, <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>, or <span pulumi-lang-nodejs="`disabled`" pulumi-lang-dotnet="`Disabled`" pulumi-lang-go="`disabled`" pulumi-lang-python="`disabled`" pulumi-lang-yaml="`disabled`" pulumi-lang-java="`disabled`" pulumi-lang-hcl="`disabled`">`disabled`</span>.
      */
     transmitPowerMode?: pulumi.Input<string | undefined>;
 }
 
 export interface FirewallPolicyDestination {
     /**
-     * Client device MAC addresses to match. Use the `mac` attribute from `terrifi.ClientDevice` resources.
+     * Client device MAC addresses to match. Use the <span pulumi-lang-nodejs="`mac`" pulumi-lang-dotnet="`Mac`" pulumi-lang-go="`mac`" pulumi-lang-python="`mac`" pulumi-lang-yaml="`mac`" pulumi-lang-java="`mac`" pulumi-lang-hcl="`mac`">`mac`</span> attribute from <span pulumi-lang-nodejs="`terrifi.ClientDevice`" pulumi-lang-dotnet="`terrifi.ClientDevice`" pulumi-lang-go="`ClientDevice`" pulumi-lang-python="`ClientDevice`" pulumi-lang-yaml="`terrifi.ClientDevice`" pulumi-lang-java="`terrifi.ClientDevice`" pulumi-lang-hcl="`terrifi_client_device`">`terrifi.ClientDevice`</span> resources.
      */
     deviceIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -146,11 +146,11 @@ export interface FirewallPolicyDestination {
      */
     macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Inverts the match on `ips` or `network_ids`. When `true` and action is `ALLOW`, everything except the specified IPs or networks is allowed. When `true` and action is `BLOCK`, everything except the specified IPs or networks is blocked.
+     * Inverts the match on <span pulumi-lang-nodejs="`ips`" pulumi-lang-dotnet="`Ips`" pulumi-lang-go="`ips`" pulumi-lang-python="`ips`" pulumi-lang-yaml="`ips`" pulumi-lang-java="`ips`" pulumi-lang-hcl="`ips`">`ips`</span> or <span pulumi-lang-nodejs="`networkIds`" pulumi-lang-dotnet="`NetworkIds`" pulumi-lang-go="`networkIds`" pulumi-lang-python="`network_ids`" pulumi-lang-yaml="`networkIds`" pulumi-lang-java="`networkIds`" pulumi-lang-hcl="`network_ids`">`networkIds`</span>. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `ALLOW`, everything except the specified IPs or networks is allowed. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `BLOCK`, everything except the specified IPs or networks is blocked.
      */
     matchOppositeIps?: pulumi.Input<boolean | undefined>;
     /**
-     * Inverts port matching. When `true` and action is `ALLOW`, all ports except the specified ones are allowed. When `true` and action is `BLOCK`, all ports except the specified ones are blocked.
+     * Inverts port matching. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `ALLOW`, all ports except the specified ones are allowed. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `BLOCK`, all ports except the specified ones are blocked.
      */
     matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
@@ -158,15 +158,15 @@ export interface FirewallPolicyDestination {
      */
     networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Specific port number to match (when `port_matching_type` is `SPECIFIC`).
+     * Specific port number to match (when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `SPECIFIC`).
      */
     port?: pulumi.Input<number | undefined>;
     /**
-     * Port group ID to match (when `port_matching_type` is `OBJECT`).
+     * Port group ID to match (when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `OBJECT`).
      */
     portGroupId?: pulumi.Input<string | undefined>;
     /**
-     * Port matching type. Valid values: `ANY`, `SPECIFIC`, `OBJECT`. Default: `ANY`. Automatically derived when `port` or `port_group_id` is set.
+     * Port matching type. Valid values: `ANY`, `SPECIFIC`, `OBJECT`. Default: `ANY`. Automatically derived when <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> or <span pulumi-lang-nodejs="`portGroupId`" pulumi-lang-dotnet="`PortGroupId`" pulumi-lang-go="`portGroupId`" pulumi-lang-python="`port_group_id`" pulumi-lang-yaml="`portGroupId`" pulumi-lang-java="`portGroupId`" pulumi-lang-hcl="`port_group_id`">`portGroupId`</span> is set.
      */
     portMatchingType?: pulumi.Input<string | undefined>;
     /**
@@ -193,7 +193,7 @@ export interface FirewallPolicySchedule {
      */
     mode?: pulumi.Input<string | undefined>;
     /**
-     * Days of the week to repeat on. Valid values: `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`.
+     * Days of the week to repeat on. Valid values: <span pulumi-lang-nodejs="`mon`" pulumi-lang-dotnet="`Mon`" pulumi-lang-go="`mon`" pulumi-lang-python="`mon`" pulumi-lang-yaml="`mon`" pulumi-lang-java="`mon`" pulumi-lang-hcl="`mon`">`mon`</span>, <span pulumi-lang-nodejs="`tue`" pulumi-lang-dotnet="`Tue`" pulumi-lang-go="`tue`" pulumi-lang-python="`tue`" pulumi-lang-yaml="`tue`" pulumi-lang-java="`tue`" pulumi-lang-hcl="`tue`">`tue`</span>, <span pulumi-lang-nodejs="`wed`" pulumi-lang-dotnet="`Wed`" pulumi-lang-go="`wed`" pulumi-lang-python="`wed`" pulumi-lang-yaml="`wed`" pulumi-lang-java="`wed`" pulumi-lang-hcl="`wed`">`wed`</span>, <span pulumi-lang-nodejs="`thu`" pulumi-lang-dotnet="`Thu`" pulumi-lang-go="`thu`" pulumi-lang-python="`thu`" pulumi-lang-yaml="`thu`" pulumi-lang-java="`thu`" pulumi-lang-hcl="`thu`">`thu`</span>, <span pulumi-lang-nodejs="`fri`" pulumi-lang-dotnet="`Fri`" pulumi-lang-go="`fri`" pulumi-lang-python="`fri`" pulumi-lang-yaml="`fri`" pulumi-lang-java="`fri`" pulumi-lang-hcl="`fri`">`fri`</span>, <span pulumi-lang-nodejs="`sat`" pulumi-lang-dotnet="`Sat`" pulumi-lang-go="`sat`" pulumi-lang-python="`sat`" pulumi-lang-yaml="`sat`" pulumi-lang-java="`sat`" pulumi-lang-hcl="`sat`">`sat`</span>, <span pulumi-lang-nodejs="`sun`" pulumi-lang-dotnet="`Sun`" pulumi-lang-go="`sun`" pulumi-lang-python="`sun`" pulumi-lang-yaml="`sun`" pulumi-lang-java="`sun`" pulumi-lang-hcl="`sun`">`sun`</span>.
      */
     repeatOnDays?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -212,7 +212,7 @@ export interface FirewallPolicySchedule {
 
 export interface FirewallPolicySource {
     /**
-     * Client device MAC addresses to match. Use the `mac` attribute from `terrifi.ClientDevice` resources.
+     * Client device MAC addresses to match. Use the <span pulumi-lang-nodejs="`mac`" pulumi-lang-dotnet="`Mac`" pulumi-lang-go="`mac`" pulumi-lang-python="`mac`" pulumi-lang-yaml="`mac`" pulumi-lang-java="`mac`" pulumi-lang-hcl="`mac`">`mac`</span> attribute from <span pulumi-lang-nodejs="`terrifi.ClientDevice`" pulumi-lang-dotnet="`terrifi.ClientDevice`" pulumi-lang-go="`ClientDevice`" pulumi-lang-python="`ClientDevice`" pulumi-lang-yaml="`terrifi.ClientDevice`" pulumi-lang-java="`terrifi.ClientDevice`" pulumi-lang-hcl="`terrifi_client_device`">`terrifi.ClientDevice`</span> resources.
      */
     deviceIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -224,11 +224,11 @@ export interface FirewallPolicySource {
      */
     macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Inverts the match on `ips` or `network_ids`. When `true` and action is `ALLOW`, everything except the specified IPs or networks is allowed. When `true` and action is `BLOCK`, everything except the specified IPs or networks is blocked.
+     * Inverts the match on <span pulumi-lang-nodejs="`ips`" pulumi-lang-dotnet="`Ips`" pulumi-lang-go="`ips`" pulumi-lang-python="`ips`" pulumi-lang-yaml="`ips`" pulumi-lang-java="`ips`" pulumi-lang-hcl="`ips`">`ips`</span> or <span pulumi-lang-nodejs="`networkIds`" pulumi-lang-dotnet="`NetworkIds`" pulumi-lang-go="`networkIds`" pulumi-lang-python="`network_ids`" pulumi-lang-yaml="`networkIds`" pulumi-lang-java="`networkIds`" pulumi-lang-hcl="`network_ids`">`networkIds`</span>. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `ALLOW`, everything except the specified IPs or networks is allowed. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `BLOCK`, everything except the specified IPs or networks is blocked.
      */
     matchOppositeIps?: pulumi.Input<boolean | undefined>;
     /**
-     * Inverts port matching. When `true` and action is `ALLOW`, all ports except the specified ones are allowed. When `true` and action is `BLOCK`, all ports except the specified ones are blocked.
+     * Inverts port matching. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `ALLOW`, all ports except the specified ones are allowed. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> and action is `BLOCK`, all ports except the specified ones are blocked.
      */
     matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
@@ -236,15 +236,15 @@ export interface FirewallPolicySource {
      */
     networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Specific port number to match (when `port_matching_type` is `SPECIFIC`).
+     * Specific port number to match (when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `SPECIFIC`).
      */
     port?: pulumi.Input<number | undefined>;
     /**
-     * Port group ID to match (when `port_matching_type` is `OBJECT`).
+     * Port group ID to match (when <span pulumi-lang-nodejs="`portMatchingType`" pulumi-lang-dotnet="`PortMatchingType`" pulumi-lang-go="`portMatchingType`" pulumi-lang-python="`port_matching_type`" pulumi-lang-yaml="`portMatchingType`" pulumi-lang-java="`portMatchingType`" pulumi-lang-hcl="`port_matching_type`">`portMatchingType`</span> is `OBJECT`).
      */
     portGroupId?: pulumi.Input<string | undefined>;
     /**
-     * Port matching type. Valid values: `ANY`, `SPECIFIC`, `OBJECT`. Default: `ANY`. Automatically derived when `port` or `port_group_id` is set.
+     * Port matching type. Valid values: `ANY`, `SPECIFIC`, `OBJECT`. Default: `ANY`. Automatically derived when <span pulumi-lang-nodejs="`port`" pulumi-lang-dotnet="`Port`" pulumi-lang-go="`port`" pulumi-lang-python="`port`" pulumi-lang-yaml="`port`" pulumi-lang-java="`port`" pulumi-lang-hcl="`port`">`port`</span> or <span pulumi-lang-nodejs="`portGroupId`" pulumi-lang-dotnet="`PortGroupId`" pulumi-lang-go="`portGroupId`" pulumi-lang-python="`port_group_id`" pulumi-lang-yaml="`portGroupId`" pulumi-lang-java="`portGroupId`" pulumi-lang-hcl="`port_group_id`">`portGroupId`</span> is set.
      */
     portMatchingType?: pulumi.Input<string | undefined>;
     /**

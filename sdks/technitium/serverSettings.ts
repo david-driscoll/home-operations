@@ -100,7 +100,7 @@ export class ServerSettings extends pulumi.CustomResource {
      */
     declare public readonly forwarderProtocol: pulumi.Output<string>;
     /**
-     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with forwarder_protocol Tls, are rejected.
+     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with<span pulumi-lang-nodejs=" forwarderProtocol " pulumi-lang-dotnet=" ForwarderProtocol " pulumi-lang-go=" forwarderProtocol " pulumi-lang-python=" forwarder_protocol " pulumi-lang-yaml=" forwarderProtocol " pulumi-lang-java=" forwarderProtocol " pulumi-lang-hcl=" forwarder_protocol "> forwarderProtocol </span>Tls, are rejected.
      */
     declare public readonly forwarders: pulumi.Output<string[] | undefined>;
     /**
@@ -160,7 +160,7 @@ export class ServerSettings extends pulumi.CustomResource {
      */
     declare public readonly webServiceHttpPort: pulumi.Output<number | undefined>;
     /**
-     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` `server_url` stops working: the provider refuses redirects that change scheme. Switch `server_url` to the `https://` address in the same change.
+     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` <span pulumi-lang-nodejs="`serverUrl`" pulumi-lang-dotnet="`ServerUrl`" pulumi-lang-go="`serverUrl`" pulumi-lang-python="`server_url`" pulumi-lang-yaml="`serverUrl`" pulumi-lang-java="`serverUrl`" pulumi-lang-hcl="`server_url`">`serverUrl`</span> stops working: the provider refuses redirects that change scheme. Switch <span pulumi-lang-nodejs="`serverUrl`" pulumi-lang-dotnet="`ServerUrl`" pulumi-lang-go="`serverUrl`" pulumi-lang-python="`server_url`" pulumi-lang-yaml="`serverUrl`" pulumi-lang-java="`serverUrl`" pulumi-lang-hcl="`server_url`">`serverUrl`</span> to the `https://` address in the same change.
      */
     declare public readonly webServiceHttpToTlsRedirect: pulumi.Output<boolean | undefined>;
     /**
@@ -344,7 +344,7 @@ export interface ServerSettingsState {
      */
     forwarderProtocol?: pulumi.Input<string | undefined>;
     /**
-     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with forwarder_protocol Tls, are rejected.
+     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with<span pulumi-lang-nodejs=" forwarderProtocol " pulumi-lang-dotnet=" ForwarderProtocol " pulumi-lang-go=" forwarderProtocol " pulumi-lang-python=" forwarder_protocol " pulumi-lang-yaml=" forwarderProtocol " pulumi-lang-java=" forwarderProtocol " pulumi-lang-hcl=" forwarder_protocol "> forwarderProtocol </span>Tls, are rejected.
      */
     forwarders?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -404,7 +404,7 @@ export interface ServerSettingsState {
      */
     webServiceHttpPort?: pulumi.Input<number | undefined>;
     /**
-     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` `server_url` stops working: the provider refuses redirects that change scheme. Switch `server_url` to the `https://` address in the same change.
+     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` <span pulumi-lang-nodejs="`serverUrl`" pulumi-lang-dotnet="`ServerUrl`" pulumi-lang-go="`serverUrl`" pulumi-lang-python="`server_url`" pulumi-lang-yaml="`serverUrl`" pulumi-lang-java="`serverUrl`" pulumi-lang-hcl="`server_url`">`serverUrl`</span> stops working: the provider refuses redirects that change scheme. Switch <span pulumi-lang-nodejs="`serverUrl`" pulumi-lang-dotnet="`ServerUrl`" pulumi-lang-go="`serverUrl`" pulumi-lang-python="`server_url`" pulumi-lang-yaml="`serverUrl`" pulumi-lang-java="`serverUrl`" pulumi-lang-hcl="`server_url`">`serverUrl`</span> to the `https://` address in the same change.
      */
     webServiceHttpToTlsRedirect?: pulumi.Input<boolean | undefined>;
     /**
@@ -494,7 +494,7 @@ export interface ServerSettingsArgs {
      */
     forwarderProtocol?: pulumi.Input<string | undefined>;
     /**
-     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with forwarder_protocol Tls, are rejected.
+     * List of forwarder addresses. STIG BIND-9X-001360 (SC-20). Stored in Technitium's canonical form for forwarder_protocol; state keeps the configured spelling while the server's value is its canonical form. Forwarders the server would store differently, such as port 53 with<span pulumi-lang-nodejs=" forwarderProtocol " pulumi-lang-dotnet=" ForwarderProtocol " pulumi-lang-go=" forwarderProtocol " pulumi-lang-python=" forwarder_protocol " pulumi-lang-yaml=" forwarderProtocol " pulumi-lang-java=" forwarderProtocol " pulumi-lang-hcl=" forwarder_protocol "> forwarderProtocol </span>Tls, are rejected.
      */
     forwarders?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -546,7 +546,7 @@ export interface ServerSettingsArgs {
      */
     webServiceHttpPort?: pulumi.Input<number | undefined>;
     /**
-     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` `server_url` stops working: the provider refuses redirects that change scheme. Switch `server_url` to the `https://` address in the same change.
+     * Redirect web service HTTP requests to HTTPS. Once enabled, an `http://` <span pulumi-lang-nodejs="`serverUrl`" pulumi-lang-dotnet="`ServerUrl`" pulumi-lang-go="`serverUrl`" pulumi-lang-python="`server_url`" pulumi-lang-yaml="`serverUrl`" pulumi-lang-java="`serverUrl`" pulumi-lang-hcl="`server_url`">`serverUrl`</span> stops working: the provider refuses redirects that change scheme. Switch <span pulumi-lang-nodejs="`serverUrl`" pulumi-lang-dotnet="`ServerUrl`" pulumi-lang-go="`serverUrl`" pulumi-lang-python="`server_url`" pulumi-lang-yaml="`serverUrl`" pulumi-lang-java="`serverUrl`" pulumi-lang-hcl="`server_url`">`serverUrl`</span> to the `https://` address in the same change.
      */
     webServiceHttpToTlsRedirect?: pulumi.Input<boolean | undefined>;
     /**

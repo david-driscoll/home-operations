@@ -38,10 +38,6 @@ export interface GetClientListResult {
     readonly blocked?: boolean;
     readonly clients: outputs.GetClientListClient[];
     readonly group?: string;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly oui?: string;
     readonly site: string;
     readonly timeouts?: outputs.GetClientListTimeouts;

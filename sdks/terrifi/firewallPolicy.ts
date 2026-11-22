@@ -50,7 +50,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly action: pulumi.Output<string>;
     /**
-     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
+     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via <span pulumi-lang-nodejs="`connectionStates`" pulumi-lang-dotnet="`ConnectionStates`" pulumi-lang-go="`connectionStates`" pulumi-lang-python="`connection_states`" pulumi-lang-yaml="`connectionStates`" pulumi-lang-java="`connectionStates`" pulumi-lang-hcl="`connection_states`">`connectionStates`</span>. Default: `ALL`.
      */
     declare public readonly connectionStateType: pulumi.Output<string>;
     /**
@@ -70,7 +70,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly destination: pulumi.Output<outputs.FirewallPolicyDestination | undefined>;
     /**
-     * Whether the firewall policy is enabled. Default: `true`.
+     * Whether the firewall policy is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -94,7 +94,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
+     * Protocol to match. Valid values: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>, <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>, <span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span>. Default: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -175,7 +175,7 @@ export interface FirewallPolicyState {
      */
     action?: pulumi.Input<string | undefined>;
     /**
-     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
+     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via <span pulumi-lang-nodejs="`connectionStates`" pulumi-lang-dotnet="`ConnectionStates`" pulumi-lang-go="`connectionStates`" pulumi-lang-python="`connection_states`" pulumi-lang-yaml="`connectionStates`" pulumi-lang-java="`connectionStates`" pulumi-lang-hcl="`connection_states`">`connectionStates`</span>. Default: `ALL`.
      */
     connectionStateType?: pulumi.Input<string | undefined>;
     /**
@@ -195,7 +195,7 @@ export interface FirewallPolicyState {
      */
     destination?: pulumi.Input<inputs.FirewallPolicyDestination | undefined>;
     /**
-     * Whether the firewall policy is enabled. Default: `true`.
+     * Whether the firewall policy is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -219,7 +219,7 @@ export interface FirewallPolicyState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
+     * Protocol to match. Valid values: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>, <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>, <span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span>. Default: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**
@@ -245,7 +245,7 @@ export interface FirewallPolicyArgs {
      */
     action: pulumi.Input<string>;
     /**
-     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
+     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via <span pulumi-lang-nodejs="`connectionStates`" pulumi-lang-dotnet="`ConnectionStates`" pulumi-lang-go="`connectionStates`" pulumi-lang-python="`connection_states`" pulumi-lang-yaml="`connectionStates`" pulumi-lang-java="`connectionStates`" pulumi-lang-hcl="`connection_states`">`connectionStates`</span>. Default: `ALL`.
      */
     connectionStateType?: pulumi.Input<string | undefined>;
     /**
@@ -265,7 +265,7 @@ export interface FirewallPolicyArgs {
      */
     destination?: pulumi.Input<inputs.FirewallPolicyDestination | undefined>;
     /**
-     * Whether the firewall policy is enabled. Default: `true`.
+     * Whether the firewall policy is enabled. Default: <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -285,7 +285,7 @@ export interface FirewallPolicyArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
+     * Protocol to match. Valid values: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>, <span pulumi-lang-nodejs="`tcp`" pulumi-lang-dotnet="`Tcp`" pulumi-lang-go="`tcp`" pulumi-lang-python="`tcp`" pulumi-lang-yaml="`tcp`" pulumi-lang-java="`tcp`" pulumi-lang-hcl="`tcp`">`tcp`</span>, <span pulumi-lang-nodejs="`udp`" pulumi-lang-dotnet="`Udp`" pulumi-lang-go="`udp`" pulumi-lang-python="`udp`" pulumi-lang-yaml="`udp`" pulumi-lang-java="`udp`" pulumi-lang-hcl="`udp`">`udp`</span>, <span pulumi-lang-nodejs="`tcpUdp`" pulumi-lang-dotnet="`TcpUdp`" pulumi-lang-go="`tcpUdp`" pulumi-lang-python="`tcp_udp`" pulumi-lang-yaml="`tcpUdp`" pulumi-lang-java="`tcpUdp`" pulumi-lang-hcl="`tcp_udp`">`tcpUdp`</span>, <span pulumi-lang-nodejs="`icmp`" pulumi-lang-dotnet="`Icmp`" pulumi-lang-go="`icmp`" pulumi-lang-python="`icmp`" pulumi-lang-yaml="`icmp`" pulumi-lang-java="`icmp`" pulumi-lang-hcl="`icmp`">`icmp`</span>, <span pulumi-lang-nodejs="`icmpv6`" pulumi-lang-dotnet="`Icmpv6`" pulumi-lang-go="`icmpv6`" pulumi-lang-python="`icmpv6`" pulumi-lang-yaml="`icmpv6`" pulumi-lang-java="`icmpv6`" pulumi-lang-hcl="`icmpv6`">`icmpv6`</span>. Default: <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>.
      */
     protocol?: pulumi.Input<string | undefined>;
     /**

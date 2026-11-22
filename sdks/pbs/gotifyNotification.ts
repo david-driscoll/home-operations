@@ -48,7 +48,7 @@ export class GotifyNotification extends pulumi.CustomResource {
      */
     declare public readonly comment: pulumi.Output<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly disable: pulumi.Output<boolean>;
     /**
@@ -56,7 +56,7 @@ export class GotifyNotification extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     declare public /*out*/ readonly origin: pulumi.Output<string>;
     /**
@@ -118,7 +118,7 @@ export interface GotifyNotificationState {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**
@@ -126,7 +126,7 @@ export interface GotifyNotificationState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
+     * Origin of this configuration as reported by PBS (e.g., <span pulumi-lang-nodejs="`user`" pulumi-lang-dotnet="`User`" pulumi-lang-go="`user`" pulumi-lang-python="`user`" pulumi-lang-yaml="`user`" pulumi-lang-java="`user`" pulumi-lang-hcl="`user`">`user`</span>, <span pulumi-lang-nodejs="`builtin`" pulumi-lang-dotnet="`Builtin`" pulumi-lang-go="`builtin`" pulumi-lang-python="`builtin`" pulumi-lang-yaml="`builtin`" pulumi-lang-java="`builtin`" pulumi-lang-hcl="`builtin`">`builtin`</span>).
      */
     origin?: pulumi.Input<string | undefined>;
     /**
@@ -148,7 +148,7 @@ export interface GotifyNotificationArgs {
      */
     comment?: pulumi.Input<string | undefined>;
     /**
-     * Disable this notification target. Defaults to `false`.
+     * Disable this notification target. Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     disable?: pulumi.Input<boolean | undefined>;
     /**

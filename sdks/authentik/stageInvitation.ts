@@ -44,7 +44,7 @@ export class StageInvitation extends pulumi.CustomResource {
     }
 
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly continueFlowWithoutInvitation: pulumi.Output<boolean | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -82,7 +82,7 @@ export class StageInvitation extends pulumi.CustomResource {
  */
 export interface StageInvitationState {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     continueFlowWithoutInvitation?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -94,7 +94,7 @@ export interface StageInvitationState {
  */
 export interface StageInvitationArgs {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     continueFlowWithoutInvitation?: pulumi.Input<boolean | undefined>;
     name?: pulumi.Input<string | undefined>;

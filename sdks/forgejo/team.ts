@@ -60,15 +60,15 @@ export class Team extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     declare public readonly organization: pulumi.Output<string>;
     /**
-     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     declare public readonly organizationId: pulumi.Output<number>;
     /**
-     * Permissions within the owning organization. **Note**: If you set `admin` or `owner` here, make sure to set the correct `units_map`.
+     * Permissions within the owning organization. **Note**: If you set <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> or <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> here, make sure to set the correct <span pulumi-lang-nodejs="`unitsMap`" pulumi-lang-dotnet="`UnitsMap`" pulumi-lang-go="`unitsMap`" pulumi-lang-python="`units_map`" pulumi-lang-yaml="`unitsMap`" pulumi-lang-java="`unitsMap`" pulumi-lang-hcl="`units_map`">`unitsMap`</span>.
      */
     declare public readonly permission: pulumi.Output<string>;
     /**
@@ -76,7 +76,7 @@ export class Team extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly teamId: pulumi.Output<number>;
     /**
-     * Map of access units. **Note**: If the `permission` is `admin` or `owner` all units must be set to `admin` as well.
+     * Map of access units. **Note**: If the <span pulumi-lang-nodejs="`permission`" pulumi-lang-dotnet="`Permission`" pulumi-lang-go="`permission`" pulumi-lang-python="`permission`" pulumi-lang-yaml="`permission`" pulumi-lang-java="`permission`" pulumi-lang-hcl="`permission`">`permission`</span> is <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> or <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> all units must be set to <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> as well.
      */
     declare public readonly unitsMap: pulumi.Output<{[key: string]: string}>;
 
@@ -143,15 +143,15 @@ export interface TeamState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organization?: pulumi.Input<string | undefined>;
     /**
-     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organizationId?: pulumi.Input<number | undefined>;
     /**
-     * Permissions within the owning organization. **Note**: If you set `admin` or `owner` here, make sure to set the correct `units_map`.
+     * Permissions within the owning organization. **Note**: If you set <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> or <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> here, make sure to set the correct <span pulumi-lang-nodejs="`unitsMap`" pulumi-lang-dotnet="`UnitsMap`" pulumi-lang-go="`unitsMap`" pulumi-lang-python="`units_map`" pulumi-lang-yaml="`unitsMap`" pulumi-lang-java="`unitsMap`" pulumi-lang-hcl="`units_map`">`unitsMap`</span>.
      */
     permission?: pulumi.Input<string | undefined>;
     /**
@@ -159,7 +159,7 @@ export interface TeamState {
      */
     teamId?: pulumi.Input<number | undefined>;
     /**
-     * Map of access units. **Note**: If the `permission` is `admin` or `owner` all units must be set to `admin` as well.
+     * Map of access units. **Note**: If the <span pulumi-lang-nodejs="`permission`" pulumi-lang-dotnet="`Permission`" pulumi-lang-go="`permission`" pulumi-lang-python="`permission`" pulumi-lang-yaml="`permission`" pulumi-lang-java="`permission`" pulumi-lang-hcl="`permission`">`permission`</span> is <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> or <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> all units must be set to <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> as well.
      */
     unitsMap?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
 }
@@ -185,19 +185,19 @@ export interface TeamArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Name of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organization?: pulumi.Input<string | undefined>;
     /**
-     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of `organization` or `organization_id` must be specified.
+     * Numeric identifier of the owning organization. Changing this forces a new resource to be created. **Note**: One of <span pulumi-lang-nodejs="`organization`" pulumi-lang-dotnet="`Organization`" pulumi-lang-go="`organization`" pulumi-lang-python="`organization`" pulumi-lang-yaml="`organization`" pulumi-lang-java="`organization`" pulumi-lang-hcl="`organization`">`organization`</span> or <span pulumi-lang-nodejs="`organizationId`" pulumi-lang-dotnet="`OrganizationId`" pulumi-lang-go="`organizationId`" pulumi-lang-python="`organization_id`" pulumi-lang-yaml="`organizationId`" pulumi-lang-java="`organizationId`" pulumi-lang-hcl="`organization_id`">`organizationId`</span> must be specified.
      */
     organizationId?: pulumi.Input<number | undefined>;
     /**
-     * Permissions within the owning organization. **Note**: If you set `admin` or `owner` here, make sure to set the correct `units_map`.
+     * Permissions within the owning organization. **Note**: If you set <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> or <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> here, make sure to set the correct <span pulumi-lang-nodejs="`unitsMap`" pulumi-lang-dotnet="`UnitsMap`" pulumi-lang-go="`unitsMap`" pulumi-lang-python="`units_map`" pulumi-lang-yaml="`unitsMap`" pulumi-lang-java="`unitsMap`" pulumi-lang-hcl="`units_map`">`unitsMap`</span>.
      */
     permission?: pulumi.Input<string | undefined>;
     /**
-     * Map of access units. **Note**: If the `permission` is `admin` or `owner` all units must be set to `admin` as well.
+     * Map of access units. **Note**: If the <span pulumi-lang-nodejs="`permission`" pulumi-lang-dotnet="`Permission`" pulumi-lang-go="`permission`" pulumi-lang-python="`permission`" pulumi-lang-yaml="`permission`" pulumi-lang-java="`permission`" pulumi-lang-hcl="`permission`">`permission`</span> is <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> or <span pulumi-lang-nodejs="`owner`" pulumi-lang-dotnet="`Owner`" pulumi-lang-go="`owner`" pulumi-lang-python="`owner`" pulumi-lang-yaml="`owner`" pulumi-lang-java="`owner`" pulumi-lang-hcl="`owner`">`owner`</span> all units must be set to <span pulumi-lang-nodejs="`admin`" pulumi-lang-dotnet="`Admin`" pulumi-lang-go="`admin`" pulumi-lang-python="`admin`" pulumi-lang-yaml="`admin`" pulumi-lang-java="`admin`" pulumi-lang-hcl="`admin`">`admin`</span> as well.
      */
     unitsMap: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
 }

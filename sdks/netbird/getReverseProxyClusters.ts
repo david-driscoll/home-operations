@@ -17,10 +17,6 @@ export function getReverseProxyClusters(opts?: pulumi.InvokeOptions): Promise<Ge
  */
 export interface GetReverseProxyClustersResult {
     readonly clusters: outputs.GetReverseProxyClustersCluster[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
 }
 export function getReverseProxyClustersOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetReverseProxyClustersResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});

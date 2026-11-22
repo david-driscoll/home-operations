@@ -44,13 +44,13 @@ export class StagePassword extends pulumi.CustomResource {
     }
 
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly allowShowPassword: pulumi.Output<boolean | undefined>;
     declare public readonly backends: pulumi.Output<string[]>;
     declare public readonly configureFlow: pulumi.Output<string | undefined>;
     /**
-     * Defaults to `5`.
+     * Defaults to <span pulumi-lang-nodejs="`5`" pulumi-lang-dotnet="`5`" pulumi-lang-go="`5`" pulumi-lang-python="`5`" pulumi-lang-yaml="`5`" pulumi-lang-java="`5`" pulumi-lang-hcl="`5`">`5`</span>.
      */
     declare public readonly failedAttemptsBeforeCancel: pulumi.Output<number | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -97,13 +97,13 @@ export class StagePassword extends pulumi.CustomResource {
  */
 export interface StagePasswordState {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     allowShowPassword?: pulumi.Input<boolean | undefined>;
     backends?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     configureFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `5`.
+     * Defaults to <span pulumi-lang-nodejs="`5`" pulumi-lang-dotnet="`5`" pulumi-lang-go="`5`" pulumi-lang-python="`5`" pulumi-lang-yaml="`5`" pulumi-lang-java="`5`" pulumi-lang-hcl="`5`">`5`</span>.
      */
     failedAttemptsBeforeCancel?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -115,13 +115,13 @@ export interface StagePasswordState {
  */
 export interface StagePasswordArgs {
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     allowShowPassword?: pulumi.Input<boolean | undefined>;
     backends: pulumi.Input<pulumi.Input<string>[]>;
     configureFlow?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `5`.
+     * Defaults to <span pulumi-lang-nodejs="`5`" pulumi-lang-dotnet="`5`" pulumi-lang-go="`5`" pulumi-lang-python="`5`" pulumi-lang-yaml="`5`" pulumi-lang-java="`5`" pulumi-lang-hcl="`5`">`5`</span>.
      */
     failedAttemptsBeforeCancel?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;

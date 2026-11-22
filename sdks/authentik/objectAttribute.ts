@@ -48,7 +48,7 @@ export class ObjectAttribute extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly created: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean | undefined>;
     declare public readonly group: pulumi.Output<string | undefined>;
@@ -72,9 +72,9 @@ export class ObjectAttribute extends pulumi.CustomResource {
     declare public readonly regex: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `text`
-     *   - `number`
-     *   - `boolean`
+     *   - <span pulumi-lang-nodejs="`text`" pulumi-lang-dotnet="`Text`" pulumi-lang-go="`text`" pulumi-lang-python="`text`" pulumi-lang-yaml="`text`" pulumi-lang-java="`text`" pulumi-lang-hcl="`text`">`text`</span>
+     *   - <span pulumi-lang-nodejs="`number`" pulumi-lang-dotnet="`Number`" pulumi-lang-go="`number`" pulumi-lang-python="`number`" pulumi-lang-yaml="`number`" pulumi-lang-java="`number`" pulumi-lang-hcl="`number`">`number`</span>
+     *   - <span pulumi-lang-nodejs="`boolean`" pulumi-lang-dotnet="`Boolean`" pulumi-lang-go="`boolean`" pulumi-lang-python="`boolean`" pulumi-lang-yaml="`boolean`" pulumi-lang-java="`boolean`" pulumi-lang-hcl="`boolean`">`boolean`</span>
      */
     declare public readonly type: pulumi.Output<string>;
 
@@ -146,7 +146,7 @@ export interface ObjectAttributeState {
      */
     created?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     group?: pulumi.Input<string | undefined>;
@@ -170,9 +170,9 @@ export interface ObjectAttributeState {
     regex?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `text`
-     *   - `number`
-     *   - `boolean`
+     *   - <span pulumi-lang-nodejs="`text`" pulumi-lang-dotnet="`Text`" pulumi-lang-go="`text`" pulumi-lang-python="`text`" pulumi-lang-yaml="`text`" pulumi-lang-java="`text`" pulumi-lang-hcl="`text`">`text`</span>
+     *   - <span pulumi-lang-nodejs="`number`" pulumi-lang-dotnet="`Number`" pulumi-lang-go="`number`" pulumi-lang-python="`number`" pulumi-lang-yaml="`number`" pulumi-lang-java="`number`" pulumi-lang-hcl="`number`">`number`</span>
+     *   - <span pulumi-lang-nodejs="`boolean`" pulumi-lang-dotnet="`Boolean`" pulumi-lang-go="`boolean`" pulumi-lang-python="`boolean`" pulumi-lang-yaml="`boolean`" pulumi-lang-java="`boolean`" pulumi-lang-hcl="`boolean`">`boolean`</span>
      */
     type?: pulumi.Input<string | undefined>;
 }
@@ -182,7 +182,7 @@ export interface ObjectAttributeState {
  */
 export interface ObjectAttributeArgs {
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     group?: pulumi.Input<string | undefined>;
@@ -202,9 +202,9 @@ export interface ObjectAttributeArgs {
     regex?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `text`
-     *   - `number`
-     *   - `boolean`
+     *   - <span pulumi-lang-nodejs="`text`" pulumi-lang-dotnet="`Text`" pulumi-lang-go="`text`" pulumi-lang-python="`text`" pulumi-lang-yaml="`text`" pulumi-lang-java="`text`" pulumi-lang-hcl="`text`">`text`</span>
+     *   - <span pulumi-lang-nodejs="`number`" pulumi-lang-dotnet="`Number`" pulumi-lang-go="`number`" pulumi-lang-python="`number`" pulumi-lang-yaml="`number`" pulumi-lang-java="`number`" pulumi-lang-hcl="`number`">`number`</span>
+     *   - <span pulumi-lang-nodejs="`boolean`" pulumi-lang-dotnet="`Boolean`" pulumi-lang-go="`boolean`" pulumi-lang-python="`boolean`" pulumi-lang-yaml="`boolean`" pulumi-lang-java="`boolean`" pulumi-lang-hcl="`boolean`">`boolean`</span>
      */
     type: pulumi.Input<string>;
 }

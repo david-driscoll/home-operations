@@ -51,13 +51,13 @@ export class SourceOauth extends pulumi.CustomResource {
     declare public readonly authenticationFlow: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `basic_auth`
-     *   - `post_body`
-     *      Defaults to `basic_auth`.
+     *   - <span pulumi-lang-nodejs="`basicAuth`" pulumi-lang-dotnet="`BasicAuth`" pulumi-lang-go="`basicAuth`" pulumi-lang-python="`basic_auth`" pulumi-lang-yaml="`basicAuth`" pulumi-lang-java="`basicAuth`" pulumi-lang-hcl="`basic_auth`">`basicAuth`</span>
+     *   - <span pulumi-lang-nodejs="`postBody`" pulumi-lang-dotnet="`PostBody`" pulumi-lang-go="`postBody`" pulumi-lang-python="`post_body`" pulumi-lang-yaml="`postBody`" pulumi-lang-java="`postBody`" pulumi-lang-hcl="`post_body`">`postBody`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`basicAuth`" pulumi-lang-dotnet="`BasicAuth`" pulumi-lang-go="`basicAuth`" pulumi-lang-python="`basic_auth`" pulumi-lang-yaml="`basicAuth`" pulumi-lang-java="`basicAuth`" pulumi-lang-hcl="`basic_auth`">`basicAuth`</span>.
      */
     declare public readonly authorizationCodeAuthMethod: pulumi.Output<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set. Generated.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set. Generated.
      */
     declare public readonly authorizationUrl: pulumi.Output<string>;
     /**
@@ -67,16 +67,16 @@ export class SourceOauth extends pulumi.CustomResource {
     declare public readonly consumerKey: pulumi.Output<string>;
     declare public readonly consumerSecret: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly enabled: pulumi.Output<boolean | undefined>;
     declare public readonly enrollmentFlow: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `name_link`
-     *   - `name_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`nameLink`" pulumi-lang-dotnet="`NameLink`" pulumi-lang-go="`nameLink`" pulumi-lang-python="`name_link`" pulumi-lang-yaml="`nameLink`" pulumi-lang-java="`nameLink`" pulumi-lang-hcl="`name_link`">`nameLink`</span>
+     *   - <span pulumi-lang-nodejs="`nameDeny`" pulumi-lang-dotnet="`NameDeny`" pulumi-lang-go="`nameDeny`" pulumi-lang-python="`name_deny`" pulumi-lang-yaml="`nameDeny`" pulumi-lang-java="`nameDeny`" pulumi-lang-hcl="`name_deny`">`nameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     declare public readonly groupMatchingMode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -85,7 +85,7 @@ export class SourceOauth extends pulumi.CustomResource {
      */
     declare public readonly oidcJwks: pulumi.Output<string>;
     /**
-     * Automatically configure JWKS if not specified by `oidc_well_known_url`. Generated.
+     * Automatically configure JWKS if not specified by <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span>. Generated.
      */
     declare public readonly oidcJwksUrl: pulumi.Output<string>;
     /**
@@ -94,63 +94,63 @@ export class SourceOauth extends pulumi.CustomResource {
     declare public readonly oidcWellKnownUrl: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `none`
-     *   - `plain`
+     *   - <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>
+     *   - <span pulumi-lang-nodejs="`plain`" pulumi-lang-dotnet="`Plain`" pulumi-lang-go="`plain`" pulumi-lang-python="`plain`" pulumi-lang-yaml="`plain`" pulumi-lang-java="`plain`" pulumi-lang-hcl="`plain`">`plain`</span>
      *   - `S256`
-     *      Defaults to `none`.
+     *      Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     declare public readonly pkce: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
-     *      Defaults to `any`.
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set. Generated.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set. Generated.
      */
     declare public readonly profileUrl: pulumi.Output<string>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     declare public readonly promoted: pulumi.Output<boolean | undefined>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     declare public readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `openidconnect`
-     *   - `apple`
-     *   - `discord`
-     *   - `entraid`
-     *   - `facebook`
-     *   - `github`
-     *   - `gitlab`
-     *   - `google`
-     *   - `mailcow`
-     *   - `okta`
-     *   - `patreon`
-     *   - `reddit`
-     *   - `slack`
-     *   - `twitch`
-     *   - `twitter`
-     *   - `wechat`
+     *   - <span pulumi-lang-nodejs="`openidconnect`" pulumi-lang-dotnet="`Openidconnect`" pulumi-lang-go="`openidconnect`" pulumi-lang-python="`openidconnect`" pulumi-lang-yaml="`openidconnect`" pulumi-lang-java="`openidconnect`" pulumi-lang-hcl="`openidconnect`">`openidconnect`</span>
+     *   - <span pulumi-lang-nodejs="`apple`" pulumi-lang-dotnet="`Apple`" pulumi-lang-go="`apple`" pulumi-lang-python="`apple`" pulumi-lang-yaml="`apple`" pulumi-lang-java="`apple`" pulumi-lang-hcl="`apple`">`apple`</span>
+     *   - <span pulumi-lang-nodejs="`discord`" pulumi-lang-dotnet="`Discord`" pulumi-lang-go="`discord`" pulumi-lang-python="`discord`" pulumi-lang-yaml="`discord`" pulumi-lang-java="`discord`" pulumi-lang-hcl="`discord`">`discord`</span>
+     *   - <span pulumi-lang-nodejs="`entraid`" pulumi-lang-dotnet="`Entraid`" pulumi-lang-go="`entraid`" pulumi-lang-python="`entraid`" pulumi-lang-yaml="`entraid`" pulumi-lang-java="`entraid`" pulumi-lang-hcl="`entraid`">`entraid`</span>
+     *   - <span pulumi-lang-nodejs="`facebook`" pulumi-lang-dotnet="`Facebook`" pulumi-lang-go="`facebook`" pulumi-lang-python="`facebook`" pulumi-lang-yaml="`facebook`" pulumi-lang-java="`facebook`" pulumi-lang-hcl="`facebook`">`facebook`</span>
+     *   - <span pulumi-lang-nodejs="`github`" pulumi-lang-dotnet="`Github`" pulumi-lang-go="`github`" pulumi-lang-python="`github`" pulumi-lang-yaml="`github`" pulumi-lang-java="`github`" pulumi-lang-hcl="`github`">`github`</span>
+     *   - <span pulumi-lang-nodejs="`gitlab`" pulumi-lang-dotnet="`Gitlab`" pulumi-lang-go="`gitlab`" pulumi-lang-python="`gitlab`" pulumi-lang-yaml="`gitlab`" pulumi-lang-java="`gitlab`" pulumi-lang-hcl="`gitlab`">`gitlab`</span>
+     *   - <span pulumi-lang-nodejs="`google`" pulumi-lang-dotnet="`Google`" pulumi-lang-go="`google`" pulumi-lang-python="`google`" pulumi-lang-yaml="`google`" pulumi-lang-java="`google`" pulumi-lang-hcl="`google`">`google`</span>
+     *   - <span pulumi-lang-nodejs="`mailcow`" pulumi-lang-dotnet="`Mailcow`" pulumi-lang-go="`mailcow`" pulumi-lang-python="`mailcow`" pulumi-lang-yaml="`mailcow`" pulumi-lang-java="`mailcow`" pulumi-lang-hcl="`mailcow`">`mailcow`</span>
+     *   - <span pulumi-lang-nodejs="`okta`" pulumi-lang-dotnet="`Okta`" pulumi-lang-go="`okta`" pulumi-lang-python="`okta`" pulumi-lang-yaml="`okta`" pulumi-lang-java="`okta`" pulumi-lang-hcl="`okta`">`okta`</span>
+     *   - <span pulumi-lang-nodejs="`patreon`" pulumi-lang-dotnet="`Patreon`" pulumi-lang-go="`patreon`" pulumi-lang-python="`patreon`" pulumi-lang-yaml="`patreon`" pulumi-lang-java="`patreon`" pulumi-lang-hcl="`patreon`">`patreon`</span>
+     *   - <span pulumi-lang-nodejs="`reddit`" pulumi-lang-dotnet="`Reddit`" pulumi-lang-go="`reddit`" pulumi-lang-python="`reddit`" pulumi-lang-yaml="`reddit`" pulumi-lang-java="`reddit`" pulumi-lang-hcl="`reddit`">`reddit`</span>
+     *   - <span pulumi-lang-nodejs="`slack`" pulumi-lang-dotnet="`Slack`" pulumi-lang-go="`slack`" pulumi-lang-python="`slack`" pulumi-lang-yaml="`slack`" pulumi-lang-java="`slack`" pulumi-lang-hcl="`slack`">`slack`</span>
+     *   - <span pulumi-lang-nodejs="`twitch`" pulumi-lang-dotnet="`Twitch`" pulumi-lang-go="`twitch`" pulumi-lang-python="`twitch`" pulumi-lang-yaml="`twitch`" pulumi-lang-java="`twitch`" pulumi-lang-hcl="`twitch`">`twitch`</span>
+     *   - <span pulumi-lang-nodejs="`twitter`" pulumi-lang-dotnet="`Twitter`" pulumi-lang-go="`twitter`" pulumi-lang-python="`twitter`" pulumi-lang-yaml="`twitter`" pulumi-lang-java="`twitter`" pulumi-lang-hcl="`twitter`">`twitter`</span>
+     *   - <span pulumi-lang-nodejs="`wechat`" pulumi-lang-dotnet="`Wechat`" pulumi-lang-go="`wechat`" pulumi-lang-python="`wechat`" pulumi-lang-yaml="`wechat`" pulumi-lang-java="`wechat`" pulumi-lang-hcl="`wechat`">`wechat`</span>
      */
     declare public readonly providerType: pulumi.Output<string>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set.
      */
     declare public readonly requestTokenUrl: pulumi.Output<string | undefined>;
     declare public readonly slug: pulumi.Output<string>;
     declare public readonly sourceOauthId: pulumi.Output<string>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `email_link`
-     *   - `email_deny`
-     *   - `username_link`
-     *   - `username_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`emailLink`" pulumi-lang-dotnet="`EmailLink`" pulumi-lang-go="`emailLink`" pulumi-lang-python="`email_link`" pulumi-lang-yaml="`emailLink`" pulumi-lang-java="`emailLink`" pulumi-lang-hcl="`email_link`">`emailLink`</span>
+     *   - <span pulumi-lang-nodejs="`emailDeny`" pulumi-lang-dotnet="`EmailDeny`" pulumi-lang-go="`emailDeny`" pulumi-lang-python="`email_deny`" pulumi-lang-yaml="`emailDeny`" pulumi-lang-java="`emailDeny`" pulumi-lang-hcl="`email_deny`">`emailDeny`</span>
+     *   - <span pulumi-lang-nodejs="`usernameLink`" pulumi-lang-dotnet="`UsernameLink`" pulumi-lang-go="`usernameLink`" pulumi-lang-python="`username_link`" pulumi-lang-yaml="`usernameLink`" pulumi-lang-java="`usernameLink`" pulumi-lang-hcl="`username_link`">`usernameLink`</span>
+     *   - <span pulumi-lang-nodejs="`usernameDeny`" pulumi-lang-dotnet="`UsernameDeny`" pulumi-lang-go="`usernameDeny`" pulumi-lang-python="`username_deny`" pulumi-lang-yaml="`usernameDeny`" pulumi-lang-java="`usernameDeny`" pulumi-lang-hcl="`username_deny`">`usernameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     declare public readonly userMatchingMode: pulumi.Output<string | undefined>;
     /**
@@ -265,13 +265,13 @@ export interface SourceOauthState {
     authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `basic_auth`
-     *   - `post_body`
-     *      Defaults to `basic_auth`.
+     *   - <span pulumi-lang-nodejs="`basicAuth`" pulumi-lang-dotnet="`BasicAuth`" pulumi-lang-go="`basicAuth`" pulumi-lang-python="`basic_auth`" pulumi-lang-yaml="`basicAuth`" pulumi-lang-java="`basicAuth`" pulumi-lang-hcl="`basic_auth`">`basicAuth`</span>
+     *   - <span pulumi-lang-nodejs="`postBody`" pulumi-lang-dotnet="`PostBody`" pulumi-lang-go="`postBody`" pulumi-lang-python="`post_body`" pulumi-lang-yaml="`postBody`" pulumi-lang-java="`postBody`" pulumi-lang-hcl="`post_body`">`postBody`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`basicAuth`" pulumi-lang-dotnet="`BasicAuth`" pulumi-lang-go="`basicAuth`" pulumi-lang-python="`basic_auth`" pulumi-lang-yaml="`basicAuth`" pulumi-lang-java="`basicAuth`" pulumi-lang-hcl="`basic_auth`">`basicAuth`</span>.
      */
     authorizationCodeAuthMethod?: pulumi.Input<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set. Generated.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set. Generated.
      */
     authorizationUrl?: pulumi.Input<string | undefined>;
     /**
@@ -281,16 +281,16 @@ export interface SourceOauthState {
     consumerKey?: pulumi.Input<string | undefined>;
     consumerSecret?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `name_link`
-     *   - `name_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`nameLink`" pulumi-lang-dotnet="`NameLink`" pulumi-lang-go="`nameLink`" pulumi-lang-python="`name_link`" pulumi-lang-yaml="`nameLink`" pulumi-lang-java="`nameLink`" pulumi-lang-hcl="`name_link`">`nameLink`</span>
+     *   - <span pulumi-lang-nodejs="`nameDeny`" pulumi-lang-dotnet="`NameDeny`" pulumi-lang-go="`nameDeny`" pulumi-lang-python="`name_deny`" pulumi-lang-yaml="`nameDeny`" pulumi-lang-java="`nameDeny`" pulumi-lang-hcl="`name_deny`">`nameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -299,7 +299,7 @@ export interface SourceOauthState {
      */
     oidcJwks?: pulumi.Input<string | undefined>;
     /**
-     * Automatically configure JWKS if not specified by `oidc_well_known_url`. Generated.
+     * Automatically configure JWKS if not specified by <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span>. Generated.
      */
     oidcJwksUrl?: pulumi.Input<string | undefined>;
     /**
@@ -308,63 +308,63 @@ export interface SourceOauthState {
     oidcWellKnownUrl?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `none`
-     *   - `plain`
+     *   - <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>
+     *   - <span pulumi-lang-nodejs="`plain`" pulumi-lang-dotnet="`Plain`" pulumi-lang-go="`plain`" pulumi-lang-python="`plain`" pulumi-lang-yaml="`plain`" pulumi-lang-java="`plain`" pulumi-lang-hcl="`plain`">`plain`</span>
      *   - `S256`
-     *      Defaults to `none`.
+     *      Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     pkce?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
-     *      Defaults to `any`.
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set. Generated.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set. Generated.
      */
     profileUrl?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     promoted?: pulumi.Input<boolean | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `openidconnect`
-     *   - `apple`
-     *   - `discord`
-     *   - `entraid`
-     *   - `facebook`
-     *   - `github`
-     *   - `gitlab`
-     *   - `google`
-     *   - `mailcow`
-     *   - `okta`
-     *   - `patreon`
-     *   - `reddit`
-     *   - `slack`
-     *   - `twitch`
-     *   - `twitter`
-     *   - `wechat`
+     *   - <span pulumi-lang-nodejs="`openidconnect`" pulumi-lang-dotnet="`Openidconnect`" pulumi-lang-go="`openidconnect`" pulumi-lang-python="`openidconnect`" pulumi-lang-yaml="`openidconnect`" pulumi-lang-java="`openidconnect`" pulumi-lang-hcl="`openidconnect`">`openidconnect`</span>
+     *   - <span pulumi-lang-nodejs="`apple`" pulumi-lang-dotnet="`Apple`" pulumi-lang-go="`apple`" pulumi-lang-python="`apple`" pulumi-lang-yaml="`apple`" pulumi-lang-java="`apple`" pulumi-lang-hcl="`apple`">`apple`</span>
+     *   - <span pulumi-lang-nodejs="`discord`" pulumi-lang-dotnet="`Discord`" pulumi-lang-go="`discord`" pulumi-lang-python="`discord`" pulumi-lang-yaml="`discord`" pulumi-lang-java="`discord`" pulumi-lang-hcl="`discord`">`discord`</span>
+     *   - <span pulumi-lang-nodejs="`entraid`" pulumi-lang-dotnet="`Entraid`" pulumi-lang-go="`entraid`" pulumi-lang-python="`entraid`" pulumi-lang-yaml="`entraid`" pulumi-lang-java="`entraid`" pulumi-lang-hcl="`entraid`">`entraid`</span>
+     *   - <span pulumi-lang-nodejs="`facebook`" pulumi-lang-dotnet="`Facebook`" pulumi-lang-go="`facebook`" pulumi-lang-python="`facebook`" pulumi-lang-yaml="`facebook`" pulumi-lang-java="`facebook`" pulumi-lang-hcl="`facebook`">`facebook`</span>
+     *   - <span pulumi-lang-nodejs="`github`" pulumi-lang-dotnet="`Github`" pulumi-lang-go="`github`" pulumi-lang-python="`github`" pulumi-lang-yaml="`github`" pulumi-lang-java="`github`" pulumi-lang-hcl="`github`">`github`</span>
+     *   - <span pulumi-lang-nodejs="`gitlab`" pulumi-lang-dotnet="`Gitlab`" pulumi-lang-go="`gitlab`" pulumi-lang-python="`gitlab`" pulumi-lang-yaml="`gitlab`" pulumi-lang-java="`gitlab`" pulumi-lang-hcl="`gitlab`">`gitlab`</span>
+     *   - <span pulumi-lang-nodejs="`google`" pulumi-lang-dotnet="`Google`" pulumi-lang-go="`google`" pulumi-lang-python="`google`" pulumi-lang-yaml="`google`" pulumi-lang-java="`google`" pulumi-lang-hcl="`google`">`google`</span>
+     *   - <span pulumi-lang-nodejs="`mailcow`" pulumi-lang-dotnet="`Mailcow`" pulumi-lang-go="`mailcow`" pulumi-lang-python="`mailcow`" pulumi-lang-yaml="`mailcow`" pulumi-lang-java="`mailcow`" pulumi-lang-hcl="`mailcow`">`mailcow`</span>
+     *   - <span pulumi-lang-nodejs="`okta`" pulumi-lang-dotnet="`Okta`" pulumi-lang-go="`okta`" pulumi-lang-python="`okta`" pulumi-lang-yaml="`okta`" pulumi-lang-java="`okta`" pulumi-lang-hcl="`okta`">`okta`</span>
+     *   - <span pulumi-lang-nodejs="`patreon`" pulumi-lang-dotnet="`Patreon`" pulumi-lang-go="`patreon`" pulumi-lang-python="`patreon`" pulumi-lang-yaml="`patreon`" pulumi-lang-java="`patreon`" pulumi-lang-hcl="`patreon`">`patreon`</span>
+     *   - <span pulumi-lang-nodejs="`reddit`" pulumi-lang-dotnet="`Reddit`" pulumi-lang-go="`reddit`" pulumi-lang-python="`reddit`" pulumi-lang-yaml="`reddit`" pulumi-lang-java="`reddit`" pulumi-lang-hcl="`reddit`">`reddit`</span>
+     *   - <span pulumi-lang-nodejs="`slack`" pulumi-lang-dotnet="`Slack`" pulumi-lang-go="`slack`" pulumi-lang-python="`slack`" pulumi-lang-yaml="`slack`" pulumi-lang-java="`slack`" pulumi-lang-hcl="`slack`">`slack`</span>
+     *   - <span pulumi-lang-nodejs="`twitch`" pulumi-lang-dotnet="`Twitch`" pulumi-lang-go="`twitch`" pulumi-lang-python="`twitch`" pulumi-lang-yaml="`twitch`" pulumi-lang-java="`twitch`" pulumi-lang-hcl="`twitch`">`twitch`</span>
+     *   - <span pulumi-lang-nodejs="`twitter`" pulumi-lang-dotnet="`Twitter`" pulumi-lang-go="`twitter`" pulumi-lang-python="`twitter`" pulumi-lang-yaml="`twitter`" pulumi-lang-java="`twitter`" pulumi-lang-hcl="`twitter`">`twitter`</span>
+     *   - <span pulumi-lang-nodejs="`wechat`" pulumi-lang-dotnet="`Wechat`" pulumi-lang-go="`wechat`" pulumi-lang-python="`wechat`" pulumi-lang-yaml="`wechat`" pulumi-lang-java="`wechat`" pulumi-lang-hcl="`wechat`">`wechat`</span>
      */
     providerType?: pulumi.Input<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set.
      */
     requestTokenUrl?: pulumi.Input<string | undefined>;
     slug?: pulumi.Input<string | undefined>;
     sourceOauthId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `email_link`
-     *   - `email_deny`
-     *   - `username_link`
-     *   - `username_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`emailLink`" pulumi-lang-dotnet="`EmailLink`" pulumi-lang-go="`emailLink`" pulumi-lang-python="`email_link`" pulumi-lang-yaml="`emailLink`" pulumi-lang-java="`emailLink`" pulumi-lang-hcl="`email_link`">`emailLink`</span>
+     *   - <span pulumi-lang-nodejs="`emailDeny`" pulumi-lang-dotnet="`EmailDeny`" pulumi-lang-go="`emailDeny`" pulumi-lang-python="`email_deny`" pulumi-lang-yaml="`emailDeny`" pulumi-lang-java="`emailDeny`" pulumi-lang-hcl="`email_deny`">`emailDeny`</span>
+     *   - <span pulumi-lang-nodejs="`usernameLink`" pulumi-lang-dotnet="`UsernameLink`" pulumi-lang-go="`usernameLink`" pulumi-lang-python="`username_link`" pulumi-lang-yaml="`usernameLink`" pulumi-lang-java="`usernameLink`" pulumi-lang-hcl="`username_link`">`usernameLink`</span>
+     *   - <span pulumi-lang-nodejs="`usernameDeny`" pulumi-lang-dotnet="`UsernameDeny`" pulumi-lang-go="`usernameDeny`" pulumi-lang-python="`username_deny`" pulumi-lang-yaml="`usernameDeny`" pulumi-lang-java="`usernameDeny`" pulumi-lang-hcl="`username_deny`">`usernameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**
@@ -389,28 +389,28 @@ export interface SourceOauthArgs {
     authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `basic_auth`
-     *   - `post_body`
-     *      Defaults to `basic_auth`.
+     *   - <span pulumi-lang-nodejs="`basicAuth`" pulumi-lang-dotnet="`BasicAuth`" pulumi-lang-go="`basicAuth`" pulumi-lang-python="`basic_auth`" pulumi-lang-yaml="`basicAuth`" pulumi-lang-java="`basicAuth`" pulumi-lang-hcl="`basic_auth`">`basicAuth`</span>
+     *   - <span pulumi-lang-nodejs="`postBody`" pulumi-lang-dotnet="`PostBody`" pulumi-lang-go="`postBody`" pulumi-lang-python="`post_body`" pulumi-lang-yaml="`postBody`" pulumi-lang-java="`postBody`" pulumi-lang-hcl="`post_body`">`postBody`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`basicAuth`" pulumi-lang-dotnet="`BasicAuth`" pulumi-lang-go="`basicAuth`" pulumi-lang-python="`basic_auth`" pulumi-lang-yaml="`basicAuth`" pulumi-lang-java="`basicAuth`" pulumi-lang-hcl="`basic_auth`">`basicAuth`</span>.
      */
     authorizationCodeAuthMethod?: pulumi.Input<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set. Generated.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set. Generated.
      */
     authorizationUrl?: pulumi.Input<string | undefined>;
     consumerKey: pulumi.Input<string>;
     consumerSecret: pulumi.Input<string>;
     /**
-     * Defaults to `true`.
+     * Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `name_link`
-     *   - `name_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`nameLink`" pulumi-lang-dotnet="`NameLink`" pulumi-lang-go="`nameLink`" pulumi-lang-python="`name_link`" pulumi-lang-yaml="`nameLink`" pulumi-lang-java="`nameLink`" pulumi-lang-hcl="`name_link`">`nameLink`</span>
+     *   - <span pulumi-lang-nodejs="`nameDeny`" pulumi-lang-dotnet="`NameDeny`" pulumi-lang-go="`nameDeny`" pulumi-lang-python="`name_deny`" pulumi-lang-yaml="`nameDeny`" pulumi-lang-java="`nameDeny`" pulumi-lang-hcl="`name_deny`">`nameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -419,7 +419,7 @@ export interface SourceOauthArgs {
      */
     oidcJwks?: pulumi.Input<string | undefined>;
     /**
-     * Automatically configure JWKS if not specified by `oidc_well_known_url`. Generated.
+     * Automatically configure JWKS if not specified by <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span>. Generated.
      */
     oidcJwksUrl?: pulumi.Input<string | undefined>;
     /**
@@ -428,63 +428,63 @@ export interface SourceOauthArgs {
     oidcWellKnownUrl?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `none`
-     *   - `plain`
+     *   - <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>
+     *   - <span pulumi-lang-nodejs="`plain`" pulumi-lang-dotnet="`Plain`" pulumi-lang-go="`plain`" pulumi-lang-python="`plain`" pulumi-lang-yaml="`plain`" pulumi-lang-java="`plain`" pulumi-lang-hcl="`plain`">`plain`</span>
      *   - `S256`
-     *      Defaults to `none`.
+     *      Defaults to <span pulumi-lang-nodejs="`none`" pulumi-lang-dotnet="`None`" pulumi-lang-go="`none`" pulumi-lang-python="`none`" pulumi-lang-yaml="`none`" pulumi-lang-java="`none`" pulumi-lang-hcl="`none`">`none`</span>.
      */
     pkce?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
-     *      Defaults to `any`.
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set. Generated.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set. Generated.
      */
     profileUrl?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `false`.
+     * Defaults to <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>.
      */
     promoted?: pulumi.Input<boolean | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `openidconnect`
-     *   - `apple`
-     *   - `discord`
-     *   - `entraid`
-     *   - `facebook`
-     *   - `github`
-     *   - `gitlab`
-     *   - `google`
-     *   - `mailcow`
-     *   - `okta`
-     *   - `patreon`
-     *   - `reddit`
-     *   - `slack`
-     *   - `twitch`
-     *   - `twitter`
-     *   - `wechat`
+     *   - <span pulumi-lang-nodejs="`openidconnect`" pulumi-lang-dotnet="`Openidconnect`" pulumi-lang-go="`openidconnect`" pulumi-lang-python="`openidconnect`" pulumi-lang-yaml="`openidconnect`" pulumi-lang-java="`openidconnect`" pulumi-lang-hcl="`openidconnect`">`openidconnect`</span>
+     *   - <span pulumi-lang-nodejs="`apple`" pulumi-lang-dotnet="`Apple`" pulumi-lang-go="`apple`" pulumi-lang-python="`apple`" pulumi-lang-yaml="`apple`" pulumi-lang-java="`apple`" pulumi-lang-hcl="`apple`">`apple`</span>
+     *   - <span pulumi-lang-nodejs="`discord`" pulumi-lang-dotnet="`Discord`" pulumi-lang-go="`discord`" pulumi-lang-python="`discord`" pulumi-lang-yaml="`discord`" pulumi-lang-java="`discord`" pulumi-lang-hcl="`discord`">`discord`</span>
+     *   - <span pulumi-lang-nodejs="`entraid`" pulumi-lang-dotnet="`Entraid`" pulumi-lang-go="`entraid`" pulumi-lang-python="`entraid`" pulumi-lang-yaml="`entraid`" pulumi-lang-java="`entraid`" pulumi-lang-hcl="`entraid`">`entraid`</span>
+     *   - <span pulumi-lang-nodejs="`facebook`" pulumi-lang-dotnet="`Facebook`" pulumi-lang-go="`facebook`" pulumi-lang-python="`facebook`" pulumi-lang-yaml="`facebook`" pulumi-lang-java="`facebook`" pulumi-lang-hcl="`facebook`">`facebook`</span>
+     *   - <span pulumi-lang-nodejs="`github`" pulumi-lang-dotnet="`Github`" pulumi-lang-go="`github`" pulumi-lang-python="`github`" pulumi-lang-yaml="`github`" pulumi-lang-java="`github`" pulumi-lang-hcl="`github`">`github`</span>
+     *   - <span pulumi-lang-nodejs="`gitlab`" pulumi-lang-dotnet="`Gitlab`" pulumi-lang-go="`gitlab`" pulumi-lang-python="`gitlab`" pulumi-lang-yaml="`gitlab`" pulumi-lang-java="`gitlab`" pulumi-lang-hcl="`gitlab`">`gitlab`</span>
+     *   - <span pulumi-lang-nodejs="`google`" pulumi-lang-dotnet="`Google`" pulumi-lang-go="`google`" pulumi-lang-python="`google`" pulumi-lang-yaml="`google`" pulumi-lang-java="`google`" pulumi-lang-hcl="`google`">`google`</span>
+     *   - <span pulumi-lang-nodejs="`mailcow`" pulumi-lang-dotnet="`Mailcow`" pulumi-lang-go="`mailcow`" pulumi-lang-python="`mailcow`" pulumi-lang-yaml="`mailcow`" pulumi-lang-java="`mailcow`" pulumi-lang-hcl="`mailcow`">`mailcow`</span>
+     *   - <span pulumi-lang-nodejs="`okta`" pulumi-lang-dotnet="`Okta`" pulumi-lang-go="`okta`" pulumi-lang-python="`okta`" pulumi-lang-yaml="`okta`" pulumi-lang-java="`okta`" pulumi-lang-hcl="`okta`">`okta`</span>
+     *   - <span pulumi-lang-nodejs="`patreon`" pulumi-lang-dotnet="`Patreon`" pulumi-lang-go="`patreon`" pulumi-lang-python="`patreon`" pulumi-lang-yaml="`patreon`" pulumi-lang-java="`patreon`" pulumi-lang-hcl="`patreon`">`patreon`</span>
+     *   - <span pulumi-lang-nodejs="`reddit`" pulumi-lang-dotnet="`Reddit`" pulumi-lang-go="`reddit`" pulumi-lang-python="`reddit`" pulumi-lang-yaml="`reddit`" pulumi-lang-java="`reddit`" pulumi-lang-hcl="`reddit`">`reddit`</span>
+     *   - <span pulumi-lang-nodejs="`slack`" pulumi-lang-dotnet="`Slack`" pulumi-lang-go="`slack`" pulumi-lang-python="`slack`" pulumi-lang-yaml="`slack`" pulumi-lang-java="`slack`" pulumi-lang-hcl="`slack`">`slack`</span>
+     *   - <span pulumi-lang-nodejs="`twitch`" pulumi-lang-dotnet="`Twitch`" pulumi-lang-go="`twitch`" pulumi-lang-python="`twitch`" pulumi-lang-yaml="`twitch`" pulumi-lang-java="`twitch`" pulumi-lang-hcl="`twitch`">`twitch`</span>
+     *   - <span pulumi-lang-nodejs="`twitter`" pulumi-lang-dotnet="`Twitter`" pulumi-lang-go="`twitter`" pulumi-lang-python="`twitter`" pulumi-lang-yaml="`twitter`" pulumi-lang-java="`twitter`" pulumi-lang-hcl="`twitter`">`twitter`</span>
+     *   - <span pulumi-lang-nodejs="`wechat`" pulumi-lang-dotnet="`Wechat`" pulumi-lang-go="`wechat`" pulumi-lang-python="`wechat`" pulumi-lang-yaml="`wechat`" pulumi-lang-java="`wechat`" pulumi-lang-hcl="`wechat`">`wechat`</span>
      */
     providerType: pulumi.Input<string>;
     /**
-     * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
+     * Manually configure OAuth2 URLs when <span pulumi-lang-nodejs="`oidcWellKnownUrl`" pulumi-lang-dotnet="`OidcWellKnownUrl`" pulumi-lang-go="`oidcWellKnownUrl`" pulumi-lang-python="`oidc_well_known_url`" pulumi-lang-yaml="`oidcWellKnownUrl`" pulumi-lang-java="`oidcWellKnownUrl`" pulumi-lang-hcl="`oidc_well_known_url`">`oidcWellKnownUrl`</span> is not set.
      */
     requestTokenUrl?: pulumi.Input<string | undefined>;
     slug: pulumi.Input<string>;
     sourceOauthId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `identifier`
-     *   - `email_link`
-     *   - `email_deny`
-     *   - `username_link`
-     *   - `username_deny`
-     *      Defaults to `identifier`.
+     *   - <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>
+     *   - <span pulumi-lang-nodejs="`emailLink`" pulumi-lang-dotnet="`EmailLink`" pulumi-lang-go="`emailLink`" pulumi-lang-python="`email_link`" pulumi-lang-yaml="`emailLink`" pulumi-lang-java="`emailLink`" pulumi-lang-hcl="`email_link`">`emailLink`</span>
+     *   - <span pulumi-lang-nodejs="`emailDeny`" pulumi-lang-dotnet="`EmailDeny`" pulumi-lang-go="`emailDeny`" pulumi-lang-python="`email_deny`" pulumi-lang-yaml="`emailDeny`" pulumi-lang-java="`emailDeny`" pulumi-lang-hcl="`email_deny`">`emailDeny`</span>
+     *   - <span pulumi-lang-nodejs="`usernameLink`" pulumi-lang-dotnet="`UsernameLink`" pulumi-lang-go="`usernameLink`" pulumi-lang-python="`username_link`" pulumi-lang-yaml="`usernameLink`" pulumi-lang-java="`usernameLink`" pulumi-lang-hcl="`username_link`">`usernameLink`</span>
+     *   - <span pulumi-lang-nodejs="`usernameDeny`" pulumi-lang-dotnet="`UsernameDeny`" pulumi-lang-go="`usernameDeny`" pulumi-lang-python="`username_deny`" pulumi-lang-yaml="`usernameDeny`" pulumi-lang-java="`usernameDeny`" pulumi-lang-hcl="`username_deny`">`usernameDeny`</span>
+     *      Defaults to <span pulumi-lang-nodejs="`identifier`" pulumi-lang-dotnet="`Identifier`" pulumi-lang-go="`identifier`" pulumi-lang-python="`identifier`" pulumi-lang-yaml="`identifier`" pulumi-lang-java="`identifier`" pulumi-lang-hcl="`identifier`">`identifier`</span>.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**

@@ -60,7 +60,7 @@ export class OauthClient extends pulumi.CustomResource {
      */
     declare public readonly scopes: pulumi.Output<string[]>;
     /**
-     * A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include "devices:core" or "auth_keys".
+     * A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include "devices:core" or <span pulumi-lang-nodejs=""authKeys"" pulumi-lang-dotnet=""AuthKeys"" pulumi-lang-go=""authKeys"" pulumi-lang-python=""auth_keys"" pulumi-lang-yaml=""authKeys"" pulumi-lang-java=""authKeys"" pulumi-lang-hcl=""auth_keys"">"authKeys"</span>.
      */
     declare public readonly tags: pulumi.Output<string[]>;
     /**
@@ -133,7 +133,7 @@ export interface OauthClientState {
      */
     scopes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include "devices:core" or "auth_keys".
+     * A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include "devices:core" or <span pulumi-lang-nodejs=""authKeys"" pulumi-lang-dotnet=""AuthKeys"" pulumi-lang-go=""authKeys"" pulumi-lang-python=""auth_keys"" pulumi-lang-yaml=""authKeys"" pulumi-lang-java=""authKeys"" pulumi-lang-hcl=""auth_keys"">"authKeys"</span>.
      */
     tags?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -159,7 +159,7 @@ export interface OauthClientArgs {
      */
     scopes: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include "devices:core" or "auth_keys".
+     * A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include "devices:core" or <span pulumi-lang-nodejs=""authKeys"" pulumi-lang-dotnet=""AuthKeys"" pulumi-lang-go=""authKeys"" pulumi-lang-python=""auth_keys"" pulumi-lang-yaml=""authKeys"" pulumi-lang-java=""authKeys"" pulumi-lang-hcl=""auth_keys"">"authKeys"</span>.
      */
     tags?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }

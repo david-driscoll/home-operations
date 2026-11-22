@@ -66,7 +66,7 @@ export class Setting extends pulumi.CustomResource {
      */
     declare public readonly dpi: pulumi.Output<outputs.SettingDpi>;
     /**
-     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in `speed` mode color each port by its link speed, those in `network` mode by its network; set the mode per switch with `unifi.Device`'s `etherlighting` block. Each list replaces the controller's list when set and is left untouched when omitted.
+     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in <span pulumi-lang-nodejs="`speed`" pulumi-lang-dotnet="`Speed`" pulumi-lang-go="`speed`" pulumi-lang-python="`speed`" pulumi-lang-yaml="`speed`" pulumi-lang-java="`speed`" pulumi-lang-hcl="`speed`">`speed`</span> mode color each port by its link speed, those in <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> mode by its network; set the mode per switch with <span pulumi-lang-nodejs="`unifi.Device`" pulumi-lang-dotnet="`unifi.Device`" pulumi-lang-go="`Device`" pulumi-lang-python="`Device`" pulumi-lang-yaml="`unifi.Device`" pulumi-lang-java="`unifi.Device`" pulumi-lang-hcl="`unifi_device`">`unifi.Device`</span>'s <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> block. Each list replaces the controller's list when set and is left untouched when omitted.
      */
     declare public readonly etherlighting: pulumi.Output<outputs.SettingEtherlighting | undefined>;
     /**
@@ -102,16 +102,20 @@ export class Setting extends pulumi.CustomResource {
      */
     declare public readonly ntp: pulumi.Output<outputs.SettingNtp>;
     /**
-     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in `radios`, overriding a channel set on the device, so leaving a band out of `radios` is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
+     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in <span pulumi-lang-nodejs="`radios`" pulumi-lang-dotnet="`Radios`" pulumi-lang-go="`radios`" pulumi-lang-python="`radios`" pulumi-lang-yaml="`radios`" pulumi-lang-java="`radios`" pulumi-lang-hcl="`radios`">`radios`</span>, overriding a channel set on the device, so leaving a band out of <span pulumi-lang-nodejs="`radios`" pulumi-lang-dotnet="`Radios`" pulumi-lang-go="`radios`" pulumi-lang-python="`radios`" pulumi-lang-yaml="`radios`" pulumi-lang-java="`radios`" pulumi-lang-hcl="`radios`">`radios`</span> is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
      */
     declare public readonly radioAi: pulumi.Output<outputs.SettingRadioAi | undefined>;
     /**
      * RADIUS settings.
      */
     declare public readonly radius: pulumi.Output<outputs.SettingRadius>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of `radius.secret` (Terraform 1.11+). Used at apply time but never written to state. It sits at the root rather than inside <span pulumi-lang-nodejs="`radius`" pulumi-lang-dotnet="`Radius`" pulumi-lang-go="`radius`" pulumi-lang-python="`radius`" pulumi-lang-yaml="`radius`" pulumi-lang-java="`radius`" pulumi-lang-hcl="`radius`">`radius`</span> because Terraform does not allow a write-only attribute inside a computed nested attribute. Requires the <span pulumi-lang-nodejs="`radius`" pulumi-lang-dotnet="`Radius`" pulumi-lang-go="`radius`" pulumi-lang-python="`radius`" pulumi-lang-yaml="`radius`" pulumi-lang-java="`radius`" pulumi-lang-hcl="`radius`">`radius`</span> block (`radius = {}` is enough) and is mutually exclusive with `radius.secret`. Because nothing is stored, a secret changed outside Terraform produces no diff; increment <span pulumi-lang-nodejs="`radiusSecretWoVersion`" pulumi-lang-dotnet="`RadiusSecretWoVersion`" pulumi-lang-go="`radiusSecretWoVersion`" pulumi-lang-python="`radius_secret_wo_version`" pulumi-lang-yaml="`radiusSecretWoVersion`" pulumi-lang-java="`radiusSecretWoVersion`" pulumi-lang-hcl="`radius_secret_wo_version`">`radiusSecretWoVersion`</span> to send a new value.
+     */
     declare public readonly radiusSecretWo: pulumi.Output<string | undefined>;
     /**
-     * Version counter for `radius_secret_wo`. Increment this value to trigger a RADIUS secret update.
+     * Version counter for <span pulumi-lang-nodejs="`radiusSecretWo`" pulumi-lang-dotnet="`RadiusSecretWo`" pulumi-lang-go="`radiusSecretWo`" pulumi-lang-python="`radius_secret_wo`" pulumi-lang-yaml="`radiusSecretWo`" pulumi-lang-java="`radiusSecretWo`" pulumi-lang-hcl="`radius_secret_wo`">`radiusSecretWo`</span>. Increment this value to trigger a RADIUS secret update.
      */
     declare public readonly radiusSecretWoVersion: pulumi.Output<number | undefined>;
     /**
@@ -226,7 +230,7 @@ export interface SettingState {
      */
     dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
     /**
-     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in `speed` mode color each port by its link speed, those in `network` mode by its network; set the mode per switch with `unifi.Device`'s `etherlighting` block. Each list replaces the controller's list when set and is left untouched when omitted.
+     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in <span pulumi-lang-nodejs="`speed`" pulumi-lang-dotnet="`Speed`" pulumi-lang-go="`speed`" pulumi-lang-python="`speed`" pulumi-lang-yaml="`speed`" pulumi-lang-java="`speed`" pulumi-lang-hcl="`speed`">`speed`</span> mode color each port by its link speed, those in <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> mode by its network; set the mode per switch with <span pulumi-lang-nodejs="`unifi.Device`" pulumi-lang-dotnet="`unifi.Device`" pulumi-lang-go="`Device`" pulumi-lang-python="`Device`" pulumi-lang-yaml="`unifi.Device`" pulumi-lang-java="`unifi.Device`" pulumi-lang-hcl="`unifi_device`">`unifi.Device`</span>'s <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> block. Each list replaces the controller's list when set and is left untouched when omitted.
      */
     etherlighting?: pulumi.Input<inputs.SettingEtherlighting | undefined>;
     /**
@@ -262,16 +266,20 @@ export interface SettingState {
      */
     ntp?: pulumi.Input<inputs.SettingNtp | undefined>;
     /**
-     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in `radios`, overriding a channel set on the device, so leaving a band out of `radios` is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
+     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in <span pulumi-lang-nodejs="`radios`" pulumi-lang-dotnet="`Radios`" pulumi-lang-go="`radios`" pulumi-lang-python="`radios`" pulumi-lang-yaml="`radios`" pulumi-lang-java="`radios`" pulumi-lang-hcl="`radios`">`radios`</span>, overriding a channel set on the device, so leaving a band out of <span pulumi-lang-nodejs="`radios`" pulumi-lang-dotnet="`Radios`" pulumi-lang-go="`radios`" pulumi-lang-python="`radios`" pulumi-lang-yaml="`radios`" pulumi-lang-java="`radios`" pulumi-lang-hcl="`radios`">`radios`</span> is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
      */
     radioAi?: pulumi.Input<inputs.SettingRadioAi | undefined>;
     /**
      * RADIUS settings.
      */
     radius?: pulumi.Input<inputs.SettingRadius | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of `radius.secret` (Terraform 1.11+). Used at apply time but never written to state. It sits at the root rather than inside <span pulumi-lang-nodejs="`radius`" pulumi-lang-dotnet="`Radius`" pulumi-lang-go="`radius`" pulumi-lang-python="`radius`" pulumi-lang-yaml="`radius`" pulumi-lang-java="`radius`" pulumi-lang-hcl="`radius`">`radius`</span> because Terraform does not allow a write-only attribute inside a computed nested attribute. Requires the <span pulumi-lang-nodejs="`radius`" pulumi-lang-dotnet="`Radius`" pulumi-lang-go="`radius`" pulumi-lang-python="`radius`" pulumi-lang-yaml="`radius`" pulumi-lang-java="`radius`" pulumi-lang-hcl="`radius`">`radius`</span> block (`radius = {}` is enough) and is mutually exclusive with `radius.secret`. Because nothing is stored, a secret changed outside Terraform produces no diff; increment <span pulumi-lang-nodejs="`radiusSecretWoVersion`" pulumi-lang-dotnet="`RadiusSecretWoVersion`" pulumi-lang-go="`radiusSecretWoVersion`" pulumi-lang-python="`radius_secret_wo_version`" pulumi-lang-yaml="`radiusSecretWoVersion`" pulumi-lang-java="`radiusSecretWoVersion`" pulumi-lang-hcl="`radius_secret_wo_version`">`radiusSecretWoVersion`</span> to send a new value.
+     */
     radiusSecretWo?: pulumi.Input<string | undefined>;
     /**
-     * Version counter for `radius_secret_wo`. Increment this value to trigger a RADIUS secret update.
+     * Version counter for <span pulumi-lang-nodejs="`radiusSecretWo`" pulumi-lang-dotnet="`RadiusSecretWo`" pulumi-lang-go="`radiusSecretWo`" pulumi-lang-python="`radius_secret_wo`" pulumi-lang-yaml="`radiusSecretWo`" pulumi-lang-java="`radiusSecretWo`" pulumi-lang-hcl="`radius_secret_wo`">`radiusSecretWo`</span>. Increment this value to trigger a RADIUS secret update.
      */
     radiusSecretWoVersion?: pulumi.Input<number | undefined>;
     /**
@@ -318,7 +326,7 @@ export interface SettingArgs {
      */
     dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
     /**
-     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in `speed` mode color each port by its link speed, those in `network` mode by its network; set the mode per switch with `unifi.Device`'s `etherlighting` block. Each list replaces the controller's list when set and is left untouched when omitted.
+     * Site-wide Etherlighting colors for switches with per-port LED lighting. Switches in <span pulumi-lang-nodejs="`speed`" pulumi-lang-dotnet="`Speed`" pulumi-lang-go="`speed`" pulumi-lang-python="`speed`" pulumi-lang-yaml="`speed`" pulumi-lang-java="`speed`" pulumi-lang-hcl="`speed`">`speed`</span> mode color each port by its link speed, those in <span pulumi-lang-nodejs="`network`" pulumi-lang-dotnet="`Network`" pulumi-lang-go="`network`" pulumi-lang-python="`network`" pulumi-lang-yaml="`network`" pulumi-lang-java="`network`" pulumi-lang-hcl="`network`">`network`</span> mode by its network; set the mode per switch with <span pulumi-lang-nodejs="`unifi.Device`" pulumi-lang-dotnet="`unifi.Device`" pulumi-lang-go="`Device`" pulumi-lang-python="`Device`" pulumi-lang-yaml="`unifi.Device`" pulumi-lang-java="`unifi.Device`" pulumi-lang-hcl="`unifi_device`">`unifi.Device`</span>'s <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> block. Each list replaces the controller's list when set and is left untouched when omitted.
      */
     etherlighting?: pulumi.Input<inputs.SettingEtherlighting | undefined>;
     /**
@@ -354,16 +362,20 @@ export interface SettingArgs {
      */
     ntp?: pulumi.Input<inputs.SettingNtp | undefined>;
     /**
-     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in `radios`, overriding a channel set on the device, so leaving a band out of `radios` is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
+     * Channel AI, the nightly channel optimization (Settings > WiFi > Channel AI). On its schedule the optimizer rewrites the channel of every radio in the bands listed in <span pulumi-lang-nodejs="`radios`" pulumi-lang-dotnet="`Radios`" pulumi-lang-go="`radios`" pulumi-lang-python="`radios`" pulumi-lang-yaml="`radios`" pulumi-lang-java="`radios`" pulumi-lang-hcl="`radios`">`radios`</span>, overriding a channel set on the device, so leaving a band out of <span pulumi-lang-nodejs="`radios`" pulumi-lang-dotnet="`Radios`" pulumi-lang-go="`radios`" pulumi-lang-python="`radios`" pulumi-lang-yaml="`radios`" pulumi-lang-java="`radios`" pulumi-lang-hcl="`radios`">`radios`</span> is how its channel is pinned while the others stay optimized. Only the attributes set in config are written; the others keep their controller values.
      */
     radioAi?: pulumi.Input<inputs.SettingRadioAi | undefined>;
     /**
      * RADIUS settings.
      */
     radius?: pulumi.Input<inputs.SettingRadius | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of `radius.secret` (Terraform 1.11+). Used at apply time but never written to state. It sits at the root rather than inside <span pulumi-lang-nodejs="`radius`" pulumi-lang-dotnet="`Radius`" pulumi-lang-go="`radius`" pulumi-lang-python="`radius`" pulumi-lang-yaml="`radius`" pulumi-lang-java="`radius`" pulumi-lang-hcl="`radius`">`radius`</span> because Terraform does not allow a write-only attribute inside a computed nested attribute. Requires the <span pulumi-lang-nodejs="`radius`" pulumi-lang-dotnet="`Radius`" pulumi-lang-go="`radius`" pulumi-lang-python="`radius`" pulumi-lang-yaml="`radius`" pulumi-lang-java="`radius`" pulumi-lang-hcl="`radius`">`radius`</span> block (`radius = {}` is enough) and is mutually exclusive with `radius.secret`. Because nothing is stored, a secret changed outside Terraform produces no diff; increment <span pulumi-lang-nodejs="`radiusSecretWoVersion`" pulumi-lang-dotnet="`RadiusSecretWoVersion`" pulumi-lang-go="`radiusSecretWoVersion`" pulumi-lang-python="`radius_secret_wo_version`" pulumi-lang-yaml="`radiusSecretWoVersion`" pulumi-lang-java="`radiusSecretWoVersion`" pulumi-lang-hcl="`radius_secret_wo_version`">`radiusSecretWoVersion`</span> to send a new value.
+     */
     radiusSecretWo?: pulumi.Input<string | undefined>;
     /**
-     * Version counter for `radius_secret_wo`. Increment this value to trigger a RADIUS secret update.
+     * Version counter for <span pulumi-lang-nodejs="`radiusSecretWo`" pulumi-lang-dotnet="`RadiusSecretWo`" pulumi-lang-go="`radiusSecretWo`" pulumi-lang-python="`radius_secret_wo`" pulumi-lang-yaml="`radiusSecretWo`" pulumi-lang-java="`radiusSecretWo`" pulumi-lang-hcl="`radius_secret_wo`">`radiusSecretWo`</span>. Increment this value to trigger a RADIUS secret update.
      */
     radiusSecretWoVersion?: pulumi.Input<number | undefined>;
     /**

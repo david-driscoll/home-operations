@@ -62,7 +62,7 @@ export class ContentFilter extends pulumi.CustomResource {
      */
     declare public readonly clientMacs: pulumi.Output<string[] | undefined>;
     /**
-     * Whether the filter is active. Defaults to `true` for a new filter; an existing filter keeps the controller's value when this is not set, so adopting a disabled filter does not re-enable it (#544).
+     * Whether the filter is active. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new filter; an existing filter keeps the controller's value when this is not set, so adopting a disabled filter does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
@@ -151,7 +151,7 @@ export interface ContentFilterState {
      */
     clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether the filter is active. Defaults to `true` for a new filter; an existing filter keeps the controller's value when this is not set, so adopting a disabled filter does not re-enable it (#544).
+     * Whether the filter is active. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new filter; an existing filter keeps the controller's value when this is not set, so adopting a disabled filter does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -198,7 +198,7 @@ export interface ContentFilterArgs {
      */
     clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
-     * Whether the filter is active. Defaults to `true` for a new filter; an existing filter keeps the controller's value when this is not set, so adopting a disabled filter does not re-enable it (#544).
+     * Whether the filter is active. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a new filter; an existing filter keeps the controller's value when this is not set, so adopting a disabled filter does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**

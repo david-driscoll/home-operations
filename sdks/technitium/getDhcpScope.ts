@@ -30,10 +30,6 @@ export interface GetDhcpScopeResult {
     readonly enabled: boolean;
     readonly endingAddress: string;
     readonly exclusions: outputs.GetDhcpScopeExclusion[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly leaseTimeDays: number;
     readonly leaseTimeHours: number;
     readonly leaseTimeMinutes: number;

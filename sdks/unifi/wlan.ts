@@ -50,7 +50,7 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly apGroup: pulumi.Output<outputs.WlanApGroup>;
     /**
-     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (`off`, `equal`, `prefer_5g`), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set `bandsteering_mode` on the `unifi.Device` resource for the AP instead. Still accepted and preserved in state for one release.
+     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (<span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>, <span pulumi-lang-nodejs="`equal`" pulumi-lang-dotnet="`Equal`" pulumi-lang-go="`equal`" pulumi-lang-python="`equal`" pulumi-lang-yaml="`equal`" pulumi-lang-java="`equal`" pulumi-lang-hcl="`equal`">`equal`</span>, <span pulumi-lang-nodejs="`prefer5g`" pulumi-lang-dotnet="`Prefer5g`" pulumi-lang-go="`prefer5g`" pulumi-lang-python="`prefer_5g`" pulumi-lang-yaml="`prefer5g`" pulumi-lang-java="`prefer5g`" pulumi-lang-hcl="`prefer_5g`">`prefer5g`</span>), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set <span pulumi-lang-nodejs="`bandsteeringMode`" pulumi-lang-dotnet="`BandsteeringMode`" pulumi-lang-go="`bandsteeringMode`" pulumi-lang-python="`bandsteering_mode`" pulumi-lang-yaml="`bandsteeringMode`" pulumi-lang-java="`bandsteeringMode`" pulumi-lang-hcl="`bandsteering_mode`">`bandsteeringMode`</span> on the <span pulumi-lang-nodejs="`unifi.Device`" pulumi-lang-dotnet="`unifi.Device`" pulumi-lang-go="`Device`" pulumi-lang-python="`Device`" pulumi-lang-yaml="`unifi.Device`" pulumi-lang-java="`unifi.Device`" pulumi-lang-hcl="`unifi_device`">`unifi.Device`</span> resource for the AP instead. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -64,27 +64,27 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly bssTransition: pulumi.Output<boolean>;
     /**
-     * DTIM period for the 6 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 6 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     declare public readonly dtim6e: pulumi.Output<number>;
     /**
-     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`. Defaults to `default` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * DTIM mode. Can be one of <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Use <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> together with <span pulumi-lang-nodejs="`dtimNg`" pulumi-lang-dotnet="`DtimNg`" pulumi-lang-go="`dtimNg`" pulumi-lang-python="`dtim_ng`" pulumi-lang-yaml="`dtimNg`" pulumi-lang-java="`dtimNg`" pulumi-lang-hcl="`dtim_ng`">`dtimNg`</span>/<span pulumi-lang-nodejs="`dtimNa`" pulumi-lang-dotnet="`DtimNa`" pulumi-lang-go="`dtimNa`" pulumi-lang-python="`dtim_na`" pulumi-lang-yaml="`dtimNa`" pulumi-lang-java="`dtimNa`" pulumi-lang-hcl="`dtim_na`">`dtimNa`</span>/<span pulumi-lang-nodejs="`dtim6e`" pulumi-lang-dotnet="`Dtim6e`" pulumi-lang-go="`dtim6e`" pulumi-lang-python="`dtim_6e`" pulumi-lang-yaml="`dtim6e`" pulumi-lang-java="`dtim6e`" pulumi-lang-hcl="`dtim_6e`">`dtim6e`</span>. Defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     declare public readonly dtimMode: pulumi.Output<string>;
     /**
-     * DTIM period for the 5 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 5 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     declare public readonly dtimNa: pulumi.Output<number>;
     /**
-     * DTIM period for the 2.4 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 2.4 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     declare public readonly dtimNg: pulumi.Output<number>;
     /**
-     * Enable or disable the WLAN. Defaults to `true` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Enable or disable the WLAN. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3.support = false`, `wpa3.transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
+     * Enable enhanced IoT connectivity. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the controller forces <span pulumi-lang-nodejs="`iappEnabled " pulumi-lang-dotnet="`IappEnabled " pulumi-lang-go="`iappEnabled " pulumi-lang-python="`iapp_enabled " pulumi-lang-yaml="`iappEnabled " pulumi-lang-java="`iappEnabled " pulumi-lang-hcl="`iapp_enabled ">`iappEnabled </span>= true`, `wpa3.support = false`, `wpa3.transition = false`, <span pulumi-lang-nodejs="`pmfMode " pulumi-lang-dotnet="`PmfMode " pulumi-lang-go="`pmfMode " pulumi-lang-python="`pmf_mode " pulumi-lang-yaml="`pmfMode " pulumi-lang-java="`pmfMode " pulumi-lang-hcl="`pmf_mode ">`pmfMode </span>= "disabled"` and <span pulumi-lang-nodejs="`dtimNg " pulumi-lang-dotnet="`DtimNg " pulumi-lang-go="`dtimNg " pulumi-lang-python="`dtim_ng " pulumi-lang-yaml="`dtimNg " pulumi-lang-java="`dtimNg " pulumi-lang-hcl="`dtim_ng ">`dtimNg </span>= 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
      */
     declare public readonly enhancedIot: pulumi.Output<boolean>;
     /**
@@ -120,15 +120,15 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly macFilter: pulumi.Output<outputs.WlanMacFilter>;
     /**
-     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. `1000` in `auto` mode), so this is computed rather than defaulted to `0`.
+     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. <span pulumi-lang-nodejs="`1000`" pulumi-lang-dotnet="`1000`" pulumi-lang-go="`1000`" pulumi-lang-python="`1000`" pulumi-lang-yaml="`1000`" pulumi-lang-java="`1000`" pulumi-lang-hcl="`1000`">`1000`</span> in <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> mode), so this is computed rather than defaulted to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     declare public readonly minimumDataRate2gKbps: pulumi.Output<number>;
     /**
-     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. `6000` in `auto` mode), so this is computed rather than defaulted to `0`.
+     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. <span pulumi-lang-nodejs="`6000`" pulumi-lang-dotnet="`6000`" pulumi-lang-go="`6000`" pulumi-lang-python="`6000`" pulumi-lang-yaml="`6000`" pulumi-lang-java="`6000`" pulumi-lang-hcl="`6000`">`6000`</span> in <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> mode), so this is computed rather than defaulted to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     declare public readonly minimumDataRate5gKbps: pulumi.Output<number>;
     /**
-     * Minimum rate setting preference. Defaults to `auto` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Minimum rate setting preference. Defaults to <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     declare public readonly minrateSettingPreference: pulumi.Output<string>;
     /**
@@ -156,12 +156,16 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly no2ghzOui: pulumi.Output<boolean>;
     /**
-     * The passphrase for the network, only required if `security` is not `open`. Stored in state — use `passphrase_wo` to avoid persisting the secret.
+     * The passphrase for the network, only required if <span pulumi-lang-nodejs="`security`" pulumi-lang-dotnet="`Security`" pulumi-lang-go="`security`" pulumi-lang-python="`security`" pulumi-lang-yaml="`security`" pulumi-lang-java="`security`" pulumi-lang-hcl="`security`">`security`</span> is not <span pulumi-lang-nodejs="`open`" pulumi-lang-dotnet="`Open`" pulumi-lang-go="`open`" pulumi-lang-python="`open`" pulumi-lang-yaml="`open`" pulumi-lang-java="`open`" pulumi-lang-hcl="`open`">`open`</span>. Stored in state — use <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span> to avoid persisting the secret.
      */
     declare public readonly passphrase: pulumi.Output<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`passphrase`" pulumi-lang-dotnet="`Passphrase`" pulumi-lang-go="`passphrase`" pulumi-lang-python="`passphrase`" pulumi-lang-yaml="`passphrase`" pulumi-lang-java="`passphrase`" pulumi-lang-hcl="`passphrase`">`passphrase`</span> (Terraform 1.11+). Sent on create and whenever <span pulumi-lang-nodejs="`passphraseWoVersion`" pulumi-lang-dotnet="`PassphraseWoVersion`" pulumi-lang-go="`passphraseWoVersion`" pulumi-lang-python="`passphrase_wo_version`" pulumi-lang-yaml="`passphraseWoVersion`" pulumi-lang-java="`passphraseWoVersion`" pulumi-lang-hcl="`passphrase_wo_version`">`passphraseWoVersion`</span> changes, and never written to state, so it can be sourced from an ephemeral resource (e.g. a Vault secret). Mutually exclusive with <span pulumi-lang-nodejs="`passphrase`" pulumi-lang-dotnet="`Passphrase`" pulumi-lang-go="`passphrase`" pulumi-lang-python="`passphrase`" pulumi-lang-yaml="`passphrase`" pulumi-lang-java="`passphrase`" pulumi-lang-hcl="`passphrase`">`passphrase`</span>.
+     */
     declare public readonly passphraseWo: pulumi.Output<string | undefined>;
     /**
-     * Version counter for `passphrase_wo`. Increment this value to send the current `passphrase_wo` to the controller on the next apply.
+     * Version counter for <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span>. Increment this value to send the current <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span> to the controller on the next apply.
      */
     declare public readonly passphraseWoVersion: pulumi.Output<number | undefined>;
     /**
@@ -169,7 +173,7 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly pmfMode: pulumi.Output<string>;
     /**
-     * Private pre-shared keys (PPSK): a list of per-key passphrases, each optionally bound to its own network/VLAN. Only valid when `private_preshared_keys_enabled` is `true`.
+     * Private pre-shared keys (PPSK): a list of per-key passphrases, each optionally bound to its own network/VLAN. Only valid when <span pulumi-lang-nodejs="`privatePresharedKeysEnabled`" pulumi-lang-dotnet="`PrivatePresharedKeysEnabled`" pulumi-lang-go="`privatePresharedKeysEnabled`" pulumi-lang-python="`private_preshared_keys_enabled`" pulumi-lang-yaml="`privatePresharedKeysEnabled`" pulumi-lang-java="`privatePresharedKeysEnabled`" pulumi-lang-hcl="`private_preshared_keys_enabled`">`privatePresharedKeysEnabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     declare public readonly privatePresharedKeys: pulumi.Output<outputs.WlanPrivatePresharedKey[] | undefined>;
     /**
@@ -185,11 +189,11 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly radius: pulumi.Output<outputs.WlanRadius>;
     /**
-     * 6 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP.
+     * 6 GHz roaming assistant. Disconnects clients whose signal drops below <span pulumi-lang-nodejs="`rssi`" pulumi-lang-dotnet="`Rssi`" pulumi-lang-go="`rssi`" pulumi-lang-python="`rssi`" pulumi-lang-yaml="`rssi`" pulumi-lang-java="`rssi`" pulumi-lang-hcl="`rssi`">`rssi`</span> so they re-associate with a closer AP.
      */
     declare public readonly roamingAssistant6e: pulumi.Output<outputs.WlanRoamingAssistant6e>;
     /**
-     * 5 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
+     * 5 GHz roaming assistant. Disconnects clients whose signal drops below <span pulumi-lang-nodejs="`rssi`" pulumi-lang-dotnet="`Rssi`" pulumi-lang-go="`rssi`" pulumi-lang-python="`rssi`" pulumi-lang-yaml="`rssi`" pulumi-lang-java="`rssi`" pulumi-lang-hcl="`rssi`">`rssi`</span> so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
      */
     declare public readonly roamingAssistantNa: pulumi.Output<outputs.WlanRoamingAssistantNa>;
     /**
@@ -374,7 +378,7 @@ export interface WlanState {
      */
     apGroup?: pulumi.Input<inputs.WlanApGroup | undefined>;
     /**
-     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (`off`, `equal`, `prefer_5g`), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set `bandsteering_mode` on the `unifi.Device` resource for the AP instead. Still accepted and preserved in state for one release.
+     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (<span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>, <span pulumi-lang-nodejs="`equal`" pulumi-lang-dotnet="`Equal`" pulumi-lang-go="`equal`" pulumi-lang-python="`equal`" pulumi-lang-yaml="`equal`" pulumi-lang-java="`equal`" pulumi-lang-hcl="`equal`">`equal`</span>, <span pulumi-lang-nodejs="`prefer5g`" pulumi-lang-dotnet="`Prefer5g`" pulumi-lang-go="`prefer5g`" pulumi-lang-python="`prefer_5g`" pulumi-lang-yaml="`prefer5g`" pulumi-lang-java="`prefer5g`" pulumi-lang-hcl="`prefer_5g`">`prefer5g`</span>), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set <span pulumi-lang-nodejs="`bandsteeringMode`" pulumi-lang-dotnet="`BandsteeringMode`" pulumi-lang-go="`bandsteeringMode`" pulumi-lang-python="`bandsteering_mode`" pulumi-lang-yaml="`bandsteeringMode`" pulumi-lang-java="`bandsteeringMode`" pulumi-lang-hcl="`bandsteering_mode`">`bandsteeringMode`</span> on the <span pulumi-lang-nodejs="`unifi.Device`" pulumi-lang-dotnet="`unifi.Device`" pulumi-lang-go="`Device`" pulumi-lang-python="`Device`" pulumi-lang-yaml="`unifi.Device`" pulumi-lang-java="`unifi.Device`" pulumi-lang-hcl="`unifi_device`">`unifi.Device`</span> resource for the AP instead. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -388,27 +392,27 @@ export interface WlanState {
      */
     bssTransition?: pulumi.Input<boolean | undefined>;
     /**
-     * DTIM period for the 6 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 6 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     dtim6e?: pulumi.Input<number | undefined>;
     /**
-     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`. Defaults to `default` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * DTIM mode. Can be one of <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Use <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> together with <span pulumi-lang-nodejs="`dtimNg`" pulumi-lang-dotnet="`DtimNg`" pulumi-lang-go="`dtimNg`" pulumi-lang-python="`dtim_ng`" pulumi-lang-yaml="`dtimNg`" pulumi-lang-java="`dtimNg`" pulumi-lang-hcl="`dtim_ng`">`dtimNg`</span>/<span pulumi-lang-nodejs="`dtimNa`" pulumi-lang-dotnet="`DtimNa`" pulumi-lang-go="`dtimNa`" pulumi-lang-python="`dtim_na`" pulumi-lang-yaml="`dtimNa`" pulumi-lang-java="`dtimNa`" pulumi-lang-hcl="`dtim_na`">`dtimNa`</span>/<span pulumi-lang-nodejs="`dtim6e`" pulumi-lang-dotnet="`Dtim6e`" pulumi-lang-go="`dtim6e`" pulumi-lang-python="`dtim_6e`" pulumi-lang-yaml="`dtim6e`" pulumi-lang-java="`dtim6e`" pulumi-lang-hcl="`dtim_6e`">`dtim6e`</span>. Defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     dtimMode?: pulumi.Input<string | undefined>;
     /**
-     * DTIM period for the 5 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 5 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     dtimNa?: pulumi.Input<number | undefined>;
     /**
-     * DTIM period for the 2.4 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 2.4 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     dtimNg?: pulumi.Input<number | undefined>;
     /**
-     * Enable or disable the WLAN. Defaults to `true` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Enable or disable the WLAN. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3.support = false`, `wpa3.transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
+     * Enable enhanced IoT connectivity. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the controller forces <span pulumi-lang-nodejs="`iappEnabled " pulumi-lang-dotnet="`IappEnabled " pulumi-lang-go="`iappEnabled " pulumi-lang-python="`iapp_enabled " pulumi-lang-yaml="`iappEnabled " pulumi-lang-java="`iappEnabled " pulumi-lang-hcl="`iapp_enabled ">`iappEnabled </span>= true`, `wpa3.support = false`, `wpa3.transition = false`, <span pulumi-lang-nodejs="`pmfMode " pulumi-lang-dotnet="`PmfMode " pulumi-lang-go="`pmfMode " pulumi-lang-python="`pmf_mode " pulumi-lang-yaml="`pmfMode " pulumi-lang-java="`pmfMode " pulumi-lang-hcl="`pmf_mode ">`pmfMode </span>= "disabled"` and <span pulumi-lang-nodejs="`dtimNg " pulumi-lang-dotnet="`DtimNg " pulumi-lang-go="`dtimNg " pulumi-lang-python="`dtim_ng " pulumi-lang-yaml="`dtimNg " pulumi-lang-java="`dtimNg " pulumi-lang-hcl="`dtim_ng ">`dtimNg </span>= 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
      */
     enhancedIot?: pulumi.Input<boolean | undefined>;
     /**
@@ -444,15 +448,15 @@ export interface WlanState {
      */
     macFilter?: pulumi.Input<inputs.WlanMacFilter | undefined>;
     /**
-     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. `1000` in `auto` mode), so this is computed rather than defaulted to `0`.
+     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. <span pulumi-lang-nodejs="`1000`" pulumi-lang-dotnet="`1000`" pulumi-lang-go="`1000`" pulumi-lang-python="`1000`" pulumi-lang-yaml="`1000`" pulumi-lang-java="`1000`" pulumi-lang-hcl="`1000`">`1000`</span> in <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> mode), so this is computed rather than defaulted to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     minimumDataRate2gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. `6000` in `auto` mode), so this is computed rather than defaulted to `0`.
+     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. <span pulumi-lang-nodejs="`6000`" pulumi-lang-dotnet="`6000`" pulumi-lang-go="`6000`" pulumi-lang-python="`6000`" pulumi-lang-yaml="`6000`" pulumi-lang-java="`6000`" pulumi-lang-hcl="`6000`">`6000`</span> in <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> mode), so this is computed rather than defaulted to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     minimumDataRate5gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum rate setting preference. Defaults to `auto` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Minimum rate setting preference. Defaults to <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     minrateSettingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -480,12 +484,16 @@ export interface WlanState {
      */
     no2ghzOui?: pulumi.Input<boolean | undefined>;
     /**
-     * The passphrase for the network, only required if `security` is not `open`. Stored in state — use `passphrase_wo` to avoid persisting the secret.
+     * The passphrase for the network, only required if <span pulumi-lang-nodejs="`security`" pulumi-lang-dotnet="`Security`" pulumi-lang-go="`security`" pulumi-lang-python="`security`" pulumi-lang-yaml="`security`" pulumi-lang-java="`security`" pulumi-lang-hcl="`security`">`security`</span> is not <span pulumi-lang-nodejs="`open`" pulumi-lang-dotnet="`Open`" pulumi-lang-go="`open`" pulumi-lang-python="`open`" pulumi-lang-yaml="`open`" pulumi-lang-java="`open`" pulumi-lang-hcl="`open`">`open`</span>. Stored in state — use <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span> to avoid persisting the secret.
      */
     passphrase?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`passphrase`" pulumi-lang-dotnet="`Passphrase`" pulumi-lang-go="`passphrase`" pulumi-lang-python="`passphrase`" pulumi-lang-yaml="`passphrase`" pulumi-lang-java="`passphrase`" pulumi-lang-hcl="`passphrase`">`passphrase`</span> (Terraform 1.11+). Sent on create and whenever <span pulumi-lang-nodejs="`passphraseWoVersion`" pulumi-lang-dotnet="`PassphraseWoVersion`" pulumi-lang-go="`passphraseWoVersion`" pulumi-lang-python="`passphrase_wo_version`" pulumi-lang-yaml="`passphraseWoVersion`" pulumi-lang-java="`passphraseWoVersion`" pulumi-lang-hcl="`passphrase_wo_version`">`passphraseWoVersion`</span> changes, and never written to state, so it can be sourced from an ephemeral resource (e.g. a Vault secret). Mutually exclusive with <span pulumi-lang-nodejs="`passphrase`" pulumi-lang-dotnet="`Passphrase`" pulumi-lang-go="`passphrase`" pulumi-lang-python="`passphrase`" pulumi-lang-yaml="`passphrase`" pulumi-lang-java="`passphrase`" pulumi-lang-hcl="`passphrase`">`passphrase`</span>.
+     */
     passphraseWo?: pulumi.Input<string | undefined>;
     /**
-     * Version counter for `passphrase_wo`. Increment this value to send the current `passphrase_wo` to the controller on the next apply.
+     * Version counter for <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span>. Increment this value to send the current <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span> to the controller on the next apply.
      */
     passphraseWoVersion?: pulumi.Input<number | undefined>;
     /**
@@ -493,7 +501,7 @@ export interface WlanState {
      */
     pmfMode?: pulumi.Input<string | undefined>;
     /**
-     * Private pre-shared keys (PPSK): a list of per-key passphrases, each optionally bound to its own network/VLAN. Only valid when `private_preshared_keys_enabled` is `true`.
+     * Private pre-shared keys (PPSK): a list of per-key passphrases, each optionally bound to its own network/VLAN. Only valid when <span pulumi-lang-nodejs="`privatePresharedKeysEnabled`" pulumi-lang-dotnet="`PrivatePresharedKeysEnabled`" pulumi-lang-go="`privatePresharedKeysEnabled`" pulumi-lang-python="`private_preshared_keys_enabled`" pulumi-lang-yaml="`privatePresharedKeysEnabled`" pulumi-lang-java="`privatePresharedKeysEnabled`" pulumi-lang-hcl="`private_preshared_keys_enabled`">`privatePresharedKeysEnabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     privatePresharedKeys?: pulumi.Input<pulumi.Input<inputs.WlanPrivatePresharedKey>[] | undefined>;
     /**
@@ -509,11 +517,11 @@ export interface WlanState {
      */
     radius?: pulumi.Input<inputs.WlanRadius | undefined>;
     /**
-     * 6 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP.
+     * 6 GHz roaming assistant. Disconnects clients whose signal drops below <span pulumi-lang-nodejs="`rssi`" pulumi-lang-dotnet="`Rssi`" pulumi-lang-go="`rssi`" pulumi-lang-python="`rssi`" pulumi-lang-yaml="`rssi`" pulumi-lang-java="`rssi`" pulumi-lang-hcl="`rssi`">`rssi`</span> so they re-associate with a closer AP.
      */
     roamingAssistant6e?: pulumi.Input<inputs.WlanRoamingAssistant6e | undefined>;
     /**
-     * 5 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
+     * 5 GHz roaming assistant. Disconnects clients whose signal drops below <span pulumi-lang-nodejs="`rssi`" pulumi-lang-dotnet="`Rssi`" pulumi-lang-go="`rssi`" pulumi-lang-python="`rssi`" pulumi-lang-yaml="`rssi`" pulumi-lang-java="`rssi`" pulumi-lang-hcl="`rssi`">`rssi`</span> so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
      */
     roamingAssistantNa?: pulumi.Input<inputs.WlanRoamingAssistantNa | undefined>;
     /**
@@ -572,7 +580,7 @@ export interface WlanArgs {
      */
     apGroup?: pulumi.Input<inputs.WlanApGroup | undefined>;
     /**
-     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (`off`, `equal`, `prefer_5g`), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set `bandsteering_mode` on the `unifi.Device` resource for the AP instead. Still accepted and preserved in state for one release.
+     * **Moved to `unifi_device.bandsteering_mode`.** Per-SSID band steering mode (<span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>, <span pulumi-lang-nodejs="`equal`" pulumi-lang-dotnet="`Equal`" pulumi-lang-go="`equal`" pulumi-lang-python="`equal`" pulumi-lang-yaml="`equal`" pulumi-lang-java="`equal`" pulumi-lang-hcl="`equal`">`equal`</span>, <span pulumi-lang-nodejs="`prefer5g`" pulumi-lang-dotnet="`Prefer5g`" pulumi-lang-go="`prefer5g`" pulumi-lang-python="`prefer_5g`" pulumi-lang-yaml="`prefer5g`" pulumi-lang-java="`prefer5g`" pulumi-lang-hcl="`prefer_5g`">`prefer5g`</span>), which steers dual-band capable clients toward the less congested / higher-throughput band. UniFi Network 10.x moved band steering off the WLAN back to the access point, so this attribute no longer reaches the controller: set <span pulumi-lang-nodejs="`bandsteeringMode`" pulumi-lang-dotnet="`BandsteeringMode`" pulumi-lang-go="`bandsteeringMode`" pulumi-lang-python="`bandsteering_mode`" pulumi-lang-yaml="`bandsteeringMode`" pulumi-lang-java="`bandsteeringMode`" pulumi-lang-hcl="`bandsteering_mode`">`bandsteeringMode`</span> on the <span pulumi-lang-nodejs="`unifi.Device`" pulumi-lang-dotnet="`unifi.Device`" pulumi-lang-go="`Device`" pulumi-lang-python="`Device`" pulumi-lang-yaml="`unifi.Device`" pulumi-lang-java="`unifi.Device`" pulumi-lang-hcl="`unifi_device`">`unifi.Device`</span> resource for the AP instead. Still accepted and preserved in state for one release.
      *
      * @deprecated Deprecated
      */
@@ -586,27 +594,27 @@ export interface WlanArgs {
      */
     bssTransition?: pulumi.Input<boolean | undefined>;
     /**
-     * DTIM period for the 6 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 6 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     dtim6e?: pulumi.Input<number | undefined>;
     /**
-     * DTIM mode. Can be one of `default` or `custom`. Use `custom` together with `dtim_ng`/`dtim_na`/`dtim_6e`. Defaults to `default` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * DTIM mode. Can be one of <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> or <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Use <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span> together with <span pulumi-lang-nodejs="`dtimNg`" pulumi-lang-dotnet="`DtimNg`" pulumi-lang-go="`dtimNg`" pulumi-lang-python="`dtim_ng`" pulumi-lang-yaml="`dtimNg`" pulumi-lang-java="`dtimNg`" pulumi-lang-hcl="`dtim_ng`">`dtimNg`</span>/<span pulumi-lang-nodejs="`dtimNa`" pulumi-lang-dotnet="`DtimNa`" pulumi-lang-go="`dtimNa`" pulumi-lang-python="`dtim_na`" pulumi-lang-yaml="`dtimNa`" pulumi-lang-java="`dtimNa`" pulumi-lang-hcl="`dtim_na`">`dtimNa`</span>/<span pulumi-lang-nodejs="`dtim6e`" pulumi-lang-dotnet="`Dtim6e`" pulumi-lang-go="`dtim6e`" pulumi-lang-python="`dtim_6e`" pulumi-lang-yaml="`dtim6e`" pulumi-lang-java="`dtim6e`" pulumi-lang-hcl="`dtim_6e`">`dtim6e`</span>. Defaults to <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     dtimMode?: pulumi.Input<string | undefined>;
     /**
-     * DTIM period for the 5 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 5 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     dtimNa?: pulumi.Input<number | undefined>;
     /**
-     * DTIM period for the 2.4 GHz band (1-255). Only used when `dtim_mode` is `custom`. Computed from the controller when not set.
+     * DTIM period for the 2.4 GHz band (1-255). Only used when <span pulumi-lang-nodejs="`dtimMode`" pulumi-lang-dotnet="`DtimMode`" pulumi-lang-go="`dtimMode`" pulumi-lang-python="`dtim_mode`" pulumi-lang-yaml="`dtimMode`" pulumi-lang-java="`dtimMode`" pulumi-lang-hcl="`dtim_mode`">`dtimMode`</span> is <span pulumi-lang-nodejs="`custom`" pulumi-lang-dotnet="`Custom`" pulumi-lang-go="`custom`" pulumi-lang-python="`custom`" pulumi-lang-yaml="`custom`" pulumi-lang-java="`custom`" pulumi-lang-hcl="`custom`">`custom`</span>. Computed from the controller when not set.
      */
     dtimNg?: pulumi.Input<number | undefined>;
     /**
-     * Enable or disable the WLAN. Defaults to `true` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Enable or disable the WLAN. Defaults to <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Enable enhanced IoT connectivity. When `true`, the controller forces `iapp_enabled = true`, `wpa3.support = false`, `wpa3.transition = false`, `pmf_mode = "disabled"` and `dtim_ng = 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
+     * Enable enhanced IoT connectivity. When <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>, the controller forces <span pulumi-lang-nodejs="`iappEnabled " pulumi-lang-dotnet="`IappEnabled " pulumi-lang-go="`iappEnabled " pulumi-lang-python="`iapp_enabled " pulumi-lang-yaml="`iappEnabled " pulumi-lang-java="`iappEnabled " pulumi-lang-hcl="`iapp_enabled ">`iappEnabled </span>= true`, `wpa3.support = false`, `wpa3.transition = false`, <span pulumi-lang-nodejs="`pmfMode " pulumi-lang-dotnet="`PmfMode " pulumi-lang-go="`pmfMode " pulumi-lang-python="`pmf_mode " pulumi-lang-yaml="`pmfMode " pulumi-lang-java="`pmfMode " pulumi-lang-hcl="`pmf_mode ">`pmfMode </span>= "disabled"` and <span pulumi-lang-nodejs="`dtimNg " pulumi-lang-dotnet="`DtimNg " pulumi-lang-go="`dtimNg " pulumi-lang-python="`dtim_ng " pulumi-lang-yaml="`dtimNg " pulumi-lang-java="`dtimNg " pulumi-lang-hcl="`dtim_ng ">`dtimNg </span>= 1`; the provider pins those fields to match, so any conflicting values you set for them are ignored (this disables WPA3 on the SSID).
      */
     enhancedIot?: pulumi.Input<boolean | undefined>;
     /**
@@ -642,15 +650,15 @@ export interface WlanArgs {
      */
     macFilter?: pulumi.Input<inputs.WlanMacFilter | undefined>;
     /**
-     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. `1000` in `auto` mode), so this is computed rather than defaulted to `0`.
+     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. <span pulumi-lang-nodejs="`1000`" pulumi-lang-dotnet="`1000`" pulumi-lang-go="`1000`" pulumi-lang-python="`1000`" pulumi-lang-yaml="`1000`" pulumi-lang-java="`1000`" pulumi-lang-hcl="`1000`">`1000`</span> in <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> mode), so this is computed rather than defaulted to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     minimumDataRate2gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. `6000` in `auto` mode), so this is computed rather than defaulted to `0`.
+     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. <span pulumi-lang-nodejs="`6000`" pulumi-lang-dotnet="`6000`" pulumi-lang-go="`6000`" pulumi-lang-python="`6000`" pulumi-lang-yaml="`6000`" pulumi-lang-java="`6000`" pulumi-lang-hcl="`6000`">`6000`</span> in <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> mode), so this is computed rather than defaulted to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     minimumDataRate5gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum rate setting preference. Defaults to `auto` for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
+     * Minimum rate setting preference. Defaults to <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span> for a newly created WLAN; an existing WLAN keeps the controller's value when unset.
      */
     minrateSettingPreference?: pulumi.Input<string | undefined>;
     /**
@@ -678,12 +686,16 @@ export interface WlanArgs {
      */
     no2ghzOui?: pulumi.Input<boolean | undefined>;
     /**
-     * The passphrase for the network, only required if `security` is not `open`. Stored in state — use `passphrase_wo` to avoid persisting the secret.
+     * The passphrase for the network, only required if <span pulumi-lang-nodejs="`security`" pulumi-lang-dotnet="`Security`" pulumi-lang-go="`security`" pulumi-lang-python="`security`" pulumi-lang-yaml="`security`" pulumi-lang-java="`security`" pulumi-lang-hcl="`security`">`security`</span> is not <span pulumi-lang-nodejs="`open`" pulumi-lang-dotnet="`Open`" pulumi-lang-go="`open`" pulumi-lang-python="`open`" pulumi-lang-yaml="`open`" pulumi-lang-java="`open`" pulumi-lang-hcl="`open`">`open`</span>. Stored in state — use <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span> to avoid persisting the secret.
      */
     passphrase?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only equivalent of <span pulumi-lang-nodejs="`passphrase`" pulumi-lang-dotnet="`Passphrase`" pulumi-lang-go="`passphrase`" pulumi-lang-python="`passphrase`" pulumi-lang-yaml="`passphrase`" pulumi-lang-java="`passphrase`" pulumi-lang-hcl="`passphrase`">`passphrase`</span> (Terraform 1.11+). Sent on create and whenever <span pulumi-lang-nodejs="`passphraseWoVersion`" pulumi-lang-dotnet="`PassphraseWoVersion`" pulumi-lang-go="`passphraseWoVersion`" pulumi-lang-python="`passphrase_wo_version`" pulumi-lang-yaml="`passphraseWoVersion`" pulumi-lang-java="`passphraseWoVersion`" pulumi-lang-hcl="`passphrase_wo_version`">`passphraseWoVersion`</span> changes, and never written to state, so it can be sourced from an ephemeral resource (e.g. a Vault secret). Mutually exclusive with <span pulumi-lang-nodejs="`passphrase`" pulumi-lang-dotnet="`Passphrase`" pulumi-lang-go="`passphrase`" pulumi-lang-python="`passphrase`" pulumi-lang-yaml="`passphrase`" pulumi-lang-java="`passphrase`" pulumi-lang-hcl="`passphrase`">`passphrase`</span>.
+     */
     passphraseWo?: pulumi.Input<string | undefined>;
     /**
-     * Version counter for `passphrase_wo`. Increment this value to send the current `passphrase_wo` to the controller on the next apply.
+     * Version counter for <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span>. Increment this value to send the current <span pulumi-lang-nodejs="`passphraseWo`" pulumi-lang-dotnet="`PassphraseWo`" pulumi-lang-go="`passphraseWo`" pulumi-lang-python="`passphrase_wo`" pulumi-lang-yaml="`passphraseWo`" pulumi-lang-java="`passphraseWo`" pulumi-lang-hcl="`passphrase_wo`">`passphraseWo`</span> to the controller on the next apply.
      */
     passphraseWoVersion?: pulumi.Input<number | undefined>;
     /**
@@ -691,7 +703,7 @@ export interface WlanArgs {
      */
     pmfMode?: pulumi.Input<string | undefined>;
     /**
-     * Private pre-shared keys (PPSK): a list of per-key passphrases, each optionally bound to its own network/VLAN. Only valid when `private_preshared_keys_enabled` is `true`.
+     * Private pre-shared keys (PPSK): a list of per-key passphrases, each optionally bound to its own network/VLAN. Only valid when <span pulumi-lang-nodejs="`privatePresharedKeysEnabled`" pulumi-lang-dotnet="`PrivatePresharedKeysEnabled`" pulumi-lang-go="`privatePresharedKeysEnabled`" pulumi-lang-python="`private_preshared_keys_enabled`" pulumi-lang-yaml="`privatePresharedKeysEnabled`" pulumi-lang-java="`privatePresharedKeysEnabled`" pulumi-lang-hcl="`private_preshared_keys_enabled`">`privatePresharedKeysEnabled`</span> is <span pulumi-lang-nodejs="`true`" pulumi-lang-dotnet="`True`" pulumi-lang-go="`true`" pulumi-lang-python="`true`" pulumi-lang-yaml="`true`" pulumi-lang-java="`true`" pulumi-lang-hcl="`true`">`true`</span>.
      */
     privatePresharedKeys?: pulumi.Input<pulumi.Input<inputs.WlanPrivatePresharedKey>[] | undefined>;
     /**
@@ -707,11 +719,11 @@ export interface WlanArgs {
      */
     radius?: pulumi.Input<inputs.WlanRadius | undefined>;
     /**
-     * 6 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP.
+     * 6 GHz roaming assistant. Disconnects clients whose signal drops below <span pulumi-lang-nodejs="`rssi`" pulumi-lang-dotnet="`Rssi`" pulumi-lang-go="`rssi`" pulumi-lang-python="`rssi`" pulumi-lang-yaml="`rssi`" pulumi-lang-java="`rssi`" pulumi-lang-hcl="`rssi`">`rssi`</span> so they re-associate with a closer AP.
      */
     roamingAssistant6e?: pulumi.Input<inputs.WlanRoamingAssistant6e | undefined>;
     /**
-     * 5 GHz roaming assistant. Disconnects clients whose signal drops below `rssi` so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
+     * 5 GHz roaming assistant. Disconnects clients whose signal drops below <span pulumi-lang-nodejs="`rssi`" pulumi-lang-dotnet="`Rssi`" pulumi-lang-go="`rssi`" pulumi-lang-python="`rssi`" pulumi-lang-yaml="`rssi`" pulumi-lang-java="`rssi`" pulumi-lang-hcl="`rssi`">`rssi`</span> so they re-associate with a closer AP. Replaces the device-level `radio_table.assisted_roaming_*` attributes, which UniFi Network 10.x moved to the WLAN.
      */
     roamingAssistantNa?: pulumi.Input<inputs.WlanRoamingAssistantNa | undefined>;
     /**

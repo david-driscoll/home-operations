@@ -50,7 +50,7 @@ export class RadiusUser extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * ID of the network for this account. When set and `vlan` is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
+     * ID of the network for this account. When set and <span pulumi-lang-nodejs="`vlan`" pulumi-lang-dotnet="`Vlan`" pulumi-lang-go="`vlan`" pulumi-lang-python="`vlan`" pulumi-lang-yaml="`vlan`" pulumi-lang-java="`vlan`" pulumi-lang-hcl="`vlan`">`vlan`</span> is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
      */
     declare public readonly networkId: pulumi.Output<string | undefined>;
     /**
@@ -63,11 +63,11 @@ export class RadiusUser extends pulumi.CustomResource {
     declare public readonly site: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.RadiusUserTimeouts | undefined>;
     /**
-     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, `medium_type = 6`; an existing account keeps the controller's values, which may be none.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, <span pulumi-lang-nodejs="`mediumType " pulumi-lang-dotnet="`MediumType " pulumi-lang-go="`mediumType " pulumi-lang-python="`medium_type " pulumi-lang-yaml="`mediumType " pulumi-lang-java="`mediumType " pulumi-lang-hcl="`medium_type ">`mediumType </span>= 6`; an existing account keeps the controller's values, which may be none.
      */
     declare public readonly tunnel: pulumi.Output<outputs.RadiusUserTunnel>;
     /**
-     * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
+     * VLAN assigned to the account. If omitted but <span pulumi-lang-nodejs="`networkId`" pulumi-lang-dotnet="`NetworkId`" pulumi-lang-go="`networkId`" pulumi-lang-python="`network_id`" pulumi-lang-yaml="`networkId`" pulumi-lang-java="`networkId`" pulumi-lang-hcl="`network_id`">`networkId`</span> is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
      */
     declare public readonly vlan: pulumi.Output<number>;
 
@@ -120,7 +120,7 @@ export interface RadiusUserState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * ID of the network for this account. When set and `vlan` is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
+     * ID of the network for this account. When set and <span pulumi-lang-nodejs="`vlan`" pulumi-lang-dotnet="`Vlan`" pulumi-lang-go="`vlan`" pulumi-lang-python="`vlan`" pulumi-lang-yaml="`vlan`" pulumi-lang-java="`vlan`" pulumi-lang-hcl="`vlan`">`vlan`</span> is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
@@ -133,11 +133,11 @@ export interface RadiusUserState {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.RadiusUserTimeouts | undefined>;
     /**
-     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, `medium_type = 6`; an existing account keeps the controller's values, which may be none.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, <span pulumi-lang-nodejs="`mediumType " pulumi-lang-dotnet="`MediumType " pulumi-lang-go="`mediumType " pulumi-lang-python="`medium_type " pulumi-lang-yaml="`mediumType " pulumi-lang-java="`mediumType " pulumi-lang-hcl="`medium_type ">`mediumType </span>= 6`; an existing account keeps the controller's values, which may be none.
      */
     tunnel?: pulumi.Input<inputs.RadiusUserTunnel | undefined>;
     /**
-     * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
+     * VLAN assigned to the account. If omitted but <span pulumi-lang-nodejs="`networkId`" pulumi-lang-dotnet="`NetworkId`" pulumi-lang-go="`networkId`" pulumi-lang-python="`network_id`" pulumi-lang-yaml="`networkId`" pulumi-lang-java="`networkId`" pulumi-lang-hcl="`network_id`">`networkId`</span> is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
      */
     vlan?: pulumi.Input<number | undefined>;
 }
@@ -151,7 +151,7 @@ export interface RadiusUserArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * ID of the network for this account. When set and `vlan` is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
+     * ID of the network for this account. When set and <span pulumi-lang-nodejs="`vlan`" pulumi-lang-dotnet="`Vlan`" pulumi-lang-go="`vlan`" pulumi-lang-python="`vlan`" pulumi-lang-yaml="`vlan`" pulumi-lang-java="`vlan`" pulumi-lang-hcl="`vlan`">`vlan`</span> is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
@@ -164,11 +164,11 @@ export interface RadiusUserArgs {
     site?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.RadiusUserTimeouts | undefined>;
     /**
-     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, `medium_type = 6`; an existing account keeps the controller's values, which may be none.
+     * RFC 2868 tunnel attributes used for dynamic VLAN assignment. A new account defaults to `type = 3`, <span pulumi-lang-nodejs="`mediumType " pulumi-lang-dotnet="`MediumType " pulumi-lang-go="`mediumType " pulumi-lang-python="`medium_type " pulumi-lang-yaml="`mediumType " pulumi-lang-java="`mediumType " pulumi-lang-hcl="`medium_type ">`mediumType </span>= 6`; an existing account keeps the controller's values, which may be none.
      */
     tunnel?: pulumi.Input<inputs.RadiusUserTunnel | undefined>;
     /**
-     * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
+     * VLAN assigned to the account. If omitted but <span pulumi-lang-nodejs="`networkId`" pulumi-lang-dotnet="`NetworkId`" pulumi-lang-go="`networkId`" pulumi-lang-python="`network_id`" pulumi-lang-yaml="`networkId`" pulumi-lang-java="`networkId`" pulumi-lang-hcl="`network_id`">`networkId`</span> is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
      */
     vlan?: pulumi.Input<number | undefined>;
 }

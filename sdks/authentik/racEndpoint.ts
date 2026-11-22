@@ -45,16 +45,16 @@ export class RacEndpoint extends pulumi.CustomResource {
 
     declare public readonly host: pulumi.Output<string>;
     /**
-     * Defaults to `0`.
+     * Defaults to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     declare public readonly maximumConnections: pulumi.Output<number | undefined>;
     declare public readonly name: pulumi.Output<string>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `rdp`
-     *   - `vnc`
-     *   - `ssh`
+     *   - <span pulumi-lang-nodejs="`rdp`" pulumi-lang-dotnet="`Rdp`" pulumi-lang-go="`rdp`" pulumi-lang-python="`rdp`" pulumi-lang-yaml="`rdp`" pulumi-lang-java="`rdp`" pulumi-lang-hcl="`rdp`">`rdp`</span>
+     *   - <span pulumi-lang-nodejs="`vnc`" pulumi-lang-dotnet="`Vnc`" pulumi-lang-go="`vnc`" pulumi-lang-python="`vnc`" pulumi-lang-yaml="`vnc`" pulumi-lang-java="`vnc`" pulumi-lang-hcl="`vnc`">`vnc`</span>
+     *   - <span pulumi-lang-nodejs="`ssh`" pulumi-lang-dotnet="`Ssh`" pulumi-lang-go="`ssh`" pulumi-lang-python="`ssh`" pulumi-lang-yaml="`ssh`" pulumi-lang-java="`ssh`" pulumi-lang-hcl="`ssh`">`ssh`</span>
      */
     declare public readonly protocol: pulumi.Output<string>;
     declare public readonly protocolProvider: pulumi.Output<number>;
@@ -116,16 +116,16 @@ export class RacEndpoint extends pulumi.CustomResource {
 export interface RacEndpointState {
     host?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `0`.
+     * Defaults to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     maximumConnections?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `rdp`
-     *   - `vnc`
-     *   - `ssh`
+     *   - <span pulumi-lang-nodejs="`rdp`" pulumi-lang-dotnet="`Rdp`" pulumi-lang-go="`rdp`" pulumi-lang-python="`rdp`" pulumi-lang-yaml="`rdp`" pulumi-lang-java="`rdp`" pulumi-lang-hcl="`rdp`">`rdp`</span>
+     *   - <span pulumi-lang-nodejs="`vnc`" pulumi-lang-dotnet="`Vnc`" pulumi-lang-go="`vnc`" pulumi-lang-python="`vnc`" pulumi-lang-yaml="`vnc`" pulumi-lang-java="`vnc`" pulumi-lang-hcl="`vnc`">`vnc`</span>
+     *   - <span pulumi-lang-nodejs="`ssh`" pulumi-lang-dotnet="`Ssh`" pulumi-lang-go="`ssh`" pulumi-lang-python="`ssh`" pulumi-lang-yaml="`ssh`" pulumi-lang-java="`ssh`" pulumi-lang-hcl="`ssh`">`ssh`</span>
      */
     protocol?: pulumi.Input<string | undefined>;
     protocolProvider?: pulumi.Input<number | undefined>;
@@ -142,16 +142,16 @@ export interface RacEndpointState {
 export interface RacEndpointArgs {
     host: pulumi.Input<string>;
     /**
-     * Defaults to `0`.
+     * Defaults to <span pulumi-lang-nodejs="`0`" pulumi-lang-dotnet="`0`" pulumi-lang-go="`0`" pulumi-lang-python="`0`" pulumi-lang-yaml="`0`" pulumi-lang-java="`0`" pulumi-lang-hcl="`0`">`0`</span>.
      */
     maximumConnections?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `rdp`
-     *   - `vnc`
-     *   - `ssh`
+     *   - <span pulumi-lang-nodejs="`rdp`" pulumi-lang-dotnet="`Rdp`" pulumi-lang-go="`rdp`" pulumi-lang-python="`rdp`" pulumi-lang-yaml="`rdp`" pulumi-lang-java="`rdp`" pulumi-lang-hcl="`rdp`">`rdp`</span>
+     *   - <span pulumi-lang-nodejs="`vnc`" pulumi-lang-dotnet="`Vnc`" pulumi-lang-go="`vnc`" pulumi-lang-python="`vnc`" pulumi-lang-yaml="`vnc`" pulumi-lang-java="`vnc`" pulumi-lang-hcl="`vnc`">`vnc`</span>
+     *   - <span pulumi-lang-nodejs="`ssh`" pulumi-lang-dotnet="`Ssh`" pulumi-lang-go="`ssh`" pulumi-lang-python="`ssh`" pulumi-lang-yaml="`ssh`" pulumi-lang-java="`ssh`" pulumi-lang-hcl="`ssh`">`ssh`</span>
      */
     protocol: pulumi.Input<string>;
     protocolProvider: pulumi.Input<number>;

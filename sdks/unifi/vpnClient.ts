@@ -46,20 +46,23 @@ export class VpnClient extends pulumi.CustomResource {
     }
 
     /**
-     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets `false`), so adopting a client that carries the default route does not drop it (#544).
+     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>), so adopting a client that carries the default route does not drop it (#544).
      */
     declare public readonly defaultRoute: pulumi.Output<boolean>;
     /**
      * Specifies whether the VPN client is enabled. A new client is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     declare public readonly enabled: pulumi.Output<boolean>;
+    /**
+     * The local IPv6 address for the WireGuard tunnel in CIDR notation (e.g., `2001:db8::2/64`). In file mode it defaults to the IPv6 entry of the configuration's `Address` line. When not configured, the controller's value is kept, so an address set in the UI survives updates made through Terraform.
+     */
     declare public readonly ipv6Subnet: pulumi.Output<string>;
     /**
      * The name of the VPN client.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets `false`) (#544).
+     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>) (#544).
      */
     declare public readonly pullDns: pulumi.Output<boolean>;
     /**
@@ -72,7 +75,7 @@ export class VpnClient extends pulumi.CustomResource {
     declare public readonly subnet: pulumi.Output<string>;
     declare public readonly timeouts: pulumi.Output<outputs.VpnClientTimeouts | undefined>;
     /**
-     * WireGuard VPN configuration. Specify either `configuration` for file upload mode or `peer` for manual configuration.
+     * WireGuard VPN configuration. Specify either <span pulumi-lang-nodejs="`configuration`" pulumi-lang-dotnet="`Configuration`" pulumi-lang-go="`configuration`" pulumi-lang-python="`configuration`" pulumi-lang-yaml="`configuration`" pulumi-lang-java="`configuration`" pulumi-lang-hcl="`configuration`">`configuration`</span> for file upload mode or <span pulumi-lang-nodejs="`peer`" pulumi-lang-dotnet="`Peer`" pulumi-lang-go="`peer`" pulumi-lang-python="`peer`" pulumi-lang-yaml="`peer`" pulumi-lang-java="`peer`" pulumi-lang-hcl="`peer`">`peer`</span> for manual configuration.
      */
     declare public readonly wireguard: pulumi.Output<outputs.VpnClientWireguard>;
 
@@ -126,20 +129,23 @@ export class VpnClient extends pulumi.CustomResource {
  */
 export interface VpnClientState {
     /**
-     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets `false`), so adopting a client that carries the default route does not drop it (#544).
+     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>), so adopting a client that carries the default route does not drop it (#544).
      */
     defaultRoute?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether the VPN client is enabled. A new client is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The local IPv6 address for the WireGuard tunnel in CIDR notation (e.g., `2001:db8::2/64`). In file mode it defaults to the IPv6 entry of the configuration's `Address` line. When not configured, the controller's value is kept, so an address set in the UI survives updates made through Terraform.
+     */
     ipv6Subnet?: pulumi.Input<string | undefined>;
     /**
      * The name of the VPN client.
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets `false`) (#544).
+     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>) (#544).
      */
     pullDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -152,7 +158,7 @@ export interface VpnClientState {
     subnet?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.VpnClientTimeouts | undefined>;
     /**
-     * WireGuard VPN configuration. Specify either `configuration` for file upload mode or `peer` for manual configuration.
+     * WireGuard VPN configuration. Specify either <span pulumi-lang-nodejs="`configuration`" pulumi-lang-dotnet="`Configuration`" pulumi-lang-go="`configuration`" pulumi-lang-python="`configuration`" pulumi-lang-yaml="`configuration`" pulumi-lang-java="`configuration`" pulumi-lang-hcl="`configuration`">`configuration`</span> for file upload mode or <span pulumi-lang-nodejs="`peer`" pulumi-lang-dotnet="`Peer`" pulumi-lang-go="`peer`" pulumi-lang-python="`peer`" pulumi-lang-yaml="`peer`" pulumi-lang-java="`peer`" pulumi-lang-hcl="`peer`">`peer`</span> for manual configuration.
      */
     wireguard?: pulumi.Input<inputs.VpnClientWireguard | undefined>;
 }
@@ -162,20 +168,23 @@ export interface VpnClientState {
  */
 export interface VpnClientArgs {
     /**
-     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets `false`), so adopting a client that carries the default route does not drop it (#544).
+     * Specifies whether to use the VPN as the default route. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>), so adopting a client that carries the default route does not drop it (#544).
      */
     defaultRoute?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether the VPN client is enabled. A new client is created enabled; an existing one keeps the controller's value when this is not set, so adopting a disabled tunnel does not re-enable it (#544).
      */
     enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The local IPv6 address for the WireGuard tunnel in CIDR notation (e.g., `2001:db8::2/64`). In file mode it defaults to the IPv6 entry of the configuration's `Address` line. When not configured, the controller's value is kept, so an address set in the UI survives updates made through Terraform.
+     */
     ipv6Subnet?: pulumi.Input<string | undefined>;
     /**
      * The name of the VPN client.
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets `false`) (#544).
+     * Specifies whether to pull DNS servers from the VPN. Taken from the controller when not set (a new client gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>) (#544).
      */
     pullDns?: pulumi.Input<boolean | undefined>;
     /**
@@ -188,7 +197,7 @@ export interface VpnClientArgs {
     subnet: pulumi.Input<string>;
     timeouts?: pulumi.Input<inputs.VpnClientTimeouts | undefined>;
     /**
-     * WireGuard VPN configuration. Specify either `configuration` for file upload mode or `peer` for manual configuration.
+     * WireGuard VPN configuration. Specify either <span pulumi-lang-nodejs="`configuration`" pulumi-lang-dotnet="`Configuration`" pulumi-lang-go="`configuration`" pulumi-lang-python="`configuration`" pulumi-lang-yaml="`configuration`" pulumi-lang-java="`configuration`" pulumi-lang-hcl="`configuration`">`configuration`</span> for file upload mode or <span pulumi-lang-nodejs="`peer`" pulumi-lang-dotnet="`Peer`" pulumi-lang-go="`peer`" pulumi-lang-python="`peer`" pulumi-lang-yaml="`peer`" pulumi-lang-java="`peer`" pulumi-lang-hcl="`peer`">`peer`</span> for manual configuration.
      */
     wireguard: pulumi.Input<inputs.VpnClientWireguard>;
 }

@@ -27,10 +27,6 @@ export interface GetMetricsServerResult {
     readonly bucket: string;
     readonly comment: string;
     readonly enable: boolean;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly maxBodySize: number;
     readonly mtu: number;
     readonly name: string;

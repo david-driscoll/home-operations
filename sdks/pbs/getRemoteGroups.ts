@@ -27,10 +27,6 @@ export interface GetRemoteGroupsArgs {
  */
 export interface GetRemoteGroupsResult {
     readonly groups: string[];
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly namespace?: string;
     readonly remoteName: string;
     readonly store: string;

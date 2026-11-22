@@ -76,11 +76,11 @@ export class ClusterSecondary extends pulumi.CustomResource {
      */
     declare public readonly nodeUrl: pulumi.Output<string>;
     /**
-     * Administrator username on the Secondary node (used together with node_password when node_token is not set).
+     * Administrator username on the Secondary node (used together with<span pulumi-lang-nodejs=" nodePassword " pulumi-lang-dotnet=" NodePassword " pulumi-lang-go=" nodePassword " pulumi-lang-python=" node_password " pulumi-lang-yaml=" nodePassword " pulumi-lang-java=" nodePassword " pulumi-lang-hcl=" node_password "> nodePassword </span>when<span pulumi-lang-nodejs=" nodeToken " pulumi-lang-dotnet=" NodeToken " pulumi-lang-go=" nodeToken " pulumi-lang-python=" node_token " pulumi-lang-yaml=" nodeToken " pulumi-lang-java=" nodeToken " pulumi-lang-hcl=" node_token "> nodeToken </span>is not set).
      */
     declare public readonly nodeUsername: pulumi.Output<string | undefined>;
     /**
-     * IP address of the Primary node. When unset, the domain name in primary_node_url is resolved by the Secondary.
+     * IP address of the Primary node. When unset, the domain name in<span pulumi-lang-nodejs=" primaryNodeUrl " pulumi-lang-dotnet=" PrimaryNodeUrl " pulumi-lang-go=" primaryNodeUrl " pulumi-lang-python=" primary_node_url " pulumi-lang-yaml=" primaryNodeUrl " pulumi-lang-java=" primaryNodeUrl " pulumi-lang-hcl=" primary_node_url "> primaryNodeUrl </span>is resolved by the Secondary.
      */
     declare public readonly primaryNodeIpAddress: pulumi.Output<string | undefined>;
     /**
@@ -197,11 +197,11 @@ export interface ClusterSecondaryState {
      */
     nodeUrl?: pulumi.Input<string | undefined>;
     /**
-     * Administrator username on the Secondary node (used together with node_password when node_token is not set).
+     * Administrator username on the Secondary node (used together with<span pulumi-lang-nodejs=" nodePassword " pulumi-lang-dotnet=" NodePassword " pulumi-lang-go=" nodePassword " pulumi-lang-python=" node_password " pulumi-lang-yaml=" nodePassword " pulumi-lang-java=" nodePassword " pulumi-lang-hcl=" node_password "> nodePassword </span>when<span pulumi-lang-nodejs=" nodeToken " pulumi-lang-dotnet=" NodeToken " pulumi-lang-go=" nodeToken " pulumi-lang-python=" node_token " pulumi-lang-yaml=" nodeToken " pulumi-lang-java=" nodeToken " pulumi-lang-hcl=" node_token "> nodeToken </span>is not set).
      */
     nodeUsername?: pulumi.Input<string | undefined>;
     /**
-     * IP address of the Primary node. When unset, the domain name in primary_node_url is resolved by the Secondary.
+     * IP address of the Primary node. When unset, the domain name in<span pulumi-lang-nodejs=" primaryNodeUrl " pulumi-lang-dotnet=" PrimaryNodeUrl " pulumi-lang-go=" primaryNodeUrl " pulumi-lang-python=" primary_node_url " pulumi-lang-yaml=" primaryNodeUrl " pulumi-lang-java=" primaryNodeUrl " pulumi-lang-hcl=" primary_node_url "> primaryNodeUrl </span>is resolved by the Secondary.
      */
     primaryNodeIpAddress?: pulumi.Input<string | undefined>;
     /**
@@ -251,11 +251,11 @@ export interface ClusterSecondaryArgs {
      */
     nodeUrl: pulumi.Input<string>;
     /**
-     * Administrator username on the Secondary node (used together with node_password when node_token is not set).
+     * Administrator username on the Secondary node (used together with<span pulumi-lang-nodejs=" nodePassword " pulumi-lang-dotnet=" NodePassword " pulumi-lang-go=" nodePassword " pulumi-lang-python=" node_password " pulumi-lang-yaml=" nodePassword " pulumi-lang-java=" nodePassword " pulumi-lang-hcl=" node_password "> nodePassword </span>when<span pulumi-lang-nodejs=" nodeToken " pulumi-lang-dotnet=" NodeToken " pulumi-lang-go=" nodeToken " pulumi-lang-python=" node_token " pulumi-lang-yaml=" nodeToken " pulumi-lang-java=" nodeToken " pulumi-lang-hcl=" node_token "> nodeToken </span>is not set).
      */
     nodeUsername?: pulumi.Input<string | undefined>;
     /**
-     * IP address of the Primary node. When unset, the domain name in primary_node_url is resolved by the Secondary.
+     * IP address of the Primary node. When unset, the domain name in<span pulumi-lang-nodejs=" primaryNodeUrl " pulumi-lang-dotnet=" PrimaryNodeUrl " pulumi-lang-go=" primaryNodeUrl " pulumi-lang-python=" primary_node_url " pulumi-lang-yaml=" primaryNodeUrl " pulumi-lang-java=" primaryNodeUrl " pulumi-lang-hcl=" primary_node_url "> primaryNodeUrl </span>is resolved by the Secondary.
      */
     primaryNodeIpAddress?: pulumi.Input<string | undefined>;
     /**

@@ -54,7 +54,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly allowAdoption: pulumi.Output<boolean>;
     /**
-     * Band steering mode; valid values are `off`, `equal`, and `prefer_5g`.
+     * Band steering mode; valid values are <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>, <span pulumi-lang-nodejs="`equal`" pulumi-lang-dotnet="`Equal`" pulumi-lang-go="`equal`" pulumi-lang-python="`equal`" pulumi-lang-yaml="`equal`" pulumi-lang-java="`equal`" pulumi-lang-hcl="`equal`">`equal`</span>, and <span pulumi-lang-nodejs="`prefer5g`" pulumi-lang-dotnet="`Prefer5g`" pulumi-lang-go="`prefer5g`" pulumi-lang-python="`prefer_5g`" pulumi-lang-yaml="`prefer5g`" pulumi-lang-java="`prefer5g`" pulumi-lang-hcl="`prefer_5g`">`prefer5g`</span>.
      */
     declare public readonly bandsteeringMode: pulumi.Output<string>;
     /**
@@ -66,7 +66,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly disabled: pulumi.Output<boolean>;
     /**
-     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with `unifi.Setting`'s `etherlighting` block.
+     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with <span pulumi-lang-nodejs="`unifi.Setting`" pulumi-lang-dotnet="`unifi.Setting`" pulumi-lang-go="`Setting`" pulumi-lang-python="`Setting`" pulumi-lang-yaml="`unifi.Setting`" pulumi-lang-java="`unifi.Setting`" pulumi-lang-hcl="`unifi_setting`">`unifi.Setting`</span>'s <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> block.
      */
     declare public readonly etherlighting: pulumi.Output<outputs.DeviceEtherlighting>;
     /**
@@ -102,7 +102,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly meshStaVapEnabled: pulumi.Output<boolean>;
     /**
-     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
+     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a<span pulumi-lang-nodejs=" portOverride " pulumi-lang-dotnet=" PortOverride " pulumi-lang-go=" portOverride " pulumi-lang-python=" port_override " pulumi-lang-yaml=" portOverride " pulumi-lang-java=" portOverride " pulumi-lang-hcl=" port_override "> portOverride </span>tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     declare public readonly mgmtNetworkId: pulumi.Output<string>;
     /**
@@ -114,7 +114,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Outdoor mode override; valid values are `default`, `on`, and `off`.
+     * Outdoor mode override; valid values are <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     declare public readonly outdoorModeOverride: pulumi.Output<string>;
     /**
@@ -126,11 +126,11 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly outletOverrides: pulumi.Output<outputs.DeviceOutletOverride[]>;
     /**
-     * PoE mode; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     declare public readonly poeMode: pulumi.Output<string>;
     /**
-     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with `unifi.DevicePort`; do not declare the same port in both places, the last write wins and the other one drifts.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a <span pulumi-lang-nodejs="`portOverride`" pulumi-lang-dotnet="`PortOverride`" pulumi-lang-go="`portOverride`" pulumi-lang-python="`port_override`" pulumi-lang-yaml="`portOverride`" pulumi-lang-java="`portOverride`" pulumi-lang-hcl="`port_override`">`portOverride`</span> block keep their existing controller-side configuration — the provider merges your declared ports (by <span pulumi-lang-nodejs="`index`" pulumi-lang-dotnet="`Index`" pulumi-lang-go="`index`" pulumi-lang-python="`index`" pulumi-lang-yaml="`index`" pulumi-lang-java="`index`" pulumi-lang-hcl="`index`">`index`</span>) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with <span pulumi-lang-nodejs="`unifi.DevicePort`" pulumi-lang-dotnet="`unifi.DevicePort`" pulumi-lang-go="`DevicePort`" pulumi-lang-python="`DevicePort`" pulumi-lang-yaml="`unifi.DevicePort`" pulumi-lang-java="`unifi.DevicePort`" pulumi-lang-hcl="`unifi_device_port`">`unifi.DevicePort`</span>; do not declare the same port in both places, the last write wins and the other one drifts.
      */
     declare public readonly portOverrides: pulumi.Output<outputs.DevicePortOverride[] | undefined>;
     /**
@@ -265,7 +265,7 @@ export interface DeviceState {
      */
     allowAdoption?: pulumi.Input<boolean | undefined>;
     /**
-     * Band steering mode; valid values are `off`, `equal`, and `prefer_5g`.
+     * Band steering mode; valid values are <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>, <span pulumi-lang-nodejs="`equal`" pulumi-lang-dotnet="`Equal`" pulumi-lang-go="`equal`" pulumi-lang-python="`equal`" pulumi-lang-yaml="`equal`" pulumi-lang-java="`equal`" pulumi-lang-hcl="`equal`">`equal`</span>, and <span pulumi-lang-nodejs="`prefer5g`" pulumi-lang-dotnet="`Prefer5g`" pulumi-lang-go="`prefer5g`" pulumi-lang-python="`prefer_5g`" pulumi-lang-yaml="`prefer5g`" pulumi-lang-java="`prefer5g`" pulumi-lang-hcl="`prefer_5g`">`prefer5g`</span>.
      */
     bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
@@ -277,7 +277,7 @@ export interface DeviceState {
      */
     disabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with `unifi.Setting`'s `etherlighting` block.
+     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with <span pulumi-lang-nodejs="`unifi.Setting`" pulumi-lang-dotnet="`unifi.Setting`" pulumi-lang-go="`Setting`" pulumi-lang-python="`Setting`" pulumi-lang-yaml="`unifi.Setting`" pulumi-lang-java="`unifi.Setting`" pulumi-lang-hcl="`unifi_setting`">`unifi.Setting`</span>'s <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> block.
      */
     etherlighting?: pulumi.Input<inputs.DeviceEtherlighting | undefined>;
     /**
@@ -313,7 +313,7 @@ export interface DeviceState {
      */
     meshStaVapEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
+     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a<span pulumi-lang-nodejs=" portOverride " pulumi-lang-dotnet=" PortOverride " pulumi-lang-go=" portOverride " pulumi-lang-python=" port_override " pulumi-lang-yaml=" portOverride " pulumi-lang-java=" portOverride " pulumi-lang-hcl=" port_override "> portOverride </span>tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     mgmtNetworkId?: pulumi.Input<string | undefined>;
     /**
@@ -325,7 +325,7 @@ export interface DeviceState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Outdoor mode override; valid values are `default`, `on`, and `off`.
+     * Outdoor mode override; valid values are <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
@@ -337,11 +337,11 @@ export interface DeviceState {
      */
     outletOverrides?: pulumi.Input<pulumi.Input<inputs.DeviceOutletOverride>[] | undefined>;
     /**
-     * PoE mode; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with `unifi.DevicePort`; do not declare the same port in both places, the last write wins and the other one drifts.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a <span pulumi-lang-nodejs="`portOverride`" pulumi-lang-dotnet="`PortOverride`" pulumi-lang-go="`portOverride`" pulumi-lang-python="`port_override`" pulumi-lang-yaml="`portOverride`" pulumi-lang-java="`portOverride`" pulumi-lang-hcl="`port_override`">`portOverride`</span> block keep their existing controller-side configuration — the provider merges your declared ports (by <span pulumi-lang-nodejs="`index`" pulumi-lang-dotnet="`Index`" pulumi-lang-go="`index`" pulumi-lang-python="`index`" pulumi-lang-yaml="`index`" pulumi-lang-java="`index`" pulumi-lang-hcl="`index`">`index`</span>) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with <span pulumi-lang-nodejs="`unifi.DevicePort`" pulumi-lang-dotnet="`unifi.DevicePort`" pulumi-lang-go="`DevicePort`" pulumi-lang-python="`DevicePort`" pulumi-lang-yaml="`unifi.DevicePort`" pulumi-lang-java="`unifi.DevicePort`" pulumi-lang-hcl="`unifi_device_port`">`unifi.DevicePort`</span>; do not declare the same port in both places, the last write wins and the other one drifts.
      */
     portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[] | undefined>;
     /**
@@ -388,7 +388,7 @@ export interface DeviceArgs {
      */
     allowAdoption?: pulumi.Input<boolean | undefined>;
     /**
-     * Band steering mode; valid values are `off`, `equal`, and `prefer_5g`.
+     * Band steering mode; valid values are <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>, <span pulumi-lang-nodejs="`equal`" pulumi-lang-dotnet="`Equal`" pulumi-lang-go="`equal`" pulumi-lang-python="`equal`" pulumi-lang-yaml="`equal`" pulumi-lang-java="`equal`" pulumi-lang-hcl="`equal`">`equal`</span>, and <span pulumi-lang-nodejs="`prefer5g`" pulumi-lang-dotnet="`Prefer5g`" pulumi-lang-go="`prefer5g`" pulumi-lang-python="`prefer_5g`" pulumi-lang-yaml="`prefer5g`" pulumi-lang-java="`prefer5g`" pulumi-lang-hcl="`prefer_5g`">`prefer5g`</span>.
      */
     bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
@@ -400,7 +400,7 @@ export interface DeviceArgs {
      */
     disabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with `unifi.Setting`'s `etherlighting` block.
+     * Etherlighting settings for switches with per-port LED lighting (e.g. USW Pro Max). The per-speed and per-network colors are site-wide and are configured with <span pulumi-lang-nodejs="`unifi.Setting`" pulumi-lang-dotnet="`unifi.Setting`" pulumi-lang-go="`Setting`" pulumi-lang-python="`Setting`" pulumi-lang-yaml="`unifi.Setting`" pulumi-lang-java="`unifi.Setting`" pulumi-lang-hcl="`unifi_setting`">`unifi.Setting`</span>'s <span pulumi-lang-nodejs="`etherlighting`" pulumi-lang-dotnet="`Etherlighting`" pulumi-lang-go="`etherlighting`" pulumi-lang-python="`etherlighting`" pulumi-lang-yaml="`etherlighting`" pulumi-lang-java="`etherlighting`" pulumi-lang-hcl="`etherlighting`">`etherlighting`</span> block.
      */
     etherlighting?: pulumi.Input<inputs.DeviceEtherlighting | undefined>;
     /**
@@ -436,7 +436,7 @@ export interface DeviceArgs {
      */
     meshStaVapEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
+     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a<span pulumi-lang-nodejs=" portOverride " pulumi-lang-dotnet=" PortOverride " pulumi-lang-go=" portOverride " pulumi-lang-python=" port_override " pulumi-lang-yaml=" portOverride " pulumi-lang-java=" portOverride " pulumi-lang-hcl=" port_override "> portOverride </span>tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     mgmtNetworkId?: pulumi.Input<string | undefined>;
     /**
@@ -444,7 +444,7 @@ export interface DeviceArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * Outdoor mode override; valid values are `default`, `on`, and `off`.
+     * Outdoor mode override; valid values are <span pulumi-lang-nodejs="`default`" pulumi-lang-dotnet="`Default`" pulumi-lang-go="`default`" pulumi-lang-python="`default`" pulumi-lang-yaml="`default`" pulumi-lang-java="`default`" pulumi-lang-hcl="`default`">`default`</span>, <span pulumi-lang-nodejs="`on`" pulumi-lang-dotnet="`On`" pulumi-lang-go="`on`" pulumi-lang-python="`on`" pulumi-lang-yaml="`on`" pulumi-lang-java="`on`" pulumi-lang-hcl="`on`">`on`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
@@ -456,11 +456,11 @@ export interface DeviceArgs {
      */
     outletOverrides?: pulumi.Input<pulumi.Input<inputs.DeviceOutletOverride>[] | undefined>;
     /**
-     * PoE mode; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
+     * PoE mode; valid values are <span pulumi-lang-nodejs="`auto`" pulumi-lang-dotnet="`Auto`" pulumi-lang-go="`auto`" pulumi-lang-python="`auto`" pulumi-lang-yaml="`auto`" pulumi-lang-java="`auto`" pulumi-lang-hcl="`auto`">`auto`</span>, <span pulumi-lang-nodejs="`pasv24`" pulumi-lang-dotnet="`Pasv24`" pulumi-lang-go="`pasv24`" pulumi-lang-python="`pasv24`" pulumi-lang-yaml="`pasv24`" pulumi-lang-java="`pasv24`" pulumi-lang-hcl="`pasv24`">`pasv24`</span>, <span pulumi-lang-nodejs="`passthrough`" pulumi-lang-dotnet="`Passthrough`" pulumi-lang-go="`passthrough`" pulumi-lang-python="`passthrough`" pulumi-lang-yaml="`passthrough`" pulumi-lang-java="`passthrough`" pulumi-lang-hcl="`passthrough`">`passthrough`</span>, and <span pulumi-lang-nodejs="`off`" pulumi-lang-dotnet="`Off`" pulumi-lang-go="`off`" pulumi-lang-python="`off`" pulumi-lang-yaml="`off`" pulumi-lang-java="`off`" pulumi-lang-hcl="`off`">`off`</span>.
      */
     poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with `unifi.DevicePort`; do not declare the same port in both places, the last write wins and the other one drifts.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a <span pulumi-lang-nodejs="`portOverride`" pulumi-lang-dotnet="`PortOverride`" pulumi-lang-go="`portOverride`" pulumi-lang-python="`port_override`" pulumi-lang-yaml="`portOverride`" pulumi-lang-java="`portOverride`" pulumi-lang-hcl="`port_override`">`portOverride`</span> block keep their existing controller-side configuration — the provider merges your declared ports (by <span pulumi-lang-nodejs="`index`" pulumi-lang-dotnet="`Index`" pulumi-lang-go="`index`" pulumi-lang-python="`index`" pulumi-lang-yaml="`index`" pulumi-lang-java="`index`" pulumi-lang-hcl="`index`">`index`</span>) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead. A port can instead be managed on its own, and imported directly, with <span pulumi-lang-nodejs="`unifi.DevicePort`" pulumi-lang-dotnet="`unifi.DevicePort`" pulumi-lang-go="`DevicePort`" pulumi-lang-python="`DevicePort`" pulumi-lang-yaml="`unifi.DevicePort`" pulumi-lang-java="`unifi.DevicePort`" pulumi-lang-hcl="`unifi_device_port`">`unifi.DevicePort`</span>; do not declare the same port in both places, the last write wins and the other one drifts.
      */
     portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[] | undefined>;
     /**

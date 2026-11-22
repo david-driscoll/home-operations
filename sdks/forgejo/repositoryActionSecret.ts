@@ -47,8 +47,18 @@ export class RepositoryActionSecret extends pulumi.CustomResource {
      * Time at which the secret was created.
      */
     declare public /*out*/ readonly createdAt: pulumi.Output<string>;
+    /**
+     * Data of the secret. The value is stored in the Terraform state. **Note**: Exactly one of <span pulumi-lang-nodejs="`data`" pulumi-lang-dotnet="`Data`" pulumi-lang-go="`data`" pulumi-lang-python="`data`" pulumi-lang-yaml="`data`" pulumi-lang-java="`data`" pulumi-lang-hcl="`data`">`data`</span> or <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> must be specified.
+     */
     declare public readonly data: pulumi.Output<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only data of the secret. The value is never stored in the Terraform state or plan; change <span pulumi-lang-nodejs="`dataWoVersion`" pulumi-lang-dotnet="`DataWoVersion`" pulumi-lang-go="`dataWoVersion`" pulumi-lang-python="`data_wo_version`" pulumi-lang-yaml="`dataWoVersion`" pulumi-lang-java="`dataWoVersion`" pulumi-lang-hcl="`data_wo_version`">`dataWoVersion`</span> to update it. Requires Terraform >= 1.11 or OpenTofu >= 1.11. **Note**: Exactly one of <span pulumi-lang-nodejs="`data`" pulumi-lang-dotnet="`Data`" pulumi-lang-go="`data`" pulumi-lang-python="`data`" pulumi-lang-yaml="`data`" pulumi-lang-java="`data`" pulumi-lang-hcl="`data`">`data`</span> or <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> must be specified.
+     */
     declare public readonly dataWo: pulumi.Output<string | undefined>;
+    /**
+     * Version of <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span>. Terraform cannot detect changes of write-only values, so the secret is only updated when this value changes. **Note**: Only effective if <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> is set.
+     */
     declare public readonly dataWoVersion: pulumi.Output<number | undefined>;
     /**
      * Name of the secret. Changing this forces a new resource to be created.
@@ -105,8 +115,18 @@ export interface RepositoryActionSecretState {
      * Time at which the secret was created.
      */
     createdAt?: pulumi.Input<string | undefined>;
+    /**
+     * Data of the secret. The value is stored in the Terraform state. **Note**: Exactly one of <span pulumi-lang-nodejs="`data`" pulumi-lang-dotnet="`Data`" pulumi-lang-go="`data`" pulumi-lang-python="`data`" pulumi-lang-yaml="`data`" pulumi-lang-java="`data`" pulumi-lang-hcl="`data`">`data`</span> or <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> must be specified.
+     */
     data?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only data of the secret. The value is never stored in the Terraform state or plan; change <span pulumi-lang-nodejs="`dataWoVersion`" pulumi-lang-dotnet="`DataWoVersion`" pulumi-lang-go="`dataWoVersion`" pulumi-lang-python="`data_wo_version`" pulumi-lang-yaml="`dataWoVersion`" pulumi-lang-java="`dataWoVersion`" pulumi-lang-hcl="`data_wo_version`">`dataWoVersion`</span> to update it. Requires Terraform >= 1.11 or OpenTofu >= 1.11. **Note**: Exactly one of <span pulumi-lang-nodejs="`data`" pulumi-lang-dotnet="`Data`" pulumi-lang-go="`data`" pulumi-lang-python="`data`" pulumi-lang-yaml="`data`" pulumi-lang-java="`data`" pulumi-lang-hcl="`data`">`data`</span> or <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> must be specified.
+     */
     dataWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version of <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span>. Terraform cannot detect changes of write-only values, so the secret is only updated when this value changes. **Note**: Only effective if <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> is set.
+     */
     dataWoVersion?: pulumi.Input<number | undefined>;
     /**
      * Name of the secret. Changing this forces a new resource to be created.
@@ -122,8 +142,18 @@ export interface RepositoryActionSecretState {
  * The set of arguments for constructing a RepositoryActionSecret resource.
  */
 export interface RepositoryActionSecretArgs {
+    /**
+     * Data of the secret. The value is stored in the Terraform state. **Note**: Exactly one of <span pulumi-lang-nodejs="`data`" pulumi-lang-dotnet="`Data`" pulumi-lang-go="`data`" pulumi-lang-python="`data`" pulumi-lang-yaml="`data`" pulumi-lang-java="`data`" pulumi-lang-hcl="`data`">`data`</span> or <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> must be specified.
+     */
     data?: pulumi.Input<string | undefined>;
+    /**
+     * **NOTE:** This field is write-only and its value will not be updated in state as part of read operations.
+     * Write-only data of the secret. The value is never stored in the Terraform state or plan; change <span pulumi-lang-nodejs="`dataWoVersion`" pulumi-lang-dotnet="`DataWoVersion`" pulumi-lang-go="`dataWoVersion`" pulumi-lang-python="`data_wo_version`" pulumi-lang-yaml="`dataWoVersion`" pulumi-lang-java="`dataWoVersion`" pulumi-lang-hcl="`data_wo_version`">`dataWoVersion`</span> to update it. Requires Terraform >= 1.11 or OpenTofu >= 1.11. **Note**: Exactly one of <span pulumi-lang-nodejs="`data`" pulumi-lang-dotnet="`Data`" pulumi-lang-go="`data`" pulumi-lang-python="`data`" pulumi-lang-yaml="`data`" pulumi-lang-java="`data`" pulumi-lang-hcl="`data`">`data`</span> or <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> must be specified.
+     */
     dataWo?: pulumi.Input<string | undefined>;
+    /**
+     * Version of <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span>. Terraform cannot detect changes of write-only values, so the secret is only updated when this value changes. **Note**: Only effective if <span pulumi-lang-nodejs="`dataWo`" pulumi-lang-dotnet="`DataWo`" pulumi-lang-go="`dataWo`" pulumi-lang-python="`data_wo`" pulumi-lang-yaml="`dataWo`" pulumi-lang-java="`dataWo`" pulumi-lang-hcl="`data_wo`">`dataWo`</span> is set.
+     */
     dataWoVersion?: pulumi.Input<number | undefined>;
     /**
      * Name of the secret. Changing this forces a new resource to be created.

@@ -90,7 +90,7 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, `virtual_network_override_id`). This is not the network of `fixed_ip`: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
+     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, <span pulumi-lang-nodejs="`virtualNetworkOverrideId`" pulumi-lang-dotnet="`VirtualNetworkOverrideId`" pulumi-lang-go="`virtualNetworkOverrideId`" pulumi-lang-python="`virtual_network_override_id`" pulumi-lang-yaml="`virtualNetworkOverrideId`" pulumi-lang-java="`virtualNetworkOverrideId`" pulumi-lang-hcl="`virtual_network_override_id`">`virtualNetworkOverrideId`</span>). This is not the network of <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span>: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
      */
     declare public readonly networkId: pulumi.Output<string>;
     /**
@@ -218,7 +218,7 @@ export interface ClientState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, `virtual_network_override_id`). This is not the network of `fixed_ip`: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
+     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, <span pulumi-lang-nodejs="`virtualNetworkOverrideId`" pulumi-lang-dotnet="`VirtualNetworkOverrideId`" pulumi-lang-go="`virtualNetworkOverrideId`" pulumi-lang-python="`virtual_network_override_id`" pulumi-lang-yaml="`virtualNetworkOverrideId`" pulumi-lang-java="`virtualNetworkOverrideId`" pulumi-lang-hcl="`virtual_network_override_id`">`virtualNetworkOverrideId`</span>). This is not the network of <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span>: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
      */
     networkId?: pulumi.Input<string | undefined>;
     /**
@@ -281,7 +281,7 @@ export interface ClientArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, `virtual_network_override_id`). This is not the network of `fixed_ip`: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
+     * ID of the network this client is forced onto regardless of the SSID or port it connects through (UniFi's Network Override, <span pulumi-lang-nodejs="`virtualNetworkOverrideId`" pulumi-lang-dotnet="`VirtualNetworkOverrideId`" pulumi-lang-go="`virtualNetworkOverrideId`" pulumi-lang-python="`virtual_network_override_id`" pulumi-lang-yaml="`virtualNetworkOverrideId`" pulumi-lang-java="`virtualNetworkOverrideId`" pulumi-lang-hcl="`virtual_network_override_id`">`virtualNetworkOverrideId`</span>). This is not the network of <span pulumi-lang-nodejs="`fixedIp`" pulumi-lang-dotnet="`FixedIp`" pulumi-lang-go="`fixedIp`" pulumi-lang-python="`fixed_ip`" pulumi-lang-yaml="`fixedIp`" pulumi-lang-java="`fixedIp`" pulumi-lang-hcl="`fixed_ip`">`fixedIp`</span>: a fixed IP belongs to whichever network's subnet contains it. Read as null while the override is disabled.
      */
     networkId?: pulumi.Input<string | undefined>;
     /**

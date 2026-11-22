@@ -54,17 +54,17 @@ export class RequestRule extends pulumi.CustomResource {
     declare public readonly name: pulumi.Output<string>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `direct`
-     *   - `random_min_reviewers`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`direct`" pulumi-lang-dotnet="`Direct`" pulumi-lang-go="`direct`" pulumi-lang-python="`direct`" pulumi-lang-yaml="`direct`" pulumi-lang-java="`direct`" pulumi-lang-hcl="`direct`">`direct`</span>
+     *   - <span pulumi-lang-nodejs="`randomMinReviewers`" pulumi-lang-dotnet="`RandomMinReviewers`" pulumi-lang-go="`randomMinReviewers`" pulumi-lang-python="`random_min_reviewers`" pulumi-lang-yaml="`randomMinReviewers`" pulumi-lang-java="`randomMinReviewers`" pulumi-lang-hcl="`random_min_reviewers`">`randomMinReviewers`</span>
      *      Generated.
      */
     declare public readonly notificationMode: pulumi.Output<string>;
     declare public readonly notificationTransports: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     declare public readonly policyEngineMode: pulumi.Output<string>;
@@ -132,17 +132,17 @@ export interface RequestRuleState {
     name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `direct`
-     *   - `random_min_reviewers`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`direct`" pulumi-lang-dotnet="`Direct`" pulumi-lang-go="`direct`" pulumi-lang-python="`direct`" pulumi-lang-yaml="`direct`" pulumi-lang-java="`direct`" pulumi-lang-hcl="`direct`">`direct`</span>
+     *   - <span pulumi-lang-nodejs="`randomMinReviewers`" pulumi-lang-dotnet="`RandomMinReviewers`" pulumi-lang-go="`randomMinReviewers`" pulumi-lang-python="`random_min_reviewers`" pulumi-lang-yaml="`randomMinReviewers`" pulumi-lang-java="`randomMinReviewers`" pulumi-lang-hcl="`random_min_reviewers`">`randomMinReviewers`</span>
      *      Generated.
      */
     notificationMode?: pulumi.Input<string | undefined>;
     notificationTransports?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
@@ -172,17 +172,17 @@ export interface RequestRuleArgs {
     name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `direct`
-     *   - `random_min_reviewers`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`direct`" pulumi-lang-dotnet="`Direct`" pulumi-lang-go="`direct`" pulumi-lang-python="`direct`" pulumi-lang-yaml="`direct`" pulumi-lang-java="`direct`" pulumi-lang-hcl="`direct`">`direct`</span>
+     *   - <span pulumi-lang-nodejs="`randomMinReviewers`" pulumi-lang-dotnet="`RandomMinReviewers`" pulumi-lang-go="`randomMinReviewers`" pulumi-lang-python="`random_min_reviewers`" pulumi-lang-yaml="`randomMinReviewers`" pulumi-lang-java="`randomMinReviewers`" pulumi-lang-hcl="`random_min_reviewers`">`randomMinReviewers`</span>
      *      Generated.
      */
     notificationMode?: pulumi.Input<string | undefined>;
     notificationTransports?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;

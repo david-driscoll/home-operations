@@ -46,11 +46,11 @@ export class Bgp extends pulumi.CustomResource {
     }
 
     /**
-     * The BGP Autonomous System Number. Conflicts with `config`.
+     * The BGP Autonomous System Number. Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     declare public readonly asn: pulumi.Output<number | undefined>;
     /**
-     * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
+     * The raw FRRouting BGP daemon configuration. Conflicts with <span pulumi-lang-nodejs="`asn`" pulumi-lang-dotnet="`Asn`" pulumi-lang-go="`asn`" pulumi-lang-python="`asn`" pulumi-lang-yaml="`asn`" pulumi-lang-java="`asn`" pulumi-lang-hcl="`asn`">`asn`</span>, <span pulumi-lang-nodejs="`routerId`" pulumi-lang-dotnet="`RouterId`" pulumi-lang-go="`routerId`" pulumi-lang-python="`router_id`" pulumi-lang-yaml="`routerId`" pulumi-lang-java="`routerId`" pulumi-lang-hcl="`router_id`">`routerId`</span>, and <span pulumi-lang-nodejs="`peers`" pulumi-lang-dotnet="`Peers`" pulumi-lang-go="`peers`" pulumi-lang-python="`peers`" pulumi-lang-yaml="`peers`" pulumi-lang-java="`peers`" pulumi-lang-hcl="`peers`">`peers`</span>.
      */
     declare public readonly config: pulumi.Output<string>;
     /**
@@ -62,11 +62,11 @@ export class Bgp extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * List of BGP peer groups. Conflicts with `config`.
+     * List of BGP peer groups. Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     declare public readonly peers: pulumi.Output<outputs.BgpPeer[] | undefined>;
     /**
-     * The BGP router ID (typically an IP address). Conflicts with `config`.
+     * The BGP router ID (typically an IP address). Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     declare public readonly routerId: pulumi.Output<string | undefined>;
     /**
@@ -123,11 +123,11 @@ export class Bgp extends pulumi.CustomResource {
  */
 export interface BgpState {
     /**
-     * The BGP Autonomous System Number. Conflicts with `config`.
+     * The BGP Autonomous System Number. Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     asn?: pulumi.Input<number | undefined>;
     /**
-     * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
+     * The raw FRRouting BGP daemon configuration. Conflicts with <span pulumi-lang-nodejs="`asn`" pulumi-lang-dotnet="`Asn`" pulumi-lang-go="`asn`" pulumi-lang-python="`asn`" pulumi-lang-yaml="`asn`" pulumi-lang-java="`asn`" pulumi-lang-hcl="`asn`">`asn`</span>, <span pulumi-lang-nodejs="`routerId`" pulumi-lang-dotnet="`RouterId`" pulumi-lang-go="`routerId`" pulumi-lang-python="`router_id`" pulumi-lang-yaml="`routerId`" pulumi-lang-java="`routerId`" pulumi-lang-hcl="`router_id`">`routerId`</span>, and <span pulumi-lang-nodejs="`peers`" pulumi-lang-dotnet="`Peers`" pulumi-lang-go="`peers`" pulumi-lang-python="`peers`" pulumi-lang-yaml="`peers`" pulumi-lang-java="`peers`" pulumi-lang-hcl="`peers`">`peers`</span>.
      */
     config?: pulumi.Input<string | undefined>;
     /**
@@ -139,11 +139,11 @@ export interface BgpState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * List of BGP peer groups. Conflicts with `config`.
+     * List of BGP peer groups. Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[] | undefined>;
     /**
-     * The BGP router ID (typically an IP address). Conflicts with `config`.
+     * The BGP router ID (typically an IP address). Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     routerId?: pulumi.Input<string | undefined>;
     /**
@@ -162,11 +162,11 @@ export interface BgpState {
  */
 export interface BgpArgs {
     /**
-     * The BGP Autonomous System Number. Conflicts with `config`.
+     * The BGP Autonomous System Number. Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     asn?: pulumi.Input<number | undefined>;
     /**
-     * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
+     * The raw FRRouting BGP daemon configuration. Conflicts with <span pulumi-lang-nodejs="`asn`" pulumi-lang-dotnet="`Asn`" pulumi-lang-go="`asn`" pulumi-lang-python="`asn`" pulumi-lang-yaml="`asn`" pulumi-lang-java="`asn`" pulumi-lang-hcl="`asn`">`asn`</span>, <span pulumi-lang-nodejs="`routerId`" pulumi-lang-dotnet="`RouterId`" pulumi-lang-go="`routerId`" pulumi-lang-python="`router_id`" pulumi-lang-yaml="`routerId`" pulumi-lang-java="`routerId`" pulumi-lang-hcl="`router_id`">`routerId`</span>, and <span pulumi-lang-nodejs="`peers`" pulumi-lang-dotnet="`Peers`" pulumi-lang-go="`peers`" pulumi-lang-python="`peers`" pulumi-lang-yaml="`peers`" pulumi-lang-java="`peers`" pulumi-lang-hcl="`peers`">`peers`</span>.
      */
     config?: pulumi.Input<string | undefined>;
     /**
@@ -178,11 +178,11 @@ export interface BgpArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * List of BGP peer groups. Conflicts with `config`.
+     * List of BGP peer groups. Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[] | undefined>;
     /**
-     * The BGP router ID (typically an IP address). Conflicts with `config`.
+     * The BGP router ID (typically an IP address). Conflicts with <span pulumi-lang-nodejs="`config`" pulumi-lang-dotnet="`Config`" pulumi-lang-go="`config`" pulumi-lang-python="`config`" pulumi-lang-yaml="`config`" pulumi-lang-java="`config`" pulumi-lang-hcl="`config`">`config`</span>.
      */
     routerId?: pulumi.Input<string | undefined>;
     /**

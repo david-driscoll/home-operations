@@ -22,10 +22,6 @@ export interface GetRemoteStoresArgs {
  * A collection of values returned by getRemoteStores.
  */
 export interface GetRemoteStoresResult {
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly remoteName: string;
     readonly stores: string[];
 }

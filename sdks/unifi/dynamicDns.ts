@@ -50,7 +50,7 @@ export class DynamicDns extends pulumi.CustomResource {
      */
     declare public readonly hostName: pulumi.Output<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan` for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a `wan2` entry does not plan to replace it (#544).
+     * The interface for the dynamic DNS. Can be <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> or <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>. Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> entry does not plan to replace it (#544).
      */
     declare public readonly interface: pulumi.Output<string>;
     /**
@@ -66,7 +66,7 @@ export class DynamicDns extends pulumi.CustomResource {
      */
     declare public readonly server: pulumi.Output<string | undefined>;
     /**
-     * The Dynamic DNS service provider, various values are supported (for example `dyndns`, etc.).
+     * The Dynamic DNS service provider, various values are supported (for example <span pulumi-lang-nodejs="`dyndns`" pulumi-lang-dotnet="`Dyndns`" pulumi-lang-go="`dyndns`" pulumi-lang-python="`dyndns`" pulumi-lang-yaml="`dyndns`" pulumi-lang-java="`dyndns`" pulumi-lang-hcl="`dyndns`">`dyndns`</span>, etc.).
      */
     declare public readonly service: pulumi.Output<string>;
     /**
@@ -129,7 +129,7 @@ export interface DynamicDnsState {
      */
     hostName?: pulumi.Input<string | undefined>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan` for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a `wan2` entry does not plan to replace it (#544).
+     * The interface for the dynamic DNS. Can be <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> or <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>. Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> entry does not plan to replace it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
@@ -145,7 +145,7 @@ export interface DynamicDnsState {
      */
     server?: pulumi.Input<string | undefined>;
     /**
-     * The Dynamic DNS service provider, various values are supported (for example `dyndns`, etc.).
+     * The Dynamic DNS service provider, various values are supported (for example <span pulumi-lang-nodejs="`dyndns`" pulumi-lang-dotnet="`Dyndns`" pulumi-lang-go="`dyndns`" pulumi-lang-python="`dyndns`" pulumi-lang-yaml="`dyndns`" pulumi-lang-java="`dyndns`" pulumi-lang-hcl="`dyndns`">`dyndns`</span>, etc.).
      */
     service?: pulumi.Input<string | undefined>;
     /**
@@ -164,7 +164,7 @@ export interface DynamicDnsArgs {
      */
     hostName: pulumi.Input<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan` for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a `wan2` entry does not plan to replace it (#544).
+     * The interface for the dynamic DNS. Can be <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> or <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span>. Defaults to <span pulumi-lang-nodejs="`wan`" pulumi-lang-dotnet="`Wan`" pulumi-lang-go="`wan`" pulumi-lang-python="`wan`" pulumi-lang-yaml="`wan`" pulumi-lang-java="`wan`" pulumi-lang-hcl="`wan`">`wan`</span> for a new entry; an existing entry keeps the controller's value when this is not set, so adopting a <span pulumi-lang-nodejs="`wan2`" pulumi-lang-dotnet="`Wan2`" pulumi-lang-go="`wan2`" pulumi-lang-python="`wan2`" pulumi-lang-yaml="`wan2`" pulumi-lang-java="`wan2`" pulumi-lang-hcl="`wan2`">`wan2`</span> entry does not plan to replace it (#544).
      */
     interface?: pulumi.Input<string | undefined>;
     /**
@@ -180,7 +180,7 @@ export interface DynamicDnsArgs {
      */
     server?: pulumi.Input<string | undefined>;
     /**
-     * The Dynamic DNS service provider, various values are supported (for example `dyndns`, etc.).
+     * The Dynamic DNS service provider, various values are supported (for example <span pulumi-lang-nodejs="`dyndns`" pulumi-lang-dotnet="`Dyndns`" pulumi-lang-go="`dyndns`" pulumi-lang-python="`dyndns`" pulumi-lang-yaml="`dyndns`" pulumi-lang-java="`dyndns`" pulumi-lang-hcl="`dyndns`">`dyndns`</span>, etc.).
      */
     service: pulumi.Input<string>;
     /**

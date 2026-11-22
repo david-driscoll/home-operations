@@ -67,10 +67,6 @@ export interface GetPeersResult {
     readonly geonameId: number;
     readonly groups: string[];
     readonly hostname: string;
-    /**
-     * The provider-assigned unique ID for this managed resource.
-     */
-    readonly id: string;
     readonly ids: string[];
     readonly inactivityExpirationEnabled: boolean;
     readonly ip: string;

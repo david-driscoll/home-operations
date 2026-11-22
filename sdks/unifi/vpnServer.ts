@@ -54,7 +54,7 @@ export class VpnServer extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * L2TP VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * L2TP VPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     declare public readonly l2tp: pulumi.Output<outputs.VpnServerL2tp | undefined>;
     /**
@@ -62,7 +62,7 @@ export class VpnServer extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * OpenVPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * OpenVPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     declare public readonly openvpn: pulumi.Output<outputs.VpnServerOpenvpn | undefined>;
     /**
@@ -78,7 +78,7 @@ export class VpnServer extends pulumi.CustomResource {
      */
     declare public readonly subnet: pulumi.Output<string>;
     /**
-     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as `subnet` (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
+     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as <span pulumi-lang-nodejs="`subnet`" pulumi-lang-dotnet="`Subnet`" pulumi-lang-go="`subnet`" pulumi-lang-python="`subnet`" pulumi-lang-yaml="`subnet`" pulumi-lang-java="`subnet`" pulumi-lang-hcl="`subnet`">`subnet`</span> (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
      */
     declare public readonly subnetIpv6: pulumi.Output<string | undefined>;
     declare public readonly timeouts: pulumi.Output<outputs.VpnServerTimeouts | undefined>;
@@ -87,7 +87,7 @@ export class VpnServer extends pulumi.CustomResource {
      */
     declare public readonly wan: pulumi.Output<outputs.VpnServerWan>;
     /**
-     * WireGuard VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * WireGuard VPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     declare public readonly wireguard: pulumi.Output<outputs.VpnServerWireguard | undefined>;
 
@@ -152,7 +152,7 @@ export interface VpnServerState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * L2TP VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * L2TP VPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     l2tp?: pulumi.Input<inputs.VpnServerL2tp | undefined>;
     /**
@@ -160,7 +160,7 @@ export interface VpnServerState {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * OpenVPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * OpenVPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     openvpn?: pulumi.Input<inputs.VpnServerOpenvpn | undefined>;
     /**
@@ -176,7 +176,7 @@ export interface VpnServerState {
      */
     subnet?: pulumi.Input<string | undefined>;
     /**
-     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as `subnet` (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
+     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as <span pulumi-lang-nodejs="`subnet`" pulumi-lang-dotnet="`Subnet`" pulumi-lang-go="`subnet`" pulumi-lang-python="`subnet`" pulumi-lang-yaml="`subnet`" pulumi-lang-java="`subnet`" pulumi-lang-hcl="`subnet`">`subnet`</span> (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
      */
     subnetIpv6?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.VpnServerTimeouts | undefined>;
@@ -185,7 +185,7 @@ export interface VpnServerState {
      */
     wan?: pulumi.Input<inputs.VpnServerWan | undefined>;
     /**
-     * WireGuard VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * WireGuard VPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     wireguard?: pulumi.Input<inputs.VpnServerWireguard | undefined>;
 }
@@ -203,7 +203,7 @@ export interface VpnServerArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * L2TP VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * L2TP VPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     l2tp?: pulumi.Input<inputs.VpnServerL2tp | undefined>;
     /**
@@ -211,7 +211,7 @@ export interface VpnServerArgs {
      */
     name?: pulumi.Input<string | undefined>;
     /**
-     * OpenVPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * OpenVPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     openvpn?: pulumi.Input<inputs.VpnServerOpenvpn | undefined>;
     /**
@@ -227,7 +227,7 @@ export interface VpnServerArgs {
      */
     subnet: pulumi.Input<string>;
     /**
-     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as `subnet` (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
+     * The VPN server's IPv6 subnet in CIDR notation, in the same gateway form as <span pulumi-lang-nodejs="`subnet`" pulumi-lang-dotnet="`Subnet`" pulumi-lang-go="`subnet`" pulumi-lang-python="`subnet`" pulumi-lang-yaml="`subnet`" pulumi-lang-java="`subnet`" pulumi-lang-hcl="`subnet`">`subnet`</span> (e.g., `fd00:db8::1/64`): the UI's "IPv6 Gateway/Subnet". Clients get an address in it (`unifi_wireguard_peer.interface_ipv6`). The controller only accepts it when a server is created, so changing it replaces the server (and with it the server's key).
      */
     subnetIpv6?: pulumi.Input<string | undefined>;
     timeouts?: pulumi.Input<inputs.VpnServerTimeouts | undefined>;
@@ -236,7 +236,7 @@ export interface VpnServerArgs {
      */
     wan?: pulumi.Input<inputs.VpnServerWan | undefined>;
     /**
-     * WireGuard VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
+     * WireGuard VPN server configuration. Exactly one of <span pulumi-lang-nodejs="`wireguard`" pulumi-lang-dotnet="`Wireguard`" pulumi-lang-go="`wireguard`" pulumi-lang-python="`wireguard`" pulumi-lang-yaml="`wireguard`" pulumi-lang-java="`wireguard`" pulumi-lang-hcl="`wireguard`">`wireguard`</span>, <span pulumi-lang-nodejs="`l2tp`" pulumi-lang-dotnet="`L2tp`" pulumi-lang-go="`l2tp`" pulumi-lang-python="`l2tp`" pulumi-lang-yaml="`l2tp`" pulumi-lang-java="`l2tp`" pulumi-lang-hcl="`l2tp`">`l2tp`</span>, or <span pulumi-lang-nodejs="`openvpn`" pulumi-lang-dotnet="`Openvpn`" pulumi-lang-go="`openvpn`" pulumi-lang-python="`openvpn`" pulumi-lang-yaml="`openvpn`" pulumi-lang-java="`openvpn`" pulumi-lang-hcl="`openvpn`">`openvpn`</span> must be specified.
      */
     wireguard?: pulumi.Input<inputs.VpnServerWireguard | undefined>;
 }

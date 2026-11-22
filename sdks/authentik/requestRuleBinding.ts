@@ -53,8 +53,8 @@ export class RequestRuleBinding extends pulumi.CustomResource {
     declare public readonly expiryPending: pulumi.Output<string>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     declare public readonly policyEngineMode: pulumi.Output<string>;
@@ -64,7 +64,7 @@ export class RequestRuleBinding extends pulumi.CustomResource {
     declare public /*out*/ readonly relateds: pulumi.Output<string[]>;
     declare public readonly requestRuleBindingId: pulumi.Output<string>;
     /**
-     * UUID of the authentik.RequestRule this binding applies.
+     * UUID of the<span pulumi-lang-nodejs=" authentik.RequestRule " pulumi-lang-dotnet=" authentik.RequestRule " pulumi-lang-go=" RequestRule " pulumi-lang-python=" RequestRule " pulumi-lang-yaml=" authentik.RequestRule " pulumi-lang-java=" authentik.RequestRule " pulumi-lang-hcl=" authentik_request_rule "> authentik.RequestRule </span>this binding applies.
      */
     declare public readonly rule: pulumi.Output<string>;
     /**
@@ -127,8 +127,8 @@ export interface RequestRuleBindingState {
     expiryPending?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
@@ -138,7 +138,7 @@ export interface RequestRuleBindingState {
     relateds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     requestRuleBindingId?: pulumi.Input<string | undefined>;
     /**
-     * UUID of the authentik.RequestRule this binding applies.
+     * UUID of the<span pulumi-lang-nodejs=" authentik.RequestRule " pulumi-lang-dotnet=" authentik.RequestRule " pulumi-lang-go=" RequestRule " pulumi-lang-python=" RequestRule " pulumi-lang-yaml=" authentik.RequestRule " pulumi-lang-java=" authentik.RequestRule " pulumi-lang-hcl=" authentik_request_rule "> authentik.RequestRule </span>this binding applies.
      */
     rule?: pulumi.Input<string | undefined>;
     /**
@@ -161,14 +161,14 @@ export interface RequestRuleBindingArgs {
     expiryPending?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
-     *   - `all`
-     *   - `any`
+     *   - <span pulumi-lang-nodejs="`all`" pulumi-lang-dotnet="`All`" pulumi-lang-go="`all`" pulumi-lang-python="`all`" pulumi-lang-yaml="`all`" pulumi-lang-java="`all`" pulumi-lang-hcl="`all`">`all`</span>
+     *   - <span pulumi-lang-nodejs="`any`" pulumi-lang-dotnet="`Any`" pulumi-lang-go="`any`" pulumi-lang-python="`any`" pulumi-lang-yaml="`any`" pulumi-lang-java="`any`" pulumi-lang-hcl="`any`">`any`</span>
      *      Generated.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     requestRuleBindingId?: pulumi.Input<string | undefined>;
     /**
-     * UUID of the authentik.RequestRule this binding applies.
+     * UUID of the<span pulumi-lang-nodejs=" authentik.RequestRule " pulumi-lang-dotnet=" authentik.RequestRule " pulumi-lang-go=" RequestRule " pulumi-lang-python=" RequestRule " pulumi-lang-yaml=" authentik.RequestRule " pulumi-lang-java=" authentik.RequestRule " pulumi-lang-hcl=" authentik_request_rule "> authentik.RequestRule </span>this binding applies.
      */
     rule: pulumi.Input<string>;
     /**

@@ -50,7 +50,7 @@ export class TrafficRoute extends pulumi.CustomResource {
      */
     declare public readonly description: pulumi.Output<string | undefined>;
     /**
-     * Destination filter for this traffic route. Specify exactly one of `domain`, `region`, or `ip`. When omitted, the route matches all internet traffic.
+     * Destination filter for this traffic route. Specify exactly one of <span pulumi-lang-nodejs="`domain`" pulumi-lang-dotnet="`Domain`" pulumi-lang-go="`domain`" pulumi-lang-python="`domain`" pulumi-lang-yaml="`domain`" pulumi-lang-java="`domain`" pulumi-lang-hcl="`domain`">`domain`</span>, <span pulumi-lang-nodejs="`region`" pulumi-lang-dotnet="`Region`" pulumi-lang-go="`region`" pulumi-lang-python="`region`" pulumi-lang-yaml="`region`" pulumi-lang-java="`region`" pulumi-lang-hcl="`region`">`region`</span>, or <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span>. When omitted, the route matches all internet traffic.
      */
     declare public readonly destination: pulumi.Output<outputs.TrafficRouteDestination | undefined>;
     /**
@@ -58,7 +58,7 @@ export class TrafficRoute extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets `false`), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
+     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
      */
     declare public readonly killSwitchEnabled: pulumi.Output<boolean>;
     /**
@@ -127,7 +127,7 @@ export interface TrafficRouteState {
      */
     description?: pulumi.Input<string | undefined>;
     /**
-     * Destination filter for this traffic route. Specify exactly one of `domain`, `region`, or `ip`. When omitted, the route matches all internet traffic.
+     * Destination filter for this traffic route. Specify exactly one of <span pulumi-lang-nodejs="`domain`" pulumi-lang-dotnet="`Domain`" pulumi-lang-go="`domain`" pulumi-lang-python="`domain`" pulumi-lang-yaml="`domain`" pulumi-lang-java="`domain`" pulumi-lang-hcl="`domain`">`domain`</span>, <span pulumi-lang-nodejs="`region`" pulumi-lang-dotnet="`Region`" pulumi-lang-go="`region`" pulumi-lang-python="`region`" pulumi-lang-yaml="`region`" pulumi-lang-java="`region`" pulumi-lang-hcl="`region`">`region`</span>, or <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span>. When omitted, the route matches all internet traffic.
      */
     destination?: pulumi.Input<inputs.TrafficRouteDestination | undefined>;
     /**
@@ -135,7 +135,7 @@ export interface TrafficRouteState {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets `false`), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
+     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
      */
     killSwitchEnabled?: pulumi.Input<boolean | undefined>;
     /**
@@ -166,7 +166,7 @@ export interface TrafficRouteArgs {
      */
     description?: pulumi.Input<string | undefined>;
     /**
-     * Destination filter for this traffic route. Specify exactly one of `domain`, `region`, or `ip`. When omitted, the route matches all internet traffic.
+     * Destination filter for this traffic route. Specify exactly one of <span pulumi-lang-nodejs="`domain`" pulumi-lang-dotnet="`Domain`" pulumi-lang-go="`domain`" pulumi-lang-python="`domain`" pulumi-lang-yaml="`domain`" pulumi-lang-java="`domain`" pulumi-lang-hcl="`domain`">`domain`</span>, <span pulumi-lang-nodejs="`region`" pulumi-lang-dotnet="`Region`" pulumi-lang-go="`region`" pulumi-lang-python="`region`" pulumi-lang-yaml="`region`" pulumi-lang-java="`region`" pulumi-lang-hcl="`region`">`region`</span>, or <span pulumi-lang-nodejs="`ip`" pulumi-lang-dotnet="`Ip`" pulumi-lang-go="`ip`" pulumi-lang-python="`ip`" pulumi-lang-yaml="`ip`" pulumi-lang-java="`ip`" pulumi-lang-hcl="`ip`">`ip`</span>. When omitted, the route matches all internet traffic.
      */
     destination?: pulumi.Input<inputs.TrafficRouteDestination | undefined>;
     /**
@@ -174,7 +174,7 @@ export interface TrafficRouteArgs {
      */
     enabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets `false`), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
+     * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable. Taken from the controller when not set (a new route gets <span pulumi-lang-nodejs="`false`" pulumi-lang-dotnet="`False`" pulumi-lang-go="`false`" pulumi-lang-python="`false`" pulumi-lang-yaml="`false`" pulumi-lang-java="`false`" pulumi-lang-hcl="`false`">`false`</span>), so adopting a route does not switch its kill switch off and leak traffic past the VPN (#544).
      */
     killSwitchEnabled?: pulumi.Input<boolean | undefined>;
     /**
