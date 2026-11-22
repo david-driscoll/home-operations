@@ -161,8 +161,9 @@ spec:
           # header OR the parameter on ANY path, and behind authentik this app
           # has no login of its own -- so `?apikey=x` on any URL would skip SSO
           # and land on the full UI. One match entry, so path AND parameter
-          # must both hold. Prowlarr's app sync does not need this at all: it
-          # talks to the Service in-cluster, not through the gateway.
+          # must both hold. An in-cluster API client would skip the gateway,
+          # but ./ciliumnetworkpolicy.yaml admits only Traefik; see its header
+          # for how to add one.
           #
           # No header-strip middleware here (unlike navidrome's /rest), checked
           # 2026-11-22: the outpost never runs on this rule, so a client's own

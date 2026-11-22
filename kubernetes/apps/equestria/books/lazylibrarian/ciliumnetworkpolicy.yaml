@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Traefik may talk to LazyLibrarian.
+#
+# LazyLibrarian runs in PROXY_AUTH mode (config.ini [PROXY]: proxy_auth = True,
+# proxy_auth_user = X-Authentik-Username), so webServe.py logs in whichever user
+# that header names, admin included, with no other check. That is safe only
+# for requests that come through Traefik's authentik forward auth, which
+# overwrites the header. Without this policy any pod in the cluster (and
+# anything the tailscale Connector routes onto the pod network) could reach
+# the Service on 5299, send `X-Authentik-Username: admin` and get the whole UI
+# as admin. Same shape as ../../media/navidrome/ciliumnetworkpolicy.yaml and
+# ../../../coder/setup-status/ciliumnetworkpolicy.yaml.
+#
+# Selecting the pod puts it into default-deny for ingress. Allowed:
+#   - Traefik (`traefik-network`). Every route to LazyLibrarian lands on it: the
+#     internal HTTPRoute (helmrelease.yaml), the tailnet and NetBird
+#     IngressRoutes from components/tailscale, and ./tailnet-api.yaml's `/api`
+#     carve-outs. Browsers get the authentik chain there. The `/api` +
+#     `?apikey` routes skip it, which is fine because api.py checks only the
+#     key and never reads the header. Gatus probes the public URL, so it
+#     arrives through Traefik too.
+#   - `host`, for the kubelet's httpGet probes on /api.
+#
+# What was checked before closing everything else (2026-11-22): the only source
+# in LazyLibrarian's log and the Hubble flows to the pod was Traefik's pod IP,
+# plus the probes from the node. Prowlarr has no LazyLibrarian application. The
+# "(Prowlarr)" indexers in config.ini are LazyLibrarian calling OUT to Prowlarr.
+# SABnzbd and qBittorrent are polled by LazyLibrarian, and they never call
+# back. No dashboard widget, audiobookrequest, readmeabook or Chaptarr points at
+# it. The user-sync CronJob (./user-sync.yaml) writes the SQLite file on the PVC
+# and never calls the Service.
+#
+# Adding an in-cluster API client (e.g. a Prowlarr LazyLibrarian app on
+# http://lazylibrarian.equestria.svc:5299): give it its own rule with an L7
+# allowlist, not a bare port, so that it cannot spoof the header on the UI:
+#       rules:
+#         http:
+#           - method: GET
+#             path: "/api(\\?.*)?"
+# The path is a full-match regex, so `/api/../home` and the like are refused
+# with 403. Note that ANY L7 rule on 5299 sends ALL traffic to that port,
+# Traefik's included, through the node's Cilium proxy.
+#
+# Egress is untouched (Prowlarr, the download clients, metadata providers).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      # The app-template pod only. The user-sync CronJob and the volsync movers
+      # share the name label (ks.yaml commonMetadata) and serve nothing.
+      app.kubernetes.io/controller: app
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "5299"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "5299"
+              protocol: TCP
