@@ -17,6 +17,9 @@ import { awaitOutput, clientIdPair } from "./helpers.ts";
 import { type RedirectUri, withNetbirdRedirectUris } from "./netbird/appRedirectUris.ts";
 import type { ClusterDefinition, VaultStore } from "./store/index.ts";
 
+/** Proxy-provider session length when an ApplicationDefinition does not set one. */
+const DEFAULT_PROXY_ACCESS_TOKEN_VALIDITY = "hours=24";
+
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
   clusterKey: string;
@@ -181,7 +184,10 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           authenticationFlow: proxy.authenticationFlow ?? this.authentik.flows.authenticationFlow,
           invalidationFlow: proxy.invalidationFlow ?? this.authentik.flows.providerLogoutFlow,
           externalHost,
-          accessTokenValidity: proxy.accessTokenValidity,
+          // The outpost's session cookie lives exactly as long as the access token.
+          // Left unset, the provider default is minutes=10, so every proxied app
+          // bounced its XHRs and websockets through authentik every ten minutes.
+          accessTokenValidity: proxy.accessTokenValidity ?? DEFAULT_PROXY_ACCESS_TOKEN_VALIDITY,
           refreshTokenValidity: proxy.refreshTokenValidity,
           basicAuthEnabled: proxy.basicAuthEnabled,
           basicAuthPasswordAttribute: proxy.basicAuthPasswordAttribute,
