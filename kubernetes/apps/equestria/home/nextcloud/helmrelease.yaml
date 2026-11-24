@@ -57,7 +57,7 @@ spec:
           *app :
             image:
               repository: docker.io/library/nextcloud
-              tag: 35.0.3-apache@sha256:ef4051dda95f3924833d19e8a90e5c1ebd1170548f1de75cab1e18aa422089c4
+              tag: 35.0.3-apache@sha256:fb3c0811a45bd5c316ddde357d12daeb44ef8259b9afcfbcde290898750c304f
               pullPolicy: IfNotPresent
             env:
               # Read by ./resources/zz-app.config.php (Flux substitution is off
@@ -144,7 +144,7 @@ spec:
           cron:
             image:
               repository: docker.io/library/nextcloud
-              tag: 35.0.3-apache@sha256:ef4051dda95f3924833d19e8a90e5c1ebd1170548f1de75cab1e18aa422089c4
+              tag: 35.0.3-apache@sha256:fb3c0811a45bd5c316ddde357d12daeb44ef8259b9afcfbcde290898750c304f
               pullPolicy: IfNotPresent
             command: ["/bin/sh", "-c"]
             args:
