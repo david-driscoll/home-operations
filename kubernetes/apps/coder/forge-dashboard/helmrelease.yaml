@@ -49,7 +49,7 @@ spec:
           app:
             image:
               repository: ghcr.io/alrayyes/forge-dashboard
-              tag: 9.111.2@sha256:7eddf62a7ba60927f026ebda29494e4e2dda0e50cacd226a1acae6f98563604d
+              tag: 9.118.0@sha256:44e2b8240459a7b8edb128ed1bb8cae5fbd04939d774aaac126bbd687df9dbd5
             env:
               TZ: ${TIMEZONE}
               ADDR: :8080
