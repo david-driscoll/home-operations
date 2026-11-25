@@ -36,3 +36,8 @@ spec:
       # Job reports alone are ~3.3 GiB since the flow rollout; the 5Gi default
       # hit 86%. Only ever raise this (components/volsync/AGENTS.md).
       VOLSYNC_CAPACITY: 15Gi
+      # The restic cache for ~63k small job-report files outgrew the 2Gi
+      # source default: the 2026-11-24 backup failed with "no space left on
+      # device" in /cache. If the existing volsync-src-tdarr-cache PVC keeps
+      # its old size after a raise, delete it; restic rebuilds the cache.
+      VOLSYNC_CACHE_CAPACITY: 8Gi
