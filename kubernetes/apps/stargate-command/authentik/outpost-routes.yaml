@@ -1,0 +1,148 @@
+---
+# The authentik outpost's `/outpost.goauthentik.io` path (sign-in callback,
+# start, sign_out) on every forward-auth app's hostname. These routes replace
+# the Ingress the outpost used to generate for itself, which
+# stacks/system/applications.ts now disables (`kubernetes_disabled_components`).
+#
+# WHY NOT THE OUTPOST'S OWN INGRESS. Traefik v3.8 gives each Gateway API
+# listener its own TLS options, and answers 421 Misdirected Request when a
+# hostname is also routed on the same entrypoint by another provider -- the two
+# routers carry different TLS options, so the name falls back to `default` and
+# the request no longer matches the listener's. The outpost's Ingress bound
+# every forward-auth hostname on `websecure` beside that app's HTTPRoute, so the
+# v3.8.0 upgrade on 2026-11-25 took 35 Gatus endpoints to 421 at once.
+#
+# WHY NOT THE OUTPOST'S OWN HTTPROUTE. `kubernetes_httproute_parent_refs` has
+# been set on the outpost since September and authentik (2026.8.6) has never
+# created the route. A route this repo owns is one less thing to debug.
+#
+# Three objects, one per kind of hostname:
+#   1. authentik-outpost            -- every app on the internal Gateway (wildcard)
+#   2. authentik-embedded-outpost   -- authentik's own names keep their own path
+#   3. authentik-outpost-ingress-hosts -- the forward-auth apps still on an Ingress
+#
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  # A namespace-local alias for network/default-cors, the middleware the
+  # outpost's Ingress carried. An HTTPRoute ExtensionRef only resolves in the
+  # route's own namespace (components/common/middleware.yaml), so the route
+  # below cannot name network/default-cors directly; a chain can.
+  name: outpost-cors
+spec:
+  chain:
+    middlewares:
+      - name: default-cors
+        namespace: network
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: authentik-outpost
+  annotations:
+    # NEVER PUBLISHED. external-dns publishes every hostname on a route
+    # attached to the internal Gateway, and this one is a wildcard: left alone
+    # it would write a `*.<root domain>` record. external-dns skips a route
+    # whose controller annotation is anything but its own `dns-controller`
+    # (see ./vanity-route.yaml). Every hostname this serves is published by its
+    # app's own route already.
+    external-dns.kubernetes.io/controller: none
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  # Traefik turns `*.` into `**.`, so this covers nested names such as
+  # `<app>.equestria.<root domain>` too.
+  hostnames:
+    - "*.${ROOT_DOMAIN}"
+  rules:
+    # Wins over each app's own `/` rule on the same hostname: Traefik ranks a
+    # PathPrefix by its length first (10000 + 100 per character) and only then
+    # adds the hostname length (pkg/provider/kubernetes/gateway/httproute.go,
+    # buildMatchRule), so `/outpost.goauthentik.io` beats `/` whatever the host.
+    #
+    # Side effect: on a hostname with no proxy provider the outpost now answers
+    # this path itself (400 "no app for hostname") instead of the app's 404.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /outpost.goauthentik.io
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: outpost-cors
+      backendRefs:
+        - name: authentik-outpost
+          port: 9000
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  # authentik's own hostnames serve `/outpost.goauthentik.io` from the
+  # server's embedded outpost, not from this cluster's proxy outpost. The
+  # wildcard above would capture that path on them too, as it outranks their
+  # `/` routes (./vanity-route.yaml and the chart's route). Same path, exact
+  # hostnames: these win on hostname length.
+  name: authentik-embedded-outpost
+  annotations:
+    # Same reason as ./vanity-route.yaml: these names' DNS belongs to Pulumi
+    # (and the staging name to the chart's route), never to this route.
+    external-dns.kubernetes.io/controller: none
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - authentik.${ROOT_DOMAIN}
+    - iris.${ROOT_DOMAIN}
+    - canterlot.${ROOT_DOMAIN}
+    - authentik.sgc.${ROOT_DOMAIN}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /outpost.goauthentik.io
+      backendRefs:
+        - name: authentik-server
+          port: 80
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  # The forward-auth apps that are still served by an Ingress, not an
+  # HTTPRoute. Their Ingress router outranks the Gateway listener's catch-all
+  # parent router (priority 9), so the wildcard HTTPRoute above never sees
+  # their traffic. With no HTTPRoute on these names there is no TLS options
+  # conflict, so a plain router on `websecure` is safe.
+  #
+  # LISTED BY HAND. An Ingress-only app that gains `authenticated-user` (the
+  # chain with the outpost hop) needs its hostname added here, or its sign-in
+  # callback lands on the app. Do NOT turn this into a wildcard: a `*.` host on
+  # `websecure` would put every Gateway app back into the TLS options conflict.
+  name: authentik-outpost-ingress-hosts
+  annotations:
+    kubernetes.io/ingress.class: internal
+    external-dns.kubernetes.io/controller: none
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: >-
+        (Host(`alloy.${CLUSTER_DOMAIN}`) || Host(`thanos.${ROOT_DOMAIN}`))
+        && PathPrefix(`/outpost.goauthentik.io`)
+      middlewares:
+        - name: default-cors
+          namespace: network
+      services:
+        - name: authentik-outpost
+          port: 9000
+  tls: {}

@@ -12,6 +12,7 @@ resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
   - ./vanity-route.yaml
+  - ./outpost-routes.yaml
 configMapGenerator:
 - name: authentik-pg-values
   files:

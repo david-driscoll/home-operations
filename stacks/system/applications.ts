@@ -264,21 +264,19 @@ async function kubernetesApplications(globals: GlobalResources, outputs: Authent
           // observability included) then timed out for seven hours. It belongs
           // with authentik itself in the Tier-1 namespace the downscaler excludes.
           kubernetes_namespace: OUTPOST_NAMESPACE,
-          kubernetes_ingress_class_name: "internal",
-          kubernetes_ingress_annotations: {
-            "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
-          },
-          kubernetes_httproute_parent_refs: [
-            {
-              name: "internal",
-              namespace: "network",
-              kind: "Gateway",
-            },
-          ],
-          kubernetes_httproute_annotations: {
-            "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
-          },
-          kubernetes_ingress_secret_name: "",
+          // No Ingress. Under Traefik v3.8 an outpost Ingress on a hostname that
+          // also has an HTTPRoute makes that hostname answer 421 Misdirected
+          // Request (per-listener TLS options). /outpost.goauthentik.io is routed
+          // by kubernetes/apps/stargate-command/authentik/outpost-routes.yaml
+          // instead. authentik does not delete what a disabled component already
+          // made: the `authentik-outpost` Ingress in stargate-command was
+          // deleted by hand once this applied.
+          //
+          // No HTTPRoute either. Its parent refs were set for months and
+          // authentik (2026.8.6) never created one; if it ever started, it would
+          // put every provider's hostname on the Gateway -- the Ingress-only
+          // forward-auth apps (alloy, thanos) included, which is the same 421.
+          kubernetes_disabled_components: ["ingress", "httproute"],
         },
         undefined,
         2,
