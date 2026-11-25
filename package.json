@@ -30,7 +30,7 @@
     "@types/node": "^26.6.6",
     "@types/ssh2": "^1.15.6",
     "json-schema-to-typescript": "^16.0.0",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "yaml": "^2.9.1"
   },
   "dependencies": {
@@ -68,7 +68,7 @@
     "file:sdks/unifi": true
   },
   "overrides": {
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "@types/node": "$@types/node"
   }
 }
