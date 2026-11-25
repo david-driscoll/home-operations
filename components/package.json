@@ -31,7 +31,7 @@
     "@pulumi/tls": "^5.6.3",
     "@pulumiverse/unifi": "^0.3.1",
     "moment": "^2.31.0",
-    "node-ssh": "^13.2.1",
+    "node-ssh": "^14.0.0",
     "node-unifi": "^2.5.1",
     "openapi-fetch": "^0.17.0",
     "simple-oauth2": "^5.1.0",
