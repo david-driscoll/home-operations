@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.15.0
-    digest: sha256:d5e611ddca847fe202b1059f5ab6273eb449d4b61ffa353b72248d7ab4f8b8c3
+    tag: 0.17.0
+    digest: sha256:c3d3025722bfbf88df676940c25cf6e9666a67f3aed8054f0b7095c46ba73e69
   url: oci://ghcr.io/n8n-io/n8n-sandbox-service/n8n-sandbox-service
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
