@@ -108,9 +108,24 @@ spec:
     provider:
       name: webhook
       webhook:
+        # ---- WHY home-operations/, AND WHY 0.11 ------------------------------
+        #
+        # The project moved from kashalls/ to home-operations/ in 0.10.0 and
+        # dropped the `v` from its tags. ghcr.io/kashalls/... stopped at v0.9.0,
+        # so Renovate had nothing newer to offer and this sat on v0.9.0 for six
+        # months.
+        #
+        # v0.9.0 applied a batch one record at a time and re-listed the whole
+        # static-DNS store (~300 entries) before every delete. The webhook's own
+        # metrics for the 2026-11-25 hand-over show the controller was not the
+        # problem: GET of the full list 0.18s, a create 0.27-0.42s, no 429s or
+        # 5xx. A ~115-change batch was ~40s of strictly serial round trips. 0.10+
+        # lists once per batch, resolves deletes from that snapshot, and runs
+        # each phase (deletes, then creates) on UNIFI_APPLY_WORKERS (default 5)
+        # workers, so the same batch is a few seconds.
         image:
-          repository: ghcr.io/kashalls/external-dns-unifi-webhook
-          tag: v0.9.0@sha256:22f4106f44a0b9ac3c97cf29bbfef93026c1164492152dc797a1d6dc86ddfbb5
+          repository: ghcr.io/home-operations/external-dns-unifi-webhook
+          tag: 0.11.0@sha256:663442f116d7b45546782bdf7ace50d05ac15cc630c7236d443d69593845e992
         env:
           - name: UNIFI_HOST
             value: "https://${DISCORD_DOMAIN}"
@@ -119,6 +134,25 @@ spec:
               secretKeyRef:
                 name: unifi-dns-secret
                 key: credential
+          # Bound one attempt against the controller. 0 (the default) leaves an
+          # attempt bounded only by the caller, so a stalled controller holds the
+          # call until external-dns's client timeout (below, under extraArgs)
+          # fires. external-dns treats that timeout as FATAL and exits mid-batch.
+          # With a per-attempt limit, 3 attempts x 15s + backoff (<= 10s each)
+          # comes back as a 5xx well inside that budget. external-dns only logs
+          # a 5xx and retries next loop.
+          - name: UNIFI_REQUEST_TIMEOUT
+            value: 15s
+          # 0.11's server defaults to 60s read/write, shorter than the 3-minute
+          # client budget below, so the webhook would cut a slow response off
+          # before external-dns gave up. Go's WriteTimeout runs from the end of
+          # the request headers to the end of the response, i.e. the whole
+          # ApplyChanges call, so it must be at least the client's total
+          # (--webhook-provider-read-timeout + --webhook-provider-write-timeout).
+          - name: SERVER_READ_TIMEOUT
+            value: 60s
+          - name: SERVER_WRITE_TIMEOUT
+            value: 180s
         livenessProbe:
           httpGet:
             path: /healthz
@@ -182,19 +216,22 @@ spec:
       #
       # external-dns calls the webhook with an http.Client whose Timeout is
       # read + write timeout (provider/webhook/webhook.go, v0.24.0): 5s + 10s
-      # = 15s by default. The UniFi webhook applies a batch one record at a
-      # time and re-fetches the whole static-DNS list before each delete, so a
-      # batch of a few dozen changes takes longer than that. external-dns then
-      # gives up on POST /records, logs it as FATAL and exits, and the
-      # webhook's in-flight UniFi calls die with `context canceled` -- the
-      # half-applied batch is whatever finished first.
+      # = 15s by default. When that expires, external-dns gives up on POST
+      # /records, logs it as FATAL and exits. The webhook handles the call on
+      # the request's context (still true in 0.11), so its in-flight UniFi calls
+      # die with `context canceled` and the batch stays half-applied. Deletes
+      # run before creates, so the half that landed is the deletes.
       #
       # 2026-11-25: deleting the authentik outpost's Ingress handed ~40 names
-      # from Ingress-owned A records to HTTPRoute-owned CNAMEs. The deletes ran
-      # first, every run hit the 15s wall before the creates, and those apps
-      # were NXDOMAIN on the LAN until this was raised. The webhook sets no
-      # server-side timeout of its own (SERVER_READ/WRITE_TIMEOUT unset), so
-      # this client limit is the only one in play. 3 minutes total.
+      # from Ingress-owned A records to HTTPRoute-owned CNAMEs, a batch of 39
+      # deletes and 76 creates. On the serial v0.9.0 webhook that took ~40s.
+      # Two runs hit the 15s wall in a row, and the CNAMEs' ownership TXTs
+      # (created last) never landed. The 0.11 webhook (see the image comment
+      # above) is the real fix and does the same batch in seconds. This stays
+      # as headroom: if this budget expires, the batch is cut off partway, and
+      # a webhook error (5xx, see UNIFI_REQUEST_TIMEOUT) does not cut anything
+      # off. The webhook's SERVER_WRITE_TIMEOUT must be at least read + write
+      # (3 minutes).
       - --webhook-provider-read-timeout=60s
       - --webhook-provider-write-timeout=120s
     sources:
