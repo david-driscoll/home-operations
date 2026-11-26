@@ -17,7 +17,7 @@
 # the job container, and Renovate bumps it. No digest: pulumi-nodejs tags are
 # immutable releases, and the workflow resolves and records the digest it
 # built on.
-FROM ghcr.io/pulumi/pulumi-nodejs:3.277.0@sha256:51e19c518f2e0e0054117b9eb3563c7e06f80744830db1f8f07e3fb8943cd118
+FROM ghcr.io/pulumi/pulumi-nodejs:3.278.0@sha256:50eef8487acefbc865c59e0f5e8656e44e8c91b4d42ef56eca46550df28cd796
 
 # Only what ./inputs.sh lists gets this far (./Dockerfile.dockerignore).
 COPY . /tmp/bake-context
