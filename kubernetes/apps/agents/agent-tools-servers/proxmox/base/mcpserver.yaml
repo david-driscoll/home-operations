@@ -67,7 +67,7 @@ kind: MCPServer
 metadata:
   name: REPLACE-ME-name
 spec:
-  image: ghcr.io/rekklesna/proxmoxmcp-plus:0.7.2@sha256:fce2fe00f2922056fc0f28c54b86602013186d8be719f8fd7f159780e6ab9577
+  image: ghcr.io/rekklesna/proxmoxmcp-plus:0.7.3@sha256:2c6e9230d1439eefa49298169d3670b778a53166871a41cb63669baad294fd7e
   transport: streamable-http
   proxyPort: 8000
   mcpPort: 8000
