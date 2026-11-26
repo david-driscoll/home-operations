@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.9.2
-    digest: sha256:37f569b1b85c5e5fbf67a9d922d2a91492ad7aa0178154425a4b945e7400d9fa
+    tag: 0.9.3
+    digest: sha256:986787b557b5b6b955a8caaffeb6e4327b7b54823ebcc157b2647e9376291710
   url: oci://ghcr.io/rajsinghtech/charts/garage-operator
   # NO `verify:` BLOCK, and do not add one back. There is nothing to verify.
   #
