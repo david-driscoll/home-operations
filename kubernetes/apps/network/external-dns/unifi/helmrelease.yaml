@@ -178,6 +178,25 @@ spec:
       # SCOPE: gateway-* sources ONLY; the tailnet Ingress and the traefik-proxy
       # source are unaffected.
       - --gateway-name=internal
+      # ---- WEBHOOK CLIENT TIMEOUT: LARGE BATCHES MUST FIT -----------------
+      #
+      # external-dns calls the webhook with an http.Client whose Timeout is
+      # read + write timeout (provider/webhook/webhook.go, v0.24.0): 5s + 10s
+      # = 15s by default. The UniFi webhook applies a batch one record at a
+      # time and re-fetches the whole static-DNS list before each delete, so a
+      # batch of a few dozen changes takes longer than that. external-dns then
+      # gives up on POST /records, logs it as FATAL and exits, and the
+      # webhook's in-flight UniFi calls die with `context canceled` -- the
+      # half-applied batch is whatever finished first.
+      #
+      # 2026-11-25: deleting the authentik outpost's Ingress handed ~40 names
+      # from Ingress-owned A records to HTTPRoute-owned CNAMEs. The deletes ran
+      # first, every run hit the 15s wall before the creates, and those apps
+      # were NXDOMAIN on the LAN until this was raised. The webhook sets no
+      # server-side timeout of its own (SERVER_READ/WRITE_TIMEOUT unset), so
+      # this client limit is the only one in play. 3 minutes total.
+      - --webhook-provider-read-timeout=60s
+      - --webhook-provider-write-timeout=120s
     sources:
       - "traefik-proxy"
       - "crd"
