@@ -47,7 +47,7 @@ spec:
           *app :
             image:
               repository: docker.io/chrisvel/tududi
-              tag: 2.1.4@sha256:ae1067a8454ce52ff481cb97b48e8620c2cb37a7d0a322baecbb2f3acdf3e39d
+              tag: 2.1.5@sha256:071a7794b440d72f2ec432b893324630716f6a84121b276587bcfab20be4dff7
               pullPolicy: IfNotPresent
             envFrom:
               - secretRef:
