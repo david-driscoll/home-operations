@@ -94,7 +94,7 @@ fnox = "v1.50.0"
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
 pipx = "1.19.1"
-"pipx:graphifyy" = "0.9.120"
+"pipx:graphifyy" = "0.9.121"
 
 [tasks.codegen]
 description = 'Regenerate types/application-definition.d.ts from schemas/'
