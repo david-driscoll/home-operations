@@ -114,7 +114,7 @@ spec:
             seccompProfile: { type: RuntimeDefault }
           containers:
             - name: sync
-              image: ghcr.io/linuxserver/lazylibrarian:latest@sha256:6dbbc01780f8df830c8c64421069b82f21efaf0fd09bb9d9b865768e1861d5d0
+              image: ghcr.io/linuxserver/lazylibrarian:latest@sha256:f3084b5408b52f6012581e8ab50c5130e9eb7ac239189bd6ad3a1d2104123717
               # Not the image's /init (s6, which wants root): just the script.
               command: ["python3", "/scripts/sync_users.py"]
               env:
