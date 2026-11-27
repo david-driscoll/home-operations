@@ -478,51 +478,51 @@ url = "https://github.com/home-operations/flate/releases/download/v0.8.0/flate_0
 url_api = "https://api.github.com/repos/home-operations/flate/releases/assets/768880022"
 
 [[tools."github:microsoft/apm"]]
-version = "0.38.1"
+version = "0.39.0"
 backend = "github:microsoft/apm"
-specifiers = ["v0.38.1"]
+specifiers = ["v0.39.0"]
 
 [tools."github:microsoft/apm"."platforms.linux-arm64"]
-checksum = "sha256:d43a93b4c6ce4b0590b048ba8cb29ee525cfdd08321697b16462a6cda2475917"
+checksum = "sha256:01ba7e98b71469225298557dd06fb4ea9e8de61c739182d09b3e26c788c1d975"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265387"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560968"
 
 [tools."github:microsoft/apm"."platforms.linux-arm64-musl"]
-checksum = "sha256:d43a93b4c6ce4b0590b048ba8cb29ee525cfdd08321697b16462a6cda2475917"
+checksum = "sha256:01ba7e98b71469225298557dd06fb4ea9e8de61c739182d09b3e26c788c1d975"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265387"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560968"
 
 [tools."github:microsoft/apm"."platforms.linux-x64"]
-checksum = "sha256:d4e5c6aa121e89e6b0a36734da73c6d90bad561d129a0bf4f023d6f5c72cb55f"
+checksum = "sha256:3a84e9c14ab594c22e97f6ccc9be41bed14199fe4f4aa24a206d23b65919592d"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-linux-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265393"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560959"
 
 [tools."github:microsoft/apm"."platforms.linux-x64-musl"]
-checksum = "sha256:d4e5c6aa121e89e6b0a36734da73c6d90bad561d129a0bf4f023d6f5c72cb55f"
+checksum = "sha256:3a84e9c14ab594c22e97f6ccc9be41bed14199fe4f4aa24a206d23b65919592d"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-linux-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265393"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560959"
 
 [tools."github:microsoft/apm"."platforms.macos-arm64"]
-checksum = "sha256:8497ce4e2237c099db21e0fcfac1d175e9e80146ce66df63a5bff4990a5eee2a"
+checksum = "sha256:8e91449c7a179292afdccfc1cbd00893297377191ec56693d65d91b563a9e9d6"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265390"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560961"
 
 [tools."github:microsoft/apm"."platforms.macos-x64"]
-checksum = "sha256:01e8111818e4e67eb4c34877f20e7437ff228d2b8c257407b88812673705ad0f"
+checksum = "sha256:b712c538543fc33b5d66120270116042ea82ad34ab220e7a7424b1bfe22c1012"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-darwin-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265389"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-darwin-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560966"
 
 [tools."github:microsoft/apm"."platforms.windows-x64"]
-checksum = "sha256:0e96d0a17bd6c1d550b5bcad1aa845ddcc6d2e0564c3ef42cf96485396720853"
+checksum = "sha256:0f9e806247c6407f69033375e0a215f061dced44bdde5f80dadcf54490ee3f8d"
 checksum_source = "mise-versions"
-url = "https://github.com/microsoft/apm/releases/download/v0.38.1/apm-windows-x86_64.zip"
-url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/782265392"
+url = "https://github.com/microsoft/apm/releases/download/v0.39.0/apm-windows-x86_64.zip"
+url_api = "https://api.github.com/repos/microsoft/apm/releases/assets/791560965"
 
 [[tools."github:stacklok/toolhive"]]
 version = "0.69.1"
