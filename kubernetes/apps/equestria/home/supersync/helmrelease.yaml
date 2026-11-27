@@ -83,7 +83,7 @@ spec:
               # `latest` lets Renovate propose digest bumps; each one runs this
               # initContainer's migrations before the server starts.
               repository: ghcr.io/super-productivity/supersync
-              tag: latest@sha256:6764664bbc96c070a14809530885ff6d0340f31a151104b14cd8c174c3c3d99a
+              tag: latest@sha256:bbaa8827bfe658839b21bcf921d5eb8a7886cb0f5e55d3a01e5c3de428ae4400
               pullPolicy: IfNotPresent
             command: ["sh", "scripts/migrate-deploy.sh"]
             env:
