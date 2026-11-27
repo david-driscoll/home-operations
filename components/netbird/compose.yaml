@@ -88,7 +88,7 @@ services:
         max-file: "2"
 
   dashboard:
-    image: netbirdio/dashboard:v2.99.0@sha256:8005cb3bfbb1433de117af5070b27b175f10730f8acb548e398ab6d20cddf9f4
+    image: netbirdio/dashboard:v2.100.0@sha256:0b06599c1ce9b91448faf3fae682fe66603c67034b2bd093dc66165283d031cd
     container_name: netbird-dashboard
     restart: unless-stopped
     networks: [netbird]
