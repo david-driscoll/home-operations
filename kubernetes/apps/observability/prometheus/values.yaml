@@ -178,14 +178,13 @@ prometheus:
               storage: 20Gi
 prometheus-node-exporter:
   fullnameOverride: node-exporter
-  # NOTE: Helm replaces lists rather than merging them, so the two
-  # --collector.filesystem.* entries below MUST be repeated verbatim from
-  # kube-prometheus-stack's own values.yaml. Dropping them would un-exclude
-  # every container mount point and blow up filesystem-metric cardinality.
-  # Keep them in sync when bumping the chart.
+  # The --collector.filesystem.* excludes live in the subchart's `defaultArgs`
+  # since prometheus-node-exporter 6.0.0 (kube-prometheus-stack 94), and
+  # `extraArgs` is appended after them. Do NOT repeat them here: node-exporter
+  # rejects a repeated flag ("cannot be repeated") and CrashLoops. Before 94
+  # they sat in kube-prometheus-stack's `extraArgs` default and had to be
+  # copied in, because Helm replaces lists rather than merging them.
   extraArgs:
-    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/containerd/.+|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
-    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|erofs)$
     # AMD GPU metrics from /sys/class/drm/card*/device (node_drm_*). Disabled
     # upstream by default. amdgpu is the ONLY driver that publishes utilisation
     # through DRM sysfs — i915 does not, and is covered separately by

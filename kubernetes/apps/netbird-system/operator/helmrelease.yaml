@@ -77,4 +77,7 @@ spec:
           cpu: 10m
           memory: 64Mi
         limits:
-          memory: 256Mi
+          # 256Mi OOMKilled twice on 2026-11-28: steady state sits near 250Mi
+          # and the full re-list after a control-plane roll (Kubernetes
+          # 1.37.3 upgrade, leases lost) pushed it over.
+          memory: 384Mi
