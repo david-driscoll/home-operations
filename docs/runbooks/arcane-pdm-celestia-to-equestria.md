@@ -48,14 +48,14 @@ new entrypoint fixes the ownership on every start.
 On celestia the manager dialled each agent at `https://arcane-agent-<host>.<tailnet>`.
 Equestria pods have no route to the tailnet (only the egress Services in
 `tailscale-system`, and no agent hostname is one of them). So every agent becomes an
-**edge agent**: it dials OUT to `MANAGER_API_URL` (`https://arcane.<root domain>`,
+**edge agent**: it dials OUT to `ARCANE_MANAGER_API_URL` (`https://arcane.<root domain>`,
 already in `docker/_common/arcane-agent/.env`) and the manager drives it through
 that tunnel.
 
 - **Tokens do not change.** An edge agent authenticates with the environment's
-  access token, which is exactly the `AGENT_TOKEN` each host already has in
+  access token, which is exactly the `ARCANE_AGENT_TOKEN` (v2: `AGENT_TOKEN`) each host already has in
   OpenBao. Arcane's own "deployment snippet" for the migrated Luna environment
-  emits that same token with `EDGE_AGENT=true`.
+  emits that same token with `EDGE_AGENT=true` (v3: `ARCANE_AGENT=true`).
 - **Transport is `websocket`.** Through Traefik the gRPC tunnel is accepted at TLS
   and never answered, so `auto` wastes 10s before falling back.
 - **The environment rows flip to `is_edge=1`** in the migrated database
