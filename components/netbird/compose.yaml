@@ -108,7 +108,7 @@ services:
 
   # Management + Signal (+ Relay + STUN when server.relays is empty).
   netbird-server:
-    image: netbirdio/netbird-server:0.83.2@sha256:47e43b1b9e6343eb99d99a612513579111439dd016805912b0fae95ce802b908
+    image: netbirdio/netbird-server:0.84.0@sha256:e439e43e8db328656baeafe124939cfdac3a71cc38fcad9b44deefe0e84a5ede
     container_name: netbird-server
     restart: ${NETBIRD_SERVER_RESTART:-unless-stopped}
     networks: [netbird]
@@ -159,7 +159,7 @@ services:
   # behind Traefik, which terminates TLS for NETBIRD_RELAY_DOMAIN with its own
   # resolver; relay.env is rendered by components/netbird/server.ts.
   relay:
-    image: netbirdio/relay:0.83.2@sha256:1b27bbadef5ae7632c46c086c91a872dad7a024aaeb2e0ee7a99faeba23c859f
+    image: netbirdio/relay:0.84.0@sha256:a6f26047934d0a9cf03e644e91f37c4816366ccd0e755347c8b00b2619e86a3f
     container_name: netbird-relay
     profiles: [relay]
     restart: unless-stopped
