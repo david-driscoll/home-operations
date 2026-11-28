@@ -53,7 +53,7 @@ spec:
               # and the Intel iGPUs have no maintained image to drive them.
               # Digest is the multi-arch index.
               repository: docker.io/athomasson2/ebook2audiobook
-              tag: v26.11.25-cpu@sha256:98676c40da31a2e347461c64be3239c6b63989ba6905bc5e4ae399de546ff1b5
+              tag: v26.11.25-cpu@sha256:432c69f07c78a2c9dd0b242bbd6558aa26f9401cc6fabb7bfb7d178d9b3fb9af
               pullPolicy: IfNotPresent
             # The image's ENTRYPOINT (`bash ebook2audiobook.command
             # --script_mode full_docker`) starts the Gradio UI on
