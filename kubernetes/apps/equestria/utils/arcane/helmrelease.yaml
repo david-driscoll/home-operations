@@ -72,7 +72,11 @@ spec:
               # No DOCKER_HOST: there is no Docker daemon in this pod. The
               # built-in local environment (id 0) was celestia's own Docker;
               # celestia is now an edge environment like the other three, and
-              # environment 0 is disabled in the migrated database.
+              # environment 0 is disabled in the migrated database. Disabling
+              # it there does not stop the background jobs (project status
+              # reconcile, global compose listing) dialling the absent socket
+              # every 15s; this does.
+              ARCANE_LOCAL_DOCKER_ENABLED: "false"
               ARCANE_ANALYTICS_ENABLED: "false"
 
               # --- oidc --------------------------------------------------
