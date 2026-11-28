@@ -28,7 +28,7 @@
 services:
   netbird-relay:
     # Same release as the Azure relays and the gateways (the NetBird Renovate group).
-    image: netbirdio/relay:0.83.2@sha256:1b27bbadef5ae7632c46c086c91a872dad7a024aaeb2e0ee7a99faeba23c859f
+    image: netbirdio/relay:0.84.0@sha256:a6f26047934d0a9cf03e644e91f37c4816366ccd0e755347c8b00b2619e86a3f
     container_name: netbird-relay
     restart: unless-stopped
     env_file:

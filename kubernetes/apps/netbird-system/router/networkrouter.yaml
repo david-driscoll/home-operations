@@ -44,7 +44,7 @@ spec:
     name: equestria.netbird.internal
   # The operator v0.9.0 default is 0.81.4. Pinned to the server's version
   # (components/netbird/compose.yaml) instead.
-  image: ghcr.io/netbirdio/netbird:0.83.2@sha256:a2f6a659b281d4d6e9820ed07b6822fddfc992f31a6a01e7b1e65c5ad0fa3072
+  image: ghcr.io/netbirdio/netbird:0.84.0@sha256:0095ff483b5a06b0f4e9528032e4dd28a9ec126dc2e246c2336d3a7a4d54fcbe
   logLevel: info
   workloadOverride:
     replicas: 3
