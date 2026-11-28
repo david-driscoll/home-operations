@@ -28,7 +28,7 @@
 // storage_quota_bytes. If an image bump ever renames one, /token starts
 // answering 500 and SuperSync itself keeps syncing existing devices.
 #:sdk Microsoft.NET.Sdk.Web
-#:package Npgsql@10.0.4
+#:package Npgsql@11.0.0
 
 using System.Buffers.Text;
 using System.Net;
